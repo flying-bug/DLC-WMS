@@ -52,16 +52,16 @@ public class SecurityConfig {
         http.cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> 
-                    auth.requestMatchers(
-                            "/api/v1/auth/login", 
-                            "/api/v1/auth/login-google", 
-                            "/api/v1/auth/forgot-password/**",
-                            "/v3/api-docs/**",
-                            "/swagger-ui/**",
-                            "/swagger-ui.html"
-                        ).permitAll()
-                        .anyRequest().authenticated()
+                .authorizeHttpRequests(auth ->
+                        auth.requestMatchers(
+                                        "/api/v1/auth/login",
+                                        "/api/v1/auth/login-google",
+                                        "/api/v1/auth/forgot-password/**",
+                                        "/v3/api-docs/**",
+                                        "/swagger-ui/**",
+                                        "/swagger-ui.html"
+                                ).permitAll()
+                                .anyRequest().authenticated()
                 );
 
         http.authenticationProvider(authenticationProvider());
