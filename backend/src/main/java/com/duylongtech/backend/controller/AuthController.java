@@ -27,10 +27,24 @@ public class AuthController {
         return ApiResponse.success(authService.loginWithGoogle(token));
     }
 
-    // 3. Forgot Password
-    @PostMapping("/forgot-password")
-    public ApiResponse<?> forgotPassword(@RequestParam String email) {
-        authService.forgotPassword(email);
+    // 3. Forgot Password - Request OTP
+    @PostMapping("/forgot-password/request-otp")
+    public ApiResponse<?> requestOtp(@RequestParam String email) {
+        authService.requestOtp(email);
+        return ApiResponse.success(null);
+    }
+
+    // 4. Forgot Password - Verify OTP
+    @PostMapping("/forgot-password/verify-otp")
+    public ApiResponse<?> verifyOtp(@RequestParam String email, @RequestParam String otp) {
+        authService.verifyOtp(email, otp);
+        return ApiResponse.success(null);
+    }
+
+    // 5. Forgot Password - Reset Password
+    @PostMapping("/forgot-password/reset")
+    public ApiResponse<?> resetPasswordWithOtp(@RequestParam String email, @RequestParam String otp, @RequestParam String newPassword) {
+        authService.resetPasswordWithOtp(email, otp, newPassword);
         return ApiResponse.success(null);
     }
 
