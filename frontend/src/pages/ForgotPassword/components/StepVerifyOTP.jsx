@@ -56,16 +56,20 @@ function StepVerifyOTP({ email, onNext, onBack }) {
         inputRefs.current[Math.min(text.length, OTP_LENGTH - 1)]?.focus();
     };
 
-    const handleResend = () => {
+    const handleResend = async () => {
         setOtp(Array(OTP_LENGTH).fill(''));
         setCountdown(OTP_RESEND_SECONDS);
         setCanResend(false);
         setError('');
         inputRefs.current[0]?.focus();
-        // TODO: gọi API gửi lại OTP
+        try {
+            await import('../../../api/axiosClient').then(m => m.default.post('/auth/forgot-password/request-otp?email=' + encodeURIComponent(email)));
+        } catch (err) {
+            setError(err.response?.data?.message || 'Có lỗi xảy ra khi gửi lại mã OTP!');
+        }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const code = otp.join('');
         if (code.length < OTP_LENGTH) {
@@ -73,11 +77,14 @@ function StepVerifyOTP({ email, onNext, onBack }) {
             return;
         }
         setLoading(true);
-        // TODO: gọi API xác thực OTP
-        setTimeout(() => {
-            setLoading(false);
+        try {
+            await import('../../../api/axiosClient').then(m => m.default.post('/auth/forgot-password/verify-otp?email=' + encodeURIComponent(email) + '&otp=' + code));
             onNext(code);
-        }, 800);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Mã OTP không hợp lệ hoặc đã hết hạn!');
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Mask email: duc***@duylong.vn

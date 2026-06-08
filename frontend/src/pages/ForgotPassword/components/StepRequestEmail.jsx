@@ -18,17 +18,20 @@ function StepRequestEmail({ onNext }) {
         return '';
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const err = validate();
         if (err) { setError(err); return; }
 
         setLoading(true);
-        // TODO: gọi API gửi OTP
-        setTimeout(() => {
-            setLoading(false);
+        try {
+            await import('../../../api/axiosClient').then(m => m.default.post('/auth/forgot-password/request-otp?email=' + encodeURIComponent(email)));
             onNext(email);
-        }, 800);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Có lỗi xảy ra khi gửi email!');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (

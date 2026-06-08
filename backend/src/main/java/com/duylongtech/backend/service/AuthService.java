@@ -83,17 +83,45 @@ public class AuthService {
         }
     }
 
-    public void forgotPassword(String email) {
+    private final java.util.Map<String, String> otpStorage = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<String, Long> otpExpiry = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public void requestOtp(String email) {
         com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại."));
         
-        // Sinh mật khẩu mới ngẫu nhiên (8 ký tự)
-        String newPassword = java.util.UUID.randomUUID().toString().substring(0, 8);
+        // Sinh OTP 6 chữ số ngẫu nhiên
+        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
+        otpStorage.put(email, otp);
+        otpExpiry.put(email, System.currentTimeMillis() + 5 * 60 * 1000); // Hết hạn sau 5 phút
+
+        // Gửi email kèm mã OTP
+        emailService.sendResetPasswordEmail(email, otp);
+    }
+
+    public void verifyOtp(String email, String otp) {
+        if (!otpStorage.containsKey(email) || !otpStorage.get(email).equals(otp)) {
+            throw new RuntimeException("Mã OTP không chính xác.");
+        }
+        if (System.currentTimeMillis() > otpExpiry.get(email)) {
+            otpStorage.remove(email);
+            otpExpiry.remove(email);
+            throw new RuntimeException("Mã OTP đã hết hạn.");
+        }
+    }
+
+    public void resetPasswordWithOtp(String email, String otp, String newPassword) {
+        verifyOtp(email, otp); // Kiểm tra lại OTP lần nữa cho chắc
+        
+        com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại."));
+        
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-        // Gửi email kèm mật khẩu mới
-        emailService.sendResetPasswordEmail(email, newPassword);
+        // Xóa OTP sau khi đổi pass thành công
+        otpStorage.remove(email);
+        otpExpiry.remove(email);
     }
 
     public void changePassword(ChangePasswordRequest request) {
