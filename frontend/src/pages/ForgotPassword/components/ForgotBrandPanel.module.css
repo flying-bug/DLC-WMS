@@ -1,0 +1,186 @@
+.panel {
+    flex: 0 0 48%;
+    background: linear-gradient(160deg, #0f2554 0%, #1a3a7a 45%, #1e4fa0 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 56px 48px;
+    position: relative;
+    overflow: hidden;
+    min-height: 100vh;
+}
+
+/* ── Decorative blobs ── */
+.blob1 {
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 320px;
+    height: 320px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.blob2 {
+    position: absolute;
+    bottom: -60px;
+    left: -60px;
+    width: 260px;
+    height: 260px;
+    background: rgba(255, 165, 0, 0.06);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+/* ── Content ── */
+.content {
+    position: relative;
+    z-index: 1;
+    max-width: 420px;
+}
+
+/* ── Badge ── */
+.badge {
+    display: inline-block;
+    padding: 5px 14px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.8);
+    letter-spacing: 1.2px;
+    margin-bottom: 28px;
+    text-transform: uppercase;
+}
+
+/* ── Headline ── */
+.headline {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+    margin: 0 0 20px;
+}
+
+.accent {
+    color: #f97316;
+    display: block;
+}
+
+/* ── Description ── */
+.description {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.7;
+    margin: 0 0 40px;
+    max-width: 380px;
+}
+
+/* ── Stats ── */
+.statsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.statCard {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    backdrop-filter: blur(8px);
+}
+
+.statValue {
+    font-size: 1.9rem;
+    font-weight: 800;
+    color: #f97316;
+    line-height: 1;
+    letter-spacing: -0.5px;
+}
+
+.statLabel {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    line-height: 1.4;
+}
+
+/* ── Logo mark ── */
+.logoMark {
+    position: absolute;
+    top: 28px;
+    left: 48px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 2;
+}
+
+.logoBox {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logoText {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.logoName {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 1px;
+}
+
+.logoSub {
+    font-size: 0.6rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.8px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 992px) {
+    .panel {
+        flex: 0 0 44%;
+        padding: 48px 32px;
+    }
+
+    .headline {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .panel {
+        flex: none;
+        min-height: auto;
+        padding: 80px 24px 36px;
+    }
+
+    .headline {
+        font-size: 1.7rem;
+    }
+
+    .statsGrid {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+}

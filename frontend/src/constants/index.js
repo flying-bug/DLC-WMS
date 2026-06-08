@@ -7,8 +7,20 @@ export const COPYRIGHT_YEAR = 2026;
 // ── Client-side routes ────────────────────────────────────────
 export const ROUTES = {
     LOGIN: '/login',
+    FORGOT_PASSWORD: '/forgot-password',
     DASHBOARD: '/dashboard',
 };
+
+// ── Password rules ────────────────────────────────────────────
+export const PASSWORD_RULES = [
+    { id: 'minLength', label: 'Tối thiểu 8 ký tự', regex: /.{8,}/ },
+    { id: 'specialChar', label: 'Có ít nhất 1 ký tự đặc biệt (!@#$)', regex: /[!@#$%^&*(),.?":{}|<>]/ },
+    { id: 'hasNumber', label: 'Có ít nhất 1 chữ số', regex: /\d/ },
+];
+
+// ── OTP config ────────────────────────────────────────────────
+export const OTP_LENGTH = 6;
+export const OTP_RESEND_SECONDS = 119; // 1:59
 
 // ── Form placeholders ─────────────────────────────────────────
 export const PLACEHOLDERS = {
