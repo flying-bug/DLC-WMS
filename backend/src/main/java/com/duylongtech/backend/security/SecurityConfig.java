@@ -56,7 +56,7 @@ public class SecurityConfig {
                     auth.requestMatchers(
                             "/api/v1/auth/login", 
                             "/api/v1/auth/login-google", 
-                            "/api/v1/auth/forgot-password",
+                            "/api/v1/auth/forgot-password/**",
                             "/v3/api-docs/**",
                             "/swagger-ui/**",
                             "/swagger-ui.html"
