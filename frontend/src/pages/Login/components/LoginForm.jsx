@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import styles from './LoginForm.module.css';
-import { PLACEHOLDERS } from '../../../constants';
+import { PLACEHOLDERS, ROUTES } from '../../../constants';
 
 function LoginForm() {
     const [formData, setFormData] = useState({
@@ -159,9 +160,9 @@ function LoginForm() {
                     />
                     <span>Ghi nhớ đăng nhập</span>
                 </label>
-                <a href="#" className={styles.forgotLink}>
+                <Link to={ROUTES.FORGOT_PASSWORD} className={styles.forgotLink}>
                     Quên mật khẩu?
-                </a>
+                </Link>
             </div>
 
             {/* Submit button */}

@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: backend
+  datasource:
+    url: jdbc:mysql://localhost:3307/duylongcomputer?useSSL=false&serverTimezone=UTC
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: computerduylong@gmail.com
+    password: sjvbpvpcyjcdqdun
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+google:
+  client-id: 889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com

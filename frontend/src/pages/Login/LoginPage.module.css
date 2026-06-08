@@ -1,12 +1,251 @@
-.loginWrapper {
-    display: flex;
+/* ── Full-page navy gradient background ── */
+.page {
     min-height: 100vh;
     width: 100%;
+    background: linear-gradient(145deg, #0d1f4a 0%, #1a3570 50%, #1e4fa0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ── Background decorations ── */
+.bgBlob1 {
+    position: absolute;
+    top: -140px;
+    right: -140px;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.055) 0%, transparent 65%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.bgBlob2 {
+    position: absolute;
+    bottom: -120px;
+    left: -120px;
+    width: 440px;
+    height: 440px;
+    background: radial-gradient(circle, rgba(99, 179, 237, 0.08) 0%, transparent 65%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+/* Subtle dot-grid texture */
+.bgGrid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+}
+
+/* ── Container ── */
+.container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+}
+
+/* ── Brand / Logo ── */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+
+.logoBox {
+    width: 46px;
+    height: 46px;
+    background: rgba(255, 255, 255, 0.13);
+    border: 1.5px solid rgba(255, 255, 255, 0.22);
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.brandText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.brandName {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 1.4px;
+    line-height: 1;
+}
+
+.brandSub {
+    font-size: 0.58rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.48);
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+/* ── Card ── */
+.card {
+    width: 100%;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 36px 36px 28px;
+    box-shadow:
+        0 32px 80px rgba(0, 0, 0, 0.32),
+        0 4px 20px rgba(0, 0, 0, 0.14);
+    animation: cardIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes cardIn {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Card header ── */
+.cardHeader {
+    margin-bottom: 24px;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 6px;
+    letter-spacing: -0.4px;
+}
+
+.subtitle {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ── Divider ── */
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0 16px;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e9edf2;
+}
+
+.dividerText {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* ── Google button ── */
+.googleBtn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 10px 20px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+}
+
+.googleBtn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.googleBtn:focus-visible {
+    outline: 2px solid #1e4fa0;
+    outline-offset: 2px;
+}
+
+/* ── Card footer links ── */
+.cardFooter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.footerLink {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.footerLink:hover {
+    color: #1e4fa0;
+}
+
+.footerDot {
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+/* ── Copyright ── */
+.copyright {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.3);
+    letter-spacing: 0.5px;
+    text-align: center;
+    margin: 0;
 }
 
 /* ── Responsive ── */
-@media (max-width: 768px) {
-    .loginWrapper {
-        flex-direction: column;
+@media (max-width: 480px) {
+    .card {
+        padding: 28px 22px 22px;
+        border-radius: 16px;
+    }
+
+    .container {
+        gap: 20px;
+    }
+}
+
+@media (max-width: 360px) {
+    .card {
+        padding: 24px 16px 20px;
     }
 }

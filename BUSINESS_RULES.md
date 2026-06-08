@@ -12,7 +12,8 @@
 ## Bảo hành
 - Chỉ quản lý bảo hành do cửa hàng cung cấp.
 
-## Phân quyền (RBAC)
-- **Super Admin:** Chỉ liên quan đến quản trị hệ thống, quản lý tài khoản và phân quyền. Tuyệt đối không can thiệp vào nghiệp vụ kinh doanh (Kho, Bán hàng, Danh mục...).
-- **Manager:** Có toàn quyền thao tác trên các phân hệ nghiệp vụ kinh doanh, nhưng không có quyền quản lý tài khoản hay phân quyền hệ thống.
-- **Staff:** Kế thừa một số quyền hạn chế từ Manager (chỉ thao tác trong phạm vi được giao).
+## Phân quyền (RBAC - Role Based Access Control)
+Hệ thống sử dụng cơ chế bảo mật JWT với các Role chuẩn như sau:
+- **SUPER_ADMIN (Quản trị cấp cao):** Chỉ liên quan đến quản trị hệ thống, quản lý tài khoản và phân quyền. Tuyệt đối không can thiệp vào nghiệp vụ kinh doanh (Kho, Bán hàng, Danh mục...).
+- **MANAGER (Quản lý):** Có toàn quyền thao tác trên các phân hệ nghiệp vụ kinh doanh, nhưng không có quyền quản lý tài khoản hay phân quyền hệ thống.
+- **STAFF (Nhân viên):** Kế thừa một số quyền hạn chế từ Manager (chỉ thao tác trong phạm vi được giao).
