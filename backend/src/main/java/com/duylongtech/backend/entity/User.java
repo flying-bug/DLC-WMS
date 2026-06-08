@@ -39,4 +39,7 @@ public class User {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Role role;
 }

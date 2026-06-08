@@ -4,6 +4,7 @@ import com.duylongtech.backend.dto.request.LoginRequest;
 import com.duylongtech.backend.dto.request.ChangePasswordRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,7 +17,7 @@ public class AuthController {
 
     // 1. Login
     @PostMapping("/login")
-    public ApiResponse<?> login(@RequestBody LoginRequest request) {
+    public ApiResponse<?> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.success(authService.login(request));
     }
 

@@ -11,3 +11,5 @@
 - Tách service, controller, repository, UI component.
 - Ưu tiên code dễ đọc hơn code ngắn.
 - Frontend tham khảo giao diện của MISA
+- Code phải có validate chuẩn, có bảo mật, để đúng các pakage.
+- Code swagger API
