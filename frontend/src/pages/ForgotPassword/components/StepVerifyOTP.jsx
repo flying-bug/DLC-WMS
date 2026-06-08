@@ -82,6 +82,8 @@ function StepVerifyOTP({ email, onNext, onBack }) {
             onNext(code);
         } catch (err) {
             setError(err.response?.data?.message || 'Mã OTP không hợp lệ hoặc đã hết hạn!');
+            setOtp(Array(OTP_LENGTH).fill(''));
+            inputRefs.current[0]?.focus();
         } finally {
             setLoading(false);
         }
@@ -121,7 +123,7 @@ function StepVerifyOTP({ email, onNext, onBack }) {
                             ref={(el) => (inputRefs.current[i] = el)}
                             type="text"
                             inputMode="numeric"
-                            maxLength={1}
+                            maxLength={2}
                             value={digit}
                             onChange={(e) => handleChange(i, e.target.value)}
                             onKeyDown={(e) => handleKeyDown(i, e)}
