@@ -29,8 +29,8 @@ public class EmailService {
                     + "<h2 style='color: #007bff; text-align: center;'>Khôi phục mật khẩu</h2>"
                     + "<p>Chào bạn,</p>"
                     + "<p>Chúng tôi đã nhận được yêu cầu khôi phục mật khẩu cho tài khoản ERP AMIS của bạn.</p>"
-                    + "<p>Mật khẩu mới của bạn là: <strong style='font-size: 24px; color: #d9534f; display: block; text-align: center; margin: 20px 0;'>" + newPassword + "</strong></p>"
-                    + "<p>Vui lòng đăng nhập bằng mật khẩu này và đổi mật khẩu mới ngay lập tức để đảm bảo an toàn.</p>"
+                    + "<p>Mã OTP của bạn là: <strong style='font-size: 24px; letter-spacing: 4px; color: #d9534f; display: block; text-align: center; margin: 20px 0;'>" + newPassword + "</strong></p>"
+                    + "<p>Mã OTP này có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>"
                     + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ ERP AMIS</p>"
                     + "</div>";
             

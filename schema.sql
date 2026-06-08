@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS `duylong_computer` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `duylong_computer`;
+CREATE DATABASE IF NOT EXISTS `duylongcomputer` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `duylongcomputer`;
 
 SET FOREIGN_KEY_CHECKS = 0;
 
