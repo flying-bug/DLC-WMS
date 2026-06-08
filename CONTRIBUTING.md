@@ -7,5 +7,7 @@
 
 ## Quy ước code
 - Đặt tên rõ ràng, nhất quán.
+- Code chuẩn SOLID, Clean Code.
 - Tách service, controller, repository, UI component.
 - Ưu tiên code dễ đọc hơn code ngắn.
+- Frontend tham khảo giao diện của MISA

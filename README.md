@@ -1,12 +1,11 @@
-# DBO / SEP490
+# SEP490
 
 Dự án quản lý kho và bán hàng cho Duy Long Computer.
 
 ## Mục tiêu
 - Quản lý nhập, xuất, chuyển kho.
-- Quản lý bán hàng POS.
 - Quản lý bảo hành do cửa hàng cung cấp.
-- Hỗ trợ lắp ráp BOM cho máy bộ.
+- Hỗ trợ lắp ráp, tháo dỡ BOM cho máy bộ.
 
 ## Công nghệ đề xuất
 - Frontend: React + Vite + Bootstrap
