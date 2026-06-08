@@ -21,26 +21,17 @@ public class User {
     @Column(unique = true, nullable = false, length = 50)
     private String username;
 
-    @Column(name = "user_code", unique = true, length = 50)
-    private String userCode;
-
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
-    @Column(name = "avatar_url")
-    private String avatarUrl;
-
     @Column(unique = true, length = 100)
     private String email;
 
     @Column(unique = true, length = 20)
     private String phone;
-
-    @Column(columnDefinition = "TEXT")
-    private String address;
 
     @Column(nullable = false, length = 20)
     private String status; // DRAFT, APPROVED, CANCELLED, INACTIVE
@@ -52,17 +43,9 @@ public class User {
     private LocalDateTime updatedAt;
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-            name = "USER_ROLES",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
+        name = "USER_ROLES",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<RoleEntity> roles = new HashSet<>();
-
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "USER_PERMISSIONS",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "permission_id")
-    )
-    private Set<PermissionEntity> permissions = new HashSet<>();
 }

@@ -1,4 +1,0 @@
-ALTER TABLE `USERS` 
-ADD COLUMN `user_code` VARCHAR(50) NULL UNIQUE AFTER `username`,
-ADD COLUMN `avatar_url` VARCHAR(255) NULL AFTER `full_name`,
-ADD COLUMN `address` TEXT NULL AFTER `phone`;

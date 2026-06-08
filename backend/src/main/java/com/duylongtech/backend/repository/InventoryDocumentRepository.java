@@ -7,7 +7,6 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 public interface InventoryDocumentRepository extends JpaRepository<InventoryDocument, Long> {
 
@@ -20,11 +19,4 @@ public interface InventoryDocumentRepository extends JpaRepository<InventoryDocu
 
     @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'EX_SO' ORDER BY e.docDate DESC")
     List<InventoryDocument> findAllExports();
-
-    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.id = :id AND e.docType = 'EX_SO'")
-    Optional<InventoryDocument> findExportByIdWithLines(@Param("id") Long id);
-
-    boolean existsByDocCode(String docCode);
-
-    boolean existsByDocCodeAndIdNot(String docCode, Long id);
 }

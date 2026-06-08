@@ -12,5 +12,4 @@ public class UserDto {
     private String phone;
     private String status;
     private List<String> roles;
-    private List<String> permissions;
 }

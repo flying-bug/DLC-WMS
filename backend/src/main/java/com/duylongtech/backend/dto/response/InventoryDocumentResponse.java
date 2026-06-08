@@ -16,11 +16,9 @@ public class InventoryDocumentResponse {
     private Long salesOrderId;
     private Long partnerId;
     private LocalDate docDate;
-    private LocalDateTime postedAt;
     private String status;
     private String note;
     private Long createdBy;
-    private Long approvedBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<InventoryDocumentLineResponse> lines;

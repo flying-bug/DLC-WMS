@@ -7,6 +7,7 @@ on:
     branches: [ "main", "duybo" ]
 
 jobs:
+  # 1. Job build và kiểm tra Frontend (React + Vite)
   frontend-ci:
     name: Frontend CI (React)
     runs-on: ubuntu-latest
@@ -35,6 +36,7 @@ jobs:
       - name: Build Frontend
         run: npm run build
 
+  # 2. Job build và kiểm tra Backend (Spring Boot)
   backend-ci:
     name: Backend CI (Spring Boot)
     runs-on: ubuntu-latest
@@ -57,31 +59,7 @@ jobs:
       - name: Grant execute permission for mvnw
         run: chmod +x mvnw
 
+      # Lưu ý: Hiện tại đang dùng -DskipTests để build nhanh và tránh lỗi kết nối database MySQL thực tế
+      # Khi đã cấu hình DB test (ví dụ dùng H2 Database cho profile test), bạn có thể bỏ -DskipTests.
       - name: Build and Package Backend
         run: ./mvnw clean package -DskipTests
-
-      - name: Upload JAR to VPS (CD)
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/duybo'
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.VPS_IP }}
-          username: ${{ secrets.VPS_USERNAME }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          source: "backend/target/*SNAPSHOT.jar"
-          target: "/root/backend"
-          strip_components: 2
-
-      - name: Start Spring Boot on VPS (CD)
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/duybo'
-        run: |
-          sudo apt-get update && sudo apt-get install -y sshpass
-          export SSHPASS="${{ secrets.VPS_PASSWORD }}"
-          sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_IP }} << 'EOF'
-            pkill -f 'java -jar' || true
-            sleep 2
-            cd /root/backend
-            export SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/duylongcomputer?useSSL=false&serverTimezone=UTC"
-            nohup java -jar backend-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
-            sleep 2
-          EOF
-          echo "Successfully deployed!"
