@@ -15,5 +15,5 @@ Hệ thống tập trung vào nghiệp vụ kho, bán hàng, bảo hành, lắp 
 - POS bán hàng.
 - Bảo hành.
 - Khách hàng, nhà cung cấp.
-- Lắp ráp BOM.
+- Lắp ráp, tháo dỡ BOM.
 - Phân quyền người dùng.

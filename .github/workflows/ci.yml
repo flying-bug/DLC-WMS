@@ -1,0 +1,65 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "duybo" ]
+  pull_request:
+    branches: [ "main", "duybo" ]
+
+jobs:
+  # 1. Job build và kiểm tra Frontend (React + Vite)
+  frontend-ci:
+    name: Frontend CI (React)
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: ./frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Linter
+        run: npm run lint
+
+      - name: Build Frontend
+        run: npm run build
+
+  # 2. Job build và kiểm tra Backend (Spring Boot)
+  backend-ci:
+    name: Backend CI (Spring Boot)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Grant execute permission for mvnw
+        run: chmod +x mvnw
+
+      # Lưu ý: Hiện tại đang dùng -DskipTests để build nhanh và tránh lỗi kết nối database MySQL thực tế
+      # Khi đã cấu hình DB test (ví dụ dùng H2 Database cho profile test), bạn có thể bỏ -DskipTests.
+      - name: Build and Package Backend
+        run: ./mvnw clean package -DskipTests
