@@ -5,9 +5,10 @@ import { ROUTES } from '../constants';
 import LoginPage from '../pages/Login/LoginPage';
 import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
 
-// Admin layout + pages (main/duybo)
+// Admin layout + pages
 import AdminLayout from '../components/layout/AdminLayout';
 import UsersPage from '../pages/UsersPage';
+import DashboardPage from '../pages/Dashboard/DashboardPage';
 
 function AppRouter() {
     return (
@@ -21,7 +22,7 @@ function AppRouter() {
                 <Route path="/" element={<AdminLayout />}>
                     <Route index element={<Navigate to={ROUTES.USERS} replace />} />
                     <Route path={ROUTES.USERS} element={<UsersPage />} />
-                    <Route path={ROUTES.DASHBOARD} element={<div>Trang Tổng quan (Đang xây dựng)</div>} />
+                    <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
                     <Route path={ROUTES.PRODUCTS} element={<div>Trang Sản phẩm (Đang xây dựng)</div>} />
                     <Route path={ROUTES.INVENTORY} element={<div>Trang Quản lý kho (Đang xây dựng)</div>} />
                     <Route path={ROUTES.SALES} element={<div>Trang Bán hàng (Đang xây dựng)</div>} />

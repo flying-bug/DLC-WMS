@@ -3,11 +3,11 @@ import axios from 'axios';
 const axiosClient = axios.create({
     baseURL: 'http://localhost:8080/api/v1',
     headers: {
-        'Content-Type': 'application/json',
-    },
+        'Content-Type': 'application/json'
+    }
 });
 
-// Thêm interceptor để xử lý token sau này nếu cần
+// Interceptor cho Request: Gắn token vào header nếu có
 axiosClient.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -21,15 +21,19 @@ axiosClient.interceptors.request.use(
     }
 );
 
+// Interceptor cho Response: Xử lý lỗi chung (VD: hết hạn token)
 axiosClient.interceptors.response.use(
     (response) => {
-        if (response && response.data) {
-            return response.data;
-        }
         return response;
     },
     (error) => {
-        throw error;
+        if (error.response && error.response.status === 401) {
+            // Có thể tự động logout hoặc redirect về trang login nếu token hết hạn
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            // window.location.href = '/login';
+        }
+        return Promise.reject(error);
     }
 );
 
