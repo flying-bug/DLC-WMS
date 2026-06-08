@@ -1,6 +1,7 @@
 package com.duylongtech.backend.dto.request;
 
 import lombok.Data;
+import java.util.List;
 
 @Data
 public class UserDto {
@@ -10,4 +11,5 @@ public class UserDto {
     private String email;
     private String phone;
     private String status;
+    private List<String> roles;
 }

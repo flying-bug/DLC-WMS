@@ -8,12 +8,19 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.Set;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import com.duylongtech.backend.entity.RoleEntity;
+import com.duylongtech.backend.repository.RoleRepository;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public List<UserDto> getAllUsers() {
         return userRepository.findAll().stream().map(this::mapToDto).collect(Collectors.toList());
@@ -26,7 +33,18 @@ public class UserService {
         user.setEmail(userDto.getEmail());
         user.setPhone(userDto.getPhone());
         user.setStatus("APPROVED");
-        user.setPasswordHash("hashed_default_password"); // TODO: Use PasswordEncoder
+        user.setPasswordHash(passwordEncoder.encode("123456")); // Default password
+
+        Set<RoleEntity> roles = new HashSet<>();
+        if (userDto.getRoles() != null && !userDto.getRoles().isEmpty()) {
+            userDto.getRoles().forEach(roleCode -> {
+                roleRepository.findByCode(roleCode).ifPresent(roles::add);
+            });
+        } else {
+            roleRepository.findByCode("STAFF").ifPresent(roles::add);
+        }
+        user.setRoles(roles);
+
         User savedUser = userRepository.save(user);
         return mapToDto(savedUser);
     }
@@ -43,7 +61,13 @@ public class UserService {
     }
 
     public void updatePermissions(Long id, List<Long> roleIds) {
-        // TODO: Map roles to user in USER_ROLES table
+        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        Set<RoleEntity> roles = new HashSet<>();
+        roleIds.forEach(roleId -> {
+            roleRepository.findById(roleId).ifPresent(roles::add);
+        });
+        user.setRoles(roles);
+        userRepository.save(user);
     }
 
     public UserDto updateUser(Long id, UserDto userDto) {
@@ -63,6 +87,9 @@ public class UserService {
         dto.setEmail(user.getEmail());
         dto.setPhone(user.getPhone());
         dto.setStatus(user.getStatus());
+        if (user.getRoles() != null) {
+            dto.setRoles(user.getRoles().stream().map(RoleEntity::getCode).collect(Collectors.toList()));
+        }
         return dto;
     }
 }

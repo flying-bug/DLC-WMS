@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
+import { GoogleLogin } from '@react-oauth/google';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -51,8 +52,35 @@ const LoginPage = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
-    console.log('Login with Google clicked');
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setIsLoading(true);
+    setErrorMsg('');
+    try {
+      const response = await axiosClient.post('/auth/login-google?token=' + credentialResponse.credential);
+      console.log('Google Login success:', response);
+      if (response.data && response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        if (response.data.role) {
+           localStorage.setItem('role', response.data.role);
+        }
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Google Login failed:', error);
+      if (error.response && error.response.status === 403) {
+        setErrorMsg('Tài khoản không tồn tại. Vui lòng liên hệ Admin!');
+      } else if (error.response && error.response.status === 500) {
+        setErrorMsg('Lỗi máy chủ hoặc xác thực Google thất bại!');
+      } else {
+        setErrorMsg('Đăng nhập bằng Google thất bại. Vui lòng thử lại!');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setErrorMsg('Đăng nhập bằng Google thất bại!');
   };
 
   return (
@@ -123,14 +151,15 @@ const LoginPage = () => {
             <hr className="flex-grow-1" />
           </div>
 
-          <button 
-            type="button" 
-            className="btn btn-outline-secondary w-100 py-2 fw-medium d-flex align-items-center justify-content-center"
-            onClick={handleGoogleLogin}
-            style={{ fontSize: '14px' }}
-          >
-            <i className="bi bi-google me-2 text-danger"></i> Đăng nhập với Google
-          </button>
+          <div className="d-flex justify-content-center w-100">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              text="signin_with"
+              theme="outline"
+              size="large"
+            />
+          </div>
         </div>
       </div>
     </div>

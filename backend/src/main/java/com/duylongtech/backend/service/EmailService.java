@@ -1,0 +1,44 @@
+package com.duylongtech.backend.service;
+
+import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class EmailService {
+
+    private final JavaMailSender mailSender;
+
+    @Value("${spring.mail.username}")
+    private String fromEmail;
+
+    public void sendResetPasswordEmail(String toEmail, String newPassword) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail, "ERP AMIS System");
+            helper.setTo(toEmail);
+            helper.setSubject("Yêu cầu khôi phục mật khẩu - ERP AMIS");
+            
+            String htmlMsg = "<div style='font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px;'>"
+                    + "<h2 style='color: #007bff; text-align: center;'>Khôi phục mật khẩu</h2>"
+                    + "<p>Chào bạn,</p>"
+                    + "<p>Chúng tôi đã nhận được yêu cầu khôi phục mật khẩu cho tài khoản ERP AMIS của bạn.</p>"
+                    + "<p>Mật khẩu mới của bạn là: <strong style='font-size: 24px; color: #d9534f; display: block; text-align: center; margin: 20px 0;'>" + newPassword + "</strong></p>"
+                    + "<p>Vui lòng đăng nhập bằng mật khẩu này và đổi mật khẩu mới ngay lập tức để đảm bảo an toàn.</p>"
+                    + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ ERP AMIS</p>"
+                    + "</div>";
+            
+            helper.setText(htmlMsg, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Failed to send email: " + e.getMessage());
+            throw new RuntimeException("Lỗi khi gửi email: " + e.getMessage());
+        }
+    }
+}
