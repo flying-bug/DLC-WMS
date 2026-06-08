@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@react-oauth/google": "^0.13.5",
     "axios": "^1.17.0",
     "bootstrap": "^5.3.8",
     "react": "^19.2.6",
