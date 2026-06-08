@@ -6,7 +6,7 @@ import { ROUTES, PASSWORD_RULES } from '../../../constants';
 /**
  * Bước 3 — Đặt mật khẩu mới.
  */
-function StepResetPassword({ onSuccess }) {
+function StepResetPassword({ email, otp, onSuccess }) {
     const [form, setForm] = useState({ newPassword: '', confirmPassword: '' });
     const [showNew, setShowNew] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -40,16 +40,19 @@ function StepResetPassword({ onSuccess }) {
         return errs;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const errs = validate();
         if (Object.keys(errs).length) { setErrors(errs); return; }
         setLoading(true);
-        // TODO: gọi API đặt lại mật khẩu
-        setTimeout(() => {
-            setLoading(false);
+        try {
+            await import('../../../api/axiosClient').then(m => m.default.post('/auth/forgot-password/reset?email=' + encodeURIComponent(email) + '&otp=' + otp + '&newPassword=' + encodeURIComponent(form.newPassword)));
             onSuccess();
-        }, 800);
+        } catch (err) {
+            setErrors({ newPassword: err.response?.data?.message || 'Có lỗi xảy ra khi đổi mật khẩu!' });
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (

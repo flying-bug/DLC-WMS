@@ -25,6 +25,7 @@ function ForgotPasswordPage() {
     const navigate = useNavigate();
     const [step, setStep] = useState(STEPS.REQUEST_EMAIL);
     const [email, setEmail] = useState('');
+    const [otp, setOtp] = useState('');
     const [toast, setToast] = useState({ visible: false, type: 'success', title: '', message: '' });
 
     const showToast = (type, title, message) =>
@@ -37,7 +38,10 @@ function ForgotPasswordPage() {
         setStep(STEPS.VERIFY_OTP);
     };
 
-    const handleOtpVerified = () => setStep(STEPS.RESET_PASSWORD);
+    const handleOtpVerified = (verifiedOtp) => {
+        setOtp(verifiedOtp);
+        setStep(STEPS.RESET_PASSWORD);
+    };
 
     const handleResetSuccess = () => {
         showToast(
@@ -89,7 +93,7 @@ function ForgotPasswordPage() {
                             />
                         )}
                         {step === STEPS.RESET_PASSWORD && (
-                            <StepResetPassword onSuccess={handleResetSuccess} />
+                            <StepResetPassword email={email} otp={otp} onSuccess={handleResetSuccess} />
                         )}
                     </div>
                 </div>

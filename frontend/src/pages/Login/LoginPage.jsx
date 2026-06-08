@@ -1,22 +1,34 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import LoginForm from './components/LoginForm';
-import GoogleAccountPicker from '../../components/google/GoogleAccountPicker';
-import GoogleIcon from '../../components/ui/GoogleIcon';
 import styles from './LoginPage.module.css';
-import { COMPANY_NAME, COPYRIGHT_YEAR, APP_NAME, ROUTES } from '../../constants';
-import { Link } from 'react-router-dom';
+import { COMPANY_NAME, COPYRIGHT_YEAR } from '../../constants';
+import axiosClient from '../../api/axiosClient';
 
 function LoginPage() {
-    const [isGooglePickerOpen, setGooglePickerOpen] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
+    const navigate = useNavigate();
 
-    const handleGoogleAccountSelected = (account) => {
-        // TODO: gọi API đăng nhập Google
-        console.log('Google account selected:', account);
+    const handleGoogleSuccess = async (credentialResponse) => {
+        setErrorMsg('');
+        try {
+            const response = await axiosClient.post('/auth/login-google?token=' + credentialResponse.credential);
+            if (response.data && response.data.data.token) {
+                localStorage.setItem('token', response.data.data.token);
+                if (response.data.data.role) {
+                    localStorage.setItem('role', response.data.data.role);
+                }
+                navigate('/');
+            }
+        } catch (error) {
+            console.error('Google Login failed:', error);
+            setErrorMsg(error.response?.data?.message || 'Đăng nhập bằng Google thất bại. Vui lòng thử lại!');
+        }
     };
 
-    const handleUseOtherAccount = () => {
-        // TODO: Google OAuth redirect
-        console.log('Use other Google account');
+    const handleGoogleError = () => {
+        setErrorMsg('Đăng nhập bằng Google thất bại!');
     };
 
     return (
@@ -51,6 +63,12 @@ function LoginPage() {
                         <p className={styles.subtitle}>Chào mừng trở lại! Vui lòng nhập thông tin của bạn.</p>
                     </div>
 
+                    {errorMsg && (
+                        <div className="alert alert-danger" role="alert" style={{ fontSize: '13px', padding: '10px', marginTop: '10px' }}>
+                            {errorMsg}
+                        </div>
+                    )}
+
                     {/* Form */}
                     <LoginForm />
 
@@ -60,15 +78,15 @@ function LoginPage() {
                     </div>
 
                     {/* Google button */}
-                    <button
-                        type="button"
-                        className={styles.googleBtn}
-                        onClick={() => setGooglePickerOpen(true)}
-                        aria-label="Đăng nhập bằng Google"
-                    >
-                        <GoogleIcon size={18} />
-                        Google
-                    </button>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+                        <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={handleGoogleError}
+                            text="signin_with"
+                            theme="outline"
+                            size="large"
+                        />
+                    </div>
 
                     {/* Footer links */}
                     <div className={styles.cardFooter}>
@@ -85,14 +103,6 @@ function LoginPage() {
                     © {COPYRIGHT_YEAR} {COMPANY_NAME.toUpperCase()}. ALL RIGHTS RESERVED.
                 </p>
             </div>
-
-            {/* Google Account Picker Modal */}
-            <GoogleAccountPicker
-                isOpen={isGooglePickerOpen}
-                onClose={() => setGooglePickerOpen(false)}
-                onSelectAccount={handleGoogleAccountSelected}
-                onUseOtherAccount={handleUseOtherAccount}
-            />
         </div>
     );
 }

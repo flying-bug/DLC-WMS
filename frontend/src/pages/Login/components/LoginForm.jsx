@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import styles from './LoginForm.module.css';
 import { PLACEHOLDERS, ROUTES } from '../../../constants';
 
@@ -37,15 +37,46 @@ function LoginForm() {
         return newErrors;
     };
 
-    const handleSubmit = (e) => {
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const validationErrors = validate();
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
             return;
         }
-        // TODO: Gọi API đăng nhập ở đây
-        console.log('Form submitted:', formData);
+        
+        setLoading(true);
+        try {
+            const { default: axiosClient } = await import('../../../api/axiosClient');
+            const response = await axiosClient.post('/auth/login', {
+                username: formData.usernameOrEmail,
+                password: formData.password
+            });
+            
+            if (response.data && response.data.data.token) {
+                localStorage.setItem('token', response.data.data.token);
+                if (response.data.data.role) {
+                    localStorage.setItem('role', response.data.data.role);
+                }
+                // Handle remember me if necessary (e.g. store username or token preference)
+                if (formData.rememberMe) {
+                    localStorage.setItem('rememberedUser', formData.usernameOrEmail);
+                } else {
+                    localStorage.removeItem('rememberedUser');
+                }
+                navigate('/');
+            }
+        } catch (error) {
+            console.error('Login failed:', error);
+            setErrors({
+                usernameOrEmail: error.response?.data?.message || 'Tài khoản hoặc mật khẩu không chính xác.'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -166,19 +197,25 @@ function LoginForm() {
             </div>
 
             {/* Submit button */}
-            <button type="submit" className={styles.submitBtn}>
-                Đăng nhập
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    fill="currentColor"
-                    viewBox="0 0 16 16"
-                    aria-hidden="true"
-                >
-                    <path fillRule="evenodd" d="M10 3.5a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 1 1 0v2A1.5 1.5 0 0 1 9.5 14h-8A1.5 1.5 0 0 1 0 12.5v-9A1.5 1.5 0 0 1 1.5 2h8A1.5 1.5 0 0 1 11 3.5v2a.5.5 0 0 1-1 0v-2z" />
-                    <path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z" />
-                </svg>
+            <button type="submit" className={styles.submitBtn} disabled={loading} aria-busy={loading}>
+                {loading ? (
+                    <span className={styles.spinner} aria-hidden="true" />
+                ) : (
+                    <>
+                        Đăng nhập
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            fill="currentColor"
+                            viewBox="0 0 16 16"
+                            aria-hidden="true"
+                        >
+                            <path fillRule="evenodd" d="M10 3.5a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 1 1 0v2A1.5 1.5 0 0 1 9.5 14h-8A1.5 1.5 0 0 1 0 12.5v-9A1.5 1.5 0 0 1 1.5 2h8A1.5 1.5 0 0 1 11 3.5v2a.5.5 0 0 1-1 0v-2z" />
+                            <path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z" />
+                        </svg>
+                    </>
+                )}
             </button>
         </form>
     );

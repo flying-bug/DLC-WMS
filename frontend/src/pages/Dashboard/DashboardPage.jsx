@@ -14,7 +14,7 @@ function DashboardPage() {
             <h1 style={{ color: '#1e3f7a' }}>🎉 Đăng nhập thành công!</h1>
             <p>Chào mừng bạn đến với Hệ thống Quản trị.</p>
             <p>Chức năng Dashboard đang được xây dựng...</p>
-            <button
+            <button 
                 onClick={handleLogout}
                 style={{
                     padding: '10px 20px',
