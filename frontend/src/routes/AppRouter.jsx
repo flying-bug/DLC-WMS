@@ -4,6 +4,7 @@ import LoginPage from '../pages/Login/LoginPage';
 import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
 import ChangePasswordPage from '../pages/ChangePassword/ChangePasswordPage';
+import UsersPage from '../pages/UsersPage';
 
 function AppRouter() {
     return (
@@ -14,6 +15,7 @@ function AppRouter() {
                 <Route path={ROUTES.LOGIN} element={<LoginPage />} />
                 <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
                 <Route path="/change-password" element={<ChangePasswordPage />} />
+                <Route path="/users" element={<UsersPage />} />
 
                 <Route path={ROUTES.DASHBOARD || '/dashboard'} element={<DashboardPage />} />
             </Routes>
