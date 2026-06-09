@@ -1,4 +1,3 @@
-import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './DashboardPage.module.css';
 
@@ -20,13 +19,7 @@ const ACTION_CARDS = [
     },
     {
         id: 'audit-log',
-        iconSvg: (
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#d97706' }}>
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <path d="M10.4 12.6a2 2 0 1 1 3 3L8 21l-4 1 1-4Z" />
-            </svg>
-        ),
+        iconClass: 'bi bi-file-earmark-pen',
         iconWrapperClass: styles.cardIconOrange,
         iconColorStyle: { color: '#d97706' },
         title: 'Xem nhật ký hệ thống',
@@ -37,21 +30,6 @@ const ACTION_CARDS = [
 
 function DashboardPage() {
     const navigate = useNavigate();
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const dropdownRef = useRef(null);
-
-    // Close dropdown on click outside
-    useEffect(() => {
-        function handleClickOutside(event) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsDropdownOpen(false);
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
 
     return (
         <div className={styles.page}>
@@ -96,35 +74,10 @@ function DashboardPage() {
                     </button>
 
                     {/* User info */}
-                    <div
-                        className={styles.userInfo}
-                        role="button"
-                        tabIndex={0}
-                        aria-label="Tài khoản người dùng"
-                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        onMouseEnter={() => setIsDropdownOpen(true)}
-                        onMouseLeave={() => setIsDropdownOpen(false)}
-                        ref={dropdownRef}
-                    >
+                    <div className={styles.userInfo} role="button" tabIndex={0} aria-label="Tài khoản người dùng">
                         <div className={styles.avatarCircle} aria-hidden="true">SA</div>
                         <span className={styles.userName}>Super Admin</span>
                         <i className={`bi bi-chevron-down ${styles.chevronIcon}`} aria-hidden="true" />
-
-                        {/* Dropdown Menu */}
-                        {(isDropdownOpen || null) && (
-                            <div className={`${styles.userDropdown} ${isDropdownOpen ? styles.showDropdown : ''}`}>
-                                <div className={styles.dropdownItem} onClick={(e) => { e.stopPropagation(); navigate('/profile'); setIsDropdownOpen(false); }}>
-                                    <i className="bi bi-person" /> Xem thông tin cá nhân
-                                </div>
-                                <div className={styles.dropdownItem} onClick={(e) => { e.stopPropagation(); navigate('/change-password'); setIsDropdownOpen(false); }}>
-                                    <i className="bi bi-shield-lock" /> Đổi mật khẩu
-                                </div>
-                                <div className={styles.dropdownDivider} />
-                                <div className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`} onClick={(e) => { e.stopPropagation(); navigate('/login'); setIsDropdownOpen(false); }}>
-                                    <i className="bi bi-box-arrow-right" /> Đăng xuất
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </header>
@@ -156,7 +109,7 @@ function DashboardPage() {
                             aria-label={card.title}
                         >
                             <div className={`${styles.cardIconWrapper} ${card.iconWrapperClass}`} aria-hidden="true">
-                                {card.iconSvg ? card.iconSvg : <i className={card.iconClass} style={card.iconColorStyle} />}
+                                <i className={card.iconClass} style={card.iconColorStyle} />
                             </div>
                             <h2 className={styles.cardTitle}>{card.title}</h2>
                             <p className={styles.cardDesc}>{card.description}</p>
@@ -178,7 +131,7 @@ function DashboardPage() {
                     </span>
                 </div>
                 <div className={styles.footerRight}>
-                    © 2026 Duy Long Computer &nbsp;·&nbsp; Warehouse Management System v2.4
+                    © 2028 Duy Long Computer &nbsp;·&nbsp; Warehouse Management System v2.4
                 </div>
             </footer>
 
