@@ -23,11 +23,7 @@ function LoginPage() {
             }
         } catch (error) {
             console.error('Google Login failed:', error);
-            if (error.response && error.response.status === 403) {
-                setErrorMsg('Tài khoản không tồn tại. Vui lòng liên hệ Admin!');
-            } else {
-                setErrorMsg('Đăng nhập bằng Google thất bại. Vui lòng thử lại!');
-            }
+            setErrorMsg(error.response?.data?.message || 'Đăng nhập bằng Google thất bại. Vui lòng thử lại!');
         }
     };
 

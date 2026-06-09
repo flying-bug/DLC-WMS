@@ -6,7 +6,7 @@ import { ROUTES, PASSWORD_RULES } from '../../../constants';
 /**
  * Bước 3 — Đặt mật khẩu mới.
  */
-function StepResetPassword({ onSuccess }) {
+function StepResetPassword({ email, otp, onSuccess }) {
     const [form, setForm] = useState({ newPassword: '', confirmPassword: '' });
     const [showNew, setShowNew] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
