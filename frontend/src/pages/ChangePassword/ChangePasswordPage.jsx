@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styles from './DashboardPage.module.css';
+import styles from './ChangePasswordPage.module.css';
 
 // ── Minimal static data for UI render ──
 const SESSION_INFO = {
@@ -8,37 +8,19 @@ const SESSION_INFO = {
     serverName: 'DL-HCM-01',
 };
 
-const ACTION_CARDS = [
-    {
-        id: 'users',
-        iconClass: 'bi bi-person-gear',
-        iconWrapperClass: styles.cardIconBlue,
-        iconColorStyle: { color: '#1e3f7a' },
-        title: 'Quản lý tài khoản & Phân quyền',
-        description: 'Quản lý hồ sơ nhân viên, thiết lập vai trò hệ thống và gán quyền truy cập bảo mật.',
-        route: '/users',
-    },
-    {
-        id: 'audit-log',
-        iconSvg: (
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#d97706' }}>
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <path d="M10.4 12.6a2 2 0 1 1 3 3L8 21l-4 1 1-4Z" />
-            </svg>
-        ),
-        iconWrapperClass: styles.cardIconOrange,
-        iconColorStyle: { color: '#d97706' },
-        title: 'Xem nhật ký hệ thống',
-        description: 'Kiểm tra lịch sử thao tác, nhật ký đăng nhập và các thay đổi dữ liệu quan trọng trong kho.',
-        route: '/audit-log',
-    },
-];
-
-function DashboardPage() {
+function ChangePasswordPage() {
     const navigate = useNavigate();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
+
+    // Form states
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    
+    const [showCurrent, setShowCurrent] = useState(false);
+    const [showNew, setShowNew] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -52,6 +34,11 @@ function DashboardPage() {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        // Handle logic
+    };
 
     return (
         <div className={styles.page}>
@@ -131,37 +118,98 @@ function DashboardPage() {
 
             {/* ── MAIN CONTENT ── */}
             <main className={styles.main}>
+                <div className={styles.contentWrapper}>
+                    {/* Breadcrumb */}
+                    <div className={styles.breadcrumb}>
+                        <i className="bi bi-house-door" />
+                        <i className="bi bi-chevron-right" />
+                        <span className={styles.breadcrumbItem}>Tài khoản</span>
+                        <i className="bi bi-chevron-right" />
+                        <span className={styles.breadcrumbActive}>Đổi mật khẩu</span>
+                    </div>
 
-                {/* Welcome section */}
-                <section className={styles.welcomeSection} aria-labelledby="welcome-heading">
-                    <h1 className={styles.welcomeTitle} id="welcome-heading">
-                        Chào mừng Super Admin
-                    </h1>
-                    <p className={styles.welcomeSubtitle}>
-                        Hệ thống quản trị kho Duy Long Computer. Vui lòng chọn một trong các tác vụ
-                        quản trị trọng tâm dưới đây để tiếp tục.
-                    </p>
-                </section>
+                    {/* Card */}
+                    <div className={styles.card}>
+                        <h1 className={styles.cardTitle}>Đổi mật khẩu</h1>
+                        <p className={styles.cardSubtitle}>
+                            Vui lòng nhập mật khẩu hiện tại và mật khẩu mới để bảo mật tài khoản.
+                        </p>
 
-                {/* Action cards */}
-                <div className={styles.cardsGrid} role="list">
-                    {ACTION_CARDS.map((card) => (
-                        <div
-                            key={card.id}
-                            className={styles.actionCard}
-                            role="listitem"
-                            onClick={() => navigate(card.route)}
-                            onKeyDown={(e) => e.key === 'Enter' && navigate(card.route)}
-                            tabIndex={0}
-                            aria-label={card.title}
-                        >
-                            <div className={`${styles.cardIconWrapper} ${card.iconWrapperClass}`} aria-hidden="true">
-                                {card.iconSvg ? card.iconSvg : <i className={card.iconClass} style={card.iconColorStyle} />}
+                        <form onSubmit={handleSubmit} className={styles.form}>
+                            {/* Current Password */}
+                            <div className={styles.formGroup}>
+                                <label>Mật khẩu hiện tại</label>
+                                <div className={styles.inputWrapper}>
+                                    <input 
+                                        type={showCurrent ? "text" : "password"} 
+                                        value={currentPassword}
+                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                        placeholder="••••••••"
+                                    />
+                                    <i 
+                                        className={`bi ${showCurrent ? 'bi-eye' : 'bi-eye-slash'} ${styles.eyeIcon}`} 
+                                        onClick={() => setShowCurrent(!showCurrent)}
+                                    />
+                                </div>
                             </div>
-                            <h2 className={styles.cardTitle}>{card.title}</h2>
-                            <p className={styles.cardDesc}>{card.description}</p>
-                        </div>
-                    ))}
+
+                            {/* New Password */}
+                            <div className={styles.formGroup}>
+                                <label>Mật khẩu mới</label>
+                                <div className={styles.inputWrapper}>
+                                    <input 
+                                        type={showNew ? "text" : "password"} 
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        placeholder="••••••••"
+                                    />
+                                    <i 
+                                        className={`bi ${showNew ? 'bi-eye' : 'bi-eye-slash'} ${styles.eyeIcon}`} 
+                                        onClick={() => setShowNew(!showNew)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Confirm Password */}
+                            <div className={styles.formGroup}>
+                                <label>Xác nhận mật khẩu mới</label>
+                                <div className={styles.inputWrapper}>
+                                    <input 
+                                        type={showConfirm ? "text" : "password"} 
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        placeholder="••••••••"
+                                    />
+                                    <i 
+                                        className={`bi ${showConfirm ? 'bi-eye' : 'bi-eye-slash'} ${styles.eyeIcon}`} 
+                                        onClick={() => setShowConfirm(!showConfirm)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Info Alert */}
+                            <div className={styles.infoAlert}>
+                                <i className="bi bi-info-circle" />
+                                <span>Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ cái và chữ số.</span>
+                            </div>
+
+                            {/* Actions */}
+                            <div className={styles.formActions}>
+                                <button type="submit" className={styles.btnPrimary}>
+                                    <i className="bi bi-floppy" /> Cập nhật mật khẩu
+                                </button>
+                                <button type="button" className={styles.btnSecondary} onClick={() => navigate('/dashboard')}>
+                                    Hủy bỏ
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    {/* Security Badge */}
+                    <div className={styles.securityBadge}>
+                        <i className="bi bi-shield-check" />
+                        <span>Hệ thống bảo mật Duy Long v2.0 - Đã được mã hóa 256-bit</span>
+                    </div>
                 </div>
             </main>
 
@@ -186,4 +234,4 @@ function DashboardPage() {
     );
 }
 
-export default DashboardPage;
+export default ChangePasswordPage;
