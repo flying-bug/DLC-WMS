@@ -1,8 +1,10 @@
 import styles from './AdminLayout.module.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const AdminLayout = ({ children }) => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const currentPath = location.pathname;
     const userRole = localStorage.getItem('role') || 'STAFF';
 
     const handleLogout = () => {
@@ -36,7 +38,7 @@ const AdminLayout = ({ children }) => {
                     <a className={styles.navItem}>
                         <i className="fas fa-file-invoice"></i> Quản lý hóa đơn
                     </a>
-                    <a className={`${styles.navItem} ${styles.active}`}>
+                    <a className={`${styles.navItem} ${styles.active}`} onClick={() => navigate('/dashboard')}>
                         <i className="fas fa-warehouse"></i> Kho
                     </a>
                     <a className={styles.navItem}>
@@ -58,13 +60,30 @@ const AdminLayout = ({ children }) => {
                 {/* Header / Topbar */}
                 <header className={styles.header}>
                     <div className={styles.topTabs}>
-                        <div className={`${styles.tab} ${styles.activeTab}`}>Quy trình</div>
+                        <div 
+                            className={`${styles.tab} ${currentPath === '/dashboard' ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/dashboard')}
+                        >
+                            Quy trình
+                        </div>
                         <div className={styles.tab}>Biểu đồ</div>
                         <div className={styles.tab}>Nhập kho</div>
                         <div className={styles.tab}>Xuất kho</div>
                         <div className={styles.tab}>Chuyển kho</div>
                         <div className={styles.tab}>Kiểm kê</div>
                         <div className={styles.tab}>Báo cáo</div>
+                        <div 
+                            className={`${styles.tab} ${currentPath === '/products' ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/products')}
+                        >
+                            Hàng hóa, dịch vụ
+                        </div>
+                        <div 
+                            className={`${styles.tab} ${currentPath === '/units' ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/units')}
+                        >
+                            Đơn vị tính
+                        </div>
                     </div>
                     <div className={styles.headerRight}>
                         <div className={styles.userInfo}>

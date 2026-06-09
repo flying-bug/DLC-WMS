@@ -4,6 +4,7 @@ import LoginPage from '../pages/Login/LoginPage';
 import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
 import UnitPage from '../pages/Unit/UnitPage';
+import ProductPage from '../pages/Product/ProductPage';
 
 function AppRouter() {
     return (
@@ -16,6 +17,7 @@ function AppRouter() {
 
                 <Route path={ROUTES.DASHBOARD || '/dashboard'} element={<DashboardPage />} />
                 <Route path="/units" element={<UnitPage />} />
+                <Route path={ROUTES.PRODUCTS} element={<ProductPage />} />
             </Routes>
         </BrowserRouter>
     );
