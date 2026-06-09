@@ -136,7 +136,6 @@
 /* ── Submit button ── */
 .submitBtn {
     width: 100%;
-    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -155,19 +154,14 @@
     font-family: inherit;
 }
 
-.submitBtn:hover:not(:disabled) {
+.submitBtn:hover {
     background: #1a3a6b;
     box-shadow: 0 4px 16px rgba(30, 63, 122, 0.32);
 }
 
-.submitBtn:active:not(:disabled) {
+.submitBtn:active {
     transform: translateY(1px);
     box-shadow: none;
-}
-
-.submitBtn:disabled {
-    opacity: 0.65;
-    cursor: not-allowed;
 }
 
 .submitBtn:focus-visible {
@@ -183,20 +177,3 @@
         gap: 10px;
     }
 }
-
-/* ── Spinner ── */
-.spinner {
-    display: inline-block;
-    width: 17px;
-    height: 17px;
-    border: 2.5px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #ffffff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
