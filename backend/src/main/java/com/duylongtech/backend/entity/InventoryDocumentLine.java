@@ -1,0 +1,50 @@
+package com.duylongtech.backend.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "INVENTORY_DOCUMENT_LINES")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class InventoryDocumentLine {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "inventory_document_id", nullable = false)
+    private InventoryDocument inventoryDocument;
+
+    @Column(name = "variant_id")
+    private Long variantId;
+
+    @Column(name = "quantity_in", precision = 15, scale = 4)
+    private BigDecimal quantityIn;
+
+    @Column(name = "quantity_out", precision = 15, scale = 4)
+    private BigDecimal quantityOut;
+
+    @Column(name = "unit_cost", precision = 15, scale = 4)
+    private BigDecimal unitCost;
+
+    @Column(name = "unit_price", precision = 15, scale = 4)
+    private BigDecimal unitPrice;
+
+    @Column(name = "line_amount", precision = 15, scale = 2)
+    private BigDecimal lineAmount;
+
+    @Column(name = "lot_batch_id")
+    private Long lotBatchId;
+
+    @Column(name = "serial_number_id")
+    private Long serialNumberId;
+
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
+}
