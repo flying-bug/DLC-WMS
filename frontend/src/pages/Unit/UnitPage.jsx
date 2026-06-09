@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import axiosClient from '../../api/axiosClient';
 import styles from './UnitPage.module.css';
@@ -30,11 +30,7 @@ const UnitPage = () => {
         return () => window.removeEventListener('click', handleClickOutside);
     }, []);
 
-    useEffect(() => {
-        fetchUnits();
-    }, [page, size, searchTerm]);
-
-    const fetchUnits = async () => {
+    const fetchUnits = useCallback(async () => {
         try {
             setLoading(true);
             const res = await axiosClient.get(`/units?page=${page}&size=${size}${searchTerm ? `&search=${searchTerm}` : ''}`);
@@ -46,7 +42,14 @@ const UnitPage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, size, searchTerm]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchUnits();
+        }, 0);
+        return () => clearTimeout(timer);
+    }, [fetchUnits]);
 
     const handleSearch = (e) => {
         if (e.key === 'Enter') {
@@ -83,6 +86,7 @@ const UnitPage = () => {
             await axiosClient.put(`/units/${unit.id}`, { ...unit, status: newStatus });
             fetchUnits();
         } catch (error) {
+            console.error("Lỗi thay đổi trạng thái:", error);
             alert('Có lỗi xảy ra khi cập nhật trạng thái!');
         }
         setOpenDropdownId(null);
@@ -119,6 +123,7 @@ const UnitPage = () => {
                 await axiosClient.delete(`/units/${id}`);
                 fetchUnits();
             } catch (error) {
+                console.error("Lỗi xóa đơn vị:", error);
                 alert('Có lỗi xảy ra khi xóa!');
             }
         }

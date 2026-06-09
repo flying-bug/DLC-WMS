@@ -1,8 +1,7 @@
-import React from 'react';
 import styles from './AdminLayout.module.css';
 import { useNavigate } from 'react-router-dom';
 
-const AdminLayout = ({ children, activeTab = 'dashboard' }) => {
+const AdminLayout = ({ children }) => {
     const navigate = useNavigate();
     const userRole = localStorage.getItem('role') || 'STAFF';
 
