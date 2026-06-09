@@ -3,6 +3,7 @@ import { ROUTES } from '../constants';
 import LoginPage from '../pages/Login/LoginPage';
 import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
+import UnitPage from '../pages/Unit/UnitPage';
 
 function AppRouter() {
     return (
@@ -14,6 +15,7 @@ function AppRouter() {
                 <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
 
                 <Route path={ROUTES.DASHBOARD || '/dashboard'} element={<DashboardPage />} />
+                <Route path="/units" element={<UnitPage />} />
             </Routes>
         </BrowserRouter>
     );
