@@ -10,7 +10,7 @@ const SESSION_INFO = {
 const ACTION_CARDS = [
     {
         id: 'users',
-        iconClass: 'bi bi-people-fill',
+        iconClass: 'bi bi-person-gear',
         iconWrapperClass: styles.cardIconBlue,
         iconColorStyle: { color: '#1e3f7a' },
         title: 'Quản lý tài khoản & Phân quyền',
@@ -19,7 +19,7 @@ const ACTION_CARDS = [
     },
     {
         id: 'audit-log',
-        iconClass: 'bi bi-journal-text',
+        iconClass: 'bi bi-file-earmark-pen',
         iconWrapperClass: styles.cardIconOrange,
         iconColorStyle: { color: '#d97706' },
         title: 'Xem nhật ký hệ thống',
@@ -131,7 +131,7 @@ function DashboardPage() {
                     </span>
                 </div>
                 <div className={styles.footerRight}>
-                    © 2026 Duy Long Computer &nbsp;·&nbsp; Warehouse Management System v2.4
+                    © 2028 Duy Long Computer &nbsp;·&nbsp; Warehouse Management System v2.4
                 </div>
             </footer>
 
