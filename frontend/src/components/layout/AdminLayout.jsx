@@ -1,5 +1,6 @@
 import styles from './AdminLayout.module.css';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 
 const AdminLayout = ({ children }) => {
     const navigate = useNavigate();
@@ -38,7 +39,7 @@ const AdminLayout = ({ children }) => {
                     <a className={styles.navItem}>
                         <i className="fas fa-file-invoice"></i> Quản lý hóa đơn
                     </a>
-                    <a className={`${styles.navItem} ${styles.active}`} onClick={() => navigate('/dashboard')}>
+                    <a className={`${styles.navItem} ${currentPath === '/dashboard' ? styles.active : ''}`} onClick={() => navigate('/dashboard')}>
                         <i className="fas fa-warehouse"></i> Kho
                     </a>
                     <a className={styles.navItem}>
@@ -96,7 +97,7 @@ const AdminLayout = ({ children }) => {
 
                 {/* Page Content */}
                 <main className={styles.content}>
-                    {children}
+                    {children || <Outlet />}
                 </main>
             </div>
         </div>
