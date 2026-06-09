@@ -43,9 +43,9 @@ public class User {
     private LocalDateTime updatedAt;
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-        name = "USER_ROLES",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
+            name = "USER_ROLES",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<RoleEntity> roles = new HashSet<>();
 }
