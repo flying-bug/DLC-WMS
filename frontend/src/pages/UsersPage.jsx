@@ -1,6 +1,8 @@
+import { useNavigate } from 'react-router-dom';
 import styles from './UsersPage.module.css';
 
 function UsersPage() {
+    const navigate = useNavigate();
     return (
         <div className={styles.page}>
             {/* Top Header */}
@@ -42,7 +44,7 @@ function UsersPage() {
                         <h1 className={styles.pageTitle}>Quản lý tài khoản & Phân quyền</h1>
                         <p className={styles.pageSubtitle}>Quản lý vai trò, quyền hạn và trạng thái của nhân viên Duy Long Computer.</p>
                     </div>
-                    <button className={styles.btnAdd}>
+                    <button className={styles.btnAdd} onClick={() => navigate('/users/create')}>
                         <i className="bi bi-person-plus" /> Thêm thành viên
                     </button>
                 </div>
