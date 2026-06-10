@@ -1,8 +1,139 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './UsersPage.module.css';
+import UserProfileDropdown from '../components/ui/UserProfileDropdown/UserProfileDropdown';
+import EmployeeDrawer from '../components/ui/EmployeeDrawer/EmployeeDrawer';
 
+const MOCK_USERS = [
+    {
+        id: '1',
+        name: 'An Nguyễn',
+        initials: 'AN',
+        avatarColorClass: styles.bgBlue,
+        code: 'DLC-2024-001',
+        department: 'Phòng Kỹ thuật & Bảo hành',
+        departmentShort: 'Kỹ thuật',
+        position: 'Trưởng nhóm Kỹ thuật',
+        roleBadge: 'TRƯỞNG NHÓM',
+        roleClass: styles.rolePrimary,
+        email: 'an.nguyen@duylong.vn',
+        phone: '0987 654 321',
+        status: 'active',
+        statusLabel: 'Đang hoạt động',
+        statusClass: styles.statusActive,
+        dob: '1995-05-15',
+        gender: 'Nam',
+        address: '123 Đường ABC, Quận 1, TP. HCM',
+        idCard: '012345678901',
+        startDate: '2024-02-01',
+        contractType: 'Chính thức',
+        systemRole: 'admin'
+    },
+    {
+        id: '2',
+        name: 'Bình Trần',
+        initials: 'BT',
+        avatarColorClass: styles.bgOrange,
+        code: 'DLC-2024-012',
+        department: 'Phòng Kinh doanh',
+        departmentShort: 'Kinh doanh',
+        position: 'Nhân viên kinh doanh',
+        roleBadge: 'NHÂN VIÊN',
+        roleClass: styles.roleSecondary,
+        email: 'binh.tran@duylong.vn',
+        phone: '0901 234 567',
+        status: 'pending',
+        statusLabel: 'Chờ duyệt',
+        statusClass: styles.statusPending,
+        dob: '1998-10-20',
+        gender: 'Nam',
+        address: '456 Đường XYZ, Quận 3, TP. HCM',
+        idCard: '098765432109',
+        startDate: '2024-03-01',
+        contractType: 'Thử việc',
+        systemRole: 'user'
+    },
+    {
+        id: '3',
+        name: 'Hùng Lê',
+        initials: 'HL',
+        avatarColorClass: styles.bgGray,
+        code: 'DLC-2023-088',
+        department: 'Kho bãi',
+        departmentShort: 'Kho',
+        position: 'Nhân viên kho',
+        roleBadge: 'NHÂN VIÊN',
+        roleClass: styles.roleSecondary,
+        email: 'hung.le@duylong.vn',
+        phone: '0912 345 678',
+        status: 'inactive',
+        statusLabel: 'Ngừng hoạt động',
+        statusClass: styles.statusInactive,
+        dob: '1990-01-01',
+        gender: 'Nam',
+        address: '789 Đường DEF, Quận Tân Bình, TP. HCM',
+        idCard: '011122233344',
+        startDate: '2023-05-15',
+        contractType: 'Thời vụ',
+        systemRole: 'user'
+    }
+];
 function UsersPage() {
     const navigate = useNavigate();
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [usersData, setUsersData] = useState(MOCK_USERS);
+    const [activeMenuId, setActiveMenuId] = useState(null); // Track which row's menu is open
+
+    const handleRowClick = (user) => {
+        setSelectedUser(user);
+        setIsDrawerOpen(true);
+    };
+
+
+    const toggleActionMenu = (e, userId) => {
+        e.stopPropagation(); // Ngăn sự kiện click lan ra row (tránh mở drawer)
+        setActiveMenuId(prev => prev === userId ? null : userId);
+    };
+
+    const handleViewInfo = (e, user) => {
+        e.stopPropagation();
+        setActiveMenuId(null);
+        handleRowClick(user);
+    };
+
+    const handleAssignPermissions = (e, userId) => {
+        e.stopPropagation();
+        setActiveMenuId(null);
+        navigate(`/users/${userId}/permissions`);
+    };
+
+    const handleToggleLock = (e, userId) => {
+        e.stopPropagation();
+        setActiveMenuId(null);
+        setUsersData(prev => prev.map(u => {
+            if (u.id === userId) {
+                return {
+                    ...u,
+                    status: u.status === 'Đang hoạt động' ? 'Đã khóa' : 'Đang hoạt động'
+                };
+            }
+            return u;
+        }));
+    };
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => setActiveMenuId(null);
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
+
+    const handleSaveUser = (updatedData) => {
+        setUsersData(prev => prev.map(u => u.id === updatedData.id ? updatedData : u));
+        setIsDrawerOpen(false);
+    };
+
     return (
         <div className={styles.page}>
             {/* Top Header */}
@@ -23,16 +154,8 @@ function UsersPage() {
                         <i className="bi bi-bell" />
                         <span className={styles.bellDot}></span>
                     </button>
-                    <div className={styles.userInfo}>
-                        <div className={styles.userDetails}>
-                            <span className={styles.userName}>Duy Long Admin</span>
-                            <span className={styles.userRole}>QUẢN TRỊ VIÊN</span>
-                        </div>
-                        <img 
-                            src="https://randomuser.me/api/portraits/men/32.jpg" 
-                            alt="Admin Avatar" 
-                            className={styles.avatarImg} 
-                        />
+                    <div className={styles.userInfoContainer}>
+                        <UserProfileDropdown />
                     </div>
                 </div>
             </header>
@@ -107,39 +230,40 @@ function UsersPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {/* Row 1 */}
-                            <tr>
-                                <td><div className={`${styles.avatarCircle} ${styles.bgBlue}`}>AN</div></td>
-                                <td><strong>An Nguyễn</strong></td>
-                                <td>DLC-2024-001</td>
-                                <td>Kế toán</td>
-                                <td><span className={`${styles.roleBadge} ${styles.rolePrimary}`}>TRƯỞNG NHÓM</span></td>
-                                <td>an.nguyen@duylong.vn</td>
-                                <td><span className={`${styles.statusBadge} ${styles.statusActive}`}><i className="bi bi-circle-fill"></i> Đang hoạt động</span></td>
-                                <td><button className={styles.btnAction}><i className="bi bi-three-dots-vertical"></i></button></td>
-                            </tr>
-                            {/* Row 2 */}
-                            <tr>
-                                <td><div className={`${styles.avatarCircle} ${styles.bgOrange}`}>BT</div></td>
-                                <td><strong>Bình Trần</strong></td>
-                                <td>DLC-2024-012</td>
-                                <td>Kỹ thuật</td>
-                                <td><span className={`${styles.roleBadge} ${styles.roleSecondary}`}>NHÂN VIÊN</span></td>
-                                <td>binh.tran@duylong.vn</td>
-                                <td><span className={`${styles.statusBadge} ${styles.statusPending}`}><i className="bi bi-circle-fill"></i> Chờ duyệt</span></td>
-                                <td><button className={styles.btnAction}><i className="bi bi-three-dots-vertical"></i></button></td>
-                            </tr>
-                            {/* Row 3 */}
-                            <tr>
-                                <td><div className={`${styles.avatarCircle} ${styles.bgGray}`}>HL</div></td>
-                                <td><strong>Hùng Lê</strong></td>
-                                <td>DLC-2023-088</td>
-                                <td>Kho</td>
-                                <td><span className={`${styles.roleBadge} ${styles.roleSecondary}`}>NHÂN VIÊN</span></td>
-                                <td>hung.le@duylong.vn</td>
-                                <td><span className={`${styles.statusBadge} ${styles.statusInactive}`}><i className="bi bi-circle-fill"></i> Ngừng hoạt động</span></td>
-                                <td><button className={styles.btnAction}><i className="bi bi-three-dots-vertical"></i></button></td>
-                            </tr>
+                            {usersData.map((user) => (
+                                <tr key={user.id} className={styles.tableRow} onClick={() => handleRowClick(user)}>
+                                    <td><div className={`${styles.avatarCircle} ${user.avatarColorClass}`}>{user.initials}</div></td>
+                                    <td><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: '#64748b' }}>{user.email}</span></td>
+                                    <td>{user.code}</td>
+                                    <td>{user.departmentShort}</td>
+                                    <td><span className={`${styles.roleBadge} ${user.roleClass}`}>{user.roleBadge}</span></td>
+                                    <td>{user.email}</td>
+                                    <td><span className={`${styles.statusBadge} ${user.statusClass}`}><i className="bi bi-circle-fill"></i> {user.statusLabel}</span></td>
+                                    <td className={styles.actionCell}>
+                                        <button 
+                                            className={styles.btnAction} 
+                                            onClick={(e) => toggleActionMenu(e, user.id)}
+                                        >
+                                            <i className="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        
+                                        {activeMenuId === user.id && (
+                                            <div className={styles.actionMenu}>
+                                                <div className={styles.actionMenuItem} onClick={(e) => handleViewInfo(e, user)}>
+                                                    <i className="bi bi-eye"></i> Xem thông tin chi tiết
+                                                </div>
+                                                <div className={styles.actionMenuItem} onClick={(e) => handleAssignPermissions(e, user.id)}>
+                                                    <i className="bi bi-shield-lock"></i> Phân quyền chức năng
+                                                </div>
+                                                <div className={`${styles.actionMenuItem} ${user.status === 'Đang hoạt động' ? styles.actionMenuItemDanger : styles.actionMenuItemSuccess}`} onClick={(e) => handleToggleLock(e, user.id)}>
+                                                    <i className={`bi ${user.status === 'Đang hoạt động' ? 'bi-lock' : 'bi-unlock'}`}></i> 
+                                                    {user.status === 'Đang hoạt động' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
 
@@ -157,6 +281,13 @@ function UsersPage() {
                     </div>
                 </div>
             </main>
+
+            <EmployeeDrawer 
+                isOpen={isDrawerOpen} 
+                onClose={() => setIsDrawerOpen(false)} 
+                user={selectedUser} 
+                onSave={handleSaveUser}
+            />
         </div>
     );
 }

@@ -125,40 +125,11 @@
     border-radius: 50%;
 }
 
-.userInfo {
+.userInfoContainer {
     display: flex;
     align-items: center;
-    gap: 12px;
     border-left: 1px solid #e2e8f0;
     padding-left: 20px;
-}
-
-.userDetails {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.userName {
-    font-size: 13px;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 2px;
-}
-
-.userRole {
-    font-size: 10px;
-    font-weight: 700;
-    color: #64748b;
-    letter-spacing: 0.5px;
-}
-
-.avatarImg {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid #e2e8f0;
 }
 
 /* Main Content */

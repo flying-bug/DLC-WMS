@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './CreateEmployeePage.module.css';
+import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
 
 function CreateEmployeePage() {
     const navigate = useNavigate();
@@ -57,12 +58,8 @@ function CreateEmployeePage() {
                     </button>
                     <button className={styles.bellBtn}><i className="bi bi-question-circle"></i></button>
                     <button className={styles.bellBtn}><i className="bi bi-gear"></i></button>
-                    <div className={styles.userInfo}>
-                        <img 
-                            src="https://randomuser.me/api/portraits/men/32.jpg" 
-                            alt="Admin Avatar" 
-                            className={styles.avatarImg} 
-                        />
+                    <div className={styles.userInfoContainer}>
+                        <UserProfileDropdown />
                     </div>
                 </div>
             </header>
@@ -213,13 +210,15 @@ function CreateEmployeePage() {
                         </h2>
                         <div className={styles.grid2}>
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Chức vụ / Vị trí</label>
+                                <label className={styles.label}>Chức danh nhân sự</label>
                                 <div className={styles.inputWrapper}>
                                     <select className={`${styles.input} ${styles.select}`} name="position" value={formData.position} onChange={handleChange}>
-                                        <option value="">Chọn vị trí</option>
-                                        <option value="staff">Nhân viên kho</option>
-                                        <option value="accountant">Kế toán</option>
+                                        <option value="">Chọn chức danh</option>
                                         <option value="manager">Quản lý kho</option>
+                                        <option value="staff">Nhân viên kho</option>
+                                        <option value="technician">Kỹ thuật viên</option>
+                                        <option value="accountant">Kế toán</option>
+                                        <option value="sales">Bán hàng</option>
                                     </select>
                                 </div>
                             </div>
@@ -228,9 +227,10 @@ function CreateEmployeePage() {
                                 <div className={styles.inputWrapper}>
                                     <select className={`${styles.input} ${styles.select}`} name="department" value={formData.department} onChange={handleChange}>
                                         <option value="">Chọn phòng ban</option>
-                                        <option value="hr">Phòng Hành chính - Nhân sự</option>
-                                        <option value="it">Phòng Kỹ thuật</option>
-                                        <option value="sales">Phòng Kinh doanh</option>
+                                        <option value="store">Cửa hàng / Bán hàng</option>
+                                        <option value="warehouse">Kho bãi</option>
+                                        <option value="technical">Kỹ thuật - Bảo hành</option>
+                                        <option value="admin">Kế toán - Hành chính</option>
                                     </select>
                                 </div>
                             </div>
