@@ -121,40 +121,11 @@
     border-radius: 50%;
 }
 
-.userInfo {
+.userInfoContainer {
     display: flex;
     align-items: center;
-    gap: 12px;
     border-left: 1px solid #e2e8f0;
     padding-left: 20px;
-}
-
-.userDetails {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.userName {
-    font-size: 13px;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 2px;
-}
-
-.userRole {
-    font-size: 10px;
-    font-weight: 700;
-    color: #64748b;
-    letter-spacing: 0.5px;
-}
-
-.avatarImg {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid #e2e8f0;
 }
 
 /* Main Content */
@@ -331,6 +302,15 @@
     border-bottom: 1px solid #e2e8f0;
 }
 
+.tableRow {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.tableRow:hover {
+    background-color: #f8fafc;
+}
+
 .table td {
     padding: 16px 20px;
     border-bottom: 1px solid #e2e8f0;
@@ -412,6 +392,90 @@
 .pageInfo {
     font-size: 13px;
     color: #64748b;
+}
+
+.pageDots {
+    padding: 8px;
+    color: #64748b;
+}
+
+/* Action Menu Dropdown */
+.actionCell {
+    position: relative;
+}
+
+.actionMenu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    min-width: 200px;
+    z-index: 100;
+    padding: 8px 0;
+    animation: fadeIn 0.15s ease;
+}
+
+.actionMenuItem {
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #334155;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.actionMenuItem:hover {
+    background-color: #f8fafc;
+    color: #1e3f7a;
+}
+
+.actionMenuItem i {
+    font-size: 16px;
+    color: #64748b;
+}
+
+.actionMenuItem:hover i {
+    color: #1e3f7a;
+}
+
+.actionMenuItemDanger {
+    color: #ef4444;
+}
+
+.actionMenuItemDanger i {
+    color: #ef4444;
+}
+
+.actionMenuItemDanger:hover {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+.actionMenuItemDanger:hover i {
+    color: #dc2626;
+}
+
+.actionMenuItemSuccess {
+    color: #10b981;
+}
+
+.actionMenuItemSuccess i {
+    color: #10b981;
+}
+
+.actionMenuItemSuccess:hover {
+    background-color: #ecfdf5;
+    color: #059669;
+}
+
+.actionMenuItemSuccess:hover i {
+    color: #059669;
 }
 
 .pageControls {
