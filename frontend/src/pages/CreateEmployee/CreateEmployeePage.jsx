@@ -44,7 +44,6 @@ function CreateEmployeePage() {
                     <nav className={styles.navLinks}>
                         <a href="/dashboard" className={styles.navLink} onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}>Tổng quan</a>
                         <a href="/users" className={styles.navLinkActive} onClick={(e) => { e.preventDefault(); navigate('/users'); }}>Người dùng</a>
-                        <a href="#" className={styles.navLink}>Vai trò và quyền hạn</a>
                     </nav>
                 </div>
                 <div className={styles.headerRight}>
