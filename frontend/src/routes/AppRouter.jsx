@@ -3,7 +3,10 @@ import { ROUTES } from '../constants';
 import LoginPage from '../pages/Login/LoginPage';
 import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
-import UnitPage from '../pages/Unit/UnitPage';
+import ChangePasswordPage from '../pages/ChangePassword/ChangePasswordPage';
+import UsersPage from '../pages/UsersPage';
+import CreateEmployeePage from '../pages/CreateEmployee/CreateEmployeePage';
+import PermissionDetailPage from '../pages/Permissions/PermissionDetailPage';
 
 function AppRouter() {
     return (
@@ -13,9 +16,12 @@ function AppRouter() {
                 <Route path="/" element={<Navigate to={ROUTES.DASHBOARD || '/dashboard'} replace />} />
                 <Route path={ROUTES.LOGIN} element={<LoginPage />} />
                 <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
+                <Route path="/change-password" element={<ChangePasswordPage />} />
+                <Route path="/users" element={<UsersPage />} />
+                <Route path="/users/create" element={<CreateEmployeePage />} />
+                <Route path="/users/:id/permissions" element={<PermissionDetailPage />} />
 
                 <Route path={ROUTES.DASHBOARD || '/dashboard'} element={<DashboardPage />} />
-                <Route path="/units" element={<UnitPage />} />
             </Routes>
         </BrowserRouter>
     );

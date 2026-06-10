@@ -1,13 +1,9 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.UserDto;
-import com.duylongtech.backend.dto.response.UserDetailResponseDTO;
 import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.repository.UserRepository;
-import com.duylongtech.backend.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,63 +21,6 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-
-    // ======================== View Account Detail (GET /api/v1/users/me) ========================
-
-    /**
-     * Lấy thông tin profile của user hiện tại đang đăng nhập.
-     * - Trích xuất userId từ SecurityContext (JWT Token).
-     * - Query database kèm JOIN Roles (tránh N+1).
-     * - Map sang DTO: che giấu password_hash, chuyển status -> isActive.
-     */
-    public UserDetailResponseDTO getCurrentUserProfile() {
-        // 1. Lấy thông tin user đang đăng nhập từ SecurityContext
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
-        // 2. Query user kèm roles (EntityGraph JOIN FETCH)
-        User user = userRepository.findWithRolesById(userDetails.getId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản trong hệ thống."));
-
-        // 3. Map Entity -> DTO (Data Masking: không trả về password_hash)
-        return mapToDetailDto(user);
-    }
-
-    /**
-     * Map User entity sang UserDetailResponseDTO.
-     * Business Rules:
-     * - Data Masking: Tuyệt đối không trả về password_hash.
-     * - Status Mapping: APPROVED -> isActive = true, các trạng thái khác -> false.
-     * - Data Aggregation: Gom nhóm roles từ bảng USER_ROLES + ROLES.
-     */
-    private UserDetailResponseDTO mapToDetailDto(User user) {
-        // Map danh sách roles
-        List<UserDetailResponseDTO.RoleDTO> roleDtos = user.getRoles().stream()
-                .map(role -> UserDetailResponseDTO.RoleDTO.builder()
-                        .code(role.getCode())
-                        .name(role.getName())
-                        .build())
-                .collect(Collectors.toList());
-
-        // Chuyển đổi status -> isActive (APPROVED = true, còn lại = false)
-        boolean isActive = "APPROVED".equalsIgnoreCase(user.getStatus());
-
-        return UserDetailResponseDTO.builder()
-                .id(user.getId())
-                .userCode(user.getUserCode())
-                .username(user.getUsername())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .address(user.getAddress())
-                .avatarUrl(user.getAvatarUrl())
-                .isActive(isActive)
-                .roles(roleDtos)
-                .createdAt(user.getCreatedAt())
-                .build();
-    }
-
-    // ======================== Existing methods ========================
 
     public List<UserDto> getAllUsers() {
         return userRepository.findAll().stream().map(this::mapToDto).collect(Collectors.toList());
@@ -154,4 +93,3 @@ public class UserService {
         return dto;
     }
 }
-

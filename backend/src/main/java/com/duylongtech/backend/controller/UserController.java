@@ -2,10 +2,7 @@ package com.duylongtech.backend.controller;
 
 import com.duylongtech.backend.dto.request.UserDto;
 import com.duylongtech.backend.dto.response.ApiResponse;
-import com.duylongtech.backend.dto.response.UserDetailResponseDTO;
 import com.duylongtech.backend.service.UserService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -15,17 +12,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
-@Tag(name = "User Management", description = "API quản lý tài khoản người dùng")
 public class UserController {
 
     private final UserService userService;
-
-    // 2. View Account Detail (Xem thông tin cá nhân)
-    @GetMapping("/me")
-    @Operation(summary = "Xem thông tin cá nhân", description = "Lấy thông tin profile của user đang đăng nhập. Yêu cầu Bearer Token.")
-    public ApiResponse<UserDetailResponseDTO> getCurrentUserProfile() {
-        return ApiResponse.success(userService.getCurrentUserProfile());
-    }
 
     // 5. View Account List
     @GetMapping
@@ -71,4 +60,3 @@ public class UserController {
         return ApiResponse.success(userService.updateUser(id, userDto));
     }
 }
-
