@@ -68,9 +68,9 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
 
         // Seed Đơn vị tính
-        Unit caiUnit = seedUnitIfNotFound("CAI", "Cái");
-        Unit lanUnit = seedUnitIfNotFound("LAN", "Lần");
-        seedUnitIfNotFound("BO", "Bộ");
+        Unit caiUnit = seedUnitIfNotFound("Cái");
+        Unit lanUnit = seedUnitIfNotFound("Lần");
+        seedUnitIfNotFound("Bộ");
 
         // Seed Thương hiệu
         Brand dellBrand = seedBrandIfNotFound("DELL", "Dell");
@@ -159,13 +159,12 @@ public class DatabaseSeeder implements CommandLineRunner {
         return roleRepository.save(newRole);
     }
 
-    private Unit seedUnitIfNotFound(String code, String name) {
-        Optional<Unit> unitOpt = unitRepository.findByCode(code);
+    private Unit seedUnitIfNotFound(String name) {
+        Optional<Unit> unitOpt = unitRepository.findByName(name);
         if (unitOpt.isPresent()) {
             return unitOpt.get();
         }
         Unit newUnit = Unit.builder()
-                .code(code)
                 .name(name)
                 .status("ACTIVE")
                 .build();

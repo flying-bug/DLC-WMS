@@ -7,6 +7,9 @@ import UnitPage from '../pages/Unit/UnitPage';
 import ProductPage from '../pages/Product/ProductPage';
 import ChangePasswordPage from '../pages/ChangePassword/ChangePasswordPage';
 import UsersPage from '../pages/UsersPage';
+import CreateEmployeePage from '../pages/CreateEmployee/CreateEmployeePage';
+import PermissionDetailPage from '../pages/Permissions/PermissionDetailPage';
+import ExportSlipPage from '../pages/ExportSlip/ExportSlipPage';
 
 function AppRouter() {
     return (
@@ -18,6 +21,9 @@ function AppRouter() {
                 <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
                 <Route path="/change-password" element={<ChangePasswordPage />} />
                 <Route path="/users" element={<UsersPage />} />
+                <Route path="/users/create" element={<CreateEmployeePage />} />
+                <Route path="/users/:id/permissions" element={<PermissionDetailPage />} />
+                <Route path="/export-slips" element={<ExportSlipPage />} />
 
                 <Route path={ROUTES.DASHBOARD || '/dashboard'} element={<DashboardPage />} />
                 <Route path="/units" element={<UnitPage />} />

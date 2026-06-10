@@ -30,18 +30,29 @@ public class ProductController {
     @PostMapping
     public ResponseEntity<ApiResponse<ProductDto>> createProduct(@RequestBody ProductDto dto) {
         ProductDto created = productService.createProduct(dto);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Tạo hàng hóa/dịch vụ thành công", created));
+        return ResponseEntity.ok(ApiResponse.<ProductDto>builder()
+                .success(true)
+                .userMessage("Tạo hàng hóa/dịch vụ thành công")
+                .data(created)
+                .build());
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductDto>> updateProduct(@PathVariable Long id, @RequestBody ProductDto dto) {
         ProductDto updated = productService.updateProduct(id, dto);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Cập nhật hàng hóa/dịch vụ thành công", updated));
+        return ResponseEntity.ok(ApiResponse.<ProductDto>builder()
+                .success(true)
+                .userMessage("Cập nhật hàng hóa/dịch vụ thành công")
+                .data(updated)
+                .build());
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Xóa hàng hóa/dịch vụ thành công", null));
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .success(true)
+                .userMessage("Xóa hàng hóa/dịch vụ thành công")
+                .build());
     }
 }
