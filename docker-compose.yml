@@ -14,7 +14,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p123456"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p123456" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -27,7 +27,9 @@ services:
     container_name: dlc-backend
     restart: always
     ports:
-      - "8080:8080"
+      - "8081:8080"
+    env_file:
+      - ./backend/.env
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/duylongcomputer?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
