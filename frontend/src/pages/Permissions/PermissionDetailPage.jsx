@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
 import styles from './PermissionDetailPage.module.css';
 
 function PermissionDetailPage() {
     const navigate = useNavigate();
-    const { id } = useParams();
+    const { id: _id } = useParams();
 
     const userName = "An Nguyễn";
 

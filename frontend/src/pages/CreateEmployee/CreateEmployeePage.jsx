@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './CreateEmployeePage.module.css';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
