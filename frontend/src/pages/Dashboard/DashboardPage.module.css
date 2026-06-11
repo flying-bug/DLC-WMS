@@ -1,0 +1,319 @@
+/* ── Dashboard page wrapper ── */
+.page {
+    min-height: 100vh;
+    width: 100%;
+    background-color: #f5f6fa;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ══════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════ */
+.header {
+    height: 56px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Brand / Logo */
+.headerBrand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.headerLogoBox {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #1e3f7a 0%, #0075c0 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.headerLogoBox svg {
+    width: 18px;
+    height: 18px;
+}
+
+.headerBrandName {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e3f7a;
+    letter-spacing: -0.2px;
+}
+
+.headerDivider {
+    width: 1px;
+    height: 20px;
+    background-color: #e2e8f0;
+    margin: 0 4px;
+}
+
+.headerSubtitle {
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+}
+
+/* Header right controls */
+.headerControls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.searchBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 12px;
+    width: 220px;
+    cursor: text;
+    transition: border-color 0.15s;
+}
+
+.searchBar:hover {
+    border-color: #cbd5e1;
+}
+
+.searchBar svg {
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.searchInput {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 13px;
+    color: #64748b;
+    width: 100%;
+    font-family: inherit;
+}
+
+.searchInput::placeholder {
+    color: #94a3b8;
+}
+
+/* Bell icon */
+.bellBtn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    position: relative;
+    transition: background 0.15s;
+}
+
+.bellBtn:hover {
+    background: #f1f5f9;
+    color: #1e3f7a;
+}
+
+
+
+/* ══════════════════════════════════════════
+   MAIN CONTENT
+══════════════════════════════════════════ */
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px 40px;
+}
+
+/* Welcome section */
+.welcomeSection {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.welcomeTitle {
+    font-size: 30px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 12px;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+}
+
+.welcomeSubtitle {
+    font-size: 15px;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.6;
+    max-width: 440px;
+}
+
+/* Action cards grid */
+.cardsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    width: 100%;
+    max-width: 640px;
+}
+
+/* Single action card */
+.actionCard {
+    background: #ffffff;
+    border: 1px solid #e8ecf0;
+    border-radius: 16px;
+    padding: 36px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+    text-decoration: none;
+    color: inherit;
+}
+
+.actionCard:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
+    transform: translateY(-2px);
+    border-color: #d1d9e0;
+}
+
+.actionCard:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Icon wrapper */
+.cardIconWrapper {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    font-size: 26px;
+}
+
+.cardIconBlue {
+    background-color: #eef2fa;
+}
+
+.cardIconOrange {
+    background-color: #fff4e6;
+}
+
+/* Card text */
+.cardTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 8px;
+    line-height: 1.3;
+}
+
+.cardDesc {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* ══════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════ */
+.footer {
+    height: 44px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+}
+
+.footerLeft {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.footerItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.footerItemIcon {
+    font-size: 13px;
+}
+
+.footerRight {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+@media (max-width: 640px) {
+    .cardsGrid {
+        grid-template-columns: 1fr;
+        max-width: 360px;
+    }
+
+    .welcomeTitle {
+        font-size: 24px;
+    }
+
+    .searchBar {
+        display: none;
+    }
+
+    .header {
+        padding: 0 16px;
+    }
+
+    .footer {
+        padding: 0 16px;
+    }
+
+    .footerLeft {
+        gap: 12px;
+    }
+}
+
+@media (max-width: 400px) {
+    .headerSubtitle {
+        display: none;
+    }
+
+    .headerDivider {
+        display: none;
+    }
+}
