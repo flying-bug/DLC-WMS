@@ -8,10 +8,8 @@ function UserProfileDropdown() {
     const dropdownRef = useRef(null);
 
     const userRole = localStorage.getItem('role') || 'STAFF';
-    const isSA = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN';
-    const isMN = userRole === 'MANAGER' || userRole === 'ROLE_MANAGER';
-    const initials = isSA ? 'SA' : isMN ? 'MN' : 'ST';
-    const displayName = isSA ? 'Super Admin' : isMN ? 'Manager' : 'Staff';
+    const initials = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' ? 'SA' : userRole === 'MANAGER' ? 'MN' : 'ST';
+    const displayName = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' ? 'Super Admin' : userRole === 'MANAGER' ? 'Manager' : 'Staff';
 
     // Close dropdown on click outside
     useEffect(() => {

@@ -96,10 +96,8 @@ function UsersPage() {
     };
 
     useEffect(() => {
-        /* eslint-disable-next-line react-hooks/set-state-in-effect */
         fetchUsers();
         fetchRoles();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleRowClick = (user) => {

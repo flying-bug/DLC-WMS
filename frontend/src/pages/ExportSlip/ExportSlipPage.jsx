@@ -1,5 +1,5 @@
-import { useState } from 'react';
-
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import styles from './ExportSlipPage.module.css';
 
@@ -25,7 +25,7 @@ const MOCK_DETAIL = {
 };
 
 function ExportSlipPage() {
-
+  const navigate = useNavigate();
   const [selectedSlip, setSelectedSlip] = useState(MOCK_SLIPS[0]);
 
   return (

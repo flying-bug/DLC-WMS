@@ -10,7 +10,6 @@ import UsersPage from '../pages/UsersPage';
 import CreateEmployeePage from '../pages/CreateEmployee/CreateEmployeePage';
 import PermissionDetailPage from '../pages/Permissions/PermissionDetailPage';
 import ExportSlipPage from '../pages/ExportSlip/ExportSlipPage';
-import ImportHistoryPage from '../pages/ImportHistory/ImportHistoryPage';
 import ProfilePage from '../pages/Profile/ProfilePage';
 import AuditLogPage from '../pages/AuditLog/AuditLogPage';
 
@@ -27,7 +26,6 @@ function AppRouter() {
                 <Route path="/users/create" element={<CreateEmployeePage />} />
                 <Route path="/users/:id/permissions" element={<PermissionDetailPage />} />
                 <Route path="/export-slips" element={<ExportSlipPage />} />
-                <Route path="/import-history" element={<ImportHistoryPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/audit-log" element={<AuditLogPage />} />
 
