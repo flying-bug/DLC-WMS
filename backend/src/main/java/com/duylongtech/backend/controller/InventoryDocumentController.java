@@ -56,4 +56,12 @@ public class InventoryDocumentController {
     ) {
         return ApiResponse.success(inventoryDocumentService.updateExport(id, req));
     }
+
+    @PostMapping("/{id}/post")
+    @Operation(summary = "Post export slip (Ghi Sổ)")
+    @PreAuthorize("hasAnyRole('MANAGER','STAFF')")
+    public ApiResponse<InventoryDocumentResponse> postExport(@PathVariable Long id) {
+        return ApiResponse.success(inventoryDocumentService.postExport(id));
+    }
 }
+
