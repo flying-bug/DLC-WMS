@@ -7,12 +7,6 @@ const AdminLayout = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const currentPath = location.pathname;
-    const userRole = localStorage.getItem('role') || 'STAFF';
-
-    const handleLogout = () => {
-        localStorage.clear();
-        navigate('/login');
-    };
 
     return (
         <div className={styles.layout}>
