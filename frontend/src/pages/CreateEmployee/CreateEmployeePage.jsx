@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axiosClient from '../../api/axiosClient';
 import styles from './CreateEmployeePage.module.css';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
 
 function CreateEmployeePage() {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
+        username: '',
         fullName: '',
-        employeeCode: '',
         phone: '',
         email: '',
         dob: '',
@@ -28,11 +29,35 @@ function CreateEmployeePage() {
         }));
     };
 
-    const handleSave = (e) => {
-        e.preventDefault();
-        // TODO: Validate and submit logic
-        console.log('Saved data:', formData);
-        navigate('/users');
+    const handleSave = async (e) => {
+        if (e) e.preventDefault();
+        
+        if (!formData.username.trim()) {
+            alert('Vui lòng nhập Tên đăng nhập (Username)');
+            return;
+        }
+        if (!formData.fullName.trim()) {
+            alert('Vui lòng nhập Họ và tên');
+            return;
+        }
+
+        try {
+            const roles = formData.isAdmin ? ['SUPER_ADMIN'] : ['STAFF'];
+            const payload = {
+                username: formData.username.trim(),
+                fullName: formData.fullName.trim(),
+                email: formData.email.trim(),
+                phone: formData.phone.trim(),
+                status: 'APPROVED',
+                roles: roles
+            };
+
+            await axiosClient.post('/users', payload);
+            navigate('/users');
+        } catch (error) {
+            console.error('Lỗi khi lưu nhân viên:', error);
+            alert(error.response?.data?.message || 'Có lỗi xảy ra khi tạo tài khoản nhân viên.');
+        }
     };
 
     return (
@@ -101,15 +126,16 @@ function CreateEmployeePage() {
                                 </div>
                             </div>
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Mã nhân viên</label>
+                                <label className={styles.label}>Tên đăng nhập (Username) <span className={styles.required}>*</span></label>
                                 <div className={styles.inputWrapper}>
                                     <input 
                                         type="text" 
                                         className={styles.input} 
-                                        placeholder="DLC-10024"
-                                        name="employeeCode"
-                                        value={formData.employeeCode}
+                                        placeholder="Ví dụ: nva_staff"
+                                        name="username"
+                                        value={formData.username}
                                         onChange={handleChange}
+                                        required
                                     />
                                 </div>
                             </div>
@@ -269,8 +295,8 @@ function CreateEmployeePage() {
                             onChange={handleChange}
                         />
                         <div className={styles.checkboxContent}>
-                            <span className={styles.checkboxTitle}>Thiết lập tài khoản quản lý hệ thống</span>
-                            <span className={styles.checkboxDesc}>Cho phép nhân viên này truy cập vào các tính năng quản trị và cổng thông tin.</span>
+                            <span className={styles.checkboxTitle}>Thiết lập tài khoản quản lý hệ thống (Super Admin)</span>
+                            <span className={styles.checkboxDesc}>Cho phép nhân viên này có toàn quyền quản trị hệ thống Duy Long Computer.</span>
                         </div>
                     </label>
                     

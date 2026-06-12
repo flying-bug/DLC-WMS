@@ -28,10 +28,10 @@ axiosClient.interceptors.response.use(
     },
     (error) => {
         if (error.response && error.response.status === 401) {
-            // Có thể tự động logout hoặc redirect về trang login nếu token hết hạn
+            // Tự động logout và redirect về trang login khi bị khóa/hết hạn
             localStorage.removeItem('token');
             localStorage.removeItem('role');
-            // window.location.href = '/login';
+            window.location.href = '/login';
         }
         return Promise.reject(error);
     }

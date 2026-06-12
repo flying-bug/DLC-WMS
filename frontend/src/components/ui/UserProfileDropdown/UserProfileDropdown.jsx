@@ -7,6 +7,10 @@ function UserProfileDropdown() {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
+    const userRole = localStorage.getItem('role') || 'STAFF';
+    const initials = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' ? 'SA' : userRole === 'MANAGER' ? 'MN' : 'ST';
+    const displayName = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' ? 'Super Admin' : userRole === 'MANAGER' ? 'Manager' : 'Staff';
+
     // Close dropdown on click outside
     useEffect(() => {
         function handleClickOutside(event) {
@@ -31,12 +35,12 @@ function UserProfileDropdown() {
             onMouseLeave={() => setIsDropdownOpen(false)}
             ref={dropdownRef}
         >
-            <div className={styles.avatarCircle} aria-hidden="true">SA</div>
-            <span className={styles.userName}>Super Admin</span>
+            <div className={styles.avatarCircle} aria-hidden="true">{initials}</div>
+            <span className={styles.userName}>{displayName}</span>
             <i className={`bi bi-chevron-down ${styles.chevronIcon}`} aria-hidden="true" />
 
             {/* Dropdown Menu */}
-            {(isDropdownOpen || null) && (
+            {isDropdownOpen && (
                 <div className={`${styles.userDropdown} ${isDropdownOpen ? styles.showDropdown : ''}`}>
                     <div className={styles.dropdownItem} onClick={(e) => { e.stopPropagation(); navigate('/profile'); setIsDropdownOpen(false); }}>
                         <i className="bi bi-person" /> Xem thông tin cá nhân
