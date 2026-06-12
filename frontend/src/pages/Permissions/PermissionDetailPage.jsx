@@ -1,24 +1,24 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import axiosClient from '../../api/axiosClient';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
 import styles from './PermissionDetailPage.module.css';
 
 function PermissionDetailPage() {
     const navigate = useNavigate();
     const { id } = useParams();
-
-    const userName = "An Nguyễn";
-
+    const [user, setUser] = useState(null);
+    const [rolesList, setRolesList] = useState([]);
     const [activeCategory, setActiveCategory] = useState('warehouse');
 
     // Initial state matching the UC list
     const [permissions, setPermissions] = useState({
         // Quản lý kho
-        import: { full: false, view: true, add: true, edit: true, delete: false, export: true, print: true },
-        export: { full: false, view: true, add: false, edit: false, delete: false, export: true, print: true },
-        transfer: { full: false, view: true, add: false, edit: false, delete: false, export: false, print: true },
-        stocktake: { full: false, view: true, add: false, edit: false, delete: false, export: false, print: true },
-        assembly: { full: false, view: true, add: false, edit: false, delete: false, export: false, print: false },
+        import: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+        export: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+        transfer: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+        stocktake: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+        assembly: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         
         // Danh mục
         product: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
@@ -27,7 +27,7 @@ function PermissionDetailPage() {
         supplier: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         warehouse_master: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
 
-        // Báo cáo (no add/edit/delete/print in some)
+        // Báo cáo
         report_balance: { full: false, view: false, export: false },
         report_ledger: { full: false, view: false, export: false },
         report_summary: { full: false, view: false, export: false },
@@ -37,6 +37,62 @@ function PermissionDetailPage() {
         auth: { full: false, view: false, edit: false },
         audit: { full: false, view: false, export: false }
     });
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                // Fetch user
+                const userRes = await axiosClient.get(`/users/${id}`);
+                const userData = userRes.data?.data;
+                setUser(userData);
+                
+                // Fetch roles
+                const rolesRes = await axiosClient.get('/roles');
+                const rolesData = rolesRes.data?.data || [];
+                setRolesList(rolesData);
+
+                // Set initial permission matrix based on roles
+                if (userData && userData.roles) {
+                    const hasAdmin = userData.roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
+                    const hasManager = userData.roles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
+                    const hasStaff = userData.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF');
+
+                    setPermissions(prev => {
+                        const newPerms = { ...prev };
+                        if (hasAdmin) {
+                            // Give full permissions everywhere
+                            Object.keys(newPerms).forEach(mod => {
+                                Object.keys(newPerms[mod]).forEach(act => {
+                                    newPerms[mod][act] = true;
+                                });
+                            });
+                        } else if (hasManager) {
+                            // Give warehouse + master_data + reports full, system none
+                            Object.keys(newPerms).forEach(mod => {
+                                const isSystem = ['account', 'auth', 'audit'].includes(mod);
+                                Object.keys(newPerms[mod]).forEach(act => {
+                                    newPerms[mod][act] = !isSystem;
+                                });
+                            });
+                        } else if (hasStaff) {
+                            // Give warehouse only
+                            Object.keys(newPerms).forEach(mod => {
+                                const isWarehouse = ['import', 'export', 'transfer', 'stocktake', 'assembly'].includes(mod);
+                                Object.keys(newPerms[mod]).forEach(act => {
+                                    newPerms[mod][act] = isWarehouse;
+                                });
+                            });
+                        }
+                        return newPerms;
+                    });
+                }
+            } catch (error) {
+                console.error("Lỗi lấy thông tin phân quyền:", error);
+            }
+        };
+
+        loadData();
+    }, [id]);
 
     const handleCheck = (module, action, checked) => {
         setPermissions(prev => {
@@ -66,9 +122,52 @@ function PermissionDetailPage() {
         });
     };
 
-    const handleSave = () => {
-        console.log("Saved permissions:", permissions);
-        navigate('/users');
+    const handleSave = async () => {
+        try {
+            // Determine role code based on matrix selections:
+            // - If any system module has views/edits checked -> SUPER_ADMIN
+            // - Else if any master_data or report module has views/edits checked -> MANAGER
+            // - Else -> STAFF
+            const hasSystemSelected = ['account', 'auth', 'audit'].some(mod => {
+                return Object.keys(permissions[mod] || {}).some(act => permissions[mod][act]);
+            });
+
+            const hasManagerSelected = ['product', 'unit', 'customer', 'supplier', 'warehouse_master', 'report_balance', 'report_ledger', 'report_summary'].some(mod => {
+                return Object.keys(permissions[mod] || {}).some(act => permissions[mod][act]);
+            });
+
+            let targetRoleCode = 'STAFF';
+            if (hasSystemSelected) {
+                targetRoleCode = 'SUPER_ADMIN';
+            } else if (hasManagerSelected) {
+                const possibleCodes = rolesList.map(r => r.code);
+                if (possibleCodes.includes('MANAGER')) {
+                    targetRoleCode = 'MANAGER';
+                } else if (possibleCodes.includes('ROLE_MANAGER')) {
+                    targetRoleCode = 'ROLE_MANAGER';
+                }
+            } else {
+                const possibleCodes = rolesList.map(r => r.code);
+                if (possibleCodes.includes('STAFF')) {
+                    targetRoleCode = 'STAFF';
+                } else if (possibleCodes.includes('ROLE_STAFF')) {
+                    targetRoleCode = 'ROLE_STAFF';
+                }
+            }
+
+            const targetRole = rolesList.find(r => r.code === targetRoleCode);
+            if (!targetRole) {
+                alert('Không tìm thấy vai trò phù hợp trong cơ sở dữ liệu!');
+                return;
+            }
+
+            await axiosClient.put(`/users/${id}/permissions`, [targetRole.id]);
+            alert('Cập nhật phân quyền thành công!');
+            navigate('/users');
+        } catch (error) {
+            console.error('Lỗi lưu phân quyền:', error);
+            alert('Có lỗi xảy ra khi lưu phân quyền.');
+        }
     };
 
     const renderCheckbox = (module, action) => {
@@ -146,6 +245,9 @@ function PermissionDetailPage() {
         }
     };
 
+    const userName = user ? user.fullName : "Đang tải...";
+    const userRolesDisplay = user && user.roles ? user.roles.join(', ') : 'Chưa có vai trò';
+
     return (
         <div className={styles.page}>
             {/* Header */}
@@ -174,7 +276,7 @@ function PermissionDetailPage() {
             {/* Main */}
             <main className={styles.main}>
                 <h1 className={styles.pageTitle}>Phân quyền chức năng cho nhân viên: {userName}</h1>
-                <p className={styles.pageSubtitle}>Vai trò: Người sử dụng hệ thống</p>
+                <p className={styles.pageSubtitle}>Vai trò hiện tại: {userRolesDisplay}</p>
 
                 <div className={styles.layout}>
                     {/* Sidebar */}

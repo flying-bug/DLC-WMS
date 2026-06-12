@@ -1,0 +1,219 @@
+.dashboardContainer {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 20px;
+    height: 100%;
+    font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Base Card Style */
+.mainProcess, .reportsArea {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.sectionTitle {
+    text-align: center;
+    font-size: 1.1rem;
+    color: #334155;
+    margin: 20px 0;
+    font-weight: bold;
+}
+
+/* Process Diagram */
+.processDiagram {
+    position: relative;
+    flex: 1;
+    min-height: 400px;
+}
+
+.node {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 120px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    z-index: 2;
+}
+
+.node:hover {
+    transform: translateY(-5px);
+}
+
+.iconWrapper {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #0ea5e9, #2563eb); /* Tech blue gradient */
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+.node span {
+    font-size: 0.85rem;
+    text-align: center;
+    color: #475569;
+    font-weight: 500;
+}
+
+/* Positions for nodes based on the image */
+.pos1 { top: 40px; left: 10%; } /* Lệnh sản xuất */
+.pos2 { top: 220px; left: 10%; } /* Lắp ráp */
+.pos3 { top: 80px; left: 40%; } /* Xuất kho */
+.pos4 { top: 220px; left: 40%; } /* Nhập kho */
+.pos5 { top: 80px; left: 65%; } /* Chuyển kho */
+.pos6 { top: 220px; left: 65%; } /* Tính giá */
+.pos7 { top: 220px; left: 85%; } /* Kiểm kê */
+
+/* CSS Connecting Lines */
+.lineHorizontalMain {
+    position: absolute;
+    top: 180px;
+    left: 20%;
+    width: 75%;
+    height: 2px;
+    background-color: #cbd5e1;
+    z-index: 1;
+}
+
+/* Arrow at the end of the line */
+.lineHorizontalMain::after {
+    content: '';
+    position: absolute;
+    right: -10px;
+    top: -4px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent transparent #cbd5e1;
+}
+
+.lineVertical1 {
+    position: absolute;
+    top: 110px;
+    left: 25%;
+    width: 2px;
+    height: 140px;
+    background-color: #cbd5e1;
+    z-index: 1;
+}
+
+.lineVertical2 {
+    position: absolute;
+    top: 150px;
+    left: 45%;
+    width: 2px;
+    height: 70px;
+    background-color: #cbd5e1;
+    z-index: 1;
+}
+
+.lineVertical3 {
+    position: absolute;
+    top: 150px;
+    left: 70%;
+    width: 2px;
+    height: 70px;
+    background-color: #cbd5e1;
+    z-index: 1;
+}
+
+.lineVertical4 {
+    position: absolute;
+    top: 180px;
+    left: 90%;
+    width: 2px;
+    height: 40px;
+    background-color: #cbd5e1;
+    z-index: 1;
+}
+
+
+/* Bottom Toolbar */
+.bottomToolbar {
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid #e2e8f0;
+    padding: 15px 0;
+    background-color: #f8fafc;
+    border-radius: 0 0 8px 8px;
+}
+
+.toolbarItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #0ea5e9;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.toolbarItem i {
+    font-size: 1.2rem;
+}
+
+.toolbarItem span {
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+.toolbarItem:hover span, .toolbarItem:hover i {
+    color: #2563eb;
+}
+
+
+/* Reports Area */
+.reportList {
+    list-style: none;
+    padding: 0 20px;
+    margin: 0;
+    flex: 1;
+}
+
+.reportList li {
+    padding: 15px 0;
+    border-bottom: 1px dashed #e2e8f0;
+    font-size: 0.9rem;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: color 0.2s;
+}
+
+.reportList li i {
+    font-size: 0.4rem;
+    color: #0ea5e9;
+}
+
+.reportList li:hover {
+    color: #0ea5e9;
+}
+
+.allReports {
+    text-align: center;
+    padding: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.allReports a {
+    color: #0ea5e9;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.allReports a:hover {
+    text-decoration: underline;
+}

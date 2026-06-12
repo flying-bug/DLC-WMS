@@ -12,23 +12,31 @@ public class UserDetailsImpl implements UserDetails {
     private Long id;
     private String username;
     private String password;
+    private boolean enabled;
     private Collection<? extends GrantedAuthority> authorities;
 
-    public UserDetailsImpl(Long id, String username, String password, Collection<? extends GrantedAuthority> authorities) {
+    public UserDetailsImpl(Long id, String username, String password, boolean enabled, Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
         this.password = password;
+        this.enabled = enabled;
         this.authorities = authorities;
     }
 
     public static UserDetailsImpl build(User user) {
         List<GrantedAuthority> authorities = user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getCode()))
+                .map(role -> {
+                    String code = role.getCode();
+                    String authority = code.startsWith("ROLE_") ? code : "ROLE_" + code;
+                    return new SimpleGrantedAuthority(authority);
+                })
                 .collect(java.util.stream.Collectors.toList());
+        boolean enabled = "APPROVED".equalsIgnoreCase(user.getStatus());
         return new UserDetailsImpl(
                 user.getId(),
                 user.getUsername(),
                 user.getPasswordHash(),
+                enabled,
                 authorities);
     }
 
@@ -58,5 +66,5 @@ public class UserDetailsImpl implements UserDetails {
     @Override
     public boolean isCredentialsNonExpired() { return true; }
     @Override
-    public boolean isEnabled() { return true; }
+    public boolean isEnabled() { return enabled; }
 }

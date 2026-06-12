@@ -66,9 +66,16 @@ public class AuthService {
             com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại. Vui lòng liên hệ Admin"));
             
+            if (!"APPROVED".equalsIgnoreCase(user.getStatus())) {
+                throw new RuntimeException("Tài khoản đã bị khóa hoặc chưa được phê duyệt.");
+            }
+            
             String role = user.getRoles().stream()
                     .findFirst()
-                    .map(r -> "ROLE_" + r.getCode())
+                    .map(r -> {
+                        String code = r.getCode();
+                        return code.startsWith("ROLE_") ? code : "ROLE_" + code;
+                    })
                     .orElse("ROLE_USER");
             String jwt = jwtUtils.generateJwtToken(user.getUsername(), role);
             
