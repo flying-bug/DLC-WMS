@@ -41,6 +41,31 @@ File template Excel chuẩn để nhập kho hàng loạt cần bao gồm các t
 - **Cột ' :**
 - *Giới hạn:* Kích thước file tối đa 5MB, xử lý tối đa 5000 dòng/lần upload để đảm bảo hiệu năng và không gây timeout server.
 
+## Requirements (mandatory)
+Functional Requirements
+FR-001: Hệ thống MUST phân biệt rõ Sổ cái (Tồn kho tổng) và Sổ chi tiết (Serial). Các báo cáo tồn kho tổng hợp chỉ được query trên bảng INVENTORY_BALANCES.
+
+FR-002: Hệ thống MUST sử dụng mã product_code làm định danh mã vạch (Barcode) để quét và tìm kiếm sản phẩm.
+
+FR-003: Hệ thống MUST hỗ trợ 3 phương thức nhập liệu trên phiếu nhập kho: Nhập tay, Quét Barcode/Scanner và Import Excel.
+
+FR-004: Hệ thống MUST tự động focus lại con trỏ chuột vào ô nhập S/N trong < 0.1s sau khi nhận tín hiệu phím Enter từ súng quét.
+
+FR-005: Hệ thống MUST cập nhật trực tiếp warehouse_id và status trong bảng SERIAL_NUMBERS khi có nghiệp vụ chuyển kho hoặc xuất bán.
+
+FR-006: Hệ thống MUST có cơ chế Partial Import đối với file Excel (Cho phép import dòng đúng, giữ lại dòng sai trên lưới để sửa tay).
+
+## Non-Functional & Security Requirements
+SEC-001 (RBAC): Chỉ user có quyền (Permissions) tương ứng mới được phép Tạo nháp, Chỉnh sửa, và Ghi sổ (POST) phiếu nhập/xuất.
+
+SEC-002 (Sanitization): Chuỗi S/N hoặc product_code nhập vào MUST được tự động trim khoảng trắng thừa ở hai đầu và chuyển thành Uppercase.
+
+SEC-003 (Audit): Mọi thay đổi trạng thái chứng từ MUST được lưu vết (Người thực hiện, Thời gian, Hành động) vào bảng AUDIT_LOGS.
+
+NFR-001 (Immutability): Phiếu kho sau khi POST KHÔNG ĐƯỢC phép xóa cứng. Phải sử dụng chứng từ đảo nếu muốn sửa sai.
+
+NFR-002 (Integrity): Tồn kho tổng trong INVENTORY_BALANCES không bao giờ được phép < 0. Tổng đếm S/N ở trạng thái AVAILABLE tại Kho X MUST luôn bằng quantity_on_hand của Kho X.
+
 ## Functional Requirements
 
 - The system SHALL phân biệt rõ Sổ cái (Tồn kho tổng) và Sổ chi tiết (Serial). Khi xem báo cáo tồn kho tổng, hệ thống chỉ query vào bảng `INVENTORY_BALANCES`.
@@ -69,10 +94,10 @@ File template Excel chuẩn để nhập kho hàng loạt cần bao gồm các t
 - Warranty eligibility MUST be verified where relevant: Chế độ bảo hành áp dụng trực tiếp lên S/N của linh kiện rời, không áp dụng cho cấu hình PC tổng.
 
 ## Success Criteria
-
-- Tốc độ load báo cáo Tồn kho tổng hợp dưới 1 giây.
-- Đảm bảo 100% khớp dữ liệu vật lý và hệ thống nhờ cơ chế ép buộc quét mã S/N.
-- Tiết kiệm 80% thời gian nhập liệu cho các lô hàng lớn (ví dụ: nhập hàng trăm thanh RAM) nhờ tính năng Import Excel.
+- SC-001: Tốc độ load báo cáo Tồn kho tổng hợp đạt < 1 giây trên quy mô 1.000.000 S/N.
+- SC-002: Tỉ lệ lệch tồn kho vật lý và phần mềm giảm xuống 0% (nhờ cơ chế bắt buộc quét đích danh).
+- SC-003: Giảm 80% thời gian nhập liệu cho các lô hàng từ 50 S/N trở lên khi sử dụng tính năng Import Excel so với gõ tay.
+- SC-004: Độ trễ từ lúc súng quét nhả Enter đến khi focus lại vào ô nhập liệu < 0.1 giây.
 
 ## Key Entities
 
@@ -84,6 +109,8 @@ File template Excel chuẩn để nhập kho hàng loạt cần bao gồm các t
 
 - Mã `product_code` nội bộ của hệ thống luôn được in làm tem Barcode dán lên sản phẩm để quét.
 - Không theo dõi cấn trừ công nợ chi tiết theo từng hóa đơn, chỉ quản lý tổng thu/chi/nợ theo Đối tác (Partner_id).
+- Máy tính/Thiết bị cầm tay của thủ kho có kết nối mạng ổn định (Luồng offline chưa được hỗ trợ sâu).
+- Người dùng sử dụng các thiết bị quét mã vạch tiêu chuẩn có khả năng tự động truyền ký tự Enter (Carriage Return) ở cuối chuỗi.
 
 ## Out of Scope (Ngoài phạm vi Phase 1)
 
