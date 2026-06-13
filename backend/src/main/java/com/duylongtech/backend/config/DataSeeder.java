@@ -5,6 +5,7 @@ import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.repository.RoleRepository;
 import com.duylongtech.backend.repository.UserRepository;
 import com.duylongtech.backend.repository.PermissionRepository;
+import com.duylongtech.backend.repository.AuditLogRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -20,12 +21,14 @@ public class DataSeeder implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final PermissionRepository permissionRepository;
+    private final AuditLogRepository auditLogRepository;
 
-    public DataSeeder(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, PermissionRepository permissionRepository) {
+    public DataSeeder(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, PermissionRepository permissionRepository, AuditLogRepository auditLogRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.permissionRepository = permissionRepository;
+        this.auditLogRepository = auditLogRepository;
     }
 
     @Override
@@ -127,6 +130,71 @@ public class DataSeeder implements CommandLineRunner {
                     .build();
             userRepository.save(admin);
             System.out.println("Tạo tài khoản mặc định thành công: admin / 123456");
+        }
+
+        if (auditLogRepository.count() == 0) {
+            User adminUser = userRepository.findByUsername("admin").orElse(null);
+            
+            auditLogRepository.save(com.duylongtech.backend.entity.AuditLog.builder()
+                    .user(adminUser)
+                    .action("POST")
+                    .entityName("Auth")
+                    .ipAddress("192.168.1.15")
+                    .status("SUCCESS")
+                    .description("Đăng nhập hệ thống")
+                    .createdAt(LocalDateTime.now().minusHours(2))
+                    .build());
+
+            auditLogRepository.save(com.duylongtech.backend.entity.AuditLog.builder()
+                    .user(adminUser)
+                    .action("UPDATE")
+                    .entityName("Product")
+                    .ipAddress("192.168.1.24")
+                    .status("SUCCESS")
+                    .description("Cập nhật số lượng sản phẩm SP-RAM-008")
+                    .createdAt(LocalDateTime.now().minusHours(1).minusMinutes(30))
+                    .build());
+
+            auditLogRepository.save(com.duylongtech.backend.entity.AuditLog.builder()
+                    .user(adminUser)
+                    .action("CREATE")
+                    .entityName("ExportSlip")
+                    .ipAddress("192.168.1.42")
+                    .status("SUCCESS")
+                    .description("Tạo phiếu xuất kho XK-2024-0012")
+                    .createdAt(LocalDateTime.now().minusHours(1))
+                    .build());
+
+            auditLogRepository.save(com.duylongtech.backend.entity.AuditLog.builder()
+                    .user(null) // anonymous
+                    .action("POST")
+                    .entityName("Auth")
+                    .ipAddress("203.113.152.4")
+                    .status("FAILED")
+                    .description("Thử đăng nhập sai mật khẩu")
+                    .createdAt(LocalDateTime.now().minusMinutes(45))
+                    .build());
+
+            auditLogRepository.save(com.duylongtech.backend.entity.AuditLog.builder()
+                    .user(adminUser)
+                    .action("UPDATE")
+                    .entityName("Permission")
+                    .ipAddress("192.168.1.15")
+                    .status("SUCCESS")
+                    .description("Phân quyền tài khoản manager@duylong.vn")
+                    .createdAt(LocalDateTime.now().minusMinutes(20))
+                    .build());
+
+            auditLogRepository.save(com.duylongtech.backend.entity.AuditLog.builder()
+                    .user(adminUser)
+                    .action("CREATE")
+                    .entityName("Unit")
+                    .ipAddress("192.168.1.24")
+                    .status("SUCCESS")
+                    .description("Thêm mới đơn vị tính: Hộp")
+                    .createdAt(LocalDateTime.now().minusMinutes(5))
+                    .build());
+            System.out.println("Seeded mock audit logs successfully.");
         }
     }
 }
