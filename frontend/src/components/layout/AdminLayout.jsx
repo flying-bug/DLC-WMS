@@ -35,7 +35,12 @@ const AdminLayout = ({ children }) => {
                             Quy trình
                         </div>
                         <div className={styles.tab}>Biểu đồ</div>
-                        <div className={styles.tab}>Nhập kho</div>
+                        <div 
+                            className={`${styles.tab} ${currentPath === '/import-history' ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/import-history')}
+                        >
+                            Nhập kho
+                        </div>
                         <div 
                             className={`${styles.tab} ${currentPath === '/export-slips' ? styles.activeTab : ''}`}
                             onClick={() => navigate('/export-slips')}

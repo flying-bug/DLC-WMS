@@ -10,6 +10,7 @@ import UsersPage from '../pages/UsersPage';
 import CreateEmployeePage from '../pages/CreateEmployee/CreateEmployeePage';
 import PermissionDetailPage from '../pages/Permissions/PermissionDetailPage';
 import ExportSlipPage from '../pages/ExportSlip/ExportSlipPage';
+import ImportHistoryPage from '../pages/ImportHistory/ImportHistoryPage';
 import ProfilePage from '../pages/Profile/ProfilePage';
 import AuditLogPage from '../pages/AuditLog/AuditLogPage';
 
@@ -53,6 +54,7 @@ function AppRouter() {
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/change-password" element={<ChangePasswordPage />} />
                     <Route path="/export-slips" element={<ExportSlipPage />} />
+                    <Route path="/import-history" element={<ImportHistoryPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/units" element={<UnitPage />} />
