@@ -10,7 +10,6 @@ function UsersPage() {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [usersData, setUsersData] = useState([]);
-    const [rolesList, setRolesList] = useState([]);
     const [activeMenuId, setActiveMenuId] = useState(null);
     const [loading, setLoading] = useState(false);
 
@@ -84,21 +83,9 @@ function UsersPage() {
         }
     };
 
-    const fetchRoles = async () => {
-        try {
-            const res = await axiosClient.get('/roles');
-            if (res.data && res.data.data) {
-                setRolesList(res.data.data);
-            }
-        } catch (error) {
-            console.error('Lỗi lấy danh sách vai trò:', error);
-        }
-    };
-
     useEffect(() => {
         /* eslint-disable-next-line react-hooks/set-state-in-effect */
         fetchUsers();
-        fetchRoles();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
