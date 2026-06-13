@@ -145,19 +145,14 @@ function UsersPage() {
 
     const handleSaveUser = async (updatedData) => {
         try {
-            // Update info
+            // Update info and roles
+            const targetRoleCode = updatedData.systemRole === 'admin' ? 'SUPER_ADMIN' : 'STAFF';
             await axiosClient.put(`/users/${updatedData.id}`, {
                 fullName: updatedData.name,
                 email: updatedData.email,
-                phone: updatedData.phone
+                phone: updatedData.phone,
+                roles: [targetRoleCode]
             });
-
-            // Update roles if changed
-            const targetRoleCode = updatedData.systemRole === 'admin' ? 'SUPER_ADMIN' : 'STAFF';
-            const role = rolesList.find(r => r.code === targetRoleCode);
-            if (role) {
-                await axiosClient.put(`/users/${updatedData.id}/permissions`, [role.id]);
-            }
 
             fetchUsers();
             setIsDrawerOpen(false);
