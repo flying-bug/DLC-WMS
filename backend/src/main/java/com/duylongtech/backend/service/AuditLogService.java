@@ -13,7 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 @Service
@@ -52,7 +52,7 @@ public class AuditLogService {
                     .ipAddress(ipAddress)
                     .status(status)
                     .description(description)
-                    .createdAt(LocalDateTime.now())
+                    .createdAt(Instant.now())
                     .build();
 
             auditLogRepository.save(logEntity);

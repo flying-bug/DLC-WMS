@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -142,7 +144,7 @@ public class DataSeeder implements CommandLineRunner {
                     .ipAddress("192.168.1.15")
                     .status("SUCCESS")
                     .description("Đăng nhập hệ thống")
-                    .createdAt(LocalDateTime.now().minusHours(2))
+                    .createdAt(Instant.now().minus(2, ChronoUnit.HOURS))
                     .build());
 
             auditLogRepository.save(com.duylongtech.backend.entity.AuditLog.builder()
@@ -152,7 +154,7 @@ public class DataSeeder implements CommandLineRunner {
                     .ipAddress("192.168.1.24")
                     .status("SUCCESS")
                     .description("Cập nhật số lượng sản phẩm SP-RAM-008")
-                    .createdAt(LocalDateTime.now().minusHours(1).minusMinutes(30))
+                    .createdAt(Instant.now().minus(90, ChronoUnit.MINUTES))
                     .build());
 
             auditLogRepository.save(com.duylongtech.backend.entity.AuditLog.builder()
@@ -162,7 +164,7 @@ public class DataSeeder implements CommandLineRunner {
                     .ipAddress("192.168.1.42")
                     .status("SUCCESS")
                     .description("Tạo phiếu xuất kho XK-2024-0012")
-                    .createdAt(LocalDateTime.now().minusHours(1))
+                    .createdAt(Instant.now().minus(1, ChronoUnit.HOURS))
                     .build());
 
             auditLogRepository.save(com.duylongtech.backend.entity.AuditLog.builder()
@@ -172,7 +174,7 @@ public class DataSeeder implements CommandLineRunner {
                     .ipAddress("203.113.152.4")
                     .status("FAILED")
                     .description("Thử đăng nhập sai mật khẩu")
-                    .createdAt(LocalDateTime.now().minusMinutes(45))
+                    .createdAt(Instant.now().minus(45, ChronoUnit.MINUTES))
                     .build());
 
             auditLogRepository.save(com.duylongtech.backend.entity.AuditLog.builder()
@@ -182,7 +184,7 @@ public class DataSeeder implements CommandLineRunner {
                     .ipAddress("192.168.1.15")
                     .status("SUCCESS")
                     .description("Phân quyền tài khoản manager@duylong.vn")
-                    .createdAt(LocalDateTime.now().minusMinutes(20))
+                    .createdAt(Instant.now().minus(20, ChronoUnit.MINUTES))
                     .build());
 
             auditLogRepository.save(com.duylongtech.backend.entity.AuditLog.builder()
@@ -192,7 +194,7 @@ public class DataSeeder implements CommandLineRunner {
                     .ipAddress("192.168.1.24")
                     .status("SUCCESS")
                     .description("Thêm mới đơn vị tính: Hộp")
-                    .createdAt(LocalDateTime.now().minusMinutes(5))
+                    .createdAt(Instant.now().minus(5, ChronoUnit.MINUTES))
                     .build());
             System.out.println("Seeded mock audit logs successfully.");
         }

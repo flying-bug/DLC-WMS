@@ -4,6 +4,18 @@ import axiosClient from '../../api/axiosClient';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
 import styles from './AuditLogPage.module.css';
 
+const formatDateTime = (isoString) => {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return isoString;
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    } catch {
+        return isoString;
+    }
+};
+
 function AuditLogPage() {
     const navigate = useNavigate();
     const [logs, setLogs] = useState([]);
@@ -141,7 +153,7 @@ function AuditLogPage() {
                             ) : (
                                 logs.map((log) => (
                                     <tr key={log.id} className={styles.tableRow}>
-                                        <td className={styles.timeCol}>{log.timestamp}</td>
+                                        <td className={styles.timeCol}>{formatDateTime(log.timestamp)}</td>
                                         <td><strong>{log.user}</strong></td>
                                         <td>{log.action}</td>
                                         <td><span className={styles.moduleBadge}>{log.module}</span></td>
