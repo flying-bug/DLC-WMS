@@ -22,7 +22,7 @@ public class InventoryDocumentController {
 
     @GetMapping("/history")
     @Operation(summary = "View export slip history")
-    @PreAuthorize("hasAnyRole('MANAGER','STAFF')")
+    @PreAuthorize("hasAuthority('export:view')")
     public ApiResponse<List<InventoryDocumentResponse>> getExportHistory(
             @RequestParam(required = false) String docCode,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -35,25 +35,33 @@ public class InventoryDocumentController {
 
     @GetMapping("/{id}")
     @Operation(summary = "View export slip detail")
-    @PreAuthorize("hasAnyRole('MANAGER','STAFF')")
+    @PreAuthorize("hasAuthority('export:view')")
     public ApiResponse<InventoryDocumentResponse> getExportDetail(@PathVariable Long id) {
         return ApiResponse.success(inventoryDocumentService.getExportDetail(id));
     }
 
     @PostMapping("/create")
     @Operation(summary = "Create export slip")
-    @PreAuthorize("hasAnyRole('MANAGER','STAFF')")
+    @PreAuthorize("hasAuthority('export:add')")
     public ApiResponse<InventoryDocumentResponse> createExport(@RequestBody InventoryDocumentRequest req) {
         return ApiResponse.success(inventoryDocumentService.createExport(req));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update export slip")
-    @PreAuthorize("hasAnyRole('MANAGER','STAFF')")
+    @PreAuthorize("hasAuthority('export:edit')")
     public ApiResponse<InventoryDocumentResponse> updateExport(
             @PathVariable Long id,
             @RequestBody InventoryDocumentRequest req
     ) {
         return ApiResponse.success(inventoryDocumentService.updateExport(id, req));
     }
+
+    @PostMapping("/{id}/post")
+    @Operation(summary = "Post export slip (Ghi Sổ)")
+    @PreAuthorize("hasAuthority('export:edit')")
+    public ApiResponse<InventoryDocumentResponse> postExport(@PathVariable Long id) {
+        return ApiResponse.success(inventoryDocumentService.postExport(id));
+    }
 }
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../Modal/Modal';
 import styles from './EmployeeDrawer.module.css';
@@ -7,22 +7,27 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('general');
     const [isEditMode, setIsEditMode] = useState(false);
-    const [formData, setFormData] = useState(null);
+    const [formData, setFormData] = useState(() => user ? { ...user } : null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-    // Sync formData when user prop changes or drawer opens
+    // Sync formData when user prop changes
     useEffect(() => {
         if (user) {
+            /* eslint-disable-next-line react-hooks/set-state-in-effect */
             setFormData({ ...user });
         }
-    }, [user]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id]);
 
     // Reset state when closed
     useEffect(() => {
         if (!isOpen) {
-            setIsEditMode(false);
-            setActiveTab('general');
-            setShowConfirmModal(false);
+            const timer = setTimeout(() => {
+                setIsEditMode(false);
+                setActiveTab('general');
+                setShowConfirmModal(false);
+            }, 0);
+            return () => clearTimeout(timer);
         }
     }, [isOpen]);
 

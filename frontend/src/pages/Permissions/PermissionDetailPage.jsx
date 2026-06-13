@@ -1,24 +1,23 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import axiosClient from '../../api/axiosClient';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
 import styles from './PermissionDetailPage.module.css';
 
 function PermissionDetailPage() {
     const navigate = useNavigate();
     const { id } = useParams();
-
-    const userName = "An Nguyễn";
-
+    const [user, setUser] = useState(null);
     const [activeCategory, setActiveCategory] = useState('warehouse');
 
     // Initial state matching the UC list
     const [permissions, setPermissions] = useState({
         // Quản lý kho
-        import: { full: false, view: true, add: true, edit: true, delete: false, export: true, print: true },
-        export: { full: false, view: true, add: false, edit: false, delete: false, export: true, print: true },
-        transfer: { full: false, view: true, add: false, edit: false, delete: false, export: false, print: true },
-        stocktake: { full: false, view: true, add: false, edit: false, delete: false, export: false, print: true },
-        assembly: { full: false, view: true, add: false, edit: false, delete: false, export: false, print: false },
+        import: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+        export: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+        transfer: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+        stocktake: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+        assembly: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         
         // Danh mục
         product: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
@@ -27,7 +26,7 @@ function PermissionDetailPage() {
         supplier: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         warehouse_master: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
 
-        // Báo cáo (no add/edit/delete/print in some)
+        // Báo cáo
         report_balance: { full: false, view: false, export: false },
         report_ledger: { full: false, view: false, export: false },
         report_summary: { full: false, view: false, export: false },
@@ -37,6 +36,75 @@ function PermissionDetailPage() {
         auth: { full: false, view: false, edit: false },
         audit: { full: false, view: false, export: false }
     });
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                // Fetch user
+                const userRes = await axiosClient.get(`/users/${id}`);
+                const userData = userRes.data?.data;
+                setUser(userData);
+                
+                // Set initial permission matrix based on saved permissions or roles
+                if (userData) {
+                    setPermissions(prev => {
+                        const newPerms = { ...prev };
+                        
+                        // 1. If user already has explicit permissions, populate them
+                        if (userData.permissions && userData.permissions.length > 0) {
+                            userData.permissions.forEach(code => {
+                                const [mod, act] = code.split(':');
+                                if (newPerms[mod] && newPerms[mod][act] !== undefined) {
+                                    newPerms[mod][act] = true;
+                                }
+                            });
+                        } else if (userData.roles) {
+                            // 2. Otherwise fallback to default permissions based on roles
+                            const hasAdmin = userData.roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
+                            const hasManager = userData.roles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
+                            const hasStaff = userData.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF');
+
+                            if (hasAdmin) {
+                                Object.keys(newPerms).forEach(mod => {
+                                    Object.keys(newPerms[mod]).forEach(act => {
+                                        newPerms[mod][act] = true;
+                                    });
+                                });
+                            } else if (hasManager) {
+                                Object.keys(newPerms).forEach(mod => {
+                                    const isSystem = ['account', 'auth', 'audit'].includes(mod);
+                                    Object.keys(newPerms[mod]).forEach(act => {
+                                        newPerms[mod][act] = !isSystem;
+                                    });
+                                });
+                            } else if (hasStaff) {
+                                Object.keys(newPerms).forEach(mod => {
+                                    const isWarehouse = ['import', 'export', 'transfer', 'stocktake', 'assembly'].includes(mod);
+                                    Object.keys(newPerms[mod]).forEach(act => {
+                                        newPerms[mod][act] = isWarehouse;
+                                    });
+                                });
+                            }
+                        }
+
+                        // For each module, determine if all actions are checked to set 'full' checkbox
+                        Object.keys(newPerms).forEach(mod => {
+                            const allOthersChecked = Object.keys(newPerms[mod])
+                                .filter(key => key !== 'full')
+                                .every(key => newPerms[mod][key]);
+                            newPerms[mod].full = allOthersChecked;
+                        });
+
+                        return newPerms;
+                    });
+                }
+            } catch (error) {
+                console.error("Lỗi lấy thông tin phân quyền:", error);
+            }
+        };
+
+        loadData();
+    }, [id]);
 
     const handleCheck = (module, action, checked) => {
         setPermissions(prev => {
@@ -66,9 +134,26 @@ function PermissionDetailPage() {
         });
     };
 
-    const handleSave = () => {
-        console.log("Saved permissions:", permissions);
-        navigate('/users');
+    const handleSave = async () => {
+        try {
+            // Compile list of ticked permission codes
+            const tickedCodes = [];
+            Object.keys(permissions).forEach(mod => {
+                Object.keys(permissions[mod]).forEach(act => {
+                    // Skip the 'full' helper checkbox
+                    if (act !== 'full' && permissions[mod][act]) {
+                        tickedCodes.push(`${mod}:${act}`);
+                    }
+                });
+            });
+
+            await axiosClient.put(`/users/${id}/permissions`, tickedCodes);
+            alert('Cập nhật phân quyền thành công!');
+            navigate('/users');
+        } catch (error) {
+            console.error('Lỗi lưu phân quyền:', error);
+            alert('Có lỗi xảy ra khi lưu phân quyền.');
+        }
     };
 
     const renderCheckbox = (module, action) => {
@@ -146,6 +231,9 @@ function PermissionDetailPage() {
         }
     };
 
+    const userName = user ? user.fullName : "Đang tải...";
+    const userRolesDisplay = user && user.roles ? user.roles.join(', ') : 'Chưa có vai trò';
+
     return (
         <div className={styles.page}>
             {/* Header */}
@@ -174,7 +262,7 @@ function PermissionDetailPage() {
             {/* Main */}
             <main className={styles.main}>
                 <h1 className={styles.pageTitle}>Phân quyền chức năng cho nhân viên: {userName}</h1>
-                <p className={styles.pageSubtitle}>Vai trò: Người sử dụng hệ thống</p>
+                <p className={styles.pageSubtitle}>Vai trò hiện tại: {userRolesDisplay}</p>
 
                 <div className={styles.layout}>
                     {/* Sidebar */}

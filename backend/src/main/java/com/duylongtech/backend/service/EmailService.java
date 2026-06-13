@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import com.duylongtech.backend.exception.BusinessException;
 
 @Service
 @RequiredArgsConstructor
@@ -38,7 +39,7 @@ public class EmailService {
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("Failed to send email: " + e.getMessage());
-            throw new RuntimeException("Lỗi khi gửi email: " + e.getMessage());
+            throw new BusinessException("Lỗi khi gửi email: " + e.getMessage());
         }
     }
 }

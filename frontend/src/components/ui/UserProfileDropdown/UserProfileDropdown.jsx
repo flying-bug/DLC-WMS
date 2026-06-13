@@ -7,6 +7,12 @@ function UserProfileDropdown() {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
 
+    const userRole = localStorage.getItem('role') || 'STAFF';
+    const isSA = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN';
+    const isMN = userRole === 'MANAGER' || userRole === 'ROLE_MANAGER';
+    const initials = isSA ? 'SA' : isMN ? 'MN' : 'ST';
+    const displayName = isSA ? 'Super Admin' : isMN ? 'Manager' : 'Staff';
+
     // Close dropdown on click outside
     useEffect(() => {
         function handleClickOutside(event) {
@@ -31,12 +37,12 @@ function UserProfileDropdown() {
             onMouseLeave={() => setIsDropdownOpen(false)}
             ref={dropdownRef}
         >
-            <div className={styles.avatarCircle} aria-hidden="true">SA</div>
-            <span className={styles.userName}>Super Admin</span>
+            <div className={styles.avatarCircle} aria-hidden="true">{initials}</div>
+            <span className={styles.userName}>{displayName}</span>
             <i className={`bi bi-chevron-down ${styles.chevronIcon}`} aria-hidden="true" />
 
             {/* Dropdown Menu */}
-            {(isDropdownOpen || null) && (
+            {isDropdownOpen && (
                 <div className={`${styles.userDropdown} ${isDropdownOpen ? styles.showDropdown : ''}`}>
                     <div className={styles.dropdownItem} onClick={(e) => { e.stopPropagation(); navigate('/profile'); setIsDropdownOpen(false); }}>
                         <i className="bi bi-person" /> Xem thông tin cá nhân
@@ -45,7 +51,7 @@ function UserProfileDropdown() {
                         <i className="bi bi-shield-lock" /> Đổi mật khẩu
                     </div>
                     <div className={styles.dropdownDivider} />
-                    <div className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`} onClick={(e) => { e.stopPropagation(); navigate('/login'); setIsDropdownOpen(false); }}>
+                    <div className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`} onClick={(e) => { e.stopPropagation(); localStorage.clear(); navigate('/login'); setIsDropdownOpen(false); }}>
                         <i className="bi bi-box-arrow-right" /> Đăng xuất
                     </div>
                 </div>

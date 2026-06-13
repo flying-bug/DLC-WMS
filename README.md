@@ -18,3 +18,4 @@ Dự án quản lý kho và bán hàng cho Duy Long Computer.
 - [API_SPEC.md](API_SPEC.md)
 - [BUSINESS_RULES.md](BUSINESS_RULES.md)
 - [CONTRIBUTING.md](CONTRIBUTING.md)
+- [SKILL.md](.ai/vibecode-kit/SKILL.md)
