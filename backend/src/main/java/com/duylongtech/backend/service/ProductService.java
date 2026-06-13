@@ -9,6 +9,7 @@ import com.duylongtech.backend.repository.BrandRepository;
 import com.duylongtech.backend.repository.ProductCategoryRepository;
 import com.duylongtech.backend.repository.ProductRepository;
 import com.duylongtech.backend.repository.UnitRepository;
+import com.duylongtech.backend.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -36,14 +37,14 @@ public class ProductService {
 
     public ProductDto getProductById(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy hàng hóa với ID: " + id));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy hàng hóa với ID: " + id));
         return convertToDto(product);
     }
 
     @Transactional
     public ProductDto createProduct(ProductDto dto) {
         if (productRepository.findByProductCode(dto.getProductCode()).isPresent()) {
-            throw new RuntimeException("Mã hàng hóa '" + dto.getProductCode() + "' đã tồn tại.");
+            throw new BusinessException("Mã hàng hóa '" + dto.getProductCode() + "' đã tồn tại.");
         }
 
         Product product = convertToEntity(dto);
@@ -54,12 +55,12 @@ public class ProductService {
     @Transactional
     public ProductDto updateProduct(Long id, ProductDto dto) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy hàng hóa với ID: " + id));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy hàng hóa với ID: " + id));
 
         // Kiểm tra trùng mã khi cập nhật mã khác
         if (!product.getProductCode().equals(dto.getProductCode())) {
             if (productRepository.findByProductCode(dto.getProductCode()).isPresent()) {
-                throw new RuntimeException("Mã hàng hóa '" + dto.getProductCode() + "' đã tồn tại trên hệ thống.");
+                throw new BusinessException("Mã hàng hóa '" + dto.getProductCode() + "' đã tồn tại trên hệ thống.");
             }
         }
 
@@ -91,7 +92,7 @@ public class ProductService {
     @Transactional
     public void deleteProduct(Long id) {
         if (!productRepository.existsById(id)) {
-            throw new RuntimeException("Không tìm thấy hàng hóa để xóa.");
+            throw new BusinessException("Không tìm thấy hàng hóa để xóa.");
         }
         productRepository.deleteById(id);
     }

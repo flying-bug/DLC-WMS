@@ -5,6 +5,7 @@ import com.duylongtech.backend.dto.response.UserDetailResponseDTO;
 import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.repository.UserRepository;
 import com.duylongtech.backend.security.UserDetailsImpl;
+import com.duylongtech.backend.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,7 +17,9 @@ import java.util.HashSet;
 import java.util.Set;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import com.duylongtech.backend.entity.RoleEntity;
+import com.duylongtech.backend.entity.PermissionEntity;
 import com.duylongtech.backend.repository.RoleRepository;
+import com.duylongtech.backend.repository.PermissionRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +28,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PermissionRepository permissionRepository;
 
     // ======================== View Account Detail (GET /api/v1/users/me) ========================
 
@@ -41,7 +45,7 @@ public class UserService {
 
         // 2. Query user kèm roles (EntityGraph JOIN FETCH)
         User user = userRepository.findWithRolesById(userDetails.getId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản trong hệ thống."));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy tài khoản trong hệ thống."));
 
         // 3. Map Entity -> DTO (Data Masking: không trả về password_hash)
         return mapToDetailDto(user);
@@ -111,31 +115,40 @@ public class UserService {
     }
 
     public UserDto getUserById(Long id) {
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
         return mapToDto(user);
     }
 
     public void updateStatus(Long id, String status) {
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
         user.setStatus(status);
         userRepository.save(user);
     }
 
-    public void updatePermissions(Long id, List<Long> roleIds) {
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        Set<RoleEntity> roles = new HashSet<>();
-        roleIds.forEach(roleId -> {
-            roleRepository.findById(roleId).ifPresent(roles::add);
-        });
-        user.setRoles(roles);
+    public void updatePermissions(Long id, List<String> permissionCodes) {
+        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
+        Set<PermissionEntity> permissions = new HashSet<>();
+        if (permissionCodes != null) {
+            permissionCodes.forEach(code -> {
+                permissionRepository.findByCode(code).ifPresent(permissions::add);
+            });
+        }
+        user.setPermissions(permissions);
         userRepository.save(user);
     }
 
     public UserDto updateUser(Long id, UserDto userDto) {
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
         user.setFullName(userDto.getFullName());
         user.setEmail(userDto.getEmail());
         user.setPhone(userDto.getPhone());
+        if (userDto.getRoles() != null) {
+            Set<RoleEntity> roles = new HashSet<>();
+            userDto.getRoles().forEach(roleCode -> {
+                roleRepository.findByCode(roleCode).ifPresent(roles::add);
+            });
+            user.setRoles(roles);
+        }
         User updated = userRepository.save(user);
         return mapToDto(updated);
     }
@@ -150,6 +163,9 @@ public class UserService {
         dto.setStatus(user.getStatus());
         if (user.getRoles() != null) {
             dto.setRoles(user.getRoles().stream().map(RoleEntity::getCode).collect(Collectors.toList()));
+        }
+        if (user.getPermissions() != null) {
+            dto.setPermissions(user.getPermissions().stream().map(PermissionEntity::getCode).collect(Collectors.toList()));
         }
         return dto;
     }

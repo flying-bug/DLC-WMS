@@ -8,7 +8,6 @@ function PermissionDetailPage() {
     const navigate = useNavigate();
     const { id } = useParams();
     const [user, setUser] = useState(null);
-    const [rolesList, setRolesList] = useState([]);
     const [activeCategory, setActiveCategory] = useState('warehouse');
 
     // Initial state matching the UC list
@@ -46,43 +45,56 @@ function PermissionDetailPage() {
                 const userData = userRes.data?.data;
                 setUser(userData);
                 
-                // Fetch roles
-                const rolesRes = await axiosClient.get('/roles');
-                const rolesData = rolesRes.data?.data || [];
-                setRolesList(rolesData);
-
-                // Set initial permission matrix based on roles
-                if (userData && userData.roles) {
-                    const hasAdmin = userData.roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
-                    const hasManager = userData.roles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
-                    const hasStaff = userData.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF');
-
+                // Set initial permission matrix based on saved permissions or roles
+                if (userData) {
                     setPermissions(prev => {
                         const newPerms = { ...prev };
-                        if (hasAdmin) {
-                            // Give full permissions everywhere
-                            Object.keys(newPerms).forEach(mod => {
-                                Object.keys(newPerms[mod]).forEach(act => {
+                        
+                        // 1. If user already has explicit permissions, populate them
+                        if (userData.permissions && userData.permissions.length > 0) {
+                            userData.permissions.forEach(code => {
+                                const [mod, act] = code.split(':');
+                                if (newPerms[mod] && newPerms[mod][act] !== undefined) {
                                     newPerms[mod][act] = true;
-                                });
+                                }
                             });
-                        } else if (hasManager) {
-                            // Give warehouse + master_data + reports full, system none
-                            Object.keys(newPerms).forEach(mod => {
-                                const isSystem = ['account', 'auth', 'audit'].includes(mod);
-                                Object.keys(newPerms[mod]).forEach(act => {
-                                    newPerms[mod][act] = !isSystem;
+                        } else if (userData.roles) {
+                            // 2. Otherwise fallback to default permissions based on roles
+                            const hasAdmin = userData.roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
+                            const hasManager = userData.roles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
+                            const hasStaff = userData.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF');
+
+                            if (hasAdmin) {
+                                Object.keys(newPerms).forEach(mod => {
+                                    Object.keys(newPerms[mod]).forEach(act => {
+                                        newPerms[mod][act] = true;
+                                    });
                                 });
-                            });
-                        } else if (hasStaff) {
-                            // Give warehouse only
-                            Object.keys(newPerms).forEach(mod => {
-                                const isWarehouse = ['import', 'export', 'transfer', 'stocktake', 'assembly'].includes(mod);
-                                Object.keys(newPerms[mod]).forEach(act => {
-                                    newPerms[mod][act] = isWarehouse;
+                            } else if (hasManager) {
+                                Object.keys(newPerms).forEach(mod => {
+                                    const isSystem = ['account', 'auth', 'audit'].includes(mod);
+                                    Object.keys(newPerms[mod]).forEach(act => {
+                                        newPerms[mod][act] = !isSystem;
+                                    });
                                 });
-                            });
+                            } else if (hasStaff) {
+                                Object.keys(newPerms).forEach(mod => {
+                                    const isWarehouse = ['import', 'export', 'transfer', 'stocktake', 'assembly'].includes(mod);
+                                    Object.keys(newPerms[mod]).forEach(act => {
+                                        newPerms[mod][act] = isWarehouse;
+                                    });
+                                });
+                            }
                         }
+
+                        // For each module, determine if all actions are checked to set 'full' checkbox
+                        Object.keys(newPerms).forEach(mod => {
+                            const allOthersChecked = Object.keys(newPerms[mod])
+                                .filter(key => key !== 'full')
+                                .every(key => newPerms[mod][key]);
+                            newPerms[mod].full = allOthersChecked;
+                        });
+
                         return newPerms;
                     });
                 }
@@ -124,44 +136,18 @@ function PermissionDetailPage() {
 
     const handleSave = async () => {
         try {
-            // Determine role code based on matrix selections:
-            // - If any system module has views/edits checked -> SUPER_ADMIN
-            // - Else if any master_data or report module has views/edits checked -> MANAGER
-            // - Else -> STAFF
-            const hasSystemSelected = ['account', 'auth', 'audit'].some(mod => {
-                return Object.keys(permissions[mod] || {}).some(act => permissions[mod][act]);
+            // Compile list of ticked permission codes
+            const tickedCodes = [];
+            Object.keys(permissions).forEach(mod => {
+                Object.keys(permissions[mod]).forEach(act => {
+                    // Skip the 'full' helper checkbox
+                    if (act !== 'full' && permissions[mod][act]) {
+                        tickedCodes.push(`${mod}:${act}`);
+                    }
+                });
             });
 
-            const hasManagerSelected = ['product', 'unit', 'customer', 'supplier', 'warehouse_master', 'report_balance', 'report_ledger', 'report_summary'].some(mod => {
-                return Object.keys(permissions[mod] || {}).some(act => permissions[mod][act]);
-            });
-
-            let targetRoleCode = 'STAFF';
-            if (hasSystemSelected) {
-                targetRoleCode = 'SUPER_ADMIN';
-            } else if (hasManagerSelected) {
-                const possibleCodes = rolesList.map(r => r.code);
-                if (possibleCodes.includes('MANAGER')) {
-                    targetRoleCode = 'MANAGER';
-                } else if (possibleCodes.includes('ROLE_MANAGER')) {
-                    targetRoleCode = 'ROLE_MANAGER';
-                }
-            } else {
-                const possibleCodes = rolesList.map(r => r.code);
-                if (possibleCodes.includes('STAFF')) {
-                    targetRoleCode = 'STAFF';
-                } else if (possibleCodes.includes('ROLE_STAFF')) {
-                    targetRoleCode = 'ROLE_STAFF';
-                }
-            }
-
-            const targetRole = rolesList.find(r => r.code === targetRoleCode);
-            if (!targetRole) {
-                alert('Không tìm thấy vai trò phù hợp trong cơ sở dữ liệu!');
-                return;
-            }
-
-            await axiosClient.put(`/users/${id}/permissions`, [targetRole.id]);
+            await axiosClient.put(`/users/${id}/permissions`, tickedCodes);
             alert('Cập nhật phân quyền thành công!');
             navigate('/users');
         } catch (error) {

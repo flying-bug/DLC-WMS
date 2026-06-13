@@ -24,13 +24,24 @@ public class UserDetailsImpl implements UserDetails {
     }
 
     public static UserDetailsImpl build(User user) {
-        List<GrantedAuthority> authorities = user.getRoles().stream()
-                .map(role -> {
-                    String code = role.getCode();
-                    String authority = code.startsWith("ROLE_") ? code : "ROLE_" + code;
-                    return new SimpleGrantedAuthority(authority);
-                })
-                .collect(java.util.stream.Collectors.toList());
+        List<GrantedAuthority> authorities = new java.util.ArrayList<>();
+        if (user.getRoles() != null) {
+            user.getRoles().forEach(role -> {
+                String code = role.getCode();
+                String authority = code.startsWith("ROLE_") ? code : "ROLE_" + code;
+                authorities.add(new SimpleGrantedAuthority(authority));
+                if (role.getPermissions() != null) {
+                    role.getPermissions().forEach(permission -> {
+                        authorities.add(new SimpleGrantedAuthority(permission.getCode()));
+                    });
+                }
+            });
+        }
+        if (user.getPermissions() != null) {
+            user.getPermissions().forEach(permission -> {
+                authorities.add(new SimpleGrantedAuthority(permission.getCode()));
+            });
+        }
         boolean enabled = "APPROVED".equalsIgnoreCase(user.getStatus());
         return new UserDetailsImpl(
                 user.getId(),
