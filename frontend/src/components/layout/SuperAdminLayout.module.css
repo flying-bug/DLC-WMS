@@ -1,0 +1,140 @@
+.layout {
+    min-height: 100vh;
+    background-color: #f8fafc;
+    font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+    color: #1e293b;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    height: 60px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+}
+
+.headerLeft {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.brandName {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e3f7a;
+    margin-right: 32px;
+}
+
+.navLinks {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    gap: 24px;
+}
+
+.navLink, .navLinkActive {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    text-decoration: none;
+    position: relative;
+    padding: 0 4px;
+    cursor: pointer;
+}
+
+.navLinkActive {
+    color: #1e3f7a;
+}
+
+.navLinkActive::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: #1e3f7a;
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+}
+
+.headerRight {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.searchBar {
+    display: flex;
+    align-items: center;
+    background: #f1f5f9;
+    border-radius: 6px;
+    padding: 8px 12px;
+    width: 280px;
+    border: 1px solid #e2e8f0;
+}
+
+.searchBar i {
+    color: #94a3b8;
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+.searchBar input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 13px;
+    width: 100%;
+    color: #1e293b;
+}
+
+.bellBtn {
+    background: none;
+    border: none;
+    position: relative;
+    color: #64748b;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.bellDot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    background-color: #ef4444;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+}
+
+.userInfoContainer {
+    display: flex;
+    align-items: center;
+    border-left: 1px solid #e2e8f0;
+    padding-left: 20px;
+}
+
+.mainWrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.content {
+    flex: 1;
+    padding: 32px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}

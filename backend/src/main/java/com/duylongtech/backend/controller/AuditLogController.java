@@ -38,7 +38,9 @@ public class AuditLogController {
         List<AuditLogResponse> content = logPage.getContent().stream().map(log -> {
             String userDisplay = "anonymous_user";
             if (log.getUser() != null) {
-                userDisplay = log.getUser().getEmail() != null ? log.getUser().getEmail() : log.getUser().getUsername();
+                userDisplay = (log.getUser().getEmail() != null && !log.getUser().getEmail().trim().isEmpty()) 
+                        ? log.getUser().getEmail() 
+                        : log.getUser().getUsername();
             }
             
             // Format status to matches Vietnamese display

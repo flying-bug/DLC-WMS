@@ -413,7 +413,7 @@
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    min-width: 200px;
+    min-width: 220px;
     z-index: 100;
     padding: 8px 0;
     animation: fadeIn 0.15s ease;
@@ -428,6 +428,7 @@
     align-items: center;
     gap: 12px;
     transition: background-color 0.2s, color 0.2s;
+    white-space: nowrap;
 }
 
 .actionMenuItem:hover {
