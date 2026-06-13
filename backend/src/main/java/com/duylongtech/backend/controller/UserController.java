@@ -29,28 +29,28 @@ public class UserController {
 
     // 5. View Account List
     @GetMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('account:view')")
     public ApiResponse<List<UserDto>> getUsers() {
         return ApiResponse.success(userService.getAllUsers());
     }
 
     // 6. Create Account
     @PostMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('account:add')")
     public ApiResponse<UserDto> createUser(@RequestBody UserDto userDto) {
         return ApiResponse.success(userService.createUser(userDto));
     }
 
     // 7. View Account Details
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('account:view')")
     public ApiResponse<UserDto> getUserDetails(@PathVariable Long id) {
         return ApiResponse.success(userService.getUserById(id));
     }
 
     // 8. Lock/Unlock Account
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('account:edit')")
     public ApiResponse<?> updateStatus(@PathVariable Long id, @RequestParam String status) {
         userService.updateStatus(id, status);
         return ApiResponse.success();
@@ -58,15 +58,15 @@ public class UserController {
 
     // 9. Update Functional Permissions
     @PutMapping("/{id}/permissions")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    public ApiResponse<?> updatePermissions(@PathVariable Long id, @RequestBody List<Long> roleIds) {
-        userService.updatePermissions(id, roleIds);
+    @PreAuthorize("hasAuthority('auth:edit')")
+    public ApiResponse<?> updatePermissions(@PathVariable Long id, @RequestBody List<String> permissionCodes) {
+        userService.updatePermissions(id, permissionCodes);
         return ApiResponse.success();
     }
 
     // 10. Update Information
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAuthority('account:edit')")
     public ApiResponse<UserDto> updateUser(@PathVariable Long id, @RequestBody UserDto userDto) {
         return ApiResponse.success(userService.updateUser(id, userDto));
     }

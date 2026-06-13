@@ -13,6 +13,7 @@ import com.duylongtech.backend.repository.InventoryDocumentRepository;
 import com.duylongtech.backend.repository.InventoryBalanceRepository;
 import com.duylongtech.backend.repository.InventoryCostLayerRepository;
 import com.duylongtech.backend.repository.InventoryLedgerRepository;
+import com.duylongtech.backend.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -101,7 +102,7 @@ public class InventoryDocumentService {
         String requestedCode = trimToNull(req.getDocCode());
         if (requestedCode != null && !requestedCode.equals(doc.getDocCode())) {
             if (inventoryDocumentRepository.existsByDocCodeAndIdNot(requestedCode, id)) {
-                throw new RuntimeException("Mã phiếu xuất kho đã tồn tại");
+                throw new BusinessException("Mã phiếu xuất kho đã tồn tại");
             }
             doc.setDocCode(requestedCode);
         }
@@ -129,7 +130,7 @@ public class InventoryDocumentService {
         InventoryDocument doc = findExportOrThrow(id);
 
         if (!"DRAFT".equals(doc.getStatus()) && !"SUBMITTED".equals(doc.getStatus())) {
-            throw new RuntimeException("Chỉ các phiếu xuất kho ở trạng thái DRAFT hoặc SUBMITTED mới có thể được ghi sổ");
+            throw new BusinessException("Chỉ các phiếu xuất kho ở trạng thái DRAFT hoặc SUBMITTED mới có thể được ghi sổ");
         }
 
         for (InventoryDocumentLine line : doc.getLines()) {
@@ -137,10 +138,10 @@ public class InventoryDocumentService {
 
             InventoryBalance balance = inventoryBalanceRepository
                     .findByWarehouseAndVariantForUpdate(doc.getWarehouseId(), line.getVariantId(), "GOOD")
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy tồn kho loại GOOD cho sản phẩm " + line.getVariantId() + " trong kho " + doc.getWarehouseId()));
+                    .orElseThrow(() -> new BusinessException("Không tìm thấy tồn kho loại GOOD cho sản phẩm " + line.getVariantId() + " trong kho " + doc.getWarehouseId()));
 
             if (balance.getQuantityOnHand().compareTo(qtyToExport) < 0) {
-                throw new RuntimeException("Không đủ tồn kho cho sản phẩm  " + line.getVariantId() + ". Cần xuất: " + qtyToExport + ", Hiện có: " + balance.getQuantityOnHand());
+                throw new BusinessException("Không đủ tồn kho cho sản phẩm  " + line.getVariantId() + ". Cần xuất: " + qtyToExport + ", Hiện có: " + balance.getQuantityOnHand());
             }
 
             balance.setQuantityOnHand(balance.getQuantityOnHand().subtract(qtyToExport));
@@ -165,7 +166,7 @@ public class InventoryDocumentService {
             }
 
             if (remainingQty.compareTo(ZERO) > 0) {
-                throw new RuntimeException("Không đủ lớp giá trị tồn kho (cost layer) cho sản phẩm  " + line.getVariantId() + " để thực hiện xuất kho theo phương pháp FIFO.");
+                throw new BusinessException("Không đủ lớp giá trị tồn kho (cost layer) cho sản phẩm  " + line.getVariantId() + " để thực hiện xuất kho theo phương pháp FIFO.");
             }
 
             BigDecimal avgUnitCost = totalCost.divide(qtyToExport, 4, RoundingMode.HALF_UP);
@@ -196,16 +197,16 @@ public class InventoryDocumentService {
 
     private InventoryDocument findExportOrThrow(Long id) {
         if (id == null) {
-            throw new RuntimeException("ID phiếu xuất kho là bắt buộc");
+            throw new BusinessException("ID phiếu xuất kho là bắt buộc");
         }
         return inventoryDocumentRepository.findExportByIdWithLines(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu xuất kho"));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất kho"));
     }
 
     private void validateCreateRequest(InventoryDocumentRequest req) {
         validateRequiredExportFields(req);
         if (req.getCreatedBy() == null) {
-            throw new RuntimeException("Người tạo phiếu (createdBy) là bắt buộc");
+            throw new BusinessException("Người tạo phiếu (createdBy) là bắt buộc");
         }
     }
 
@@ -215,23 +216,23 @@ public class InventoryDocumentService {
 
     private void validateRequiredExportFields(InventoryDocumentRequest req) {
         if (req == null) {
-            throw new RuntimeException("Dữ liệu yêu cầu phiếu xuất kho là bắt buộc");
+            throw new BusinessException("Dữ liệu yêu cầu phiếu xuất kho là bắt buộc");
         }
         if (req.getWarehouseId() == null) {
-            throw new RuntimeException("Mã kho (warehouseId) là bắt buộc");
+            throw new BusinessException("Mã kho (warehouseId) là bắt buộc");
         }
         if (req.getDocDate() == null) {
-            throw new RuntimeException("Ngày chứng từ (docDate) là bắt buộc");
+            throw new BusinessException("Ngày chứng từ (docDate) là bắt buộc");
         }
         if (req.getLines() == null || req.getLines().isEmpty()) {
-            throw new RuntimeException("Phiếu xuất kho phải có ít nhất một dòng chi tiết");
+            throw new BusinessException("Phiếu xuất kho phải có ít nhất một dòng chi tiết");
         }
     }
 
     private void ensureEditable(InventoryDocument doc) {
         String status = normalizeStatusValue(doc.getStatus(), DEFAULT_STATUS);
         if (!EDITABLE_STATUSES.contains(status)) {
-            throw new RuntimeException("Chỉ có thể cập nhật phiếu xuất kho ở trạng thái DRAFT hoặc SUBMITTED");
+            throw new BusinessException("Chỉ có thể cập nhật phiếu xuất kho ở trạng thái DRAFT hoặc SUBMITTED");
         }
     }
 
@@ -241,7 +242,7 @@ public class InventoryDocumentService {
             docCode = "EXP-" + System.currentTimeMillis();
         }
         if (inventoryDocumentRepository.existsByDocCode(docCode)) {
-            throw new RuntimeException("Mã phiếu xuất kho đã tồn tại");
+            throw new BusinessException("Mã phiếu xuất kho đã tồn tại");
         }
         return docCode;
     }
@@ -249,13 +250,13 @@ public class InventoryDocumentService {
     private InventoryDocumentLine toExportLineEntity(InventoryDocument doc, InventoryDocumentLineRequest lr,
             int index) {
         if (lr == null) {
-            throw new RuntimeException("Dòng chi tiết thứ [" + index + "] là bắt buộc");
+            throw new BusinessException("Dòng chi tiết thứ [" + index + "] là bắt buộc");
         }
         if (lr.getVariantId() == null) {
-            throw new RuntimeException("Mã sản phẩm  (variantId) tại dòng [" + index + "] là bắt buộc");
+            throw new BusinessException("Mã sản phẩm  (variantId) tại dòng [" + index + "] là bắt buộc");
         }
         if (lr.getQuantityIn() != null && lr.getQuantityIn().compareTo(ZERO) > 0) {
-            throw new RuntimeException("Dòng chi tiết của phiếu xuất kho không được phép có số lượng nhập (quantityIn)");
+            throw new BusinessException("Dòng chi tiết của phiếu xuất kho không được phép có số lượng nhập (quantityIn)");
         }
 
         BigDecimal quantityOut = requirePositive(lr.getQuantityOut(), "lines[" + index + "].quantityOut");
@@ -279,7 +280,7 @@ public class InventoryDocumentService {
 
     private BigDecimal requirePositive(BigDecimal value, String fieldName) {
         if (value == null || value.compareTo(ZERO) <= 0) {
-            throw new RuntimeException(fieldName + " phải lớn hơn 0");
+            throw new BusinessException(fieldName + " phải lớn hơn 0");
         }
         return value;
     }
@@ -289,7 +290,7 @@ public class InventoryDocumentService {
             return ZERO;
         }
         if (value.compareTo(ZERO) < 0) {
-            throw new RuntimeException(fieldName + " phải lớn hơn hoặc bằng 0");
+            throw new BusinessException(fieldName + " phải lớn hơn hoặc bằng 0");
         }
         return value;
     }
@@ -305,7 +306,7 @@ public class InventoryDocumentService {
     private String normalizeEditableStatus(String status, String fallback) {
         String normalized = normalizeStatusValue(status, fallback);
         if (!EDITABLE_STATUSES.contains(normalized)) {
-            throw new RuntimeException("Trạng thái phiếu xuất kho phải là DRAFT hoặc SUBMITTED");
+            throw new BusinessException("Trạng thái phiếu xuất kho phải là DRAFT hoặc SUBMITTED");
         }
         return normalized;
     }
@@ -320,7 +321,7 @@ public class InventoryDocumentService {
         }
         normalized = normalized.toUpperCase(Locale.ROOT);
         if (!VALID_STATUSES.contains(normalized)) {
-            throw new RuntimeException("Trạng thái phiếu xuất kho không hợp lệ");
+            throw new BusinessException("Trạng thái phiếu xuất kho không hợp lệ");
         }
         return normalized;
     }

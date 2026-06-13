@@ -6,6 +6,7 @@ import com.duylongtech.backend.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -15,6 +16,7 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('product:view')")
     public ResponseEntity<Page<ProductDto>> getProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -23,11 +25,13 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('product:view')")
     public ResponseEntity<ProductDto> getProductById(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('product:add')")
     public ResponseEntity<ApiResponse<ProductDto>> createProduct(@RequestBody ProductDto dto) {
         ProductDto created = productService.createProduct(dto);
         return ResponseEntity.ok(ApiResponse.<ProductDto>builder()
@@ -38,6 +42,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('product:edit')")
     public ResponseEntity<ApiResponse<ProductDto>> updateProduct(@PathVariable Long id, @RequestBody ProductDto dto) {
         ProductDto updated = productService.updateProduct(id, dto);
         return ResponseEntity.ok(ApiResponse.<ProductDto>builder()
@@ -48,6 +53,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('product:delete')")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.ok(ApiResponse.<Void>builder()

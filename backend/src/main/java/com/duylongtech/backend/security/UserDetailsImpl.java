@@ -1,6 +1,7 @@
 package com.duylongtech.backend.security;
 
 import com.duylongtech.backend.entity.User;
+import com.duylongtech.backend.entity.RoleEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -24,13 +25,50 @@ public class UserDetailsImpl implements UserDetails {
     }
 
     public static UserDetailsImpl build(User user) {
-        List<GrantedAuthority> authorities = user.getRoles().stream()
-                .map(role -> {
-                    String code = role.getCode();
-                    String authority = code.startsWith("ROLE_") ? code : "ROLE_" + code;
-                    return new SimpleGrantedAuthority(authority);
-                })
-                .collect(java.util.stream.Collectors.toList());
+        List<GrantedAuthority> authorities = new java.util.ArrayList<>();
+        boolean isStaff = false;
+        boolean hasAdminOrManager = false;
+
+        if (user.getRoles() != null) {
+            for (RoleEntity role : user.getRoles()) {
+                String code = role.getCode();
+                if ("STAFF".equalsIgnoreCase(code)) {
+                    isStaff = true;
+                }
+                if ("SUPER_ADMIN".equalsIgnoreCase(code) || "MANAGER".equalsIgnoreCase(code)) {
+                    hasAdminOrManager = true;
+                }
+                String authority = code.startsWith("ROLE_") ? code : "ROLE_" + code;
+                authorities.add(new SimpleGrantedAuthority(authority));
+
+                // Add role-based permissions for SUPER_ADMIN or MANAGER
+                if (("SUPER_ADMIN".equalsIgnoreCase(code) || "MANAGER".equalsIgnoreCase(code)) && role.getPermissions() != null) {
+                    role.getPermissions().forEach(permission -> {
+                        authorities.add(new SimpleGrantedAuthority(permission.getCode()));
+                    });
+                }
+            }
+        }
+
+        // If user is STAFF and does not have admin/manager roles, load dynamic permissions
+        if (isStaff && !hasAdminOrManager) {
+            if (user.getPermissions() != null && !user.getPermissions().isEmpty()) {
+                user.getPermissions().forEach(permission -> {
+                    authorities.add(new SimpleGrantedAuthority(permission.getCode()));
+                });
+            } else {
+                // Fallback to default STAFF permissions from DB if no custom permissions are set
+                if (user.getRoles() != null) {
+                    user.getRoles().forEach(role -> {
+                        if ("STAFF".equalsIgnoreCase(role.getCode()) && role.getPermissions() != null) {
+                            role.getPermissions().forEach(permission -> {
+                                authorities.add(new SimpleGrantedAuthority(permission.getCode()));
+                            });
+                        }
+                    });
+                }
+            }
+        }
         boolean enabled = "APPROVED".equalsIgnoreCase(user.getStatus());
         return new UserDetailsImpl(
                 user.getId(),
