@@ -45,7 +45,10 @@ function AuditLogPage() {
     }, [page, size, debouncedSearch]);
 
     useEffect(() => {
-        fetchLogs();
+        const timer = setTimeout(() => {
+            fetchLogs();
+        }, 0);
+        return () => clearTimeout(timer);
     }, [fetchLogs]);
 
     const handleSearchChange = (e) => {
