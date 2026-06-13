@@ -10,7 +10,6 @@ function UsersPage() {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [usersData, setUsersData] = useState([]);
-    const [rolesList, setRolesList] = useState([]);
     const [activeMenuId, setActiveMenuId] = useState(null);
     const [loading, setLoading] = useState(false);
 
@@ -84,20 +83,10 @@ function UsersPage() {
         }
     };
 
-    const fetchRoles = async () => {
-        try {
-            const res = await axiosClient.get('/roles');
-            if (res.data && res.data.data) {
-                setRolesList(res.data.data);
-            }
-        } catch (error) {
-            console.error('Lỗi lấy danh sách vai trò:', error);
-        }
-    };
-
     useEffect(() => {
+        /* eslint-disable-next-line react-hooks/set-state-in-effect */
         fetchUsers();
-        fetchRoles();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleRowClick = (user) => {
@@ -143,19 +132,14 @@ function UsersPage() {
 
     const handleSaveUser = async (updatedData) => {
         try {
-            // Update info
+            // Update info and roles
+            const targetRoleCode = updatedData.systemRole === 'admin' ? 'SUPER_ADMIN' : 'STAFF';
             await axiosClient.put(`/users/${updatedData.id}`, {
                 fullName: updatedData.name,
                 email: updatedData.email,
-                phone: updatedData.phone
+                phone: updatedData.phone,
+                roles: [targetRoleCode]
             });
-
-            // Update roles if changed
-            const targetRoleCode = updatedData.systemRole === 'admin' ? 'SUPER_ADMIN' : 'STAFF';
-            const role = rolesList.find(r => r.code === targetRoleCode);
-            if (role) {
-                await axiosClient.put(`/users/${updatedData.id}/permissions`, [role.id]);
-            }
 
             fetchUsers();
             setIsDrawerOpen(false);
@@ -298,9 +282,11 @@ function UsersPage() {
                                                     <div className={styles.actionMenuItem} onClick={(e) => handleViewInfo(e, user)}>
                                                         <i className="bi bi-eye"></i> Xem thông tin chi tiết
                                                     </div>
-                                                    <div className={styles.actionMenuItem} onClick={(e) => handleAssignPermissions(e, user.id)}>
-                                                        <i className="bi bi-shield-lock"></i> Phân quyền chức năng
-                                                    </div>
+                                                    {user.roles && user.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF') && (
+                                                        <div className={styles.actionMenuItem} onClick={(e) => handleAssignPermissions(e, user.id)}>
+                                                            <i className="bi bi-shield-lock"></i> Phân quyền chức năng
+                                                        </div>
+                                                    )}
                                                     <div className={`${styles.actionMenuItem} ${user.status === 'APPROVED' ? styles.actionMenuItemDanger : styles.actionMenuItemSuccess}`} onClick={(e) => handleToggleLock(e, user)}>
                                                         <i className={`bi ${user.status === 'APPROVED' ? 'bi-lock' : 'bi-unlock'}`}></i> 
                                                         {user.status === 'APPROVED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}

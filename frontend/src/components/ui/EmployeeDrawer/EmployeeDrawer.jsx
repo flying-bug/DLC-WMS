@@ -13,8 +13,10 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
     // Sync formData when user prop changes
     useEffect(() => {
         if (user) {
+            /* eslint-disable-next-line react-hooks/set-state-in-effect */
             setFormData({ ...user });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]);
 
     // Reset state when closed

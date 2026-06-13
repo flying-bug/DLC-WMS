@@ -5,6 +5,7 @@ import com.duylongtech.backend.dto.request.LoginRequest;
 import com.duylongtech.backend.dto.response.JwtResponse;
 import com.duylongtech.backend.security.JwtUtils;
 import com.duylongtech.backend.security.UserDetailsImpl;
+import com.duylongtech.backend.exception.BusinessException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -39,8 +40,9 @@ public class AuthService {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         
         String role = userDetails.getAuthorities().stream()
-                .findFirst()
                 .map(item -> item.getAuthority())
+                .filter(auth -> auth.startsWith("ROLE_"))
+                .findFirst()
                 .orElse("ROLE_USER");
 
         String jwt = jwtUtils.generateJwtToken(userDetails.getUsername(), role);
@@ -59,15 +61,15 @@ public class AuthService {
         try {
             java.util.Map<String, Object> response = restTemplate.getForObject(url, java.util.Map.class);
             if (response == null || !googleClientId.equals(response.get("aud"))) {
-                throw new RuntimeException("Invalid Google Token");
+                throw new BusinessException("Invalid Google Token");
             }
             String email = (String) response.get("email");
             
             com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại. Vui lòng liên hệ Admin"));
+                    .orElseThrow(() -> new BusinessException("Tài khoản không tồn tại. Vui lòng liên hệ Admin"));
             
             if (!"APPROVED".equalsIgnoreCase(user.getStatus())) {
-                throw new RuntimeException("Tài khoản đã bị khóa hoặc chưa được phê duyệt.");
+                throw new BusinessException("Tài khoản đã bị khóa hoặc chưa được phê duyệt.");
             }
             
             String role = user.getRoles().stream()
@@ -86,7 +88,10 @@ public class AuthService {
                     .role(role)
                     .build();
         } catch (Exception e) {
-            throw new RuntimeException("Google Login Failed: " + e.getMessage());
+            if (e instanceof BusinessException) {
+                throw (BusinessException) e;
+            }
+            throw new BusinessException("Google Login Failed: " + e.getMessage());
         }
     }
 
@@ -95,7 +100,7 @@ public class AuthService {
 
     public void requestOtp(String email) {
         com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại."));
+                .orElseThrow(() -> new BusinessException("Tài khoản không tồn tại."));
         
         // Sinh OTP 6 chữ số ngẫu nhiên
         String otp = String.format("%06d", new java.util.Random().nextInt(999999));
@@ -108,12 +113,12 @@ public class AuthService {
 
     public void verifyOtp(String email, String otp) {
         if (!otpStorage.containsKey(email) || !otpStorage.get(email).equals(otp)) {
-            throw new RuntimeException("Mã OTP không chính xác.");
+            throw new BusinessException("Mã OTP không chính xác.");
         }
         if (System.currentTimeMillis() > otpExpiry.get(email)) {
             otpStorage.remove(email);
             otpExpiry.remove(email);
-            throw new RuntimeException("Mã OTP đã hết hạn.");
+            throw new BusinessException("Mã OTP đã hết hạn.");
         }
     }
 
@@ -121,7 +126,7 @@ public class AuthService {
         verifyOtp(email, otp); // Kiểm tra lại OTP lần nữa cho chắc
         
         com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại."));
+                .orElseThrow(() -> new BusinessException("Tài khoản không tồn tại."));
         
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
@@ -134,10 +139,10 @@ public class AuthService {
     public void changePassword(ChangePasswordRequest request) {
         String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         com.duylongtech.backend.entity.User user = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại."));
+                .orElseThrow(() -> new BusinessException("Người dùng không tồn tại."));
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("Mật khẩu cũ không chính xác.");
+            throw new BusinessException("Mật khẩu cũ không chính xác.");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));

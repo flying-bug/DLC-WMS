@@ -3,6 +3,7 @@ package com.duylongtech.backend.service;
 import com.duylongtech.backend.dto.UnitDto;
 import com.duylongtech.backend.entity.Unit;
 import com.duylongtech.backend.repository.UnitRepository;
+import com.duylongtech.backend.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,14 +28,14 @@ public class UnitService {
 
     public UnitDto getUnitById(Long id) {
         Unit unit = unitRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn vị tính với ID: " + id));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn vị tính với ID: " + id));
         return mapToDto(unit);
     }
 
     @Transactional
     public UnitDto createUnit(UnitDto dto) {
         if (unitRepository.findByName(dto.getName()).isPresent()) {
-            throw new RuntimeException("Tên đơn vị tính đã tồn tại!");
+            throw new BusinessException("Tên đơn vị tính đã tồn tại!");
         }
 
         Unit unit = Unit.builder()
@@ -50,10 +51,10 @@ public class UnitService {
     @Transactional
     public UnitDto updateUnit(Long id, UnitDto dto) {
         Unit unit = unitRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn vị tính với ID: " + id));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn vị tính với ID: " + id));
 
         if (!unit.getName().equals(dto.getName()) && unitRepository.findByName(dto.getName()).isPresent()) {
-            throw new RuntimeException("Tên đơn vị tính đã tồn tại!");
+            throw new BusinessException("Tên đơn vị tính đã tồn tại!");
         }
 
         unit.setName(dto.getName());
@@ -69,7 +70,7 @@ public class UnitService {
     @Transactional
     public void deleteUnit(Long id) {
         if (!unitRepository.existsById(id)) {
-            throw new RuntimeException("Không tìm thấy đơn vị tính với ID: " + id);
+            throw new BusinessException("Không tìm thấy đơn vị tính với ID: " + id);
         }
         // Có thể thay bằng soft delete nếu cần: unit.setStatus("INACTIVE")
         unitRepository.deleteById(id);

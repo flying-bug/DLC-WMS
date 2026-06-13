@@ -1,7 +1,25 @@
 import axios from 'axios';
 
+const getBaseURL = () => {
+    const envUrl = import.meta.env.VITE_API_URL;
+    if (typeof window !== 'undefined') {
+        const isHttps = window.location.protocol === 'https:';
+        const isLocalhost = window.location.hostname === 'localhost';
+
+        // If deployed on HTTPS but envUrl is HTTP, force relative path to avoid Mixed Content block
+        if (isHttps && envUrl && envUrl.startsWith('http://')) {
+            return '/api/v1';
+        }
+
+        if (!envUrl) {
+            return isLocalhost ? 'http://localhost:8080/api/v1' : '/api/v1';
+        }
+    }
+    return envUrl || 'http://localhost:8080/api/v1';
+};
+
 const axiosClient = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1',
+    baseURL: getBaseURL(),
     headers: {
         'Content-Type': 'application/json'
     }
