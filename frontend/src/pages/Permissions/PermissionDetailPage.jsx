@@ -110,7 +110,7 @@ function PermissionDetailPage() {
         };
 
         loadData();
-    }, [id]);
+    }, [id, navigate]);
 
     const handleCheck = (module, action, checked) => {
         setPermissions(prev => {
