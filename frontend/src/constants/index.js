@@ -9,6 +9,7 @@ export const ROUTES = {
     LOGIN: '/login',
     FORGOT_PASSWORD: '/forgot-password',
     DASHBOARD: '/dashboard',
+    PRODUCTS: '/products',
 };
 
 // ── Password rules ────────────────────────────────────────────

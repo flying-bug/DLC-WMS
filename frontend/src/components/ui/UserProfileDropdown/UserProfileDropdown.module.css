@@ -1,0 +1,121 @@
+/* UserProfileDropdown.module.css */
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: background 0.15s;
+    position: relative;
+}
+
+.userInfo:hover {
+    background: #f1f5f9;
+}
+
+/* User info dropdown */
+.userDropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    width: 220px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    padding: 8px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 1000;
+}
+
+/* Invisible bridge to prevent hover from breaking */
+.userDropdown::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 0;
+    width: 100%;
+    height: 10px;
+}
+
+.userInfo:hover .userDropdown,
+.showDropdown {
+    display: flex;
+}
+
+.dropdownItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #475569;
+    transition: background 0.15s, color 0.15s;
+    cursor: pointer;
+}
+
+.dropdownItem i {
+    font-size: 16px;
+    color: #64748b;
+}
+
+.dropdownItem:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.dropdownItem:hover i {
+    color: #1e293b;
+}
+
+.dropdownDivider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 4px 0;
+}
+
+.dropdownItemDanger {
+    color: #ef4444;
+}
+
+.dropdownItemDanger i {
+    color: #ef4444;
+}
+
+.dropdownItemDanger:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.dropdownItemDanger:hover i {
+    color: #dc2626;
+}
+
+.avatarCircle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1e3f7a 0%, #0075c0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+
+.userName {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.chevronIcon {
+    color: #94a3b8;
+    font-size: 11px;
+}

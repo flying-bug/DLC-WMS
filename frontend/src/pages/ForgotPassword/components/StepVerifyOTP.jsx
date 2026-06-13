@@ -7,17 +7,17 @@ import { ROUTES, OTP_LENGTH, OTP_RESEND_SECONDS } from '../../../constants';
  * Bước 2 — Nhập mã OTP 6 chữ số.
  * Mỗi ô nhận 1 ký tự, tự động focus sang ô tiếp theo.
  */
-function StepVerifyOTP({ email, onNext, onBack }) {
+function StepVerifyOTP({ email, onNext }) {
     const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [countdown, setCountdown] = useState(OTP_RESEND_SECONDS);
-    const [canResend, setCanResend] = useState(false);
+    const canResend = countdown <= 0;
     const inputRefs = useRef([]);
 
     // Đếm ngược
     useEffect(() => {
-        if (countdown <= 0) { setCanResend(true); return; }
+        if (countdown <= 0) return;
         const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
         return () => clearTimeout(t);
     }, [countdown]);
@@ -59,7 +59,6 @@ function StepVerifyOTP({ email, onNext, onBack }) {
     const handleResend = async () => {
         setOtp(Array(OTP_LENGTH).fill(''));
         setCountdown(OTP_RESEND_SECONDS);
-        setCanResend(false);
         setError('');
         inputRefs.current[0]?.focus();
         try {
