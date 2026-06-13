@@ -47,6 +47,12 @@ function PermissionDetailPage() {
                 
                 // Set initial permission matrix based on saved permissions or roles
                 if (userData) {
+                    const hasStaff = userData.roles && userData.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF');
+                    if (!hasStaff) {
+                        alert("Chỉ tài khoản Nhân viên (STAFF) mới được phép phân quyền động.");
+                        navigate('/users');
+                        return;
+                    }
                     setPermissions(prev => {
                         const newPerms = { ...prev };
                         

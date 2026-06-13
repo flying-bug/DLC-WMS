@@ -295,9 +295,11 @@ function UsersPage() {
                                                     <div className={styles.actionMenuItem} onClick={(e) => handleViewInfo(e, user)}>
                                                         <i className="bi bi-eye"></i> Xem thông tin chi tiết
                                                     </div>
-                                                    <div className={styles.actionMenuItem} onClick={(e) => handleAssignPermissions(e, user.id)}>
-                                                        <i className="bi bi-shield-lock"></i> Phân quyền chức năng
-                                                    </div>
+                                                    {user.roles && user.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF') && (
+                                                        <div className={styles.actionMenuItem} onClick={(e) => handleAssignPermissions(e, user.id)}>
+                                                            <i className="bi bi-shield-lock"></i> Phân quyền chức năng
+                                                        </div>
+                                                    )}
                                                     <div className={`${styles.actionMenuItem} ${user.status === 'APPROVED' ? styles.actionMenuItemDanger : styles.actionMenuItemSuccess}`} onClick={(e) => handleToggleLock(e, user)}>
                                                         <i className={`bi ${user.status === 'APPROVED' ? 'bi-lock' : 'bi-unlock'}`}></i> 
                                                         {user.status === 'APPROVED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}

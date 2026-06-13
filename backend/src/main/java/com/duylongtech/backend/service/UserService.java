@@ -127,6 +127,11 @@ public class UserService {
 
     public void updatePermissions(Long id, List<String> permissionCodes) {
         User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
+        boolean isStaff = user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(role -> "STAFF".equalsIgnoreCase(role.getCode()));
+        if (!isStaff) {
+            throw new BusinessException("Chỉ tài khoản Nhân viên (STAFF) mới được phép phân quyền động.");
+        }
         Set<PermissionEntity> permissions = new HashSet<>();
         if (permissionCodes != null) {
             permissionCodes.forEach(code -> {
