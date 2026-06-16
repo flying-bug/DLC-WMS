@@ -13,3 +13,4 @@
 - Frontend tham khảo giao diện của MISA
 - Code phải có validate chuẩn, có bảo mật, để đúng các pakage.
 - Code swagger API
+- **Quản lý System Message / Error Code**: Không viết text cứng (hardcode) thông báo trong code. Phải tập trung các thông báo lỗi/hệ thống vào một `Enum` duy nhất (VD: `SystemMessage.java` ở Backend) gồm mã lỗi và câu thông báo (Ví dụ: `MSG01` - `No search results`).
