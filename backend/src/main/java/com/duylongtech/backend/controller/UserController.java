@@ -54,7 +54,7 @@ public class UserController {
     // 6. Create Account
     @PostMapping
     @PreAuthorize("hasAuthority('account:add')")
-    public ApiResponse<UserDto> createUser(@RequestBody UserDto userDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ApiResponse<UserDto> createUser(@jakarta.validation.Valid @RequestBody UserDto userDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
