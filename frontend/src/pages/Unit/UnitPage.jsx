@@ -87,7 +87,7 @@ const UnitPage = () => {
             fetchUnits();
         } catch (error) {
             console.error("Lỗi thay đổi trạng thái:", error);
-            alert('Có lỗi xảy ra khi cập nhật trạng thái!');
+            alert(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái!');
         }
         setOpenDropdownId(null);
     };
@@ -113,7 +113,7 @@ const UnitPage = () => {
                 setIsEdit(false);
             }
         } catch (error) {
-            setErrorMsg(error.response?.data?.message || 'Có lỗi xảy ra khi lưu.');
+            setErrorMsg(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi lưu.');
         }
     };
 
@@ -124,7 +124,7 @@ const UnitPage = () => {
                 fetchUnits();
             } catch (error) {
                 console.error("Lỗi xóa đơn vị:", error);
-                alert('Có lỗi xảy ra khi xóa!');
+                alert(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
             }
         }
         setOpenDropdownId(null);

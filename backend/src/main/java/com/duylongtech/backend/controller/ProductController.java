@@ -4,6 +4,7 @@ import com.duylongtech.backend.dto.ProductDto;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.service.ProductService;
 import com.duylongtech.backend.service.AuditLogService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -49,7 +50,7 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('product:add')")
-    public ResponseEntity<ApiResponse<ProductDto>> createProduct(@RequestBody ProductDto dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ResponseEntity<ApiResponse<ProductDto>> createProduct(@Valid @RequestBody ProductDto dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
@@ -86,7 +87,7 @@ public class ProductController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('product:edit')")
-    public ResponseEntity<ApiResponse<ProductDto>> updateProduct(@PathVariable Long id, @RequestBody ProductDto dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ResponseEntity<ApiResponse<ProductDto>> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDto dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {

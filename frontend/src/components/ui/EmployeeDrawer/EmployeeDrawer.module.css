@@ -30,6 +30,7 @@
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
+    max-width: 100vw;
 }
 
 .drawerOpen {
@@ -75,6 +76,7 @@
     display: flex;
     gap: 16px;
     align-items: center;
+    min-width: 0;
 }
 
 .avatar {
@@ -94,6 +96,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
 }
 
 .userName {
@@ -102,17 +105,20 @@
     color: #0f172a;
     margin: 0;
     line-height: 1.2;
+    overflow-wrap: anywhere;
 }
 
 .userCode {
     font-size: 13px;
     color: #64748b;
+    overflow-wrap: anywhere;
 }
 
 .badges {
     display: flex;
     gap: 8px;
     margin-top: 4px;
+    flex-wrap: wrap;
 }
 
 .statusBadge {
@@ -185,6 +191,7 @@
     flex: 1;
     overflow-y: auto;
     padding: 24px;
+    min-width: 0;
 }
 
 .section {
@@ -209,7 +216,7 @@
 
 .detailGrid2 {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
 }
 
@@ -228,6 +235,7 @@
     font-size: 14px;
     font-weight: 600;
     color: #0f172a;
+    overflow-wrap: anywhere;
 }
 
 .divider {
@@ -307,6 +315,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
 }
 
 .roleTitle {
@@ -319,6 +328,7 @@
     font-size: 13px;
     color: #64748b;
     line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
 .roleNotice {
@@ -344,6 +354,7 @@
     justify-content: flex-end;
     gap: 12px;
     background: #ffffff;
+    flex-wrap: wrap;
 }
 
 .btnCancel {
@@ -434,6 +445,7 @@
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+    flex-wrap: wrap;
 }
 
 .btnDanger {
@@ -443,4 +455,31 @@
 
 .btnDanger:hover {
     background: #dc2626;
+}
+
+@media (max-width: 576px) {
+    .header {
+        padding: 18px 18px 0;
+    }
+
+    .headerTop,
+    .userInfo,
+    .footer,
+    .modalActions {
+        align-items: stretch;
+    }
+
+    .detailGrid2 {
+        grid-template-columns: 1fr;
+    }
+
+    .body {
+        padding: 18px;
+    }
+
+    .btnCancel,
+    .btnSave,
+    .btnDanger {
+        width: 100%;
+    }
 }
