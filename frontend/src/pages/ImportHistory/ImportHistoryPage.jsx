@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import styles from './ImportHistoryPage.module.css';
@@ -13,13 +14,38 @@ const MOCK_SLIPS = [
 function ImportHistoryPage() {
 
   const [selectedSlip, setSelectedSlip] = useState(MOCK_SLIPS[0]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const navigate = useNavigate();
+
+  const filteredSlips = MOCK_SLIPS.filter(slip => 
+    slip.code.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    slip.partner.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredSlips.map(s => s.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectRow = (e, id) => {
+    e.stopPropagation();
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
 
   return (
     <AdminLayout>
       <div className={styles.pageBody} style={{ padding: 0 }}>
         <div className={styles.pageTitleContainer}>
           <h1 className={styles.pageTitle}>Danh sách hàng nhập</h1>
-          <button className={styles.btnPrimary}>
+          <button className={styles.btnPrimary} onClick={() => navigate('/import-history/create')}>
             <i className="bi bi-plus"></i> Thêm mới
           </button>
         </div>
@@ -27,11 +53,17 @@ function ImportHistoryPage() {
         <div className={styles.filterSection}>
           <div className={styles.filterGroup}>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TỪ NGÀY</span>
-              <input type="date" className={styles.filterInput} />
+              <span className={styles.filterLabel}>TÌM KIẾM</span>
+              <input 
+                type="text" 
+                className={styles.filterInput} 
+                placeholder="Mã phiếu, nhà cung cấp..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>ĐẾN NGÀY</span>
+              <span className={styles.filterLabel}>TỪ NGÀY</span>
               <input type="date" className={styles.filterInput} />
             </div>
             <div className={styles.filterField}>
@@ -54,10 +86,37 @@ function ImportHistoryPage() {
           </div>
         </div>
 
+        {selectedIds.length > 0 && (
+          <div className={styles.bulkActionsToolbar}>
+            <div className={styles.bulkText}>
+              Đã chọn {selectedIds.length} phiếu nhập
+            </div>
+            <div className={styles.bulkButtons}>
+              <button className={styles.btnOutline} style={{ borderColor: '#bae6fd', color: '#0369a1' }}>
+                <i className="bi bi-printer"></i> In tem mã vạch
+              </button>
+              <button className={styles.btnOutline} style={{ borderColor: '#bae6fd', color: '#0369a1' }}>
+                <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+              </button>
+              <button className={styles.btnPrimary}>
+                <i className="bi bi-check2-all"></i> Duyệt hàng loạt
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className={styles.tableContainer}>
           <table className={styles.table}>
             <thead>
               <tr>
+                <th style={{ width: '40px', textAlign: 'center' }}>
+                  <input 
+                    type="checkbox" 
+                    className={styles.checkbox}
+                    checked={filteredSlips.length > 0 && selectedIds.length === filteredSlips.length}
+                    onChange={handleSelectAll}
+                  />
+                </th>
                 <th>NGÀY GHI NHẬN</th>
                 <th>SỐ PHIẾU</th>
                 <th>ĐỐI TÁC</th>
@@ -68,8 +127,17 @@ function ImportHistoryPage() {
               </tr>
             </thead>
             <tbody>
-              {MOCK_SLIPS.map(slip => (
+              {filteredSlips.length > 0 ? filteredSlips.map(slip => (
                 <tr key={slip.id} className={selectedSlip.id === slip.id ? styles.activeRow : ''} onClick={() => setSelectedSlip(slip)}>
+                  <td style={{ textAlign: 'center' }}>
+                    <input 
+                      type="checkbox" 
+                      className={styles.checkbox}
+                      checked={selectedIds.includes(slip.id)}
+                      onChange={(e) => handleSelectRow(e, slip.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </td>
                   <td>{slip.date}</td>
                   <td><a href="#" className={styles.link} onClick={(e) => e.preventDefault()}>{slip.code}</a></td>
                   <td>{slip.partner}</td>
@@ -92,7 +160,17 @@ function ImportHistoryPage() {
                     <i className="bi bi-eye" style={{cursor: 'pointer', color: '#666', fontSize: '16px'}}></i>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan="8">
+                    <div className={styles.emptyState}>
+                      <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
+                      <div className={styles.emptyText}>Không tìm thấy phiếu nhập nào khớp với điều kiện lọc</div>
+                      <button className={styles.btnOutline} onClick={() => setSearchQuery('')}>Xóa bộ lọc</button>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
           
