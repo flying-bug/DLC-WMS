@@ -53,7 +53,7 @@ public class AuditLogController {
                     .id(log.getId())
                     .timestamp(log.getCreatedAt() != null ? log.getCreatedAt().toString() : "")
                     .user(userDisplay)
-                    .action(log.getDescription())
+                    .action(auditLogService.sanitizeDescription(log.getDescription()))
                     .module(log.getEntityName())
                     .ip(log.getIpAddress() != null ? log.getIpAddress() : "")
                     .status(displayStatus)

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
 import styles from './SuperAdminLayout.module.css';

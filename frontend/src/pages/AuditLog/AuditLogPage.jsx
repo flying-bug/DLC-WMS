@@ -154,10 +154,10 @@ function AuditLogPage() {
                                 logs.map((log) => (
                                     <tr key={log.id} className={styles.tableRow}>
                                         <td className={styles.timeCol}>{formatDateTime(log.timestamp)}</td>
-                                        <td><strong>{log.user}</strong></td>
-                                        <td>{log.action}</td>
+                                        <td className={styles.userCol}><strong title={log.user}>{log.user}</strong></td>
+                                        <td className={styles.actionCol} title={log.action}>{log.action}</td>
                                         <td><span className={styles.moduleBadge}>{log.module}</span></td>
-                                        <td>{log.ip}</td>
+                                        <td className={styles.ipCol}>{log.ip}</td>
                                         <td>
                                             <span className={`${styles.statusBadge} ${
                                                 log.status === 'Thành công' ? styles.statusSuccess : styles.statusFail

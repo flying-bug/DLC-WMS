@@ -5,111 +5,91 @@ import styles from './WarehouseDashboard.module.css';
 function WarehouseDashboard() {
     const navigate = useNavigate();
 
+    const processItems = [
+        { label: 'Lắp ráp, tháo dỡ', icon: 'fas fa-tools' },
+        { label: 'Xuất kho', icon: 'fas fa-truck-loading', action: () => navigate('/export-slips') },
+        { label: 'Nhập kho', icon: 'fas fa-boxes', action: () => navigate('/import-history') },
+        { label: 'Chuyển kho', icon: 'fas fa-exchange-alt' },
+        { label: 'Tính giá xuất kho', icon: 'fas fa-calculator' },
+        { label: 'Kiểm kê', icon: 'fas fa-clipboard-check' },
+    ];
+
+    const toolbarItems = [
+        { label: 'Kho', icon: 'fas fa-warehouse' },
+        { label: 'Vật tư hàng hóa', icon: 'fas fa-box', action: () => navigate('/products') },
+        { label: 'Đơn vị tính', icon: 'fas fa-balance-scale', action: () => navigate('/units') },
+        { label: 'Tiện ích', icon: 'fas fa-cog' },
+        { label: 'Tùy chọn', icon: 'fas fa-sliders-h' },
+    ];
+
+    const reportItems = [
+        'Sổ chi tiết vật tư hàng hóa',
+        'Tổng hợp tồn kho',
+        'Báo cáo đối chiếu giá thành và giá trị nhập kho',
+        'Báo cáo đối chiếu kho và sổ cái',
+        'Báo cáo tiến độ sản xuất',
+    ];
+
     return (
         <AdminLayout activeTab="dashboard">
             <div className={styles.dashboardContainer}>
-                {/* Main Process Area */}
-                <div className={styles.mainProcess}>
-                    <h3 className={styles.sectionTitle}>NGHIỆP VỤ KHO</h3>
-                    
+                <section className={styles.mainProcess}>
+                    <div className={styles.panelHeader}>
+                        <div>
+                            <p className={styles.eyebrow}>Quy trình vận hành</p>
+                            <h3 className={styles.sectionTitle}>Nghiệp vụ kho</h3>
+                        </div>
+
+                    </div>
+
                     <div className={styles.processDiagram}>
-                        {/* Process Nodes */}
-                        <div className={`${styles.node} ${styles.pos1}`}>
-                            <div className={styles.iconWrapper}>
-                                <i className="fas fa-file-signature"></i>
-                            </div>
-                            <span>Lệnh sản xuất</span>
-                        </div>
-
-                        <div className={`${styles.node} ${styles.pos2}`}>
-                            <div className={styles.iconWrapper}>
-                                <i className="fas fa-tools"></i>
-                            </div>
-                            <span>Lắp ráp, tháo dỡ</span>
-                        </div>
-
-                        <div className={`${styles.node} ${styles.pos3}`} onClick={() => navigate('/export-slips')}>
-                            <div className={styles.iconWrapper}>
-                                <i className="fas fa-truck-loading"></i>
-                            </div>
-                            <span>Xuất kho</span>
-                        </div>
-
-                        <div className={`${styles.node} ${styles.pos4}`}>
-                            <div className={styles.iconWrapper}>
-                                <i className="fas fa-boxes"></i>
-                            </div>
-                            <span>Nhập kho</span>
-                        </div>
-
-                        <div className={`${styles.node} ${styles.pos5}`}>
-                            <div className={styles.iconWrapper}>
-                                <i className="fas fa-exchange-alt"></i>
-                            </div>
-                            <span>Chuyển kho</span>
-                        </div>
-
-                        <div className={`${styles.node} ${styles.pos6}`}>
-                            <div className={styles.iconWrapper}>
-                                <i className="fas fa-calculator"></i>
-                            </div>
-                            <span>Tính giá xuất kho</span>
-                        </div>
-
-                        <div className={`${styles.node} ${styles.pos7}`}>
-                            <div className={styles.iconWrapper}>
-                                <i className="fas fa-clipboard-check"></i>
-                            </div>
-                            <span>Kiểm kê</span>
-                        </div>
-
-                        {/* Connecting Lines (CSS based) */}
-                        <div className={styles.lineVertical1}></div>
-                        <div className={styles.lineHorizontalMain}></div>
-                        <div className={styles.lineVertical2}></div>
-                        <div className={styles.lineVertical3}></div>
-                        <div className={styles.lineVertical4}></div>
+                        <div className={styles.flowLine}></div>
+                        {processItems.map((item, index) => (
+                            <button
+                                className={styles.node}
+                                key={item.label}
+                                onClick={item.action}
+                                type="button"
+                                style={{ '--delay': `${index * 40}ms` }}
+                            >
+                                <span className={styles.iconWrapper}>
+                                    <i className={item.icon}></i>
+                                </span>
+                                <span>{item.label}</span>
+                            </button>
+                        ))}
                     </div>
 
-                    {/* Bottom Toolbar */}
                     <div className={styles.bottomToolbar}>
-                        <div className={styles.toolbarItem}>
-                            <i className="fas fa-warehouse"></i>
-                            <span>Kho</span>
-                        </div>
-                        <div className={styles.toolbarItem} onClick={() => navigate('/products')}>
-                            <i className="fas fa-box"></i>
-                            <span>Vật tư hàng hóa</span>
-                        </div>
-                        <div className={styles.toolbarItem} onClick={() => navigate('/units')}>
-                            <i className="fas fa-balance-scale"></i>
-                            <span>Đơn vị tính</span>
-                        </div>
-                        <div className={styles.toolbarItem}>
-                            <i className="fas fa-cog"></i>
-                            <span>Tiện ích</span>
-                        </div>
-                        <div className={styles.toolbarItem}>
-                            <i className="fas fa-sliders-h"></i>
-                            <span>Tùy chọn</span>
-                        </div>
+                        {toolbarItems.map((item) => (
+                            <button className={styles.toolbarItem} key={item.label} onClick={item.action} type="button">
+                                <i className={item.icon}></i>
+                                <span>{item.label}</span>
+                            </button>
+                        ))}
                     </div>
-                </div>
+                </section>
 
-                {/* Reports Sidebar */}
-                <div className={styles.reportsArea}>
-                    <h3 className={styles.sectionTitle}>BÁO CÁO</h3>
+                <aside className={styles.reportsArea}>
+                    <div className={styles.reportHeader}>
+                        <p className={styles.eyebrow}>Theo dõi nhanh</p>
+                        <h3 className={styles.sectionTitle}>Báo cáo</h3>
+                    </div>
                     <ul className={styles.reportList}>
-                        <li><i className="fas fa-circle"></i> Sổ chi tiết vật tư hàng hóa</li>
-                        <li><i className="fas fa-circle"></i> Tổng hợp tồn kho</li>
-                        <li><i className="fas fa-circle"></i> Báo cáo đối chiếu giá thành và giá trị nhập kho</li>
-                        <li><i className="fas fa-circle"></i> Báo cáo đối chiếu kho và sổ cái</li>
-                        <li><i className="fas fa-circle"></i> Báo cáo tiến độ sản xuất</li>
+                        {reportItems.map((report) => (
+                            <li key={report}>
+                                <i className="fas fa-chart-line"></i>
+                                <span>{report}</span>
+                            </li>
+                        ))}
                     </ul>
                     <div className={styles.allReports}>
-                        <a href="#" onClick={(e) => e.preventDefault()}>Tất cả báo cáo</a>
+                        <a href="#" onClick={(e) => e.preventDefault()}>
+                            Tất cả báo cáo
+                            <i className="fas fa-arrow-right"></i>
+                        </a>
                     </div>
-                </div>
+                </aside>
             </div>
         </AdminLayout>
     );
