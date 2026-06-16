@@ -5,7 +5,7 @@ import styles from './Modal.module.css';
  * Generic Modal component.
  * Traps focus, hỗ trợ đóng bằng Escape và click overlay.
  */
-function Modal({ isOpen, onClose, children, ariaLabel }) {
+function Modal({ isOpen, onClose, children, ariaLabel, dialogClassName, dialogStyle }) {
     const handleKeyDown = useCallback(
         (e) => {
             if (e.key === 'Escape') onClose();
@@ -34,7 +34,8 @@ function Modal({ isOpen, onClose, children, ariaLabel }) {
             aria-label={ariaLabel}
         >
             <div
-                className={styles.dialog}
+                className={`${styles.dialog} ${dialogClassName || ''}`}
+                style={dialogStyle}
                 onClick={(e) => e.stopPropagation()}
             >
                 {children}
