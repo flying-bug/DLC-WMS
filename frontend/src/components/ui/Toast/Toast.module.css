@@ -10,27 +10,27 @@
     border-radius: 12px;
     min-width: 300px;
     max-width: 420px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-table);
     animation: slideInRight 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ── Variants ── */
 .success {
-    background: #f0fdf4;
-    border: 1.5px solid #bbf7d0;
-    color: #166534;
+    background: var(--status-success-bg);
+    border: 1.5px solid var(--color-success-border-soft);
+    color: var(--color-success-deep);
 }
 
 .error {
-    background: #fef2f2;
-    border: 1.5px solid #fecaca;
-    color: #991b1b;
+    background: var(--status-danger-bg);
+    border: 1.5px solid var(--color-danger-border-soft);
+    color: var(--color-danger-deep);
 }
 
 .info {
-    background: #eff6ff;
-    border: 1.5px solid #bfdbfe;
-    color: #1e40af;
+    background: var(--status-info-bg);
+    border: 1.5px solid var(--color-info-border-soft);
+    color: var(--color-primary-link);
 }
 
 /* ── Icon ── */
@@ -59,6 +59,7 @@
     margin: 0;
     opacity: 0.85;
     line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
 /* ── Close button ── */
@@ -105,5 +106,6 @@
         right: 16px;
         left: 16px;
         min-width: unset;
+        max-width: none;
     }
 }

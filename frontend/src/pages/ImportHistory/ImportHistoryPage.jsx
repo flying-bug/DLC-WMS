@@ -89,7 +89,7 @@ function ImportHistoryPage() {
                     </span>
                   </td>
                   <td className={styles.textCenter}>
-                    <i className="bi bi-eye" style={{cursor: 'pointer', color: '#666', fontSize: '16px'}}></i>
+                    <i className="bi bi-eye" style={{cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px'}}></i>
                   </td>
                 </tr>
               ))}

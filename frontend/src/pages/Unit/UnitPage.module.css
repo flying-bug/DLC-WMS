@@ -1,10 +1,11 @@
 .container {
-    background-color: white;
+    background-color: var(--color-white);
     height: 100%;
     display: flex;
     flex-direction: column;
     font-family: 'Inter', sans-serif;
-    color: #334155;
+    color: var(--color-text-body);
+    min-width: 0;
 }
 
 .header {
@@ -14,11 +15,11 @@
 .header h2 {
     margin: 0;
     font-size: 1.5rem;
-    color: #0f172a;
+    color: var(--color-text);
 }
 
 .breadcrumb {
-    color: #0ea5e9;
+    color: var(--color-info);
     font-size: 0.9rem;
     cursor: pointer;
     margin-top: 5px;
@@ -33,6 +34,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px 20px;
+    gap: 16px;
 }
 
 .searchBox {
@@ -43,15 +45,15 @@
 .searchBox input {
     width: 100%;
     padding: 8px 30px 8px 10px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--color-border-strong);
     border-radius: 4px;
     outline: none;
     font-style: italic;
-    color: #475569;
+    color: var(--color-text-body);
 }
 
 .searchBox input:focus {
-    border-color: #0ea5e9;
+    border-color: var(--color-info);
 }
 
 .searchBox i {
@@ -59,7 +61,7 @@
     right: 10px;
     top: 50%;
     transform: translateY(-50%);
-    color: #94a3b8;
+    color: var(--color-text-subtle);
     cursor: pointer;
 }
 
@@ -73,17 +75,17 @@
     background: none;
     border: none;
     font-size: 1.2rem;
-    color: #64748b;
+    color: var(--color-text-muted);
     cursor: pointer;
 }
 
 .iconBtn:hover {
-    color: #0f172a;
+    color: var(--color-text);
 }
 
 .primaryBtn {
-    background-color: #0ea5e9;
-    color: white;
+    background-color: var(--color-info);
+    color: var(--color-white);
     border: none;
     padding: 8px 20px;
     border-radius: 20px;
@@ -92,7 +94,7 @@
 }
 
 .primaryBtn:hover {
-    background-color: #0284c7;
+    background-color: var(--color-info-hover);
 }
 
 .tableContainer {
@@ -103,39 +105,56 @@
 
 .table {
     width: 100%;
+    min-width: 780px;
     border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.table th:nth-child(1) {
+    width: 220px;
+}
+
+.table th:nth-child(3) {
+    width: 160px;
+}
+
+.table th:nth-child(4) {
+    width: 120px;
 }
 
 .table th {
-    background-color: #e0f2fe;
-    color: #0f172a;
+    background-color: var(--color-primary-tint-2);
+    color: var(--color-text);
     font-weight: 600;
     text-align: left;
     padding: 10px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     position: sticky;
     top: 0;
 }
 
 .table td {
     padding: 10px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     border-top: none;
-    color: #334155;
+    color: var(--color-text-body);
     font-size: 0.9rem;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .table tr:hover td {
-    background-color: #f8fafc;
+    background-color: var(--color-bg-soft);
 }
 
 .actionCell {
     text-align: center;
-    color: #0ea5e9;
+    color: var(--color-info);
     display: flex;
     justify-content: center;
     gap: 5px;
     align-items: center;
+    overflow-wrap: normal;
 }
 
 .editText {
@@ -154,24 +173,24 @@
 }
 
 .dropdownToggle {
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--color-border-strong);
     padding: 2px 8px;
     border-radius: 4px;
     cursor: pointer;
-    background-color: white;
+    background-color: var(--color-white);
 }
 
 .dropdownToggle:hover {
-    background-color: #f1f5f9;
+    background-color: var(--color-surface-muted);
 }
 
 .dropdownMenu {
     position: absolute;
     top: 100%;
     right: 0;
-    background-color: white;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background-color: var(--color-white);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-dropdown);
     border-radius: 4px;
     z-index: 100;
     min-width: 150px;
@@ -182,14 +201,14 @@
 .dropdownItem {
     padding: 10px 15px;
     cursor: pointer;
-    color: #334155;
+    color: var(--color-text-body);
     text-align: left;
     font-size: 0.9rem;
 }
 
 .dropdownItem:hover {
-    background-color: #f1f5f9;
-    color: #0ea5e9;
+    background-color: var(--color-surface-muted);
+    color: var(--color-info);
 }
 
 /* Pagination */
@@ -198,8 +217,9 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px 20px;
-    border-top: 1px solid #e2e8f0;
-    background-color: #f8fafc;
+    border-top: 1px solid var(--color-border);
+    background-color: var(--color-bg-soft);
+    gap: 16px;
 }
 
 .totalInfo {
@@ -211,26 +231,28 @@
     align-items: center;
     gap: 10px;
     font-size: 0.9rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .pageControls select {
     padding: 5px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--color-border-strong);
     border-radius: 4px;
     outline: none;
 }
 
 .pageBtn {
     cursor: pointer;
-    color: #475569;
+    color: var(--color-text-body);
 }
 
 .pageBtn:hover {
-    color: #0ea5e9;
+    color: var(--color-info);
 }
 
 .pageBtn.disabled {
-    color: #cbd5e1;
+    color: var(--color-border-strong);
     cursor: not-allowed;
 }
 
@@ -244,7 +266,7 @@
 .modalOverlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background-color: rgba(0, 0, 0, 0.4);
+    background-color: var(--overlay-dark);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -252,10 +274,11 @@
 }
 
 .modal {
-    background-color: white;
+    background-color: var(--color-white);
     width: 500px;
+    max-width: calc(100vw - 32px);
     border-radius: 4px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    box-shadow: var(--shadow-dropdown-strong);
     display: flex;
     flex-direction: column;
 }
@@ -270,14 +293,14 @@
 .modalHeader h3 {
     margin: 0;
     font-size: 1.4rem;
-    color: #334155;
+    color: var(--color-text-body);
 }
 
 .modalIcons {
     display: flex;
     gap: 15px;
     font-size: 1.2rem;
-    color: #64748b;
+    color: var(--color-text-muted);
 }
 
 .modalIcons i {
@@ -285,16 +308,18 @@
 }
 
 .modalIcons i:hover {
-    color: #0f172a;
+    color: var(--color-text);
 }
 
 .modalBody {
     padding: 20px;
+    max-height: 65vh;
+    overflow-y: auto;
 }
 
 .errorAlert {
-    color: #ef4444;
-    background-color: #fef2f2;
+    color: var(--color-danger);
+    background-color: var(--status-danger-bg);
     padding: 10px;
     border-radius: 4px;
     margin-bottom: 15px;
@@ -311,16 +336,16 @@
 .formGroup label {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #0f172a;
+    color: var(--color-text);
 }
 
 .required {
-    color: #ef4444;
+    color: var(--color-danger);
 }
 
 .inputField, .textareaField {
     padding: 8px 10px;
-    border: 1px solid #0ea5e9; /* Tech blue focus style */
+    border: 1px solid var(--color-info); /* Tech blue focus style */
     border-radius: 4px;
     outline: none;
     font-family: inherit;
@@ -328,24 +353,24 @@
 
 .textareaField {
     resize: vertical;
-    border-color: #cbd5e1;
+    border-color: var(--color-border-strong);
 }
 
 .textareaField:focus {
-    border-color: #0ea5e9;
+    border-color: var(--color-info);
 }
 
 .modalFooter {
     display: flex;
     justify-content: space-between;
     padding: 15px 20px;
-    background-color: #f8fafc;
-    border-top: 1px solid #e2e8f0;
+    background-color: var(--color-bg-soft);
+    border-top: 1px solid var(--color-border);
 }
 
 .btnCancel {
-    background-color: white;
-    border: 1px solid #cbd5e1;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-border-strong);
     padding: 8px 20px;
     border-radius: 4px;
     cursor: pointer;
@@ -353,17 +378,19 @@
 }
 
 .btnCancel:hover {
-    background-color: #f1f5f9;
+    background-color: var(--color-surface-muted);
 }
 
 .rightButtons {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .btnSave {
-    background-color: white;
-    border: 1px solid #cbd5e1;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-border-strong);
     padding: 8px 20px;
     border-radius: 4px;
     cursor: pointer;
@@ -371,12 +398,12 @@
 }
 
 .btnSave:hover {
-    background-color: #f1f5f9;
+    background-color: var(--color-surface-muted);
 }
 
 .btnSaveAndAdd {
-    background-color: #0ea5e9;
-    color: white;
+    background-color: var(--color-info);
+    color: var(--color-white);
     border: none;
     padding: 8px 20px;
     border-radius: 4px;
@@ -385,5 +412,23 @@
 }
 
 .btnSaveAndAdd:hover {
-    background-color: #0284c7;
+    background-color: var(--color-info-hover);
+}
+
+@media (max-width: 720px) {
+    .toolbar,
+    .pagination,
+    .modalFooter {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .searchBox {
+        width: 100%;
+    }
+
+    .actions,
+    .pageControls {
+        justify-content: flex-start;
+    }
 }

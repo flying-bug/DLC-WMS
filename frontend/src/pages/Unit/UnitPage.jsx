@@ -87,7 +87,7 @@ const UnitPage = () => {
             fetchUnits();
         } catch (error) {
             console.error("Lỗi thay đổi trạng thái:", error);
-            alert('Có lỗi xảy ra khi cập nhật trạng thái!');
+            alert(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái!');
         }
         setOpenDropdownId(null);
     };
@@ -113,7 +113,7 @@ const UnitPage = () => {
                 setIsEdit(false);
             }
         } catch (error) {
-            setErrorMsg(error.response?.data?.message || 'Có lỗi xảy ra khi lưu.');
+            setErrorMsg(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi lưu.');
         }
     };
 
@@ -124,7 +124,7 @@ const UnitPage = () => {
                 fetchUnits();
             } catch (error) {
                 console.error("Lỗi xóa đơn vị:", error);
-                alert('Có lỗi xảy ra khi xóa!');
+                alert(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
             }
         }
         setOpenDropdownId(null);
@@ -153,7 +153,7 @@ const UnitPage = () => {
                     </div>
                     <div className={styles.actions}>
                         <button className={styles.iconBtn} onClick={fetchUnits} title="Tải lại"><i className="fas fa-sync-alt"></i></button>
-                        <button className={styles.iconBtn} title="Xuất Excel"><i className="fas fa-file-excel" style={{color: '#107c41'}}></i></button>
+                        <button className={styles.iconBtn} title="Xuất Excel"><i className="fas fa-file-excel" style={{color: 'var(--color-excel)'}}></i></button>
                         <button className={styles.primaryBtn} onClick={openAddModal}>Thêm</button>
                     </div>
                 </div>

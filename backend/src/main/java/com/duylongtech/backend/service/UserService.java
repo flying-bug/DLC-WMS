@@ -6,6 +6,7 @@ import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.repository.UserRepository;
 import com.duylongtech.backend.security.UserDetailsImpl;
 import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.constant.SystemMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -45,7 +46,7 @@ public class UserService {
 
         // 2. Query user kèm roles (EntityGraph JOIN FETCH)
         User user = userRepository.findWithRolesById(userDetails.getId())
-                .orElseThrow(() -> new BusinessException("Không tìm thấy tài khoản trong hệ thống."));
+                .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
 
         // 3. Map Entity -> DTO (Data Masking: không trả về password_hash)
         return mapToDetailDto(user);
@@ -115,22 +116,22 @@ public class UserService {
     }
 
     public UserDto getUserById(Long id) {
-        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
+        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         return mapToDto(user);
     }
 
     public void updateStatus(Long id, String status) {
-        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
+        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         user.setStatus(status);
         userRepository.save(user);
     }
 
     public void updatePermissions(Long id, List<String> permissionCodes) {
-        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
+        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         boolean isStaff = user.getRoles() != null && user.getRoles().stream()
                 .anyMatch(role -> "STAFF".equalsIgnoreCase(role.getCode()));
         if (!isStaff) {
-            throw new BusinessException("Chỉ tài khoản Nhân viên (STAFF) mới được phép phân quyền động.");
+            throw new BusinessException(SystemMessage.STAFF_ONLY_PERMISSION);
         }
         Set<PermissionEntity> permissions = new HashSet<>();
         if (permissionCodes != null) {
@@ -143,7 +144,7 @@ public class UserService {
     }
 
     public UserDto updateUser(Long id, UserDto userDto) {
-        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
+        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         user.setFullName(userDto.getFullName());
         user.setEmail(userDto.getEmail());
         user.setPhone(userDto.getPhone());

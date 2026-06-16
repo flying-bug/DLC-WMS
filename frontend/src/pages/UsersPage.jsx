@@ -263,7 +263,7 @@ function UsersPage() {
                                 usersData.map((user) => (
                                     <tr key={user.id} className={styles.tableRow} onClick={() => handleRowClick(user)}>
                                         <td><div className={`${styles.avatarCircle} ${user.avatarColorClass}`}>{user.initials}</div></td>
-                                        <td><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: '#64748b' }}>{user.email}</span></td>
+                                        <td><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: 'var(--color-text-subtle)' }}>{user.email}</span></td>
                                         <td>{user.code}</td>
                                         <td>{user.departmentShort}</td>
                                         <td><span className={`${styles.roleBadge} ${user.roleClass}`}>{user.roleBadge}</span></td>

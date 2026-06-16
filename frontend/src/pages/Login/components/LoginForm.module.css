@@ -14,15 +14,15 @@
 .label {
     font-size: 0.82rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text-heading);
 }
 
 /* ── Input wrapper ── */
 .inputWrapper {
     display: flex;
     align-items: center;
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
+    background: var(--color-bg-soft);
+    border: 1.5px solid var(--color-border);
     border-radius: 10px;
     padding: 0 12px;
     gap: 10px;
@@ -30,39 +30,40 @@
 }
 
 .inputWrapper:focus-within {
-    border-color: #1e4fa0;
-    box-shadow: 0 0 0 3px rgba(30, 79, 160, 0.1);
-    background: #ffffff;
+    border-color: var(--color-primary-accent);
+    box-shadow: var(--shadow-focus-primary-soft);
+    background: var(--color-surface);
 }
 
 .inputWrapper.inputError {
-    border-color: #ef4444;
-    background: #fff8f8;
+    border-color: var(--color-danger);
+    background: var(--status-danger-bg);
 }
 
 .inputWrapper.inputError:focus-within {
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-    background: #ffffff;
+    box-shadow: var(--shadow-focus-danger);
+    background: var(--color-surface);
 }
 
 .inputIcon {
-    color: #94a3b8;
+    color: var(--color-text-subtle);
     flex-shrink: 0;
 }
 
 .input {
     flex: 1;
+    min-width: 0;
     border: none;
     outline: none;
     background: transparent;
     padding: 10px 0;
     font-size: 0.9rem;
-    color: #0f172a;
+    color: var(--color-text);
     font-family: inherit;
 }
 
 .input::placeholder {
-    color: #c4cdd6;
+    color: var(--color-icon-muted);
 }
 
 /* ── Toggle password ── */
@@ -71,7 +72,7 @@
     border: none;
     padding: 2px;
     cursor: pointer;
-    color: #94a3b8;
+    color: var(--color-text-subtle);
     display: flex;
     align-items: center;
     flex-shrink: 0;
@@ -80,18 +81,18 @@
 }
 
 .togglePassword:hover {
-    color: #475569;
+    color: var(--color-text-body);
 }
 
 .togglePassword:focus-visible {
-    outline: 2px solid #1e4fa0;
+    outline: 2px solid var(--color-primary-accent);
     outline-offset: 2px;
 }
 
 /* ── Error message ── */
 .errorMsg {
     font-size: 0.78rem;
-    color: #ef4444;
+    color: var(--color-danger);
 }
 
 /* ── Options row (remember me + forgot) ── */
@@ -107,7 +108,7 @@
     align-items: center;
     gap: 7px;
     font-size: 0.82rem;
-    color: #374151;
+    color: var(--color-text-heading);
     cursor: pointer;
     user-select: none;
 }
@@ -115,21 +116,22 @@
 .checkbox {
     width: 15px;
     height: 15px;
-    accent-color: #1e4fa0;
+    accent-color: var(--color-primary-accent);
     cursor: pointer;
     flex-shrink: 0;
 }
 
 .forgotLink {
     font-size: 0.82rem;
-    color: #1e4fa0;
+    color: var(--color-primary-accent);
     text-decoration: none;
     font-weight: 600;
     transition: color 0.15s;
+    overflow-wrap: anywhere;
 }
 
 .forgotLink:hover {
-    color: #1a3a6b;
+    color: var(--color-primary-hover);
     text-decoration: underline;
 }
 
@@ -141,8 +143,8 @@
     justify-content: center;
     gap: 8px;
     padding: 11px 20px;
-    background: #1e3f7a;
-    color: #ffffff;
+    background: var(--color-primary);
+    color: var(--color-surface);
     border: none;
     border-radius: 10px;
     font-size: 0.9rem;
@@ -155,8 +157,8 @@
 }
 
 .submitBtn:hover {
-    background: #1a3a6b;
-    box-shadow: 0 4px 16px rgba(30, 63, 122, 0.32);
+    background: var(--color-primary-hover);
+    box-shadow: var(--shadow-primary);
 }
 
 .submitBtn:active {
@@ -165,7 +167,7 @@
 }
 
 .submitBtn:focus-visible {
-    outline: 2px solid #1e4fa0;
+    outline: 2px solid var(--color-primary-accent);
     outline-offset: 3px;
 }
 
@@ -175,5 +177,10 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
+    }
+
+    .submitBtn,
+    .inputWrapper {
+        min-height: 44px;
     }
 }

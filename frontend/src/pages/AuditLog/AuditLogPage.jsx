@@ -4,6 +4,18 @@ import axiosClient from '../../api/axiosClient';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
 import styles from './AuditLogPage.module.css';
 
+const formatDateTime = (isoString) => {
+    if (!isoString) return '';
+    try {
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return isoString;
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    } catch {
+        return isoString;
+    }
+};
+
 function AuditLogPage() {
     const navigate = useNavigate();
     const [logs, setLogs] = useState([]);
@@ -134,18 +146,18 @@ function AuditLogPage() {
                                 </tr>
                             ) : logs.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                                    <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-subtle)' }}>
                                         Không tìm thấy nhật ký nào.
                                     </td>
                                 </tr>
                             ) : (
                                 logs.map((log) => (
                                     <tr key={log.id} className={styles.tableRow}>
-                                        <td className={styles.timeCol}>{log.timestamp}</td>
-                                        <td><strong>{log.user}</strong></td>
-                                        <td>{log.action}</td>
+                                        <td className={styles.timeCol}>{formatDateTime(log.timestamp)}</td>
+                                        <td className={styles.userCol}><strong title={log.user}>{log.user}</strong></td>
+                                        <td className={styles.actionCol} title={log.action}>{log.action}</td>
                                         <td><span className={styles.moduleBadge}>{log.module}</span></td>
-                                        <td>{log.ip}</td>
+                                        <td className={styles.ipCol}>{log.ip}</td>
                                         <td>
                                             <span className={`${styles.statusBadge} ${
                                                 log.status === 'Thành công' ? styles.statusSuccess : styles.statusFail
@@ -170,12 +182,12 @@ function AuditLogPage() {
                                 style={{
                                     padding: '4px 8px',
                                     borderRadius: '4px',
-                                    border: '1px solid #e2e8f0',
+                                    border: '1px solid var(--color-border)',
                                     outline: 'none',
                                     fontSize: '13px',
-                                    color: '#475569',
+                                    color: 'var(--color-text-muted)',
                                     marginRight: '12px',
-                                    background: '#fff',
+                                    background: 'var(--color-white)',
                                     cursor: 'pointer'
                                 }}
                             >

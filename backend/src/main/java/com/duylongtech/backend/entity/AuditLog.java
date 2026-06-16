@@ -2,7 +2,7 @@ package com.duylongtech.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "AUDIT_LOGS")
@@ -42,5 +42,5 @@ public class AuditLog {
     private String description;
 
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }

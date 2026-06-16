@@ -27,7 +27,7 @@ function StepResetPassword({ email, otp, onSuccess }) {
 
     const strengthScore = ruleStatus.filter((r) => r.passed).length;
     const strengthLabels = ['', 'Yếu', 'Trung bình', 'Mạnh'];
-    const strengthColors = ['', '#ef4444', '#f97316', '#22c55e'];
+    const strengthColors = ['', 'var(--color-danger)', 'var(--color-warning-accent)', 'var(--color-success-bright)'];
 
     const validate = () => {
         const errs = {};
@@ -109,7 +109,7 @@ function StepResetPassword({ email, otp, onSuccess }) {
                                     <div
                                         key={n}
                                         className={styles.strengthSegment}
-                                        style={{ background: n <= strengthScore ? strengthColors[strengthScore] : '#e2e8f0' }}
+                                        style={{ background: n <= strengthScore ? strengthColors[strengthScore] : 'var(--color-border)' }}
                                     />
                                 ))}
                             </div>
