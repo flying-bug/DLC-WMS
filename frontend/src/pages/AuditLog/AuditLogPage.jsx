@@ -146,7 +146,7 @@ function AuditLogPage() {
                                 </tr>
                             ) : logs.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                                    <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-subtle)' }}>
                                         Không tìm thấy nhật ký nào.
                                     </td>
                                 </tr>
@@ -182,12 +182,12 @@ function AuditLogPage() {
                                 style={{
                                     padding: '4px 8px',
                                     borderRadius: '4px',
-                                    border: '1px solid #e2e8f0',
+                                    border: '1px solid var(--color-border)',
                                     outline: 'none',
                                     fontSize: '13px',
-                                    color: '#475569',
+                                    color: 'var(--color-text-muted)',
                                     marginRight: '12px',
-                                    background: '#fff',
+                                    background: 'var(--color-white)',
                                     cursor: 'pointer'
                                 }}
                             >

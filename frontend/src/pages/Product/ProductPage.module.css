@@ -3,7 +3,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background-color: #f4f5f8;
+    background-color: var(--color-bg);
     min-width: 0;
 }
 
@@ -19,14 +19,14 @@
     margin: 0;
     font-size: 20px;
     font-weight: 700;
-    color: #111;
+    color: var(--color-text);
 }
 
 .backLink {
     display: inline-block;
     margin-top: 4px;
     font-size: 13px;
-    color: #0075c0;
+    color: var(--color-primary);
     cursor: pointer;
 }
 
@@ -48,9 +48,9 @@
     display: flex;
     align-items: center;
     padding: 16px;
-    background-color: #fff;
+    background-color: var(--color-surface);
     border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-dropdown);
 }
 
 .kpiIcon {
@@ -65,25 +65,25 @@
 }
 
 .kpiWarning .kpiIcon {
-    background-color: #ffe8d6;
-    color: #ff8000;
+    background-color: var(--color-warning-bg-soft);
+    color: var(--color-warning-strong);
 }
 
 .kpiDanger .kpiIcon {
-    background-color: #fde8e8;
-    color: #e53e3e;
+    background-color: var(--color-danger-bg-soft);
+    color: var(--color-danger-strong);
 }
 
 .kpiNumber {
     font-size: 28px;
     font-weight: 700;
     line-height: 1.1;
-    color: #111;
+    color: var(--color-text);
 }
 
 .kpiLabel {
     font-size: 13px;
-    color: #666;
+    color: var(--color-text-muted);
     margin-top: 4px;
 }
 
@@ -92,10 +92,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #fff;
+    background-color: var(--color-surface);
     padding: 10px 16px;
     border-radius: 4px 4px 0 0;
-    border-bottom: 1px solid #e5e5e5;
+    border-bottom: 1px solid var(--color-border-soft);
     gap: 16px;
     min-width: 0;
 }
@@ -109,29 +109,29 @@
 
 .bulkDropdown {
     padding: 8px 16px;
-    border: 1px solid #babec5;
+    border: 1px solid var(--color-border-field);
     border-radius: 3px;
     cursor: pointer;
     font-size: 13px;
     font-weight: 600;
-    color: #111;
+    color: var(--color-text);
     display: flex;
     align-items: center;
     gap: 8px;
-    background-color: #fff;
+    background-color: var(--color-surface);
 }
 
 .bulkDropdown:hover {
-    background-color: #f4f5f8;
+    background-color: var(--color-bg);
 }
 
 .filterBtn {
-    background-color: #fff;
-    border: 1px solid #babec5;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border-field);
     border-radius: 3px;
     padding: 8px 16px;
     font-size: 13px;
-    color: #111;
+    color: var(--color-text);
     font-weight: 600;
     cursor: pointer;
     display: flex;
@@ -140,7 +140,7 @@
 }
 
 .filterBtn:hover {
-    background-color: #f4f5f8;
+    background-color: var(--color-bg);
 }
 
 .toolbarRight {
@@ -161,7 +161,7 @@
 .searchBox input {
     width: 100%;
     padding: 8px 32px 8px 12px;
-    border: 1px solid #babec5;
+    border: 1px solid var(--color-border-field);
     border-radius: 3px;
     font-size: 13px;
     font-style: italic;
@@ -169,7 +169,7 @@
 }
 
 .searchBox input:focus {
-    border-color: #0075c0;
+    border-color: var(--color-primary);
 }
 
 .searchBox i {
@@ -177,7 +177,7 @@
     right: 10px;
     top: 50%;
     transform: translateY(-50%);
-    color: #757575;
+    color: var(--color-text-muted-3);
     cursor: pointer;
 }
 
@@ -187,16 +187,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #babec5;
+    border: 1px solid var(--color-border-field);
     border-radius: 3px;
-    background-color: #fff;
-    color: #757575;
+    background-color: var(--color-surface);
+    color: var(--color-text-muted-3);
     cursor: pointer;
 }
 
 .iconBtn:hover {
-    color: #0075c0;
-    border-color: #0075c0;
+    color: var(--color-primary);
+    border-color: var(--color-primary);
 }
 
 .actionBtnGroup {
@@ -204,41 +204,41 @@
 }
 
 .addBtn {
-    background-color: #2ca01c;
+    background-color: var(--color-success-action);
     border: none;
     border-radius: 30px 0 0 30px;
     padding: 8px 24px;
-    color: #fff;
+    color: var(--color-surface);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
 }
 
 .addBtn:hover {
-    background-color: #35b624;
+    background-color: var(--color-success-action-hover);
 }
 
 .addMoreDropdownBtn {
-    background-color: #2ca01c;
+    background-color: var(--color-success-action);
     border: none;
-    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    border-left: 1px solid var(--overlay-white-line-strong);
     border-radius: 0 30px 30px 0;
     padding: 8px 10px;
-    color: #fff;
+    color: var(--color-surface);
     cursor: pointer;
 }
 
 .addMoreDropdownBtn:hover {
-    background-color: #35b624;
+    background-color: var(--color-success-action-hover);
 }
 
 /* Table */
 .tableWrapper {
-    background-color: #fff;
+    background-color: var(--color-surface);
     overflow-x: auto;
     flex: 1;
     min-height: 300px;
-    border-bottom: 1px solid #e5e5e5;
+    border-bottom: 1px solid var(--color-border-soft);
 }
 
 .table {
@@ -250,41 +250,41 @@
 }
 
 .table th {
-    background-color: #f2f2f2;
+    background-color: var(--color-bg-table);
     padding: 8px 12px;
     font-weight: 600;
-    color: #111;
-    border-right: 1px solid #e5e5e5;
-    border-bottom: 1px solid #e5e5e5;
+    color: var(--color-text);
+    border-right: 1px solid var(--color-border-soft);
+    border-bottom: 1px solid var(--color-border-soft);
     position: sticky;
     top: 0;
 }
 
 .table td {
     padding: 6px 12px;
-    border-bottom: 1px solid #e5e5e5;
-    border-right: 1px solid #f2f2f2;
+    border-bottom: 1px solid var(--color-border-soft);
+    border-right: 1px solid var(--color-bg-table);
     vertical-align: middle;
     max-width: 320px;
     overflow-wrap: anywhere;
 }
 
 .table tr:hover {
-    background-color: #f2f9ff;
+    background-color: var(--color-bg-hover);
 }
 
 .inactiveRow {
-    color: #9e9e9e;
+    color: var(--color-text-placeholder);
     font-style: italic;
 }
 
 .imageCell {
     width: 48px;
     height: 36px;
-    border: 1px solid #e5e5e5;
+    border: 1px solid var(--color-border-soft);
     border-radius: 3px;
     overflow: hidden;
-    background-color: #fafafa;
+    background-color: var(--color-bg-elevated);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -297,12 +297,12 @@
 }
 
 .noImage {
-    color: #ccc;
+    color: var(--color-text-disabled);
     font-size: 16px;
 }
 
 .codeCell {
-    color: #0075c0;
+    color: var(--color-primary);
     font-weight: 600;
     white-space: nowrap;
 }
@@ -324,7 +324,7 @@
 }
 
 .editLink {
-    color: #0075c0;
+    color: var(--color-primary);
     font-weight: 600;
     cursor: pointer;
 }
@@ -336,7 +336,7 @@
 .dropdownBtn {
     background: none;
     border: none;
-    color: #0075c0;
+    color: var(--color-primary);
     cursor: pointer;
     padding: 4px;
 }
@@ -346,9 +346,9 @@
     top: 100%;
     right: 0;
     z-index: 100;
-    background-color: #fff;
-    border: 1px solid #babec5;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border-field);
+    box-shadow: var(--shadow-table);
     border-radius: 2px;
     min-width: 120px;
     text-align: left;
@@ -357,12 +357,12 @@
 .dropdownItem {
     padding: 8px 12px;
     cursor: pointer;
-    color: #111;
+    color: var(--color-text);
 }
 
 .dropdownItem:hover {
-    background-color: #ebedf0;
-    color: #0075c0;
+    background-color: var(--color-bg-control-hover);
+    color: var(--color-primary);
 }
 
 /* Spinner */
@@ -370,9 +370,9 @@
     display: inline-block;
     width: 20px;
     height: 20px;
-    border: 3px solid rgba(0, 117, 192, 0.1);
+    border: 3px solid var(--shadow-focus-primary);
     border-radius: 50%;
-    border-top-color: #0075c0;
+    border-top-color: var(--color-primary);
     animation: spin 1s ease-in-out infinite;
     margin-right: 8px;
 }
@@ -386,7 +386,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #fff;
+    background-color: var(--color-surface);
     padding: 10px 16px;
     border-radius: 0 0 4px 4px;
     gap: 16px;
@@ -394,7 +394,7 @@
 
 .pageInfo {
     font-size: 13px;
-    color: #111;
+    color: var(--color-text);
 }
 
 .pageControls {
@@ -407,7 +407,7 @@
 
 .sizeSelect {
     padding: 6px 12px;
-    border: 1px solid #babec5;
+    border: 1px solid var(--color-border-field);
     border-radius: 3px;
     font-size: 13px;
     outline: none;
@@ -420,19 +420,19 @@
 }
 
 .pageNavBtn {
-    background-color: #fff;
-    border: 1px solid #babec5;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border-field);
     border-radius: 3px;
     padding: 6px 12px;
     font-size: 13px;
     cursor: pointer;
-    color: #111;
+    color: var(--color-text);
 }
 
 .pageNavBtn:disabled {
-    color: #ccc;
+    color: var(--color-text-disabled);
     cursor: not-allowed;
-    border-color: #e5e5e5;
+    border-color: var(--color-border-soft);
 }
 
 .pageNumber {
@@ -446,7 +446,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(0,0,0,0.4);
+    background-color: var(--overlay-dark);
     z-index: 1000;
     display: flex;
     align-items: center;
@@ -454,14 +454,14 @@
 }
 
 .modalContent {
-    background-color: #fff;
+    background-color: var(--color-surface);
     border-radius: 4px;
     width: 700px;
     max-width: 90%;
     max-height: calc(100vh - 40px);
     display: flex;
     flex-direction: column;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    box-shadow: var(--shadow-dropdown-strong);
 }
 
 .modalHeader {
@@ -469,26 +469,26 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 24px;
-    border-bottom: 1px solid #e5e5e5;
+    border-bottom: 1px solid var(--color-border-soft);
 }
 
 .modalHeader h3 {
     margin: 0;
     font-size: 18px;
     font-weight: 700;
-    color: #111;
+    color: var(--color-text);
 }
 
 .closeModalBtn {
     background: none;
     border: none;
     font-size: 18px;
-    color: #757575;
+    color: var(--color-text-muted-3);
     cursor: pointer;
 }
 
 .closeModalBtn:hover {
-    color: #111;
+    color: var(--color-text);
 }
 
 .modalBody {
@@ -498,13 +498,13 @@
 }
 
 .modalError {
-    background-color: #fde8e8;
-    color: #e53e3e;
+    background-color: var(--color-danger-bg-soft);
+    color: var(--color-danger-strong);
     padding: 10px 14px;
     border-radius: 3px;
     margin-bottom: 16px;
     font-size: 13px;
-    border-left: 4px solid #e53e3e;
+    border-left: 4px solid var(--color-danger-strong);
 }
 
 .formRow {
@@ -524,17 +524,17 @@
 .formGroup label {
     font-size: 12px;
     font-weight: 600;
-    color: #111;
+    color: var(--color-text);
     margin-bottom: 6px;
 }
 
 .required {
-    color: #ff0000;
+    color: var(--status-danger-text);
 }
 
 .formInput, .formSelect, .formTextarea {
     padding: 8px 12px;
-    border: 1px solid #babec5;
+    border: 1px solid var(--color-border-field);
     border-radius: 3px;
     font-size: 13px;
     outline: none;
@@ -543,7 +543,7 @@
 }
 
 .formInput:focus, .formSelect:focus, .formTextarea:focus {
-    border-color: #0075c0;
+    border-color: var(--color-primary);
 }
 
 .formTextarea {
@@ -566,23 +566,23 @@
     display: flex;
     justify-content: space-between;
     padding: 16px 24px;
-    border-top: 1px solid #e5e5e5;
-    background-color: #f4f5f8;
+    border-top: 1px solid var(--color-border-soft);
+    background-color: var(--color-bg);
 }
 
 .cancelBtn {
-    background-color: #fff;
-    border: 1px solid #babec5;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border-field);
     border-radius: 30px;
     padding: 8px 20px;
     font-size: 13px;
     font-weight: 600;
-    color: #111;
+    color: var(--color-text);
     cursor: pointer;
 }
 
 .cancelBtn:hover {
-    background-color: #ebedf0;
+    background-color: var(--color-bg-control-hover);
 }
 
 .footerRight {
@@ -593,9 +593,9 @@
 }
 
 .saveBtn {
-    background-color: #fff;
-    border: 1px solid #0075c0;
-    color: #0075c0;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-primary);
+    color: var(--color-primary);
     border-radius: 30px;
     padding: 8px 24px;
     font-size: 13px;
@@ -604,13 +604,13 @@
 }
 
 .saveBtn:hover {
-    background-color: #f2f9ff;
+    background-color: var(--color-bg-hover);
 }
 
 .saveAddBtn {
-    background-color: #2ca01c;
+    background-color: var(--color-success-action);
     border: none;
-    color: #fff;
+    color: var(--color-surface);
     border-radius: 30px;
     padding: 8px 24px;
     font-size: 13px;
@@ -619,7 +619,7 @@
 }
 
 .saveAddBtn:hover {
-    background-color: #35b624;
+    background-color: var(--color-success-action-hover);
 }
 
 @media (max-width: 980px) {

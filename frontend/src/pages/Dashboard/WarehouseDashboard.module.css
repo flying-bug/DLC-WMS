@@ -9,10 +9,10 @@
 
 .mainProcess,
 .reportsArea {
-    background: #ffffff;
-    border: 1px solid #e5edf5;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
-    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--shadow-card);
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -26,7 +26,7 @@
     justify-content: space-between;
     gap: 16px;
     padding: 24px 28px 18px;
-    border-bottom: 1px solid #edf2f7;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .reportHeader {
@@ -35,7 +35,7 @@
 
 .eyebrow {
     margin: 0 0 4px;
-    color: #64748b;
+    color: var(--color-text-muted);
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -44,7 +44,7 @@
 
 .sectionTitle {
     font-size: 1.25rem;
-    color: #172033;
+    color: var(--color-text-strong);
     margin: 0;
     font-weight: 700;
 }
@@ -54,22 +54,22 @@
     padding: 0 14px;
     border: 0;
     border-radius: 6px;
-    background: #0f8fdc;
-    color: #ffffff;
+    background: var(--color-primary);
+    color: var(--color-surface);
     display: inline-flex;
     align-items: center;
     gap: 8px;
     font-weight: 700;
     white-space: nowrap;
-    box-shadow: 0 10px 20px rgba(14, 143, 220, 0.22);
+    box-shadow: var(--shadow-blue);
 }
 
 .primaryAction:hover {
-    background: #0878bd;
+    background: var(--color-primary-hover);
 }
 
 .processDiagram {
-    --line: #d8e3ef;
+    --line: var(--color-border);
     position: relative;
     flex: 1;
     display: grid;
@@ -80,8 +80,8 @@
     padding: 44px 58px 52px;
     min-height: 470px;
     background:
-        linear-gradient(90deg, rgba(14, 143, 220, 0.05) 1px, transparent 1px),
-        linear-gradient(180deg, rgba(14, 143, 220, 0.05) 1px, transparent 1px);
+        linear-gradient(90deg, var(--dashboard-grid-line) 1px, transparent 1px),
+        linear-gradient(180deg, var(--dashboard-grid-line) 1px, transparent 1px);
     background-size: 44px 44px;
 }
 
@@ -120,7 +120,7 @@
     border: 1px solid transparent;
     border-radius: 8px;
     background: transparent;
-    color: #25324b;
+    color: var(--color-text-strong);
     cursor: pointer;
     transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
     z-index: 2;
@@ -130,8 +130,8 @@
 
 .node:hover {
     transform: translateY(-4px);
-    border-color: #d7eafa;
-    background: rgba(255, 255, 255, 0.86);
+    border-color: var(--color-border);
+    background: var(--dashboard-action-bg);
 }
 
 .node::before {
@@ -196,20 +196,20 @@
 .iconWrapper {
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, #14a4e8, #2563eb);
+    background: var(--color-primary);
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ffffff;
+    color: var(--color-surface);
     font-size: 1.65rem;
-    box-shadow: 0 14px 28px rgba(37, 99, 235, 0.24);
+    box-shadow: var(--shadow-blue-raised);
 }
 
 .node span {
     font-size: 0.92rem;
     text-align: center;
-    color: #26344d;
+    color: var(--color-text-strong);
     font-weight: 700;
     line-height: 1.35;
 }
@@ -217,9 +217,9 @@
 .bottomToolbar {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--color-border);
     padding: 12px 18px;
-    background-color: #f8fafc;
+    background-color: var(--color-bg-soft);
 }
 
 .toolbarItem {
@@ -227,7 +227,7 @@
     flex-direction: column;
     align-items: center;
     gap: 7px;
-    color: #0f8fdc;
+    color: var(--color-primary);
     border: 0;
     border-radius: 6px;
     background: transparent;
@@ -242,12 +242,12 @@
 
 .toolbarItem span {
     font-size: 0.86rem;
-    color: #334155;
+    color: var(--color-text-body);
     font-weight: 500;
 }
 
 .toolbarItem:hover {
-    background: #eef8ff;
+    background: var(--color-primary-soft);
 }
 
 .reportList {
@@ -259,10 +259,10 @@
 
 .reportList li {
     padding: 14px 10px;
-    border-bottom: 1px solid #eef2f7;
+    border-bottom: 1px solid var(--color-border);
     border-radius: 6px;
     font-size: 0.9rem;
-    color: #334155;
+    color: var(--color-text-body);
     cursor: pointer;
     display: flex;
     align-items: flex-start;
@@ -276,8 +276,8 @@
     height: 28px;
     min-width: 28px;
     border-radius: 6px;
-    background: #eef8ff;
-    color: #0f8fdc;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -286,18 +286,18 @@
 }
 
 .reportList li:hover {
-    color: #0f8fdc;
-    background-color: #f8fbff;
+    color: var(--color-primary);
+    background-color: var(--color-primary-soft);
 }
 
 .allReports {
     text-align: center;
     padding: 20px;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--color-border);
 }
 
 .allReports a {
-    color: #0f8fdc;
+    color: var(--color-primary);
     text-decoration: none;
     font-size: 0.95rem;
     font-weight: 700;

@@ -5,7 +5,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(15, 23, 42, 0.4);
+    background: var(--overlay-dark);
     z-index: 1050;
     opacity: 0;
     visibility: hidden;
@@ -23,8 +23,8 @@
     right: 0;
     width: 480px;
     height: 100vh;
-    background: #ffffff;
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-card-soft);
     z-index: 1100;
     transform: translateX(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -46,7 +46,7 @@
 /* Header */
 .header {
     padding: 24px 24px 0;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .headerTop {
@@ -60,7 +60,7 @@
     background: transparent;
     border: none;
     font-size: 20px;
-    color: #64748b;
+    color: var(--color-text-muted);
     cursor: pointer;
     padding: 4px;
     border-radius: 4px;
@@ -68,8 +68,8 @@
 }
 
 .btnClose:hover {
-    background: #f1f5f9;
-    color: #0f172a;
+    background: var(--color-surface-muted);
+    color: var(--color-text);
 }
 
 .userInfo {
@@ -83,8 +83,8 @@
     width: 56px;
     height: 56px;
     border-radius: 8px;
-    background: #e0e7ff;
-    color: #1e3f7a;
+    background: var(--color-primary-tint);
+    color: var(--color-primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -102,7 +102,7 @@
 .userName {
     font-size: 18px;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--color-text);
     margin: 0;
     line-height: 1.2;
     overflow-wrap: anywhere;
@@ -110,7 +110,7 @@
 
 .userCode {
     font-size: 13px;
-    color: #64748b;
+    color: var(--color-text-muted);
     overflow-wrap: anywhere;
 }
 
@@ -129,8 +129,8 @@
     font-weight: 700;
     padding: 4px 8px;
     border-radius: 100px;
-    background: #f0fdf4;
-    color: #16a34a;
+    background: var(--status-success-bg);
+    color: var(--color-success);
     letter-spacing: 0.5px;
 }
 
@@ -143,8 +143,8 @@
     font-weight: 700;
     padding: 4px 8px;
     border-radius: 100px;
-    background: #eff6ff;
-    color: #1e3f7a;
+    background: var(--status-info-bg);
+    color: var(--color-primary);
     letter-spacing: 0.5px;
 }
 
@@ -160,18 +160,18 @@
     padding: 12px 0;
     font-size: 13px;
     font-weight: 600;
-    color: #64748b;
+    color: var(--color-text-muted);
     cursor: pointer;
     position: relative;
     transition: color 0.2s;
 }
 
 .tabBtn:hover {
-    color: #0f172a;
+    color: var(--color-text);
 }
 
 .tabBtnActive {
-    color: #1e3f7a;
+    color: var(--color-primary);
 }
 
 .tabBtnActive::after {
@@ -181,7 +181,7 @@
     left: 0;
     width: 100%;
     height: 3px;
-    background: #1e3f7a;
+    background: var(--color-primary);
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
 }
@@ -201,7 +201,7 @@
 .sectionTitle {
     font-size: 12px;
     font-weight: 700;
-    color: #475569;
+    color: var(--color-text-body);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin: 0 0 16px;
@@ -228,19 +228,19 @@
 
 .detailLabel {
     font-size: 13px;
-    color: #64748b;
+    color: var(--color-text-muted);
 }
 
 .detailValue {
     font-size: 14px;
     font-weight: 600;
-    color: #0f172a;
+    color: var(--color-text);
     overflow-wrap: anywhere;
 }
 
 .divider {
     height: 1px;
-    background: #e2e8f0;
+    background: var(--color-border);
     margin: 24px 0;
 }
 
@@ -254,19 +254,19 @@
 .input {
     width: 100%;
     height: 40px;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
     border-radius: 6px;
     padding: 8px 12px;
     font-size: 14px;
-    color: #1e293b;
+    color: var(--color-text-strong);
     outline: none;
     transition: all 0.2s;
 }
 
 .input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    border-color: var(--color-primary-bright);
+    box-shadow: var(--shadow-focus-blue-strong);
 }
 
 .select {
@@ -281,7 +281,7 @@
 /* Roles Checkbox Cards */
 .roleText {
     font-size: 14px;
-    color: #475569;
+    color: var(--color-text-body);
     margin-bottom: 16px;
     line-height: 1.5;
 }
@@ -291,7 +291,7 @@
     align-items: flex-start;
     gap: 12px;
     padding: 16px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     margin-bottom: 12px;
     cursor: pointer;
@@ -299,14 +299,14 @@
 }
 
 .roleCardActive {
-    border-color: #1e3f7a;
-    background: #f8fafc;
+    border-color: var(--color-primary);
+    background: var(--color-bg-soft);
 }
 
 .roleRadio {
     width: 18px;
     height: 18px;
-    accent-color: #1e3f7a;
+    accent-color: var(--color-primary);
     margin-top: 2px;
     cursor: pointer;
 }
@@ -321,12 +321,12 @@
 .roleTitle {
     font-size: 14px;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--color-text);
 }
 
 .roleDesc {
     font-size: 13px;
-    color: #64748b;
+    color: var(--color-text-muted);
     line-height: 1.4;
     overflow-wrap: anywhere;
 }
@@ -335,10 +335,10 @@
     display: flex;
     gap: 8px;
     padding: 12px;
-    background: #f1f5f9;
+    background: var(--color-surface-muted);
     border-radius: 8px;
     font-size: 13px;
-    color: #1e3f7a;
+    color: var(--color-primary);
     margin-top: 24px;
 }
 
@@ -349,18 +349,18 @@
 /* Footer */
 .footer {
     padding: 16px 24px;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--color-border);
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    background: #ffffff;
+    background: var(--color-surface);
     flex-wrap: wrap;
 }
 
 .btnCancel {
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    color: #475569;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-text-body);
     border-radius: 6px;
     padding: 8px 20px;
     font-size: 14px;
@@ -370,14 +370,14 @@
 }
 
 .btnCancel:hover {
-    background: #f1f5f9;
-    color: #0f172a;
+    background: var(--color-surface-muted);
+    color: var(--color-text);
 }
 
 .btnSave {
-    background: #1e3f7a;
-    border: 1px solid #1e3f7a;
-    color: #ffffff;
+    background: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    color: var(--color-surface);
     border-radius: 6px;
     padding: 8px 20px;
     font-size: 14px;
@@ -387,17 +387,17 @@
 }
 
 .btnSave:hover {
-    background: #163263;
+    background: var(--color-primary-dark);
 }
 
 /* Modal Content Styles */
 .modalContent {
-    background: #fff;
+    background: var(--color-surface);
     border-radius: 12px;
     padding: 32px;
     width: 440px;
     max-width: 90vw;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    box-shadow: var(--shadow-dropdown);
 }
 
 .modalHeader {
@@ -418,25 +418,25 @@
 }
 
 .modalIconWarning {
-    background: #fef2f2;
-    color: #ef4444;
+    background: var(--status-danger-bg);
+    color: var(--color-danger);
 }
 
 .modalIconInfo {
-    background: #eff6ff;
-    color: #3b82f6;
+    background: var(--status-info-bg);
+    color: var(--color-primary-bright);
 }
 
 .modalTitle {
     font-size: 18px;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--color-text);
     margin: 0;
 }
 
 .modalText {
     font-size: 14px;
-    color: #475569;
+    color: var(--color-text-body);
     line-height: 1.6;
     margin-bottom: 32px;
 }
@@ -449,12 +449,12 @@
 }
 
 .btnDanger {
-    background: #ef4444;
-    border-color: #ef4444;
+    background: var(--color-danger);
+    border-color: var(--color-danger);
 }
 
 .btnDanger:hover {
-    background: #dc2626;
+    background: var(--color-danger-strong);
 }
 
 @media (max-width: 576px) {

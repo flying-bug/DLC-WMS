@@ -1,16 +1,16 @@
 .page {
     min-height: 100vh;
-    background-color: #f8fafc;
+    background-color: var(--color-bg-soft);
     font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
-    color: #1e293b;
+    color: var(--color-text-strong);
     min-width: 0;
 }
 
 /* Header */
 .header {
     height: 60px;
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -28,7 +28,7 @@
 .brandName {
     font-size: 18px;
     font-weight: 700;
-    color: #1e3f7a;
+    color: var(--color-primary);
     margin-right: 32px;
 }
 
@@ -46,7 +46,7 @@
     align-items: center;
     font-size: 14px;
     font-weight: 600;
-    color: #64748b;
+    color: var(--color-text-muted);
     text-decoration: none;
     position: relative;
     padding: 0 4px;
@@ -54,7 +54,7 @@
 }
 
 .navLinkActive {
-    color: #1e3f7a;
+    color: var(--color-primary);
 }
 
 .navLinkActive::after {
@@ -64,7 +64,7 @@
     left: 0;
     width: 100%;
     height: 3px;
-    background-color: #1e3f7a;
+    background-color: var(--color-primary);
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
 }
@@ -79,16 +79,16 @@
 .searchBar {
     display: flex;
     align-items: center;
-    background: #f1f5f9;
+    background: var(--color-surface-muted);
     border-radius: 6px;
     padding: 8px 12px;
     width: 280px;
     max-width: 34vw;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
 }
 
 .searchBar i {
-    color: #94a3b8;
+    color: var(--color-text-subtle);
     margin-right: 8px;
     font-size: 14px;
 }
@@ -99,18 +99,18 @@
     outline: none;
     font-size: 13px;
     width: 100%;
-    color: #1e293b;
+    color: var(--color-text-strong);
 }
 
 .searchBar input::placeholder {
-    color: #94a3b8;
+    color: var(--color-text-subtle);
 }
 
 .bellBtn {
     background: none;
     border: none;
     position: relative;
-    color: #64748b;
+    color: var(--color-text-muted);
     font-size: 18px;
     cursor: pointer;
     padding: 4px;
@@ -122,15 +122,15 @@
     right: 6px;
     width: 8px;
     height: 8px;
-    background-color: #ef4444;
-    border: 2px solid #ffffff;
+    background-color: var(--color-danger);
+    border: 2px solid var(--color-surface);
     border-radius: 50%;
 }
 
 .userInfoContainer {
     display: flex;
     align-items: center;
-    border-left: 1px solid #e2e8f0;
+    border-left: 1px solid var(--color-border);
     padding-left: 20px;
 }
 
@@ -152,20 +152,20 @@
 .pageTitle {
     font-size: 22px;
     font-weight: 700;
-    color: #1e3f7a;
+    color: var(--color-primary);
     margin: 0 0 8px;
 }
 
 .pageSubtitle {
     font-size: 14px;
-    color: #64748b;
+    color: var(--color-text-muted);
     margin: 0;
 }
 
 /* Table Container */
 .tableContainer {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -203,13 +203,13 @@
 }
 
 .table th {
-    background: #f8fafc;
+    background: var(--color-bg-soft);
     padding: 14px 20px;
     font-size: 11px;
     font-weight: 700;
-    color: #64748b;
+    color: var(--color-text-muted);
     text-align: left;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .tableRow {
@@ -217,14 +217,14 @@
 }
 
 .tableRow:hover {
-    background-color: #f8fafc;
+    background-color: var(--color-bg-soft);
 }
 
 .table td {
     padding: 16px 20px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--color-border);
     font-size: 14px;
-    color: #475569;
+    color: var(--color-text-body);
     vertical-align: middle;
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -235,14 +235,14 @@
 }
 
 .table td strong {
-    color: #1e293b;
+    color: var(--color-text-strong);
     font-weight: 700;
 }
 
 .timeCol {
     font-family: monospace;
     font-size: 13px;
-    color: #64748b;
+    color: var(--color-text-muted);
     white-space: pre-line;
     overflow-wrap: normal;
     word-break: normal;
@@ -268,8 +268,8 @@
 .moduleBadge {
     font-size: 11px;
     font-weight: 600;
-    background: #f1f5f9;
-    color: #475569;
+    background: var(--color-surface-muted);
+    color: var(--color-text-body);
     padding: 4px 8px;
     border-radius: 4px;
     max-width: 100%;
@@ -289,13 +289,13 @@
 }
 
 .statusSuccess {
-    background: #f0fdf4;
-    color: #16a34a;
+    background: var(--status-success-bg);
+    color: var(--color-success);
 }
 
 .statusFail {
-    background: #fef2f2;
-    color: #dc2626;
+    background: var(--status-danger-bg);
+    color: var(--color-danger-strong);
 }
 
 /* Pagination */
@@ -304,14 +304,14 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--color-border);
     gap: 16px;
     min-width: 1120px;
 }
 
 .pageInfo {
     font-size: 13px;
-    color: #64748b;
+    color: var(--color-text-muted);
 }
 
 .pageControls {
@@ -332,22 +332,22 @@
     border: 1px solid transparent;
     border-radius: 4px;
     font-size: 13px;
-    color: #475569;
+    color: var(--color-text-body);
     cursor: pointer;
 }
 
 .pageBtn:hover {
-    background: #f1f5f9;
+    background: var(--color-surface-muted);
 }
 
 .pageBtnActive {
-    background: #1e3f7a;
-    color: #ffffff;
+    background: var(--color-primary);
+    color: var(--color-surface);
     font-weight: 600;
 }
 
 .pageBtnActive:hover {
-    background: #1e3f7a;
+    background: var(--color-primary);
 }
 
 @media (max-width: 980px) {
