@@ -264,7 +264,7 @@ const WarehouseListPage = () => {
                                             <td>{warehouse.branch}</td>
                                             <td>
                                                 <div className={styles.rowActions}>
-                                                    <button className={styles.iconBtn} title="Xem chi tiết">
+                                                    <button className={styles.iconBtn} title="Xem chi tiết" onClick={() => navigate(`/warehouses/${warehouse.id}`)}>
                                                         <i className="far fa-eye"></i>
                                                     </button>
                                                     <button className={styles.iconBtn} title="Sửa">

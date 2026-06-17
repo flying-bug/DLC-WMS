@@ -14,6 +14,7 @@ import ImportHistoryPage from '../pages/ImportHistory/ImportHistoryPage';
 import ProfilePage from '../pages/Profile/ProfilePage';
 import AuditLogPage from '../pages/AuditLog/AuditLogPage';
 import WarehouseListPage from '../pages/Warehouse/WarehouseListPage';
+import WarehouseDetailPage from '../pages/Warehouse/WarehouseDetailPage';
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
     const token = localStorage.getItem('token');
@@ -60,6 +61,7 @@ function AppRouter() {
                     <Route path="/units" element={<UnitPage />} />
                     <Route path="/products" element={<ProductPage />} />
                     <Route path="/warehouses" element={<WarehouseListPage />} />
+                    <Route path="/warehouses/:id" element={<WarehouseDetailPage />} />
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}
