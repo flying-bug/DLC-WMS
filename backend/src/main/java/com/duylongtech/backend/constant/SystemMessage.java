@@ -24,6 +24,9 @@ public enum SystemMessage {
     INVALID_GOOGLE_TOKEN("AUTH07", "Google Token không hợp lệ."),
     STAFF_ONLY_PERMISSION("AUTH08", "Chỉ tài khoản Nhân viên (STAFF) mới được phép phân quyền động."),
 
+    INVALID_USER_STATUS("AUTH09", "Trạng thái tài khoản không hợp lệ."),
+    CANNOT_LOCK_SELF("AUTH10", "Không thể tự khóa tài khoản đang đăng nhập."),
+
     // Unit & Product
     UNIT_NOT_FOUND("UNIT01", "Không tìm thấy đơn vị tính."),
     UNIT_EXISTS("UNIT02", "Tên đơn vị tính đã tồn tại!"),

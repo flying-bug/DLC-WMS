@@ -114,13 +114,29 @@ function UsersPage() {
     const handleToggleLock = async (e, user) => {
         e.stopPropagation();
         setActiveMenuId(null);
+        const isLocking = user.status === 'APPROVED';
+        const nextStatus = isLocking ? 'INACTIVE' : 'APPROVED';
+        const confirmed = window.confirm(
+            isLocking
+                ? `Bạn chắc chắn muốn khóa tài khoản ${user.name}?`
+                : `Bạn chắc chắn muốn mở khóa tài khoản ${user.name}?`
+        );
+        if (!confirmed) {
+            return;
+        }
+
         try {
-            const nextStatus = user.status === 'APPROVED' ? 'INACTIVE' : 'APPROVED';
-            await axiosClient.put(`/users/${user.id}/status?status=${nextStatus}`);
-            fetchUsers();
+            await axiosClient.put(`/users/${user.id}/status`, null, {
+                params: { status: nextStatus }
+            });
+            await fetchUsers();
         } catch (error) {
             console.error('Lỗi thay đổi trạng thái tài khoản:', error);
-            alert('Có lỗi xảy ra khi thay đổi trạng thái tài khoản.');
+            const message =
+                error.response?.data?.userMessage ||
+                error.response?.data?.message ||
+                'Có lỗi xảy ra khi thay đổi trạng thái tài khoản.';
+            alert(message);
         }
     };
 

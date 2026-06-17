@@ -1,9 +1,9 @@
 .container {
-    padding: 0 16px 16px 16px;
+    padding: 24px;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    background-color: var(--color-bg);
+    min-height: 100%;
+    background-color: var(--page-bg);
     min-width: 0;
 }
 
@@ -12,7 +12,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 0;
+    padding: 0 0 20px;
 }
 
 .titleArea h2 {
@@ -49,8 +49,9 @@
     align-items: center;
     padding: 16px;
     background-color: var(--color-surface);
-    border-radius: 4px;
-    box-shadow: var(--shadow-dropdown);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card-soft);
 }
 
 .kpiIcon {
@@ -93,9 +94,10 @@
     justify-content: space-between;
     align-items: center;
     background-color: var(--color-surface);
-    padding: 10px 16px;
-    border-radius: 4px 4px 0 0;
-    border-bottom: 1px solid var(--color-border-soft);
+    padding: 12px 16px;
+    border: 1px solid var(--color-border);
+    border-bottom: 0;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
     gap: 16px;
     min-width: 0;
 }
@@ -110,7 +112,7 @@
 .bulkDropdown {
     padding: 8px 16px;
     border: 1px solid var(--color-border-field);
-    border-radius: 3px;
+    border-radius: var(--radius-control);
     cursor: pointer;
     font-size: 13px;
     font-weight: 600;
@@ -128,7 +130,7 @@
 .filterBtn {
     background-color: var(--color-surface);
     border: 1px solid var(--color-border-field);
-    border-radius: 3px;
+    border-radius: var(--radius-control);
     padding: 8px 16px;
     font-size: 13px;
     color: var(--color-text);
@@ -162,7 +164,7 @@
     width: 100%;
     padding: 8px 32px 8px 12px;
     border: 1px solid var(--color-border-field);
-    border-radius: 3px;
+    border-radius: var(--radius-control);
     font-size: 13px;
     font-style: italic;
     outline: none;
@@ -188,7 +190,7 @@
     align-items: center;
     justify-content: center;
     border: 1px solid var(--color-border-field);
-    border-radius: 3px;
+    border-radius: var(--radius-control);
     background-color: var(--color-surface);
     color: var(--color-text-muted-3);
     cursor: pointer;
@@ -204,9 +206,9 @@
 }
 
 .addBtn {
-    background-color: var(--color-success-action);
+    background-color: var(--button-primary-bg);
     border: none;
-    border-radius: 30px 0 0 30px;
+    border-radius: var(--radius-control) 0 0 var(--radius-control);
     padding: 8px 24px;
     color: var(--color-surface);
     font-size: 13px;
@@ -215,21 +217,21 @@
 }
 
 .addBtn:hover {
-    background-color: var(--color-success-action-hover);
+    background-color: var(--button-primary-hover-bg);
 }
 
 .addMoreDropdownBtn {
-    background-color: var(--color-success-action);
+    background-color: var(--button-primary-bg);
     border: none;
     border-left: 1px solid var(--overlay-white-line-strong);
-    border-radius: 0 30px 30px 0;
+    border-radius: 0 var(--radius-control) var(--radius-control) 0;
     padding: 8px 10px;
     color: var(--color-surface);
     cursor: pointer;
 }
 
 .addMoreDropdownBtn:hover {
-    background-color: var(--color-success-action-hover);
+    background-color: var(--button-primary-hover-bg);
 }
 
 /* Table */
@@ -573,7 +575,7 @@
 .cancelBtn {
     background-color: var(--color-surface);
     border: 1px solid var(--color-border-field);
-    border-radius: 30px;
+    border-radius: var(--radius-control);
     padding: 8px 20px;
     font-size: 13px;
     font-weight: 600;
@@ -596,7 +598,7 @@
     background-color: var(--color-surface);
     border: 1px solid var(--color-primary);
     color: var(--color-primary);
-    border-radius: 30px;
+    border-radius: var(--radius-control);
     padding: 8px 24px;
     font-size: 13px;
     font-weight: 600;
@@ -608,10 +610,10 @@
 }
 
 .saveAddBtn {
-    background-color: var(--color-success-action);
+    background-color: var(--button-primary-bg);
     border: none;
     color: var(--color-surface);
-    border-radius: 30px;
+    border-radius: var(--radius-control);
     padding: 8px 24px;
     font-size: 13px;
     font-weight: 600;
@@ -619,7 +621,7 @@
 }
 
 .saveAddBtn:hover {
-    background-color: var(--color-success-action-hover);
+    background-color: var(--button-primary-hover-bg);
 }
 
 @media (max-width: 980px) {

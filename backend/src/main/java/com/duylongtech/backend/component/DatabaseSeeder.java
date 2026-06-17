@@ -135,7 +135,16 @@ public class DatabaseSeeder implements CommandLineRunner {
         Set<PermissionEntity> allPermissions = new HashSet<>(permissionRepository.findAll());
 
         // Tài khoản Admin
-        if (userRepository.findByUsername("admin").isEmpty()) {
+        Optional<User> adminOpt = userRepository.findByUsername("admin");
+        if (adminOpt.isPresent()) {
+            User admin = adminOpt.get();
+            Set<RoleEntity> roles = new HashSet<>();
+            roles.add(superAdminRole);
+            admin.setStatus("APPROVED");
+            admin.setRoles(roles);
+            admin.setPermissions(allPermissions);
+            userRepository.save(admin);
+        } else {
             Set<RoleEntity> roles = new HashSet<>();
             roles.add(superAdminRole);
 

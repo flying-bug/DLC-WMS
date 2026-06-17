@@ -72,7 +72,10 @@ function LoginForm() {
         } catch (error) {
             console.error('Login failed:', error);
             setErrors({
-                usernameOrEmail: error.response?.data?.message || 'Tài khoản hoặc mật khẩu không chính xác.'
+                usernameOrEmail:
+                    error.response?.data?.userMessage ||
+                    error.response?.data?.message ||
+                    'Tài khoản hoặc mật khẩu không chính xác.'
             });
         } finally {
             setLoading(false);

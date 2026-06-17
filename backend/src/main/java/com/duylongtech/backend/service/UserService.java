@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.HashSet;
 import java.util.Set;
@@ -30,6 +31,15 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final PermissionRepository permissionRepository;
+
+    private Optional<RoleEntity> findRoleByCode(String roleCode) {
+        if (roleCode == null || roleCode.isBlank()) {
+            return Optional.empty();
+        }
+        String normalizedCode = roleCode.startsWith("ROLE_") ? roleCode : "ROLE_" + roleCode;
+        return roleRepository.findByCode(roleCode)
+                .or(() -> roleRepository.findByCode(normalizedCode));
+    }
 
     // ======================== View Account Detail (GET /api/v1/users/me) ========================
 
@@ -104,10 +114,10 @@ public class UserService {
         Set<RoleEntity> roles = new HashSet<>();
         if (userDto.getRoles() != null && !userDto.getRoles().isEmpty()) {
             userDto.getRoles().forEach(roleCode -> {
-                roleRepository.findByCode(roleCode).ifPresent(roles::add);
+                findRoleByCode(roleCode).ifPresent(roles::add);
             });
         } else {
-            roleRepository.findByCode("STAFF").ifPresent(roles::add);
+            findRoleByCode("STAFF").ifPresent(roles::add);
         }
         user.setRoles(roles);
 
@@ -122,7 +132,19 @@ public class UserService {
 
     public void updateStatus(Long id, String status) {
         User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
-        user.setStatus(status);
+        String normalizedStatus = status == null ? "" : status.trim().toUpperCase();
+        if (!Set.of("APPROVED", "INACTIVE").contains(normalizedStatus)) {
+            throw new BusinessException(SystemMessage.INVALID_USER_STATUS);
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if ("INACTIVE".equals(normalizedStatus) && authentication != null
+                && authentication.getPrincipal() instanceof UserDetailsImpl currentUser
+                && currentUser.getId().equals(id)) {
+            throw new BusinessException(SystemMessage.CANNOT_LOCK_SELF);
+        }
+
+        user.setStatus(normalizedStatus);
         userRepository.save(user);
     }
 
@@ -151,7 +173,7 @@ public class UserService {
         if (userDto.getRoles() != null) {
             Set<RoleEntity> roles = new HashSet<>();
             userDto.getRoles().forEach(roleCode -> {
-                roleRepository.findByCode(roleCode).ifPresent(roles::add);
+                findRoleByCode(roleCode).ifPresent(roles::add);
             });
             user.setRoles(roles);
         }

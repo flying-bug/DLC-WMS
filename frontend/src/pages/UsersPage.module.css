@@ -1,8 +1,8 @@
 /* UsersPage.module.css */
 .page {
     min-height: 100vh;
-    background-color: var(--color-bg-soft);
-    font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--page-bg);
+    font-family: var(--font-sans);
     color: var(--color-text-strong);
 }
 
@@ -134,7 +134,7 @@
 
 /* Main Content */
 .main {
-    padding: 32px 40px;
+    padding: 24px;
     max-width: 1400px;
     margin: 0 auto;
     min-width: 0;
@@ -162,10 +162,10 @@
 }
 
 .btnAdd {
-    background-color: var(--color-primary-sidebar);
+    background-color: var(--button-primary-bg);
     color: var(--color-white);
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     padding: 10px 16px;
     font-size: 14px;
     font-weight: 500;
@@ -176,7 +176,7 @@
 }
 
 .btnAdd:hover {
-    background-color: var(--color-primary);
+    background-color: var(--button-primary-hover-bg);
 }
 
 /* Stats Grid */
@@ -190,7 +190,7 @@
 .statCard {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: var(--radius-card);
     padding: 24px;
     display: flex;
     align-items: center;
@@ -240,7 +240,7 @@
 .tableContainer {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: var(--radius-card);
     overflow-x: auto;
     overflow-y: visible;
 }
