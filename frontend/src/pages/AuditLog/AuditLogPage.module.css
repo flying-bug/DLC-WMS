@@ -135,13 +135,13 @@
 /* Filter Section */
 .filterContainer {
     display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
+    flex-wrap: nowrap;
+    gap: 24px;
     background: var(--color-surface, #ffffff);
-    padding: 20px 24px;
+    padding: 26px 30px 24px;
     border: 1px solid var(--color-border, #e2e8f0);
     border-radius: 8px;
-    margin-bottom: 24px;
+    margin-bottom: 30px;
     align-items: flex-end;
 }
 
@@ -150,7 +150,13 @@
     flex-direction: column;
     gap: 8px;
     flex: 1;
-    min-width: 200px;
+    min-width: 0;
+}
+
+.filterGroup:nth-child(1),
+.filterGroup:nth-child(2),
+.filterGroup:nth-child(3) {
+    flex-basis: 30%;
 }
 
 .filterGroup label {
@@ -165,6 +171,51 @@
     align-items: center;
 }
 
+.dateRangeFields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+}
+
+.dateField {
+    height: 50px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    border: 1px solid var(--color-border, #cbd5e1);
+    border-radius: 6px;
+    background: var(--color-surface, #ffffff);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.dateField:focus-within {
+    border-color: var(--color-primary, #0056b3);
+    box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.08);
+}
+
+.dateField span {
+    color: var(--color-text-muted, #64748b);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.dateField input {
+    width: 100%;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--color-text-strong, #1e293b);
+    font: inherit;
+}
+
+.dateField input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.75;
+}
+
 .inputWrapper i {
     position: absolute;
     left: 12px;
@@ -175,7 +226,7 @@
 .inputWrapper input,
 .inputWrapper select {
     width: 100%;
-    height: 40px;
+    height: 50px;
     border: 1px solid var(--color-border, #cbd5e1);
     border-radius: 6px;
     padding: 0 12px;
@@ -207,11 +258,13 @@
 .filterAction {
     display: flex;
     align-items: flex-end;
+    flex: 0 0 142px;
 }
 
 .btnSearch {
-    height: 40px;
-    padding: 0 20px;
+    width: 100%;
+    height: 50px;
+    padding: 0 22px;
     background-color: #0b3a82; /* match dark blue in figma */
     color: #ffffff;
     border: none;
@@ -221,6 +274,7 @@
     cursor: pointer;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     transition: background-color 0.2s;
 }
@@ -239,8 +293,34 @@
 
 .table {
     width: 100%;
-    min-width: 1100px;
+    min-width: 1080px;
     border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.table th:nth-child(1) {
+    width: 190px;
+}
+
+.table th:nth-child(2) {
+    width: 230px;
+}
+
+.table th:nth-child(3) {
+    width: 180px;
+}
+
+.table th:nth-child(4) {
+    width: 160px;
+}
+
+.table th:nth-child(5) {
+    width: 150px;
+}
+
+.table th:nth-child(6) {
+    width: 100px;
+    text-align: center;
 }
 
 .table th {
@@ -268,6 +348,8 @@
     font-size: 14px;
     color: #1e293b;
     vertical-align: middle;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .table tr:last-child td {
@@ -327,11 +409,6 @@
     color: #475569;
 }
 
-.detailCol {
-    color: #475569;
-    line-height: 1.5;
-}
-
 .ipCol {
     color: #64748b;
     font-size: 13px;
@@ -360,64 +437,241 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 24px;
-    background: #f8fafc;
+    padding: 12px 16px;
+    background: var(--color-surface, #ffffff);
     border-top: 1px solid #e2e8f0;
     border-bottom-left-radius: 8px;
     border-bottom-right-radius: 8px;
+    gap: 16px;
 }
 
-.pageInfo {
-    font-size: 14px;
-    color: #64748b;
+.totalInfo {
+    font-size: 0.9rem;
+    color: var(--color-text-body, #475569);
 }
 
 .pageControls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    font-size: 0.9rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.pageControls select {
+    padding: 5px;
+    border: 1px solid var(--color-border-strong, #cbd5e1);
+    border-radius: 4px;
+    outline: none;
 }
 
 .pageBtn {
-    min-width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
-    font-size: 14px;
-    font-weight: 500;
-    color: #1e293b;
     cursor: pointer;
-    transition: all 0.2s;
+    color: var(--color-text-body, #475569);
 }
 
 .pageBtn:hover {
+    color: var(--color-info, #0b3a82);
+}
+
+.pageBtn.disabled {
+    color: var(--color-border-strong, #cbd5e1);
+    cursor: not-allowed;
+}
+
+.currentPage {
+    font-weight: bold;
+    padding: 0 5px;
+}
+
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.detailModal {
+    width: min(1100px, 100%);
+    max-height: calc(100vh - 48px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface, #ffffff);
+    border-radius: 8px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+}
+
+.detailHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.detailHeader h2 {
+    margin: 0 0 6px;
+    font-size: 20px;
+    color: #1e293b;
+}
+
+.detailHeader p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.closeBtn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #334155;
+    cursor: pointer;
+}
+
+.closeBtn:hover {
     background: #e2e8f0;
 }
 
-.pageBtnActive {
-    background: #0b3a82;
-    color: #ffffff;
-    font-weight: 600;
+.detailBody {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 16px;
+    padding: 20px 24px 24px;
+    overflow: auto;
+    background: #f8fafc;
 }
 
-.pageBtnActive:hover {
-    background: #0b3a82;
+.detailPanel,
+.comparePanel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
 }
 
-.pageEllipsis {
+.detailPanel {
+    padding: 18px;
+}
+
+.detailPanel h3,
+.comparePanel h3 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 16px;
+}
+
+.infoList {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 18px 0 0;
+}
+
+.infoList dt {
     color: #64748b;
-    padding: 0 4px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.infoList dd {
+    margin: 0 0 8px;
+    color: #1e293b;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.comparePanel {
+    overflow: hidden;
+}
+
+.compareTitle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.compareTitle span {
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.diffTable {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.diffTable th,
+.diffTable td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+    vertical-align: top;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.diffTable th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+}
+
+.diffTable tr:last-child td {
+    border-bottom: none;
+}
+
+.noteBox {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 16px 18px 18px;
+    padding: 12px;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-size: 13px;
+}
+
+.detailEmpty {
+    padding: 36px 24px;
+    text-align: center;
+    color: #64748b;
 }
 
 @media (max-width: 1024px) {
     .filterContainer {
+        flex-wrap: wrap;
         flex-direction: column;
         align-items: stretch;
     }
+
+    .filterGroup:nth-child(1),
+    .filterGroup:nth-child(2),
+    .filterGroup:nth-child(3),
+    .filterAction {
+        flex-basis: auto;
+    }
+
     .filterAction {
         justify-content: flex-end;
     }
@@ -438,6 +692,28 @@
     }
 
     .main {
+        padding: 16px;
+    }
+
+    .dateRangeFields {
+        grid-template-columns: 1fr;
+    }
+
+    .pagination {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .pageControls {
+        justify-content: flex-start;
+    }
+
+    .modalOverlay {
+        padding: 12px;
+    }
+
+    .detailBody {
+        grid-template-columns: 1fr;
         padding: 16px;
     }
 }

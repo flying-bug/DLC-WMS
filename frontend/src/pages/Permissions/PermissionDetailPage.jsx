@@ -199,6 +199,7 @@ function PermissionDetailPage() {
             case 'warehouse':
                 return (
                     <>
+                        {renderRow('warehouse_master', 'Danh mục kho bãi', 'bi-houses')}
                         {renderRow('import', 'Nhập kho', 'bi-box-arrow-in-right')}
                         {renderRow('export', 'Xuất kho', 'bi-box-arrow-right')}
                         {renderRow('transfer', 'Chuyển kho', 'bi-arrow-left-right')}
@@ -213,7 +214,6 @@ function PermissionDetailPage() {
                         {renderRow('unit', 'Đơn vị tính', 'bi-rulers')}
                         {renderRow('customer', 'Khách hàng', 'bi-person-vcard')}
                         {renderRow('supplier', 'Nhà cung cấp', 'bi-truck')}
-                        {renderRow('warehouse_master', 'Danh mục kho bãi', 'bi-houses')}
                     </>
                 );
             case 'reports':

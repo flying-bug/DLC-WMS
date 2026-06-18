@@ -51,6 +51,12 @@ public enum SystemMessage {
     BOM_INSUFFICIENT_COMPONENTS("BOM01", "Không đủ số lượng linh kiện thành phần để lắp ráp"),
     WARR_OUT_OF_WARRANTY("WARR01", "Thiết bị đã hết hạn bảo hành"),
 
+    // Warehouse
+    WH_NOT_FOUND("WH01", "Không tìm thấy kho lưu trữ."),
+    WH_CODE_EXISTS("WH02", "Mã kho đã tồn tại trên hệ thống."),
+    WH_HAS_TRANSACTION("WH03", "Không thể xóa kho đã phát sinh giao dịch hoặc đang chứa linh kiện. Hệ thống đã tự động chuyển trạng thái kho này về ngừng hoạt động (INACTIVE)."),
+    WH_OPTIMISTIC_LOCK("WH04", "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại trang để xem dữ liệu mới nhất."),
+
     // General Errors
     ACCESS_DENIED("SYS403", "Bạn không có quyền thực hiện thao tác này"),
     SESSION_EXPIRED("SYS401", "Phiên đăng nhập đã hết hạn"),

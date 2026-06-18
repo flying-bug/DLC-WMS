@@ -63,6 +63,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("VAL400", errorMsg));
     }
 
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLockingFailureException(org.springframework.orm.ObjectOptimisticLockingFailureException ex) {
+        log.warn("Optimistic locking failure: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(SystemMessage.WH_OPTIMISTIC_LOCK.getCode(), SystemMessage.WH_OPTIMISTIC_LOCK.getMessage()));
+    }
+
     @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
     public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(RuntimeException ex) {
         log.warn("Access denied: {}", ex.getMessage());

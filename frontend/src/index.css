@@ -2,3 +2,86 @@
 @import './styles/theme.css';
 @import './styles/bootstrap-overrides.css';
 @import './styles/global.css';
+
+button {
+  font-family: var(--font-sans);
+}
+
+/* ── MISA Design System — shared table/button/badge classes ── */
+
+.misa-table {
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.misa-table thead th {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid var(--misa-border);
+  font-weight: 600;
+  color: #333;
+  text-transform: uppercase;
+  font-size: 12px;
+  padding: 12px 16px;
+}
+
+.misa-table tbody td {
+  padding: 12px 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--misa-border);
+}
+
+.misa-table tbody tr:hover {
+  background-color: #f1f8fe;
+  cursor: pointer;
+}
+
+.btn-misa-primary {
+  background-color: var(--misa-primary);
+  color: white;
+  border: none;
+  font-weight: 500;
+  padding: 6px 16px;
+  border-radius: 3px;
+  transition: all 0.2s;
+}
+
+.btn-misa-primary:hover {
+  background-color: #005a96;
+  color: white;
+}
+
+.btn-misa-outline {
+  border: 1px solid var(--misa-border);
+  background-color: white;
+  color: #333;
+  font-weight: 500;
+  padding: 6px 16px;
+  border-radius: 3px;
+}
+
+.btn-misa-outline:hover {
+  background-color: #f4f5f8;
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-approved {
+  background-color: #e6f8ec;
+  color: #00b050;
+}
+
+.status-draft {
+  background-color: #f4f5f8;
+  color: #888;
+}
+
+.status-inactive {
+  background-color: #feeced;
+  color: #ff0000;
+}

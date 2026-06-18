@@ -104,7 +104,13 @@ public class DatabaseSeeder implements CommandLineRunner {
         Set<PermissionEntity> allPerms = new HashSet<>(permissionRepository.findAll());
 
         roleRepository.findByCode("ROLE_SUPER_ADMIN").ifPresent(role -> {
-            role.setPermissions(new HashSet<>(allPerms));
+            Set<PermissionEntity> superAdminPerms = new HashSet<>();
+            for (PermissionEntity perm : allPerms) {
+                if (java.util.Arrays.asList("account", "auth", "audit").contains(perm.getModule())) {
+                    superAdminPerms.add(perm);
+                }
+            }
+            role.setPermissions(superAdminPerms);
             roleRepository.save(role);
         });
 
@@ -133,6 +139,12 @@ public class DatabaseSeeder implements CommandLineRunner {
 
     private void seedUsers(RoleEntity superAdminRole, RoleEntity managerRole, RoleEntity staffRole) {
         Set<PermissionEntity> allPermissions = new HashSet<>(permissionRepository.findAll());
+        Set<PermissionEntity> adminPermissions = new HashSet<>();
+        for (PermissionEntity permission : allPermissions) {
+            if (java.util.Arrays.asList("account", "auth", "audit").contains(permission.getModule())) {
+                adminPermissions.add(permission);
+            }
+        }
 
         // Tài khoản Admin
         Optional<User> adminOpt = userRepository.findByUsername("admin");
@@ -142,7 +154,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             roles.add(superAdminRole);
             admin.setStatus("APPROVED");
             admin.setRoles(roles);
-            admin.setPermissions(allPermissions);
+            admin.setPermissions(adminPermissions);
             userRepository.save(admin);
         } else {
             Set<RoleEntity> roles = new HashSet<>();
@@ -156,7 +168,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .phone("0123456789")
                     .status("APPROVED")
                     .roles(roles)
-                    .permissions(allPermissions)
+                    .permissions(adminPermissions)
                     .createdAt(LocalDateTime.now())
                     .build();
             userRepository.save(admin);

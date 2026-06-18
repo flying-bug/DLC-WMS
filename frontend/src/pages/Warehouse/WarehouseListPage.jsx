@@ -1,73 +1,69 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
+import * as warehouseApi from '../../api/warehouseApi';
+import WarehouseFormModal from '../../components/warehouse/WarehouseFormModal';
+import Toast from '../../components/ui/Toast/Toast';
 import styles from './WarehouseListPage.module.css';
-
-// Dữ liệu mock dựa trên Figma (Không gọi API)
-const MOCK_WAREHOUSES = [
-    {
-        id: 'K01',
-        name: 'Kho Linh Kiện',
-        address: 'Khu Công nghệ Cao, Quận 9, TP. Thủ Đức',
-        status: 'ACTIVE', // Đang hoạt động
-        branch: 'Hồ Chí Minh'
-    },
-    {
-        id: 'MK01',
-        name: 'Kho Thành Phẩm',
-        address: 'Sông Lô, Vĩnh Phúc',
-        status: 'PAUSED', // Tạm ngưng
-        branch: 'Vĩnh Phúc'
-    },
-    {
-        id: 'K05',
-        name: 'Kho Phụ Kiện',
-        address: 'Hola, Thạch Thất, Hà Nội',
-        status: 'STOPPED', // Ngừng sử dụng
-        branch: 'Hà Nội'
-    }
-];
 
 const WarehouseListPage = () => {
     const navigate = useNavigate();
-    const [warehouses, setWarehouses] = useState(MOCK_WAREHOUSES);
+    const [warehouses, setWarehouses] = useState([]);
     
     // Các state bộ lọc
     const [searchCode, setSearchCode] = useState('');
     const [searchName, setSearchName] = useState('');
     const [searchAddress, setSearchAddress] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
-    const [filterBranch, setFilterBranch] = useState('');
+
+    // Pagination
+    const [page, setPage] = useState(0);
+    const [size, setSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+
+    // Modal
+    const [showModal, setShowModal] = useState(false);
+    const [isEdit, setIsEdit] = useState(false);
+    const [selectedData, setSelectedData] = useState(null);
+
+    // Toast state
+    const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
+
+    const showToast = (type, message) => {
+        setToast({ isVisible: true, type, message });
+    };
 
     // State sắp xếp
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
-    const handleFilter = () => {
-        let filtered = MOCK_WAREHOUSES.filter(w => {
-            const matchCode = w.id.toLowerCase().includes(searchCode.toLowerCase());
-            const matchName = w.name.toLowerCase().includes(searchName.toLowerCase());
-            const matchAddress = w.address.toLowerCase().includes(searchAddress.toLowerCase());
-            const matchStatus = filterStatus ? w.status === filterStatus : true;
-            
-            // Xử lý logic lọc chi nhánh đơn giản (vì mock data dùng tên hiển thị)
-            let matchBranch = true;
-            if (filterBranch === 'HCM') matchBranch = w.branch.includes('Hồ Chí Minh');
-            else if (filterBranch === 'HN') matchBranch = w.branch.includes('Hà Nội');
-            else if (filterBranch === 'VP') matchBranch = w.branch.includes('Vĩnh Phúc');
-            
-            return matchCode && matchName && matchAddress && matchStatus && matchBranch;
-        });
-
-        // Áp dụng luôn sắp xếp nếu đang có sort
-        if (sortConfig.key) {
-            filtered.sort((a, b) => {
-                if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
-                if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
-                return 0;
+    const fetchWarehouses = async () => {
+        try {
+            const res = await warehouseApi.getWarehouses({
+                code: searchCode || undefined,
+                name: searchName || undefined,
+                address: searchAddress || undefined,
+                status: filterStatus || undefined,
+                page: page,
+                size: size
             });
+            setWarehouses(res.data.data.content || []);
+            setTotalPages(res.data.data.totalPages || 0);
+            setTotalElements(res.data.data.totalElements || 0);
+        } catch (error) {
+            console.error("Lỗi fetch kho:", error);
+            showToast('error', 'Không thể tải dữ liệu kho!');
         }
-        
-        setWarehouses(filtered);
+    };
+
+    useEffect(() => {
+        fetchWarehouses();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, size]); 
+
+    const handleFilter = () => {
+        setPage(0);
+        fetchWarehouses();
     };
 
     const handleReload = () => {
@@ -75,9 +71,15 @@ const WarehouseListPage = () => {
         setSearchName('');
         setSearchAddress('');
         setFilterStatus('');
-        setFilterBranch('');
         setSortConfig({ key: null, direction: 'asc' });
-        setWarehouses(MOCK_WAREHOUSES);
+        setPage(0);
+        warehouseApi.getWarehouses({ page: 0, size: size }).then(res => {
+            setWarehouses(res.data.data.content || []);
+            setTotalPages(res.data.data.totalPages || 0);
+            setTotalElements(res.data.data.totalElements || 0);
+        }).catch(err => {
+            console.error(err);
+        });
     };
 
     const handleSort = (key) => {
@@ -87,12 +89,43 @@ const WarehouseListPage = () => {
         }
         setSortConfig({ key, direction });
 
+        // Client-side sort on current page data
         const sortedData = [...warehouses].sort((a, b) => {
             if (a[key] < b[key]) return direction === 'asc' ? -1 : 1;
             if (a[key] > b[key]) return direction === 'asc' ? 1 : -1;
             return 0;
         });
         setWarehouses(sortedData);
+    };
+
+    const handleSaveModal = async (formData) => {
+        try {
+            if (isEdit) {
+                await warehouseApi.updateWarehouse(selectedData.id, formData);
+                showToast('success', 'Cập nhật kho thành công!');
+            } else {
+                await warehouseApi.createWarehouse(formData);
+                showToast('success', 'Thêm mới kho thành công!');
+            }
+            fetchWarehouses();
+        } catch (error) {
+            console.error(error);
+            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra!');
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm('Bạn có chắc chắn muốn xóa kho này không? (Hệ thống sẽ vô hiệu hóa nếu kho có chứa hàng)')) {
+            try {
+                await warehouseApi.deleteWarehouse(id);
+                fetchWarehouses();
+                showToast('success', 'Xóa kho thành công!');
+            } catch (error) {
+                console.error("Lỗi xóa kho:", error);
+                showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
+                fetchWarehouses();
+            }
+        }
     };
 
     const getSortIcon = (key) => {
@@ -104,6 +137,7 @@ const WarehouseListPage = () => {
     const getStatusBadge = (status) => {
         switch (status) {
             case 'ACTIVE':
+            case 'APPROVED':
                 return (
                     <div className={`${styles.statusBadge} ${styles.statusActive}`}>
                         <span className={styles.statusDot}></span>
@@ -118,6 +152,7 @@ const WarehouseListPage = () => {
                     </div>
                 );
             case 'STOPPED':
+            case 'INACTIVE':
                 return (
                     <div className={`${styles.statusBadge} ${styles.statusStopped}`}>
                         <span className={styles.statusDot}></span>
@@ -129,8 +164,42 @@ const WarehouseListPage = () => {
         }
     };
 
+    const handleExportExcel = async () => {
+        try {
+            const res = await warehouseApi.exportWarehouses({
+                code: searchCode || undefined,
+                name: searchName || undefined,
+                address: searchAddress || undefined,
+                status: filterStatus || undefined
+            });
+            
+            // Create Blob URL and download
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            
+            const now = new Date();
+            const timestamp = now.getFullYear().toString() +
+                String(now.getMonth() + 1).padStart(2, '0') +
+                String(now.getDate()).padStart(2, '0') + '_' +
+                String(now.getHours()).padStart(2, '0') +
+                String(now.getMinutes()).padStart(2, '0') +
+                String(now.getSeconds()).padStart(2, '0');
+            
+            link.setAttribute('download', `DLC_WMS_Danh_Sach_Kho_${timestamp}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            
+            showToast('success', 'Xuất Excel thành công!');
+        } catch (error) {
+            console.error("Lỗi xuất Excel:", error);
+            showToast('error', 'Có lỗi xảy ra khi xuất Excel!');
+        }
+    };
+
     return (
-        <AdminLayout activeTab="dashboard">
+        <AdminLayout activeTab="warehouses">
             <div className={styles.container}>
                 {/* Header Page */}
                 <div className={styles.pageHeader}>
@@ -139,14 +208,15 @@ const WarehouseListPage = () => {
                         <p className={styles.pageSubtitle}>Danh sách và cấu hình các kho hàng thuộc hệ thống Duy Long Computer</p>
                     </div>
                     <div className={styles.actionButtons}>
-                        <button className={styles.btnAdd} type="button">
+                        <button className={styles.btnAdd} type="button" onClick={() => {
+                            setIsEdit(false);
+                            setSelectedData(null);
+                            setShowModal(true);
+                        }}>
                             <i className="fas fa-plus"></i> Thêm kho
                         </button>
-                        <button className={styles.btnExport} type="button">
+                        <button className={styles.btnExport} type="button" onClick={handleExportExcel}>
                             <i className="fas fa-file-excel"></i> Xuất Excel
-                        </button>
-                        <button className={styles.btnReload} onClick={handleReload} type="button" title="Tải lại dữ liệu">
-                            <i className="fas fa-redo"></i>
                         </button>
                     </div>
                 </div>
@@ -186,21 +256,8 @@ const WarehouseListPage = () => {
                             <div className={styles.selectWrapper}>
                                 <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                                     <option value="">Tất cả</option>
-                                    <option value="ACTIVE">Đang hoạt động</option>
-                                    <option value="PAUSED">Tạm ngưng</option>
-                                    <option value="STOPPED">Ngừng sử dụng</option>
-                                </select>
-                                <i className={`fas fa-chevron-down ${styles.selectIcon}`}></i>
-                            </div>
-                        </div>
-                        <div className={styles.filterGroup}>
-                            <label>Chi nhánh</label>
-                            <div className={styles.selectWrapper}>
-                                <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)}>
-                                    <option value="">Tất cả chi nhánh</option>
-                                    <option value="HCM">Hồ Chí Minh</option>
-                                    <option value="HN">Hà Nội</option>
-                                    <option value="VP">Vĩnh Phúc</option>
+                                    <option value="APPROVED">Đang hoạt động</option>
+                                    <option value="INACTIVE">Ngừng sử dụng</option>
                                 </select>
                                 <i className={`fas fa-chevron-down ${styles.selectIcon}`}></i>
                             </div>
@@ -219,8 +276,8 @@ const WarehouseListPage = () => {
                         <table className={styles.table}>
                             <thead>
                                 <tr>
-                                    <th style={{ width: '15%' }} onClick={() => handleSort('id')} className={styles.sortableHeader}>
-                                        MÃ KHO {getSortIcon('id')}
+                                    <th style={{ width: '15%' }} onClick={() => handleSort('code')} className={styles.sortableHeader}>
+                                        MÃ KHO {getSortIcon('code')}
                                     </th>
                                     <th style={{ width: '20%' }} onClick={() => handleSort('name')} className={styles.sortableHeader}>
                                         TÊN KHO {getSortIcon('name')}
@@ -231,8 +288,8 @@ const WarehouseListPage = () => {
                                     <th style={{ width: '15%' }} onClick={() => handleSort('status')} className={styles.sortableHeader}>
                                         TRẠNG THÁI {getSortIcon('status')}
                                     </th>
-                                    <th style={{ width: '15%' }} onClick={() => handleSort('branch')} className={styles.sortableHeader}>
-                                        CHI NHÁNH {getSortIcon('branch')}
+                                    <th style={{ width: '15%' }}>
+                                        LOẠI KHO
                                     </th>
                                     <th style={{ width: '10%', textAlign: 'center' }}>THAO TÁC</th>
                                 </tr>
@@ -241,7 +298,6 @@ const WarehouseListPage = () => {
                                 {warehouses.length === 0 ? (
                                     <tr>
                                         <td colSpan="6" style={{ padding: '0' }}>
-                                            {/* Trạng thái trống (Empty State) */}
                                             <div className={styles.emptyState}>
                                                 <div className={styles.emptyIcon}>
                                                     <i className="fas fa-box-open"></i>
@@ -257,20 +313,24 @@ const WarehouseListPage = () => {
                                 ) : (
                                     warehouses.map((warehouse) => (
                                         <tr key={warehouse.id}>
-                                            <td className={styles.codeCell}>{warehouse.id}</td>
+                                            <td className={styles.codeCell}>{warehouse.code}</td>
                                             <td className={styles.nameCell}>{warehouse.name}</td>
                                             <td>{warehouse.address}</td>
                                             <td>{getStatusBadge(warehouse.status)}</td>
-                                            <td>{warehouse.branch}</td>
+                                            <td>{warehouse.type === 'STANDARD' ? 'Kho tiêu chuẩn' : (warehouse.type || 'N/A')}</td>
                                             <td>
                                                 <div className={styles.rowActions}>
                                                     <button className={styles.iconBtn} title="Xem chi tiết" onClick={() => navigate(`/warehouses/${warehouse.id}`)}>
                                                         <i className="far fa-eye"></i>
                                                     </button>
-                                                    <button className={styles.iconBtn} title="Sửa">
+                                                    <button className={styles.iconBtn} title="Sửa" onClick={() => {
+                                                        setIsEdit(true);
+                                                        setSelectedData(warehouse);
+                                                        setShowModal(true);
+                                                    }}>
                                                         <i className="fas fa-pencil-alt"></i>
                                                     </button>
-                                                    <button className={styles.iconBtn} title="Xóa">
+                                                    <button className={styles.iconBtn} title="Xóa" onClick={() => handleDelete(warehouse.id)}>
                                                         <i className="far fa-trash-alt"></i>
                                                     </button>
                                                 </div>
@@ -286,28 +346,57 @@ const WarehouseListPage = () => {
                     {warehouses.length > 0 && (
                         <div className={styles.pagination}>
                             <div className={styles.pageInfo}>
-                                Hiển thị 1 - {warehouses.length} trong tổng số {warehouses.length} bản ghi
+                                Hiển thị {page * size + 1} - {Math.min((page + 1) * size, totalElements)} trong tổng số {totalElements} bản ghi
                             </div>
                             <div className={styles.pageControls}>
-                                <button className={styles.pageNavBtn} disabled>
+                                <button className={styles.pageNavBtn} disabled={page === 0} onClick={() => setPage(page - 1)}>
                                     <i className="fas fa-chevron-left"></i>
                                 </button>
-                                <button className={`${styles.pageBtn} ${styles.active}`}>1</button>
-                                <button className={styles.pageNavBtn} disabled>
+                                
+                                {[...Array(totalPages)].map((_, i) => (
+                                    <button 
+                                        key={i} 
+                                        className={`${styles.pageBtn} ${page === i ? styles.active : ''}`}
+                                        onClick={() => setPage(i)}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+
+                                <button className={styles.pageNavBtn} disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
                                     <i className="fas fa-chevron-right"></i>
                                 </button>
                                 
                                 <div className={styles.pageSizeSelect}>
-                                    <select>
-                                        <option>3 bản ghi / trang</option>
-                                        <option>10 bản ghi / trang</option>
-                                        <option>20 bản ghi / trang</option>
+                                    <select value={size} onChange={(e) => {
+                                        setSize(Number(e.target.value));
+                                        setPage(0);
+                                    }}>
+                                        <option value={10}>10 bản ghi / trang</option>
+                                        <option value={20}>20 bản ghi / trang</option>
+                                        <option value={50}>50 bản ghi / trang</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
                     )}
                 </div>
+
+                {/* Modal Thêm / Sửa */}
+                <WarehouseFormModal
+                    isOpen={showModal}
+                    onClose={() => setShowModal(false)}
+                    onSave={handleSaveModal}
+                    isEdit={isEdit}
+                    initialData={selectedData}
+                />
+
+                <Toast 
+                    isVisible={toast.isVisible}
+                    type={toast.type}
+                    message={toast.message}
+                    onClose={() => setToast({ ...toast, isVisible: false })}
+                />
             </div>
         </AdminLayout>
     );

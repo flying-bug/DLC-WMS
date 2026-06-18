@@ -49,15 +49,43 @@
     border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 600;
-    background-color: rgba(34, 197, 94, 0.1);
-    color: #15803d;
+}
+
+.statusBadgeInline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    margin-top: 2px;
 }
 
 .statusDot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
+}
+
+/* Active (green) */
+.statusActive {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: #15803d;
+}
+
+.statusActive .statusDot {
     background-color: #22c55e;
+}
+
+/* Stopped / Inactive (red) */
+.statusStopped {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+.statusStopped .statusDot {
+    background-color: #ef4444;
 }
 
 .headerRight {
@@ -409,6 +437,41 @@
     font-size: 0.75rem;
     color: #94a3b8;
     border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.changeList {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.changeItem {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(88px, 0.7fr) minmax(0, 1fr) auto minmax(0, 1fr);
+    padding: 8px 10px;
+}
+
+.changeField {
+    color: #334155;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.changeValue {
+    color: #475569;
+    font-size: 0.82rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.changeArrow {
+    color: #64748b;
+    font-weight: 700;
 }
 
 /* Responsive */
