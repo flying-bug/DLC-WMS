@@ -12,6 +12,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
     const [formData, setFormData] = useState({
         code: '',
         name: '',
+        accountId: '',
         address: '',
         status: 'APPROVED',
     });
@@ -26,12 +27,13 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                 setFormData({
                     code: initialData.code || '',
                     name: initialData.name || '',
+                    accountId: initialData.accountId || '',
                     address: initialData.address || '',
                     status: initialData.status || 'APPROVED',
                     version: initialData.version,
                 });
             } else {
-                setFormData({ code: '', name: '', address: '', status: 'APPROVED', version: null });
+                setFormData({ code: '', name: '', accountId: '', address: '', status: 'APPROVED', version: null });
             }
             setErrorMsg('');
         }
@@ -113,7 +115,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                 onClose();
             } else {
                 // Reset form để thêm tiếp
-                setFormData({ code: '', name: '', address: '', status: 'APPROVED' });
+                setFormData({ code: '', name: '', accountId: '', address: '', status: 'APPROVED' });
             }
         } catch (err) {
             const msg =
@@ -127,7 +129,12 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} ariaLabel={isEdit ? 'Sửa thông tin kho' : 'Thêm kho mới'}>
+        <Modal 
+            isOpen={isOpen} 
+            onClose={onClose} 
+            ariaLabel={isEdit ? 'Sửa thông tin kho' : 'Thêm kho mới'}
+            className={styles.warehouseModal}
+        >
             <div className={styles.modalHeader}>
                 <h3>{isEdit ? 'Sửa thông tin kho' : 'Thêm kho mới'}</h3>
                 <div className={styles.modalIcons}>
@@ -138,34 +145,52 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
             <div className={styles.modalBody}>
                 {errorMsg && <div className={styles.errorAlert}>{errorMsg}</div>}
 
-                {/* Mã kho */}
-                <div className={styles.formGroup}>
-                    <label>Mã kho <span className={styles.required}>*</span></label>
-                    <input
-                        id="warehouse-code"
-                        type="text"
-                        className={styles.inputField}
-                        value={formData.code}
-                        onChange={(e) => handleChange('code', e.target.value)}
-                        disabled={isEdit} // Read-only khi chỉnh sửa
-                        autoFocus={!isEdit}
-                        maxLength={50}
-                    />
-                    {isEdit && <small className={styles.hint}>Mã kho không thể thay đổi sau khi tạo.</small>}
+                <div className={styles.grid2}>
+                    {/* Mã kho */}
+                    <div className={styles.formGroup}>
+                        <label>Mã kho <span className={styles.required}>*</span></label>
+                        <input
+                            id="warehouse-code"
+                            type="text"
+                            className={styles.inputField}
+                            value={formData.code}
+                            onChange={(e) => handleChange('code', e.target.value)}
+                            disabled={isEdit} // Read-only khi chỉnh sửa
+                            autoFocus={!isEdit}
+                            maxLength={50}
+                        />
+                        {isEdit && <small className={styles.hint}>Mã kho không thể thay đổi sau khi tạo.</small>}
+                    </div>
+
+                    {/* Tên kho */}
+                    <div className={styles.formGroup}>
+                        <label>Tên kho <span className={styles.required}>*</span></label>
+                        <input
+                            id="warehouse-name"
+                            type="text"
+                            className={styles.inputField}
+                            value={formData.name}
+                            onChange={(e) => handleChange('name', e.target.value)}
+                            autoFocus={isEdit}
+                            maxLength={100}
+                        />
+                    </div>
                 </div>
 
-                {/* Tên kho */}
+                {/* Tài khoản kho */}
                 <div className={styles.formGroup}>
-                    <label>Tên kho <span className={styles.required}>*</span></label>
-                    <input
-                        id="warehouse-name"
-                        type="text"
+                    <label>Tài khoản kho</label>
+                    <select
+                        id="warehouse-account"
                         className={styles.inputField}
-                        value={formData.name}
-                        onChange={(e) => handleChange('name', e.target.value)}
-                        autoFocus={isEdit}
-                        maxLength={100}
-                    />
+                        value={formData.accountId}
+                        onChange={(e) => handleChange('accountId', e.target.value)}
+                    >
+                        <option value="">Chọn tài khoản quản lý</option>
+                        <option value="user1">Nguyễn Văn A (Admin)</option>
+                        <option value="user2">Trần Thị B (Manager)</option>
+                        <option value="user3">Lê Văn C (Staff)</option>
+                    </select>
                 </div>
 
                 {/* Địa chỉ */}
@@ -204,44 +229,31 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                     </div>
                 </div>
 
-                {isEdit && (
-                    <div className={styles.formGroup}>
-                        <label>Trạng thái</label>
-                        <select
-                            id="warehouse-status"
-                            className={styles.inputField}
-                            value={formData.status}
-                            onChange={(e) => handleChange('status', e.target.value)}
-                        >
-                            <option value="APPROVED">Đang hoạt động</option>
-                            <option value="INACTIVE">Ngừng sử dụng</option>
-                        </select>
-                    </div>
-                )}
-                {/* Loại kho – Cố định read-only */}
                 <div className={styles.formGroup}>
-                    <label>Loại kho</label>
-                    <input
-                        id="warehouse-type"
-                        value="Kho tiêu chuẩn"
-                        disabled={true}
+                    <label>Trạng thái</label>
+                    <select
+                        id="warehouse-status"
                         className={styles.inputField}
-                    />
-                    <small className={styles.hint}>Mặc định là Kho tiêu chuẩn, không thể thay đổi.</small>
+                        value={formData.status}
+                        onChange={(e) => handleChange('status', e.target.value)}
+                    >
+                        <option value="APPROVED">Đang hoạt động</option>
+                        <option value="INACTIVE">Ngừng sử dụng</option>
+                    </select>
                 </div>
             </div>
 
             <div className={styles.modalFooter}>
-                <button className={styles.btnCancel} onClick={onClose} disabled={saving}>Hủy</button>
+                <button className={styles.btnCancel} onClick={onClose} disabled={saving}>Hủy bỏ</button>
                 <div className={styles.rightButtons}>
-                    <button className={styles.btnSave} onClick={() => handleSubmit(true)} disabled={saving}>
-                        {saving ? 'Đang lưu...' : 'Cất'}
-                    </button>
                     {!isEdit && (
                         <button className={styles.btnSaveAndAdd} onClick={() => handleSubmit(false)} disabled={saving}>
-                            Cất và Thêm
+                            Lưu & Thêm tiếp
                         </button>
                     )}
+                    <button className={styles.btnSave} onClick={() => handleSubmit(true)} disabled={saving}>
+                        {saving ? 'Đang lưu...' : 'Lưu kho'}
+                    </button>
                 </div>
             </div>
         </Modal>

@@ -1,92 +1,114 @@
-/* WarehouseFormModal styles – matches UnitPage modal pattern */
+/* WarehouseFormModal styles - aligned with Figma and design system tokens */
 .modalHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 20px;
+    padding: 16px 24px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
 }
 
 .modalHeader h3 {
     margin: 0;
-    font-size: 1.4rem;
-    color: #334155;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text-strong);
 }
 
 .modalIcons {
     display: flex;
-    gap: 15px;
-    font-size: 1.2rem;
-    color: #64748b;
+    gap: 16px;
+    font-size: 16px;
+    color: var(--color-icon-muted);
 }
 
 .modalIcons i {
     cursor: pointer;
+    transition: color 0.2s;
 }
 
 .modalIcons i:hover {
-    color: #0f172a;
+    color: var(--color-text-strong);
 }
 
 .modalBody {
-    padding: 20px;
+    padding: 24px;
     max-height: 65vh;
     overflow-y: auto;
+    background: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .errorAlert {
-    color: #ef4444;
-    background-color: #fef2f2;
-    padding: 10px;
-    border-radius: 4px;
-    margin-bottom: 15px;
-    font-size: 0.9rem;
+    color: var(--color-danger);
+    background-color: var(--color-danger-bg-soft);
+    border: 1px solid var(--color-danger-border-soft);
+    padding: 12px;
+    border-radius: var(--radius-control);
+    font-size: 14px;
+}
+
+.grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
 }
 
 .formGroup {
-    margin-bottom: 15px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
 }
 
 .formGroup label {
-    font-size: 0.9rem;
+    font-size: 13px;
     font-weight: 600;
-    color: #0f172a;
+    color: var(--color-text-body);
 }
 
 .required {
-    color: #ef4444;
+    color: var(--color-danger);
+    margin-left: 4px;
 }
 
 .inputField, .textareaField {
-    padding: 8px 10px;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
+    width: 100%;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    padding: 8px 12px;
+    font-size: 14px;
+    color: var(--color-text-strong);
     outline: none;
+    transition: all 0.2s ease;
     font-family: inherit;
 }
 
+.inputField {
+    height: var(--height-control);
+}
+
 .inputField:focus, .textareaField:focus {
-    border-color: #0ea5e9;
+    border-color: var(--form-focus-border);
+    box-shadow: var(--shadow-focus-primary);
 }
 
 .inputField:disabled {
-    background-color: #f1f5f9;
-    color: #94a3b8;
+    background-color: var(--color-bg-muted);
+    color: var(--color-text-placeholder);
     cursor: not-allowed;
 }
 
 .textareaField {
     resize: vertical;
+    min-height: 80px;
 }
 
 .addressField {
     position: relative;
-}
-
-.addressField .textareaField {
-    width: 100%;
 }
 
 .suggestionList {
@@ -97,59 +119,72 @@
     z-index: 20;
     max-height: 220px;
     overflow-y: auto;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.14);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    box-shadow: var(--shadow-dropdown);
 }
 
 .suggestionItem {
     width: 100%;
     border: 0;
-    background: #ffffff;
-    color: #0f172a;
+    background: transparent;
+    color: var(--color-text-strong);
     cursor: pointer;
     display: block;
     font: inherit;
-    padding: 10px 12px;
+    font-size: 14px;
+    padding: 10px 16px;
     text-align: left;
 }
 
 .suggestionItem:hover {
-    background: #f1f5f9;
+    background: var(--color-bg-hover);
 }
 
 .suggestionMeta {
-    color: #64748b;
-    font-size: 0.85rem;
-    padding: 10px 12px;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    padding: 10px 16px;
 }
 
 .hint {
-    font-size: 0.8rem;
-    color: #94a3b8;
+    font-size: 12px;
+    color: var(--color-text-subtle);
     font-style: italic;
+    margin-top: 4px;
 }
 
 .modalFooter {
     display: flex;
     justify-content: space-between;
-    padding: 15px 20px;
-    background-color: #f8fafc;
-    border-top: 1px solid #e2e8f0;
+    align-items: center;
+    padding: 16px 24px;
+    background-color: var(--color-bg-soft);
+    border-top: 1px solid var(--color-border);
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+}
+
+.rightButtons {
+    display: flex;
+    gap: 12px;
 }
 
 .btnCancel {
-    background-color: white;
-    border: 1px solid #cbd5e1;
-    padding: 8px 20px;
-    border-radius: 4px;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border-strong);
+    color: var(--color-text-body);
+    padding: 0 20px;
+    height: var(--height-control);
+    border-radius: var(--radius-control);
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
-    font-weight: 500;
+    transition: all 0.2s;
 }
 
 .btnCancel:hover {
-    background-color: #f1f5f9;
+    background-color: var(--color-bg-muted);
 }
 
 .btnCancel:disabled {
@@ -157,24 +192,44 @@
     cursor: not-allowed;
 }
 
-.rightButtons {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+.btnSaveAndAdd {
+    background-color: var(--color-surface);
+    color: var(--color-primary-navy);
+    border: 1px solid var(--color-primary-navy);
+    padding: 0 20px;
+    height: var(--height-control);
+    border-radius: var(--radius-control);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btnSaveAndAdd:hover {
+    background-color: var(--color-primary-soft);
+}
+
+.btnSaveAndAdd:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .btnSave {
-    background-color: white;
-    border: 1px solid #cbd5e1;
-    padding: 8px 20px;
-    border-radius: 4px;
+    background-color: var(--color-primary-navy);
+    color: var(--color-white);
+    border: 1px solid var(--color-primary-navy);
+    padding: 0 24px;
+    height: var(--height-control);
+    border-radius: var(--radius-control);
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
-    font-weight: 500;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-primary-soft);
 }
 
 .btnSave:hover {
-    background-color: #f1f5f9;
+    background-color: var(--color-primary-dark);
 }
 
 .btnSave:disabled {
@@ -182,21 +237,6 @@
     cursor: not-allowed;
 }
 
-.btnSaveAndAdd {
-    background-color: #0ea5e9;
-    color: white;
-    border: none;
-    padding: 8px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-}
-
-.btnSaveAndAdd:hover {
-    background-color: #0284c7;
-}
-
-.btnSaveAndAdd:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.warehouseModal {
+    max-width: 550px !important;
 }
