@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warehouseApi from '../../api/warehouseApi';
 import WarehouseFormModal from '../../components/warehouse/WarehouseFormModal';
+import ConfirmModal from '../../components/ui/Modal/ConfirmModal';
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './WarehouseListPage.module.css';
 
@@ -26,6 +27,11 @@ const WarehouseListPage = () => {
     const [showModal, setShowModal] = useState(false);
     const [isEdit, setIsEdit] = useState(false);
     const [selectedData, setSelectedData] = useState(null);
+
+    // Delete Modal
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [warehouseToDelete, setWarehouseToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Toast state
     const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
@@ -114,17 +120,26 @@ const WarehouseListPage = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa kho này không? (Hệ thống sẽ vô hiệu hóa nếu kho có chứa hàng)')) {
-            try {
-                await warehouseApi.deleteWarehouse(id);
-                fetchWarehouses();
-                showToast('success', 'Xóa kho thành công!');
-            } catch (error) {
-                console.error("Lỗi xóa kho:", error);
-                showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
-                fetchWarehouses();
-            }
+    const confirmDelete = (warehouse) => {
+        setWarehouseToDelete(warehouse);
+        setShowDeleteModal(true);
+    };
+
+    const handleDelete = async () => {
+        if (!warehouseToDelete) return;
+        setIsDeleting(true);
+        try {
+            await warehouseApi.deleteWarehouse(warehouseToDelete.id);
+            fetchWarehouses();
+            showToast('success', 'Xóa kho thành công!');
+        } catch (error) {
+            console.error("Lỗi xóa kho:", error);
+            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
+            fetchWarehouses();
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteModal(false);
+            setWarehouseToDelete(null);
         }
     };
 
@@ -330,7 +345,7 @@ const WarehouseListPage = () => {
                                                     }}>
                                                         <i className="fas fa-pencil-alt"></i>
                                                     </button>
-                                                    <button className={styles.iconBtn} title="Xóa" onClick={() => handleDelete(warehouse.id)}>
+                                                    <button className={styles.iconBtn} title="Xóa" onClick={() => confirmDelete(warehouse)}>
                                                         <i className="far fa-trash-alt"></i>
                                                     </button>
                                                 </div>
@@ -389,6 +404,19 @@ const WarehouseListPage = () => {
                     onSave={handleSaveModal}
                     isEdit={isEdit}
                     initialData={selectedData}
+                />
+
+                <ConfirmModal
+                    isOpen={showDeleteModal}
+                    onClose={() => setShowDeleteModal(false)}
+                    onConfirm={handleDelete}
+                    title="Xóa kho"
+                    message="Bạn có chắc chắn muốn xóa kho này?"
+                    itemName={warehouseToDelete ? `${warehouseToDelete.name} (${warehouseToDelete.code})` : ''}
+                    warningText="Hành động này không thể hoàn tác."
+                    confirmText="Xóa kho"
+                    cancelText="Hủy"
+                    isLoading={isDeleting}
                 />
 
                 <Toast 

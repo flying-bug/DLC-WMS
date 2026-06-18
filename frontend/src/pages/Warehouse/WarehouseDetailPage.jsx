@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warehouseApi from '../../api/warehouseApi';
 import WarehouseFormModal from '../../components/warehouse/WarehouseFormModal';
+import ConfirmModal from '../../components/ui/Modal/ConfirmModal';
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './WarehouseDetailPage.module.css';
 
@@ -98,6 +99,10 @@ const WarehouseDetailPage = () => {
     // Modal
     const [showModal, setShowModal] = useState(false);
 
+    // Delete Modal
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     // Toast state
     const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
 
@@ -155,16 +160,18 @@ const WarehouseDetailPage = () => {
     };
 
     const handleDelete = async () => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa kho này không? (Hệ thống sẽ vô hiệu hóa nếu kho có chứa hàng)')) {
-            try {
-                await warehouseApi.deleteWarehouse(id);
-                showToast('success', 'Xóa kho thành công!');
-                setTimeout(() => navigate('/warehouses'), 1500);
-            } catch (error) {
-                console.error("Lỗi xóa kho:", error);
-                showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
-                fetchDetail(); // Reload to reflect INACTIVE status if 409 Soft delete occurred
-            }
+        setIsDeleting(true);
+        try {
+            await warehouseApi.deleteWarehouse(id);
+            showToast('success', 'Xóa kho thành công!');
+            setTimeout(() => navigate('/warehouses'), 1500);
+        } catch (error) {
+            console.error("Lỗi xóa kho:", error);
+            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
+            fetchDetail(); // Reload to reflect INACTIVE status if 409 Soft delete occurred
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteModal(false);
         }
     };
 
@@ -203,7 +210,7 @@ const WarehouseDetailPage = () => {
                         <button className={styles.btnEdit} onClick={() => setShowModal(true)}>
                             <i className="fas fa-pencil-alt"></i> Chỉnh sửa
                         </button>
-                        <button className={styles.btnDelete} onClick={handleDelete}>
+                        <button className={styles.btnDelete} onClick={() => setShowDeleteModal(true)}>
                             <i className="far fa-trash-alt"></i> Xóa
                         </button>
                     </div>
@@ -429,6 +436,19 @@ const WarehouseDetailPage = () => {
                     onSave={handleSaveModal}
                     isEdit={true}
                     initialData={warehouse}
+                />
+
+                <ConfirmModal
+                    isOpen={showDeleteModal}
+                    onClose={() => setShowDeleteModal(false)}
+                    onConfirm={handleDelete}
+                    title="Xóa kho"
+                    message="Bạn có chắc chắn muốn xóa kho này?"
+                    itemName={warehouse ? `${warehouse.name} (${warehouse.code})` : ''}
+                    warningText="Hành động này không thể hoàn tác."
+                    confirmText="Xóa kho"
+                    cancelText="Hủy"
+                    isLoading={isDeleting}
                 />
 
                 <Toast 
