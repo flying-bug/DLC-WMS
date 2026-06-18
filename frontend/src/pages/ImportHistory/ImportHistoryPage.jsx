@@ -42,7 +42,7 @@ function ImportHistoryPage() {
 
   return (
     <AdminLayout>
-      <div className={styles.pageBody} style={{ padding: 0 }}>
+      <div className={styles.pageBody}>
         <div className={styles.pageTitleContainer}>
           <h1 className={styles.pageTitle}>Danh sách hàng nhập</h1>
           <button className={styles.btnPrimary} onClick={() => navigate('/import-history/create')}>
@@ -118,8 +118,8 @@ function ImportHistoryPage() {
                   />
                 </th>
                 <th>NGÀY GHI NHẬN</th>
-                <th>SỐ PHIẾU</th>
-                <th>ĐỐI TÁC</th>
+                <th>MÃ SỐ ĐƠN</th>
+                <th>NƠI GIAO HÀNG</th>
                 <th>KHO HÀNG</th>
                 <th className={styles.textRight}>TỔNG TIỀN</th>
                 <th>TÌNH TRẠNG</th>
@@ -192,6 +192,87 @@ function ImportHistoryPage() {
             </div>
           </div>
         </div>
+
+        {selectedSlip && (
+          <div className={styles.detailSection}>
+            <div className={styles.detailHeader}>
+              <i className={`bi bi-file-earmark-text ${styles.detailIcon}`}></i>
+              <h2 className={styles.detailTitle}>Chi tiết Đơn nhập hàng: {selectedSlip.code}</h2>
+              <div style={{ flex: 1 }}></div>
+              <span className={`${styles.badge} ${
+                selectedSlip.statusCode === 'success' ? styles.badgeSuccess :
+                selectedSlip.statusCode === 'info' ? styles.badgeInfo :
+                selectedSlip.statusCode === 'warning' ? styles.badgeWarning :
+                styles.badgeDanger
+              }`}>
+                {selectedSlip.statusCode === 'success' && <i className="bi bi-check-circle-fill" style={{ marginRight: '4px' }}></i>}
+                {selectedSlip.statusCode === 'warning' && <i className="bi bi-hourglass-split" style={{ marginRight: '4px' }}></i>}
+                {selectedSlip.statusCode === 'danger' && <i className="bi bi-x-circle-fill" style={{ marginRight: '4px' }}></i>}
+                {selectedSlip.status}
+              </span>
+            </div>
+
+            <div className={styles.detailGrid}>
+              <div className={styles.detailGroup} style={{ gridColumn: 'span 2' }}>
+                <div className={styles.detailItem}>
+                  <span className={styles.detailLabel}>NHÀ CUNG CẤP</span>
+                  <span className={styles.detailValue}>{selectedSlip.partner}</span>
+                </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.detailLabel}>ĐỊA CHỈ</span>
+                  <span className={styles.detailValue}>Khu Công nghệ Cao, Quận 9, TP. Thủ Đức</span>
+                </div>
+              </div>
+
+              <div className={styles.detailRight}>
+                <div className={styles.detailRightRow}>
+                  <span className={styles.detailRightLabel}>Ngày nhận hàng</span>
+                  <span className={styles.detailRightValue}>{selectedSlip.date}</span>
+                </div>
+                <div className={styles.detailRightRow}>
+                  <span className={styles.detailRightLabel}>Kho nhập</span>
+                  <span className={`${styles.detailRightValue} ${styles.textBlue}`}>{selectedSlip.warehouse} (K01)</span>
+                </div>
+                <div className={styles.detailRightRow}>
+                  <span className={styles.detailRightLabel}>Người nhận</span>
+                  <span className={styles.detailRightValue}>Nguyễn Văn A</span>
+                </div>
+              </div>
+            </div>
+
+            <table className={styles.detailTable}>
+              <thead>
+                <tr>
+                  <th>STT</th>
+                  <th>Mã sản phẩm</th>
+                  <th>Tên sản phẩm</th>
+                  <th>ĐVT</th>
+                  <th className={styles.textCenter}>Số lượng</th>
+                  <th className={styles.textRight}>Giá nhập</th>
+                  <th className={styles.textRight}>Thành tiền</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td className={styles.textBlue}>CPU-I7-13700K</td>
+                  <td>CPU Intel Core i7 thế hệ 13 13700K</td>
+                  <td>Cái</td>
+                  <td className={styles.textCenter}>100</td>
+                  <td className={styles.textRight}>10,500,000</td>
+                  <td className={styles.textRight}>1,050,000,000</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className={styles.detailFooter}>
+              <div className={styles.footerTotalLabel}>Tổng cộng hàng nhập:</div>
+              <div className={styles.footerQty}>100</div>
+              <div className={styles.footerTotalLabel} style={{ flex: 0, whiteSpace: 'nowrap', paddingRight: '16px' }}>Tổng tiền:</div>
+              <div className={styles.footerMoney}>{selectedSlip.total}</div>
+            </div>
+          </div>
+        )}
 
       </div>
     </AdminLayout>
