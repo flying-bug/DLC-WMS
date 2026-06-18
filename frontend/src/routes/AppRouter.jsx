@@ -12,6 +12,7 @@ import PermissionDetailPage from '../pages/Permissions/PermissionDetailPage';
 import ExportSlipPage from '../pages/ExportSlip/ExportSlipPage';
 import ImportHistoryPage from '../pages/ImportHistory/ImportHistoryPage';
 import CreateImportSlipPage from '../pages/CreateImportSlip/CreateImportSlipPage';
+import UpdateImportSlipPage from '../pages/UpdateImportSlip/UpdateImportSlipPage';
 import ProfilePage from '../pages/Profile/ProfilePage';
 import AuditLogPage from '../pages/AuditLog/AuditLogPage';
 import WarehouseListPage from '../pages/Warehouse/WarehouseListPage';
@@ -58,6 +59,7 @@ function AppRouter() {
                     <Route path="/export-slips" element={<ExportSlipPage />} />
                     <Route path="/import-history" element={<ImportHistoryPage />} />
                     <Route path="/import-history/create" element={<CreateImportSlipPage />} />
+                    <Route path="/import-slips/:id/edit" element={<UpdateImportSlipPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/units" element={<UnitPage />} />
