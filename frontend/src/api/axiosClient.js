@@ -45,7 +45,8 @@ axiosClient.interceptors.response.use(
         return response;
     },
     (error) => {
-        if (error.response && error.response.status === 401) {
+        const isLoginRequest = error.config?.url?.includes('/auth/login');
+        if (error.response && error.response.status === 401 && !isLoginRequest) {
             // Tự động logout và redirect về trang login khi bị khóa/hết hạn
             localStorage.removeItem('token');
             localStorage.removeItem('role');

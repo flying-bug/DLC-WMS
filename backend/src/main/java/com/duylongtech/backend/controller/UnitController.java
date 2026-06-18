@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/units")
@@ -52,7 +53,7 @@ public class UnitController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('unit:add')")
-    public ResponseEntity<UnitDto> createUnit(@RequestBody UnitDto unitDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ResponseEntity<UnitDto> createUnit(@Valid @RequestBody UnitDto unitDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
@@ -85,7 +86,7 @@ public class UnitController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('unit:edit')")
-    public ResponseEntity<UnitDto> updateUnit(@PathVariable Long id, @RequestBody UnitDto unitDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ResponseEntity<UnitDto> updateUnit(@PathVariable Long id, @Valid @RequestBody UnitDto unitDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {

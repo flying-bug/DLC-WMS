@@ -114,13 +114,29 @@ function UsersPage() {
     const handleToggleLock = async (e, user) => {
         e.stopPropagation();
         setActiveMenuId(null);
+        const isLocking = user.status === 'APPROVED';
+        const nextStatus = isLocking ? 'INACTIVE' : 'APPROVED';
+        const confirmed = window.confirm(
+            isLocking
+                ? `Bạn chắc chắn muốn khóa tài khoản ${user.name}?`
+                : `Bạn chắc chắn muốn mở khóa tài khoản ${user.name}?`
+        );
+        if (!confirmed) {
+            return;
+        }
+
         try {
-            const nextStatus = user.status === 'APPROVED' ? 'INACTIVE' : 'APPROVED';
-            await axiosClient.put(`/users/${user.id}/status?status=${nextStatus}`);
-            fetchUsers();
+            await axiosClient.put(`/users/${user.id}/status`, null, {
+                params: { status: nextStatus }
+            });
+            await fetchUsers();
         } catch (error) {
             console.error('Lỗi thay đổi trạng thái tài khoản:', error);
-            alert('Có lỗi xảy ra khi thay đổi trạng thái tài khoản.');
+            const message =
+                error.response?.data?.userMessage ||
+                error.response?.data?.message ||
+                'Có lỗi xảy ra khi thay đổi trạng thái tài khoản.';
+            alert(message);
         }
     };
 
@@ -263,7 +279,7 @@ function UsersPage() {
                                 usersData.map((user) => (
                                     <tr key={user.id} className={styles.tableRow} onClick={() => handleRowClick(user)}>
                                         <td><div className={`${styles.avatarCircle} ${user.avatarColorClass}`}>{user.initials}</div></td>
-                                        <td><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: '#64748b' }}>{user.email}</span></td>
+                                        <td><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: 'var(--color-text-subtle)' }}>{user.email}</span></td>
                                         <td>{user.code}</td>
                                         <td>{user.departmentShort}</td>
                                         <td><span className={`${styles.roleBadge} ${user.roleClass}`}>{user.roleBadge}</span></td>

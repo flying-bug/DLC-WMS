@@ -356,7 +356,7 @@ const ProductPage = () => {
                                 </tr>
                             ) : products.length === 0 ? (
                                 <tr>
-                                    <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                                    <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted-2)' }}>
                                         Không tìm thấy hàng hóa, dịch vụ nào phù hợp.
                                     </td>
                                 </tr>

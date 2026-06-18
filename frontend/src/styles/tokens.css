@@ -1,0 +1,104 @@
+:root {
+  --color-primary: #0075c0;
+  --color-primary-hover: #005a96;
+  --color-primary-soft: #f1f8fe;
+  --color-primary-accent: #0ea5e9;
+  --color-primary-dark: #163263;
+  --color-primary-deep: #173160;
+  --color-primary-navy: #1e3f7a;
+  --color-primary-sidebar: #2b4c8a;
+  --color-primary-sidebar-hover: #1e3a75;
+  --color-primary-bright: #3b82f6;
+  --color-primary-bright-hover: #1d4ed8;
+  --color-primary-link: #1e40af;
+  --color-primary-pale: #dbeafe;
+  --color-primary-tint: #e0e7ff;
+  --color-primary-tint-2: #e0f2fe;
+  --color-secondary: #393a3d;
+  --color-secondary-hover: #4d4e51;
+
+  --color-info: #0ea5e9;
+  --color-info-hover: #0284c7;
+  --color-info-bg: #e6f0ff;
+  --color-info-border: #b3d4ff;
+  --color-info-border-soft: #bfdbfe;
+  --color-success: #00b050;
+  --color-success-strong: #00b050;
+  --color-success-alt: #10b981;
+  --color-success-dark: #059669;
+  --color-success-deep: #166534;
+  --color-success-bright: #22c55e;
+  --color-success-action: #2ca01c;
+  --color-success-action-hover: #35b624;
+  --color-success-bg: #e6f8ec;
+  --color-success-bg-soft: #ecfdf5;
+  --color-success-border: #b3e6c8;
+  --color-success-border-soft: #bbf7d0;
+  --color-warning: #f59e0b;
+  --color-warning-dark: #d97706;
+  --color-warning-accent: #f97316;
+  --color-warning-bg: #fff7ed;
+  --color-warning-bg-soft: #ffe8d6;
+  --color-warning-border: #ffe4b3;
+  --color-warning-strong: #ff8000;
+  --color-danger: #ef4444;
+  --color-danger-strong: #e53e3e;
+  --color-danger-text: #ff0000;
+  --color-danger-deep: #991b1b;
+  --color-danger-bg: #feeced;
+  --color-danger-bg-soft: #fde8e8;
+  --color-danger-border: #fbb4b4;
+  --color-danger-border-soft: #fecaca;
+
+  --color-bg: #f4f5f8;
+  --color-bg-page-alt: #f4f7f9;
+  --color-bg-soft: #f8f9fa;
+  --color-bg-table: #f2f2f2;
+  --color-bg-hover: #f2f9ff;
+  --color-bg-muted: #e9edf2;
+  --color-bg-elevated: #fafafa;
+  --color-bg-subtle: #fcfcfc;
+  --color-bg-control-hover: #ebedf0;
+  --color-bg-soft-blue: #eef2fa;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f5f8;
+
+  --color-text: #111111;
+  --color-text-2: #222222;
+  --color-text-strong: #333333;
+  --color-text-heading: #374151;
+  --color-text-body: #333333;
+  --color-text-secondary: #444444;
+  --color-text-muted: #555555;
+  --color-text-muted-2: #666666;
+  --color-text-muted-3: #757575;
+  --color-text-subtle: #888888;
+  --color-text-placeholder: #9e9e9e;
+  --color-text-disabled: #cccccc;
+  --color-icon-muted: #c4cdd6;
+
+  --color-border: #e0e0e0;
+  --color-border-strong: #d0d0d0;
+  --color-border-field: #babec5;
+  --color-border-soft: #e5e5e5;
+  --color-border-card: #e8ecf0;
+  --color-border-muted: #d1d9e0;
+  --color-border-focus-soft: #93c5fd;
+  --color-border-auth: #e9edf2;
+  --color-white: #ffffff;
+
+  --color-auth-start: #0d1f4a;
+  --color-auth-middle: #1a3570;
+  --color-excel: #107c41;
+
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+
+  --font-size-caption: 13px;
+  --font-size-body: 14px;
+  --font-size-card-title: 16px;
+  --font-size-page-title: 22px;
+
+  --radius-control: 4px;
+  --radius-card: 8px;
+  --height-control: 38px;
+}

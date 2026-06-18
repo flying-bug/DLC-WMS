@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Base Response chuẩn Enterprise ERP (MISA / SAP)
+ * Base Response chuẩn DLC-WMS
  */
 @Data
 @Builder

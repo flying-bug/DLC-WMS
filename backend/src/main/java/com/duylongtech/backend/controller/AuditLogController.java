@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +24,6 @@ import java.util.stream.Collectors;
 public class AuditLogController {
 
     private final AuditLogService auditLogService;
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @GetMapping
     @Operation(summary = "Get audit logs with search and pagination")
@@ -40,7 +38,9 @@ public class AuditLogController {
         List<AuditLogResponse> content = logPage.getContent().stream().map(log -> {
             String userDisplay = "anonymous_user";
             if (log.getUser() != null) {
-                userDisplay = log.getUser().getEmail() != null ? log.getUser().getEmail() : log.getUser().getUsername();
+                userDisplay = (log.getUser().getEmail() != null && !log.getUser().getEmail().trim().isEmpty()) 
+                        ? log.getUser().getEmail() 
+                        : log.getUser().getUsername();
             }
             
             // Format status to matches Vietnamese display
@@ -51,9 +51,9 @@ public class AuditLogController {
             
             return AuditLogResponse.builder()
                     .id(log.getId())
-                    .timestamp(log.getCreatedAt() != null ? log.getCreatedAt().format(DATE_FORMATTER) : "")
+                    .timestamp(log.getCreatedAt() != null ? log.getCreatedAt().toString() : "")
                     .user(userDisplay)
-                    .action(log.getDescription())
+                    .action(auditLogService.sanitizeDescription(log.getDescription()))
                     .module(log.getEntityName())
                     .ip(log.getIpAddress() != null ? log.getIpAddress() : "")
                     .status(displayStatus)

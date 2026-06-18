@@ -11,12 +11,12 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
-    @Query("SELECT a FROM AuditLog a WHERE " +
+    @Query("SELECT a FROM AuditLog a LEFT JOIN a.user u WHERE " +
            "(:searchTerm IS NULL OR :searchTerm = '' OR " +
            "LOWER(a.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
            "LOWER(a.action) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
            "LOWER(a.entityName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-           "(a.user IS NOT NULL AND LOWER(a.user.username) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) OR " +
-           "(a.user IS NOT NULL AND LOWER(a.user.email) LIKE LOWER(CONCAT('%', :searchTerm, '%'))))")
+           "LOWER(u.username) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+           "LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
     Page<AuditLog> searchLogs(@Param("searchTerm") String searchTerm, Pageable pageable);
 }

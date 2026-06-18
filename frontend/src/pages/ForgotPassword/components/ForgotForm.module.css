@@ -11,21 +11,23 @@
 .title {
     font-size: 1.35rem;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--color-text);
     margin: 0 0 8px;
     letter-spacing: -0.3px;
 }
 
 .subtitle {
     font-size: 0.875rem;
-    color: #64748b;
+    color: var(--color-text-muted);
     margin: 0;
     line-height: 1.6;
+    overflow-wrap: anywhere;
 }
 
 .emailHighlight {
     font-weight: 600;
-    color: #1e3f7a;
+    color: var(--color-primary);
+    overflow-wrap: anywhere;
 }
 
 /* ── Form ── */
@@ -45,15 +47,15 @@
 .label {
     font-size: 0.82rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--color-text-heading);
 }
 
 /* ── Input wrapper ── */
 .inputWrapper {
     display: flex;
     align-items: center;
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
+    background: var(--color-bg-soft);
+    border: 1.5px solid var(--color-border);
     border-radius: 8px;
     padding: 0 12px;
     transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
@@ -61,39 +63,40 @@
 }
 
 .inputWrapper:focus-within {
-    border-color: #1e4fa0;
-    box-shadow: 0 0 0 3px rgba(30, 79, 160, 0.1);
-    background: #ffffff;
+    border-color: var(--color-primary-accent);
+    box-shadow: var(--shadow-focus-primary-soft);
+    background: var(--color-surface);
 }
 
 .inputWrapper.inputError {
-    border-color: #ef4444;
-    background: #fff5f5;
+    border-color: var(--color-danger);
+    background: var(--status-danger-bg);
 }
 
 .inputWrapper.inputError:focus-within {
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-    background: #ffffff;
+    box-shadow: var(--shadow-focus-danger);
+    background: var(--color-surface);
 }
 
 .inputIcon {
-    color: #94a3b8;
+    color: var(--color-text-subtle);
     flex-shrink: 0;
 }
 
 .input {
     flex: 1;
+    min-width: 0;
     border: none;
     outline: none;
     background: transparent;
     padding: 10px 0;
     font-size: 0.9rem;
-    color: #0f172a;
+    color: var(--color-text);
     font-family: inherit;
 }
 
 .input::placeholder {
-    color: #c4cdd6;
+    color: var(--color-icon-muted);
 }
 
 .togglePassword {
@@ -101,7 +104,7 @@
     border: none;
     padding: 2px;
     cursor: pointer;
-    color: #94a3b8;
+    color: var(--color-text-subtle);
     display: flex;
     align-items: center;
     flex-shrink: 0;
@@ -110,18 +113,18 @@
 }
 
 .togglePassword:hover {
-    color: #475569;
+    color: var(--color-text-body);
 }
 
 .togglePassword:focus-visible {
-    outline: 2px solid #1e4fa0;
+    outline: 2px solid var(--color-primary-accent);
     outline-offset: 2px;
 }
 
 /* ── Error ── */
 .errorMsg {
     font-size: 0.78rem;
-    color: #ef4444;
+    color: var(--color-danger);
     display: flex;
     align-items: center;
     gap: 4px;
@@ -133,38 +136,39 @@
     gap: 8px;
     justify-content: center;
     margin: 8px 0 4px;
+    width: 100%;
 }
 
 .otpInput {
-    width: 52px;
+    width: clamp(38px, 12vw, 52px);
     height: 58px;
     text-align: center;
     font-size: 1.4rem;
     font-weight: 700;
-    color: #0f172a;
-    background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
+    color: var(--color-text);
+    background: var(--color-bg-soft);
+    border: 1.5px solid var(--color-border);
     border-radius: 10px;
     outline: none;
     transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
-    caret-color: #1e4fa0;
+    caret-color: var(--color-primary-accent);
 }
 
 .otpInput:focus {
-    border-color: #1e4fa0;
-    box-shadow: 0 0 0 3px rgba(30, 79, 160, 0.1);
-    background: #ffffff;
+    border-color: var(--color-primary-accent);
+    box-shadow: var(--shadow-focus-primary-soft);
+    background: var(--color-surface);
 }
 
 .otpInput.otpInputFilled {
-    background: #eff6ff;
-    border-color: #93c5fd;
-    color: #1e3f7a;
+    background: var(--status-info-bg);
+    border-color: var(--color-border-focus-soft);
+    color: var(--color-primary);
 }
 
 .otpInput.otpInputError {
-    border-color: #ef4444;
-    background: #fff5f5;
+    border-color: var(--color-danger);
+    background: var(--status-danger-bg);
 }
 
 /* ── Resend ── */
@@ -175,12 +179,12 @@
     gap: 5px;
     margin-top: 4px;
     padding-top: 12px;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid var(--color-surface-muted);
 }
 
 .resendLabel {
     font-size: 0.82rem;
-    color: #64748b;
+    color: var(--color-text-muted);
 }
 
 .resendBtn {
@@ -188,25 +192,25 @@
     border: none;
     font-size: 0.82rem;
     font-weight: 600;
-    color: #1e4fa0;
+    color: var(--color-primary-accent);
     cursor: pointer;
     padding: 2px 0;
     transition: color 0.15s;
 }
 
 .resendBtn:hover {
-    color: #1a3a6b;
+    color: var(--color-primary-hover);
     text-decoration: underline;
 }
 
 .resendCountdown {
     font-size: 0.82rem;
-    color: #94a3b8;
+    color: var(--color-text-subtle);
 }
 
 .countdown {
     font-weight: 600;
-    color: #1e4fa0;
+    color: var(--color-primary-accent);
 }
 
 /* ── Password strength ── */
@@ -215,6 +219,7 @@
     align-items: center;
     gap: 8px;
     margin-top: 4px;
+    min-width: 0;
 }
 
 .strengthSegments {
@@ -228,7 +233,7 @@
     height: 3px;
     border-radius: 4px;
     transition: background 0.3s;
-    background: #e2e8f0;
+    background: var(--color-border);
 }
 
 .strengthText {
@@ -244,14 +249,14 @@
     align-items: center;
     gap: 5px;
     font-size: 0.78rem;
-    color: #94a3b8;
+    color: var(--color-text-subtle);
     margin: 3px 0 0;
 }
 
 /* ── Rules box ── */
 .ruleBox {
-    background: #f8fafc;
-    border: 1px solid #e9edf2;
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-bg-muted);
     border-radius: 8px;
     padding: 12px 14px;
 }
@@ -259,7 +264,7 @@
 .ruleTitle {
     font-size: 0.78rem;
     font-weight: 700;
-    color: #374151;
+    color: var(--color-text-heading);
     margin: 0 0 8px;
 }
 
@@ -277,22 +282,23 @@
     align-items: center;
     gap: 7px;
     font-size: 0.78rem;
-    color: #94a3b8;
+    color: var(--color-text-subtle);
     transition: color 0.2s;
+    overflow-wrap: anywhere;
 }
 
 .ruleItem svg {
-    color: #cbd5e1;
+    color: var(--color-border-strong);
     flex-shrink: 0;
     transition: color 0.2s;
 }
 
 .ruleItem.rulePassed {
-    color: #166534;
+    color: var(--color-success-deep);
 }
 
 .ruleItem.rulePassed svg {
-    color: #22c55e;
+    color: var(--color-success-bright);
 }
 
 /* ── Submit button ── */
@@ -303,8 +309,8 @@
     justify-content: center;
     gap: 8px;
     padding: 11px 20px;
-    background: #1e3f7a;
-    color: #ffffff;
+    background: var(--color-primary);
+    color: var(--color-surface);
     border: none;
     border-radius: 8px;
     font-size: 0.9rem;
@@ -316,8 +322,8 @@
 }
 
 .submitBtn:hover:not(:disabled) {
-    background: #1a3a6b;
-    box-shadow: 0 4px 14px rgba(30, 63, 122, 0.3);
+    background: var(--color-primary-hover);
+    box-shadow: var(--shadow-primary-soft);
 }
 
 .submitBtn:active:not(:disabled) {
@@ -331,7 +337,7 @@
 }
 
 .submitBtn:focus-visible {
-    outline: 2px solid #1e4fa0;
+    outline: 2px solid var(--color-primary-accent);
     outline-offset: 3px;
 }
 
@@ -340,8 +346,8 @@
     display: inline-block;
     width: 17px;
     height: 17px;
-    border: 2.5px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #ffffff;
+    border: 2.5px solid var(--auth-footer-text);
+    border-top-color: var(--color-surface);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
 }
@@ -359,14 +365,14 @@
     gap: 6px;
     font-size: 0.82rem;
     font-weight: 500;
-    color: #1e4fa0;
+    color: var(--color-primary-accent);
     text-decoration: none;
     margin-top: 18px;
     transition: color 0.15s, gap 0.15s;
 }
 
 .backLink:hover {
-    color: #1a3a6b;
+    color: var(--color-primary-hover);
     gap: 8px;
 }
 
@@ -378,12 +384,32 @@
 /* ── Responsive ── */
 @media (max-width: 480px) {
     .otpInput {
-        width: 42px;
         height: 50px;
         font-size: 1.2rem;
     }
 
     .otpGroup {
         gap: 6px;
+    }
+
+    .strengthBar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .strengthText {
+        min-width: 0;
+        text-align: left;
+    }
+}
+
+@media (max-width: 360px) {
+    .otpGroup {
+        gap: 4px;
+    }
+
+    .otpInput {
+        height: 46px;
+        font-size: 1.08rem;
     }
 }
