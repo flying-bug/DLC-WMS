@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import styles from './ImportHistoryPage.module.css';
@@ -11,7 +12,7 @@ const MOCK_SLIPS = [
 ];
 
 function ImportHistoryPage() {
-
+  const navigate = useNavigate();
   const [selectedSlip, setSelectedSlip] = useState(MOCK_SLIPS[0]);
 
   return (
@@ -89,7 +90,8 @@ function ImportHistoryPage() {
                     </span>
                   </td>
                   <td className={styles.textCenter}>
-                    <i className="bi bi-eye" style={{cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px'}}></i>
+                    <i className="bi bi-eye" style={{cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px'}} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}></i>
+                    <i className="bi bi-pencil" style={{cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px'}} title="Sửa phiếu nhập kho" onClick={(e) => { e.stopPropagation(); navigate(`/import-slips/${slip.code}/edit`); }}></i>
                   </td>
                 </tr>
               ))}
