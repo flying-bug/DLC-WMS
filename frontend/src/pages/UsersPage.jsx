@@ -18,16 +18,16 @@ function UsersPage() {
         const isManager = u.roles && u.roles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
         const systemRole = isSuperAdmin ? 'admin' : 'user';
         const initials = u.fullName ? u.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
-        
+
         const colorClasses = [styles.bgBlue, styles.bgOrange, styles.bgGray];
         const avatarColorClass = colorClasses[u.id % colorClasses.length] || styles.bgBlue;
-        
+
         let department = 'Kho bãi';
         let departmentShort = 'Kho';
         let position = 'Nhân viên kho';
         let roleBadge = 'NHÂN VIÊN';
         let roleClass = styles.roleSecondary;
-        
+
         if (isSuperAdmin) {
             department = 'Phòng Kỹ thuật & Bảo hành';
             departmentShort = 'Quản trị';
@@ -286,13 +286,13 @@ function UsersPage() {
                                         <td>{user.email}</td>
                                         <td><span className={`${styles.statusBadge} ${user.statusClass}`}><i className="bi bi-circle-fill"></i> {user.statusLabel}</span></td>
                                         <td className={styles.actionCell}>
-                                            <button 
-                                                className={styles.btnAction} 
+                                            <button
+                                                className={styles.btnAction}
                                                 onClick={(e) => toggleActionMenu(e, user.id)}
                                             >
                                                 <i className="bi bi-three-dots-vertical"></i>
                                             </button>
-                                            
+
                                             {activeMenuId === user.id && (
                                                 <div className={styles.actionMenu}>
                                                     <div className={styles.actionMenuItem} onClick={(e) => handleViewInfo(e, user)}>
@@ -304,7 +304,7 @@ function UsersPage() {
                                                         </div>
                                                     )}
                                                     <div className={`${styles.actionMenuItem} ${user.status === 'APPROVED' ? styles.actionMenuItemDanger : styles.actionMenuItemSuccess}`} onClick={(e) => handleToggleLock(e, user)}>
-                                                        <i className={`bi ${user.status === 'APPROVED' ? 'bi-lock' : 'bi-unlock'}`}></i> 
+                                                        <i className={`bi ${user.status === 'APPROVED' ? 'bi-lock' : 'bi-unlock'}`}></i>
                                                         {user.status === 'APPROVED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
                                                     </div>
                                                 </div>
@@ -328,10 +328,10 @@ function UsersPage() {
                 </div>
             </main>
 
-            <EmployeeDrawer 
-                isOpen={isDrawerOpen} 
-                onClose={() => setIsDrawerOpen(false)} 
-                user={selectedUser} 
+            <EmployeeDrawer
+                isOpen={isDrawerOpen}
+                onClose={() => setIsDrawerOpen(false)}
+                user={selectedUser}
                 onSave={handleSaveUser}
             />
         </div>

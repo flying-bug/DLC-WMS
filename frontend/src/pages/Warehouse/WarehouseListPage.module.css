@@ -114,7 +114,7 @@
     color: var(--color-text-strong, #334155);
 }
 
-.filterGroup input, 
+.filterGroup input,
 .filterGroup select {
     height: 40px;
     border: 1px solid var(--color-border, #e2e8f0);
@@ -128,7 +128,7 @@
     width: 100%;
 }
 
-.filterGroup input:focus, 
+.filterGroup input:focus,
 .filterGroup select:focus {
     border-color: var(--color-primary, #002b6b);
     background-color: white;
@@ -401,17 +401,17 @@
         flex-direction: column;
         gap: 16px;
     }
-    
+
     .filterGroup {
         min-width: calc(50% - 12px);
     }
-    
+
     .filterAction {
         width: 100%;
         margin-left: 0;
         margin-top: 8px;
     }
-    
+
     .btnFilter {
         width: 100%;
         justify-content: center;
@@ -422,25 +422,25 @@
     .filterGroup {
         min-width: 100%;
     }
-    
+
     .pagination {
         flex-direction: column;
         gap: 16px;
         align-items: stretch;
         text-align: center;
     }
-    
+
     .pageControls {
         justify-content: center;
         flex-wrap: wrap;
     }
-    
+
     .pageSizeSelect {
         width: 100%;
         margin-left: 0;
         margin-top: 12px;
     }
-    
+
     .pageSizeSelect select {
         width: 100%;
     }

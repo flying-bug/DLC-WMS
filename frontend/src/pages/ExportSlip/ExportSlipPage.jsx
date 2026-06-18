@@ -102,7 +102,7 @@ function ExportSlipPage() {
               ))}
             </tbody>
           </table>
-          
+
           <div className={styles.pagination}>
             <span>Hiển thị 1-4 trên tổng số 120 bản ghi</span>
             <div className={styles.pageControls}>
@@ -119,7 +119,7 @@ function ExportSlipPage() {
               <i className={`bi bi-receipt ${styles.detailIcon}`}></i>
               <h2 className={styles.detailTitle}>Chi tiết Phiếu xuất kho: {selectedSlip.code}</h2>
             </div>
-            
+
             <div className={styles.detailGrid}>
               <div className={styles.detailGroup}>
                 <div className={styles.detailItem}>
@@ -131,7 +131,7 @@ function ExportSlipPage() {
                   <span className={styles.detailValue}>{MOCK_DETAIL.reason}</span>
                 </div>
               </div>
-              
+
               <div className={styles.detailGroup}>
                 <div className={styles.detailItem}>
                   <span className={styles.detailLabel}>NGƯỜI NHẬN HÀNG</span>

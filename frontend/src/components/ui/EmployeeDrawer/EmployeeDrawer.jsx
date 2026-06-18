@@ -253,7 +253,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
             {isEditMode ? (
                 <>
                     <p className={styles.roleText}>Chọn vai trò phù hợp cho nhân viên này để thiết lập các quyền hạn truy cập tương ứng.</p>
-                    
+
                     <label className={`${styles.roleCard} ${formData.systemRole === 'admin' ? styles.roleCardActive : ''}`}>
                         <input type="radio" name="systemRole" value="admin" checked={formData.systemRole === 'admin'} onChange={handleChange} className={styles.roleRadio} />
                         <div className={styles.roleContent}>
@@ -322,7 +322,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                             <i className="bi bi-x-lg"></i>
                         </button>
                     </div>
-                    
+
                     <div className={styles.tabs}>
                         <button className={`${styles.tabBtn} ${activeTab === 'general' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('general')}>Thông tin chung</button>
                         <button className={`${styles.tabBtn} ${activeTab === 'employee' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('employee')}>Thông tin nhân viên</button>

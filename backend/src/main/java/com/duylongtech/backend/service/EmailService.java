@@ -25,7 +25,7 @@ public class EmailService {
             helper.setFrom(fromEmail, "DLC-WMS System");
             helper.setTo(toEmail);
             helper.setSubject("Yêu cầu khôi phục mật khẩu - DLC-WMS");
-            
+
             String htmlMsg = "<div style='font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px;'>"
                     + "<h2 style='color: #007bff; text-align: center;'>Khôi phục mật khẩu</h2>"
                     + "<p>Chào bạn,</p>"
@@ -34,7 +34,7 @@ public class EmailService {
                     + "<p>Mã OTP này có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>"
                     + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ DLC-WMS</p>"
                     + "</div>";
-            
+
             helper.setText(htmlMsg, true);
             mailSender.send(message);
         } catch (Exception e) {

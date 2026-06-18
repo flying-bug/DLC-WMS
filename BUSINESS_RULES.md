@@ -1,5 +1,5 @@
 # 5. Requirement Appendix
-## 5.1 Business Rules 
+## 5.1 Business Rules
 
 Dưới đây là danh sách các Quy tắc Nghiệp vụ (Business Rules) được chọn lọc và chuẩn hóa sát nhất với các Use Case thực tế của dự án DLC-WMS (Bao gồm Quản lý Danh mục, Nhập/Xuất kho, Chuyển/Kiểm kê, Lắp ráp BOM, và Bảo hành).
 

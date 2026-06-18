@@ -11,7 +11,7 @@ const ProductPage = () => {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [tempSearch, setTempSearch] = useState('');
-    
+
     // Pagination state
     const [page, setPage] = useState(0);
     const [size, setSize] = useState(20);
@@ -35,7 +35,7 @@ const ProductPage = () => {
         active: true
     });
     const [errorMsg, setErrorMsg] = useState('');
-    
+
     // Dropdown state for rows
     const [openDropdownId, setOpenDropdownId] = useState(null);
 
@@ -299,9 +299,9 @@ const ProductPage = () => {
 
                     <div className={styles.toolbarRight}>
                         <div className={styles.searchBox}>
-                            <input 
-                                type="text" 
-                                placeholder="Tìm theo mã, tên hàng hóa" 
+                            <input
+                                type="text"
+                                placeholder="Tìm theo mã, tên hàng hóa"
                                 value={tempSearch}
                                 onChange={(e) => setTempSearch(e.target.value)}
                                 onKeyDown={handleSearch}
@@ -317,7 +317,7 @@ const ProductPage = () => {
                         <button className={styles.iconBtn} title="Thiết lập cột">
                             <i className="fas fa-cog"></i>
                         </button>
-                        
+
                         <div className={styles.actionBtnGroup}>
                             <button className={styles.addBtn} onClick={handleOpenAdd}>
                                 Thêm
@@ -386,8 +386,8 @@ const ProductPage = () => {
                                         <td style={{ textAlign: 'center' }}>
                                             <div className={styles.actionCell}>
                                                 <span className={styles.editLink} onClick={() => handleOpenEdit(item)}>Sửa</span>
-                                                <button 
-                                                    className={styles.dropdownBtn} 
+                                                <button
+                                                    className={styles.dropdownBtn}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         setOpenDropdownId(openDropdownId === item.id ? null : item.id);
@@ -395,7 +395,7 @@ const ProductPage = () => {
                                                 >
                                                     <i className="fas fa-caret-down"></i>
                                                 </button>
-                                                
+
                                                 {openDropdownId === item.id && (
                                                     <div className={styles.dropdownMenu}>
                                                         <div className={styles.dropdownItem} onClick={() => handleDuplicate(item)}>
@@ -424,8 +424,8 @@ const ProductPage = () => {
                         Tổng số: <strong>{totalElements}</strong> bản ghi
                     </div>
                     <div className={styles.pageControls}>
-                        <select 
-                            value={size} 
+                        <select
+                            value={size}
                             onChange={(e) => {
                                 setSize(Number(e.target.value));
                                 setPage(0);
@@ -439,8 +439,8 @@ const ProductPage = () => {
                         </select>
 
                         <div className={styles.pageNav}>
-                            <button 
-                                className={styles.pageNavBtn} 
+                            <button
+                                className={styles.pageNavBtn}
                                 disabled={page === 0}
                                 onClick={() => setPage(page - 1)}
                             >
@@ -449,8 +449,8 @@ const ProductPage = () => {
                             <span className={styles.pageNumber}>
                                 Trang <strong>{page + 1}</strong> / {totalPages || 1}
                             </span>
-                            <button 
-                                className={styles.pageNavBtn} 
+                            <button
+                                className={styles.pageNavBtn}
                                 disabled={page >= totalPages - 1}
                                 onClick={() => setPage(page + 1)}
                             >
@@ -474,13 +474,13 @@ const ProductPage = () => {
 
                         <div className={styles.modalBody}>
                             {errorMsg && <div className={styles.modalError}>{errorMsg}</div>}
-                            
+
                             <div className={styles.formRow}>
                                 <div className={styles.formGroup}>
                                     <label>Mã hàng hóa/dịch vụ <span className={styles.required}>*</span></label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.productCode} 
+                                    <input
+                                        type="text"
+                                        value={formData.productCode}
                                         onChange={(e) => setFormData({ ...formData, productCode: e.target.value })}
                                         placeholder="Ví dụ: VT00001"
                                         className={styles.formInput}
@@ -488,9 +488,9 @@ const ProductPage = () => {
                                 </div>
                                 <div className={styles.formGroup}>
                                     <label>Tên hàng hóa/dịch vụ <span className={styles.required}>*</span></label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.productName} 
+                                    <input
+                                        type="text"
+                                        value={formData.productName}
                                         onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
                                         placeholder="Tên đầy đủ của sản phẩm/dịch vụ"
                                         className={styles.formInput}
@@ -501,8 +501,8 @@ const ProductPage = () => {
                             <div className={styles.formRow}>
                                 <div className={styles.formGroup}>
                                     <label>Tính chất</label>
-                                    <select 
-                                        value={formData.productType} 
+                                    <select
+                                        value={formData.productType}
                                         onChange={(e) => setFormData({ ...formData, productType: e.target.value })}
                                         className={styles.formSelect}
                                     >
@@ -514,8 +514,8 @@ const ProductPage = () => {
 
                                 <div className={styles.formGroup}>
                                     <label>Đơn vị tính</label>
-                                    <select 
-                                        value={formData.unitId} 
+                                    <select
+                                        value={formData.unitId}
                                         onChange={(e) => setFormData({ ...formData, unitId: e.target.value })}
                                         className={styles.formSelect}
                                     >
@@ -530,8 +530,8 @@ const ProductPage = () => {
                             <div className={styles.formRow}>
                                 <div className={styles.formGroup}>
                                     <label>Giảm thuế theo quy định</label>
-                                    <select 
-                                        value={formData.taxReductionStatus} 
+                                    <select
+                                        value={formData.taxReductionStatus}
                                         onChange={(e) => setFormData({ ...formData, taxReductionStatus: e.target.value })}
                                         className={styles.formSelect}
                                     >
@@ -542,9 +542,9 @@ const ProductPage = () => {
                                 </div>
                                 <div className={styles.formGroup}>
                                     <label>Ảnh đại diện (URL)</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.imageUrl} 
+                                    <input
+                                        type="text"
+                                        value={formData.imageUrl}
                                         onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                                         placeholder="https://example.com/image.png"
                                         className={styles.formInput}
@@ -555,18 +555,18 @@ const ProductPage = () => {
                             <div className={styles.formRow}>
                                 <div className={styles.formGroup}>
                                     <label>Số lượng tồn</label>
-                                    <input 
-                                        type="number" 
-                                        value={formData.stockQty} 
+                                    <input
+                                        type="number"
+                                        value={formData.stockQty}
                                         onChange={(e) => setFormData({ ...formData, stockQty: Number(e.target.value) })}
                                         className={styles.formInput}
                                     />
                                 </div>
                                 <div className={styles.formGroup}>
                                     <label>Giá trị tồn (VND)</label>
-                                    <input 
-                                        type="number" 
-                                        value={formData.stockValue} 
+                                    <input
+                                        type="number"
+                                        value={formData.stockValue}
                                         onChange={(e) => setFormData({ ...formData, stockValue: Number(e.target.value) })}
                                         className={styles.formInput}
                                     />
@@ -575,8 +575,8 @@ const ProductPage = () => {
 
                             <div className={styles.formGroup}>
                                 <label>Mô tả chi tiết</label>
-                                <textarea 
-                                    value={formData.description} 
+                                <textarea
+                                    value={formData.description}
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     placeholder="Mô tả thông số kỹ thuật hoặc ghi chú khác..."
                                     rows="3"
@@ -586,9 +586,9 @@ const ProductPage = () => {
 
                             <div className={styles.checkboxGroup}>
                                 <label className={styles.checkboxLabel}>
-                                    <input 
-                                        type="checkbox" 
-                                        checked={formData.active} 
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.active}
                                         onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
                                     />
                                     <span>Đang sử dụng</span>

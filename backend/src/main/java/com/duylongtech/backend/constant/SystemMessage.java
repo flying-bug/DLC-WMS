@@ -13,7 +13,7 @@ public enum SystemMessage {
     INVALID_EMAIL("MSG06", "Email không đúng định dạng."),
     INVALID_PHONE("MSG07", "Số điện thoại không hợp lệ (phải đúng mạng viễn thông Việt Nam)."),
     EXCEED_MAX_LENGTH("MSG08", "Độ dài dữ liệu vượt quá giới hạn cho phép."),
-    
+
     // Auth & User
     LOGIN_FAILED("AUTH01", "Tài khoản hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại."),
     USER_NOT_FOUND("AUTH02", "Không tìm thấy tài khoản trong hệ thống."),
@@ -50,6 +50,12 @@ public enum SystemMessage {
     // BOM & Warranty
     BOM_INSUFFICIENT_COMPONENTS("BOM01", "Không đủ số lượng linh kiện thành phần để lắp ráp"),
     WARR_OUT_OF_WARRANTY("WARR01", "Thiết bị đã hết hạn bảo hành"),
+
+    // Warehouse
+    WH_NOT_FOUND("WH01", "Không tìm thấy kho lưu trữ."),
+    WH_CODE_EXISTS("WH02", "Mã kho đã tồn tại trên hệ thống."),
+    WH_HAS_TRANSACTION("WH03", "Không thể xóa kho đã phát sinh giao dịch hoặc đang chứa linh kiện. Hệ thống đã tự động chuyển trạng thái kho này về ngừng hoạt động (INACTIVE)."),
+    WH_OPTIMISTIC_LOCK("WH04", "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại trang để xem dữ liệu mới nhất."),
 
     // General Errors
     ACCESS_DENIED("SYS403", "Bạn không có quyền thực hiện thao tác này"),

@@ -12,14 +12,14 @@ public class UserDto {
     private Long id;
     @NotBlank(message = "FIELD_REQUIRED")
     private String username;
-    
+
     @NotBlank(message = "FIELD_REQUIRED")
     private String fullName;
-    
+
     @NotBlank(message = "FIELD_REQUIRED")
     @Email(message = "INVALID_EMAIL")
     private String email;
-    
+
     @NotBlank(message = "FIELD_REQUIRED")
     @Pattern(regexp = com.duylongtech.backend.constant.AppConstants.MOBILE_REGEX, message = "INVALID_PHONE")
     private String phone;
