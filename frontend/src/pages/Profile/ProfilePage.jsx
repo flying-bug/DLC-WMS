@@ -1,24 +1,28 @@
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
+import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import styles from './ProfilePage.module.css';
 
 function ProfilePage() {
     const navigate = useNavigate();
     const userRole = localStorage.getItem('role') || 'STAFF';
-    const displayRole = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' ? 'Super Admin' : userRole === 'MANAGER' ? 'Manager' : 'Staff';
-    const email = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' ? 'admin@duylong.vn' : userRole === 'MANAGER' ? 'manager@duylong.vn' : 'staff@duylong.vn';
+    const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN';
+    const displayRole = isSuperAdmin ? 'Super Admin' : userRole === 'MANAGER' ? 'Manager' : 'Staff';
+    const email = isSuperAdmin ? 'admin@duylong.vn' : userRole === 'MANAGER' ? 'manager@duylong.vn' : 'staff@duylong.vn';
     const phone = '0987 654 321';
-    const fullName = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' ? 'Nguyễn Đức Long' : userRole === 'MANAGER' ? 'Trần Văn Bình' : 'Lê Hoàng Nam';
+    const fullName = isSuperAdmin ? 'Nguyễn Đức Long' : userRole === 'MANAGER' ? 'Trần Văn Bình' : 'Lê Hoàng Nam';
+
+    const Layout = isSuperAdmin ? SuperAdminLayout : AdminLayout;
 
     return (
-        <AdminLayout>
+        <Layout>
             <div className={styles.container}>
                 <div className={styles.header}>
                     <h2>Thông tin cá nhân</h2>
                     <div className={styles.breadcrumb}>
-                        <span className={styles.breadcrumbLink} onClick={() => navigate('/dashboard')}>Kho</span>
+                        <span className={styles.breadcrumbLink} onClick={() => navigate('/dashboard')}>Super Admin Dashboard</span>
                         <i className="fas fa-chevron-right"></i>
-                        <span>Tài khoản</span>
+                        <span>Thông tin cá nhân</span>
                     </div>
                 </div>
 
@@ -63,7 +67,7 @@ function ProfilePage() {
                     </div>
                 </div>
             </div>
-        </AdminLayout>
+        </Layout>
     );
 }
 

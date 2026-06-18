@@ -6,12 +6,14 @@ import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.repository.UserRepository;
 import com.duylongtech.backend.security.UserDetailsImpl;
 import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.constant.SystemMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.HashSet;
 import java.util.Set;
@@ -30,6 +32,15 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final PermissionRepository permissionRepository;
 
+    private Optional<RoleEntity> findRoleByCode(String roleCode) {
+        if (roleCode == null || roleCode.isBlank()) {
+            return Optional.empty();
+        }
+        String normalizedCode = roleCode.startsWith("ROLE_") ? roleCode : "ROLE_" + roleCode;
+        return roleRepository.findByCode(roleCode)
+                .or(() -> roleRepository.findByCode(normalizedCode));
+    }
+
     // ======================== View Account Detail (GET /api/v1/users/me) ========================
 
     /**
@@ -45,7 +56,7 @@ public class UserService {
 
         // 2. Query user kèm roles (EntityGraph JOIN FETCH)
         User user = userRepository.findWithRolesById(userDetails.getId())
-                .orElseThrow(() -> new BusinessException("Không tìm thấy tài khoản trong hệ thống."));
+                .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
 
         // 3. Map Entity -> DTO (Data Masking: không trả về password_hash)
         return mapToDetailDto(user);
@@ -103,10 +114,10 @@ public class UserService {
         Set<RoleEntity> roles = new HashSet<>();
         if (userDto.getRoles() != null && !userDto.getRoles().isEmpty()) {
             userDto.getRoles().forEach(roleCode -> {
-                roleRepository.findByCode(roleCode).ifPresent(roles::add);
+                findRoleByCode(roleCode).ifPresent(roles::add);
             });
         } else {
-            roleRepository.findByCode("STAFF").ifPresent(roles::add);
+            findRoleByCode("STAFF").ifPresent(roles::add);
         }
         user.setRoles(roles);
 
@@ -115,22 +126,34 @@ public class UserService {
     }
 
     public UserDto getUserById(Long id) {
-        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
+        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         return mapToDto(user);
     }
 
     public void updateStatus(Long id, String status) {
-        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
-        user.setStatus(status);
+        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
+        String normalizedStatus = status == null ? "" : status.trim().toUpperCase();
+        if (!Set.of("APPROVED", "INACTIVE").contains(normalizedStatus)) {
+            throw new BusinessException(SystemMessage.INVALID_USER_STATUS);
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if ("INACTIVE".equals(normalizedStatus) && authentication != null
+                && authentication.getPrincipal() instanceof UserDetailsImpl currentUser
+                && currentUser.getId().equals(id)) {
+            throw new BusinessException(SystemMessage.CANNOT_LOCK_SELF);
+        }
+
+        user.setStatus(normalizedStatus);
         userRepository.save(user);
     }
 
     public void updatePermissions(Long id, List<String> permissionCodes) {
-        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
+        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         boolean isStaff = user.getRoles() != null && user.getRoles().stream()
                 .anyMatch(role -> "STAFF".equalsIgnoreCase(role.getCode()));
         if (!isStaff) {
-            throw new BusinessException("Chỉ tài khoản Nhân viên (STAFF) mới được phép phân quyền động.");
+            throw new BusinessException(SystemMessage.STAFF_ONLY_PERMISSION);
         }
         Set<PermissionEntity> permissions = new HashSet<>();
         if (permissionCodes != null) {
@@ -143,14 +166,14 @@ public class UserService {
     }
 
     public UserDto updateUser(Long id, UserDto userDto) {
-        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException("User not found"));
+        User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         user.setFullName(userDto.getFullName());
         user.setEmail(userDto.getEmail());
         user.setPhone(userDto.getPhone());
         if (userDto.getRoles() != null) {
             Set<RoleEntity> roles = new HashSet<>();
             userDto.getRoles().forEach(roleCode -> {
-                roleRepository.findByCode(roleCode).ifPresent(roles::add);
+                findRoleByCode(roleCode).ifPresent(roles::add);
             });
             user.setRoles(roles);
         }

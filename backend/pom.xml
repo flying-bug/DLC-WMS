@@ -146,6 +146,12 @@
             <artifactId>cloudinary-http44</artifactId>
             <version>1.36.0</version> </dependency>
 
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.3</version>
+        </dependency>
+
     </dependencies>
 
     <build>

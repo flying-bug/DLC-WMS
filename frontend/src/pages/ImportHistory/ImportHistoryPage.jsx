@@ -89,13 +89,13 @@ function ImportHistoryPage() {
                     </span>
                   </td>
                   <td className={styles.textCenter}>
-                    <i className="bi bi-eye" style={{cursor: 'pointer', color: '#666', fontSize: '16px'}}></i>
+                    <i className="bi bi-eye" style={{cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px'}}></i>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          
+
           <div className={styles.pagination}>
             <span>Hiển thị 1 - 4 trong tổng số 156 bản ghi</span>
             <div className={styles.pageControls}>
