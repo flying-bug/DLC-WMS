@@ -1,9 +1,29 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
+import SupplierModal from './components/SupplierModal';
 import styles from './SupplierDetailPage.module.css';
 
 const SupplierDetailPage = () => {
     const navigate = useNavigate();
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    // Dữ liệu mock để test form Edit
+    const mockSupplier = {
+        type: 'COMPANY',
+        code: '0106242834',
+        tax_code: '0106242834',
+        name: 'CÔNG TY TNHH CÔNG NGHIỆP H VIỆT NAM',
+        phone: '024 3367 0218',
+        email: 'contact@h-vietnam.com',
+        address: 'Đội 3, thôn Hoàng Xá, Xã Thạch Thất, TP Hà Nội',
+        group_type: 'RETAIL',
+        credit_limit: '150000000',
+        payment_term_days: '30',
+        bank_name: 'VIETCOMBANK - CHI NHÁNH THẠCH THẤT',
+        bank_account_number: '0451 000 999 888',
+        bank_beneficiary_name: 'CÔNG TY TNHH CONG NGHIEP H VIET NAM'
+    };
 
     return (
         <AdminLayout>
@@ -26,7 +46,7 @@ const SupplierDetailPage = () => {
                         </div>
                     </div>
                     <div className={styles.headerActions}>
-                        <button className={styles.btnOutline}>
+                        <button className={styles.btnOutline} onClick={() => setIsEditModalOpen(true)}>
                             <i className="fas fa-pen"></i> Chỉnh sửa
                         </button>
                         <button className={styles.btnDanger}>
@@ -121,7 +141,10 @@ const SupplierDetailPage = () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
 
+                    {/* Right Column */}
+                    <div className={styles.colRight}>
                         {/* Contacts Card */}
                         <div className={styles.card}>
                             <div className={styles.cardHeader}>
@@ -134,7 +157,6 @@ const SupplierDetailPage = () => {
                                         <th>Họ và tên</th>
                                         <th>Chức vụ</th>
                                         <th>Số điện thoại</th>
-                                        <th>Email</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -142,21 +164,15 @@ const SupplierDetailPage = () => {
                                         <td style={{ fontWeight: 600 }}>Nguyễn Văn An</td>
                                         <td>Trưởng phòng KD</td>
                                         <td>0987 654 321</td>
-                                        <td>an.nv@h-vietnam.com</td>
                                     </tr>
                                     <tr>
                                         <td style={{ fontWeight: 600 }}>Trần Thị Bình</td>
                                         <td>Kế toán trưởng</td>
                                         <td>0912 345 678</td>
-                                        <td>binh.tt@h-vietnam.com</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-
-                    {/* Right Column */}
-                    <div className={styles.colRight}>
                         {/* Bank Accounts Card */}
                         <div className={styles.card}>
                             <div className={styles.cardHeader}>
@@ -174,6 +190,18 @@ const SupplierDetailPage = () => {
                     
                 </div>
             </div>
+
+            {/* Edit Modal */}
+            {isEditModalOpen && (
+                <SupplierModal 
+                    onClose={() => setIsEditModalOpen(false)}
+                    onSave={(data) => {
+                        console.log('Updated data:', data);
+                        setIsEditModalOpen(false);
+                    }}
+                    initialData={mockSupplier}
+                />
+            )}
         </AdminLayout>
     );
 };

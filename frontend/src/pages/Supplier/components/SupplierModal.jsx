@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './SupplierModal.module.css';
 
-const SupplierModal = ({ onClose, onSave }) => {
+const SupplierModal = ({ onClose, onSave, initialData = null }) => {
     const [activeTab, setActiveTab] = useState('bankAccount');
     
     // Form state
@@ -20,6 +20,12 @@ const SupplierModal = ({ onClose, onSave }) => {
         bank_account_number: '',
         bank_beneficiary_name: ''
     });
+
+    useEffect(() => {
+        if (initialData) {
+            setFormData(prev => ({ ...prev, ...initialData }));
+        }
+    }, [initialData]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -52,7 +58,7 @@ const SupplierModal = ({ onClose, onSave }) => {
                 {/* Header */}
                 <div className={styles.header}>
                     <div className={styles.headerTitle}>
-                        Thêm Nhà Cung Cấp
+                        {initialData ? 'Chỉnh sửa Nhà Cung Cấp' : 'Thêm Nhà Cung Cấp'}
                         <div className={styles.radioGroup}>
                             <label className={styles.radioLabel}>
                                 <input 
@@ -271,8 +277,12 @@ const SupplierModal = ({ onClose, onSave }) => {
                         <button className={styles.btnCancel} onClick={onClose}>Hủy</button>
                     </div>
                     <div className={styles.footerRight}>
-                        <button className={styles.btnSaveNext} onClick={handleSave}>Lưu & Thêm tiếp</button>
-                        <button className={styles.btnSave} onClick={handleSave}>Lưu</button>
+                        {!initialData && (
+                            <button className={styles.btnSaveNext} onClick={handleSave}>Lưu & Thêm tiếp</button>
+                        )}
+                        <button className={styles.btnSave} onClick={handleSave}>
+                            {initialData ? 'Cập nhật' : 'Lưu'}
+                        </button>
                     </div>
                 </div>
 
