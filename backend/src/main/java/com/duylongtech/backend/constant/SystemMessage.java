@@ -47,6 +47,14 @@ public enum SystemMessage {
     INV_DIFF_WAREHOUSE_REQUIRED("INV10", "Kho nguồn và kho đích phải khác nhau"),
     INV_STOCKTAKE_ACTIVE("INV11", "Kho đang bị khóa do có phiếu kiểm kê đang xử lý"),
 
+    // Supplier
+    SUPPLIER_NOT_FOUND("SUP01", "Không tìm thấy nhà cung cấp."),
+    SUPPLIER_CODE_EXISTS("SUP02", "Mã nhà cung cấp đã tồn tại trên hệ thống."),
+    SUPPLIER_HAS_TRANSACTIONS("SUP03", "Nhà cung cấp đang có giao dịch liên kết, chỉ có thể vô hiệu hóa (chuyển sang Ngừng hoạt động)."),
+    SUPPLIER_INVALID_TYPE("SUP04", "Loại nhà cung cấp không hợp lệ. Chỉ chấp nhận COMPANY hoặc INDIVIDUAL."),
+    SUPPLIER_INVALID_STATUS("SUP05", "Trạng thái nhà cung cấp không hợp lệ. Chỉ chấp nhận APPROVED hoặc INACTIVE."),
+    SUPPLIER_INVALID_GROUP_TYPE("SUP06", "Nhóm nhà cung cấp không hợp lệ. Chỉ chấp nhận: RETAIL, WHOLESALE, DISTRIBUTOR."),
+
     // BOM & Warranty
     BOM_INSUFFICIENT_COMPONENTS("BOM01", "Không đủ số lượng linh kiện thành phần để lắp ráp"),
     WARR_OUT_OF_WARRANTY("WARR01", "Thiết bị đã hết hạn bảo hành"),
