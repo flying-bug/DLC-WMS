@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SupplierModal from './components/SupplierModal';
+import DeleteSupplierModal from './components/DeleteSupplierModal';
 import styles from './SupplierDetailPage.module.css';
 
 const SupplierDetailPage = () => {
     const navigate = useNavigate();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
     // Dữ liệu mock để test form Edit
     const mockSupplier = {
@@ -49,7 +51,7 @@ const SupplierDetailPage = () => {
                         <button className={styles.btnOutline} onClick={() => setIsEditModalOpen(true)}>
                             <i className="fas fa-pen"></i> Chỉnh sửa
                         </button>
-                        <button className={styles.btnDanger}>
+                        <button className={styles.btnDanger} onClick={() => setIsDeleteModalOpen(true)}>
                             <i className="far fa-trash-alt"></i> Xóa
                         </button>
                     </div>
@@ -200,6 +202,19 @@ const SupplierDetailPage = () => {
                         setIsEditModalOpen(false);
                     }}
                     initialData={mockSupplier}
+                />
+            )}
+
+            {/* Delete Modal */}
+            {isDeleteModalOpen && (
+                <DeleteSupplierModal
+                    supplier={mockSupplier}
+                    onClose={() => setIsDeleteModalOpen(false)}
+                    onDelete={(supplier) => {
+                        console.log('Deleted supplier:', supplier);
+                        setIsDeleteModalOpen(false);
+                        navigate('/suppliers'); // Điều hướng về danh sách sau khi xóa
+                    }}
                 />
             )}
         </AdminLayout>
