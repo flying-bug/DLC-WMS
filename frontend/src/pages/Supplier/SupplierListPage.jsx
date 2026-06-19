@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
+import SupplierModal from './components/SupplierModal';
 import styles from './SupplierListPage.module.css';
 
 const MOCK_SUPPLIERS = [
@@ -25,6 +26,7 @@ const MOCK_SUPPLIERS = [
 const SupplierListPage = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const formatCurrency = (val) => {
         if (!val) return '0';
@@ -42,7 +44,7 @@ const SupplierListPage = () => {
                         </span>
                         <h2>Danh sách nhà cung cấp</h2>
                     </div>
-                    <button className={styles.btnAdd}>
+                    <button className={styles.btnAdd} onClick={() => setIsModalOpen(true)}>
                         <i className="fas fa-plus"></i> Thêm mới
                     </button>
                 </div>
@@ -140,7 +142,13 @@ const SupplierListPage = () => {
                                             <input type="checkbox" />
                                         </td>
                                         <td className={styles.codeCell}>{item.code}</td>
-                                        <td className={styles.nameCell}>{item.name}</td>
+                                        <td 
+                                            className={styles.nameCell} 
+                                            style={{ cursor: 'pointer', color: 'var(--color-primary, #002b6b)' }}
+                                            onClick={() => navigate(`/suppliers/${item.id}`)}
+                                        >
+                                            {item.name}
+                                        </td>
                                         <td>{item.address}</td>
                                         <td style={{ textAlign: 'right' }}>{formatCurrency(item.debt)}</td>
                                         <td>
@@ -183,6 +191,16 @@ const SupplierListPage = () => {
                     </div>
                 </div>
             </div>
+
+            {isModalOpen && (
+                <SupplierModal 
+                    onClose={() => setIsModalOpen(false)} 
+                    onSave={(data) => {
+                        console.log('Saved data:', data);
+                        setIsModalOpen(false);
+                    }} 
+                />
+            )}
         </AdminLayout>
     );
 };
