@@ -4,7 +4,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import SupplierModal from './components/SupplierModal';
 import styles from './SupplierListPage.module.css';
 
-const MOCK_SUPPLIERS = [
+const INITIAL_SUPPLIERS = [
     {
         id: 1,
         code: '0106242834',
@@ -25,6 +25,7 @@ const MOCK_SUPPLIERS = [
 
 const SupplierListPage = () => {
     const navigate = useNavigate();
+    const [suppliers, setSuppliers] = useState(INITIAL_SUPPLIERS);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -136,7 +137,7 @@ const SupplierListPage = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {MOCK_SUPPLIERS.map((item) => (
+                                {suppliers.map((item) => (
                                     <tr key={item.id}>
                                         <td style={{ textAlign: 'center' }}>
                                             <input type="checkbox" />
@@ -169,11 +170,11 @@ const SupplierListPage = () => {
                     {/* Pagination */}
                     <div className={styles.pagination}>
                         <div className={styles.pageInfo}>
-                            Tổng số: {MOCK_SUPPLIERS.length} bản ghi
+                            Tổng số: {suppliers.length} bản ghi
                         </div>
                         <div className={styles.pageControls}>
                             <div className={styles.sizeInfo}>
-                                {MOCK_SUPPLIERS.length} bản ghi trên 1 trang
+                                {suppliers.length} bản ghi trên 1 trang
                                 <i className="fas fa-caret-down" style={{ marginLeft: '4px' }}></i>
                             </div>
                             <div className={styles.pageNav}>
@@ -196,7 +197,15 @@ const SupplierListPage = () => {
                 <SupplierModal 
                     onClose={() => setIsModalOpen(false)} 
                     onSave={(data) => {
-                        console.log('Saved data:', data);
+                        const newSupplier = {
+                            id: Date.now(),
+                            code: data.code || `NCC${Math.floor(Math.random() * 1000)}`,
+                            name: data.name,
+                            address: data.address,
+                            debt: 0,
+                            taxCode: data.tax_code
+                        };
+                        setSuppliers([newSupplier, ...suppliers]);
                         setIsModalOpen(false);
                     }} 
                 />
