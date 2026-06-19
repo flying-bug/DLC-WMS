@@ -11,6 +11,7 @@ export const ROUTES = {
     DASHBOARD: '/dashboard',
     PRODUCTS: '/products',
     SUPPLIERS: '/suppliers',
+    SUPPLIER_DETAIL: '/suppliers/:id',
 };
 
 // ── Password rules ────────────────────────────────────────────

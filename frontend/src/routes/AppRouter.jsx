@@ -16,6 +16,7 @@ import AuditLogPage from '../pages/AuditLog/AuditLogPage';
 import WarehouseListPage from '../pages/Warehouse/WarehouseListPage';
 import WarehouseDetailPage from '../pages/Warehouse/WarehouseDetailPage';
 import SupplierListPage from '../pages/Supplier/SupplierListPage';
+import SupplierDetailPage from '../pages/Supplier/SupplierDetailPage';
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -63,6 +64,7 @@ function AppRouter() {
                     <Route path="/units" element={<UnitPage />} />
                     <Route path="/products" element={<ProductPage />} />
                     <Route path="/suppliers" element={<SupplierListPage />} />
+                    <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
                     <Route path="/warehouses" element={<WarehouseListPage />} />
                     <Route path="/warehouses/:id" element={<WarehouseDetailPage />} />
                 </Route>
