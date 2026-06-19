@@ -369,53 +369,6 @@
     text-transform: uppercase;
 }
 
-/* Location Card */
-.locationCard {
-    background: linear-gradient(135deg, #475569 0%, #1e293b 100%);
-    border-radius: 8px;
-    height: 200px;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: flex-end;
-    padding: 16px;
-}
-
-.locationPin {
-    background-color: white;
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-text-strong, #1e293b);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.locationPin i {
-    color: #ef4444;
-}
-
-.cartIconBtn {
-    position: absolute;
-    right: 16px;
-    bottom: 50%;
-    transform: translateY(50%);
-    width: 48px;
-    height: 48px;
-    background-color: #3b82f6;
-    color: white;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    cursor: pointer;
-}
-
 @media (max-width: 1024px) {
     .contentGrid {
         grid-template-columns: 1fr;

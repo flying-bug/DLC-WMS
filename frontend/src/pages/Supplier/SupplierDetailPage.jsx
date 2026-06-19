@@ -169,22 +169,6 @@ const SupplierDetailPage = () => {
                                 <div className={styles.bankNumber}>0451 000 999 888</div>
                                 <div className={styles.bankHolder}>Chủ TK: CÔNG TY TNHH CONG NGHIEP H VIET NAM</div>
                             </div>
-
-                            <div className={styles.bankAccount}>
-                                <div className={styles.bankName}>BIDV - CHI NHÁNH HÀ ĐÔNG</div>
-                                <div className={styles.bankNumber}>2201 000 123 456</div>
-                                <div className={styles.bankHolder}>Chủ TK: CÔNG TY TNHH CONG NGHIEP H VIET NAM</div>
-                            </div>
-                        </div>
-
-                        {/* Location / Image Placeholder */}
-                        <div className={styles.locationCard}>
-                            <div className={styles.locationPin}>
-                                <i className="fas fa-map-marker-alt"></i> Thạch Thất, Hà Nội
-                            </div>
-                            <div className={styles.cartIconBtn}>
-                                <i className="fas fa-shopping-cart"></i>
-                            </div>
                         </div>
                     </div>
                     
