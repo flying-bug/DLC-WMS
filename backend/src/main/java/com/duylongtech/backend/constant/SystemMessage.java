@@ -59,6 +59,14 @@ public enum SystemMessage {
     BOM_INSUFFICIENT_COMPONENTS("BOM01", "Không đủ số lượng linh kiện thành phần để lắp ráp"),
     WARR_OUT_OF_WARRANTY("WARR01", "Thiết bị đã hết hạn bảo hành"),
 
+    // Brand
+    BRAND_NOT_FOUND("BRD01", "Không tìm thấy thương hiệu / nhà sản xuất."),
+    BRAND_CODE_EXISTS("BRD02", "Mã thương hiệu (Mã NSX) đã tồn tại trên hệ thống."),
+    BRAND_NAME_REQUIRED("BRD03", "Tên thương hiệu không được để trống."),
+    BRAND_HAS_LINKED_PRODUCTS("BRD04", "Không thể xóa thương hiệu này vì đang có dữ liệu sản phẩm/bảo hành liên quan."),
+    BRAND_INVALID_STATUS("BRD05", "Trạng thái thương hiệu không hợp lệ. Chỉ chấp nhận APPROVED hoặc INACTIVE."),
+    BRAND_CODE_NOT_MODIFIABLE("BRD06", "Mã thương hiệu (Mã NSX) không được phép thay đổi sau khi đã tạo."),
+
     // General Errors
     ACCESS_DENIED("SYS403", "Bạn không có quyền thực hiện thao tác này"),
     SESSION_EXPIRED("SYS401", "Phiên đăng nhập đã hết hạn"),
