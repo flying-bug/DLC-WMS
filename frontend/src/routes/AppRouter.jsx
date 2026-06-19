@@ -11,9 +11,12 @@ import CreateEmployeePage from '../pages/CreateEmployee/CreateEmployeePage';
 import PermissionDetailPage from '../pages/Permissions/PermissionDetailPage';
 import ExportSlipPage from '../pages/ExportSlip/ExportSlipPage';
 import ImportHistoryPage from '../pages/ImportHistory/ImportHistoryPage';
+import CreateImportSlipPage from '../pages/CreateImportSlip/CreateImportSlipPage';
+import UpdateImportSlipPage from '../pages/UpdateImportSlip/UpdateImportSlipPage';
 import ProfilePage from '../pages/Profile/ProfilePage';
 import AuditLogPage from '../pages/AuditLog/AuditLogPage';
-
+import WarehouseListPage from '../pages/Warehouse/WarehouseListPage';
+import WarehouseDetailPage from '../pages/Warehouse/WarehouseDetailPage';
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
     const token = localStorage.getItem('token');
@@ -55,10 +58,14 @@ function AppRouter() {
                     <Route path="/change-password" element={<ChangePasswordPage />} />
                     <Route path="/export-slips" element={<ExportSlipPage />} />
                     <Route path="/import-history" element={<ImportHistoryPage />} />
+                    <Route path="/import-history/create" element={<CreateImportSlipPage />} />
+                    <Route path="/import-slips/:id/edit" element={<UpdateImportSlipPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/units" element={<UnitPage />} />
                     <Route path="/products" element={<ProductPage />} />
+                    <Route path="/warehouses" element={<WarehouseListPage />} />
+                    <Route path="/warehouses/:id" element={<WarehouseDetailPage />} />
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}

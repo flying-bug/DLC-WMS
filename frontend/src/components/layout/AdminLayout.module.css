@@ -145,20 +145,20 @@
 }
 
 .tab {
-    padding: 0 18px;
+    padding: 0 12px;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 500;
+    font-size: 0.85rem;
     color: var(--color-text-muted);
     border: 0;
     border-bottom: 3px solid transparent;
     background: transparent;
     transition: all 0.2s ease;
     white-space: nowrap;
-    font: inherit;
 }
 
 .tab:hover {

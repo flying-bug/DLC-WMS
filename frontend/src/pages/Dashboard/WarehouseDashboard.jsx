@@ -15,7 +15,7 @@ function WarehouseDashboard() {
     ];
 
     const toolbarItems = [
-        { label: 'Kho', icon: 'fas fa-warehouse' },
+        { label: 'Kho', icon: 'fas fa-warehouse', action: () => navigate('/warehouses') },
         { label: 'Vật tư hàng hóa', icon: 'fas fa-box', action: () => navigate('/products') },
         { label: 'Đơn vị tính', icon: 'fas fa-balance-scale', action: () => navigate('/units') },
         { label: 'Tiện ích', icon: 'fas fa-cog' },

@@ -4,6 +4,8 @@ import com.duylongtech.backend.entity.AuditLog;
 import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.repository.AuditLogRepository;
 import com.duylongtech.backend.repository.UserRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -14,7 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -29,11 +35,23 @@ public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @Transactional(readOnly = true)
-    public Page<AuditLog> getAuditLogs(String searchTerm, int page, int size) {
+    public Page<AuditLog> getAuditLogs(String searchTerm, String module, Instant fromDate, Instant toDate, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return auditLogRepository.searchLogs(searchTerm, pageable);
+        return auditLogRepository.searchLogs(searchTerm, module, fromDate, toDate, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<AuditLog> getAuditLogById(Long id) {
+        return auditLogRepository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AuditLog> getLogsForEntity(String entityName, Long entityId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size); // Repository method already has OrderByCreatedAtDesc in name if we rely on method name, but let's be safe
+        return auditLogRepository.findByEntityNameAndEntityIdOrderByCreatedAtDesc(entityName, entityId, pageable);
     }
 
     @Transactional
@@ -91,6 +109,77 @@ public class AuditLogService {
         }
 
         return normalized;
+    }
+
+    public String buildChangeDetail(Object before, Object after, String note) {
+        Map<String, Object> beforeMap = toDetailMap(before);
+        Map<String, Object> afterMap = toDetailMap(after);
+        List<Map<String, Object>> changes = buildChanges(beforeMap, afterMap);
+
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("before", beforeMap);
+        detail.put("after", afterMap);
+        detail.put("changes", changes);
+        detail.put("changeCount", changes.size());
+        if (note != null && !note.trim().isEmpty()) {
+            detail.put("note", note);
+        }
+
+        try {
+            return objectMapper.writeValueAsString(detail);
+        } catch (Exception e) {
+            log.warn("Failed to serialize audit detail", e);
+            return null;
+        }
+    }
+
+    public Map<String, Object> parseDetail(String detailJson) {
+        if (detailJson == null || detailJson.trim().isEmpty()) {
+            return null;
+        }
+
+        try {
+            return objectMapper.readValue(detailJson, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            log.warn("Failed to parse audit detail for response", e);
+            return null;
+        }
+    }
+
+    private Map<String, Object> toDetailMap(Object value) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        if (value == null) {
+            return map;
+        }
+
+        Map<String, Object> raw = objectMapper.convertValue(value, new TypeReference<Map<String, Object>>() {});
+        raw.forEach((key, fieldValue) -> {
+            if (!"createdAt".equals(key) && !"updatedAt".equals(key) && fieldValue != null) {
+                map.put(key, fieldValue);
+            }
+        });
+        return map;
+    }
+
+    private List<Map<String, Object>> buildChanges(Map<String, Object> before, Map<String, Object> after) {
+        List<Map<String, Object>> changes = new ArrayList<>();
+        Map<String, Object> fields = new LinkedHashMap<>();
+        fields.putAll(before);
+        fields.putAll(after);
+
+        for (String field : fields.keySet()) {
+            Object beforeValue = before.get(field);
+            Object afterValue = after.get(field);
+            if (!java.util.Objects.equals(beforeValue, afterValue)) {
+                Map<String, Object> change = new LinkedHashMap<>();
+                change.put("field", field);
+                change.put("before", beforeValue);
+                change.put("after", afterValue);
+                changes.add(change);
+            }
+        }
+
+        return changes;
     }
 
     private String extractAuditPrefix(String description) {
