@@ -1,0 +1,190 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import AdminLayout from '../../components/layout/AdminLayout';
+import styles from './SupplierListPage.module.css';
+
+const MOCK_SUPPLIERS = [
+    {
+        id: 1,
+        code: '0106242834',
+        name: 'CÔNG TY TNHH CÔNG NGHIỆP H VIỆT NAM',
+        address: 'Đội 3, thôn Hoàng Xá, Xã Thạch Thất, TP',
+        debt: 0,
+        taxCode: '0106242834'
+    },
+    {
+        id: 2,
+        code: 'NCC00001',
+        name: 'QuyMC',
+        address: 'Hải Lựu Phú Thọ',
+        debt: 0,
+        taxCode: null
+    }
+];
+
+const SupplierListPage = () => {
+    const navigate = useNavigate();
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const formatCurrency = (val) => {
+        if (!val) return '0';
+        return new Intl.NumberFormat('vi-VN').format(val);
+    };
+
+    return (
+        <AdminLayout>
+            <div className={styles.container}>
+                {/* Header */}
+                <div className={styles.header}>
+                    <div className={styles.titleArea}>
+                        <span className={styles.backLink} onClick={() => navigate('/dashboard')}>
+                            <i className="fas fa-chevron-left"></i> Tất cả danh mục
+                        </span>
+                        <h2>Danh sách nhà cung cấp</h2>
+                    </div>
+                    <button className={styles.btnAdd}>
+                        <i className="fas fa-plus"></i> Thêm mới
+                    </button>
+                </div>
+
+                {/* KPIs Cards */}
+                <div className={styles.kpiContainer}>
+                    <div className={`${styles.kpiCard} ${styles.kpiDanger}`}>
+                        <div className={styles.kpiHeader}>
+                            <div className={styles.kpiLabel}>NỢ QUÁ HẠN</div>
+                            <div className={styles.kpiIcon}>
+                                <i className="fas fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        <div className={styles.kpiNumber}>0</div>
+                        <div className={styles.kpiSubtext}>Số liệu tính đến: 16h18</div>
+                        <div style={{ position: 'absolute', bottom: 0, left: '16px', right: '16px', height: '3px', backgroundColor: 'var(--color-danger-bg-soft)', borderRadius: '2px' }}></div>
+                    </div>
+
+                    <div className={`${styles.kpiCard} ${styles.kpiPrimary}`}>
+                        <div className={styles.kpiHeader}>
+                            <div className={styles.kpiLabel}>TỔNG NỢ PHẢI TRẢ</div>
+                            <div className={styles.kpiIcon}>
+                                <i className="fas fa-wallet"></i>
+                            </div>
+                        </div>
+                        <div className={styles.kpiNumber}>0</div>
+                        <div className={styles.kpiSubtext}>Số liệu tính đến: 16h18</div>
+                        <div style={{ position: 'absolute', bottom: 0, left: '16px', right: '16px', height: '3px', backgroundColor: 'var(--color-bg-soft)', borderRadius: '2px' }}></div>
+                    </div>
+
+                    <div className={`${styles.kpiCard} ${styles.kpiSuccess}`}>
+                        <div className={styles.kpiHeader}>
+                            <div className={styles.kpiLabel}>ĐÃ THANH TOÁN (30 NGÀY)</div>
+                            <div className={styles.kpiIcon}>
+                                <i className="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        <div className={styles.kpiNumber}>0</div>
+                        <div className={styles.kpiSubtext}>Số liệu tính đến: 16h18</div>
+                        <div style={{ position: 'absolute', bottom: 0, left: '16px', right: '16px', height: '3px', backgroundColor: 'var(--color-bg-soft)', borderRadius: '2px' }}></div>
+                    </div>
+                </div>
+
+                {/* Table Section */}
+                <div className={styles.tableCard}>
+                    {/* Toolbar */}
+                    <div className={styles.tableToolbar}>
+                        <div className={styles.toolbarLeft}>
+                            <button className={styles.filterBtn}>
+                                <i className="fas fa-filter"></i> Lọc
+                            </button>
+                            <div className={styles.searchBox}>
+                                <i className="fas fa-search"></i>
+                                <input 
+                                    type="text" 
+                                    placeholder="Tìm tên hoặc mã NCC..." 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <div className={styles.toolbarRight}>
+                            <button className={styles.iconBtn} title="Tải lại">
+                                <i className="fas fa-sync-alt"></i>
+                            </button>
+                            <button className={styles.iconBtn} title="Xuất Excel">
+                                <i className="fas fa-file-excel"></i>
+                            </button>
+                            <button className={styles.iconBtn} title="Thiết lập">
+                                <i className="fas fa-cog"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Data Table */}
+                    <div className={styles.tableWrapper}>
+                        <table className={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th style={{ width: '40px', textAlign: 'center' }}>
+                                        <input type="checkbox" />
+                                    </th>
+                                    <th>MÃ NHÀ CUNG CẤP</th>
+                                    <th>TÊN NHÀ CUNG CẤP</th>
+                                    <th>ĐỊA CHỈ</th>
+                                    <th style={{ textAlign: 'right' }}>SỐ TIỀN NỢ</th>
+                                    <th>MÃ SỐ THUẾ</th>
+                                    <th style={{ textAlign: 'center' }}>CHỨC NĂNG</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {MOCK_SUPPLIERS.map((item) => (
+                                    <tr key={item.id}>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <input type="checkbox" />
+                                        </td>
+                                        <td className={styles.codeCell}>{item.code}</td>
+                                        <td className={styles.nameCell}>{item.name}</td>
+                                        <td>{item.address}</td>
+                                        <td style={{ textAlign: 'right' }}>{formatCurrency(item.debt)}</td>
+                                        <td>
+                                            {item.taxCode ? item.taxCode : <span className={styles.lightText}>Chưa cập nhật</span>}
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <button className={styles.actionBtn} style={{ margin: '0 auto' }}>
+                                                Lập CT mua hàng
+                                                <i className="fas fa-caret-down"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Pagination */}
+                    <div className={styles.pagination}>
+                        <div className={styles.pageInfo}>
+                            Tổng số: {MOCK_SUPPLIERS.length} bản ghi
+                        </div>
+                        <div className={styles.pageControls}>
+                            <div className={styles.sizeInfo}>
+                                {MOCK_SUPPLIERS.length} bản ghi trên 1 trang
+                                <i className="fas fa-caret-down" style={{ marginLeft: '4px' }}></i>
+                            </div>
+                            <div className={styles.pageNav}>
+                                <button className={styles.pageNavBtn}>
+                                    <i className="fas fa-chevron-left"></i>
+                                </button>
+                                <button className={`${styles.pageBtn} ${styles.active}`}>
+                                    1
+                                </button>
+                                <button className={styles.pageNavBtn}>
+                                    <i className="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </AdminLayout>
+    );
+};
+
+export default SupplierListPage;
