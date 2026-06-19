@@ -2,7 +2,7 @@ import { useState } from 'react';
 import styles from './SupplierModal.module.css';
 
 const SupplierModal = ({ onClose, onSave }) => {
-    const [activeTab, setActiveTab] = useState('paymentTerms');
+    const [activeTab, setActiveTab] = useState('bankAccount');
     
     // Form state
     const [formData, setFormData] = useState({
@@ -185,48 +185,21 @@ const SupplierModal = ({ onClose, onSave }) => {
                     {/* Tabs */}
                     <div className={styles.tabs}>
                         <button 
-                            className={`${styles.tab} ${activeTab === 'paymentTerms' ? styles.tabActive : ''}`}
-                            onClick={() => setActiveTab('paymentTerms')}
-                        >
-                            Điều khoản thanh toán
-                        </button>
-                        <button 
                             className={`${styles.tab} ${activeTab === 'bankAccount' ? styles.tabActive : ''}`}
                             onClick={() => setActiveTab('bankAccount')}
                         >
                             Tài khoản ngân hàng
                         </button>
+                        <button 
+                            className={`${styles.tab} ${activeTab === 'paymentTerms' ? styles.tabActive : ''}`}
+                            onClick={() => setActiveTab('paymentTerms')}
+                        >
+                            Điều khoản thanh toán
+                        </button>
                     </div>
 
                     {/* Tab Content */}
                     <div className={styles.tabContent}>
-                        {activeTab === 'paymentTerms' && (
-                            <div className={styles.formGrid} style={{ marginBottom: 0 }}>
-                                <div className={`${styles.formGroup} ${styles.col6}`}>
-                                    <label className={styles.formLabel}>Hạn mức nợ (VNĐ)</label>
-                                    <input 
-                                        type="number" 
-                                        className={styles.input} 
-                                        name="credit_limit"
-                                        value={formData.credit_limit}
-                                        onChange={handleChange}
-                                        placeholder="0" 
-                                    />
-                                </div>
-                                <div className={`${styles.formGroup} ${styles.col6}`}>
-                                    <label className={styles.formLabel}>Thời hạn thanh toán (Số ngày)</label>
-                                    <input 
-                                        type="number" 
-                                        className={styles.input} 
-                                        name="payment_term_days"
-                                        value={formData.payment_term_days}
-                                        onChange={handleChange}
-                                        placeholder="0" 
-                                    />
-                                </div>
-                            </div>
-                        )}
-
                         {activeTab === 'bankAccount' && (
                             <div className={styles.formGrid} style={{ marginBottom: 0 }}>
                                 <div className={`${styles.formGroup} ${styles.col12}`}>
@@ -258,6 +231,33 @@ const SupplierModal = ({ onClose, onSave }) => {
                                         name="bank_beneficiary_name"
                                         value={formData.bank_beneficiary_name}
                                         onChange={handleChange}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'paymentTerms' && (
+                            <div className={styles.formGrid} style={{ marginBottom: 0 }}>
+                                <div className={`${styles.formGroup} ${styles.col6}`}>
+                                    <label className={styles.formLabel}>Hạn mức nợ (VNĐ)</label>
+                                    <input 
+                                        type="number" 
+                                        className={styles.input} 
+                                        name="credit_limit"
+                                        value={formData.credit_limit}
+                                        onChange={handleChange}
+                                        placeholder="0" 
+                                    />
+                                </div>
+                                <div className={`${styles.formGroup} ${styles.col6}`}>
+                                    <label className={styles.formLabel}>Thời hạn thanh toán (Số ngày)</label>
+                                    <input 
+                                        type="number" 
+                                        className={styles.input} 
+                                        name="payment_term_days"
+                                        value={formData.payment_term_days}
+                                        onChange={handleChange}
+                                        placeholder="0" 
                                     />
                                 </div>
                             </div>
