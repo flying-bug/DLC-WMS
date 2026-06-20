@@ -1,0 +1,202 @@
+/* WarehouseFormModal styles – matches UnitPage modal pattern */
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+}
+
+.modalHeader h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #334155;
+}
+
+.modalIcons {
+    display: flex;
+    gap: 15px;
+    font-size: 1.2rem;
+    color: #64748b;
+}
+
+.modalIcons i {
+    cursor: pointer;
+}
+
+.modalIcons i:hover {
+    color: #0f172a;
+}
+
+.modalBody {
+    padding: 20px;
+    max-height: 65vh;
+    overflow-y: auto;
+}
+
+.errorAlert {
+    color: #ef4444;
+    background-color: #fef2f2;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+}
+
+.formGroup {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.formGroup label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.required {
+    color: #ef4444;
+}
+
+.inputField, .textareaField {
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    outline: none;
+    font-family: inherit;
+}
+
+.inputField:focus, .textareaField:focus {
+    border-color: #0ea5e9;
+}
+
+.inputField:disabled {
+    background-color: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.textareaField {
+    resize: vertical;
+}
+
+.addressField {
+    position: relative;
+}
+
+.addressField .textareaField {
+    width: 100%;
+}
+
+.suggestionList {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    z-index: 20;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.14);
+}
+
+.suggestionItem {
+    width: 100%;
+    border: 0;
+    background: #ffffff;
+    color: #0f172a;
+    cursor: pointer;
+    display: block;
+    font: inherit;
+    padding: 10px 12px;
+    text-align: left;
+}
+
+.suggestionItem:hover {
+    background: #f1f5f9;
+}
+
+.suggestionMeta {
+    color: #64748b;
+    font-size: 0.85rem;
+    padding: 10px 12px;
+}
+
+.hint {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.modalFooter {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 20px;
+    background-color: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+.btnCancel {
+    background-color: white;
+    border: 1px solid #cbd5e1;
+    padding: 8px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btnCancel:hover {
+    background-color: #f1f5f9;
+}
+
+.btnCancel:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.rightButtons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.btnSave {
+    background-color: white;
+    border: 1px solid #cbd5e1;
+    padding: 8px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btnSave:hover {
+    background-color: #f1f5f9;
+}
+
+.btnSave:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btnSaveAndAdd {
+    background-color: #0ea5e9;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btnSaveAndAdd:hover {
+    background-color: #0284c7;
+}
+
+.btnSaveAndAdd:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
