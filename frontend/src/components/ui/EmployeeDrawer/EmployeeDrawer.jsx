@@ -369,7 +369,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     {isEditMode ? (
                         <>
                             <button className={styles.btnCancel} onClick={handleCancel}>Hủy</button>
-                            <button className={styles.btnSave} onClick={handleInitialSave}>Lưu thay đổi</button>
+                            <button className={styles.btnSave} onClick={handleInitialSave} disabled={saving}>Lưu thay đổi</button>
                         </>
                     ) : (
                         <button className={styles.btnCancel} onClick={() => setIsEditMode(true)}>Chỉnh sửa</button>
@@ -392,7 +392,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                         </p>
                         <div className={styles.modalActions}>
                             <button className={styles.btnCancel} onClick={() => setShowConfirmModal(false)}>Hủy</button>
-                            <button className={`${styles.btnSave} ${styles.btnDanger}`} onClick={handleConfirmAdmin}>Xác nhận cấp quyền</button>
+                            <button className={`${styles.btnSave} ${styles.btnDanger}`} onClick={handleConfirmAdmin} disabled={saving}>Xác nhận cấp quyền</button>
                         </div>
                     </div>
                 ) : (
@@ -408,7 +408,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                         </p>
                         <div className={styles.modalActions}>
                             <button className={styles.btnCancel} onClick={() => setShowConfirmModal(false)}>Hủy</button>
-                            <button className={styles.btnSave} onClick={handleConfirmUser}>Tiếp tục</button>
+                            <button className={styles.btnSave} onClick={handleConfirmUser} disabled={saving}>Tiếp tục</button>
                         </div>
                     </div>
                 )}

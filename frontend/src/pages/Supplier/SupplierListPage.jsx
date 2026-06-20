@@ -28,7 +28,11 @@ const SupplierListPage = () => {
     };
 
     useEffect(() => {
-        fetchSuppliers();
+        const timer = setTimeout(() => {
+            fetchSuppliers();
+        }, 0);
+
+        return () => clearTimeout(timer);
     }, []);
 
     const formatCurrency = (val) => {
