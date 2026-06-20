@@ -32,10 +32,10 @@ class WarehouseServiceTest {
 
     @Mock
     private WarehouseRepository warehouseRepository;
-
+    
     @Mock
     private UserWarehouseRoleRepository userWarehouseRoleRepository;
-
+    
     @Mock
     private InventoryBalanceRepository inventoryBalanceRepository;
 
@@ -80,7 +80,7 @@ class WarehouseServiceTest {
     void createWarehouse_FailCodeExists() {
         when(warehouseRepository.existsByCodeIgnoreCase("WH-01")).thenReturn(true);
 
-        BusinessException ex = assertThrows(BusinessException.class,
+        BusinessException ex = assertThrows(BusinessException.class, 
                 () -> warehouseService.createWarehouse(mockRequest, 99L));
         assertEquals(SystemMessage.WH_CODE_EXISTS.getMessage(), ex.getMessage());
     }

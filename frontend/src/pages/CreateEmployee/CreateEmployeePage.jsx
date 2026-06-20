@@ -6,6 +6,8 @@ import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserPro
 
 function CreateEmployeePage() {
     const navigate = useNavigate();
+    const [submitError, setSubmitError] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({
         username: '',
         fullName: '',
@@ -31,23 +33,44 @@ function CreateEmployeePage() {
 
     const handleSave = async (e) => {
         if (e) e.preventDefault();
+        setSubmitError('');
         
         if (!formData.username.trim()) {
-            alert('Vui lòng nhập Tên đăng nhập (Username)');
+            setSubmitError('Vui lòng nhập Tên đăng nhập (Username).');
             return;
         }
         if (!formData.fullName.trim()) {
-            alert('Vui lòng nhập Họ và tên');
+            setSubmitError('Vui lòng nhập Họ và tên.');
+            return;
+        }
+        if (!formData.phone.trim()) {
+            setSubmitError('Vui lòng nhập Số điện thoại.');
+            return;
+        }
+        if (!formData.email.trim()) {
+            setSubmitError('Vui lòng nhập Địa chỉ Email.');
+            return;
+        }
+        if (!formData.idCard.trim()) {
+            setSubmitError('Vui lòng nhập Số CCCD.');
             return;
         }
 
         try {
+            setIsSaving(true);
             const roles = formData.isAdmin ? ['SUPER_ADMIN'] : ['STAFF'];
             const payload = {
                 username: formData.username.trim(),
                 fullName: formData.fullName.trim(),
                 email: formData.email.trim(),
-                phone: formData.phone.trim(),
+                phone: formData.phone.replace(/[\s.-]/g, ''),
+                idCard: formData.idCard.trim(),
+                dob: formData.dob || null,
+                startDate: formData.startDate || null,
+                gender: formData.gender,
+                position: formData.position,
+                department: formData.department,
+                address: formData.address.trim(),
                 status: 'APPROVED',
                 roles: roles
             };
@@ -56,7 +79,14 @@ function CreateEmployeePage() {
             navigate('/users');
         } catch (error) {
             console.error('Lỗi khi lưu nhân viên:', error);
-            alert(error.response?.data?.message || 'Có lỗi xảy ra khi tạo tài khoản nhân viên.');
+            setSubmitError(
+                error.response?.data?.userMessage ||
+                error.response?.data?.message ||
+                error.response?.data?.devMessage ||
+                'Có lỗi xảy ra khi tạo tài khoản nhân viên.'
+            );
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -103,6 +133,13 @@ function CreateEmployeePage() {
                     <p className={styles.pageSubtitle}>Vui lòng hoàn thành biểu mẫu dưới đây để tạo hồ sơ nhân viên mới trong hệ thống.</p>
                 </div>
 
+                {submitError && (
+                    <div className={styles.errorBanner} role="alert">
+                        <i className="bi bi-exclamation-triangle"></i>
+                        <span>{submitError}</span>
+                    </div>
+                )}
+
                 <form className={styles.formContainer} onSubmit={handleSave}>
                     {/* Card 1: Personal Info */}
                     <div className={styles.card}>
@@ -141,7 +178,7 @@ function CreateEmployeePage() {
                             </div>
                             
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Số điện thoại</label>
+                                <label className={styles.label}>Số điện thoại <span className={styles.required}>*</span></label>
                                 <div className={styles.inputWrapper}>
                                     <i className={`bi bi-telephone ${styles.inputIcon}`}></i>
                                     <input 
@@ -155,7 +192,7 @@ function CreateEmployeePage() {
                                 </div>
                             </div>
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Địa chỉ Email</label>
+                                <label className={styles.label}>Địa chỉ Email <span className={styles.required}>*</span></label>
                                 <div className={styles.inputWrapper}>
                                     <i className={`bi bi-envelope ${styles.inputIcon}`}></i>
                                     <input 
@@ -312,8 +349,8 @@ function CreateEmployeePage() {
                     <button type="button" className={styles.btnCancel} onClick={() => navigate('/users')}>
                         Hủy bỏ
                     </button>
-                    <button type="button" className={styles.btnSave} onClick={handleSave}>
-                        <i className="bi bi-save"></i> Lưu người dùng
+                    <button type="button" className={styles.btnSave} onClick={handleSave} disabled={isSaving}>
+                        <i className="bi bi-save"></i> {isSaving ? 'Đang lưu...' : 'Lưu người dùng'}
                     </button>
                 </div>
             </div>

@@ -233,7 +233,7 @@ public class WarehouseService {
                 if ("STANDARD".equals(wh.getType())) typeStr = "Kho tiêu chuẩn";
                 else if (wh.getType() != null) typeStr = wh.getType();
                 row.createCell(4).setCellValue(typeStr);
-
+                
                 String statusStr = "Khác";
                 if ("APPROVED".equals(wh.getStatus())) statusStr = "Đang hoạt động";
                 else if ("INACTIVE".equals(wh.getStatus())) statusStr = "Ngừng hoạt động";

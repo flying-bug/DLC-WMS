@@ -13,14 +13,14 @@ const SuperAdminLayout = ({ children }) => {
                 <div className={styles.headerLeft}>
                     <div className={styles.brandName}>Duy Long Computer</div>
                     <nav className={styles.navLinks}>
-                        <a
-                            onClick={() => navigate('/users')}
+                        <a 
+                            onClick={() => navigate('/users')} 
                             className={currentPath.startsWith('/users') ? styles.navLinkActive : styles.navLink}
                         >
                             Quản lý người dùng
                         </a>
-                        <a
-                            onClick={() => navigate('/audit-log')}
+                        <a 
+                            onClick={() => navigate('/audit-log')} 
                             className={currentPath.startsWith('/audit-log') ? styles.navLinkActive : styles.navLink}
                         >
                             Nhật ký hệ thống

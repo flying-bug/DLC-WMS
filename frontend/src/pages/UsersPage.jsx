@@ -47,7 +47,7 @@ function UsersPage() {
             name: u.fullName,
             initials,
             avatarColorClass,
-            code: u.username,
+            code: u.userCode || '(Chưa cấp)',
             department,
             departmentShort,
             position,
@@ -58,12 +58,12 @@ function UsersPage() {
             status: u.status,
             statusLabel: u.status === 'APPROVED' ? 'Đang hoạt động' : 'Đã khóa',
             statusClass: u.status === 'APPROVED' ? styles.statusActive : styles.statusInactive,
-            dob: '1995-05-15',
-            gender: 'Nam',
-            address: 'Hà Nội, Việt Nam',
-            idCard: '012345678901',
-            startDate: '2024-02-01',
-            contractType: 'Chính thức',
+            dob: u.dob || 'Chưa cập nhật',
+            gender: u.gender || 'Chưa cập nhật',
+            address: u.address || 'Chưa cập nhật',
+            idCard: u.idCard || 'Chưa cập nhật',
+            startDate: u.startDate || 'Chưa cập nhật',
+            contractType: u.contractType || 'Chưa cập nhật',
             systemRole,
             roles: u.roles || []
         };
@@ -153,15 +153,16 @@ function UsersPage() {
             await axiosClient.put(`/users/${updatedData.id}`, {
                 fullName: updatedData.name,
                 email: updatedData.email,
-                phone: updatedData.phone,
+                phone: (updatedData.phone || '').replace(/[\s.-]/g, ''),
                 roles: [targetRoleCode]
             });
 
-            fetchUsers();
+            await fetchUsers();
             setIsDrawerOpen(false);
         } catch (error) {
             console.error('Lỗi lưu thông tin nhân viên:', error);
             alert('Có lỗi xảy ra khi cập nhật thông tin nhân viên.');
+            throw error;
         }
     };
 
@@ -261,7 +262,7 @@ function UsersPage() {
                                 <th>MÃ NHÂN VIÊN</th>
                                 <th>BỘ PHẬN</th>
                                 <th>VAI TRÒ</th>
-                                <th>EMAIL</th>
+
                                 <th>TRẠNG THÁI</th>
                                 <th>THAO TÁC</th>
                             </tr>
@@ -283,7 +284,7 @@ function UsersPage() {
                                         <td>{user.code}</td>
                                         <td>{user.departmentShort}</td>
                                         <td><span className={`${styles.roleBadge} ${user.roleClass}`}>{user.roleBadge}</span></td>
-                                        <td>{user.email}</td>
+
                                         <td><span className={`${styles.statusBadge} ${user.statusClass}`}><i className="bi bi-circle-fill"></i> {user.statusLabel}</span></td>
                                         <td className={styles.actionCell}>
                                             <button

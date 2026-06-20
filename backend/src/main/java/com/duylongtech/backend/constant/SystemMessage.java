@@ -13,7 +13,7 @@ public enum SystemMessage {
     INVALID_EMAIL("MSG06", "Email không đúng định dạng."),
     INVALID_PHONE("MSG07", "Số điện thoại không hợp lệ (phải đúng mạng viễn thông Việt Nam)."),
     EXCEED_MAX_LENGTH("MSG08", "Độ dài dữ liệu vượt quá giới hạn cho phép."),
-
+    
     // Auth & User
     LOGIN_FAILED("AUTH01", "Tài khoản hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại."),
     USER_NOT_FOUND("AUTH02", "Không tìm thấy tài khoản trong hệ thống."),
@@ -26,6 +26,9 @@ public enum SystemMessage {
 
     INVALID_USER_STATUS("AUTH09", "Trạng thái tài khoản không hợp lệ."),
     CANNOT_LOCK_SELF("AUTH10", "Không thể tự khóa tài khoản đang đăng nhập."),
+    USERNAME_EXISTS("AUTH11", "Tên đăng nhập đã tồn tại. Vui lòng chọn tên đăng nhập khác."),
+    EMAIL_EXISTS("AUTH12", "Email đã tồn tại. Vui lòng sử dụng email khác."),
+    PHONE_EXISTS("AUTH13", "Số điện thoại đã được đăng ký cho tài khoản khác. Vui lòng sử dụng số điện thoại khác."),
 
     // Unit & Product
     UNIT_NOT_FOUND("UNIT01", "Không tìm thấy đơn vị tính."),
@@ -46,6 +49,14 @@ public enum SystemMessage {
     INV_SERIAL_MISSING("INV09", "Bắt buộc phải nhập danh sách Serial cho sản phẩm này"),
     INV_DIFF_WAREHOUSE_REQUIRED("INV10", "Kho nguồn và kho đích phải khác nhau"),
     INV_STOCKTAKE_ACTIVE("INV11", "Kho đang bị khóa do có phiếu kiểm kê đang xử lý"),
+
+    // Supplier
+    SUPPLIER_NOT_FOUND("SUP01", "Không tìm thấy nhà cung cấp."),
+    SUPPLIER_CODE_EXISTS("SUP02", "Mã nhà cung cấp đã tồn tại trên hệ thống."),
+    SUPPLIER_HAS_TRANSACTIONS("SUP03", "Nhà cung cấp đang có giao dịch liên kết, chỉ có thể vô hiệu hóa (chuyển sang Ngừng hoạt động)."),
+    SUPPLIER_INVALID_TYPE("SUP04", "Loại nhà cung cấp không hợp lệ. Chỉ chấp nhận COMPANY hoặc INDIVIDUAL."),
+    SUPPLIER_INVALID_STATUS("SUP05", "Trạng thái nhà cung cấp không hợp lệ. Chỉ chấp nhận APPROVED hoặc INACTIVE."),
+    SUPPLIER_INVALID_GROUP_TYPE("SUP06", "Nhóm nhà cung cấp không hợp lệ. Chỉ chấp nhận: RETAIL, WHOLESALE, DISTRIBUTOR."),
 
     // BOM & Warranty
     BOM_INSUFFICIENT_COMPONENTS("BOM01", "Không đủ số lượng linh kiện thành phần để lắp ráp"),

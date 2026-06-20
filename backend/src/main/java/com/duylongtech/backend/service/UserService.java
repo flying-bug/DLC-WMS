@@ -6,6 +6,7 @@ import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.repository.UserRepository;
 import com.duylongtech.backend.security.UserDetailsImpl;
 import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.constant.AppConstants;
 import com.duylongtech.backend.constant.SystemMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -90,6 +91,12 @@ public class UserService {
                 .phone(user.getPhone())
                 .address(user.getAddress())
                 .avatarUrl(user.getAvatarUrl())
+                .idCard(user.getIdCard())
+                .dob(user.getDob())
+                .gender(user.getGender())
+                .startDate(user.getStartDate())
+                .position(user.getPosition())
+                .department(user.getDepartment())
                 .isActive(isActive)
                 .roles(roleDtos)
                 .createdAt(user.getCreatedAt())
@@ -103,13 +110,34 @@ public class UserService {
     }
 
     public UserDto createUser(UserDto userDto) {
+        String username = userDto.getUsername().trim();
+        String email = userDto.getEmail().trim();
+        String phone = normalizePhone(userDto.getPhone());
+
+        if (userRepository.existsByUsername(username)) {
+            throw new BusinessException(SystemMessage.USERNAME_EXISTS);
+        }
+        if (userRepository.existsByEmail(email)) {
+            throw new BusinessException(SystemMessage.EMAIL_EXISTS);
+        }
+        if (phone != null && !phone.isEmpty() && userRepository.existsByPhone(phone)) {
+            throw new BusinessException(SystemMessage.PHONE_EXISTS);
+        }
+
         User user = new User();
-        user.setUsername(userDto.getUsername());
-        user.setFullName(userDto.getFullName());
-        user.setEmail(userDto.getEmail());
-        user.setPhone(userDto.getPhone());
+        user.setUsername(username);
+        user.setFullName(userDto.getFullName().trim());
+        user.setEmail(email);
+        user.setPhone(phone);
         user.setStatus("APPROVED");
         user.setPasswordHash(passwordEncoder.encode("123456")); // Default password
+        user.setIdCard(userDto.getIdCard());
+        user.setDob(userDto.getDob());
+        user.setGender(userDto.getGender());
+        user.setStartDate(userDto.getStartDate());
+        user.setPosition(userDto.getPosition());
+        user.setDepartment(userDto.getDepartment());
+        user.setAddress(userDto.getAddress());
 
         Set<RoleEntity> roles = new HashSet<>();
         if (userDto.getRoles() != null && !userDto.getRoles().isEmpty()) {
@@ -167,9 +195,50 @@ public class UserService {
 
     public UserDto updateUser(Long id, UserDto userDto) {
         User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
-        user.setFullName(userDto.getFullName());
-        user.setEmail(userDto.getEmail());
-        user.setPhone(userDto.getPhone());
+        if (userDto.getFullName() != null) {
+            String fullName = userDto.getFullName().trim();
+            if (fullName.isEmpty()) {
+                throw new BusinessException(SystemMessage.FIELD_REQUIRED);
+            }
+            user.setFullName(fullName);
+        }
+
+        if (userDto.getEmail() != null) {
+            String email = userDto.getEmail().trim();
+            if (email.isEmpty()) {
+                throw new BusinessException(SystemMessage.FIELD_REQUIRED);
+            }
+            if (!isValidEmail(email)) {
+                throw new BusinessException(SystemMessage.INVALID_EMAIL);
+            }
+            if (!email.equalsIgnoreCase(user.getEmail()) && userRepository.existsByEmailAndIdNot(email, id)) {
+                throw new BusinessException(SystemMessage.EMAIL_EXISTS);
+            }
+            user.setEmail(email);
+        }
+
+        if (userDto.getPhone() != null) {
+            String phone = normalizePhone(userDto.getPhone());
+            if (phone.isEmpty()) {
+                throw new BusinessException(SystemMessage.FIELD_REQUIRED);
+            }
+            if (!phone.matches(AppConstants.MOBILE_REGEX)) {
+                throw new BusinessException(SystemMessage.INVALID_PHONE);
+            }
+            if (!phone.equals(user.getPhone()) && userRepository.existsByPhoneAndIdNot(phone, id)) {
+                throw new BusinessException(SystemMessage.PHONE_EXISTS);
+            }
+            user.setPhone(phone);
+        }
+
+        if (userDto.getStatus() != null) {
+            String normalizedStatus = userDto.getStatus().trim().toUpperCase();
+            if (!Set.of("APPROVED", "INACTIVE").contains(normalizedStatus)) {
+                throw new BusinessException(SystemMessage.INVALID_USER_STATUS);
+            }
+            user.setStatus(normalizedStatus);
+        }
+
         if (userDto.getRoles() != null) {
             Set<RoleEntity> roles = new HashSet<>();
             userDto.getRoles().forEach(roleCode -> {
@@ -177,8 +246,23 @@ public class UserService {
             });
             user.setRoles(roles);
         }
+        if (userDto.getIdCard() != null) user.setIdCard(userDto.getIdCard());
+        if (userDto.getDob() != null) user.setDob(userDto.getDob());
+        if (userDto.getGender() != null) user.setGender(userDto.getGender());
+        if (userDto.getStartDate() != null) user.setStartDate(userDto.getStartDate());
+        if (userDto.getPosition() != null) user.setPosition(userDto.getPosition());
+        if (userDto.getDepartment() != null) user.setDepartment(userDto.getDepartment());
+        if (userDto.getAddress() != null) user.setAddress(userDto.getAddress());
         User updated = userRepository.save(user);
         return mapToDto(updated);
+    }
+
+    private boolean isValidEmail(String email) {
+        return email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    }
+
+    private String normalizePhone(String phone) {
+        return phone == null ? null : phone.trim().replaceAll("[\\s.-]", "");
     }
 
     private UserDto mapToDto(User user) {
@@ -189,6 +273,13 @@ public class UserService {
         dto.setEmail(user.getEmail());
         dto.setPhone(user.getPhone());
         dto.setStatus(user.getStatus());
+        dto.setIdCard(user.getIdCard());
+        dto.setDob(user.getDob());
+        dto.setGender(user.getGender());
+        dto.setStartDate(user.getStartDate());
+        dto.setPosition(user.getPosition());
+        dto.setDepartment(user.getDepartment());
+        dto.setAddress(user.getAddress());
         if (user.getRoles() != null) {
             dto.setRoles(user.getRoles().stream().map(RoleEntity::getCode).collect(Collectors.toList()));
         }
@@ -198,4 +289,3 @@ public class UserService {
         return dto;
     }
 }
-

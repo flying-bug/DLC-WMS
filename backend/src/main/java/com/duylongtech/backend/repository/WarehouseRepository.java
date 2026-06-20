@@ -25,9 +25,9 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
            "(:name IS NULL OR :name = '' OR LOWER(w.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
            "(:address IS NULL OR :address = '' OR LOWER(w.address) LIKE LOWER(CONCAT('%', :address, '%'))) AND " +
            "(:status IS NULL OR :status = '' OR w.status = :status)")
-    Page<Warehouse> filterWarehouses(@Param("code") String code,
-                                     @Param("name") String name,
-                                     @Param("address") String address,
-                                     @Param("status") String status,
+    Page<Warehouse> filterWarehouses(@Param("code") String code, 
+                                     @Param("name") String name, 
+                                     @Param("address") String address, 
+                                     @Param("status") String status, 
                                      Pageable pageable);
 }

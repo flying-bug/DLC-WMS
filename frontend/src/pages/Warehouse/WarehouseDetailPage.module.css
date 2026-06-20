@@ -487,11 +487,11 @@
         align-items: flex-start;
         gap: 16px;
     }
-
+    
     .infoGrid {
         grid-template-columns: 1fr;
     }
-
+    
     .metaInfoBox {
         grid-template-columns: 1fr;
     }

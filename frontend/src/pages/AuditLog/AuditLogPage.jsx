@@ -160,11 +160,8 @@ function AuditLogPage() {
     }, [page, size, debouncedSearch, selectedModule, fromDateInput, toDateInput]);
 
     useEffect(() => {
-        const timeoutId = window.setTimeout(() => {
-            fetchLogs();
-        }, 0);
-
-        return () => window.clearTimeout(timeoutId);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        fetchLogs();
     }, [fetchLogs]);
 
     const handlePageChange = (newPage) => {

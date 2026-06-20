@@ -13,6 +13,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
+    boolean existsByPhone(String phone);
+    boolean existsByEmailAndIdNot(String email, Long id);
+    boolean existsByPhoneAndIdNot(String phone, Long id);
 
     /**
      * Lấy User kèm danh sách Roles (JOIN FETCH) để phục vụ API /users/me.

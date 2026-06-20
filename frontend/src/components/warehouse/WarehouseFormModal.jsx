@@ -21,10 +21,9 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
     const [addressLoading, setAddressLoading] = useState(false);
 
     useEffect(() => {
-        const timeoutId = window.setTimeout(() => {
-            if (!isOpen) return;
-
+        if (isOpen) {
             if (isEdit && initialData) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setFormData({
                     code: initialData.code || '',
                     name: initialData.name || '',
@@ -36,9 +35,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                 setFormData({ code: '', name: '', address: '', status: 'APPROVED', version: null });
             }
             setErrorMsg('');
-        }, 0);
-
-        return () => window.clearTimeout(timeoutId);
+        }
     }, [isOpen, isEdit, initialData]);
 
     const handleChange = (field, value) => {

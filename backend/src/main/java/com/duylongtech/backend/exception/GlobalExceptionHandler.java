@@ -57,7 +57,7 @@ public class GlobalExceptionHandler {
                     }
                 })
                 .collect(Collectors.joining("; "));
-
+        
         log.warn("Validation error: {}", errorMsg);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error("VAL400", errorMsg));

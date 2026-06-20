@@ -44,6 +44,23 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String address;
 
+    @Column(name = "id_card", length = 20)
+    private String idCard;
+
+    private java.time.LocalDate dob;
+
+    @Column(length = 10)
+    private String gender;
+
+    @Column(name = "start_date")
+    private java.time.LocalDate startDate;
+
+    @Column(length = 50)
+    private String position;
+
+    @Column(length = 50)
+    private String department;
+
     @Column(nullable = false, length = 20)
     private String status; // DRAFT, APPROVED, CANCELLED, INACTIVE
 

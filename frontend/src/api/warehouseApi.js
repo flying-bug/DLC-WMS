@@ -13,7 +13,7 @@ export const getWarehouses = (params = {}) => {
  * Xuất Excel danh sách kho
  */
 export const exportWarehouses = (params = {}) => {
-    return axiosClient.get(`${WAREHOUSE_BASE}/export`, {
+    return axiosClient.get(`${WAREHOUSE_BASE}/export`, { 
         params,
         responseType: 'blob'
     });

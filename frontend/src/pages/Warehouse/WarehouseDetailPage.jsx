@@ -14,9 +14,9 @@ const formatCurrency = (value) => {
 const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleString('vi-VN', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
+    return date.toLocaleString('vi-VN', { 
+        day: '2-digit', month: '2-digit', year: 'numeric', 
+        hour: '2-digit', minute: '2-digit' 
     });
 };
 
@@ -132,14 +132,11 @@ const WarehouseDetailPage = () => {
     };
 
     useEffect(() => {
-        const timeoutId = window.setTimeout(() => {
-            fetchDetail();
-            if (activeTab === 'history') {
-                fetchLogs(0);
-            }
-        }, 0);
-
-        return () => window.clearTimeout(timeoutId);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        fetchDetail();
+        if (activeTab === 'history') {
+            fetchLogs(0);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, activeTab]);
 
@@ -215,19 +212,19 @@ const WarehouseDetailPage = () => {
 
                 {/* 2. Tabs Navigation */}
                 <div className={styles.tabsNav}>
-                    <button
+                    <button 
                         className={`${styles.tabItem} ${activeTab === 'info' ? styles.active : ''}`}
                         onClick={() => setActiveTab('info')}
                     >
                         Thông tin chung
                     </button>
-                    <button
+                    <button 
                         className={`${styles.tabItem} ${activeTab === 'stats' ? styles.active : ''}`}
                         onClick={() => setActiveTab('stats')}
                     >
                         Thống kê
                     </button>
-                    <button
+                    <button 
                         className={`${styles.tabItem} ${activeTab === 'history' ? styles.active : ''}`}
                         onClick={() => setActiveTab('history')}
                     >
@@ -310,7 +307,7 @@ const WarehouseDetailPage = () => {
                                                 <p>{getStatusLabel(warehouse.status)}</p>
                                             </div>
                                         </div>
-
+                                        
                                         <div className={styles.metaInfoBox}>
                                             <div className={styles.infoItem}>
                                                 <label>NGƯỜI TẠO</label>
@@ -395,20 +392,20 @@ const WarehouseDetailPage = () => {
                                         ))}
                                     </div>
                                 )}
-
+                                
                                 {/* Phân trang */}
                                 {logsTotalPages > 1 && (
                                     <div className={styles.pagination}>
-                                        <button
-                                            disabled={logsPage === 0}
+                                        <button 
+                                            disabled={logsPage === 0} 
                                             onClick={() => fetchLogs(logsPage - 1)}
                                             className={styles.pageBtn}
                                         >
                                             Trước
                                         </button>
                                         <span className={styles.pageInfo}>Trang {logsPage + 1} / {logsTotalPages}</span>
-                                        <button
-                                            disabled={logsPage >= logsTotalPages - 1}
+                                        <button 
+                                            disabled={logsPage >= logsTotalPages - 1} 
                                             onClick={() => fetchLogs(logsPage + 1)}
                                             className={styles.pageBtn}
                                         >
@@ -435,7 +432,7 @@ const WarehouseDetailPage = () => {
                     initialData={warehouse}
                 />
 
-                <Toast
+                <Toast 
                     isVisible={toast.isVisible}
                     type={toast.type}
                     message={toast.message}

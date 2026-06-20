@@ -68,7 +68,7 @@ public class AuthService {
 
             com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
-
+            
             if (!"APPROVED".equalsIgnoreCase(user.getStatus())) {
                 throw new BusinessException(SystemMessage.USER_LOCKED);
             }
@@ -102,7 +102,7 @@ public class AuthService {
     public void requestOtp(String email) {
         com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
-
+        
         // Sinh OTP 6 chữ số ngẫu nhiên
         String otp = String.format("%06d", new java.util.Random().nextInt(999999));
         otpStorage.put(email, otp);
@@ -128,7 +128,7 @@ public class AuthService {
 
         com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
-
+        
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
