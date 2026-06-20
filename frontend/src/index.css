@@ -1,71 +1,7 @@
-/* ── Global reset & base styles ── */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-:root {
-  /* Brand colors — DLC-WMS */
-  --color-primary: #1e3f7a;
-  --color-primary-dark: #1a3a6b;
-  --color-primary-light: #1e4fa0;
-
-  /* Neutrals */
-  --color-text: #0f172a;
-  --color-text-muted: #64748b;
-  --color-border: #e2e8f0;
-  --color-bg: #f5f6fa;
-  --color-white: #ffffff;
-
-  /* Danger */
-  --color-danger: #ef4444;
-
-  /* Typography */
-  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-
-  /* MISA Design System variables */
-  --misa-primary: #0075c0;
-  --misa-sidebar-bg: #393a3d;
-  --misa-sidebar-hover: #4d4e51;
-  --misa-sidebar-active: #0075c0;
-  --misa-sidebar-text: #ffffff;
-  --misa-body-bg: #f4f5f8;
-  --misa-text-color: #111111;
-  --misa-border: #e0e0e0;
-  --misa-header-height: 56px;
-  --misa-sidebar-width: 220px;
-
-  font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--color-text);
-  background-color: var(--color-bg);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-}
-
-#root {
-  width: 100%;
-  min-height: 100vh;
-  max-width: 100%;
-  border: none;
-  text-align: left;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-a {
-  color: inherit;
-}
+@import './styles/tokens.css';
+@import './styles/theme.css';
+@import './styles/bootstrap-overrides.css';
+@import './styles/global.css';
 
 button {
   font-family: var(--font-sans);

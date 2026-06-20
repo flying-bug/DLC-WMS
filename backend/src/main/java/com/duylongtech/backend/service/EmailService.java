@@ -22,19 +22,19 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromEmail, "ERP AMIS System");
+            helper.setFrom(fromEmail, "DLC-WMS System");
             helper.setTo(toEmail);
-            helper.setSubject("Yêu cầu khôi phục mật khẩu - ERP AMIS");
+            helper.setSubject("Yêu cầu khôi phục mật khẩu - DLC-WMS");
             
             String htmlMsg = "<div style='font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px;'>"
                     + "<h2 style='color: #007bff; text-align: center;'>Khôi phục mật khẩu</h2>"
                     + "<p>Chào bạn,</p>"
-                    + "<p>Chúng tôi đã nhận được yêu cầu khôi phục mật khẩu cho tài khoản ERP AMIS của bạn.</p>"
+                    + "<p>Chúng tôi đã nhận được yêu cầu khôi phục mật khẩu cho tài khoản DLC-WMS của bạn.</p>"
                     + "<p>Mã OTP của bạn là: <strong style='font-size: 24px; letter-spacing: 4px; color: #d9534f; display: block; text-align: center; margin: 20px 0;'>" + newPassword + "</strong></p>"
                     + "<p>Mã OTP này có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>"
-                    + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ ERP AMIS</p>"
+                    + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ DLC-WMS</p>"
                     + "</div>";
-            
+
             helper.setText(htmlMsg, true);
             mailSender.send(message);
         } catch (Exception e) {

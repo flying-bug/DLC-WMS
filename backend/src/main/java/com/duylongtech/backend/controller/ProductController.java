@@ -4,6 +4,7 @@ import com.duylongtech.backend.dto.ProductDto;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.service.ProductService;
 import com.duylongtech.backend.service.AuditLogService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -49,11 +50,12 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('product:add')")
-    public ResponseEntity<ApiResponse<ProductDto>> createProduct(@RequestBody ProductDto dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ResponseEntity<ApiResponse<ProductDto>> createProduct(@Valid @RequestBody ProductDto dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
             ProductDto created = productService.createProduct(dto);
+            String detailJson = auditLogService.buildChangeDetail(null, created, "Tạo mới sản phẩm");
             auditLogService.logEvent(
                 actor,
                 "CREATE",
@@ -62,7 +64,7 @@ public class ProductController {
                 "SUCCESS",
                 "Thêm mới sản phẩm " + created.getProductCode(),
                 ip,
-                null
+                detailJson
             );
             return ResponseEntity.ok(ApiResponse.<ProductDto>builder()
                     .success(true)
@@ -86,11 +88,13 @@ public class ProductController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('product:edit')")
-    public ResponseEntity<ApiResponse<ProductDto>> updateProduct(@PathVariable Long id, @RequestBody ProductDto dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ResponseEntity<ApiResponse<ProductDto>> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDto dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
+            ProductDto before = productService.getProductById(id);
             ProductDto updated = productService.updateProduct(id, dto);
+            String detailJson = auditLogService.buildChangeDetail(before, updated, "Cập nhật sản phẩm");
             auditLogService.logEvent(
                 actor,
                 "UPDATE",
@@ -99,7 +103,7 @@ public class ProductController {
                 "SUCCESS",
                 "Cập nhật sản phẩm " + updated.getProductCode(),
                 ip,
-                null
+                detailJson
             );
             return ResponseEntity.ok(ApiResponse.<ProductDto>builder()
                     .success(true)
@@ -127,8 +131,9 @@ public class ProductController {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         String productCode = "ID " + id;
+        ProductDto target = null;
         try {
-            ProductDto target = productService.getProductById(id);
+            target = productService.getProductById(id);
             if (target != null) {
                 productCode = target.getProductCode();
             }
@@ -136,6 +141,7 @@ public class ProductController {
 
         try {
             productService.deleteProduct(id);
+            String detailJson = auditLogService.buildChangeDetail(target, null, "Xóa sản phẩm");
             auditLogService.logEvent(
                 actor,
                 "DELETE",
@@ -144,7 +150,7 @@ public class ProductController {
                 "SUCCESS",
                 "Xóa sản phẩm " + productCode,
                 ip,
-                null
+                detailJson
             );
             return ResponseEntity.ok(ApiResponse.<Void>builder()
                     .success(true)

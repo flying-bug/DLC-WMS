@@ -1,0 +1,139 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--page-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  max-width: 100%;
+  border: none;
+  text-align: left;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-sans);
+}
+
+.misa-table {
+  background: var(--color-surface);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-card-subtle);
+}
+
+.misa-table thead th {
+  background-color: var(--table-header-bg);
+  border-bottom: 2px solid var(--table-border);
+  font-weight: 600;
+  color: var(--color-text-strong);
+  text-transform: uppercase;
+  font-size: 12px;
+  padding: 12px 16px;
+}
+
+.misa-table tbody td {
+  padding: 12px 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--table-border);
+  font-size: var(--font-size-body);
+}
+
+.misa-table tbody tr:hover {
+  background-color: var(--table-hover-bg);
+  cursor: pointer;
+}
+
+.misa-form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--form-label-color);
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+}
+
+.misa-input,
+.misa-select {
+  width: 100%;
+  height: var(--height-control);
+  border: 1px solid var(--form-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text-strong);
+  font-size: var(--font-size-body);
+  padding: 8px 12px;
+  outline: none;
+}
+
+.misa-input:focus,
+.misa-select:focus {
+  border-color: var(--form-focus-border);
+  box-shadow: var(--shadow-focus-primary);
+}
+
+.btn-misa-outline {
+  border: 1px solid var(--color-border);
+  background-color: var(--button-outline-bg);
+  color: var(--color-text-strong);
+  font-weight: 500;
+  padding: 6px 16px;
+  border-radius: var(--radius-control);
+}
+
+.btn-misa-outline:hover {
+  background-color: var(--button-outline-hover-bg);
+}
+
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-approved {
+  background-color: var(--status-success-bg);
+  color: var(--status-success-text);
+}
+
+.status-draft,
+.status-pending {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning-text);
+}
+
+.status-inactive {
+  background-color: var(--status-danger-bg);
+  color: var(--status-danger-text);
+}
+
+.status-cancelled {
+  background-color: var(--status-danger-bg);
+  color: var(--status-danger-text);
+}

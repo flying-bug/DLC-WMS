@@ -1,0 +1,97 @@
+:root {
+  --page-bg: var(--color-bg);
+  --page-bg-soft: var(--color-bg-soft);
+  --surface-bg: var(--color-surface);
+  --header-bg: var(--color-surface);
+  --sidebar-bg: var(--color-secondary);
+  --sidebar-hover-bg: var(--color-secondary-hover);
+
+  --brand-gradient: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-accent) 100%);
+  --auth-gradient: linear-gradient(145deg, var(--color-auth-start) 0%, var(--color-auth-middle) 50%, var(--color-primary) 100%);
+
+  --table-header-bg: var(--color-bg-soft);
+  --table-hover-bg: var(--color-primary-soft);
+  --table-border: var(--color-border);
+
+  --form-border: var(--color-border-strong);
+  --form-focus-border: var(--color-primary);
+  --form-label-color: var(--color-text-muted);
+
+  --button-primary-bg: var(--color-primary);
+  --button-primary-hover-bg: var(--color-primary-hover);
+  --button-outline-bg: var(--color-surface);
+  --button-outline-hover-bg: var(--color-bg);
+
+  --status-success-bg: var(--color-success-bg);
+  --status-success-text: var(--color-success);
+  --status-success-border: var(--color-success-border);
+  --status-warning-bg: var(--color-warning-bg);
+  --status-warning-text: var(--color-warning);
+  --status-warning-border: var(--color-warning-border);
+  --status-danger-bg: var(--color-danger-bg);
+  --status-danger-text: var(--color-danger-text);
+  --status-danger-border: var(--color-danger-border);
+  --status-info-bg: var(--color-primary-soft);
+  --status-info-text: var(--color-primary);
+  --status-info-border: var(--color-info-border);
+
+  --overlay-dark: rgba(0, 0, 0, 0.4);
+  --overlay-modal: rgba(0, 0, 0, 0.55);
+  --overlay-white-line: rgba(255, 255, 255, 0.1);
+  --overlay-white-line-strong: rgba(255, 255, 255, 0.2);
+  --overlay-white-muted: rgba(255, 255, 255, 0.7);
+  --overlay-white-soft-text: rgba(255, 255, 255, 0.8);
+  --overlay-white-hover: rgba(255, 255, 255, 0.1);
+  --overlay-white-active: rgba(255, 255, 255, 0.15);
+
+  --auth-spotlight: rgba(255, 255, 255, 0.055);
+  --auth-spotlight-soft: rgba(255, 255, 255, 0.05);
+  --auth-spotlight-accent: rgba(99, 179, 237, 0.08);
+  --auth-spotlight-warning: rgba(249, 115, 22, 0.08);
+  --auth-dot-grid: rgba(255, 255, 255, 0.04);
+  --auth-brand-bg: rgba(255, 255, 255, 0.13);
+  --auth-brand-bg-soft: rgba(255, 255, 255, 0.12);
+  --auth-brand-border: rgba(255, 255, 255, 0.22);
+  --auth-muted-text: rgba(255, 255, 255, 0.48);
+  --auth-muted-text-soft: rgba(255, 255, 255, 0.5);
+  --auth-footer-text: rgba(255, 255, 255, 0.3);
+  --auth-footer-text-strong: rgba(255, 255, 255, 0.35);
+  --auth-spinner-border: rgba(255, 255, 255, 0.3);
+  --dashboard-grid-line: rgba(14, 143, 220, 0.05);
+  --dashboard-action-bg: rgba(255, 255, 255, 0.86);
+
+  --shadow-card: 0 16px 36px rgba(15, 23, 42, 0.08);
+  --shadow-card-soft: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-card-subtle: 0 1px 3px rgba(0, 0, 0, 0.02);
+  --shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-dropdown: 0 10px 25px rgba(0, 0, 0, 0.1);
+  --shadow-dropdown-strong: 0 10px 25px rgba(0, 0, 0, 0.2);
+  --shadow-modal: 0 8px 40px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-toast: 0 8px 32px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-table: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-auth-card: 0 32px 80px rgba(0, 0, 0, 0.32), 0 4px 20px rgba(0, 0, 0, 0.14);
+  --shadow-auth-card-soft: 0 24px 64px rgba(0, 0, 0, 0.28), 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-auth-brand: 0 4px 16px rgba(0, 0, 0, 0.18);
+  --shadow-primary: 0 4px 16px rgba(30, 63, 122, 0.32);
+  --shadow-primary-soft: 0 1px 2px 0 rgba(30, 63, 122, 0.3);
+  --shadow-primary-raised: 0 4px 6px -1px rgba(30, 63, 122, 0.3), 0 2px 4px -1px rgba(30, 63, 122, 0.2);
+  --shadow-blue: 0 10px 20px rgba(14, 143, 220, 0.22);
+  --shadow-blue-raised: 0 14px 28px rgba(37, 99, 235, 0.24);
+  --shadow-focus-primary: 0 0 0 2px rgba(0, 117, 192, 0.12);
+  --shadow-focus-blue: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  --shadow-focus-blue-strong: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  --shadow-focus-primary-soft: 0 0 0 3px rgba(30, 79, 160, 0.1);
+  --shadow-focus-danger: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  --shadow-focus-primary-wide: 0 0 0 4px rgba(30, 63, 122, 0.16);
+
+  --misa-primary: var(--color-primary);
+  --misa-sidebar-bg: var(--color-secondary);
+  --misa-sidebar-hover: var(--color-secondary-hover);
+  --misa-sidebar-active: var(--color-primary);
+  --misa-sidebar-text: var(--color-white);
+  --misa-body-bg: var(--color-bg);
+  --misa-text-color: var(--color-text);
+  --misa-border: var(--color-border);
+  --misa-header-height: 56px;
+  --misa-sidebar-width: 220px;
+}

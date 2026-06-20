@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/units")
@@ -52,11 +53,12 @@ public class UnitController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('unit:add')")
-    public ResponseEntity<UnitDto> createUnit(@RequestBody UnitDto unitDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ResponseEntity<UnitDto> createUnit(@Valid @RequestBody UnitDto unitDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
             UnitDto created = unitService.createUnit(unitDto);
+            String detailJson = auditLogService.buildChangeDetail(null, created, "Tạo mới đơn vị tính");
             auditLogService.logEvent(
                 actor,
                 "CREATE",
@@ -65,7 +67,7 @@ public class UnitController {
                 "SUCCESS",
                 "Thêm mới đơn vị tính: " + created.getName(),
                 ip,
-                null
+                detailJson
             );
             return ResponseEntity.ok(created);
         } catch (Exception e) {
@@ -85,11 +87,13 @@ public class UnitController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('unit:edit')")
-    public ResponseEntity<UnitDto> updateUnit(@PathVariable Long id, @RequestBody UnitDto unitDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ResponseEntity<UnitDto> updateUnit(@PathVariable Long id, @Valid @RequestBody UnitDto unitDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
+            UnitDto before = unitService.getUnitById(id);
             UnitDto updated = unitService.updateUnit(id, unitDto);
+            String detailJson = auditLogService.buildChangeDetail(before, updated, "Cập nhật đơn vị tính");
             auditLogService.logEvent(
                 actor,
                 "UPDATE",
@@ -98,7 +102,7 @@ public class UnitController {
                 "SUCCESS",
                 "Cập nhật đơn vị tính: " + updated.getName(),
                 ip,
-                null
+                detailJson
             );
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
@@ -122,8 +126,9 @@ public class UnitController {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         String unitName = "ID " + id;
+        UnitDto target = null;
         try {
-            UnitDto target = unitService.getUnitById(id);
+            target = unitService.getUnitById(id);
             if (target != null) {
                 unitName = target.getName();
             }
@@ -131,6 +136,7 @@ public class UnitController {
 
         try {
             unitService.deleteUnit(id);
+            String detailJson = auditLogService.buildChangeDetail(target, null, "Xóa đơn vị tính");
             auditLogService.logEvent(
                 actor,
                 "DELETE",
@@ -139,7 +145,7 @@ public class UnitController {
                 "SUCCESS",
                 "Xóa đơn vị tính: " + unitName,
                 ip,
-                null
+                detailJson
             );
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
