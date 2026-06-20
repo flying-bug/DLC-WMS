@@ -2,6 +2,8 @@ package com.duylongtech.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -42,12 +44,31 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String address;
 
+    @Column(name = "id_card", length = 20)
+    private String idCard;
+
+    private java.time.LocalDate dob;
+
+    @Column(length = 10)
+    private String gender;
+
+    @Column(name = "start_date")
+    private java.time.LocalDate startDate;
+
+    @Column(length = 50)
+    private String position;
+
+    @Column(length = 50)
+    private String department;
+
     @Column(nullable = false, length = 20)
     private String status; // DRAFT, APPROVED, CANCELLED, INACTIVE
 
+    @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     @ManyToMany(fetch = FetchType.EAGER)

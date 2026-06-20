@@ -47,7 +47,7 @@ function LoginForm() {
             setErrors(validationErrors);
             return;
         }
-        
+
         setLoading(true);
         try {
             const { default: axiosClient } = await import('../../../api/axiosClient');
@@ -55,7 +55,7 @@ function LoginForm() {
                 username: formData.usernameOrEmail,
                 password: formData.password
             });
-            
+
             if (response.data && response.data.data.token) {
                 localStorage.setItem('token', response.data.data.token);
                 if (response.data.data.role) {
@@ -72,7 +72,10 @@ function LoginForm() {
         } catch (error) {
             console.error('Login failed:', error);
             setErrors({
-                usernameOrEmail: error.response?.data?.message || 'Tài khoản hoặc mật khẩu không chính xác.'
+                usernameOrEmail:
+                    error.response?.data?.userMessage ||
+                    error.response?.data?.message ||
+                    'Tài khoản hoặc mật khẩu không chính xác.'
             });
         } finally {
             setLoading(false);

@@ -18,16 +18,16 @@ function UsersPage() {
         const isManager = u.roles && u.roles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
         const systemRole = isSuperAdmin ? 'admin' : 'user';
         const initials = u.fullName ? u.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
-        
+
         const colorClasses = [styles.bgBlue, styles.bgOrange, styles.bgGray];
         const avatarColorClass = colorClasses[u.id % colorClasses.length] || styles.bgBlue;
-        
+
         let department = 'Kho bãi';
         let departmentShort = 'Kho';
         let position = 'Nhân viên kho';
         let roleBadge = 'NHÂN VIÊN';
         let roleClass = styles.roleSecondary;
-        
+
         if (isSuperAdmin) {
             department = 'Phòng Kỹ thuật & Bảo hành';
             departmentShort = 'Quản trị';
@@ -47,7 +47,7 @@ function UsersPage() {
             name: u.fullName,
             initials,
             avatarColorClass,
-            code: u.username,
+            code: u.userCode || '(Chưa cấp)',
             department,
             departmentShort,
             position,
@@ -58,12 +58,12 @@ function UsersPage() {
             status: u.status,
             statusLabel: u.status === 'APPROVED' ? 'Đang hoạt động' : 'Đã khóa',
             statusClass: u.status === 'APPROVED' ? styles.statusActive : styles.statusInactive,
-            dob: '1995-05-15',
-            gender: 'Nam',
-            address: 'Hà Nội, Việt Nam',
-            idCard: '012345678901',
-            startDate: '2024-02-01',
-            contractType: 'Chính thức',
+            dob: u.dob || 'Chưa cập nhật',
+            gender: u.gender || 'Chưa cập nhật',
+            address: u.address || 'Chưa cập nhật',
+            idCard: u.idCard || 'Chưa cập nhật',
+            startDate: u.startDate || 'Chưa cập nhật',
+            contractType: u.contractType || 'Chưa cập nhật',
             systemRole,
             roles: u.roles || []
         };
@@ -114,13 +114,29 @@ function UsersPage() {
     const handleToggleLock = async (e, user) => {
         e.stopPropagation();
         setActiveMenuId(null);
+        const isLocking = user.status === 'APPROVED';
+        const nextStatus = isLocking ? 'INACTIVE' : 'APPROVED';
+        const confirmed = window.confirm(
+            isLocking
+                ? `Bạn chắc chắn muốn khóa tài khoản ${user.name}?`
+                : `Bạn chắc chắn muốn mở khóa tài khoản ${user.name}?`
+        );
+        if (!confirmed) {
+            return;
+        }
+
         try {
-            const nextStatus = user.status === 'APPROVED' ? 'INACTIVE' : 'APPROVED';
-            await axiosClient.put(`/users/${user.id}/status?status=${nextStatus}`);
-            fetchUsers();
+            await axiosClient.put(`/users/${user.id}/status`, null, {
+                params: { status: nextStatus }
+            });
+            await fetchUsers();
         } catch (error) {
             console.error('Lỗi thay đổi trạng thái tài khoản:', error);
-            alert('Có lỗi xảy ra khi thay đổi trạng thái tài khoản.');
+            const message =
+                error.response?.data?.userMessage ||
+                error.response?.data?.message ||
+                'Có lỗi xảy ra khi thay đổi trạng thái tài khoản.';
+            alert(message);
         }
     };
 
@@ -137,15 +153,16 @@ function UsersPage() {
             await axiosClient.put(`/users/${updatedData.id}`, {
                 fullName: updatedData.name,
                 email: updatedData.email,
-                phone: updatedData.phone,
+                phone: (updatedData.phone || '').replace(/[\s.-]/g, ''),
                 roles: [targetRoleCode]
             });
 
-            fetchUsers();
+            await fetchUsers();
             setIsDrawerOpen(false);
         } catch (error) {
             console.error('Lỗi lưu thông tin nhân viên:', error);
             alert('Có lỗi xảy ra khi cập nhật thông tin nhân viên.');
+            throw error;
         }
     };
 
@@ -245,7 +262,7 @@ function UsersPage() {
                                 <th>MÃ NHÂN VIÊN</th>
                                 <th>BỘ PHẬN</th>
                                 <th>VAI TRÒ</th>
-                                <th>EMAIL</th>
+
                                 <th>TRẠNG THÁI</th>
                                 <th>THAO TÁC</th>
                             </tr>
@@ -263,20 +280,20 @@ function UsersPage() {
                                 usersData.map((user) => (
                                     <tr key={user.id} className={styles.tableRow} onClick={() => handleRowClick(user)}>
                                         <td><div className={`${styles.avatarCircle} ${user.avatarColorClass}`}>{user.initials}</div></td>
-                                        <td><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: '#64748b' }}>{user.email}</span></td>
+                                        <td><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: 'var(--color-text-subtle)' }}>{user.email}</span></td>
                                         <td>{user.code}</td>
                                         <td>{user.departmentShort}</td>
                                         <td><span className={`${styles.roleBadge} ${user.roleClass}`}>{user.roleBadge}</span></td>
-                                        <td>{user.email}</td>
+
                                         <td><span className={`${styles.statusBadge} ${user.statusClass}`}><i className="bi bi-circle-fill"></i> {user.statusLabel}</span></td>
                                         <td className={styles.actionCell}>
-                                            <button 
-                                                className={styles.btnAction} 
+                                            <button
+                                                className={styles.btnAction}
                                                 onClick={(e) => toggleActionMenu(e, user.id)}
                                             >
                                                 <i className="bi bi-three-dots-vertical"></i>
                                             </button>
-                                            
+
                                             {activeMenuId === user.id && (
                                                 <div className={styles.actionMenu}>
                                                     <div className={styles.actionMenuItem} onClick={(e) => handleViewInfo(e, user)}>
@@ -288,7 +305,7 @@ function UsersPage() {
                                                         </div>
                                                     )}
                                                     <div className={`${styles.actionMenuItem} ${user.status === 'APPROVED' ? styles.actionMenuItemDanger : styles.actionMenuItemSuccess}`} onClick={(e) => handleToggleLock(e, user)}>
-                                                        <i className={`bi ${user.status === 'APPROVED' ? 'bi-lock' : 'bi-unlock'}`}></i> 
+                                                        <i className={`bi ${user.status === 'APPROVED' ? 'bi-lock' : 'bi-unlock'}`}></i>
                                                         {user.status === 'APPROVED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
                                                     </div>
                                                 </div>
@@ -312,10 +329,10 @@ function UsersPage() {
                 </div>
             </main>
 
-            <EmployeeDrawer 
-                isOpen={isDrawerOpen} 
-                onClose={() => setIsDrawerOpen(false)} 
-                user={selectedUser} 
+            <EmployeeDrawer
+                isOpen={isDrawerOpen}
+                onClose={() => setIsDrawerOpen(false)}
+                user={selectedUser}
                 onSave={handleSaveUser}
             />
         </div>

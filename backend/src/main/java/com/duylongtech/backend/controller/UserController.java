@@ -54,11 +54,12 @@ public class UserController {
     // 6. Create Account
     @PostMapping
     @PreAuthorize("hasAuthority('account:add')")
-    public ApiResponse<UserDto> createUser(@RequestBody UserDto userDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ApiResponse<UserDto> createUser(@jakarta.validation.Valid @RequestBody UserDto userDto, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
             UserDto created = userService.createUser(userDto);
+            String detailJson = auditLogService.buildChangeDetail(null, created, "Tạo mới tài khoản");
             auditLogService.logEvent(
                 actor,
                 "CREATE",
@@ -67,7 +68,7 @@ public class UserController {
                 "SUCCESS",
                 "Tạo mới tài khoản " + created.getUsername(),
                 ip,
-                null
+                detailJson
             );
             return ApiResponse.success(created);
         } catch (Exception e) {
@@ -99,15 +100,18 @@ public class UserController {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         String targetUsername = "ID " + id;
+        UserDto before = null;
         try {
-            UserDto target = userService.getUserById(id);
-            if (target != null) {
-                targetUsername = target.getUsername();
+            before = userService.getUserById(id);
+            if (before != null) {
+                targetUsername = before.getUsername();
             }
         } catch (Exception ignored) {}
 
         try {
             userService.updateStatus(id, status);
+            UserDto after = userService.getUserById(id);
+            String detailJson = auditLogService.buildChangeDetail(before, after, "Cập nhật trạng thái tài khoản");
             auditLogService.logEvent(
                 actor,
                 "UPDATE",
@@ -116,7 +120,7 @@ public class UserController {
                 "SUCCESS",
                 "Cập nhật trạng thái tài khoản " + targetUsername + " thành " + status,
                 ip,
-                null
+                detailJson
             );
             return ApiResponse.success();
         } catch (Exception e) {
@@ -141,15 +145,18 @@ public class UserController {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         String targetUsername = "ID " + id;
+        UserDto before = null;
         try {
-            UserDto target = userService.getUserById(id);
-            if (target != null) {
-                targetUsername = target.getUsername();
+            before = userService.getUserById(id);
+            if (before != null) {
+                targetUsername = before.getUsername();
             }
         } catch (Exception ignored) {}
 
         try {
             userService.updatePermissions(id, permissionCodes);
+            UserDto after = userService.getUserById(id);
+            String detailJson = auditLogService.buildChangeDetail(before, after, "Phân quyền tài khoản");
             auditLogService.logEvent(
                 actor,
                 "UPDATE",
@@ -158,7 +165,7 @@ public class UserController {
                 "SUCCESS",
                 "Phân quyền tài khoản " + targetUsername,
                 ip,
-                null
+                detailJson
             );
             return ApiResponse.success();
         } catch (Exception e) {
@@ -183,7 +190,9 @@ public class UserController {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
+            UserDto before = userService.getUserById(id);
             UserDto updated = userService.updateUser(id, userDto);
+            String detailJson = auditLogService.buildChangeDetail(before, updated, "Cập nhật thông tin tài khoản");
             auditLogService.logEvent(
                 actor,
                 "UPDATE",
@@ -192,7 +201,7 @@ public class UserController {
                 "SUCCESS",
                 "Cập nhật thông tin tài khoản " + updated.getUsername(),
                 ip,
-                null
+                detailJson
             );
             return ApiResponse.success(updated);
         } catch (Exception e) {

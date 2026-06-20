@@ -17,7 +17,7 @@ function ChangePasswordPage() {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    
+
     const [showCurrent, setShowCurrent] = useState(false);
     const [showNew, setShowNew] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -50,7 +50,7 @@ function ChangePasswordPage() {
                 <div className={styles.headerBrand}>
                     <div className={styles.headerLogoBox} aria-hidden="true">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                            stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                            stroke="var(--color-white)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                             <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
                             <polyline points="9 22 9 12 15 12 15 22" />
                         </svg>
@@ -140,14 +140,14 @@ function ChangePasswordPage() {
                             <div className={styles.formGroup}>
                                 <label>Mật khẩu hiện tại</label>
                                 <div className={styles.inputWrapper}>
-                                    <input 
-                                        type={showCurrent ? "text" : "password"} 
+                                    <input
+                                        type={showCurrent ? "text" : "password"}
                                         value={currentPassword}
                                         onChange={(e) => setCurrentPassword(e.target.value)}
                                         placeholder="••••••••"
                                     />
-                                    <i 
-                                        className={`bi ${showCurrent ? 'bi-eye' : 'bi-eye-slash'} ${styles.eyeIcon}`} 
+                                    <i
+                                        className={`bi ${showCurrent ? 'bi-eye' : 'bi-eye-slash'} ${styles.eyeIcon}`}
                                         onClick={() => setShowCurrent(!showCurrent)}
                                     />
                                 </div>
@@ -157,14 +157,14 @@ function ChangePasswordPage() {
                             <div className={styles.formGroup}>
                                 <label>Mật khẩu mới</label>
                                 <div className={styles.inputWrapper}>
-                                    <input 
-                                        type={showNew ? "text" : "password"} 
+                                    <input
+                                        type={showNew ? "text" : "password"}
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
                                         placeholder="••••••••"
                                     />
-                                    <i 
-                                        className={`bi ${showNew ? 'bi-eye' : 'bi-eye-slash'} ${styles.eyeIcon}`} 
+                                    <i
+                                        className={`bi ${showNew ? 'bi-eye' : 'bi-eye-slash'} ${styles.eyeIcon}`}
                                         onClick={() => setShowNew(!showNew)}
                                     />
                                 </div>
@@ -174,14 +174,14 @@ function ChangePasswordPage() {
                             <div className={styles.formGroup}>
                                 <label>Xác nhận mật khẩu mới</label>
                                 <div className={styles.inputWrapper}>
-                                    <input 
-                                        type={showConfirm ? "text" : "password"} 
+                                    <input
+                                        type={showConfirm ? "text" : "password"}
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                         placeholder="••••••••"
                                     />
-                                    <i 
-                                        className={`bi ${showConfirm ? 'bi-eye' : 'bi-eye-slash'} ${styles.eyeIcon}`} 
+                                    <i
+                                        className={`bi ${showConfirm ? 'bi-eye' : 'bi-eye-slash'} ${styles.eyeIcon}`}
                                         onClick={() => setShowConfirm(!showConfirm)}
                                     />
                                 </div>
