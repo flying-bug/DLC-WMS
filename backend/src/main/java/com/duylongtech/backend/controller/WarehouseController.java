@@ -200,9 +200,10 @@ public class WarehouseController {
             jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUsername();
+        Long userId = getCurrentUserId();
         try {
             WarehouseDetailResponse before = warehouseService.getWarehouseDetail(id);
-            WarehouseResponse updated = warehouseService.updateWarehouse(id, request);
+            WarehouseResponse updated = warehouseService.updateWarehouse(id, request, userId);
             String detailJson = auditLogService.buildChangeDetail(
                     warehouseAuditSnapshot(before),
                     warehouseAuditSnapshot(updated),

@@ -40,4 +40,7 @@ public interface InventoryDocumentRepository extends JpaRepository<InventoryDocu
     boolean existsByDocCode(String docCode);
 
     boolean existsByDocCodeAndIdNot(String docCode, Long id);
+
+    @Query("SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END FROM InventoryDocument e WHERE e.warehouseId = :warehouseId OR e.sourceWarehouseId = :warehouseId")
+    boolean existsByAnyWarehouseId(@Param("warehouseId") Long warehouseId);
 }
