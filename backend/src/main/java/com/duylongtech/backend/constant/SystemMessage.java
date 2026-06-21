@@ -36,6 +36,12 @@ public enum SystemMessage {
     PRODUCT_NOT_FOUND("PROD01", "Không tìm thấy hàng hóa."),
     PRODUCT_CODE_EXISTS("PROD02", "Mã hàng hóa đã tồn tại trên hệ thống."),
     PRODUCT_NOT_DELETEABLE("PROD03", "Không tìm thấy hàng hóa để xóa."),
+    CATEGORY_NOT_FOUND("CAT01", "Không tìm thấy danh mục."),
+    CATEGORY_CODE_EXISTS("CAT02", "Mã danh mục đã tồn tại trên hệ thống."),
+    CATEGORY_NAME_EXISTS("CAT03", "Tên danh mục đã tồn tại trên hệ thống."),
+    CATEGORY_HAS_PRODUCTS("CAT04", "Không thể xóa danh mục đang có hàng hóa liên kết."),
+    CATEGORY_PARENT_NOT_FOUND("CAT05", "Không tìm thấy danh mục cha."),
+    CATEGORY_INVALID_PARENT("CAT06", "Danh mục cha không hợp lệ."),
 
     // Inventory
     INV_DOC_EXISTS("INV01", "Mã phiếu xuất kho đã tồn tại"),

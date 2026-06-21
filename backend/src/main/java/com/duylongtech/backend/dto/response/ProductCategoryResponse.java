@@ -1,6 +1,5 @@
-package com.duylongtech.backend.dto;
+package com.duylongtech.backend.dto.response;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,12 +11,12 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UnitDto {
+public class ProductCategoryResponse {
     private Long id;
-
-    @NotBlank(message = "FIELD_REQUIRED")
+    private Long parentId;
+    private String parentName;
+    private String code;
     private String name;
-    private String description;
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -21,4 +21,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "WHERE (:search IS NULL OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%')) " +
            "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Product> searchProducts(@Param("search") String search, Pageable pageable);
+
+    boolean existsByCategoryId(Long categoryId);
 }

@@ -1,7 +1,8 @@
 package com.duylongtech.backend.controller;
 
-import com.duylongtech.backend.dto.ProductDto;
+import com.duylongtech.backend.dto.request.ProductRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.dto.response.ProductResponse;
 import com.duylongtech.backend.service.ProductService;
 import com.duylongtech.backend.service.AuditLogService;
 import jakarta.validation.Valid;
@@ -35,7 +36,7 @@ public class ProductController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('product:view')")
-    public ResponseEntity<Page<ProductDto>> getProducts(
+    public ResponseEntity<Page<ProductResponse>> getProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String search) {
@@ -44,17 +45,17 @@ public class ProductController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('product:view')")
-    public ResponseEntity<ProductDto> getProductById(@PathVariable Long id) {
+    public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('product:add')")
-    public ResponseEntity<ApiResponse<ProductDto>> createProduct(@Valid @RequestBody ProductDto dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@Valid @RequestBody ProductRequest dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
-            ProductDto created = productService.createProduct(dto);
+            ProductResponse created = productService.createProduct(dto);
             String detailJson = auditLogService.buildChangeDetail(null, created, "Tạo mới sản phẩm");
             auditLogService.logEvent(
                 actor,
@@ -66,7 +67,7 @@ public class ProductController {
                 ip,
                 detailJson
             );
-            return ResponseEntity.ok(ApiResponse.<ProductDto>builder()
+            return ResponseEntity.ok(ApiResponse.<ProductResponse>builder()
                     .success(true)
                     .userMessage("Tạo hàng hóa/dịch vụ thành công")
                     .data(created)
@@ -88,12 +89,12 @@ public class ProductController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('product:edit')")
-    public ResponseEntity<ApiResponse<ProductDto>> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDto dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest dto, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
-            ProductDto before = productService.getProductById(id);
-            ProductDto updated = productService.updateProduct(id, dto);
+            ProductResponse before = productService.getProductById(id);
+            ProductResponse updated = productService.updateProduct(id, dto);
             String detailJson = auditLogService.buildChangeDetail(before, updated, "Cập nhật sản phẩm");
             auditLogService.logEvent(
                 actor,
@@ -105,7 +106,7 @@ public class ProductController {
                 ip,
                 detailJson
             );
-            return ResponseEntity.ok(ApiResponse.<ProductDto>builder()
+            return ResponseEntity.ok(ApiResponse.<ProductResponse>builder()
                     .success(true)
                     .userMessage("Cập nhật hàng hóa/dịch vụ thành công")
                     .data(updated)
@@ -131,7 +132,7 @@ public class ProductController {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         String productCode = "ID " + id;
-        ProductDto target = null;
+        ProductResponse target = null;
         try {
             target = productService.getProductById(id);
             if (target != null) {
