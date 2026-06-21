@@ -17,6 +17,10 @@ public class WarehouseDetailResponse {
     private String address;
     private String type;
     private String status;
+    private Long creatorId;
+    private String creatorName;
+    private Long updaterId;
+    private String updaterName;
     private Long version;
 
     // Metrics

@@ -8,11 +8,13 @@ import com.duylongtech.backend.entity.UserWarehouseRole;
 import com.duylongtech.backend.entity.Warehouse;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.InventoryBalanceRepository;
+import com.duylongtech.backend.repository.InventoryDocumentRepository;
 import com.duylongtech.backend.repository.UserRepository;
 import com.duylongtech.backend.repository.UserWarehouseRoleRepository;
 import com.duylongtech.backend.repository.WarehouseRepository;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ public class WarehouseService {
     private final WarehouseRepository warehouseRepository;
     private final UserWarehouseRoleRepository userWarehouseRoleRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
+    private final InventoryDocumentRepository inventoryDocumentRepository;
     private final UserRepository userRepository;
 
     // ──────────────────────────────────────────────────────────
@@ -52,6 +55,7 @@ public class WarehouseService {
                 .address(request.getAddress())
                 .type("STANDARD") // Cố định theo spec
                 .status("APPROVED")
+                .creator(userRepository.findById(currentUserId).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND)))
                 .build();
 
         Warehouse saved = warehouseRepository.save(warehouse);
@@ -99,6 +103,10 @@ public class WarehouseService {
                 .address(warehouse.getAddress())
                 .type(warehouse.getType())
                 .status(warehouse.getStatus())
+                .creatorId(warehouse.getCreator() != null ? warehouse.getCreator().getId() : null)
+                .creatorName(warehouse.getCreator() != null ? warehouse.getCreator().getFullName() : null)
+                .updaterId(warehouse.getUpdater() != null ? warehouse.getUpdater().getId() : null)
+                .updaterName(warehouse.getUpdater() != null ? warehouse.getUpdater().getFullName() : null)
                 .version(warehouse.getVersion())
                 .totalSkus(totalSkus != null ? totalSkus : 0L)
                 .totalQuantity(totalQuantity)
@@ -113,7 +121,7 @@ public class WarehouseService {
     // ──────────────────────────────────────────────────────────
 
     @Transactional
-    public WarehouseResponse updateWarehouse(Long id, WarehouseRequest request) {
+    public WarehouseResponse updateWarehouse(Long id, WarehouseRequest request, Long currentUserId) {
         Warehouse warehouse = warehouseRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(SystemMessage.WH_NOT_FOUND));
 
@@ -126,6 +134,11 @@ public class WarehouseService {
         warehouse.setAddress(request.getAddress());
         if (request.getStatus() != null) {
             warehouse.setStatus(request.getStatus());
+        }
+
+        // Set updater
+        if (currentUserId != null) {
+            warehouse.setUpdater(userRepository.findById(currentUserId).orElse(null));
         }
 
         Warehouse updated = warehouseRepository.save(warehouse);
@@ -141,19 +154,34 @@ public class WarehouseService {
         Warehouse warehouse = warehouseRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(SystemMessage.WH_NOT_FOUND));
 
-        // Kiểm tra nếu kho có tồn kho (INVENTORY_BALANCES)
+        // Kiểm tra nếu kho có tồn kho (INVENTORY_BALANCES) hoặc từng có giao dịch (INVENTORY_DOCUMENTS)
         boolean hasInventory = inventoryBalanceRepository.existsByWarehouseId(id);
+        boolean hasTransactions = inventoryDocumentRepository.existsByAnyWarehouseId(id);
 
-        if (hasInventory) {
+        if (hasInventory || hasTransactions) {
             // Tự động chuyển INACTIVE thay vì xóa
             warehouse.setStatus("INACTIVE");
             warehouseRepository.save(warehouse);
             return false; // Soft deleted
         }
 
-        // Kho trống → hard delete
-        warehouseRepository.delete(warehouse);
-        return true; // Hard deleted
+        // Xóa các UserWarehouseRole (bảng phân quyền)
+        List<UserWarehouseRole> roles = userWarehouseRoleRepository.findByWarehouseId(id);
+        if (!roles.isEmpty()) {
+            userWarehouseRoleRepository.deleteAll(roles);
+        }
+
+        try {
+            // Kho trống và chưa từng có giao dịch → hard delete
+            warehouseRepository.delete(warehouse);
+            warehouseRepository.flush(); // Bắt buộc flush để trigger exception ngay lập tức
+            return true; // Hard deleted
+        } catch (DataIntegrityViolationException e) {
+            // Vẫn còn dữ liệu liên quan khác (lịch sử tồn kho, cost layers...) -> Soft delete
+            warehouse.setStatus("INACTIVE");
+            warehouseRepository.save(warehouse);
+            return false; // Soft deleted
+        }
     }
 
     // ──────────────────────────────────────────────────────────
@@ -168,6 +196,10 @@ public class WarehouseService {
                 .address(warehouse.getAddress())
                 .type(warehouse.getType())
                 .status(warehouse.getStatus())
+                .creatorId(warehouse.getCreator() != null ? warehouse.getCreator().getId() : null)
+                .creatorName(warehouse.getCreator() != null ? warehouse.getCreator().getFullName() : null)
+                .updaterId(warehouse.getUpdater() != null ? warehouse.getUpdater().getId() : null)
+                .updaterName(warehouse.getUpdater() != null ? warehouse.getUpdater().getFullName() : null)
                 .version(warehouse.getVersion())
                 .createdAt(warehouse.getCreatedAt())
                 .updatedAt(warehouse.getUpdatedAt())
@@ -208,7 +240,7 @@ public class WarehouseService {
 
             // Header (Row 4)
             Row headerRow = sheet.createRow(4);
-            String[] columns = {"STT", "Mã kho", "Tên kho", "Địa chỉ", "Loại kho", "Trạng thái", "Ngày tạo", "Ngày cập nhật"};
+            String[] columns = {"STT", "Mã kho", "Tên kho", "Địa chỉ", "Loại kho", "Người tạo", "Người cập nhật", "Trạng thái", "Ngày tạo", "Ngày cập nhật"};
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
@@ -233,15 +265,18 @@ public class WarehouseService {
                 if ("STANDARD".equals(wh.getType())) typeStr = "Kho tiêu chuẩn";
                 else if (wh.getType() != null) typeStr = wh.getType();
                 row.createCell(4).setCellValue(typeStr);
+
+                row.createCell(5).setCellValue(wh.getCreator() != null ? wh.getCreator().getFullName() : "");
+                row.createCell(6).setCellValue(wh.getUpdater() != null ? wh.getUpdater().getFullName() : "");
                 
                 String statusStr = "Khác";
                 if ("APPROVED".equals(wh.getStatus())) statusStr = "Đang hoạt động";
                 else if ("INACTIVE".equals(wh.getStatus())) statusStr = "Ngừng hoạt động";
                 else if ("PENDING".equals(wh.getStatus())) statusStr = "Chờ duyệt";
-                row.createCell(5).setCellValue(statusStr);
+                row.createCell(7).setCellValue(statusStr);
 
-                row.createCell(6).setCellValue(wh.getCreatedAt() != null ? dtf.format(wh.getCreatedAt()) : "");
-                row.createCell(7).setCellValue(wh.getUpdatedAt() != null ? dtf.format(wh.getUpdatedAt()) : "");
+                row.createCell(8).setCellValue(wh.getCreatedAt() != null ? dtf.format(wh.getCreatedAt()) : "");
+                row.createCell(9).setCellValue(wh.getUpdatedAt() != null ? dtf.format(wh.getUpdatedAt()) : "");
             }
 
             // Auto-size columns

@@ -45,6 +45,14 @@ public class Warehouse {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "creator_id")
+    private User creator;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updater_id")
+    private User updater;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

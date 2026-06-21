@@ -39,6 +39,12 @@ class WarehouseServiceTest {
     @Mock
     private InventoryBalanceRepository inventoryBalanceRepository;
 
+    @Mock
+    private com.duylongtech.backend.repository.InventoryDocumentRepository inventoryDocumentRepository;
+
+    @Mock
+    private com.duylongtech.backend.repository.UserRepository userRepository;
+
     @InjectMocks
     private WarehouseService warehouseService;
 
@@ -67,6 +73,7 @@ class WarehouseServiceTest {
     @Test
     void createWarehouse_Success() {
         when(warehouseRepository.existsByCodeIgnoreCase("WH-01")).thenReturn(false);
+        when(userRepository.findById(99L)).thenReturn(Optional.of(com.duylongtech.backend.entity.User.builder().id(99L).build()));
         when(warehouseRepository.save(any(Warehouse.class))).thenReturn(mockWarehouse);
 
         WarehouseResponse res = warehouseService.createWarehouse(mockRequest, 99L);
@@ -116,7 +123,7 @@ class WarehouseServiceTest {
         when(warehouseRepository.findById(1L)).thenReturn(Optional.of(mockWarehouse));
         when(warehouseRepository.save(any(Warehouse.class))).thenReturn(mockWarehouse);
 
-        WarehouseResponse res = warehouseService.updateWarehouse(1L, mockRequest);
+        WarehouseResponse res = warehouseService.updateWarehouse(1L, mockRequest, 99L);
 
         assertNotNull(res);
         assertEquals("Kho Test Edit", mockWarehouse.getName());
@@ -128,21 +135,22 @@ class WarehouseServiceTest {
     void deleteWarehouse_SuccessEmptyWarehouse() {
         when(warehouseRepository.findById(1L)).thenReturn(Optional.of(mockWarehouse));
         when(inventoryBalanceRepository.existsByWarehouseId(1L)).thenReturn(false);
+        when(inventoryDocumentRepository.existsByAnyWarehouseId(1L)).thenReturn(false);
 
-        warehouseService.deleteWarehouse(1L);
+        boolean result = warehouseService.deleteWarehouse(1L);
 
-        assertEquals("INACTIVE", mockWarehouse.getStatus());
-        verify(warehouseRepository, times(1)).save(mockWarehouse);
+        assertTrue(result);
+        verify(warehouseRepository, times(1)).delete(mockWarehouse);
     }
 
     @Test
-    void deleteWarehouse_FailHasInventory() {
+    void deleteWarehouse_SoftDeleteWhenHasInventory() {
         when(warehouseRepository.findById(1L)).thenReturn(Optional.of(mockWarehouse));
         when(inventoryBalanceRepository.existsByWarehouseId(1L)).thenReturn(true);
 
-        BusinessException ex = assertThrows(BusinessException.class, () -> warehouseService.deleteWarehouse(1L));
+        boolean result = warehouseService.deleteWarehouse(1L);
 
-        assertEquals(SystemMessage.WH_HAS_TRANSACTION.getMessage(), ex.getMessage());
+        assertFalse(result);
         assertEquals("INACTIVE", mockWarehouse.getStatus());
         verify(warehouseRepository, times(1)).save(mockWarehouse);
     }

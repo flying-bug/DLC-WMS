@@ -16,6 +16,10 @@ public class WarehouseResponse {
     private String address;
     private String type;
     private String status;
+    private Long creatorId;
+    private String creatorName;
+    private Long updaterId;
+    private String updaterName;
     private Long version;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
