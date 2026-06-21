@@ -16,10 +16,10 @@ function ImportHistoryPage() {
   const [selectedSlip, setSelectedSlip] = useState(MOCK_SLIPS[0]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
-  const navigate = useNavigate();
 
-  const filteredSlips = MOCK_SLIPS.filter(slip => 
-    slip.code.toLowerCase().includes(searchQuery.toLowerCase()) || 
+
+  const filteredSlips = MOCK_SLIPS.filter(slip =>
+    slip.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
     slip.partner.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -54,10 +54,10 @@ function ImportHistoryPage() {
           <div className={styles.filterGroup}>
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>TÌM KIẾM</span>
-              <input 
-                type="text" 
-                className={styles.filterInput} 
-                placeholder="Mã phiếu, nhà cung cấp..." 
+              <input
+                type="text"
+                className={styles.filterInput}
+                placeholder="Mã phiếu, nhà cung cấp..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -110,8 +110,8 @@ function ImportHistoryPage() {
             <thead>
               <tr>
                 <th style={{ width: '40px', textAlign: 'center' }}>
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className={styles.checkbox}
                     checked={filteredSlips.length > 0 && selectedIds.length === filteredSlips.length}
                     onChange={handleSelectAll}
@@ -130,8 +130,8 @@ function ImportHistoryPage() {
               {filteredSlips.length > 0 ? filteredSlips.map(slip => (
                 <tr key={slip.id} className={selectedSlip.id === slip.id ? styles.activeRow : ''} onClick={() => setSelectedSlip(slip)}>
                   <td style={{ textAlign: 'center' }}>
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className={styles.checkbox}
                       checked={selectedIds.includes(slip.id)}
                       onChange={(e) => handleSelectRow(e, slip.id)}
@@ -144,12 +144,11 @@ function ImportHistoryPage() {
                   <td>{slip.warehouse}</td>
                   <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>
                   <td>
-                    <span className={`${styles.badge} ${
-                      slip.statusCode === 'success' ? styles.badgeSuccess :
+                    <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
                       slip.statusCode === 'info' ? styles.badgeInfo :
-                      slip.statusCode === 'warning' ? styles.badgeWarning :
-                      styles.badgeDanger
-                    }`}>
+                        slip.statusCode === 'warning' ? styles.badgeWarning :
+                          styles.badgeDanger
+                      }`}>
                       {slip.statusCode === 'success' && <i className="bi bi-check-circle-fill" style={{ marginRight: '4px' }}></i>}
                       {slip.statusCode === 'warning' && <i className="bi bi-hourglass-split" style={{ marginRight: '4px' }}></i>}
                       {slip.statusCode === 'danger' && <i className="bi bi-x-circle-fill" style={{ marginRight: '4px' }}></i>}
@@ -157,8 +156,8 @@ function ImportHistoryPage() {
                     </span>
                   </td>
                   <td className={styles.textCenter}>
-                    <i className="bi bi-eye" style={{cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px'}} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}></i>
-                    <i className="bi bi-pencil" style={{cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px'}} title="Sửa phiếu nhập kho" onClick={(e) => { e.stopPropagation(); navigate(`/import-slips/${slip.code}/edit`); }}></i>
+                    <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}></i>
+                    <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu nhập kho" onClick={(e) => { e.stopPropagation(); navigate(`/import-slips/${slip.code}/edit`); }}></i>
                   </td>
                 </tr>
               )) : (
@@ -174,7 +173,7 @@ function ImportHistoryPage() {
               )}
             </tbody>
           </table>
-          
+
           <div className={styles.pagination}>
             <span>Hiển thị 1 - 4 trong tổng số 156 bản ghi</span>
             <div className={styles.pageControls}>
@@ -200,12 +199,11 @@ function ImportHistoryPage() {
               <i className={`bi bi-file-earmark-text ${styles.detailIcon}`}></i>
               <h2 className={styles.detailTitle}>Chi tiết Đơn nhập hàng: {selectedSlip.code}</h2>
               <div style={{ flex: 1 }}></div>
-              <span className={`${styles.badge} ${
-                selectedSlip.statusCode === 'success' ? styles.badgeSuccess :
+              <span className={`${styles.badge} ${selectedSlip.statusCode === 'success' ? styles.badgeSuccess :
                 selectedSlip.statusCode === 'info' ? styles.badgeInfo :
-                selectedSlip.statusCode === 'warning' ? styles.badgeWarning :
-                styles.badgeDanger
-              }`}>
+                  selectedSlip.statusCode === 'warning' ? styles.badgeWarning :
+                    styles.badgeDanger
+                }`}>
                 {selectedSlip.statusCode === 'success' && <i className="bi bi-check-circle-fill" style={{ marginRight: '4px' }}></i>}
                 {selectedSlip.statusCode === 'warning' && <i className="bi bi-hourglass-split" style={{ marginRight: '4px' }}></i>}
                 {selectedSlip.statusCode === 'danger' && <i className="bi bi-x-circle-fill" style={{ marginRight: '4px' }}></i>}
