@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
-import com.duylongtech.backend.dto.UnitDto;
+import com.duylongtech.backend.dto.request.UnitRequest;
+import com.duylongtech.backend.dto.response.UnitResponse;
 import com.duylongtech.backend.entity.Unit;
 import com.duylongtech.backend.repository.UnitRepository;
 import com.duylongtech.backend.exception.BusinessException;
@@ -17,7 +18,7 @@ public class UnitService {
 
     private final UnitRepository unitRepository;
 
-    public Page<UnitDto> getAllUnits(String search, Pageable pageable) {
+    public Page<UnitResponse> getAllUnits(String search, Pageable pageable) {
         Page<Unit> unitPage;
         if (search != null && !search.isEmpty()) {
             unitPage = unitRepository.findByNameContainingIgnoreCase(search, pageable);
@@ -27,14 +28,14 @@ public class UnitService {
         return unitPage.map(this::mapToDto);
     }
 
-    public UnitDto getUnitById(Long id) {
+    public UnitResponse getUnitById(Long id) {
         Unit unit = unitRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(SystemMessage.UNIT_NOT_FOUND));
         return mapToDto(unit);
     }
 
     @Transactional
-    public UnitDto createUnit(UnitDto dto) {
+    public UnitResponse createUnit(UnitRequest dto) {
         if (unitRepository.findByName(dto.getName()).isPresent()) {
             throw new BusinessException(SystemMessage.UNIT_EXISTS);
         }
@@ -50,7 +51,7 @@ public class UnitService {
     }
 
     @Transactional
-    public UnitDto updateUnit(Long id, UnitDto dto) {
+    public UnitResponse updateUnit(Long id, UnitRequest dto) {
         Unit unit = unitRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(SystemMessage.UNIT_NOT_FOUND));
 
@@ -77,8 +78,8 @@ public class UnitService {
         unitRepository.deleteById(id);
     }
 
-    private UnitDto mapToDto(Unit unit) {
-        return UnitDto.builder()
+    private UnitResponse mapToDto(Unit unit) {
+        return UnitResponse.builder()
                 .id(unit.getId())
                 .name(unit.getName())
                 .description(unit.getDescription())

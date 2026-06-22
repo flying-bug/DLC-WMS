@@ -5,6 +5,7 @@ import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
 import UnitPage from '../pages/Unit/UnitPage';
 import ProductPage from '../pages/Product/ProductPage';
+import ProductCategoryPage from '../pages/ProductCategory/ProductCategoryPage';
 import ChangePasswordPage from '../pages/ChangePassword/ChangePasswordPage';
 import UsersPage from '../pages/UsersPage';
 import CreateEmployeePage from '../pages/CreateEmployee/CreateEmployeePage';
@@ -71,6 +72,7 @@ function AppRouter() {
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/units" element={<UnitPage />} />
                     <Route path="/products" element={<ProductPage />} />
+                    <Route path="/product-categories" element={<ProductCategoryPage />} />
                     <Route path="/suppliers" element={<SupplierListPage />} />
                     <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
                     <Route path="/warehouses" element={<WarehouseListPage />} />

@@ -87,6 +87,13 @@ const AdminLayout = ({ children }) => {
                         >
                             Đơn vị tính
                         </button>
+                        <button
+                            className={`${styles.tab} ${currentPath === '/product-categories' ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/product-categories')}
+                            type="button"
+                        >
+                            Danh mục sản phẩm
+                        </button>
                     </nav>
                     <div className={styles.headerRight}>
                         <UserProfileDropdown />
