@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
-import com.duylongtech.backend.dto.ProductDto;
+import com.duylongtech.backend.dto.request.ProductRequest;
+import com.duylongtech.backend.dto.response.ProductResponse;
 import com.duylongtech.backend.entity.Brand;
 import com.duylongtech.backend.entity.Product;
 import com.duylongtech.backend.entity.ProductCategory;
@@ -30,19 +31,19 @@ public class ProductService {
     private final ProductCategoryRepository categoryRepository;
     private final UnitRepository unitRepository;
 
-    public Page<ProductDto> getProducts(int page, int size, String search) {
+    public Page<ProductResponse> getProducts(int page, int size, String search) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         return productRepository.searchProducts(search, pageable).map(this::convertToDto);
     }
 
-    public ProductDto getProductById(Long id) {
+    public ProductResponse getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy hàng hóa với ID: " + id));
         return convertToDto(product);
     }
 
     @Transactional
-    public ProductDto createProduct(ProductDto dto) {
+    public ProductResponse createProduct(ProductRequest dto) {
         if (productRepository.findByProductCode(dto.getProductCode()).isPresent()) {
             throw new BusinessException("Mã hàng hóa '" + dto.getProductCode() + "' đã tồn tại.");
         }
@@ -53,7 +54,7 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductDto updateProduct(Long id, ProductDto dto) {
+    public ProductResponse updateProduct(Long id, ProductRequest dto) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy hàng hóa với ID: " + id));
 
@@ -97,7 +98,7 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
-    private void updateRelations(Product product, ProductDto dto) {
+    private void updateRelations(Product product, ProductRequest dto) {
         if (dto.getBrandId() != null) {
             Brand brand = brandRepository.findById(dto.getBrandId()).orElse(null);
             product.setBrand(brand);
@@ -120,7 +121,7 @@ public class ProductService {
         }
     }
 
-    private Product convertToEntity(ProductDto dto) {
+    private Product convertToEntity(ProductRequest dto) {
         Product product = Product.builder()
                 .productCode(dto.getProductCode())
                 .productName(dto.getProductName())
@@ -140,8 +141,8 @@ public class ProductService {
         return product;
     }
 
-    private ProductDto convertToDto(Product product) {
-        return ProductDto.builder()
+    private ProductResponse convertToDto(Product product) {
+        return ProductResponse.builder()
                 .id(product.getId())
                 .productCode(product.getProductCode())
                 .productName(product.getProductName())

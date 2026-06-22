@@ -5,11 +5,14 @@ import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
 import UnitPage from '../pages/Unit/UnitPage';
 import ProductPage from '../pages/Product/ProductPage';
+import ProductCategoryPage from '../pages/ProductCategory/ProductCategoryPage';
 import ChangePasswordPage from '../pages/ChangePassword/ChangePasswordPage';
 import UsersPage from '../pages/UsersPage';
 import CreateEmployeePage from '../pages/CreateEmployee/CreateEmployeePage';
 import PermissionDetailPage from '../pages/Permissions/PermissionDetailPage';
 import ExportSlipPage from '../pages/ExportSlip/ExportSlipPage';
+import CreateExportSlipPage from '../pages/ExportSlip/CreateExportSlipPage';
+import UpdateExportSlipPage from '../pages/ExportSlip/UpdateExportSlipPage';
 import ImportHistoryPage from '../pages/ImportHistory/ImportHistoryPage';
 import CreateImportSlipPage from '../pages/CreateImportSlip/CreateImportSlipPage';
 import UpdateImportSlipPage from '../pages/UpdateImportSlip/UpdateImportSlipPage';
@@ -17,6 +20,9 @@ import ProfilePage from '../pages/Profile/ProfilePage';
 import AuditLogPage from '../pages/AuditLog/AuditLogPage';
 import WarehouseListPage from '../pages/Warehouse/WarehouseListPage';
 import WarehouseDetailPage from '../pages/Warehouse/WarehouseDetailPage';
+import SupplierListPage from '../pages/Supplier/SupplierListPage';
+import SupplierDetailPage from '../pages/Supplier/SupplierDetailPage';
+
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
     const token = localStorage.getItem('token');
@@ -57,6 +63,8 @@ function AppRouter() {
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/change-password" element={<ChangePasswordPage />} />
                     <Route path="/export-slips" element={<ExportSlipPage />} />
+                    <Route path="/export-slips/create" element={<CreateExportSlipPage />} />
+                    <Route path="/export-slips/:id/edit" element={<UpdateExportSlipPage />} />
                     <Route path="/import-history" element={<ImportHistoryPage />} />
                     <Route path="/import-history/create" element={<CreateImportSlipPage />} />
                     <Route path="/import-slips/:id/edit" element={<UpdateImportSlipPage />} />
@@ -64,6 +72,9 @@ function AppRouter() {
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/units" element={<UnitPage />} />
                     <Route path="/products" element={<ProductPage />} />
+                    <Route path="/product-categories" element={<ProductCategoryPage />} />
+                    <Route path="/suppliers" element={<SupplierListPage />} />
+                    <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
                     <Route path="/warehouses" element={<WarehouseListPage />} />
                     <Route path="/warehouses/:id" element={<WarehouseDetailPage />} />
                 </Route>

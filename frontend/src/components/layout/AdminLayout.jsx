@@ -27,6 +27,14 @@ const AdminLayout = ({ children }) => {
                         <i className="fas fa-warehouse"></i>
                         <span>Kho</span>
                     </button>
+                    <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/suppliers') ? styles.active : ''}`}
+                        onClick={() => navigate('/suppliers')}
+                        type="button"
+                    >
+                        <i className="fas fa-truck-loading"></i>
+                        <span>Nhà cung cấp</span>
+                    </button>
                 </nav>
             </aside>
 
@@ -78,6 +86,13 @@ const AdminLayout = ({ children }) => {
                             type="button"
                         >
                             Đơn vị tính
+                        </button>
+                        <button
+                            className={`${styles.tab} ${currentPath === '/product-categories' ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/product-categories')}
+                            type="button"
+                        >
+                            Danh mục sản phẩm
                         </button>
                     </nav>
                     <div className={styles.headerRight}>

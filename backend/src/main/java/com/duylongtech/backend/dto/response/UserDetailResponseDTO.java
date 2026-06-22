@@ -21,6 +21,12 @@ public class UserDetailResponseDTO {
     private String phone;
     private String address;
     private String avatarUrl;
+    private String idCard;
+    private java.time.LocalDate dob;
+    private String gender;
+    private java.time.LocalDate startDate;
+    private String position;
+    private String department;
     private boolean isActive;
     private List<RoleDTO> roles;
     private LocalDateTime createdAt;

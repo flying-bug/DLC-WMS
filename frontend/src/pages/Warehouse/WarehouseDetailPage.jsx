@@ -132,6 +132,7 @@ const WarehouseDetailPage = () => {
     };
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchDetail();
         if (activeTab === 'history') {
             fetchLogs(0);
@@ -310,11 +311,15 @@ const WarehouseDetailPage = () => {
                                         <div className={styles.metaInfoBox}>
                                             <div className={styles.infoItem}>
                                                 <label>NGƯỜI TẠO</label>
-                                                <p>Admin System</p>
+                                                <p>{warehouse.creatorName || 'Chưa cập nhật'}</p>
                                             </div>
                                             <div className={styles.infoItem}>
                                                 <label>NGÀY TẠO</label>
                                                 <p>{formatDate(warehouse.createdAt)}</p>
+                                            </div>
+                                            <div className={styles.infoItem}>
+                                                <label>NGƯỜI CẬP NHẬT</label>
+                                                <p>{warehouse.updaterName || 'Chưa cập nhật'}</p>
                                             </div>
                                             <div className={styles.infoItem}>
                                                 <label>CẬP NHẬT LẦN CUỐI</label>

@@ -57,6 +57,7 @@ const WarehouseListPage = () => {
     };
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchWarehouses();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, size]); 

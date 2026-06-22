@@ -24,7 +24,23 @@ public interface InventoryDocumentRepository extends JpaRepository<InventoryDocu
     @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.id = :id AND e.docType = 'EX_SO'")
     Optional<InventoryDocument> findExportByIdWithLines(@Param("id") Long id);
 
+    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'IN_PO' AND (:docCode IS NULL OR LOWER(e.docCode) LIKE LOWER(CONCAT('%',:docCode,'%'))) AND (:warehouseId IS NULL OR e.warehouseId = :warehouseId) AND (:status IS NULL OR e.status = :status) AND (:fromDate IS NULL OR e.docDate >= :fromDate) AND (:toDate IS NULL OR e.docDate <= :toDate) ORDER BY e.docDate DESC")
+    List<InventoryDocument> searchImports(@Param("docCode") String docCode,
+                                         @Param("fromDate") LocalDate fromDate,
+                                         @Param("toDate") LocalDate toDate,
+                                         @Param("status") String status,
+                                         @Param("warehouseId") Long warehouseId);
+
+    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'IN_PO' ORDER BY e.docDate DESC")
+    List<InventoryDocument> findAllImports();
+
+    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.id = :id AND e.docType = 'IN_PO'")
+    Optional<InventoryDocument> findImportByIdWithLines(@Param("id") Long id);
+
     boolean existsByDocCode(String docCode);
 
     boolean existsByDocCodeAndIdNot(String docCode, Long id);
+
+    @Query("SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END FROM InventoryDocument e WHERE e.warehouseId = :warehouseId OR e.sourceWarehouseId = :warehouseId")
+    boolean existsByAnyWarehouseId(@Param("warehouseId") Long warehouseId);
 }

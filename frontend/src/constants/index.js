@@ -10,6 +10,8 @@ export const ROUTES = {
     FORGOT_PASSWORD: '/forgot-password',
     DASHBOARD: '/dashboard',
     PRODUCTS: '/products',
+    SUPPLIERS: '/suppliers',
+    SUPPLIER_DETAIL: '/suppliers/:id',
 };
 
 // ── Password rules ────────────────────────────────────────────

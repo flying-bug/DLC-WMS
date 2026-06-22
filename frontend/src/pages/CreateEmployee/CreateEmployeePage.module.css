@@ -198,6 +198,25 @@
     gap: 24px;
 }
 
+.errorBanner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 12px 14px;
+    border: 1px solid #fecaca;
+    border-radius: var(--radius-control);
+    background: #fef2f2;
+    color: #991b1b;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.errorBanner i {
+    font-size: 16px;
+    flex: 0 0 auto;
+}
+
 .card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
@@ -445,6 +464,12 @@
     background: var(--button-primary-hover-bg);
     border-color: var(--button-primary-hover-bg);
     box-shadow: var(--shadow-primary-soft);
+}
+
+.btnSave:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+    box-shadow: none;
 }
 
 /* Security Note */

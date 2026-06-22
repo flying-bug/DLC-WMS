@@ -1,0 +1,376 @@
+.container {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    background-color: var(--page-bg, #f8f9fa);
+    min-width: 0;
+    font-family: var(--font-sans, 'Inter', sans-serif);
+}
+
+/* Header */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    margin-bottom: 24px;
+}
+
+.titleArea {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.backLink {
+    font-size: 14px;
+    color: var(--color-primary, #002b6b);
+    cursor: pointer;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.backLink i {
+    font-size: 12px;
+}
+
+.breadcrumbSeparator {
+    color: #cbd5e1;
+    margin: 0 8px;
+}
+
+.breadcrumbText {
+    color: var(--color-text-strong, #1e293b);
+    font-weight: 600;
+}
+
+.supplierName {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-primary, #002b6b);
+    text-transform: uppercase;
+}
+
+.badgeRow {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.badgeGray {
+    background-color: #f1f5f9;
+    color: #475569;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.badgeStatus {
+    background-color: #eff6ff;
+    color: #2563eb;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.badgeStatus i {
+    font-size: 10px;
+}
+
+.headerActions {
+    display: flex;
+    gap: 12px;
+}
+
+.btnOutline {
+    background-color: white;
+    color: var(--color-text-strong, #1e293b);
+    border: 1px solid var(--color-border, #cbd5e1);
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btnOutline:hover {
+    background-color: #f8fafc;
+}
+
+.btnDanger {
+    background-color: white;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btnDanger:hover {
+    background-color: #fef2f2;
+}
+
+/* KPIs cards */
+.kpiContainer {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.kpiCard {
+    flex: 1;
+    background-color: white;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 8px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.kpiLeft {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.kpiLabel {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-muted, #64748b);
+}
+
+.kpiNumber {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-text-strong, #1e293b);
+}
+
+.kpiRight {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.kpiBorderRed {
+    border-left: 4px solid #ef4444;
+}
+
+.kpiBorderRed .kpiRight {
+    background-color: #fef2f2;
+    color: #ef4444;
+}
+
+.kpiBorderBlue {
+    border-left: 4px solid #1e3a8a;
+}
+
+.kpiBorderBlue .kpiRight {
+    background-color: #eff6ff;
+    color: #1e3a8a;
+}
+
+.kpiBorderTeal {
+    border-left: 4px solid #0d9488;
+}
+
+.kpiBorderTeal .kpiRight {
+    background-color: #f0fdfa;
+    color: #0d9488;
+}
+
+.kpiBorderTeal .kpiNumber {
+    color: #0d9488;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 32px;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    margin-bottom: 24px;
+}
+
+.tab {
+    padding: 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-muted, #64748b);
+    cursor: pointer;
+    position: relative;
+}
+
+.tabActive {
+    color: #b45309; /* Orange/Brown */
+}
+
+.tabActive::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: #b45309;
+    border-radius: 3px 3px 0 0;
+}
+
+/* Content Grid */
+.contentGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+/* Common Card */
+.card {
+    background-color: white;
+    border-radius: 8px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.cardIcon {
+    color: var(--color-primary, #002b6b);
+    font-size: 18px;
+}
+
+.cardTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-strong, #1e293b);
+    margin: 0;
+}
+
+/* Basic Info Grid */
+.infoGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 16px;
+}
+
+.infoItem {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.infoLabel {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-muted, #64748b);
+}
+
+.infoValue {
+    font-size: 14px;
+    color: var(--color-text-strong, #1e293b);
+}
+
+.infoValueBold {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-strong, #1e293b);
+}
+
+/* Contact Table */
+.contactTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.contactTable th {
+    background-color: #f8fafc;
+    color: var(--color-text-strong, #1e293b);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.contactTable td {
+    padding: 16px 12px;
+    font-size: 14px;
+    color: var(--color-text-strong, #1e293b);
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.contactTable tr:last-child td {
+    border-bottom: none;
+}
+
+/* Bank Accounts */
+.bankAccount {
+    background-color: #f8fafc;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.bankAccount:last-child {
+    margin-bottom: 0;
+}
+
+.bankName {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-muted, #64748b);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.bankNumber {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-primary, #002b6b);
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+}
+
+.bankHolder {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-strong, #1e293b);
+    text-transform: uppercase;
+}
+
+@media (max-width: 1024px) {
+    .contentGrid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -26,6 +26,9 @@ public enum SystemMessage {
 
     INVALID_USER_STATUS("AUTH09", "Trạng thái tài khoản không hợp lệ."),
     CANNOT_LOCK_SELF("AUTH10", "Không thể tự khóa tài khoản đang đăng nhập."),
+    USERNAME_EXISTS("AUTH11", "Tên đăng nhập đã tồn tại. Vui lòng chọn tên đăng nhập khác."),
+    EMAIL_EXISTS("AUTH12", "Email đã tồn tại. Vui lòng sử dụng email khác."),
+    PHONE_EXISTS("AUTH13", "Số điện thoại đã được đăng ký cho tài khoản khác. Vui lòng sử dụng số điện thoại khác."),
 
     // Unit & Product
     UNIT_NOT_FOUND("UNIT01", "Không tìm thấy đơn vị tính."),
@@ -33,6 +36,12 @@ public enum SystemMessage {
     PRODUCT_NOT_FOUND("PROD01", "Không tìm thấy hàng hóa."),
     PRODUCT_CODE_EXISTS("PROD02", "Mã hàng hóa đã tồn tại trên hệ thống."),
     PRODUCT_NOT_DELETEABLE("PROD03", "Không tìm thấy hàng hóa để xóa."),
+    CATEGORY_NOT_FOUND("CAT01", "Không tìm thấy danh mục."),
+    CATEGORY_CODE_EXISTS("CAT02", "Mã danh mục đã tồn tại trên hệ thống."),
+    CATEGORY_NAME_EXISTS("CAT03", "Tên danh mục đã tồn tại trên hệ thống."),
+    CATEGORY_HAS_PRODUCTS("CAT04", "Không thể xóa danh mục đang có hàng hóa liên kết."),
+    CATEGORY_PARENT_NOT_FOUND("CAT05", "Không tìm thấy danh mục cha."),
+    CATEGORY_INVALID_PARENT("CAT06", "Danh mục cha không hợp lệ."),
 
     // Inventory
     INV_DOC_EXISTS("INV01", "Mã phiếu xuất kho đã tồn tại"),
@@ -59,13 +68,6 @@ public enum SystemMessage {
     BOM_INSUFFICIENT_COMPONENTS("BOM01", "Không đủ số lượng linh kiện thành phần để lắp ráp"),
     WARR_OUT_OF_WARRANTY("WARR01", "Thiết bị đã hết hạn bảo hành"),
 
-    // Brand
-    BRAND_NOT_FOUND("BRD01", "Không tìm thấy thương hiệu / nhà sản xuất."),
-    BRAND_CODE_EXISTS("BRD02", "Mã thương hiệu (Mã NSX) đã tồn tại trên hệ thống."),
-    BRAND_NAME_REQUIRED("BRD03", "Tên thương hiệu không được để trống."),
-    BRAND_HAS_LINKED_PRODUCTS("BRD04", "Không thể xóa thương hiệu này vì đang có dữ liệu sản phẩm/bảo hành liên quan."),
-    BRAND_INVALID_STATUS("BRD05", "Trạng thái thương hiệu không hợp lệ. Chỉ chấp nhận APPROVED hoặc INACTIVE."),
-    BRAND_CODE_NOT_MODIFIABLE("BRD06", "Mã thương hiệu (Mã NSX) không được phép thay đổi sau khi đã tạo."),
     // Warehouse
     WH_NOT_FOUND("WH01", "Không tìm thấy kho lưu trữ."),
     WH_CODE_EXISTS("WH02", "Mã kho đã tồn tại trên hệ thống."),

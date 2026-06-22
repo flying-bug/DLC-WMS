@@ -160,6 +160,7 @@ function AuditLogPage() {
     }, [page, size, debouncedSearch, selectedModule, fromDateInput, toDateInput]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchLogs();
     }, [fetchLogs]);
 

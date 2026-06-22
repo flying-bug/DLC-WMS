@@ -39,7 +39,7 @@ public class AuthService {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        
+
         String role = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .filter(auth -> auth.startsWith("ROLE_"))
@@ -65,14 +65,14 @@ public class AuthService {
                 throw new BusinessException(SystemMessage.INVALID_GOOGLE_TOKEN);
             }
             String email = (String) response.get("email");
-            
+
             com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
             
             if (!"APPROVED".equalsIgnoreCase(user.getStatus())) {
                 throw new BusinessException(SystemMessage.USER_LOCKED);
             }
-            
+
             String role = user.getRoles().stream()
                     .findFirst()
                     .map(r -> {
@@ -81,7 +81,7 @@ public class AuthService {
                     })
                     .orElse("ROLE_USER");
             String jwt = jwtUtils.generateJwtToken(user.getUsername(), role);
-            
+
             return JwtResponse.builder()
                     .token(jwt)
                     .id(user.getId())
@@ -125,7 +125,7 @@ public class AuthService {
 
     public void resetPasswordWithOtp(String email, String otp, String newPassword) {
         verifyOtp(email, otp); // Kiểm tra lại OTP lần nữa cho chắc
-        
+
         com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         

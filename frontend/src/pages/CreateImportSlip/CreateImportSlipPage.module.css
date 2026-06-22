@@ -252,14 +252,29 @@
   border: 1px solid #d1d5db;
   border-radius: 4px;
   padding: 6px 8px;
-  width: 60px;
+  width: 80px;
   text-align: right;
   font-size: 13px;
   color: #1f2937;
   font-weight: 500;
 }
 .tableInputWide {
-  width: 90px;
+  width: 130px;
+}
+.tableSelect {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 6px 8px;
+  width: 150px;
+  font-size: 13px;
+  color: #1f2937;
+  font-weight: 500;
+  outline: none;
+  background-color: white;
+}
+.tableSelect:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
 }
 .tableInput:focus {
   border-color: #3b82f6;
@@ -366,8 +381,16 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
 }
-.actionLink:hover { text-decoration: underline; }
+.actionLink:hover {
+  background-color: #eff6ff;
+  text-decoration: none;
+}
 
 .actionLinkGray {
   color: #64748b;

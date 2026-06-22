@@ -18,7 +18,7 @@ function PermissionDetailPage() {
         transfer: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         stocktake: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         assembly: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-        
+
         // Danh mục
         product: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         unit: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
@@ -44,7 +44,7 @@ function PermissionDetailPage() {
                 const userRes = await axiosClient.get(`/users/${id}`);
                 const userData = userRes.data?.data;
                 setUser(userData);
-                
+
                 // Set initial permission matrix based on saved permissions or roles
                 if (userData) {
                     const hasStaff = userData.roles && userData.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF');
@@ -55,7 +55,7 @@ function PermissionDetailPage() {
                     }
                     setPermissions(prev => {
                         const newPerms = { ...prev };
-                        
+
                         // 1. If user already has explicit permissions, populate them
                         if (userData.permissions && userData.permissions.length > 0) {
                             userData.permissions.forEach(code => {
@@ -115,27 +115,27 @@ function PermissionDetailPage() {
     const handleCheck = (module, action, checked) => {
         setPermissions(prev => {
             const modulePerms = { ...prev[module] };
-            
+
             if (action === 'full') {
                 Object.keys(modulePerms).forEach(key => {
                     modulePerms[key] = checked;
                 });
             } else {
                 modulePerms[action] = checked;
-                
+
                 if (!checked) {
                     modulePerms.full = false;
                 } else {
                     const allOthersChecked = Object.keys(modulePerms)
                         .filter(key => key !== 'full')
                         .every(key => modulePerms[key]);
-                        
+
                     if (allOthersChecked) {
                         modulePerms.full = true;
                     }
                 }
             }
-            
+
             return { ...prev, [module]: modulePerms };
         });
     };
@@ -167,11 +167,11 @@ function PermissionDetailPage() {
             return <input type="checkbox" className={styles.checkbox} disabled style={{ opacity: 0.3 }} />;
         }
         return (
-            <input 
-                type="checkbox" 
-                className={styles.checkbox} 
-                checked={permissions[module][action]} 
-                onChange={(e) => handleCheck(module, action, e.target.checked)} 
+            <input
+                type="checkbox"
+                className={styles.checkbox}
+                checked={permissions[module][action]}
+                onChange={(e) => handleCheck(module, action, e.target.checked)}
             />
         );
     };

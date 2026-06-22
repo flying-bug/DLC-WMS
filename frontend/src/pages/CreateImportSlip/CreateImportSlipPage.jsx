@@ -1,63 +1,130 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
+import * as importApi from '../../api/inventoryImportApi';
 import styles from './CreateImportSlipPage.module.css';
-import ManageSerialModal from './ManageSerialModal';
+
+const unwrap = (response) => response?.data?.data ?? response?.data;
+const pageContent = (payload) => payload?.content ?? payload ?? [];
+const today = () => new Date().toISOString().slice(0, 10);
+const money = (value) => Number(value || 0).toLocaleString('vi-VN');
+
+const emptyLine = () => ({
+  localId: crypto.randomUUID(),
+  variantId: '',
+  quantity: 1,
+  price: 0,
+  note: '',
+});
 
 function CreateImportSlipPage() {
   const navigate = useNavigate();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalData, setModalData] = useState(null);
+  const [warehouses, setWarehouses] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState({
+    docCode: '',
+    warehouseId: '',
+    partnerId: '',
+    docDate: today(),
+    note: '',
+    status: 'DRAFT',
+  });
+  const [items, setItems] = useState([emptyLine()]);
 
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      code: "CPU-I9-14900K",
-      name: "Intel Core i9-14900K Processor",
-      warehouse: "Kho chính",
-      serials: ["SN-2024-0091-8273-A", "SN-2024-0091-8273-B", "SN-2024-0091-8273-C", "SN-2024-0091-8273-D", "SN-2024-0091-8273-E"],
-      unit: "Cái",
-      warranty: "36 tháng",
-      quantity: 5,
-      price: 14500000
-    },
-    {
-      id: 2,
-      code: "RAM-COR-64G",
-      name: "Corsair Vengeance RGB 64GB DDR5 6000MHz",
-      warehouse: "Kho chính",
-      serials: ["SN-RAM-001", "SN-RAM-002", "SN-RAM-003"],
-      unit: "Bộ",
-      warranty: "12 tháng",
-      quantity: 10,
-      price: 5200000
-    }
-  ]);
+  useEffect(() => {
+    const loadLookups = async () => {
+      const [warehouseRes, supplierRes, productRes] = await Promise.allSettled([
+        importApi.getWarehouses({ size: 100 }),
+        importApi.getSuppliers(),
+        importApi.getProducts({ size: 100 }),
+      ]);
+      if (warehouseRes.status === 'fulfilled') {
+        const data = pageContent(unwrap(warehouseRes.value));
+        setWarehouses(data);
+        setForm(prev => ({ ...prev, warehouseId: prev.warehouseId || data[0]?.id || '' }));
+      }
+      if (supplierRes.status === 'fulfilled') {
+        const data = pageContent(unwrap(supplierRes.value));
+        setSuppliers(data);
+        setForm(prev => ({ ...prev, partnerId: prev.partnerId || data[0]?.id || '' }));
+      }
+      if (productRes.status === 'fulfilled') {
+        const data = pageContent(unwrap(productRes.value));
+        setProducts(data);
+        setItems(prev => prev.map((item, index) => index === 0 && !item.variantId ? { ...item, variantId: data[0]?.id || '' } : item));
+      }
+    };
+    loadLookups();
+  }, []);
 
-  const handleItemChange = (id, field, value) => {
-    setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
-  };
-
-  const handleSerialUpdate = (id, newSerials) => {
-    setItems(items.map(item => item.id === id ? { ...item, serials: newSerials } : item));
-  };
-
-  const removeItem = (id) => {
-    setItems(items.filter(item => item.id !== id));
-  };
-
+  const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-  const totalPrice = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0)), 0);
-  const isFormValid = items.length > 0 && items.every(item => item.serials.length === Number(item.quantity));
+  const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
+  const isFormValid = Boolean(form.warehouseId && form.docDate && items.length && items.every(item => item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0));
 
-  const openSerialModal = (item) => {
-    setModalData({ 
-      itemId: item.id,
-      productName: `${item.code} (${item.name})`, 
-      targetQuantity: Number(item.quantity), 
-      initialSerials: item.serials 
-    });
-    setIsModalOpen(true);
+  const handleFormChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleItemChange = (localId, field, value) => {
+    setItems(prev => prev.map(item => item.localId === localId ? { ...item, [field]: value } : item));
+  };
+
+  const addItem = () => {
+    setItems(prev => [...prev, { ...emptyLine(), variantId: products[0]?.id || '' }]);
+  };
+
+  const removeItem = (localId) => {
+    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : prev);
+  };
+
+  const buildPayload = (status) => ({
+    docCode: form.docCode || undefined,
+    warehouseId: Number(form.warehouseId),
+    partnerId: form.partnerId ? Number(form.partnerId) : null,
+    docDate: form.docDate,
+    status,
+    note: form.note,
+    createdBy: Number(localStorage.getItem('userId') || localStorage.getItem('id') || 1),
+    lines: items.map(item => ({
+      variantId: Number(item.variantId),
+      quantityIn: Number(item.quantity),
+      quantityOut: 0,
+      unitCost: Number(item.price),
+      unitPrice: Number(item.price),
+      note: item.note,
+    })),
+  });
+
+  const submit = async (status, shouldPost = false) => {
+    if (!isFormValid) {
+      setError('Vui lòng chọn kho, ngày ghi nhận và ít nhất một dòng hàng hợp lệ.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    let createdId = null;
+    try {
+      const response = await importApi.createImportSlip(buildPayload(status));
+      const created = unwrap(response);
+      createdId = created?.id;
+      if (shouldPost && createdId) {
+        await importApi.postImportSlip(createdId);
+      }
+      navigate('/import-history');
+    } catch (err) {
+      if (createdId) {
+        alert('Đã tạo phiếu nhưng Ghi sổ thất bại: ' + (err.response?.data?.userMessage || err.response?.data?.devMessage || err.message));
+        navigate('/import-history');
+      } else {
+        setError(err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không lưu được phiếu nhập kho');
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -65,17 +132,12 @@ function CreateImportSlipPage() {
       <div className={styles.pageBody} style={{ padding: 0 }}>
         <div className={styles.scrollableContent}>
           <div className={styles.pageHeader}>
-            <a
-              href="#"
-              className={styles.backLink}
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/import-history');
-              }}
-            >
-              <i className="bi bi-arrow-left"></i> Phiếu Nhập Kho PNK001
+            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/import-history'); }}>
+              <i className="bi bi-arrow-left"></i> Tạo phiếu nhập kho
             </a>
           </div>
+
+          {error && <div className={styles.card} style={{ color: '#b91c1c' }}>{error}</div>}
 
           <div className={styles.topGrid}>
             <div className={styles.card}>
@@ -86,39 +148,25 @@ function CreateImportSlipPage() {
 
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Mã nhà cung cấp</label>
-                  <div className={styles.inputGroup}>
-                    <input type="text" className={`${styles.input} ${styles.inputWithAppend}`} defaultValue="KH-2024-089" />
-                    <button className={styles.btnAppend}><i className="bi bi-plus"></i></button>
-                  </div>
+                  <label className={styles.label}>Nhà cung cấp</label>
+                  <select className={styles.input} value={form.partnerId} onChange={(e) => handleFormChange('partnerId', e.target.value)}>
+                    <option value="">Chưa chọn</option>
+                    {suppliers.map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.code} - {supplier.name}</option>)}
+                  </select>
                 </div>
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Tên nhà cung cấp</label>
-                  <div className={styles.inputReadonly}>Công ty TNHH Giải pháp Công nghệ Việt</div>
-                </div>
-              </div>
-
-              <div className={styles.formRow}>
-                <div className={`${styles.formGroup} ${styles.formGroupFull}`}>
-                  <label className={styles.label}>Địa chỉ</label>
-                  <div className={styles.inputReadonly}>123 Đường Láng, Quận Đống Đa, Hà Nội</div>
-                </div>
-              </div>
-
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Nhân viên bán hàng</label>
-                  <div className={styles.inputGroup}>
-                    <input type="text" className={`${styles.input} ${styles.inputWithAppend}`} defaultValue="NV-TRUNGNT" />
-                    <button className={styles.btnAppend}><i className="bi bi-plus"></i></button>
-                  </div>
+                  <label className={styles.label}>Kho nhập</label>
+                  <select className={styles.input} value={form.warehouseId} onChange={(e) => handleFormChange('warehouseId', e.target.value)}>
+                    <option value="">Chọn kho</option>
+                    {warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} - {warehouse.name}</option>)}
+                  </select>
                 </div>
               </div>
 
               <div className={styles.formRow}>
                 <div className={`${styles.formGroup} ${styles.formGroupFull}`}>
                   <label className={styles.label}>Lý do nhập</label>
-                  <textarea className={styles.textarea} defaultValue="Nhập hàng theo hợp đồng số HD-99281-VTS ký ngày 15/10"></textarea>
+                  <textarea className={styles.textarea} value={form.note} onChange={(e) => handleFormChange('note', e.target.value)} />
                 </div>
               </div>
             </div>
@@ -131,20 +179,20 @@ function CreateImportSlipPage() {
 
               <div className={styles.formGroup} style={{ marginBottom: '16px' }}>
                 <label className={styles.label}>Ngày ghi nhận</label>
-                <input type="text" className={styles.input} defaultValue="10/27/2023" />
+                <input type="date" className={styles.input} value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
               </div>
 
               <div className={styles.formGroup} style={{ marginBottom: '16px' }}>
                 <label className={styles.label}>Số phiếu</label>
-                <div className={`${styles.inputReadonly} ${styles.inputReadonlyText}`}>PNK001</div>
+                <input className={styles.input} placeholder="Để trống để hệ thống tự sinh" value={form.docCode} onChange={(e) => handleFormChange('docCode', e.target.value)} />
               </div>
 
               <div className={styles.formGroup}>
-                <label className={styles.label}>Chứng Từ Tham Chiếu</label>
-                <div className={styles.linksBox}>
-                  <a href="#" className={styles.linkItem}><i className="bi bi-link-45deg"></i> Phiếu Xuất: PXN003</a>
-                  <div className={styles.linkItemAdd}><i className="bi bi-paperclip"></i> Đính kèm chứng từ...</div>
-                </div>
+                <label className={styles.label}>Trạng thái</label>
+                <select className={styles.input} value={form.status} onChange={(e) => handleFormChange('status', e.target.value)}>
+                  <option value="DRAFT">Lưu tạm</option>
+                  <option value="SUBMITTED">Chờ duyệt</option>
+                </select>
               </div>
             </div>
           </div>
@@ -153,11 +201,6 @@ function CreateImportSlipPage() {
             <div className={styles.cardHeader}>
               <i className="bi bi-box-seam text-gray-500"></i>
               <h3 className={styles.cardTitle}>Bảng hàng hóa</h3>
-              <div className={styles.cardHeaderRight}>
-                <button className={styles.btnOutlineBlue}>
-                  <i className="bi bi-download"></i> Nhập từ Excel
-                </button>
-              </div>
             </div>
 
             <div className={styles.tableContainer}>
@@ -167,10 +210,7 @@ function CreateImportSlipPage() {
                     <th>#</th>
                     <th>Mã hàng</th>
                     <th>Tên hàng</th>
-                    <th>Kho</th>
-                    <th>Serial Number</th>
                     <th>ĐVT</th>
-                    <th>Bảo hành</th>
                     <th style={{ textAlign: 'right' }}>Số lượng</th>
                     <th style={{ textAlign: 'right' }}>Đơn giá nhập</th>
                     <th style={{ textAlign: 'right' }}>Thành tiền</th>
@@ -179,78 +219,44 @@ function CreateImportSlipPage() {
                 </thead>
                 <tbody>
                   {items.map((item, index) => {
-                    const isSerialOk = item.serials.length === Number(item.quantity);
+                    const product = productById.get(String(item.variantId));
                     return (
-                      <tr key={item.id}>
+                      <tr key={item.localId}>
                         <td>{index + 1}</td>
-                        <td className={styles.textBold}>{item.code}</td>
-                        <td>{item.name}</td>
                         <td>
-                          <div className={styles.flexCenter}>
-                            {item.warehouse} <i className="bi bi-chevron-down" style={{ fontSize: '10px', color: '#666' }}></i>
-                            <button className={styles.miniBtnAppend} style={{ marginLeft: '4px' }}><i className="bi bi-plus"></i></button>
-                          </div>
+                          <select className={styles.tableSelect} value={item.variantId} onChange={(e) => handleItemChange(item.localId, 'variantId', e.target.value)}>
+                            <option value="">Chọn hàng</option>
+                            {products.map(productItem => <option key={productItem.id} value={productItem.id}>{productItem.productCode}</option>)}
+                          </select>
                         </td>
-                        <td>
-                          <div className={styles.serialCellContainer}>
-                            <button 
-                              className={isSerialOk ? styles.serialBadgeSuccess : styles.serialBadgeWarning}
-                              onClick={() => openSerialModal(item)}
-                            >
-                              <i className={isSerialOk ? "bi bi-check-circle" : "bi bi-exclamation-triangle"}></i> 
-                              {item.serials.length}/{item.quantity} Serial
-                            </button>
-                            <span className={styles.serialSubtext}>
-                              {isSerialOk ? 'Đã nhập đủ' : `Thiếu ${Number(item.quantity) - item.serials.length} Serial Number`}
-                            </span>
-                          </div>
-                        </td>
-                        <td>{item.unit}</td>
-                        <td>{item.warranty}</td>
+                        <td>{product?.productName || ''}</td>
+                        <td>{product?.unitName || ''}</td>
                         <td align="right">
-                          <input 
-                            type="number" 
-                            className={styles.tableInput} 
-                            value={item.quantity} 
-                            onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
-                          />
+                          <input type="number" min="0" className={styles.tableInput} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
                         </td>
                         <td align="right">
-                          <input 
-                            type="number" 
-                            className={`${styles.tableInput} ${styles.tableInputWide}`} 
-                            value={item.price} 
-                            onChange={(e) => handleItemChange(item.id, 'price', e.target.value)}
-                          />
+                          <input type="number" min="0" className={`${styles.tableInput} ${styles.tableInputWide}`} value={item.price} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value)} />
                         </td>
                         <td align="right" className={`${styles.textBold} ${styles.textBlue}`}>
-                          {(Number(item.quantity) * Number(item.price)).toLocaleString('vi-VN')} đ
+                          {money(Number(item.quantity || 0) * Number(item.price || 0))} đ
                         </td>
                         <td>
-                          <button className={styles.iconBtnDanger} onClick={() => removeItem(item.id)}>
+                          <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)}>
                             <i className="bi bi-trash"></i>
                           </button>
                         </td>
                       </tr>
                     );
                   })}
-                  {items.length === 0 && (
-                    <tr>
-                      <td colSpan="11" style={{ textAlign: 'center', padding: '30px', color: '#6b7280' }}>
-                        Chưa có hàng hóa nào. Vui lòng thêm từ danh mục.
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
               <div className={styles.tableFooter}>
                 <span>Tổng cộng hàng nhập:</span>
-                <span>{totalQuantity}</span>
-                <span className={styles.textBlue}>{totalPrice.toLocaleString('vi-VN')} đ</span>
+                <span>{money(totalQuantity)}</span>
+                <span className={styles.textBlue}>{money(totalPrice)} đ</span>
               </div>
               <div className={styles.tableActions}>
-                <a className={styles.actionLink}><i className="bi bi-plus-circle"></i> Thêm dòng mới</a>
-                <a className={styles.actionLinkGray}><i className="bi bi-list-ul"></i> Thêm nhanh từ danh mục</a>
+                <button className={styles.actionLink} onClick={addItem}><i className="bi bi-plus-circle"></i> Thêm dòng mới</button>
               </div>
             </div>
           </div>
@@ -258,42 +264,19 @@ function CreateImportSlipPage() {
 
         <div className={styles.fixedFooter}>
           <div className={styles.footerLeft}>
-            <button className={styles.btnDefault}>Hủy bỏ</button>
-            <button className={styles.btnTextBlue}>
-              <i className="bi bi-clock-history"></i> Xem nhật ký thay đổi
-            </button>
+            <button className={styles.btnDefault} onClick={() => navigate('/import-history')}>Hủy bỏ</button>
           </div>
           <div className={styles.footerRight}>
-            <button className={styles.btnOutlinePrimary}>Lưu tạm</button>
-            <button 
-              className={styles.btnSuccess} 
-              style={{ opacity: isFormValid ? 1 : 0.5, cursor: isFormValid ? 'pointer' : 'not-allowed' }}
-              disabled={!isFormValid}
-            >
+            <button className={styles.btnOutlinePrimary} disabled={saving} onClick={() => submit('DRAFT')}>Lưu tạm</button>
+            <button className={styles.btnSuccess} disabled={!isFormValid || saving} onClick={() => submit('SUBMITTED')}>
               <i className="bi bi-save"></i> Lưu lại
             </button>
-            <button className={styles.btnPrimary}>
-              <i className="bi bi-printer"></i> Lưu và In
+            <button className={styles.btnPrimary} disabled={!isFormValid || saving} onClick={() => submit('SUBMITTED', true)}>
+              <i className="bi bi-printer"></i> Lưu và ghi sổ
             </button>
           </div>
         </div>
-
       </div>
-
-      {isModalOpen && modalData && (
-        <ManageSerialModal 
-          isOpen={isModalOpen}
-          onClose={(updatedSerials) => {
-            if (Array.isArray(updatedSerials)) {
-              handleSerialUpdate(modalData.itemId, updatedSerials);
-            }
-            setIsModalOpen(false);
-          }}
-          productName={modalData.productName}
-          targetQuantity={modalData.targetQuantity}
-          initialSerials={modalData.initialSerials}
-        />
-      )}
     </AdminLayout>
   );
 }

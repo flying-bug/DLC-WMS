@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Modal from '../../components/ui/Modal/Modal';
 import styles from './ManageSerialModal.module.css';
 
@@ -10,6 +10,7 @@ function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initi
 
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSerials([...initialSerials]);
       setInputValue('');
       setErrorText('');

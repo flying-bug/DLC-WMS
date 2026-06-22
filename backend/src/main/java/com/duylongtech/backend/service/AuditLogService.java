@@ -55,7 +55,7 @@ public class AuditLogService {
     }
 
     @Transactional
-    public void logEvent(String username, String action, String entityName, Long entityId, 
+    public void logEvent(String username, String action, String entityName, Long entityId,
                          String status, String description, String ipAddress, String detailJson) {
         try {
             User user = null;

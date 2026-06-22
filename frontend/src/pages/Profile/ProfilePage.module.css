@@ -188,3 +188,41 @@
         flex-direction: column;
     }
 }
+
+@media (max-width: 640px) {
+    .container {
+        padding: 16px;
+    }
+
+    .header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .profileCard {
+        padding: 22px;
+    }
+
+    .actionsSection {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 640px) {
+    .container {
+        padding: 16px;
+    }
+
+    .header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .profileCard {
+        padding: 22px;
+    }
+
+    .actionsSection {
+        flex-direction: column;
+    }
+}

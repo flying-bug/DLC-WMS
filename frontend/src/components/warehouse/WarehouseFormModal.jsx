@@ -23,6 +23,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
     useEffect(() => {
         if (isOpen) {
             if (isEdit && initialData) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setFormData({
                     code: initialData.code || '',
                     name: initialData.name || '',

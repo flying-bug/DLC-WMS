@@ -34,7 +34,7 @@ public class EmailService {
                     + "<p>Mã OTP này có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>"
                     + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ DLC-WMS</p>"
                     + "</div>";
-            
+
             helper.setText(htmlMsg, true);
             mailSender.send(message);
         } catch (Exception e) {

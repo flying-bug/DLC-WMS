@@ -243,6 +243,7 @@
     border-radius: var(--radius-card);
     overflow-x: auto;
     overflow-y: visible;
+    padding-bottom: 120px; /* Fix double scrollbar from dropdown popup */
 }
 
 .tableToolbar {

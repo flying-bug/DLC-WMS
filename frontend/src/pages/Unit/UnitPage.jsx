@@ -7,7 +7,7 @@ const UnitPage = () => {
     const [units, setUnits] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    
+
     // Pagination state
     const [page, setPage] = useState(0);
     const [size, setSize] = useState(20);
@@ -19,7 +19,7 @@ const UnitPage = () => {
     const [isEdit, setIsEdit] = useState(false);
     const [formData, setFormData] = useState({ id: null, name: '', description: '', status: 'ACTIVE' });
     const [errorMsg, setErrorMsg] = useState('');
-    
+
     // Dropdown state
     const [openDropdownId, setOpenDropdownId] = useState(null);
 
@@ -142,9 +142,9 @@ const UnitPage = () => {
 
                 <div className={styles.toolbar}>
                     <div className={styles.searchBox}>
-                        <input 
-                            type="text" 
-                            placeholder="Tìm kiếm theo đơn vị tính" 
+                        <input
+                            type="text"
+                            placeholder="Tìm kiếm theo đơn vị tính"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             onKeyDown={handleSearch}
@@ -181,9 +181,9 @@ const UnitPage = () => {
                                         <td>{unit.status === 'ACTIVE' ? 'Đang sử dụng' : 'Ngừng sử dụng'}</td>
                                         <td className={styles.actionCell}>
                                             <span className={styles.editText} onClick={() => openEditModal(unit)}>Sửa</span>
-                                            
+
                                             <div className={styles.dropdownContainer}>
-                                                <div 
+                                                <div
                                                     className={styles.dropdownToggle}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -192,7 +192,7 @@ const UnitPage = () => {
                                                 >
                                                     <i className="fas fa-caret-down"></i>
                                                 </div>
-                                                
+
                                                 {openDropdownId === unit.id && (
                                                     <div className={styles.dropdownMenu}>
                                                         <div className={styles.dropdownItem} onClick={() => handleDuplicate(unit)}>Nhân bản</div>
@@ -221,15 +221,15 @@ const UnitPage = () => {
                             <option value={30}>30 bản ghi trên 1 trang</option>
                             <option value={50}>50 bản ghi trên 1 trang</option>
                         </select>
-                        <span 
-                            className={`${styles.pageBtn} ${page === 0 ? styles.disabled : ''}`} 
+                        <span
+                            className={`${styles.pageBtn} ${page === 0 ? styles.disabled : ''}`}
                             onClick={() => page > 0 && setPage(page - 1)}
                         >
                             Trước
                         </span>
                         <span className={styles.currentPage}>{page + 1}</span>
-                        <span 
-                            className={`${styles.pageBtn} ${page >= totalPages - 1 ? styles.disabled : ''}`} 
+                        <span
+                            className={`${styles.pageBtn} ${page >= totalPages - 1 ? styles.disabled : ''}`}
                             onClick={() => page < totalPages - 1 && setPage(page + 1)}
                         >
                             Sau
@@ -250,22 +250,22 @@ const UnitPage = () => {
                             </div>
                             <div className={styles.modalBody}>
                                 {errorMsg && <div className={styles.errorAlert}>{errorMsg}</div>}
-                                
+
                                 <div className={styles.formGroup}>
                                     <label>Đơn vị tính <span className={styles.required}>*</span></label>
-                                    <input 
-                                        type="text" 
-                                        className={styles.inputField} 
+                                    <input
+                                        type="text"
+                                        className={styles.inputField}
                                         value={formData.name}
                                         onChange={(e) => setFormData({...formData, name: e.target.value})}
                                         autoFocus
                                     />
                                 </div>
-                                
+
                                 <div className={styles.formGroup}>
                                     <label>Mô tả</label>
-                                    <textarea 
-                                        className={styles.textareaField} 
+                                    <textarea
+                                        className={styles.textareaField}
                                         rows="3"
                                         value={formData.description}
                                         onChange={(e) => setFormData({...formData, description: e.target.value})}

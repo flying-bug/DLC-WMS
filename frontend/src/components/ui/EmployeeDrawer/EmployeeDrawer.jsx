@@ -9,6 +9,8 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
     const [isEditMode, setIsEditMode] = useState(false);
     const [formData, setFormData] = useState(() => user ? { ...user } : null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState('');
 
     // Sync formData when user prop changes
     useEffect(() => {
@@ -26,6 +28,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                 setIsEditMode(false);
                 setActiveTab('general');
                 setShowConfirmModal(false);
+                setSaveError('');
             }, 0);
             return () => clearTimeout(timer);
         }
@@ -36,32 +39,52 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+        if (saveError) setSaveError('');
     };
 
-    const handleInitialSave = () => {
-        // If system role is updated, show modal
-        // If not changed or just simple info, we can bypass, but since this is dynamic
-        // we'll just show the modal every time they save in this demo.
-        setShowConfirmModal(true);
+    const normalizePhone = (value) => (value || '').replace(/[\s.-]/g, '');
+
+    const saveCurrentForm = async () => {
+        setSaving(true);
+        setSaveError('');
+        try {
+            if (onSave) {
+                await onSave({
+                    ...formData,
+                    phone: normalizePhone(formData.phone),
+                });
+            }
+            setIsEditMode(false);
+            setShowConfirmModal(false);
+            onClose();
+        } catch (error) {
+            setSaveError(error?.response?.data?.userMessage || error?.message || 'Không lưu được thay đổi.');
+        } finally {
+            setSaving(false);
+        }
     };
 
-    const handleConfirmAdmin = () => {
-        if (onSave) onSave(formData);
-        setIsEditMode(false);
-        setShowConfirmModal(false);
-        onClose(); // Optional: close drawer after admin save
+    const handleInitialSave = async () => {
+        if (formData.systemRole !== user.systemRole) {
+            setShowConfirmModal(true);
+            return;
+        }
+        await saveCurrentForm();
     };
 
-    const handleConfirmUser = () => {
-        if (onSave) onSave(formData);
-        setIsEditMode(false);
-        setShowConfirmModal(false);
+    const handleConfirmAdmin = async () => {
+        await saveCurrentForm();
+    };
+
+    const handleConfirmUser = async () => {
+        await saveCurrentForm();
         navigate(`/users/${formData.id}/permissions`);
     };
 
     const handleCancel = () => {
         setFormData({ ...user }); // reset
         setIsEditMode(false);
+        setSaveError('');
     };
 
     const renderGeneralTab = () => (
@@ -253,7 +276,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
             {isEditMode ? (
                 <>
                     <p className={styles.roleText}>Chọn vai trò phù hợp cho nhân viên này để thiết lập các quyền hạn truy cập tương ứng.</p>
-                    
+
                     <label className={`${styles.roleCard} ${formData.systemRole === 'admin' ? styles.roleCardActive : ''}`}>
                         <input type="radio" name="systemRole" value="admin" checked={formData.systemRole === 'admin'} onChange={handleChange} className={styles.roleRadio} />
                         <div className={styles.roleContent}>
@@ -322,7 +345,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                             <i className="bi bi-x-lg"></i>
                         </button>
                     </div>
-                    
+
                     <div className={styles.tabs}>
                         <button className={`${styles.tabBtn} ${activeTab === 'general' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('general')}>Thông tin chung</button>
                         <button className={`${styles.tabBtn} ${activeTab === 'employee' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('employee')}>Thông tin nhân viên</button>
@@ -331,6 +354,12 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                 </div>
 
                 <div className={styles.body}>
+                    {saveError && (
+                        <div className={styles.errorAlert}>
+                            <i className="bi bi-exclamation-triangle"></i>
+                            <span>{saveError}</span>
+                        </div>
+                    )}
                     {activeTab === 'general' && renderGeneralTab()}
                     {activeTab === 'employee' && renderEmployeeInfoTab()}
                     {activeTab === 'role' && renderRoleTab()}
@@ -340,7 +369,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     {isEditMode ? (
                         <>
                             <button className={styles.btnCancel} onClick={handleCancel}>Hủy</button>
-                            <button className={styles.btnSave} onClick={handleInitialSave}>Lưu thay đổi</button>
+                            <button className={styles.btnSave} onClick={handleInitialSave} disabled={saving}>Lưu thay đổi</button>
                         </>
                     ) : (
                         <button className={styles.btnCancel} onClick={() => setIsEditMode(true)}>Chỉnh sửa</button>
@@ -349,7 +378,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
             </div>
 
             {/* Confirmation Modal */}
-            <Modal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)}>
+            <Modal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)} dialogClassName={styles.confirmDialog}>
                 {formData.systemRole === 'admin' ? (
                     <div className={styles.modalContent}>
                         <div className={styles.modalHeader}>
@@ -363,7 +392,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                         </p>
                         <div className={styles.modalActions}>
                             <button className={styles.btnCancel} onClick={() => setShowConfirmModal(false)}>Hủy</button>
-                            <button className={`${styles.btnSave} ${styles.btnDanger}`} onClick={handleConfirmAdmin}>Xác nhận cấp quyền</button>
+                            <button className={`${styles.btnSave} ${styles.btnDanger}`} onClick={handleConfirmAdmin} disabled={saving}>Xác nhận cấp quyền</button>
                         </div>
                     </div>
                 ) : (
@@ -379,7 +408,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                         </p>
                         <div className={styles.modalActions}>
                             <button className={styles.btnCancel} onClick={() => setShowConfirmModal(false)}>Hủy</button>
-                            <button className={styles.btnSave} onClick={handleConfirmUser}>Tiếp tục</button>
+                            <button className={styles.btnSave} onClick={handleConfirmUser} disabled={saving}>Tiếp tục</button>
                         </div>
                     </div>
                 )}
