@@ -1,0 +1,60 @@
+@startuml
+title Sequence Diagram: UC09 - Create Account
+
+actor "Admin/Manager" as User
+boundary "CreateUserPage" as Page
+control "UserController" as Controller
+control "UserService" as Service
+entity "UserRepository" as Repository
+database "Database" as Database
+
+User -> Page : Fill account information\nClick "Save"
+activate Page
+
+Page -> Controller : POST /api/v1/users
+activate Controller
+
+Controller -> Service : createUser(userDto)
+activate Service
+
+Service -> Repository : existsByUsername / Email / Phone()
+activate Repository
+
+Repository -> Database : SELECT count(*) FROM users WHERE ...
+activate Database
+Database --> Repository : Boolean result
+deactivate Database
+
+Repository --> Service : true / false
+deactivate Repository
+
+alt Duplicate Data (Username / Email / Phone)
+    Service --> Controller : throws Exception
+    Controller --> Page : 400 Error Response
+    Page --> User : Hiển thị thông báo lỗi (Tên đăng nhập/Email/SĐT đã tồn tại)
+
+else Valid Data
+    Service -> Service : Set default password ("123456")\nand map DTO to Entity
+
+    Service -> Repository : save(user)
+    activate Repository
+    
+    Repository -> Database : INSERT INTO users (...) VALUES (...)
+    activate Database
+    Database --> Repository : Saved
+    deactivate Database
+    
+    Repository --> Service : User Entity
+    deactivate Repository
+    
+    Service --> Controller : UserDto
+    deactivate Service
+    
+    Controller --> Page : 200 OK (ApiResponse)
+    deactivate Controller
+    
+    Page --> User : Hiển thị thông báo (Tạo tài khoản thành công)
+    deactivate Page
+end
+
+@enduml

@@ -1,0 +1,67 @@
+@startuml
+title Sequence Diagram: UC12 - Lock/Unlock Account
+
+actor "Admin/Manager" as User
+boundary "UsersPage" as Page
+control "UserController" as Controller
+control "UserService" as Service
+entity "UserRepository" as Repository
+database "Database" as Database
+
+User -> Page : Toggle Lock/Unlock switch\nConfirm Action
+activate Page
+
+Page -> Controller : PUT /api/v1/users/{id}/status?status=APPROVED/INACTIVE
+activate Controller
+
+Controller -> Service : updateStatus(id, status)
+activate Service
+
+Service -> Repository : findById(id)
+activate Repository
+
+Repository -> Database : SELECT * FROM users WHERE id = ?
+activate Database
+Database --> Repository : User data / null
+deactivate Database
+
+Repository --> Service : User / null
+deactivate Repository
+
+alt User Not Found
+    Service --> Controller : throws Exception
+    Controller --> Page : 404 Error Response
+    Page --> User : Hiển thị thông báo lỗi (Tài khoản không tồn tại)
+
+else User Found
+    Service -> Service : Validate status & self-locking rule
+
+    alt Locking own account
+        Service --> Controller : throws Exception
+        Controller --> Page : 400 Error Response
+        Page --> User : Hiển thị thông báo lỗi (Không thể tự khóa tài khoản)
+
+    else Valid Operation
+        Service -> Repository : save(user)
+        activate Repository
+        
+        Repository -> Database : UPDATE users SET status = ? WHERE id = ?
+        activate Database
+        Database --> Repository : Saved
+        deactivate Database
+        
+        Repository --> Service : User Entity
+        deactivate Repository
+        
+        Service --> Controller : void
+        deactivate Service
+        
+        Controller --> Page : 200 OK (ApiResponse)
+        deactivate Controller
+        
+        Page --> User : Hiển thị thông báo (Cập nhật trạng thái thành công)
+        deactivate Page
+    end
+end
+
+@enduml
