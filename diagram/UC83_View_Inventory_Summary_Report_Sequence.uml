@@ -1,0 +1,85 @@
+@startuml
+
+autonumber
+
+actor "Manager" as Actor
+boundary "InventorySummaryReportPage" as Page
+control "ReportController" as Controller
+participant "InventoryReportService" as Service
+participant "InventoryReportRepository" as Repository
+database "duylongcomputer" as Database
+
+Actor -> Page: Request to view Inventory Summary Report\n(apply filters: date range, warehouse, category)
+activate Page
+
+Page -> Controller: GET /api/v1/reports/inventory-summary (filters)
+activate Controller
+
+alt Validation Error
+    Controller -> Controller: validateParams(filters)
+    Controller --> Page: 400 Bad Request (Validation details)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị lỗi thông số tìm kiếm không hợp lệ
+else Valid Parameters
+    Controller -> Service: getInventorySummaryReport(filters)
+    activate Service
+
+    Service -> Repository: fetchInventorySummary(filters)
+    activate Repository
+    
+    Repository -> Database: SELECT product_id, SUM(qty_in), SUM(qty_out) \nFROM INVENTORY_TRANSACTIONS \nLEFT JOIN PRODUCT_VARIANTS \n(filtered by date, warehouse) \nGROUP BY product_id
+    activate Database
+    
+    Database --> Repository: Aggregated Transactions (In/Out limits)
+    deactivate Database
+    
+    Repository -> Database: SELECT product_id, quantity \nFROM INVENTORY_BALANCES \n(at start date and end date boundaries)
+    activate Database
+    
+    Database --> Repository: Balances Result Set
+    deactivate Database
+    
+    Repository --> Service: List[InventorySummaryData]
+    deactivate Repository
+    
+    Service -> Service: processSummaryData(List[InventorySummaryData])
+    note right: Calculate metrics for each product:\n- Tồn đầu kỳ (Beginning Balance)\n- Tổng nhập (Total In)\n- Tổng xuất (Total Out)\n- Tồn cuối kỳ (Ending Balance)
+    
+    Service --> Controller: InventorySummaryReportDTO
+    deactivate Service
+    
+    Controller --> Page: 200 OK (InventorySummaryReportDTO)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị báo cáo Tổng hợp Xuất - Nhập - Tồn (Bảng dữ liệu)
+end
+
+opt Export Report to Excel/PDF
+    Actor -> Page: Click "Export" button
+    Page -> Controller: GET /api/v1/reports/inventory-summary/export (filters, format)
+    activate Controller
+    
+    Controller -> Service: exportInventorySummaryReport(filters, format)
+    activate Service
+    
+    Service -> Repository: fetchInventorySummary(filters)
+    activate Repository
+    Repository --> Service: List[InventorySummaryData]
+    deactivate Repository
+    
+    Service -> Service: generateFile(List[InventorySummaryData], format)
+    note right: Create Excel/PDF file with calculated\nBeginning, In, Out, and Ending balances
+    
+    Service --> Controller: byte[] (File stream)
+    deactivate Service
+    
+    Controller --> Page: 200 OK (Content-Type: application/octet-stream)
+    deactivate Controller
+    
+    Page --> Actor: Tải xuống file báo cáo xuất nhập tồn thành công
+end
+
+deactivate Page
+
+@enduml

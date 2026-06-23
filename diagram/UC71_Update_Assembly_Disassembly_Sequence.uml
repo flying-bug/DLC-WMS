@@ -1,0 +1,110 @@
+@startuml
+
+autonumber
+
+actor "Manager/Staff" as Actor
+boundary "UpdateAssemblyOrderPage" as Page
+control "AssemblyOrderController" as Controller
+participant "AssemblyOrderService" as Service
+participant "AssemblyOrderRepository" as Repository
+participant "AssemblyBomRepository" as BomRepository
+database "duylongcomputer" as Database
+
+Actor -> Page: Modify order details and submit\n(quantity, bomId, notes)
+activate Page
+
+Page -> Controller: PUT /api/v1/assembly-orders/{id} (UpdateOrderRequest)
+activate Controller
+
+alt Validation Error
+    Controller -> Controller: validateRequest(request)
+    Controller --> Page: 400 Bad Request (Validation details)
+    deactivate Controller
+    Page --> Actor: Hiển thị lỗi dữ liệu không hợp lệ
+else Valid Request
+    Controller -> Service: updateAssemblyOrder(id, request)
+    activate Service
+
+    Service -> Repository: findById(id)
+    activate Repository
+    
+    Repository -> Database: SELECT FROM ASSEMBLY_ORDERS \nLEFT JOIN ASSEMBLY_ORDER_LINES
+    activate Database
+    
+    Database --> Repository: Existing Order Data
+    deactivate Database
+    
+    Repository --> Service: Optional[AssemblyOrder]
+    deactivate Repository
+    
+    alt Order Not Found
+        Service --> Controller: ResourceNotFoundException (Order not found)
+        deactivate Service
+        
+        Controller --> Page: 404 Not Found (Error message)
+        deactivate Controller
+        
+        Page --> Actor: Hiển thị lỗi không tìm thấy đơn lệnh
+    else Order Found
+        Service -> Service: validateUpdatability(existingOrder)
+        note right: Ensure order status is PENDING.\nCannot update COMPLETED/CANCELLED
+        
+        alt Cannot Update (e.g., Status != PENDING)
+            Service --> Controller: IllegalStateException (Invalid status)
+            deactivate Service
+            
+            Controller --> Page: 400 Bad Request (Trạng thái không hợp lệ)
+            deactivate Controller
+            
+            Page --> Actor: Hiển thị lỗi không thể cập nhật lệnh đã xử lý
+        else Can Update
+            opt BOM or Quantity changed
+                Service -> BomRepository: findById(request.bomId)
+                activate BomRepository
+                
+                BomRepository -> Database: SELECT FROM ASSEMBLY_BOMS
+                activate Database
+                Database --> BomRepository: BOM Details
+                deactivate Database
+                
+                BomRepository --> Service: Optional[AssemblyBom]
+                deactivate BomRepository
+                
+                Service -> Service: recalculateLines(existingOrder, newBom, newQuantity)
+                note right: Clear old components and recalculate\nbased on new BOM or Quantity
+            end
+            
+            Service -> Service: updateEntity(existingOrder, request)
+            
+            Service -> Repository: save(existingOrder)
+            activate Repository
+            
+            Repository -> Database: UPDATE ASSEMBLY_ORDERS
+            activate Database
+            Database --> Repository: Updated Order Result
+            deactivate Database
+            
+            Repository -> Database: DELETE/INSERT/UPDATE ASSEMBLY_ORDER_LINES
+            activate Database
+            Database --> Repository: Updated Lines Result
+            deactivate Database
+            
+            Repository --> Service: Saved AssemblyOrder
+            deactivate Repository
+            
+            Service -> Service: mapToDTO(Saved AssemblyOrder)
+            
+            Service --> Controller: AssemblyOrderDetailDTO
+            deactivate Service
+            
+            Controller --> Page: 200 OK (AssemblyOrderDetailDTO)
+            deactivate Controller
+            
+            Page --> Actor: Hiển thị thông báo cập nhật thành công\nvà tải lại chi tiết lệnh
+        end
+    end
+end
+
+deactivate Page
+
+@enduml

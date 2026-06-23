@@ -1,0 +1,107 @@
+@startuml
+
+autonumber
+
+actor "Manager/Staff" as Actor
+boundary "CreateRepairTicketPage" as Page
+control "RepairTicketController" as Controller
+participant "RepairTicketService" as Service
+participant "WarrantyRepository" as WarrantyRepo
+participant "SerialNumberRepository" as SerialRepo
+participant "RepairTicketRepository" as Repository
+database "duylongcomputer" as Database
+
+Actor -> Page: Fill and submit Create Repair Ticket form\n(warrantyId, issueDescription, expectedDate)
+activate Page
+
+Page -> Controller: POST /api/v1/repair-tickets (CreateRepairTicketRequest)
+activate Controller
+
+alt Validation Error
+    Controller -> Controller: validateRequest(request)
+    Controller --> Page: 400 Bad Request (Validation Errors)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị lỗi dữ liệu đầu vào không hợp lệ
+else Valid Request
+    Controller -> Service: createRepairTicket(request)
+    activate Service
+
+    Service -> WarrantyRepo: findById(warrantyId)
+    activate WarrantyRepo
+    
+    WarrantyRepo -> Database: SELECT FROM WARRANTIES
+    activate Database
+    
+    Database --> WarrantyRepo: Warranty Data
+    deactivate Database
+    
+    WarrantyRepo --> Service: Optional[Warranty]
+    deactivate WarrantyRepo
+
+    alt Warranty Not Found
+        Service --> Controller: ResourceNotFoundException
+        deactivate Service
+        
+        Controller --> Page: 404 Not Found (Error Message)
+        deactivate Controller
+        
+        Page --> Actor: Hiển thị lỗi không tìm thấy phiếu bảo hành
+    else Warranty Found
+        Service -> Service: validateWarrantyStatus(warranty)
+        note right: Ensure warranty is active/approved\nand device is not already in repair
+        
+        alt Invalid Warranty Status
+            Service --> Controller: IllegalStateException (Out of warranty/Already repairing)
+            deactivate Service
+            
+            Controller --> Page: 400 Bad Request (Invalid Status)
+            deactivate Controller
+            
+            Page --> Actor: Hiển thị lỗi thiết bị không đủ điều kiện bảo hành/sửa chữa
+        else Valid Warranty Status
+            Service -> Service: initializeRepairTicket(RepairTicket)
+            note right: Set default status to PENDING
+            
+            Service -> Repository: save(repairTicket)
+            activate Repository
+            
+            Repository -> Database: INSERT INTO REPAIR_TICKETS
+            activate Database
+            
+            Database --> Repository: Inserted Ticket
+            deactivate Database
+            
+            Repository --> Service: Saved RepairTicket
+            deactivate Repository
+            
+            opt Update Serial Status to REPAIRING
+                Service -> SerialRepo: updateStatus(warranty.serialId, 'REPAIRING')
+                activate SerialRepo
+                
+                SerialRepo -> Database: UPDATE SERIAL_NUMBERS
+                activate Database
+                
+                Database --> SerialRepo: Update Result
+                deactivate Database
+                
+                SerialRepo --> Service: Success
+                deactivate SerialRepo
+            end
+            
+            Service -> Service: mapToDTO(Saved RepairTicket)
+            
+            Service --> Controller: RepairTicketDTO
+            deactivate Service
+            
+            Controller --> Page: 201 Created (RepairTicketDTO)
+            deactivate Controller
+            
+            Page --> Actor: Hiển thị thông báo tạo phiếu sửa chữa thành công
+        end
+    end
+end
+
+deactivate Page
+
+@enduml
