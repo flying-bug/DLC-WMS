@@ -12,27 +12,24 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductResponse {
+public class ProductVariantResponse {
     private Long id;
+    private Long productId;
+    private String productCode;
+    private String productName;
     private Long brandId;
     private String brandName;
     private Long categoryId;
     private String categoryName;
     private Long unitId;
     private String unitName;
-    private String productCode;
-    private String productName;
-    private String productType;
+    private String sku;
+    private String variantName;
+    private BigDecimal costPrice;
     private BigDecimal salePrice;
-    private Boolean trackSerial;
-    private Boolean trackLot;
-    private Boolean isAssembly;
-    private String description;
+    private String manufacturerPartNumber;
+    private String specsJson;
     private Boolean active;
-    private String taxReductionStatus;
-    private BigDecimal stockQty;
-    private BigDecimal stockValue;
-    private String imageUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

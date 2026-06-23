@@ -1,8 +1,10 @@
 package com.duylongtech.backend.controller;
 
 import com.duylongtech.backend.dto.request.ProductRequest;
+import com.duylongtech.backend.dto.request.ProductVariantRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.ProductResponse;
+import com.duylongtech.backend.dto.response.ProductVariantResponse;
 import com.duylongtech.backend.service.ProductService;
 import com.duylongtech.backend.service.AuditLogService;
 import jakarta.validation.Valid;
@@ -43,10 +45,85 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProducts(page, size, search));
     }
 
+    @GetMapping("/export")
+    @PreAuthorize("hasAuthority('product:export')")
+    public ResponseEntity<byte[]> exportProducts(
+            @RequestParam(required = false) String search,
+            org.springframework.security.core.Authentication authentication) {
+        String exporterName = authentication != null ? authentication.getName() : "System";
+        byte[] excelBytes = productService.exportProductsToExcel(search, exporterName);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        String timestamp = java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String filename = "DLC_WMS_Danh_Sach_San_Pham_" + timestamp + ".xlsx";
+        headers.add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(org.springframework.http.MediaType
+                        .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelBytes);
+    }
+
+    @GetMapping("/variants")
+    @PreAuthorize("hasAuthority('product:view')")
+    public ResponseEntity<Page<ProductVariantResponse>> getVariants(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1000") int size,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(productService.getVariants(page, size, search));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('product:view')")
     public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getProductById(id));
+    }
+
+    @GetMapping("/{id}/variants")
+    @PreAuthorize("hasAuthority('product:view')")
+    public ResponseEntity<java.util.List<ProductVariantResponse>> getProductVariants(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.getVariantsByProduct(id));
+    }
+
+    @PostMapping("/{id}/variants")
+    @PreAuthorize("hasAuthority('product:add')")
+    public ResponseEntity<ApiResponse<ProductVariantResponse>> createProductVariant(
+            @PathVariable Long id,
+            @Valid @RequestBody ProductVariantRequest request) {
+        ProductVariantResponse created = productService.createVariant(id, request);
+        return ResponseEntity.ok(ApiResponse.<ProductVariantResponse>builder()
+                .success(true)
+                .userMessage("Tao SKU thanh cong")
+                .data(created)
+                .build());
+    }
+
+    @PutMapping("/{id}/variants/{variantId}")
+    @PreAuthorize("hasAuthority('product:edit')")
+    public ResponseEntity<ApiResponse<ProductVariantResponse>> updateProductVariant(
+            @PathVariable Long id,
+            @PathVariable Long variantId,
+            @Valid @RequestBody ProductVariantRequest request) {
+        ProductVariantResponse updated = productService.updateVariant(id, variantId, request);
+        return ResponseEntity.ok(ApiResponse.<ProductVariantResponse>builder()
+                .success(true)
+                .userMessage("Cap nhat SKU thanh cong")
+                .data(updated)
+                .build());
+    }
+
+    @DeleteMapping("/{id}/variants/{variantId}")
+    @PreAuthorize("hasAuthority('product:delete')")
+    public ResponseEntity<ApiResponse<Void>> deleteProductVariant(
+            @PathVariable Long id,
+            @PathVariable Long variantId) {
+        productService.deleteVariant(id, variantId);
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .success(true)
+                .userMessage("Xoa SKU thanh cong")
+                .build());
     }
 
     @PostMapping

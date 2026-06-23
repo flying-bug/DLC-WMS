@@ -23,7 +23,7 @@ export const postImportSlip = (id) => {
 };
 
 export const getProducts = (params = {}) => {
-  return axiosClient.get('/products', { params });
+  return axiosClient.get('/products/variants', { params });
 };
 
 export const getSuppliers = (params = {}) => {
