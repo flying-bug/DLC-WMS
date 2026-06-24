@@ -125,11 +125,17 @@ const ProductPage = () => {
     }, [page, size, searchTerm]);
 
     useEffect(() => {
-        fetchLookups();
+        const timeoutId = window.setTimeout(() => {
+            fetchLookups();
+        }, 0);
+        return () => window.clearTimeout(timeoutId);
     }, [fetchLookups]);
 
     useEffect(() => {
-        fetchProducts();
+        const timeoutId = window.setTimeout(() => {
+            fetchProducts();
+        }, 0);
+        return () => window.clearTimeout(timeoutId);
     }, [fetchProducts]);
 
     const buildInitialFormData = (overrides = {}) => ({
