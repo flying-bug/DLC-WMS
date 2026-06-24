@@ -25,6 +25,7 @@ import SupplierDetailPage from '../pages/Supplier/SupplierDetailPage';
 import CustomerListPage from '../pages/Customer/CustomerListPage';
 import CustomerDetailPage from '../pages/Customer/CustomerDetailPage';
 import WarrantyListPage from '../pages/Warranty/WarrantyListPage';
+import WarrantyDetailPage from '../pages/Warranty/WarrantyDetailPage';
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -83,6 +84,7 @@ function AppRouter() {
                     <Route path="/customers" element={<CustomerListPage />} />
                     <Route path="/customers/:id" element={<CustomerDetailPage />} />
                     <Route path="/warranties" element={<WarrantyListPage />} />
+                    <Route path="/warranties/:id" element={<WarrantyDetailPage />} />
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}
