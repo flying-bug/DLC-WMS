@@ -29,6 +29,15 @@ public class InventoryDocument {
     @Column(name = "doc_type", nullable = false, length = 30)
     private String docType;
 
+    @Column(name = "issue_purpose", length = 30)
+    private String issuePurpose;
+
+    @Column(name = "reference_type", length = 30)
+    private String referenceType;
+
+    @Column(name = "reference_id")
+    private Long referenceId;
+
     @Column(name = "warehouse_id")
     private Long warehouseId;
 
