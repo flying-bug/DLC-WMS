@@ -28,6 +28,7 @@ import WarrantyListPage from '../pages/Warranty/WarrantyListPage';
 import WarrantyDetailPage from '../pages/Warranty/WarrantyDetailPage';
 import CreateRepairTicketPage from '../pages/RepairTicket/CreateRepairTicketPage';
 import RepairTicketListPage from '../pages/RepairTicket/RepairTicketListPage';
+import UpdateRepairTicketPage from '../pages/RepairTicket/UpdateRepairTicketPage';
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -89,6 +90,7 @@ function AppRouter() {
                     <Route path="/warranties/:id" element={<WarrantyDetailPage />} />
                     <Route path="/repair-tickets" element={<RepairTicketListPage />} />
                     <Route path="/repair-tickets/create" element={<CreateRepairTicketPage />} />
+                    <Route path="/repair-tickets/:id/edit" element={<UpdateRepairTicketPage />} />
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}
