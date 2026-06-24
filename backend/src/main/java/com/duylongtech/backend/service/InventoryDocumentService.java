@@ -45,14 +45,18 @@ public class InventoryDocumentService {
 
     @Transactional(readOnly = true)
     public List<InventoryDocumentResponse> getExportHistory(String docCode, LocalDate fromDate, LocalDate toDate,
-            String status, Long warehouseId) {
+            String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId) {
         String normalizedDocCode = trimToNull(docCode);
         String normalizedStatus = normalizeOptionalStatus(status);
+        String normalizedIssuePurpose = normalizeOptionalReference(issuePurpose);
+        String normalizedReferenceType = normalizeOptionalReference(referenceType);
         boolean noFilters = normalizedDocCode == null && fromDate == null && toDate == null && normalizedStatus == null
-                && warehouseId == null;
+                && warehouseId == null && normalizedIssuePurpose == null && normalizedReferenceType == null
+                && referenceId == null;
         List<InventoryDocument> docs = noFilters
                 ? inventoryDocumentRepository.findAllExports()
-                : inventoryDocumentRepository.searchExports(normalizedDocCode, fromDate, toDate, normalizedStatus, warehouseId);
+                : inventoryDocumentRepository.searchExports(normalizedDocCode, fromDate, toDate, normalizedStatus,
+                        warehouseId, normalizedIssuePurpose, normalizedReferenceType, referenceId);
         return docs.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
@@ -236,11 +240,17 @@ public class InventoryDocumentService {
         InventoryDocument doc = new InventoryDocument();
         doc.setDocCode(docCode);
         doc.setDocType(docType);
+        doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
+        doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
+        doc.setReferenceId(req.getReferenceId());
         doc.setWarehouseId(req.getWarehouseId());
         doc.setSourceWarehouseId(req.getSourceWarehouseId());
         doc.setPurchaseOrderId(req.getPurchaseOrderId());
         doc.setSalesOrderId(req.getSalesOrderId());
         doc.setPartnerId(req.getPartnerId());
+        doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
+        doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
+        doc.setReferenceId(req.getReferenceId());
         doc.setDocDate(req.getDocDate());
         doc.setStatus(normalizeEditableStatus(req.getStatus(), DEFAULT_STATUS));
         doc.setNote(req.getNote());
@@ -466,6 +476,11 @@ public class InventoryDocumentService {
         return normalized;
     }
 
+    private String normalizeOptionalReference(String value) {
+        String normalized = trimToNull(value);
+        return normalized != null ? normalized.toUpperCase(Locale.ROOT) : null;
+    }
+
     private String normalizeEditableImportStatus(String status, String fallback) {
         String normalized = normalizeStatusValue(status, fallback);
         if (!EDITABLE_STATUSES.contains(normalized)) {
@@ -502,6 +517,9 @@ public class InventoryDocumentService {
         r.setId(doc.getId());
         r.setDocCode(doc.getDocCode());
         r.setDocType(doc.getDocType());
+        r.setIssuePurpose(doc.getIssuePurpose());
+        r.setReferenceType(doc.getReferenceType());
+        r.setReferenceId(doc.getReferenceId());
         r.setWarehouseId(doc.getWarehouseId());
         r.setSourceWarehouseId(doc.getSourceWarehouseId());
         r.setPurchaseOrderId(doc.getPurchaseOrderId());

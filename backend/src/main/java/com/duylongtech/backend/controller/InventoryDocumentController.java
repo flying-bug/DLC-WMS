@@ -45,9 +45,14 @@ public class InventoryDocumentController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Long warehouseId
+            @RequestParam(required = false) Long warehouseId,
+            @RequestParam(required = false) String issuePurpose,
+            @RequestParam(required = false) String referenceType,
+            @RequestParam(required = false) Long referenceId
     ) {
-        return ApiResponse.success(inventoryDocumentService.getExportHistory(docCode, fromDate, toDate, status, warehouseId));
+        return ApiResponse.success(inventoryDocumentService.getExportHistory(
+                docCode, fromDate, toDate, status, warehouseId, issuePurpose, referenceType, referenceId
+        ));
     }
 
     @GetMapping("/{id}")
