@@ -1,0 +1,61 @@
+@startuml
+
+autonumber
+
+actor "Manager" as Actor
+boundary "DashboardPage" as Page
+control "DashboardController" as Controller
+participant "DashboardService" as Service
+participant "DashboardRepository" as Repository
+database "duylongcomputer" as Database
+
+Actor -> Page: Navigate to Dashboard / Home Page
+activate Page
+
+Page -> Controller: GET /api/v1/dashboard/metrics
+activate Controller
+
+Controller -> Service: getDashboardMetrics()
+activate Service
+
+Service -> Repository: fetchOverallStats()
+activate Repository
+Repository -> Database: SELECT COUNT, SUM... \nFROM SALES_ORDERS, REPAIR_TICKETS, PARTNER_LEDGERS
+activate Database
+Database --> Repository: Aggregated Stats (Revenue, Debt, Tickets)
+deactivate Database
+Repository --> Service: Map[String, Object] (Overall Stats)
+deactivate Repository
+
+Service -> Repository: fetchRecentActivities()
+activate Repository
+Repository -> Database: SELECT * FROM INVENTORY_TRANSACTIONS \nORDER BY created_at DESC LIMIT 10
+activate Database
+Database --> Repository: Recent Activities Result Set
+deactivate Database
+Repository --> Service: List[ActivityData]
+deactivate Repository
+
+Service -> Repository: fetchChartData(defaultDateRange)
+activate Repository
+Repository -> Database: SELECT date, SUM(total_amount) \nFROM SALES_ORDERS GROUP BY date
+activate Database
+Database --> Repository: Chart Data Result Set
+deactivate Database
+Repository --> Service: List[ChartData]
+deactivate Repository
+
+Service -> Service: aggregateAndFormatDashboardData()
+note right: Compile all stats, charts,\nand activities into a single comprehensive DTO
+
+Service --> Controller: DashboardDTO
+deactivate Service
+
+Controller --> Page: 200 OK (DashboardDTO)
+deactivate Controller
+
+Page --> Actor: Hiển thị giao diện Dashboard tổng quan\n(Thẻ thống kê, Biểu đồ doanh thu, Hoạt động gần đây)
+
+deactivate Page
+
+@enduml

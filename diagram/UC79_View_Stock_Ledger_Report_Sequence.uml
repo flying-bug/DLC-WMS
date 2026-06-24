@@ -1,0 +1,79 @@
+@startuml
+
+autonumber
+
+actor "Manager" as Actor
+boundary "StockLedgerReportPage" as Page
+control "ReportController" as Controller
+participant "InventoryReportService" as Service
+participant "InventoryTransactionRepository" as Repository
+database "duylongcomputer" as Database
+
+Actor -> Page: Request to view Stock Ledger Report\n(apply filters: date range, product, warehouse)
+activate Page
+
+Page -> Controller: GET /api/v1/reports/stock-ledger (filters)
+activate Controller
+
+alt Validation Error
+    Controller -> Controller: validateParams(filters)
+    Controller --> Page: 400 Bad Request (Validation details)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị lỗi thông số tìm kiếm không hợp lệ
+else Valid Parameters
+    Controller -> Service: getStockLedgerReport(filters)
+    activate Service
+
+    Service -> Repository: fetchLedgerData(filters)
+    activate Repository
+    
+    Repository -> Database: SELECT t.* FROM INVENTORY_TRANSACTIONS t \nLEFT JOIN PRODUCT_VARIANTS p \nLEFT JOIN WAREHOUSES w \n(filtered by date, product, warehouse) \nORDER BY t.created_at ASC
+    activate Database
+    
+    Database --> Repository: Transaction Result Set
+    deactivate Database
+    
+    Repository --> Service: List[InventoryTransaction]
+    deactivate Repository
+    
+    Service -> Service: processLedgerData(List[InventoryTransaction])
+    note right: Calculate running balances (Tồn đầu kỳ, Tồn cuối kỳ)\nbased on IN/OUT movements
+    
+    Service --> Controller: StockLedgerReportDTO
+    deactivate Service
+    
+    Controller --> Page: 200 OK (StockLedgerReportDTO)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị báo cáo thẻ kho / sổ chi tiết vật tư (Stock Ledger)
+end
+
+opt Export Report to Excel/PDF
+    Actor -> Page: Click "Export" button
+    Page -> Controller: GET /api/v1/reports/stock-ledger/export (filters, format)
+    activate Controller
+    
+    Controller -> Service: exportStockLedgerReport(filters, format)
+    activate Service
+    
+    Service -> Repository: fetchLedgerData(filters)
+    activate Repository
+    Repository --> Service: List[InventoryTransaction]
+    deactivate Repository
+    
+    Service -> Service: generateFile(List[InventoryTransaction], format)
+    note right: Create Excel/PDF file with formatting\n(including running balances)
+    
+    Service --> Controller: byte[] (File stream)
+    deactivate Service
+    
+    Controller --> Page: 200 OK (Content-Type: application/octet-stream)
+    deactivate Controller
+    
+    Page --> Actor: Tải xuống file báo cáo thẻ kho thành công
+end
+
+deactivate Page
+
+@enduml
