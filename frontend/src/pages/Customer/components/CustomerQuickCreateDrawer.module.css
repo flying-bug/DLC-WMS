@@ -1,0 +1,211 @@
+/* Overlay (dim nền) */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.35);
+    z-index: 1000;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Drawer panel từ phải */
+.drawer {
+    width: 420px;
+    max-width: 100vw;
+    height: 100%;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.drawerOpen {
+    transform: translateX(0);
+}
+
+/* Header */
+.drawerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    background-color: var(--color-primary, #002b6b);
+    color: white;
+    flex-shrink: 0;
+}
+
+.drawerTitle {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.drawerTitle i {
+    font-size: 14px;
+    opacity: 0.85;
+}
+
+.closeBtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: none;
+    background-color: rgba(255, 255, 255, 0.15);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: background-color 0.15s;
+}
+
+.closeBtn:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Form Body - Scrollable */
+.form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.formBody {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Form Group */
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-strong, #334155);
+}
+
+.required {
+    color: #dc2626;
+    margin-left: 2px;
+}
+
+.input,
+.select,
+.textarea {
+    padding: 8px 12px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--color-text-strong, #1e293b);
+    background-color: white;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+    border-color: var(--color-primary, #002b6b);
+    box-shadow: 0 0 0 3px rgba(0, 43, 107, 0.08);
+}
+
+.inputError {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08) !important;
+}
+
+.textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.errorMsg {
+    font-size: 12px;
+    color: #dc2626;
+    font-weight: 500;
+}
+
+.warningMsg {
+    font-size: 12px;
+    color: #d97706;
+    font-weight: 500;
+    background-color: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 4px;
+    padding: 6px 10px;
+    line-height: 1.5;
+}
+
+/* Footer */
+.drawerFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+    background-color: #f8fafc;
+    flex-shrink: 0;
+}
+
+.btnCancel {
+    padding: 8px 16px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 6px;
+    background-color: white;
+    color: var(--color-text-strong, #334155);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.btnCancel:hover {
+    background-color: #f1f5f9;
+}
+
+.btnSave {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--color-primary, #002b6b);
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.15s;
+}
+
+.btnSave:hover:not(:disabled) {
+    background-color: #001f4d;
+}
+
+.btnSave:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+    .drawer {
+        width: 100vw;
+    }
+}
