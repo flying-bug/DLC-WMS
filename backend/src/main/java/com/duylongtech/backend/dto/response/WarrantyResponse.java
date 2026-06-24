@@ -25,6 +25,7 @@ public class WarrantyResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private String warrantyStatus;
+    private String note;
     private Integer repairCount;
     private List<RepairSummary> repairs;
 
