@@ -27,7 +27,8 @@ const CustomerQuickCreateDrawer = ({ isOpen, editData, onClose, onSaved }) => {
 
     // Reset form khi mở
     useEffect(() => {
-        if (isOpen) {
+        if (!isOpen) return;
+        Promise.resolve().then(() => {
             if (isEditMode) {
                 setForm({
                     name: editData.name || '',
@@ -41,7 +42,7 @@ const CustomerQuickCreateDrawer = ({ isOpen, editData, onClose, onSaved }) => {
                 setForm({ name: '', phone: '', email: '', address: '', groupType: 'RETAIL' });
             }
             setErrors({});
-        }
+        });
     }, [isOpen, editData, isEditMode]);
 
     const handleChange = (e) => {

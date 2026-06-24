@@ -40,7 +40,7 @@ const CustomerListPage = () => {
     }, []);
 
     useEffect(() => {
-        fetchCustomers('', 0);
+        Promise.resolve().then(() => fetchCustomers('', 0));
     }, [fetchCustomers]);
 
     // Autocomplete search: debounce 400ms

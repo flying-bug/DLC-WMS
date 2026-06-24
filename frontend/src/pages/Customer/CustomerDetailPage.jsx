@@ -87,7 +87,7 @@ const CustomerDetailPage = () => {
     }, [id]);
 
     useEffect(() => {
-        fetchTabData(activeTab, page);
+        Promise.resolve().then(() => fetchTabData(activeTab, page));
     }, [activeTab, page, fetchTabData]);
 
     const handleTabChange = (tab) => {
