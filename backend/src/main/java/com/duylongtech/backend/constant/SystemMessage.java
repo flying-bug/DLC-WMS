@@ -64,6 +64,12 @@ public enum SystemMessage {
     SUPPLIER_INVALID_STATUS("SUP05", "Trạng thái nhà cung cấp không hợp lệ. Chỉ chấp nhận APPROVED hoặc INACTIVE."),
     SUPPLIER_INVALID_GROUP_TYPE("SUP06", "Nhóm nhà cung cấp không hợp lệ. Chỉ chấp nhận: RETAIL, WHOLESALE, DISTRIBUTOR."),
 
+    // Customer
+    CUST_NOT_FOUND("CUST01", "Không tìm thấy khách hàng."),
+    CUST_PHONE_EXISTS("CUST02", "Số điện thoại này đã được đăng ký cho khách hàng khác."),
+    CUST_HAS_REPAIRING_WARRANTY("CUST03", "Khách hàng đang có thiết bị sửa chữa tại trung tâm, không thể vô hiệu hóa."),
+    CUST_VIEW_SEED_DATA_DENIED("CUST04", "Không được phép xem chi tiết dữ liệu Khách vãng lai."),
+
     // BOM & Warranty
     BOM_INSUFFICIENT_COMPONENTS("BOM01", "Không đủ số lượng linh kiện thành phần để lắp ráp"),
     WARR_OUT_OF_WARRANTY("WARR01", "Thiết bị đã hết hạn bảo hành"),

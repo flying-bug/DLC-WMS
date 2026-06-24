@@ -1,0 +1,59 @@
+@startuml
+
+autonumber
+
+actor "Manager/Staff" as Actor
+boundary "WarrantyDetailPage" as Page
+control "WarrantyController" as Controller
+participant "WarrantyService" as Service
+participant "WarrantyRepository" as Repository
+database "duylongcomputer" as Database
+
+Actor -> Page: Request to view warranty details (click on warranty)
+activate Page
+
+Page -> Controller: GET /api/v1/warranties/{id}
+activate Controller
+
+Controller -> Service: getWarrantyById(id)
+activate Service
+
+Service -> Repository: findById(id)
+activate Repository
+
+Repository -> Database: SELECT FROM WARRANTIES \nLEFT JOIN SERIAL_NUMBERS \nLEFT JOIN PARTNERS \nLEFT JOIN REPAIR_LOGS
+activate Database
+
+Database --> Repository: Warranty Data (with related entities)
+deactivate Database
+
+alt Warranty Not Found
+    Repository --> Service: Empty Optional
+    deactivate Repository
+    
+    Service --> Controller: ResourceNotFoundException (Warranty not found)
+    deactivate Service
+    
+    Controller --> Page: 404 Not Found (Error Message)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị thông báo lỗi không tìm thấy phiếu bảo hành
+else Warranty Found
+    Repository --> Service: Optional[Warranty]
+    deactivate Repository
+    
+    Service -> Service: mapToDetailDTO(Warranty)
+    note right: Map warranty information,\nserial info, partner info,\nand repair history
+    
+    Service --> Controller: WarrantyDetailDTO
+    deactivate Service
+    
+    Controller --> Page: 200 OK (WarrantyDetailDTO)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị chi tiết phiếu bảo hành (thông tin chung, thiết bị, lịch sử sửa chữa)
+end
+
+deactivate Page
+
+@enduml

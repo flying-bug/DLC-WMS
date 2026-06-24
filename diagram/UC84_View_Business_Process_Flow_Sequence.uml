@@ -1,0 +1,66 @@
+@startuml
+
+autonumber
+
+actor "Manager" as Actor
+boundary "ProcessFlowPage" as Page
+control "ProcessFlowController" as Controller
+participant "ProcessFlowService" as Service
+participant "MetricsRepository" as Repository
+database "duylongcomputer" as Database
+
+Actor -> Page: Navigate to View Business Process Flow (Sơ đồ quy trình)
+activate Page
+
+Page -> Controller: GET /api/v1/process-flow/metrics
+activate Controller
+
+Controller -> Service: getProcessFlowMetrics()
+activate Service
+
+Service -> Repository: fetchNodeMetrics()
+activate Repository
+
+Repository -> Database: SELECT status, COUNT(id) \nFROM PURCHASE_ORDERS GROUP BY status
+activate Database
+Database --> Repository: PO Status Counts
+deactivate Database
+
+Repository -> Database: SELECT status, COUNT(id) \nFROM SALES_ORDERS GROUP BY status
+activate Database
+Database --> Repository: SO Status Counts
+deactivate Database
+
+Repository -> Database: SELECT doc_type, status, COUNT(id) \nFROM INVENTORY_DOCUMENTS GROUP BY doc_type, status
+activate Database
+Database --> Repository: Inventory Document Counts (In/Out/Transfer)
+deactivate Database
+
+Repository -> Database: SELECT status, COUNT(id) \nFROM REPAIR_TICKETS GROUP BY status
+activate Database
+Database --> Repository: Repair Ticket Counts
+deactivate Database
+
+Repository --> Service: Map[String, Object] (Raw Metrics)
+deactivate Repository
+
+Service -> Service: aggregateFlowData(Raw Metrics)
+note right: Map raw database counts to specific\nvisual nodes on the Process Flow\n(e.g., 'Inbound', 'Storage', 'Outbound', 'Services')
+
+Service --> Controller: ProcessFlowDTO
+deactivate Service
+
+Controller --> Page: 200 OK (ProcessFlowDTO)
+deactivate Controller
+
+Page --> Actor: Hiển thị sơ đồ quy trình nghiệp vụ trực quan\n(Mỗi Node hiển thị số liệu tương ứng)
+
+opt Interact with Process Flow
+    Actor -> Page: Click on a specific Node (e.g., "Pending Putaways")
+    Page -> Page: Redirect to respective list view\n(e.g., Inventory Documents with pre-applied status filters)
+    Page --> Actor: Điều hướng và hiển thị danh sách chi tiết tương ứng
+end
+
+deactivate Page
+
+@enduml
