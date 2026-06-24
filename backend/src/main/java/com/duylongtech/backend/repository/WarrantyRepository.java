@@ -8,6 +8,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface WarrantyRepository extends JpaRepository<Warranty, Long> {
+    boolean existsByWarrantyCode(String warrantyCode);
+
+    boolean existsByWarrantyCodeAndIdNot(String warrantyCode, Long id);
     
     @Query("SELECT w FROM Warranty w " +
            "LEFT JOIN FETCH w.serialNumber sn " +
