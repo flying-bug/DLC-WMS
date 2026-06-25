@@ -42,6 +42,10 @@ public class Product {
     @Column(name = "product_type", nullable = false, length = 50)
     private String productType;
 
+    @Column(name = "sale_price", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal salePrice = BigDecimal.ZERO;
+
     @Column(name = "track_serial")
     @Builder.Default
     private Boolean trackSerial = false;
