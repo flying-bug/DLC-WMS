@@ -91,9 +91,6 @@ const BrandListPage = () => {
                                 <i className={`fas fa-chevron-down ${styles.selectIcon}`}></i>
                             </div>
                         </div>
-                        <div className={styles.filterInfo}>
-                            Hiển thị <strong>1-10</strong> trong <strong>{totalElements}</strong> kết quả
-                        </div>
                     </div>
                 </div>
 

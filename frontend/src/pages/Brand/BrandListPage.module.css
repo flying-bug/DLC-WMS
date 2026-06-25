@@ -175,15 +175,6 @@
     pointer-events: none;
 }
 
-.filterInfo {
-    font-size: 0.875rem;
-    color: var(--color-text-muted, #64748b);
-}
-
-.filterInfo strong {
-    color: var(--color-text-strong, #1e293b);
-}
-
 /* Table Card */
 .tableCard {
     background-color: white;
