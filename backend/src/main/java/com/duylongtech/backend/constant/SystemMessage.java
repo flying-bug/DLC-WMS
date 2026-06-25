@@ -74,6 +74,12 @@ public enum SystemMessage {
     WH_HAS_TRANSACTION("WH03", "Không thể xóa kho đã phát sinh giao dịch hoặc đang chứa linh kiện. Hệ thống đã tự động chuyển trạng thái kho này về ngừng hoạt động (INACTIVE)."),
     WH_OPTIMISTIC_LOCK("WH04", "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại trang để xem dữ liệu mới nhất."),
 
+    // Brand
+    BRAND_NOT_FOUND("BRND01", "Không tìm thấy thương hiệu."),
+    BRAND_CODE_EXISTS("BRND02", "Mã thương hiệu đã tồn tại trên hệ thống."),
+    BRAND_CODE_NOT_MODIFIABLE("BRND03", "Mã thương hiệu không thể thay đổi sau khi tạo."),
+    BRAND_INVALID_STATUS("BRND04", "Trạng thái thương hiệu không hợp lệ."),
+
     // General Errors
     ACCESS_DENIED("SYS403", "Bạn không có quyền thực hiện thao tác này"),
     SESSION_EXPIRED("SYS401", "Phiên đăng nhập đã hết hạn"),

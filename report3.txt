@@ -150,33 +150,33 @@ UC-12	Lock/Unlock Account		Lock or unlock a user account.
 UC-13	Update Functional Permissions		Assign or update user permissions.
 UC-14	View System Audit Logs		View system audit logs.
 UC-15	View Warehouse List	Warehouse Management	View the list of warehouses.
-UC-16	View Warehouse Details		
+UC-16	View Warehouse Details		View details of a warehouse
 UC-17	Create Warehouse		Create a new warehouse.
 UC-18	Update Warehouse		Update warehouse information.
 UC-19	Delete Warehouse		Delete a warehouse.
 UC-20	View Supplier List	Supplier Management	View the list of suppliers.
-UC-21	View Supplier Details		
+UC-21	View Supplier Details		View details of a supplier
 UC-22	Create Supplier		Create a new supplier.
 UC-23	Update Supplier		Update supplier information.
 UC-24	Delete Supplier		Delete a supplier.
 UC-25	View Customer List	Customer Management	View the list of customers.
-UC-26	View Customer Details		
+UC-26	View Customer Details		View details of a customer
 UC-27	Create Customer		Create a new customer.
 UC-28	Update Customer		Update customer information.
 UC-29	Delete Customer		Delete a customer.
 UC-30	View Product List	Product Management	View the list of products.
-UC-31	View Product Details		
+UC-31	View Product Details		View details of a product
 UC-32	Create Product		Create a new product.
 UC-33	Update Product		Update product information.
 UC-34	Delete Product		Delete a product.
 UC-35	Print Bar Code		Print barcode labels for products.
 UC-36	View Brand List	Brand Management	View the list of brands.
-UC-37	View Brand Details		
+UC-37	View Brand Details		View details of a brand
 UC-38	Create Brand		Create a new brand.
 UC-39	Update Brand		Update brand information.
 UC-40	Delete Brand		Delete a brand.
 UC-41	View Category List	Category Management	View the list of categories.
-UC-42	View Category Details		
+UC-42	View Category Details		View details of a category
 UC-43	Create Category		Create a new category.
 UC-44	Update Category		Update category information.
 UC-45	Delete Category		Delete a category.
@@ -326,31 +326,27 @@ Table 03: Screen Authorization
 
 Table 04: Non-UI Function List
 1.5 Entity Relationship Diagram
-    
+      
 Figure 10: ERD Conceptual Diagram
 The link of the diagram: ERD Conceptual Diagram
 Entities Description
 #	Entity	Description
-1	User	Represents system users such as managers, accountants, sales staff, warehouse staff, and technicians who perform business operations within the system.
-2	Role	Defines a collection of permissions assigned to users to control access to system functionalities.
-3	Permission	Represents a specific system function or action that can be granted to a role.
-4	Warehouse	Represents a physical storage location where products, components, and inventory are managed.
-5	Partner	Represents external parties interacting with the business, including suppliers and customers.
-6	Brand	Represents the manufacturer or brand associated with a product.
-7	Product Category	Represents a classification used to group similar products for organization and reporting purposes.
-8	Unit	Represents the measurement unit used for inventory transactions, such as piece, box, meter, or set.
-9	Product	Represents a product model or product type offered by the business.
-10	Product Variant	Represents a specific variation of a product, distinguished by attributes such as configuration, specification, or version.
-11	Purchase Order	Represents an order created to procure products from suppliers and receive inventory into the warehouse.
-12	Sales Order	Represents an order created when products are sold to customers and inventory is issued from the warehouse.
-13	Inventory Document	Represents inventory transaction records such as goods receipt, goods issue, stock transfer, or inventory adjustment documents.
-14	Serial Number	Represents a unique identifier assigned to an individual product item for tracking, warranty, and traceability purposes.
-15	Warranty	Represents warranty information provided to customers for purchased products, including coverage period and warranty status.
-16	Repair	Represents a repair or maintenance request associated with a product under warranty or paid service.
-17	Assembly BOM	Represents the Bill of Materials (BOM), defining the components required to assemble a finished product.
-18	Assembly Order	Represents an assembly operation that consumes components according to a BOM and produces a finished product.
+1	Partner	Represents external entities such as Customers and Suppliers. A partner supplies Purchase Orders, places Sale Orders, and has associated Payments.
+2	User	Represents internal system employees/staff. Users interact with the system to create key operational documents, including Payments, Sale Orders, Purchase Orders, and Inventory Documents.
+3	Payment	Represents financial transactions (inflow/outflow). Created by a User and linked to a specific Partner.
+4	Purchase Order	Represents procurement orders supplied by a Partner. It contains a list of Products and, upon execution, automatically generates Inventory Documents (Import Slips).
+5	Sale Order	Represents customer orders placed by a Partner. It contains a list of Products and, upon execution, automatically generates Inventory Documents (Export Slips).
+6	Assembly Order	Represents manufacturing, assembly, or disassembly tasks. It contains Products (components/finished goods) and generates Inventory Documents to handle component consumption and product receiving.
+7	Inventory Document	Represents warehouse stock movements (e.g., Import, Export, or Transfer slips). It can be generated automatically by Orders (PO, SO, Assembly) or created manually by a User, and it directly writes data to update the Inventory Balance.
+8	Inventory Balance	Represents the detailed on-hand stock ledger. It tracks the real-time quantity of each Product and indicates the specific Warehouse where the stock is stored.
+9	Warehouse	Represents the physical storage locations. It stores the Inventory Balances of various products.
+10	Product	The core master data representing goods or items. Products are contained in Orders (PO, SO, Assembly), tracked by Inventory Balances, and individually managed through Serial Numbers.
+11	Serial Number	A unique identifier for a specific physical unit of a Product, enabling deep traceability and after-sales services.
+12	Warranty	Represents the warranty policies, coverage, and expiration timelines associated with a specific Serial Number.
+13	Repair	Represents a maintenance request or repair ticket. It records service actions linked to and covered by an existing Warranty.
 
 Table 05: Entity Description
+
 2. Use Case Specifications
 2.1 Authentication
 2.1.1 UC 01 - Login

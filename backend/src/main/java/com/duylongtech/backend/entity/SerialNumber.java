@@ -1,0 +1,53 @@
+package com.duylongtech.backend.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "SERIAL_NUMBERS")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class SerialNumber {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "variant_id", nullable = false)
+    private Long variantId;
+
+    @Column(name = "warehouse_id", nullable = false)
+    private Long warehouseId;
+
+    @Column(name = "serial_number", nullable = false, length = 100, unique = true)
+    private String serialNumber;
+
+    @Column(name = "status", nullable = false, length = 30)
+    private String status;
+
+    @Column(name = "purchase_order_line_id")
+    private Long purchaseOrderLineId;
+
+    @Column(name = "sales_order_line_id")
+    private Long salesOrderLineId;
+
+    @Column(name = "imported_at")
+    private LocalDateTime importedAt;
+
+    @Column(name = "sold_at")
+    private LocalDateTime soldAt;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+}

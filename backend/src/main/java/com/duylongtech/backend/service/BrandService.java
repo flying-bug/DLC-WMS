@@ -201,9 +201,8 @@ public class BrandService {
         long linkedProductCount = brandRepository.countLinkedProducts(brand.getId());
 
         if (linkedProductCount > 0) {
-            // Có sản phẩm liên kết → chỉ đổi sang INACTIVE, không xóa vật lý
-            brand.setStatus(INACTIVE);
-            brandRepository.save(brand);
+            // Có sản phẩm liên kết → chặn lại và báo lỗi theo FR 3.7.5
+            throw new BusinessException("Không thể xóa thương hiệu này vì đang có dữ liệu sản phẩm/bảo hành liên quan.");
         } else {
             // Chưa có sản phẩm liên kết → xóa vật lý an toàn
             brandRepository.delete(brand);
