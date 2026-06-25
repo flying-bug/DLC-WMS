@@ -262,6 +262,18 @@
     gap: 8px;
 }
 
+.nameLink {
+    color: #0b57d0;
+    cursor: pointer;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+
+.nameLink:hover {
+    color: #0842a0;
+    text-decoration: underline;
+}
+
 .statusBadge {
     display: inline-flex;
     align-items: center;

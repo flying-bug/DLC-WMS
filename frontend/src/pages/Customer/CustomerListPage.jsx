@@ -173,7 +173,15 @@ const CustomerListPage = () => {
                                             <input type="checkbox" className={styles.checkbox} />
                                         </td>
                                         <td className={styles.codeCell}>{item.code}</td>
-                                        <td className={styles.nameCell}>{item.name}</td>
+                                        <td>
+                                            <span 
+                                                className={styles.nameLink} 
+                                                onClick={() => navigate(`/customers/${item.id}`)}
+                                                title="Xem chi tiết khách hàng"
+                                            >
+                                                {item.name}
+                                            </span>
+                                        </td>
                                         <td>{item.address || '---'}</td>
                                         <td>{item.taxCode || '---'}</td>
                                         <td>{item.phone}</td>

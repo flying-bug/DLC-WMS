@@ -18,12 +18,12 @@ const CustomerDetailPage = () => {
     const [customer, setCustomer] = useState(null);
     const [activeTab, setActiveTab] = useState(TABS.SALES);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    
+
     // Tab States
     const [salesData, setSalesData] = useState({ content: [], totalElements: 0, totalPages: 0 });
     const [warrantyData, setWarrantyData] = useState({ content: [], totalElements: 0, totalPages: 0 });
     const [receiptData, setReceiptData] = useState({ content: [], totalElements: 0, totalPages: 0, totalPaid: 0 });
-    
+
     const [page, setPage] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -32,11 +32,24 @@ const CustomerDetailPage = () => {
     useEffect(() => {
         const fetchCustomerInfo = async () => {
             try {
-                const res = await getCustomerById(id);
-                setCustomer(res.data?.data);
+                // MOCK DATA START
+                setCustomer({
+                    id: id,
+                    code: 'KH00001',
+                    name: 'Ng Thu Uyên',
+                    phone: '0912 345 678',
+                    email: 'uyen.ng@example.com',
+                    address: '123 Lê Lợi, Q.1, TP.HCM',
+                    taxCode: '0123456789',
+                    groupType: 'RETAIL',
+                    status: 'APPROVED'
+                });
+
+                // --- ORIGINAL API CALL (Commented for UI Preview) ---
+                // const res = await getCustomerById(id);
+                // setCustomer(res.data?.data);
             } catch (err) {
                 const msg = err.response?.data?.message || '';
-                // Nếu là khách vãng lai KH-0000 -> chặn xem chi tiết
                 if (msg.includes('CUST_VIEW_SEED_DATA_DENIED')) {
                     alert('Không thể xem chi tiết Khách vãng lai.');
                     navigate('/customers');
@@ -52,33 +65,45 @@ const CustomerDetailPage = () => {
     const fetchTabData = useCallback(async (currentTab, currentPage = 0) => {
         try {
             setLoading(true);
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 400));
+
+            // MOCK DATA START
             if (currentTab === TABS.SALES) {
-                const res = await getCustomerSalesHistory(id, currentPage);
-                const pageData = res.data?.data;
                 setSalesData({
-                    content: pageData?.content || [],
-                    totalElements: pageData?.totalElements || 0,
-                    totalPages: pageData?.totalPages || 0
+                    content: [
+                        { orderCode: 'HD00102', orderDate: '2026-06-20T10:00:00Z', productName: 'iPhone 15 Pro Max 256GB', quantity: 1, serialNumber: 'IMEI123456789' },
+                        { orderCode: 'HD00085', orderDate: '2026-05-15T14:30:00Z', productName: 'AirPods Pro Gen 2', quantity: 2, serialNumber: 'SN987654321' }
+                    ],
+                    totalElements: 2,
+                    totalPages: 1
                 });
             } else if (currentTab === TABS.WARRANTY) {
-                const res = await getCustomerWarranties(id, currentPage);
-                const pageData = res.data?.data;
                 setWarrantyData({
-                    content: pageData?.content || [],
-                    totalElements: pageData?.totalElements || 0,
-                    totalPages: pageData?.totalPages || 0
+                    content: [
+                        {
+                            warrantyCode: 'BH00045', serialNumber: 'IMEI123456789', startDate: '2026-06-20T10:00:00Z', endDate: '2027-06-20T10:00:00Z', warrantyStatus: 'ACTIVE', repairs: [
+                                { repairCode: 'SC001', repairStatus: 'Hoàn thành', receivedDate: '2026-08-01T09:00:00Z' }
+                            ]
+                        }
+                    ],
+                    totalElements: 1,
+                    totalPages: 1
                 });
             } else if (currentTab === TABS.RECEIPT) {
-                const res = await getCustomerReceipts(id, currentPage);
-                const wrapper = res.data?.data;
-                const pageData = wrapper?.receipts;
                 setReceiptData({
-                    content: pageData?.content || [],
-                    totalElements: pageData?.totalElements || 0,
-                    totalPages: pageData?.totalPages || 0,
-                    totalPaid: wrapper?.summary?.totalPaid || 0
+                    content: [
+                        { receiptCode: 'PT00120', type: 'RECEIPT', createdAt: '2026-06-20T10:05:00Z', amount: 29990000, paymentMethod: 'Chuyển khoản', status: 'Hoàn thành' },
+                        { receiptCode: 'PT00095', type: 'RECEIPT', createdAt: '2026-05-15T14:35:00Z', amount: 5990000, paymentMethod: 'Tiền mặt', status: 'Hoàn thành' },
+                        { receiptCode: 'PC00012', type: 'VOUCHER', createdAt: '2026-06-25T08:00:00Z', amount: 500000, paymentMethod: 'Tiền mặt', status: 'Hoàn thành' }
+                    ],
+                    totalElements: 3,
+                    totalPages: 1,
+                    totalPaid: 35470000,
+                    currentDebt: 5000000
                 });
             }
+            // MOCK DATA END
         } catch (err) {
             console.error('Lỗi tải dữ liệu tab:', err);
         } finally {
@@ -126,8 +151,8 @@ const CustomerDetailPage = () => {
         return d.toLocaleDateString('vi-VN');
     };
 
-    if (error) return <AdminLayout><div style={{padding: '24px', color: 'red'}}>{error}</div></AdminLayout>;
-    if (!customer) return <AdminLayout><div style={{padding: '24px'}}>Đang tải...</div></AdminLayout>;
+    if (error) return <AdminLayout><div style={{ padding: '24px', color: 'red' }}>{error}</div></AdminLayout>;
+    if (!customer) return <AdminLayout><div style={{ padding: '24px' }}>Đang tải...</div></AdminLayout>;
 
     // ─────────────────────────────────────────────────────────────────────────
     // RENDERS
@@ -157,7 +182,7 @@ const CustomerDetailPage = () => {
                         <th>MÃ ĐƠN HÀNG</th>
                         <th>NGÀY MUA</th>
                         <th>SẢN PHẨM</th>
-                        <th style={{textAlign: 'center'}}>SỐ LƯỢNG</th>
+                        <th style={{ textAlign: 'center' }}>SỐ LƯỢNG</th>
                         <th>SERIAL / IMEI</th>
                     </tr>
                 </thead>
@@ -168,10 +193,10 @@ const CustomerDetailPage = () => {
                         <tr><td colSpan="5" className={styles.emptyState}>Chưa có lịch sử mua hàng</td></tr>
                     ) : salesData.content.map((item, idx) => (
                         <tr key={idx}>
-                            <td style={{fontWeight: 600, color: 'var(--color-primary)'}}>{item.orderCode}</td>
+                            <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{item.orderCode}</td>
                             <td>{formatDate(item.orderDate)}</td>
                             <td>{item.productName}</td>
-                            <td style={{textAlign: 'center'}}>{item.quantity}</td>
+                            <td style={{ textAlign: 'center' }}>{item.quantity}</td>
                             <td>{item.serialNumber || '-'}</td>
                         </tr>
                     ))}
@@ -200,14 +225,14 @@ const CustomerDetailPage = () => {
                         <tr><td colSpan="5" className={styles.emptyState}>Chưa có lịch sử bảo hành</td></tr>
                     ) : warrantyData.content.map((item, idx) => (
                         <tr key={idx}>
-                            <td style={{fontWeight: 600, color: 'var(--color-primary)'}}>{item.warrantyCode}</td>
+                            <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{item.warrantyCode}</td>
                             <td>{item.serialNumber || '-'}</td>
                             <td>{formatDate(item.startDate)} - {formatDate(item.endDate)}</td>
                             <td>{item.warrantyStatus}</td>
                             <td>
                                 {item.repairs?.length > 0 ? (
                                     item.repairs.map(r => (
-                                        <div key={r.repairCode} style={{fontSize: '12px'}}>
+                                        <div key={r.repairCode} style={{ fontSize: '12px' }}>
                                             {r.repairCode} - {r.repairStatus} ({formatDate(r.receivedDate)})
                                         </div>
                                     ))
@@ -229,7 +254,7 @@ const CustomerDetailPage = () => {
                         <th>MÃ CHỨNG TỪ</th>
                         <th>LOẠI</th>
                         <th>NGÀY GIAO DỊCH</th>
-                        <th style={{textAlign: 'right'}}>SỐ TIỀN (VNĐ)</th>
+                        <th style={{ textAlign: 'right' }}>SỐ TIỀN (VNĐ)</th>
                         <th>PHƯƠNG THỨC</th>
                         <th>TRẠNG THÁI</th>
                     </tr>
@@ -241,16 +266,16 @@ const CustomerDetailPage = () => {
                         <tr><td colSpan="6" className={styles.emptyState}>Chưa có lịch sử giao dịch</td></tr>
                     ) : receiptData.content.map((item, idx) => (
                         <tr key={idx}>
-                            <td style={{fontWeight: 600, color: 'var(--color-primary)'}}>{item.receiptCode}</td>
+                            <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{item.receiptCode}</td>
                             <td>
                                 {item.type === 'RECEIPT' ? (
-                                    <span style={{color: '#16a34a', fontWeight: 600}}>Phiếu Thu</span>
+                                    <span style={{ color: '#16a34a', fontWeight: 600 }}>Phiếu Thu</span>
                                 ) : (
-                                    <span style={{color: '#dc2626', fontWeight: 600}}>Phiếu Chi</span>
+                                    <span style={{ color: '#dc2626', fontWeight: 600 }}>Phiếu Chi</span>
                                 )}
                             </td>
                             <td>{formatDate(item.createdAt)}</td>
-                            <td style={{textAlign: 'right', fontWeight: 600}}>
+                            <td style={{ textAlign: 'right', fontWeight: 600 }}>
                                 {item.type === 'VOUCHER' ? '-' : '+'}{formatCurrency(item.amount)}
                             </td>
                             <td>{item.paymentMethod || '-'}</td>
@@ -274,18 +299,16 @@ const CustomerDetailPage = () => {
                         </span>
                         <h2 className={styles.title}>Hồ sơ khách hàng: {customer.name}</h2>
                     </div>
-                    <div style={{display: 'flex', gap: '8px'}}>
-                        <button 
-                            className="btn btn-outline-primary" 
-                            style={{padding: '6px 12px', border: '1px solid var(--color-primary)', borderRadius: '4px', background: 'white', color: 'var(--color-primary)', cursor: 'pointer', fontWeight: 600}}
+                    <div className={styles.actionBtnGroup}>
+                        <button
+                            className={styles.btnEdit}
                             onClick={() => setIsDrawerOpen(true)}
                         >
                             <i className="fas fa-pen"></i> Chỉnh sửa
                         </button>
                         {customer.status === 'APPROVED' && (
-                            <button 
-                                className="btn btn-outline-danger"
-                                style={{padding: '6px 12px', border: '1px solid #dc2626', borderRadius: '4px', background: 'white', color: '#dc2626', cursor: 'pointer', fontWeight: 600}}
+                            <button
+                                className={styles.btnDeactivate}
                                 onClick={handleDeactivate}
                             >
                                 <i className="fas fa-ban"></i> Ngừng hoạt động
@@ -302,7 +325,7 @@ const CustomerDetailPage = () => {
                         <div className={styles.infoGrid}>
                             <div className={styles.infoItem}>
                                 <span className={styles.infoLabel}>Mã khách hàng</span>
-                                <span className={styles.infoValue} style={{color: 'var(--color-primary)'}}>{customer.code}</span>
+                                <span className={styles.infoValue} style={{ color: 'var(--color-primary)' }}>{customer.code}</span>
                             </div>
                             <div className={styles.infoItem}>
                                 <span className={styles.infoLabel}>Trạng thái</span>
@@ -320,11 +343,15 @@ const CustomerDetailPage = () => {
                                 <span className={styles.infoLabel}>Nhóm khách hàng</span>
                                 <span className={styles.infoValue}>{getGroupLabel(customer.groupType)}</span>
                             </div>
-                            <div className={styles.infoItem} style={{gridColumn: '1 / -1'}}>
+                            <div className={styles.infoItem}>
+                                <span className={styles.infoLabel}>Mã số thuế</span>
+                                <span className={styles.infoValue}>{customer.taxCode || '—'}</span>
+                            </div>
+                            <div className={styles.infoItem} style={{ gridColumn: '1 / -1' }}>
                                 <span className={styles.infoLabel}>Email</span>
                                 <span className={styles.infoValue}>{customer.email || '—'}</span>
                             </div>
-                            <div className={styles.infoItem} style={{gridColumn: '1 / -1'}}>
+                            <div className={styles.infoItem} style={{ gridColumn: '1 / -1' }}>
                                 <span className={styles.infoLabel}>Địa chỉ</span>
                                 <span className={styles.infoValue}>{customer.address || '—'}</span>
                             </div>
@@ -333,27 +360,34 @@ const CustomerDetailPage = () => {
 
                     {/* Summary Receipt Card */}
                     <div className={styles.summaryCard}>
-                        <div className={styles.summaryLabel}>Tổng tiền khách đã trả</div>
-                        <h2 className={styles.summaryAmount}>{formatCurrency(receiptData.totalPaid)} ₫</h2>
+                        <div className={styles.summaryRow}>
+                            <div className={styles.summaryLabel}>Tổng tiền khách đã trả</div>
+                            <h2 className={styles.summaryAmount}>{formatCurrency(receiptData.totalPaid)} ₫</h2>
+                        </div>
+                        <div className={styles.summaryDivider}></div>
+                        <div className={styles.summaryRow}>
+                            <div className={styles.summaryLabel}>Dư nợ hiện tại</div>
+                            <h2 className={styles.summaryAmountDebt}>{formatCurrency(receiptData.currentDebt || 0)} ₫</h2>
+                        </div>
                     </div>
                 </div>
 
                 {/* Tabs */}
                 <div className={styles.tabsContainer}>
                     <div className={styles.tabHeader}>
-                        <button 
+                        <button
                             className={`${styles.tabBtn} ${activeTab === TABS.SALES ? styles.tabBtnActive : ''}`}
                             onClick={() => handleTabChange(TABS.SALES)}
                         >
-                            <i className="fas fa-shopping-cart"></i> Mua hàng
+                            <i className="fas fa-shopping-cart"></i> Lịch Sử Mua hàng
                         </button>
-                        <button 
+                        <button
                             className={`${styles.tabBtn} ${activeTab === TABS.WARRANTY ? styles.tabBtnActive : ''}`}
                             onClick={() => handleTabChange(TABS.WARRANTY)}
                         >
                             <i className="fas fa-shield-alt"></i> Bảo hành
                         </button>
-                        <button 
+                        <button
                             className={`${styles.tabBtn} ${activeTab === TABS.RECEIPT ? styles.tabBtnActive : ''}`}
                             onClick={() => handleTabChange(TABS.RECEIPT)}
                         >
