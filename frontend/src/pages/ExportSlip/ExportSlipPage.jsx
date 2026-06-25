@@ -19,6 +19,9 @@ const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')} đ`;
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('vi-VN') : '');
 const sumAmount = (lines = []) => lines.reduce((sum, line) => sum + Number(line.lineAmount || 0), 0);
 const sumQuantity = (lines = []) => lines.reduce((sum, line) => sum + Number(line.quantityOut || 0), 0);
+const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
+  ? `${item.productName} - ${item.variantName}`
+  : item?.productName || '';
 
 function ExportSlipPage() {
   const navigate = useNavigate();
@@ -274,8 +277,8 @@ function ExportSlipPage() {
                   const product = productById.get(line.variantId);
                   return (
                     <tr key={line.id || index}>
-                      <td><a href="#" className={styles.link} onClick={(event) => event.preventDefault()}>{product?.productCode || `SP #${line.variantId}`}</a></td>
-                      <td>{product?.productName || 'Chưa có tên sản phẩm'}</td>
+                      <td><a href="#" className={styles.link} onClick={(event) => event.preventDefault()}>{product?.sku || `SKU #${line.variantId}`}</a></td>
+                      <td>{variantLabel(product) || 'Chưa có tên sản phẩm'}</td>
                       <td>{product?.unitName || ''}</td>
                       <td className={styles.textRight}>{Number(line.quantityOut || 0).toLocaleString('vi-VN')}</td>
                       <td className={styles.textRight}>{money(line.unitPrice)}</td>

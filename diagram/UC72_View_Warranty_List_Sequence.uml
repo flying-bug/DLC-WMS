@@ -1,0 +1,96 @@
+@startuml
+
+autonumber
+
+actor "Manager/Staff" as Actor
+boundary "WarrantyListPage" as Page
+control "WarrantyController" as Controller
+participant "WarrantyService" as Service
+participant "WarrantyRepository" as Repository
+database "duylongcomputer" as Database
+
+Actor -> Page: Request to view warranty list\n(apply filters: status, dates, serial, partner)
+activate Page
+
+Page -> Controller: GET /api/v1/warranties (filters, pagination)
+activate Controller
+
+alt Validation Error (e.g., Invalid date range)
+    Controller -> Controller: validateParams(filters)
+    Controller --> Page: 400 Bad Request (Validation details)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị lỗi thông số tìm kiếm không hợp lệ
+else Valid Parameters
+    Controller -> Service: getWarranties(filters, pageable)
+    activate Service
+
+    Service -> Repository: findAll(specification, pageable)
+    activate Repository
+
+    Repository -> Database: SELECT FROM WARRANTIES \nLEFT JOIN SERIAL_NUMBERS \nLEFT JOIN PARTNERS \n(with dynamic filters)
+    activate Database
+    
+    Database --> Repository: Result Set
+    deactivate Database
+
+    Repository --> Service: Page[Warranty]
+    deactivate Repository
+
+    Service -> Service: mapToDTOs(Page[Warranty])
+    
+    Service --> Controller: PageResponse[WarrantyDTO]
+    deactivate Service
+
+    Controller --> Page: 200 OK (PageResponse)
+    deactivate Controller
+
+    Page --> Actor: Hiển thị danh sách phiếu bảo hành (Warranty List)
+end
+
+opt View details of a specific warranty
+    Actor -> Page: Click on a specific warranty
+    Page -> Controller: GET /api/v1/warranties/{id}
+    activate Controller
+    
+    Controller -> Service: getWarrantyById(id)
+    activate Service
+    
+    Service -> Repository: findById(id)
+    activate Repository
+    
+    Repository -> Database: SELECT FROM WARRANTIES \nJOIN SERIAL_NUMBERS \nJOIN PARTNERS
+    activate Database
+    
+    Database --> Repository: Warranty Data
+    deactivate Database
+    
+    alt Warranty Not Found
+        Repository --> Service: Empty Optional
+        deactivate Repository
+        
+        Service --> Controller: ResourceNotFoundException
+        deactivate Service
+        
+        Controller --> Page: 404 Not Found (Error message)
+        deactivate Controller
+        
+        Page --> Actor: Hiển thị lỗi không tìm thấy phiếu bảo hành
+    else Warranty Found
+        Repository --> Service: Optional[Warranty]
+        deactivate Repository
+        
+        Service -> Service: mapToDetailDTO(Warranty)
+        Service --> Controller: WarrantyDetailDTO
+        deactivate Service
+        
+        Controller --> Page: 200 OK (WarrantyDetailDTO)
+        deactivate Controller
+        
+        Page --> Actor: Hiển thị chi tiết phiếu bảo hành
+    end
+end
+
+deactivate Page
+
+@enduml

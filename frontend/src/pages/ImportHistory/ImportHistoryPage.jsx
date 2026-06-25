@@ -19,6 +19,9 @@ const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')} đ`;
 const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN') : '';
 const sumAmount = (lines = []) => lines.reduce((sum, line) => sum + Number(line.lineAmount || 0), 0);
 const sumQuantity = (lines = []) => lines.reduce((sum, line) => sum + Number(line.quantityIn || 0), 0);
+const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
+  ? `${item.productName} - ${item.variantName}`
+  : item?.productName || '';
 
 function ImportHistoryPage() {
   const navigate = useNavigate();
@@ -293,8 +296,8 @@ function ImportHistoryPage() {
                   return (
                     <tr key={line.id || index}>
                       <td>{index + 1}</td>
-                      <td className={styles.textBlue}>{product?.productCode || `SP #${line.variantId}`}</td>
-                      <td>{product?.productName || 'Chưa có tên sản phẩm'}</td>
+                      <td className={styles.textBlue}>{product?.sku || `SKU #${line.variantId}`}</td>
+                      <td>{variantLabel(product) || 'Chưa có tên sản phẩm'}</td>
                       <td>{product?.unitName || ''}</td>
                       <td className={styles.textCenter}>{Number(line.quantityIn || 0).toLocaleString('vi-VN')}</td>
                       <td className={styles.textRight}>{money(line.unitCost)}</td>

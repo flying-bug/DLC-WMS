@@ -35,6 +35,14 @@ const AdminLayout = ({ children }) => {
                         <i className="fas fa-truck-loading"></i>
                         <span>Nhà cung cấp</span>
                     </button>
+                    <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/customers') ? styles.active : ''}`}
+                        onClick={() => navigate('/customers')}
+                        type="button"
+                    >
+                        <i className="fas fa-users"></i>
+                        <span>Khách hàng</span>
+                    </button>
                 </nav>
             </aside>
 

@@ -23,6 +23,7 @@ public class ProductResponse {
     private String productCode;
     private String productName;
     private String productType;
+    private BigDecimal salePrice;
     private Boolean trackSerial;
     private Boolean trackLot;
     private Boolean isAssembly;

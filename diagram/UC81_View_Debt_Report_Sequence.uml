@@ -1,0 +1,79 @@
+@startuml
+
+autonumber
+
+actor "Manager" as Actor
+boundary "DebtReportPage" as Page
+control "ReportController" as Controller
+participant "DebtReportService" as Service
+participant "PartnerLedgerRepository" as Repository
+database "duylongcomputer" as Database
+
+Actor -> Page: Request to view Debt Report\n(apply filters: date range, partner type, partner id)
+activate Page
+
+Page -> Controller: GET /api/v1/reports/debt (filters)
+activate Controller
+
+alt Validation Error
+    Controller -> Controller: validateParams(filters)
+    Controller --> Page: 400 Bad Request (Validation details)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị lỗi thông số tìm kiếm không hợp lệ
+else Valid Parameters
+    Controller -> Service: getDebtReport(filters)
+    activate Service
+
+    Service -> Repository: fetchDebtData(filters)
+    activate Repository
+    
+    Repository -> Database: SELECT l.*, p.name, p.partner_type \nFROM PARTNER_LEDGERS l \nJOIN PARTNERS p ON l.partner_id = p.id \n(filtered by date, partner type) \nORDER BY l.created_at ASC
+    activate Database
+    
+    Database --> Repository: Ledger Result Set
+    deactivate Database
+    
+    Repository --> Service: List[PartnerLedger]
+    deactivate Repository
+    
+    Service -> Service: processDebtData(List[PartnerLedger])
+    note right: Calculate total debt metrics (Công nợ phải thu, phải trả)\nand running debt balances for each partner
+    
+    Service --> Controller: DebtReportDTO
+    deactivate Service
+    
+    Controller --> Page: 200 OK (DebtReportDTO)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị báo cáo công nợ (bảng chi tiết, tổng hợp)
+end
+
+opt Export Report to Excel/PDF
+    Actor -> Page: Click "Export" button
+    Page -> Controller: GET /api/v1/reports/debt/export (filters, format)
+    activate Controller
+    
+    Controller -> Service: exportDebtReport(filters, format)
+    activate Service
+    
+    Service -> Repository: fetchDebtData(filters)
+    activate Repository
+    Repository --> Service: List[PartnerLedger]
+    deactivate Repository
+    
+    Service -> Service: generateFile(List[PartnerLedger], format)
+    note right: Create Excel/PDF file with formatting\n(including aggregated debt metrics)
+    
+    Service --> Controller: byte[] (File stream)
+    deactivate Service
+    
+    Controller --> Page: 200 OK (Content-Type: application/octet-stream)
+    deactivate Controller
+    
+    Page --> Actor: Tải xuống file báo cáo công nợ thành công
+end
+
+deactivate Page
+
+@enduml
