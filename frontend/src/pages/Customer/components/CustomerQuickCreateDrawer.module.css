@@ -5,24 +5,30 @@
     background-color: rgba(0, 0, 0, 0.35);
     z-index: 1000;
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
+    align-items: center;
 }
 
-/* Drawer panel từ phải */
+/* Modal panel ở giữa màn hình */
 .drawer {
-    width: 420px;
-    max-width: 100vw;
-    height: 100%;
+    width: 550px;
+    max-width: 90vw;
+    height: auto;
+    max-height: 90vh;
+    border-radius: 8px;
     background-color: white;
     display: flex;
     flex-direction: column;
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
-    transform: translateX(100%);
-    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
 }
 
 .drawerOpen {
-    transform: translateX(0);
+    transform: scale(1);
+    opacity: 1;
 }
 
 /* Header */
