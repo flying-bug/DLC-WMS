@@ -55,7 +55,7 @@
     background-color: var(--color-primary, #002b6b);
     color: white;
     border: none;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .btnAdd:hover {
@@ -90,7 +90,7 @@
     border: 1px solid var(--color-border, #e2e8f0);
     padding: 24px;
     margin-bottom: 24px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .filterGrid {
@@ -114,7 +114,7 @@
     color: var(--color-text-strong, #334155);
 }
 
-.filterGroup input, 
+.filterGroup input,
 .filterGroup select {
     height: 40px;
     border: 1px solid var(--color-border, #e2e8f0);
@@ -128,7 +128,7 @@
     width: 100%;
 }
 
-.filterGroup input:focus, 
+.filterGroup input:focus,
 .filterGroup select:focus {
     border-color: var(--color-primary, #002b6b);
     background-color: white;
@@ -189,7 +189,7 @@
     border-radius: 12px;
     border: 1px solid var(--color-border, #e2e8f0);
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .tableResponsive {
@@ -336,7 +336,8 @@
     gap: 4px;
 }
 
-.pageNavBtn, .pageBtn {
+.pageNavBtn,
+.pageBtn {
     width: 32px;
     height: 32px;
     border-radius: 4px;
@@ -357,7 +358,8 @@
     background-color: #f8fafc;
 }
 
-.pageBtn:hover:not(.active), .pageNavBtn:hover:not(:disabled) {
+.pageBtn:hover:not(.active),
+.pageNavBtn:hover:not(:disabled) {
     background-color: #f1f5f9;
 }
 
@@ -401,17 +403,17 @@
         flex-direction: column;
         gap: 16px;
     }
-    
+
     .filterGroup {
         min-width: calc(50% - 12px);
     }
-    
+
     .filterAction {
         width: 100%;
         margin-left: 0;
         margin-top: 8px;
     }
-    
+
     .btnFilter {
         width: 100%;
         justify-content: center;
@@ -422,25 +424,25 @@
     .filterGroup {
         min-width: 100%;
     }
-    
+
     .pagination {
         flex-direction: column;
         gap: 16px;
         align-items: stretch;
         text-align: center;
     }
-    
+
     .pageControls {
         justify-content: center;
         flex-wrap: wrap;
     }
-    
+
     .pageSizeSelect {
         width: 100%;
         margin-left: 0;
         margin-top: 12px;
     }
-    
+
     .pageSizeSelect select {
         width: 100%;
     }

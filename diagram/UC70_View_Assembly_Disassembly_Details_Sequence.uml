@@ -1,0 +1,59 @@
+@startuml
+
+autonumber
+
+actor "Manager/Staff" as Actor
+boundary "AssemblyOrderDetailPage" as Page
+control "AssemblyOrderController" as Controller
+participant "AssemblyOrderService" as Service
+participant "AssemblyOrderRepository" as Repository
+database "duylongcomputer" as Database
+
+Actor -> Page: Request to view assembly/disassembly order details (click on order)
+activate Page
+
+Page -> Controller: GET /api/v1/assembly-orders/{id}
+activate Controller
+
+Controller -> Service: getAssemblyOrderById(id)
+activate Service
+
+Service -> Repository: findById(id)
+activate Repository
+
+Repository -> Database: SELECT FROM ASSEMBLY_ORDERS \nLEFT JOIN ASSEMBLY_ORDER_LINES
+activate Database
+
+Database --> Repository: AssemblyOrder Data (with component lines)
+deactivate Database
+
+alt Order Not Found
+    Repository --> Service: Empty Optional
+    deactivate Repository
+    
+    Service --> Controller: ResourceNotFoundException (Order not found)
+    deactivate Service
+    
+    Controller --> Page: 404 Not Found (Error Message)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị thông báo lỗi không tìm thấy lệnh lắp ráp/tháo dỡ
+else Order Found
+    Repository --> Service: Optional[AssemblyOrder]
+    deactivate Repository
+    
+    Service -> Service: mapToDetailDTO(AssemblyOrder)
+    note right: Map order information,\nBOM details, and component lines
+    
+    Service --> Controller: AssemblyOrderDetailDTO
+    deactivate Service
+    
+    Controller --> Page: 200 OK (AssemblyOrderDetailDTO)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị chi tiết lệnh lắp ráp/tháo dỡ (thông tin chung, danh sách linh kiện, trạng thái)
+end
+
+deactivate Page
+
+@enduml

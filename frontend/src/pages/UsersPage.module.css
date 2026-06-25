@@ -427,24 +427,14 @@
 .statusPending { background: var(--status-warning-bg); color: var(--color-warning); }
 .statusInactive { background: var(--color-surface-muted); color: var(--color-text-muted); }
 
-/* Pagination */
-.pagination {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    border-top: 1px solid var(--color-border);
-    gap: 16px;
-    min-width: 1080px;
+/* Overlay */
+.overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
 }
 
-.pageInfo {
-    font-size: 13px;
-    color: var(--color-text-muted);
-}
-
-.pageDots {
-    padding: 8px;
+.actionMenuItem i {
+    font-size: 16px;
     color: var(--color-text-muted);
 }
 
@@ -485,10 +475,6 @@
     color: var(--color-primary);
 }
 
-.actionMenuItem i {
-    font-size: 16px;
-    color: var(--color-text-muted);
-}
 
 .actionMenuItem:hover i {
     color: var(--color-primary);

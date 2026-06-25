@@ -9,6 +9,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 /**
  * Repository cho Partner (Nhà cung cấp / Khách hàng).
  * Supplier: is_supplier = true
@@ -50,4 +53,50 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
      * Kiểm tra partner có phải là nhà cung cấp không.
      */
     Optional<Partner> findByIdAndIsSupplierTrue(Long id);
+
+    // ==========================================
+    // CUSTOMER METHODS
+    // ==========================================
+
+    Optional<Partner> findByPhoneAndIsCustomerTrue(String phone);
+
+    boolean existsByPhoneAndIsCustomerTrue(String phone);
+
+    boolean existsByPhoneAndIsCustomerTrueAndIdNot(String phone, Long id);
+
+    @Query("SELECT p FROM Partner p WHERE p.isCustomer = true AND (:phone IS NULL OR p.phone LIKE CONCAT('%', :phone, '%'))")
+    Page<Partner> searchCustomers(@Param("phone") String phone, Pageable pageable);
+
+    Optional<Partner> findByIdAndIsCustomerTrue(Long id);
+
+    /**
+     * Kiểm tra khách hàng có thiết bị đang trong trạng thái sửa chữa không.
+     * Dùng để chặn vô hiệu hóa (CUST03).
+     * Trạng thái RECEIVED hoặc REPAIRING thuộc bảng REPAIRS.
+     */
+    @Query("SELECT COUNT(r) > 0 FROM Repair r WHERE r.partnerId = :partnerId " +
+           "AND r.repairStatus IN ('RECEIVED', 'REPAIRING')")
+    boolean hasActiveRepairByPartnerId(@Param("partnerId") Long partnerId);
+
+    /**
+     * Tính tổng tiền đã thu từ khách hàng (chỉ tính phiếu thu hoàn thành POSTED/APPROVED).
+     */
+    @Query(value = "SELECT COALESCE(SUM(amount), 0) FROM PAYMENT_RECEIPTS " +
+           "WHERE partner_id = :customerId AND status IN ('POSTED', 'APPROVED')", 
+           nativeQuery = true)
+    java.math.BigDecimal getTotalPaidByCustomerId(@Param("customerId") Long customerId);
+
+    /**
+     * Lấy lịch sử thu chi (UNION ALL giữa RECEIPTS và VOUCHERS).
+     */
+    @Query(value = "SELECT receipt_code AS code, amount, status, payment_method AS paymentMethod, created_at AS createdAt, 'RECEIPT' AS type " +
+           "FROM PAYMENT_RECEIPTS WHERE partner_id = :customerId " +
+           "UNION ALL " +
+           "SELECT voucher_code AS code, amount, status, payment_method AS paymentMethod, created_at AS createdAt, 'VOUCHER' AS type " +
+           "FROM PAYMENT_VOUCHERS WHERE partner_id = :customerId " +
+           "ORDER BY createdAt DESC", 
+           countQuery = "SELECT (SELECT COUNT(*) FROM PAYMENT_RECEIPTS WHERE partner_id = :customerId) + " +
+                        "(SELECT COUNT(*) FROM PAYMENT_VOUCHERS WHERE partner_id = :customerId)",
+           nativeQuery = true)
+    Page<Object[]> findPaymentHistoryByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
 }

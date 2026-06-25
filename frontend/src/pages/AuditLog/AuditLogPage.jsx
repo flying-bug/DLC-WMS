@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
+import Pagination from '../../components/ui/Pagination/Pagination';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
 import styles from './AuditLogPage.module.css';
 
@@ -337,30 +338,19 @@ function AuditLogPage() {
                         </tbody>
                     </table>
 
-                    <div className={styles.pagination}>
-                        <div className={styles.totalInfo}>Tổng số: <b>{totalElements}</b> bản ghi</div>
-                        <div className={styles.pageControls}>
-                            <select value={size} onChange={(e) => { setSize(Number(e.target.value)); setPage(0); }}>
-                                <option value={10}>10 bản ghi trên 1 trang</option>
-                                <option value={20}>20 bản ghi trên 1 trang</option>
-                                <option value={30}>30 bản ghi trên 1 trang</option>
-                                <option value={50}>50 bản ghi trên 1 trang</option>
-                            </select>
-                            <span
-                                className={`${styles.pageBtn} ${page === 0 ? styles.disabled : ''}`}
-                                onClick={() => page > 0 && handlePageChange(page - 1)}
-                            >
-                                Trước
-                            </span>
-                            <span className={styles.currentPage}>{page + 1}</span>
-                            <span
-                                className={`${styles.pageBtn} ${page >= totalPages - 1 ? styles.disabled : ''}`}
-                                onClick={() => page < totalPages - 1 && handlePageChange(page + 1)}
-                            >
-                                Sau
-                            </span>
-                        </div>
-                    </div>
+                    {logs.length > 0 && (
+                        <Pagination
+                            page={page}
+                            totalPages={totalPages}
+                            totalElements={totalElements}
+                            size={size}
+                            onPageChange={setPage}
+                            onSizeChange={(s) => {
+                                setSize(s);
+                                setPage(0);
+                            }}
+                        />
+                    )}
                 </div>
             </main>
 

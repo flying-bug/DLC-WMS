@@ -9,7 +9,7 @@ import styles from './WarehouseListPage.module.css';
 const WarehouseListPage = () => {
     const navigate = useNavigate();
     const [warehouses, setWarehouses] = useState([]);
-    
+
     // Các state bộ lọc
     const [searchCode, setSearchCode] = useState('');
     const [searchName, setSearchName] = useState('');
@@ -60,7 +60,7 @@ const WarehouseListPage = () => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchWarehouses();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, size]); 
+    }, [page, size]);
 
     const handleFilter = () => {
         setPage(0);
@@ -173,12 +173,12 @@ const WarehouseListPage = () => {
                 address: searchAddress || undefined,
                 status: filterStatus || undefined
             });
-            
+
             // Create Blob URL and download
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
             link.href = url;
-            
+
             const now = new Date();
             const timestamp = now.getFullYear().toString() +
                 String(now.getMonth() + 1).padStart(2, '0') +
@@ -186,12 +186,12 @@ const WarehouseListPage = () => {
                 String(now.getHours()).padStart(2, '0') +
                 String(now.getMinutes()).padStart(2, '0') +
                 String(now.getSeconds()).padStart(2, '0');
-            
+
             link.setAttribute('download', `DLC_WMS_Danh_Sach_Kho_${timestamp}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
-            
+
             showToast('success', 'Xuất Excel thành công!');
         } catch (error) {
             console.error("Lỗi xuất Excel:", error);
@@ -227,27 +227,27 @@ const WarehouseListPage = () => {
                     <div className={styles.filterGrid}>
                         <div className={styles.filterGroup}>
                             <label>Tìm theo mã kho</label>
-                            <input 
-                                type="text" 
-                                placeholder="Ví dụ: K01, MK01..." 
+                            <input
+                                type="text"
+                                placeholder="Ví dụ: K01, MK01..."
                                 value={searchCode}
                                 onChange={(e) => setSearchCode(e.target.value)}
                             />
                         </div>
                         <div className={styles.filterGroup}>
                             <label>Tìm theo tên kho</label>
-                            <input 
-                                type="text" 
-                                placeholder="Nhập tên kho hàng" 
+                            <input
+                                type="text"
+                                placeholder="Nhập tên kho hàng"
                                 value={searchName}
                                 onChange={(e) => setSearchName(e.target.value)}
                             />
                         </div>
                         <div className={styles.filterGroup}>
                             <label>Địa chỉ</label>
-                            <input 
-                                type="text" 
-                                placeholder="Nhập địa chỉ" 
+                            <input
+                                type="text"
+                                placeholder="Nhập địa chỉ"
                                 value={searchAddress}
                                 onChange={(e) => setSearchAddress(e.target.value)}
                             />
@@ -353,10 +353,10 @@ const WarehouseListPage = () => {
                                 <button className={styles.pageNavBtn} disabled={page === 0} onClick={() => setPage(page - 1)}>
                                     <i className="fas fa-chevron-left"></i>
                                 </button>
-                                
+
                                 {[...Array(totalPages)].map((_, i) => (
-                                    <button 
-                                        key={i} 
+                                    <button
+                                        key={i}
                                         className={`${styles.pageBtn} ${page === i ? styles.active : ''}`}
                                         onClick={() => setPage(i)}
                                     >
@@ -367,15 +367,16 @@ const WarehouseListPage = () => {
                                 <button className={styles.pageNavBtn} disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
                                     <i className="fas fa-chevron-right"></i>
                                 </button>
-                                
+
                                 <div className={styles.pageSizeSelect}>
                                     <select value={size} onChange={(e) => {
                                         setSize(Number(e.target.value));
                                         setPage(0);
                                     }}>
-                                        <option value={10}>10 bản ghi / trang</option>
-                                        <option value={20}>20 bản ghi / trang</option>
-                                        <option value={50}>50 bản ghi / trang</option>
+                                        <option value={10}>10 bản ghi trên 1 trang</option>
+                                        <option value={20}>20 bản ghi trên 1 trang</option>
+                                        <option value={50}>50 bản ghi trên 1 trang</option>
+
                                     </select>
                                 </div>
                             </div>
@@ -392,7 +393,7 @@ const WarehouseListPage = () => {
                     initialData={selectedData}
                 />
 
-                <Toast 
+                <Toast
                     isVisible={toast.isVisible}
                     type={toast.type}
                     message={toast.message}

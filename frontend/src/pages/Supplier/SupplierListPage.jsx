@@ -105,9 +105,9 @@ const SupplierListPage = () => {
                             </button>
                             <div className={styles.searchBox}>
                                 <i className="fas fa-search"></i>
-                                <input 
-                                    type="text" 
-                                    placeholder="Tìm tên hoặc mã NCC..." 
+                                <input
+                                    type="text"
+                                    placeholder="Tìm tên hoặc mã NCC..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -144,17 +144,17 @@ const SupplierListPage = () => {
                             </thead>
                             <tbody>
                                 {loading ? (
-                                    <tr><td colSpan="7" style={{textAlign:'center', padding:'20px'}}>Đang tải dữ liệu...</td></tr>
+                                    <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>Đang tải dữ liệu...</td></tr>
                                 ) : suppliers.length === 0 ? (
-                                    <tr><td colSpan="7" style={{textAlign:'center', padding:'20px'}}>Chưa có dữ liệu.</td></tr>
+                                    <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>Chưa có dữ liệu.</td></tr>
                                 ) : suppliers.map((item) => (
                                     <tr key={item.id}>
                                         <td style={{ textAlign: 'center' }}>
                                             <input type="checkbox" />
                                         </td>
                                         <td className={styles.codeCell}>{item.code}</td>
-                                        <td 
-                                            className={styles.nameCell} 
+                                        <td
+                                            className={styles.nameCell}
                                             style={{ cursor: 'pointer', color: 'var(--color-primary, #002b6b)' }}
                                             onClick={() => navigate(`/suppliers/${item.id}`)}
                                         >
@@ -204,12 +204,12 @@ const SupplierListPage = () => {
             </div>
 
             {isModalOpen && (
-                <SupplierModal 
-                    onClose={() => setIsModalOpen(false)} 
+                <SupplierModal
+                    onClose={() => setIsModalOpen(false)}
                     onSave={async (data) => {
                         try {
                             const cleanString = (str) => (str && str.trim() !== '') ? str.trim() : null;
-                            
+
                             const newSupplier = {
                                 code: cleanString(data.code) || `NCC${Math.floor(Math.random() * 1000)}`,
                                 name: cleanString(data.name),
@@ -232,7 +232,7 @@ const SupplierListPage = () => {
                         } catch (error) {
                             alert(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi tạo NCC');
                         }
-                    }} 
+                    }}
                 />
             )}
         </AdminLayout>

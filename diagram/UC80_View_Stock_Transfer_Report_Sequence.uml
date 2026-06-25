@@ -1,0 +1,79 @@
+@startuml
+
+autonumber
+
+actor "Manager" as Actor
+boundary "StockTransferReportPage" as Page
+control "ReportController" as Controller
+participant "InventoryReportService" as Service
+participant "InventoryDocumentRepository" as Repository
+database "duylongcomputer" as Database
+
+Actor -> Page: Request to view Stock Transfer Report\n(apply filters: date range, source warehouse, dest warehouse)
+activate Page
+
+Page -> Controller: GET /api/v1/reports/stock-transfer (filters)
+activate Controller
+
+alt Validation Error
+    Controller -> Controller: validateParams(filters)
+    Controller --> Page: 400 Bad Request (Validation details)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị lỗi thông số tìm kiếm không hợp lệ
+else Valid Parameters
+    Controller -> Service: getStockTransferReport(filters)
+    activate Service
+
+    Service -> Repository: fetchTransferData(filters)
+    activate Repository
+    
+    Repository -> Database: SELECT d.*, l.* FROM INVENTORY_DOCUMENTS d \nLEFT JOIN INVENTORY_DOCUMENT_LINES l ON d.id = l.document_id \nWHERE d.doc_type = 'TRANSFER' \n(AND match date/warehouse filters)
+    activate Database
+    
+    Database --> Repository: Transfer Result Set
+    deactivate Database
+    
+    Repository --> Service: List[InventoryDocument]
+    deactivate Repository
+    
+    Service -> Service: processTransferData(List[InventoryDocument])
+    note right: Calculate total items transferred,\naggregate metrics by Source/Destination
+    
+    Service --> Controller: StockTransferReportDTO
+    deactivate Service
+    
+    Controller --> Page: 200 OK (StockTransferReportDTO)
+    deactivate Controller
+    
+    Page --> Actor: Hiển thị báo cáo luân chuyển kho (bảng dữ liệu, biểu đồ)
+end
+
+opt Export Report to Excel/PDF
+    Actor -> Page: Click "Export" button
+    Page -> Controller: GET /api/v1/reports/stock-transfer/export (filters, format)
+    activate Controller
+    
+    Controller -> Service: exportStockTransferReport(filters, format)
+    activate Service
+    
+    Service -> Repository: fetchTransferData(filters)
+    activate Repository
+    Repository --> Service: List[InventoryDocument]
+    deactivate Repository
+    
+    Service -> Service: generateFile(List[InventoryDocument], format)
+    note right: Create Excel/PDF file with formatting\n(including aggregated data)
+    
+    Service --> Controller: byte[] (File stream)
+    deactivate Service
+    
+    Controller --> Page: 200 OK (Content-Type: application/octet-stream)
+    deactivate Controller
+    
+    Page --> Actor: Tải xuống file báo cáo luân chuyển kho thành công
+end
+
+deactivate Page
+
+@enduml

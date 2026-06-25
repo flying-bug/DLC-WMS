@@ -278,7 +278,10 @@
 /* Modal Overlay */
 .modalOverlay {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background-color: var(--overlay-dark);
     display: flex;
     align-items: center;
@@ -356,9 +359,11 @@
     color: var(--color-danger);
 }
 
-.inputField, .textareaField {
+.inputField,
+.textareaField {
     padding: 8px 10px;
-    border: 1px solid var(--color-info); /* Tech blue focus style */
+    border: 1px solid var(--color-info);
+    /* Tech blue focus style */
     border-radius: 4px;
     outline: none;
     font-family: inherit;
@@ -429,6 +434,7 @@
 }
 
 @media (max-width: 720px) {
+
     .toolbar,
     .pagination,
     .modalFooter {

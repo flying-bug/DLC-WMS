@@ -4,6 +4,7 @@ import axiosClient from '../api/axiosClient';
 import styles from './UsersPage.module.css';
 import UserProfileDropdown from '../components/ui/UserProfileDropdown/UserProfileDropdown';
 import EmployeeDrawer from '../components/ui/EmployeeDrawer/EmployeeDrawer';
+import Pagination from '../components/ui/Pagination/Pagination';
 
 function UsersPage() {
     const navigate = useNavigate();
@@ -12,6 +13,10 @@ function UsersPage() {
     const [usersData, setUsersData] = useState([]);
     const [activeMenuId, setActiveMenuId] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(0);
+    const [size, setSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
 
     const mapUserToUi = (u) => {
         const isSuperAdmin = u.roles && u.roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
@@ -72,9 +77,13 @@ function UsersPage() {
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const res = await axiosClient.get('/users');
+            const res = await axiosClient.get('/users', {
+                params: { page, size }
+            });
             if (res.data && res.data.data) {
                 setUsersData(res.data.data.map(mapUserToUi));
+                setTotalPages(res.data.totalPages || 0);
+                setTotalElements(res.data.totalElements || 0);
             }
         } catch (error) {
             console.error('Lỗi lấy danh sách người dùng:', error);
@@ -84,10 +93,8 @@ function UsersPage() {
     };
 
     useEffect(() => {
-        /* eslint-disable-next-line react-hooks/set-state-in-effect */
         fetchUsers();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [page, size]);
 
     const handleRowClick = (user) => {
         setSelectedUser(user);
@@ -148,7 +155,6 @@ function UsersPage() {
 
     const handleSaveUser = async (updatedData) => {
         try {
-            // Update info and roles
             const targetRoleCode = updatedData.systemRole === 'admin' ? 'SUPER_ADMIN' : 'STAFF';
             await axiosClient.put(`/users/${updatedData.id}`, {
                 fullName: updatedData.name,
@@ -166,15 +172,17 @@ function UsersPage() {
         }
     };
 
-    // Calculate dynamic stats
-    const totalStaff = usersData.length;
+    const handlePageChange = (newPage) => {
+        setPage(newPage);
+    };
+
+    const totalStaff = totalElements;
     const activeStaff = usersData.filter(u => u.status === 'APPROVED').length;
     const inactiveStaff = usersData.filter(u => u.status === 'INACTIVE').length;
     const pendingStaff = usersData.filter(u => u.status !== 'APPROVED' && u.status !== 'INACTIVE').length;
 
     return (
         <div className={styles.page}>
-            {/* Top Header */}
             <header className={styles.header}>
                 <div className={styles.headerLeft}>
                     <div className={styles.brandName}>Duy Long Computer</div>
@@ -198,7 +206,6 @@ function UsersPage() {
                 </div>
             </header>
 
-            {/* Main Content */}
             <main className={styles.main}>
                 <div className={styles.pageHeader}>
                     <div>
@@ -210,7 +217,6 @@ function UsersPage() {
                     </button>
                 </div>
 
-                {/* Stat Cards */}
                 <div className={styles.statsGrid}>
                     <div className={styles.statCard}>
                         <div className={`${styles.statIcon} ${styles.iconBlue}`}><i className="bi bi-people-fill" /></div>

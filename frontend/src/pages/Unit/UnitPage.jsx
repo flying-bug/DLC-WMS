@@ -153,7 +153,7 @@ const UnitPage = () => {
                     </div>
                     <div className={styles.actions}>
                         <button className={styles.iconBtn} onClick={fetchUnits} title="Tải lại"><i className="fas fa-sync-alt"></i></button>
-                        <button className={styles.iconBtn} title="Xuất Excel"><i className="fas fa-file-excel" style={{color: 'var(--color-excel)'}}></i></button>
+                        <button className={styles.iconBtn} title="Xuất Excel"><i className="fas fa-file-excel" style={{ color: 'var(--color-excel)' }}></i></button>
                         <button className={styles.primaryBtn} onClick={openAddModal}>Thêm</button>
                     </div>
                 </div>
@@ -257,7 +257,7 @@ const UnitPage = () => {
                                         type="text"
                                         className={styles.inputField}
                                         value={formData.name}
-                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         autoFocus
                                     />
                                 </div>
@@ -268,7 +268,7 @@ const UnitPage = () => {
                                         className={styles.textareaField}
                                         rows="3"
                                         value={formData.description}
-                                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     ></textarea>
                                 </div>
                             </div>

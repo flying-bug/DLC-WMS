@@ -432,59 +432,7 @@
     color: #082d66;
 }
 
-/* Pagination */
-.pagination {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    background: var(--color-surface, #ffffff);
-    border-top: 1px solid #e2e8f0;
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
-    gap: 16px;
-}
-
-.totalInfo {
-    font-size: 0.9rem;
-    color: var(--color-text-body, #475569);
-}
-
-.pageControls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.9rem;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
-.pageControls select {
-    padding: 5px;
-    border: 1px solid var(--color-border-strong, #cbd5e1);
-    border-radius: 4px;
-    outline: none;
-}
-
-.pageBtn {
-    cursor: pointer;
-    color: var(--color-text-body, #475569);
-}
-
-.pageBtn:hover {
-    color: var(--color-info, #0b3a82);
-}
-
-.pageBtn.disabled {
-    color: var(--color-border-strong, #cbd5e1);
-    cursor: not-allowed;
-}
-
-.currentPage {
-    font-weight: bold;
-    padding: 0 5px;
-}
-
+/* Drawer & Overlay */
 .modalOverlay {
     position: fixed;
     inset: 0;

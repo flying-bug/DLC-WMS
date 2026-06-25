@@ -183,12 +183,11 @@ function ExportSlipPage() {
                   <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>
                   <td>{slip.warehouse}</td>
                   <td>
-                    <span className={`${styles.badge} ${
-                      slip.statusCode === 'success' ? styles.badgeSuccess :
-                      slip.statusCode === 'info' ? styles.badgeInfo :
-                      slip.statusCode === 'warning' ? styles.badgeWarning :
-                      styles.badgeDanger
-                    }`}>
+                    <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
+                        slip.statusCode === 'info' ? styles.badgeInfo :
+                          slip.statusCode === 'warning' ? styles.badgeWarning :
+                            styles.badgeDanger
+                      }`}>
                       {slip.statusLabel}
                     </span>
                   </td>

@@ -14,9 +14,9 @@ const formatCurrency = (value) => {
 const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleString('vi-VN', { 
-        day: '2-digit', month: '2-digit', year: 'numeric', 
-        hour: '2-digit', minute: '2-digit' 
+    return date.toLocaleString('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
     });
 };
 
@@ -93,6 +93,8 @@ const WarehouseDetailPage = () => {
     const [logs, setLogs] = useState([]);
     const [logsPage, setLogsPage] = useState(0);
     const [logsTotalPages, setLogsTotalPages] = useState(0);
+    const [logsTotalElements, setLogsTotalElements] = useState(0);
+    const [logsSize, setLogsSize] = useState(10);
     const [loadingLogs, setLoadingLogs] = useState(false);
 
     // Modal
@@ -212,19 +214,19 @@ const WarehouseDetailPage = () => {
 
                 {/* 2. Tabs Navigation */}
                 <div className={styles.tabsNav}>
-                    <button 
+                    <button
                         className={`${styles.tabItem} ${activeTab === 'info' ? styles.active : ''}`}
                         onClick={() => setActiveTab('info')}
                     >
                         Thông tin chung
                     </button>
-                    <button 
+                    <button
                         className={`${styles.tabItem} ${activeTab === 'stats' ? styles.active : ''}`}
                         onClick={() => setActiveTab('stats')}
                     >
                         Thống kê
                     </button>
-                    <button 
+                    <button
                         className={`${styles.tabItem} ${activeTab === 'history' ? styles.active : ''}`}
                         onClick={() => setActiveTab('history')}
                     >
@@ -307,7 +309,7 @@ const WarehouseDetailPage = () => {
                                                 <p>{getStatusLabel(warehouse.status)}</p>
                                             </div>
                                         </div>
-                                        
+
                                         <div className={styles.metaInfoBox}>
                                             <div className={styles.infoItem}>
                                                 <label>NGƯỜI TẠO</label>
@@ -335,13 +337,13 @@ const WarehouseDetailPage = () => {
                                 {/* Alert Card */}
                                 <div className={styles.alertCard}>
                                     <div className={styles.alertHeader}>
-                                        <i className="fas fa-info-circle" style={{color: '#3b82f6'}}></i>
+                                        <i className="fas fa-info-circle" style={{ color: '#3b82f6' }}></i>
                                         <h4>Ghi chú hoạt động</h4>
                                     </div>
-                                    <p className={styles.alertText} style={{color: '#475569', backgroundColor: 'transparent'}}>
+                                    <p className={styles.alertText} style={{ color: '#475569', backgroundColor: 'transparent' }}>
                                         Mọi thay đổi thông tin liên quan đến kho hàng sẽ được ghi nhận vào nhật ký hệ thống (Audit Log).
                                     </p>
-                                    <button className={styles.btnAlertAction} style={{backgroundColor: '#e2e8f0', color: '#475569'}} onClick={() => navigate('/audit-log')}>
+                                    <button className={styles.btnAlertAction} style={{ backgroundColor: '#e2e8f0', color: '#475569' }} onClick={() => navigate('/audit-log')}>
                                         Xem nhật ký hệ thống
                                     </button>
                                 </div>
@@ -396,20 +398,20 @@ const WarehouseDetailPage = () => {
                                         ))}
                                     </div>
                                 )}
-                                
+
                                 {/* Phân trang */}
                                 {logsTotalPages > 1 && (
                                     <div className={styles.pagination}>
-                                        <button 
-                                            disabled={logsPage === 0} 
+                                        <button
+                                            disabled={logsPage === 0}
                                             onClick={() => fetchLogs(logsPage - 1)}
                                             className={styles.pageBtn}
                                         >
                                             Trước
                                         </button>
                                         <span className={styles.pageInfo}>Trang {logsPage + 1} / {logsTotalPages}</span>
-                                        <button 
-                                            disabled={logsPage >= logsTotalPages - 1} 
+                                        <button
+                                            disabled={logsPage >= logsTotalPages - 1}
                                             onClick={() => fetchLogs(logsPage + 1)}
                                             className={styles.pageBtn}
                                         >
@@ -436,7 +438,7 @@ const WarehouseDetailPage = () => {
                     initialData={warehouse}
                 />
 
-                <Toast 
+                <Toast
                     isVisible={toast.isVisible}
                     type={toast.type}
                     message={toast.message}
