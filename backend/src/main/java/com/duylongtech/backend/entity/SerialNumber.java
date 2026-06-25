@@ -6,6 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "SERIAL_NUMBERS")
@@ -26,6 +27,11 @@ public class SerialNumber {
     private Long warehouseId;
 
     @Column(name = "serial_number", nullable = false, length = 100, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id", insertable = false, updatable = false)
+    private ProductVariant variant;
+
+    @Column(name = "serial_number", nullable = false, unique = true, length = 100)
     private String serialNumber;
 
     @Column(name = "status", nullable = false, length = 30)
@@ -50,4 +56,10 @@ public class SerialNumber {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+    @Column(name = "sales_order_line_id")
+    private Long salesOrderLineId;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sales_order_line_id", insertable = false, updatable = false)
+    private SalesOrderLine salesOrderLine;
 }

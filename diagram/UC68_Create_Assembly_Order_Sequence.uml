@@ -1,0 +1,80 @@
+@startuml
+
+autonumber
+
+actor "Manager/Staff" as Actor
+boundary "CreateAssemblyOrderPage" as Page
+control "AssemblyOrderController" as Controller
+participant "AssemblyOrderService" as Service
+participant "AssemblyBomRepository" as BomRepository
+participant "AssemblyOrderRepository" as Repository
+database "duylongcomputer" as Database
+
+Actor -> Page: Fill and submit Create Assembly Order form\n(bomId, quantity, warehouseId, notes)
+activate Page
+
+Page -> Controller: POST /api/v1/assembly-orders (CreateAssemblyOrderRequest)
+activate Controller
+
+alt Validation Error (e.g., Missing fields, Quantity <= 0)
+    Controller -> Controller: validateRequest(request)
+    Controller --> Page: 400 Bad Request (Validation Errors)
+    Page --> Actor: Hiển thị lỗi dữ liệu không hợp lệ
+else Valid Request
+    Controller -> Service: createAssemblyOrder(request)
+    activate Service
+
+    Service -> BomRepository: findById(bomId)
+    activate BomRepository
+    
+    BomRepository -> Database: SELECT FROM ASSEMBLY_BOMS \nLEFT JOIN ASSEMBLY_BOM_LINES
+    activate Database
+    
+    Database --> BomRepository: BOM with components
+    deactivate Database
+    
+    BomRepository --> Service: Optional[AssemblyBom]
+    deactivate BomRepository
+
+    alt BOM Not Found
+        Service --> Controller: ResourceNotFoundException (BOM not found)
+        Controller --> Page: 404 Not Found (Error message)
+        Page --> Actor: Hiển thị lỗi định mức vật tư không tồn tại
+    else BOM Found
+        Service -> Service: validateBusinessRules(request, bom)
+        note right: Calculate required components\nbased on BOM and Quantity
+        
+        Service -> Service: initializeOrderEntity(AssemblyOrder)
+        note right: Set status to PENDING,\norder_type to ASSEMBLY
+        
+        Service -> Repository: save(assemblyOrder)
+        activate Repository
+        
+        Repository -> Database: INSERT INTO ASSEMBLY_ORDERS
+        activate Database
+        Database --> Repository: Inserted Record
+        deactivate Database
+        
+        Repository -> Database: INSERT INTO ASSEMBLY_ORDER_LINES
+        activate Database
+        Database --> Repository: Inserted Records
+        deactivate Database
+        
+        Repository --> Service: Saved AssemblyOrder
+        deactivate Repository
+        
+        Service -> Service: mapToDTO(Saved AssemblyOrder)
+        
+        Service --> Controller: AssemblyOrderDetailDTO
+        deactivate Service
+        
+        Controller --> Page: 201 Created (AssemblyOrderDetailDTO)
+        deactivate Controller
+        
+        Page --> Actor: Hiển thị thông báo tạo lệnh lắp ráp thành công\nvà chuyển hướng về trang chi tiết
+    end
+end
+
+deactivate Page
+
+@enduml

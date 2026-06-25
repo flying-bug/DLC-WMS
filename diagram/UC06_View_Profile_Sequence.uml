@@ -1,0 +1,42 @@
+@startuml
+title Sequence Diagram: UC06 - View Profile
+
+actor "User" as User
+boundary "ProfilePage" as Page
+control "UserController" as Controller
+control "UserService" as Service
+entity "UserRepository" as Repository
+database "Database" as Database
+
+User -> Page : Click "Xem thông tin cá nhân"\n(Navigate to Profile)
+activate Page
+
+Page -> Controller : GET /api/v1/users/me
+activate Controller
+
+Controller -> Service : getCurrentUserProfile()
+activate Service
+
+Service -> Repository : findWithRolesById(currentUserId)
+activate Repository
+
+Repository -> Database : SELECT * FROM users\nLEFT JOIN user_roles WHERE id = ?
+activate Database
+Database --> Repository : User data (with Roles)
+deactivate Database
+
+Repository --> Service : User Entity
+deactivate Repository
+
+Service -> Service : mapToDetailDto(User)\n(Remove password_hash, map status)
+
+Service --> Controller : UserDetailResponseDTO
+deactivate Service
+
+Controller --> Page : 200 OK (ApiResponse)
+deactivate Controller
+
+Page --> User : Hiển thị thông tin cá nhân
+deactivate Page
+
+@enduml

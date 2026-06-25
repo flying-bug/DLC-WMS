@@ -1,0 +1,112 @@
+@startuml
+title Class Diagram: Authentication Module
+
+package "Controller Layer" {
+    class AuthController {
+        - authService : AuthService
+        - auditLogService : AuditLogService
+        + login(request: LoginRequest) : ApiResponse<JwtResponse>
+        + loginWithGoogle(token: String) : ApiResponse<JwtResponse>
+        + requestOtp(email: String) : ApiResponse<Void>
+        + verifyOtp(email: String, otp: String) : ApiResponse<Void>
+        + resetPasswordWithOtp(email: String, otp: String, newPassword: String) : ApiResponse<Void>
+        + changePassword(request: ChangePasswordRequest) : ApiResponse<Void>
+    }
+}
+
+package "Service Layer" {
+    class AuthService {
+        - userRepository : UserRepository
+        - passwordEncoder : PasswordEncoder
+        - jwtUtils : JwtUtils
+        - emailService : EmailService
+        - otpStorage : Map<String, String>
+        - otpExpiry : Map<String, Long>
+        + login(request: LoginRequest) : JwtResponse
+        + loginWithGoogle(token: String) : JwtResponse
+        + requestOtp(email: String) : void
+        + verifyOtp(email: String, otp: String) : void
+        + resetPasswordWithOtp(email: String, otp: String, newPassword: String) : void
+        + changePassword(request: ChangePasswordRequest) : void
+    }
+
+    class JwtUtils {
+        - jwtSecret : String
+        - jwtExpirationMs : int
+        + generateJwtToken(username: String, role: String) : String
+        + getUserNameFromJwtToken(token: String) : String
+        + validateJwtToken(authToken: String) : boolean
+    }
+    
+    interface UserDetailsService {
+        + loadUserByUsername(username: String) : UserDetails
+    }
+    
+    class UserDetailsServiceImpl {
+        - userRepository : UserRepository
+        + loadUserByUsername(username: String) : UserDetails
+    }
+    
+    class AuditLogService {
+        + logEvent(actor, action, entity, entityId, status, desc, ip, detail) : void
+    }
+    
+    class EmailService {
+        + sendResetPasswordEmail(to: String, otp: String) : void
+    }
+}
+
+package "Repository Layer" {
+    interface UserRepository <<Repository>> {
+        + findByUsername(username: String) : Optional<User>
+        + findByEmail(email: String) : Optional<User>
+    }
+}
+
+package "Entity Layer" {
+    class User {
+        - id : Long
+        - username : String
+        - passwordHash : String
+        - email : String
+        - status : String
+        - roles : Set<RoleEntity>
+    }
+}
+
+package "DTO Layer" {
+    class LoginRequest {
+        - username : String
+        - password : String
+    }
+
+    class ChangePasswordRequest {
+        - oldPassword : String
+        - newPassword : String
+    }
+
+    class JwtResponse {
+        - token : String
+        - id : Long
+        - username : String
+        - role : String
+    }
+}
+
+' Relationships
+AuthController --> AuthService : uses
+AuthController --> AuditLogService : uses
+AuthController ..> LoginRequest : uses
+AuthController ..> ChangePasswordRequest : uses
+
+AuthService --> UserRepository : uses
+AuthService --> JwtUtils : uses
+AuthService --> EmailService : uses
+AuthService ..> JwtResponse : returns
+AuthService ..> User : uses
+
+UserDetailsService <|.. UserDetailsServiceImpl : implements
+UserDetailsServiceImpl --> UserRepository : uses
+
+UserRepository --> User : manages
+@enduml

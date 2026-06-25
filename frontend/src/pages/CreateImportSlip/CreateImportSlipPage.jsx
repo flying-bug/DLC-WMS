@@ -8,6 +8,9 @@ const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const today = () => new Date().toISOString().slice(0, 10);
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
+const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
+  ? `${item.productName} - ${item.variantName}`
+  : item?.productName || '';
 
 const emptyLine = () => ({
   localId: crypto.randomUUID(),
@@ -226,10 +229,10 @@ function CreateImportSlipPage() {
                         <td>
                           <select className={styles.tableSelect} value={item.variantId} onChange={(e) => handleItemChange(item.localId, 'variantId', e.target.value)}>
                             <option value="">Chọn hàng</option>
-                            {products.map(productItem => <option key={productItem.id} value={productItem.id}>{productItem.productCode}</option>)}
+                            {products.map(productItem => <option key={productItem.id} value={productItem.id}>{productItem.sku}</option>)}
                           </select>
                         </td>
-                        <td>{product?.productName || ''}</td>
+                        <td>{variantLabel(product)}</td>
                         <td>{product?.unitName || ''}</td>
                         <td align="right">
                           <input type="number" min="0" className={styles.tableInput} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />

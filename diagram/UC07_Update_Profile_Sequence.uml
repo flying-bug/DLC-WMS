@@ -1,0 +1,60 @@
+@startuml
+title Sequence Diagram: UC07 - Update Profile
+
+actor "User" as User
+boundary "ProfilePage" as Page
+control "UserController" as Controller
+control "UserService" as Service
+entity "UserRepository" as Repository
+database "Database" as Database
+
+User -> Page : Input new profile information\nClick "Save"
+activate Page
+
+Page -> Controller : PUT /api/v1/users/{id}
+activate Controller
+
+Controller -> Service : updateUser(id, userDto)
+activate Service
+
+Service -> Repository : findById(id)
+activate Repository
+
+Repository -> Database : SELECT * FROM users WHERE id = ?
+activate Database
+Database --> Repository : User data
+deactivate Database
+
+Repository --> Service : User
+deactivate Repository
+
+Service -> Service : Validate new information\n(email, phone format & uniqueness)
+
+alt Validation Failed (Email/Phone Exists)
+    Service --> Controller : throws Exception
+    Controller --> Page : 400 Error Response
+    Page --> User : Hiển thị thông báo lỗi (Email/SĐT đã tồn tại)
+
+else Validation Passed
+    Service -> Repository : save(user)
+    activate Repository
+    
+    Repository -> Database : UPDATE users SET ... WHERE id = ?
+    activate Database
+    Database --> Repository : Saved
+    deactivate Database
+    
+    Repository --> Service : Saved User
+    deactivate Repository
+    
+    Service --> Controller : UserDto
+    deactivate Service
+    
+    Controller --> Page : 200 OK (ApiResponse)
+    deactivate Controller
+    
+    Page --> User : Hiển thị thông báo (Cập nhật thành công)
+    deactivate Page
+end
+
+@enduml

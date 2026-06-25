@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductRequest {
+    @NotNull(message = "FIELD_REQUIRED")
     private Long brandId;
 
     @NotNull(message = "FIELD_REQUIRED")
@@ -29,6 +30,8 @@ public class ProductRequest {
     private String productName;
 
     private String productType;
+    @NotNull(message = "FIELD_REQUIRED")
+    private BigDecimal salePrice;
     private Boolean trackSerial;
     private Boolean trackLot;
     private Boolean isAssembly;
