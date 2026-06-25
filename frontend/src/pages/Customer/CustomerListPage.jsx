@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import CustomerQuickCreateDrawer from './components/CustomerQuickCreateDrawer';
 import Modal from '../../components/ui/Modal/Modal';
-import { searchCustomers } from '../../api/customerApi';
+// import { searchCustomers } from '../../api/customerApi'; // MOCK - Temporarily unused
 import styles from './CustomerListPage.module.css';
 
 const CustomerListPage = () => {
@@ -21,6 +21,7 @@ const CustomerListPage = () => {
     // Debounce search
     const debounceRef = useRef(null);
 
+    // eslint-disable-next-line no-unused-vars
     const fetchCustomers = useCallback(async (keyword = '', currentPage = 0) => {
         try {
             setLoading(true);

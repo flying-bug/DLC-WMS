@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
-import { getCustomerById, getCustomerSalesHistory, getCustomerWarranties, getCustomerReceipts, deactivateCustomer } from '../../api/customerApi';
+import { getCustomerById, deactivateCustomer } from '../../api/customerApi';
+// import { getCustomerSalesHistory, getCustomerWarranties, getCustomerReceipts } from '../../api/customerApi';
 import CustomerQuickCreateDrawer from './components/CustomerQuickCreateDrawer';
 import styles from './CustomerDetailPage.module.css';
 
@@ -61,7 +62,7 @@ const CustomerDetailPage = () => {
         fetchCustomerInfo();
     }, [id, navigate]);
 
-    // Fetch data cho từng tab
+    // eslint-disable-next-line no-unused-vars
     const fetchTabData = useCallback(async (currentTab, currentPage = 0) => {
         try {
             setLoading(true);
@@ -109,7 +110,8 @@ const CustomerDetailPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         Promise.resolve().then(() => fetchTabData(activeTab, page));
