@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import BrandDetailDrawer from './components/BrandDetailDrawer';
 import styles from './BrandListPage.module.css';
 
 const mockBrands = Array.from({ length: 45 }, (_, i) => ({
@@ -16,6 +17,8 @@ const BrandListPage = () => {
     const [brands, setBrands] = useState(mockBrands);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
+    const [selectedBrand, setSelectedBrand] = useState(null);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
     // Pagination states (mock)
     const [page, setPage] = useState(0);
@@ -130,7 +133,14 @@ const BrandListPage = () => {
                                         <td>{getStatusBadge(brand.status)}</td>
                                         <td>
                                             <div className={styles.rowActions}>
-                                                <button className={`${styles.iconBtn} ${styles.view}`} title="Xem chi tiết">
+                                                <button 
+                                                    className={`${styles.iconBtn} ${styles.view}`} 
+                                                    title="Xem chi tiết"
+                                                    onClick={() => {
+                                                        setSelectedBrand(brand);
+                                                        setIsDrawerOpen(true);
+                                                    }}
+                                                >
                                                     <i className="far fa-eye"></i>
                                                 </button>
                                                 <button className={`${styles.iconBtn} ${styles.edit}`} title="Sửa">
@@ -164,6 +174,15 @@ const BrandListPage = () => {
                     )}
                 </div>
             </div>
+
+            <BrandDetailDrawer 
+                isOpen={isDrawerOpen} 
+                onClose={() => {
+                    setIsDrawerOpen(false);
+                    setTimeout(() => setSelectedBrand(null), 300); // delay to allow animation to finish
+                }} 
+                brand={selectedBrand} 
+            />
         </AdminLayout>
     );
 };
