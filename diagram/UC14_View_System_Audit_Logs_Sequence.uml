@@ -1,0 +1,71 @@
+@startuml
+title Sequence Diagram: UC14 - View System Audit Logs
+
+actor "Super Admin" as User
+boundary "AuditLogsPage" as Page
+control "AuditLogController" as Controller
+control "AuditLogService" as Service
+entity "AuditLogRepository" as Repository
+database "Database" as Database
+
+User -> Page : Navigate to Audit Logs\n(Input filters/pagination)
+activate Page
+
+Page -> Controller : GET /api/v1/audit-logs\n?searchTerm=&page=&size=
+activate Controller
+
+Controller -> Service : getAuditLogs(...)
+activate Service
+
+Service -> Repository : findAll(Specification, Pageable)
+activate Repository
+
+Repository -> Database : SELECT * FROM audit_logs\nWHERE ... LIMIT ...
+activate Database
+Database --> Repository : Page of AuditLogs
+deactivate Database
+
+Repository --> Service : Page<AuditLog> Entities
+deactivate Repository
+
+Service --> Controller : Page<AuditLog> Entities
+deactivate Service
+
+Controller -> Controller : mapToResponse(log, false)
+
+Controller --> Page : 200 OK (ApiResponse)
+deactivate Controller
+
+Page --> User : Hiển thị danh sách nhật ký hệ thống
+
+User -> Page : Click on a specific log record
+
+Page -> Controller : GET /api/v1/audit-logs/{id}
+activate Controller
+
+Controller -> Service : getAuditLogById(id)
+activate Service
+
+Service -> Repository : findById(id)
+activate Repository
+
+Repository -> Database : SELECT * FROM audit_logs WHERE id = ?
+activate Database
+Database --> Repository : AuditLog data
+deactivate Database
+
+Repository --> Service : AuditLog Entity
+deactivate Repository
+
+Service --> Controller : AuditLog Entity
+deactivate Service
+
+Controller -> Controller : mapToResponse(log, true)
+
+Controller --> Page : 200 OK (ApiResponse)
+deactivate Controller
+
+Page --> User : Hiển thị chi tiết thay đổi (Detail JSON)
+deactivate Page
+
+@enduml

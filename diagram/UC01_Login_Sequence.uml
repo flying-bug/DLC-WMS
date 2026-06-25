@@ -1,0 +1,61 @@
+@startuml
+title Sequence Diagram: UC01 - Login
+
+actor "User" as User
+boundary "LoginPage" as Page
+control "AuthController" as Controller
+control "AuthService" as Service
+entity "UserRepository" as Repository
+database "Database" as Database
+
+User -> Page : Input username and password\nClick Login
+activate Page
+
+Page -> Controller : POST /api/v1/auth/login
+activate Controller
+
+Controller -> Service : login(request)
+activate Service
+
+Service -> Repository : findByUsername(username)
+activate Repository
+
+Repository -> Database : SELECT * FROM users WHERE username = ?
+activate Database
+Database --> Repository : User data / null
+deactivate Database
+
+Repository --> Service : User / null
+deactivate Repository
+
+alt User Not Found
+    Service --> Controller : throws Exception
+    Controller --> Page : 401 / 400 Error Response
+    Page --> User : Hiển thị thông báo lỗi (Sai thông tin)
+
+else User Found
+    alt Account Locked (status != APPROVED)
+        Service --> Controller : throws Exception
+        Controller --> Page : 401 / 403 Error Response
+        Page --> User : Hiển thị thông báo lỗi (Tài khoản bị khóa)
+        
+    else Valid Account
+        alt Incorrect Password
+            Service --> Controller : throws Exception
+            Controller --> Page : 401 Error Response
+            Page --> User : Hiển thị thông báo lỗi (Sai thông tin)
+            
+        else Correct Password
+            Service --> Controller : return JwtResponse
+            deactivate Service
+            
+            Controller --> Page : 200 OK (ApiResponse)
+            deactivate Controller
+            
+            Page --> User : Đăng nhập thành công,\nchuyển hướng Dashboard
+            deactivate Page
+        end
+    end
+end
+
+@enduml
