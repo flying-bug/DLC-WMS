@@ -77,10 +77,10 @@ const CustomerListPage = () => {
 
     const executeToggleStatus = () => {
         if (!confirmModal.customer) return;
-        
+
         // MOCK: Toggle status locally
-        setCustomers(prev => prev.map(c => 
-            c.id === confirmModal.customer.id 
+        setCustomers(prev => prev.map(c =>
+            c.id === confirmModal.customer.id
                 ? { ...c, status: c.status === 'APPROVED' ? 'INACTIVE' : 'APPROVED' }
                 : c
         ));
@@ -138,6 +138,9 @@ const CustomerListPage = () => {
                             <button className={styles.iconBtn} title="Cài đặt">
                                 <i className="fas fa-cog"></i>
                             </button>
+                            <button className={styles.btnImport} title="Nhập dữ liệu từ Excel">
+                                <i className="fas fa-file-import"></i> Nhập từ Excel
+                            </button>
                             <button id="btn-add-customer" className={styles.btnAdd} onClick={() => setIsDrawerOpen(true)}>
                                 <i className="fas fa-plus"></i> Thêm
                             </button>
@@ -174,8 +177,8 @@ const CustomerListPage = () => {
                                         </td>
                                         <td className={styles.codeCell}>{item.code}</td>
                                         <td>
-                                            <span 
-                                                className={styles.nameLink} 
+                                            <span
+                                                className={styles.nameLink}
                                                 onClick={() => navigate(`/customers/${item.id}`)}
                                                 title="Xem chi tiết khách hàng"
                                             >
@@ -288,8 +291,8 @@ const CustomerListPage = () => {
             />
 
             {/* Confirm Modal */}
-            <Modal 
-                isOpen={confirmModal.isOpen} 
+            <Modal
+                isOpen={confirmModal.isOpen}
                 onClose={() => setConfirmModal({ isOpen: false, customer: null, action: '' })}
             >
                 <div className={styles.confirmModalContent}>
@@ -305,14 +308,14 @@ const CustomerListPage = () => {
                         Bạn có chắc chắn muốn {confirmModal.action} khách hàng <strong>"{confirmModal.customer?.name}"</strong> không?
                     </p>
                     <div className={styles.confirmActions}>
-                        <button 
-                            className={styles.btnCancel} 
+                        <button
+                            className={styles.btnCancel}
                             onClick={() => setConfirmModal({ isOpen: false, customer: null, action: '' })}
                         >
                             Hủy bỏ
                         </button>
-                        <button 
-                            className={`${styles.btnConfirm} ${confirmModal.action === 'vô hiệu hóa' ? styles.btnConfirmDanger : ''}`} 
+                        <button
+                            className={`${styles.btnConfirm} ${confirmModal.action === 'vô hiệu hóa' ? styles.btnConfirmDanger : ''}`}
                             onClick={executeToggleStatus}
                         >
                             Đồng ý
