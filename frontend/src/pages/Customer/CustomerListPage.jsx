@@ -2,36 +2,48 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import CustomerQuickCreateDrawer from './components/CustomerQuickCreateDrawer';
-import { searchCustomers, deactivateCustomer } from '../../api/customerApi';
+import Modal from '../../components/ui/Modal/Modal';
+import { searchCustomers } from '../../api/customerApi';
 import styles from './CustomerListPage.module.css';
-
-const SEED_DATA_CODE = 'KH-0000';
 
 const CustomerListPage = () => {
     const navigate = useNavigate();
     const [customers, setCustomers] = useState([]);
-    const [phoneSearch, setPhoneSearch] = useState('');
+    const [keywordSearch, setKeywordSearch] = useState('');
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [editTarget, setEditTarget] = useState(null); // null = create, object = edit
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, customer: null, action: '' });
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const PAGE_SIZE = 10;
 
-    // Debounce search để tránh gọi API liên tục khi gõ
+    // Debounce search
     const debounceRef = useRef(null);
 
-    const fetchCustomers = useCallback(async (phone = '', currentPage = 0) => {
+    const fetchCustomers = useCallback(async (keyword = '', currentPage = 0) => {
         try {
             setLoading(true);
-            const res = await searchCustomers(phone, currentPage, PAGE_SIZE);
-            const pageData = res.data?.data;
-            if (pageData) {
-                setCustomers(pageData.content || []);
-                setTotalPages(pageData.totalPages || 0);
-                setTotalElements(pageData.totalElements || 0);
-            }
+
+            // MOCK DATA START
+            const mockCustomers = [
+                { id: 1, code: 'KH00001', name: 'Ng Thu Uyên', address: '123 Lê Lợi, Q.1, TP.HCM', taxCode: '0123456789', phone: '0912 345 678', status: 'APPROVED', lastOrder: '2026-06-20' },
+                { id: 2, code: 'KH00002', name: 'Công ty TNHH ABC', address: '456 Nguyễn Huệ, Q.1, TP.HCM', taxCode: '0987654321', phone: '0987 654 321', status: 'APPROVED', lastOrder: '2026-06-18' },
+                { id: 3, code: 'KH00003', name: 'Trần Văn Bình', address: '789 Hai Bà Trưng, Q.3, TP.HCM', taxCode: '', phone: '0901 234 567', status: 'INACTIVE', lastOrder: '2026-05-12' },
+                { id: 4, code: 'KH00004', name: 'Công ty CP XYZ', address: '321 Võ Văn Tần, Q.3, TP.HCM', taxCode: '1122334455', phone: '0938 765 432', status: 'APPROVED', lastOrder: '2026-06-22' },
+                { id: 5, code: 'KH00005', name: 'Lê Thị Hương', address: '654 Pasteur, Q.1, TP.HCM', taxCode: '', phone: '0945 678 901', status: 'APPROVED', lastOrder: '2026-06-01' },
+                { id: 6, code: 'KH00006', name: 'DNTN Phú Thịnh', address: '987 Trần Hưng Đạo, Q.5, TP.HCM', taxCode: '5566778899', phone: '0976 543 210', status: 'INACTIVE', lastOrder: '2026-04-30' },
+                { id: 7, code: 'KH00007', name: 'Nguyễn Minh Tuấn', address: '159 Điện Biên Phủ, Bình Thạnh', taxCode: '', phone: '0923 456 789', status: 'APPROVED', lastOrder: '2026-06-24' },
+            ];
+
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            setCustomers(mockCustomers);
+            setTotalPages(5);
+            setTotalElements(42);
+            // MOCK DATA END
+
         } catch (error) {
             console.error('Lỗi tải danh sách khách hàng:', error);
         } finally {
@@ -43,10 +55,9 @@ const CustomerListPage = () => {
         Promise.resolve().then(() => fetchCustomers('', 0));
     }, [fetchCustomers]);
 
-    // Autocomplete search: debounce 400ms
-    const handlePhoneChange = (e) => {
+    const handleSearchChange = (e) => {
         const value = e.target.value;
-        setPhoneSearch(value);
+        setKeywordSearch(value);
         setPage(0);
         clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
@@ -56,36 +67,33 @@ const CustomerListPage = () => {
 
     const handlePageChange = (newPage) => {
         setPage(newPage);
-        fetchCustomers(phoneSearch, newPage);
+        fetchCustomers(keywordSearch, newPage);
     };
 
-    const handleDeactivate = async (customer) => {
-        if (!window.confirm(`Bạn có chắc muốn vô hiệu hóa khách hàng "${customer.name}" không?`)) return;
-        try {
-            await deactivateCustomer(customer.id);
-            fetchCustomers(phoneSearch, page);
-        } catch (error) {
-            alert(error.response?.data?.message || 'Không thể vô hiệu hóa. Vui lòng kiểm tra lại.');
-        }
+    const handleToggleStatus = (customer) => {
+        const action = customer.status === 'APPROVED' ? 'vô hiệu hóa' : 'kích hoạt';
+        setConfirmModal({ isOpen: true, customer, action });
+    };
+
+    const executeToggleStatus = () => {
+        if (!confirmModal.customer) return;
+        
+        // MOCK: Toggle status locally
+        setCustomers(prev => prev.map(c => 
+            c.id === confirmModal.customer.id 
+                ? { ...c, status: c.status === 'APPROVED' ? 'INACTIVE' : 'APPROVED' }
+                : c
+        ));
+        setConfirmModal({ isOpen: false, customer: null, action: '' });
     };
 
     const handleSavedSuccess = () => {
         setIsDrawerOpen(false);
-        setEditTarget(null);
-        fetchCustomers(phoneSearch, page);
+        fetchCustomers(keywordSearch, page);
     };
 
-    const getGroupTypeLabel = (groupType) => {
-        const map = { RETAIL: 'Khách lẻ', WHOLESALE: 'Khách thợ', DISTRIBUTOR: 'Đại lý' };
-        return map[groupType] || groupType;
-    };
-
-    const getStatusBadge = (status) => {
-        if (status === 'APPROVED') return <span className={styles.badgeActive}>Hoạt động</span>;
-        return <span className={styles.badgeInactive}>Ngừng hoạt động</span>;
-    };
-
-    const isSeedData = (code) => code === SEED_DATA_CODE;
+    const startItem = page * PAGE_SIZE + 1;
+    const endItem = Math.min((page + 1) * PAGE_SIZE, totalElements);
 
     return (
         <AdminLayout>
@@ -93,14 +101,8 @@ const CustomerListPage = () => {
                 {/* Header */}
                 <div className={styles.header}>
                     <div className={styles.titleArea}>
-                        <span className={styles.backLink} onClick={() => navigate('/dashboard')}>
-                            <i className="fas fa-chevron-left"></i> Tất cả danh mục
-                        </span>
                         <h2>Danh sách khách hàng</h2>
                     </div>
-                    <button id="btn-add-customer" className={styles.btnAdd} onClick={() => { setEditTarget(null); setIsDrawerOpen(true); }}>
-                        <i className="fas fa-plus"></i> Thêm mới
-                    </button>
                 </div>
 
                 {/* Table Section */}
@@ -108,21 +110,36 @@ const CustomerListPage = () => {
                     {/* Toolbar */}
                     <div className={styles.tableToolbar}>
                         <div className={styles.toolbarLeft}>
-                            <div className={styles.searchBox}>
-                                <i className="fas fa-search"></i>
-                                <input
-                                    id="input-search-phone"
-                                    type="text"
-                                    placeholder="Tìm theo số điện thoại..."
-                                    value={phoneSearch}
-                                    onChange={handlePhoneChange}
-                                    autoComplete="off"
-                                />
+                            <div className={styles.dropdownBtn}>
+                                Thực hiện hàng loạt <i className="fas fa-chevron-down"></i>
+                            </div>
+                            <div className={styles.filterBtn}>
+                                <i className="fas fa-filter"></i> Lọc
                             </div>
                         </div>
                         <div className={styles.toolbarRight}>
-                            <button className={styles.iconBtn} title="Tải lại" onClick={() => fetchCustomers(phoneSearch, page)}>
+                            <div className={styles.searchBox}>
+                                <i className="fas fa-search"></i>
+                                <input
+                                    id="input-search"
+                                    type="text"
+                                    placeholder="Tìm kiếm"
+                                    value={keywordSearch}
+                                    onChange={handleSearchChange}
+                                    autoComplete="off"
+                                />
+                            </div>
+                            <button className={styles.iconBtn} title="Tải lại" onClick={() => fetchCustomers(keywordSearch, page)}>
                                 <i className="fas fa-sync-alt"></i>
+                            </button>
+                            <button className={styles.iconBtn} title="In">
+                                <i className="fas fa-print"></i>
+                            </button>
+                            <button className={styles.iconBtn} title="Cài đặt">
+                                <i className="fas fa-cog"></i>
+                            </button>
+                            <button id="btn-add-customer" className={styles.btnAdd} onClick={() => setIsDrawerOpen(true)}>
+                                <i className="fas fa-plus"></i> Thêm
                             </button>
                         </div>
                     </div>
@@ -132,60 +149,77 @@ const CustomerListPage = () => {
                         <table className={styles.table}>
                             <thead>
                                 <tr>
-                                    <th>MÃ KH</th>
+                                    <th style={{ width: '40px', textAlign: 'center' }}>
+                                        <input type="checkbox" className={styles.checkbox} />
+                                    </th>
+                                    <th>MÃ KHÁCH HÀNG</th>
                                     <th>TÊN KHÁCH HÀNG</th>
+                                    <th>ĐỊA CHỈ</th>
+                                    <th>MÃ SỐ THUẾ</th>
                                     <th>SỐ ĐIỆN THOẠI</th>
-                                    <th>NHÓM</th>
-                                    <th style={{ textAlign: 'center' }}>TRẠNG THÁI</th>
+                                    <th>TRẠNG THÁI</th>
+                                    <th>ĐƠN HÀNG CUỐI</th>
                                     <th style={{ textAlign: 'center' }}>CHỨC NĂNG</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
-                                    <tr><td colSpan="6" className={styles.emptyRow}>Đang tải dữ liệu...</td></tr>
+                                    <tr><td colSpan="9" className={styles.emptyRow}>Đang tải dữ liệu...</td></tr>
                                 ) : customers.length === 0 ? (
-                                    <tr><td colSpan="6" className={styles.emptyRow}>Chưa có dữ liệu.</td></tr>
+                                    <tr><td colSpan="9" className={styles.emptyRow}>Chưa có dữ liệu.</td></tr>
                                 ) : customers.map((item) => (
                                     <tr key={item.id}>
-                                        <td className={styles.codeCell}>{item.code}</td>
-                                        <td className={styles.nameCell}>
-                                            {/* Ẩn link "Xem chi tiết" với KH-0000 theo spec CUST04 */}
-                                            {isSeedData(item.code) ? (
-                                                <span>{item.name}</span>
-                                            ) : (
-                                                <span
-                                                    className={styles.nameLink}
-                                                    onClick={() => navigate(`/customers/${item.id}`)}
-                                                    title="Xem hồ sơ chi tiết"
-                                                >
-                                                    {item.name}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td>{item.phone}</td>
-                                        <td>{getGroupTypeLabel(item.groupType)}</td>
-                                        <td style={{ textAlign: 'center' }}>{getStatusBadge(item.status)}</td>
                                         <td style={{ textAlign: 'center' }}>
-                                            {!isSeedData(item.code) && (
-                                                <div className={styles.actionGroup}>
-                                                    <button
-                                                        className={styles.actionBtnEdit}
-                                                        onClick={() => { setEditTarget(item); setIsDrawerOpen(true); }}
-                                                        title="Chỉnh sửa"
-                                                    >
-                                                        <i className="fas fa-pen"></i>
-                                                    </button>
-                                                    {item.status === 'APPROVED' && (
-                                                        <button
-                                                            className={styles.actionBtnDeactivate}
-                                                            onClick={() => handleDeactivate(item)}
-                                                            title="Vô hiệu hóa"
-                                                        >
-                                                            <i className="fas fa-ban"></i>
-                                                        </button>
-                                                    )}
+                                            <input type="checkbox" className={styles.checkbox} />
+                                        </td>
+                                        <td className={styles.codeCell}>{item.code}</td>
+                                        <td className={styles.nameCell}>{item.name}</td>
+                                        <td>{item.address || '---'}</td>
+                                        <td>{item.taxCode || '---'}</td>
+                                        <td>{item.phone}</td>
+                                        <td>
+                                            {item.status === 'APPROVED' ? (
+                                                <div className={`${styles.statusBadge} ${styles.statusActive}`}>
+                                                    <i className="far fa-check-circle"></i> Active
+                                                </div>
+                                            ) : (
+                                                <div className={`${styles.statusBadge} ${styles.statusInactive}`}>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <circle cx="12" cy="12" r="10"></circle>
+                                                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                                                    </svg> Inactive
                                                 </div>
                                             )}
+                                        </td>
+                                        <td>{item.lastOrder || '---'}</td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <div className={styles.actionIconGroup}>
+                                                <button
+                                                    className={`${styles.actionIconBtn} ${styles.iconBtnView}`}
+                                                    onClick={() => navigate(`/customers/${item.id}`)}
+                                                    title="Xem chi tiết"
+                                                >
+                                                    <i className="far fa-eye"></i>
+                                                </button>
+                                                <div className={styles.actionDivider}></div>
+                                                {item.status === 'APPROVED' ? (
+                                                    <button
+                                                        className={`${styles.actionIconBtn} ${styles.iconBtnDelete}`}
+                                                        onClick={() => handleToggleStatus(item)}
+                                                        title="Vô hiệu hóa"
+                                                    >
+                                                        <i className="far fa-times-circle"></i>
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        className={`${styles.actionIconBtn} ${styles.iconBtnActivate}`}
+                                                        onClick={() => handleToggleStatus(item)}
+                                                        title="Kích hoạt"
+                                                    >
+                                                        <i className="far fa-check-circle"></i>
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -195,7 +229,17 @@ const CustomerListPage = () => {
 
                     {/* Pagination */}
                     <div className={styles.pagination}>
-                        <div className={styles.pageInfo}>Tổng số: {totalElements} khách hàng</div>
+                        <div className={styles.pageInfo}>
+                            {totalElements > 0 ? `${startItem}-${endItem} của ${totalElements} khách hàng` : '0 khách hàng'}
+                            <span className={styles.pageSize}>
+                                Hiển thị
+                                <select className={styles.pageSizeSelect} defaultValue={10}>
+                                    <option value={10}>10 dòng / trang</option>
+                                    <option value={20}>20 dòng / trang</option>
+                                    <option value={50}>50 dòng / trang</option>
+                                </select>
+                            </span>
+                        </div>
                         <div className={styles.pageControls}>
                             <div className={styles.pageNav}>
                                 <button
@@ -227,13 +271,47 @@ const CustomerListPage = () => {
                 </div>
             </div>
 
-            {/* Drawer Tạo nhanh / Chỉnh sửa */}
+            {/* Drawer Tạo nhanh */}
             <CustomerQuickCreateDrawer
                 isOpen={isDrawerOpen}
-                editData={editTarget}
-                onClose={() => { setIsDrawerOpen(false); setEditTarget(null); }}
+                editData={null}
+                onClose={() => setIsDrawerOpen(false)}
                 onSaved={handleSavedSuccess}
             />
+
+            {/* Confirm Modal */}
+            <Modal 
+                isOpen={confirmModal.isOpen} 
+                onClose={() => setConfirmModal({ isOpen: false, customer: null, action: '' })}
+            >
+                <div className={styles.confirmModalContent}>
+                    <div className={styles.confirmIcon}>
+                        {confirmModal.action === 'vô hiệu hóa' ? (
+                            <i className="fas fa-exclamation-circle" style={{ color: '#ef4444' }}></i>
+                        ) : (
+                            <i className="fas fa-question-circle" style={{ color: '#3b82f6' }}></i>
+                        )}
+                    </div>
+                    <h3 className={styles.confirmTitle}>Xác nhận {confirmModal.action}</h3>
+                    <p className={styles.confirmMessage}>
+                        Bạn có chắc chắn muốn {confirmModal.action} khách hàng <strong>"{confirmModal.customer?.name}"</strong> không?
+                    </p>
+                    <div className={styles.confirmActions}>
+                        <button 
+                            className={styles.btnCancel} 
+                            onClick={() => setConfirmModal({ isOpen: false, customer: null, action: '' })}
+                        >
+                            Hủy bỏ
+                        </button>
+                        <button 
+                            className={`${styles.btnConfirm} ${confirmModal.action === 'vô hiệu hóa' ? styles.btnConfirmDanger : ''}`} 
+                            onClick={executeToggleStatus}
+                        >
+                            Đồng ý
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </AdminLayout>
     );
 };
