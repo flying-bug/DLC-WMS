@@ -63,7 +63,7 @@ function RealtimeSessionBridge() {
             window.removeEventListener(AUTH_EVENT, handleAuthChanged);
             closeConnection();
         };
-    }, [closeConnection, openConnection]);
+    }, []);
 
     return null;
 }

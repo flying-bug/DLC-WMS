@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import LoginForm from './components/LoginForm';
@@ -8,16 +8,15 @@ import axiosClient from '../../api/axiosClient';
 import { setAuthSession } from '../../auth/session';
 
 function LoginPage() {
-    const [errorMsg, setErrorMsg] = useState('');
-    const navigate = useNavigate();
-
-    useEffect(() => {
+    const [errorMsg, setErrorMsg] = useState(() => {
         const logoutMessage = sessionStorage.getItem('logoutMessage');
         if (logoutMessage) {
-            setErrorMsg(logoutMessage);
             sessionStorage.removeItem('logoutMessage');
+            return logoutMessage;
         }
-    }, []);
+        return '';
+    });
+    const navigate = useNavigate();
 
     const handleGoogleSuccess = async (credentialResponse) => {
         setErrorMsg('');
