@@ -72,6 +72,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         moduleActions.put("stocktake", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("product", new String[]{"view", "add", "edit", "delete", "export", "print"});
+        moduleActions.put("brand", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("unit", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("customer", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("supplier", new String[]{"view", "add", "edit", "delete", "export", "print"});

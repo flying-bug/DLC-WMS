@@ -24,6 +24,11 @@ import SupplierListPage from '../pages/Supplier/SupplierListPage';
 import SupplierDetailPage from '../pages/Supplier/SupplierDetailPage';
 import CustomerListPage from '../pages/Customer/CustomerListPage';
 import CustomerDetailPage from '../pages/Customer/CustomerDetailPage';
+import WarrantyListPage from '../pages/Warranty/WarrantyListPage';
+import WarrantyDetailPage from '../pages/Warranty/WarrantyDetailPage';
+import CreateRepairTicketPage from '../pages/RepairTicket/CreateRepairTicketPage';
+import RepairTicketListPage from '../pages/RepairTicket/RepairTicketListPage';
+import UpdateRepairTicketPage from '../pages/RepairTicket/UpdateRepairTicketPage';
 import BrandListPage from '../pages/Brand/BrandListPage';
 
 // Wrapper for protected routes (requires token)
@@ -82,6 +87,11 @@ function AppRouter() {
                     <Route path="/warehouses/:id" element={<WarehouseDetailPage />} />
                     <Route path="/customers" element={<CustomerListPage />} />
                     <Route path="/customers/:id" element={<CustomerDetailPage />} />
+                    <Route path="/warranties" element={<WarrantyListPage />} />
+                    <Route path="/warranties/:id" element={<WarrantyDetailPage />} />
+                    <Route path="/repair-tickets" element={<RepairTicketListPage />} />
+                    <Route path="/repair-tickets/create" element={<CreateRepairTicketPage />} />
+                    <Route path="/repair-tickets/:id/edit" element={<UpdateRepairTicketPage />} />
                     <Route path="/brands" element={<BrandListPage />} />
                 </Route>
 

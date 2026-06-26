@@ -44,6 +44,14 @@ const AdminLayout = ({ children }) => {
                         <span>Khách hàng</span>
                     </button>
                     <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/warranties') ? styles.active : ''}`}
+                        onClick={() => navigate('/warranties')}
+                        type="button"
+                    >
+                        <i className="fas fa-shield-alt"></i>
+                        <span>Bao hanh</span>
+                    </button>
+                    <button
                         className={`${styles.navItem} ${currentPath.startsWith('/brands') ? styles.active : ''}`}
                         onClick={() => navigate('/brands')}
                         type="button"
@@ -82,6 +90,20 @@ const AdminLayout = ({ children }) => {
                         <button className={styles.tab} type="button">Chuyển kho</button>
                         <button className={styles.tab} type="button">Kiểm kê</button>
                         <button className={styles.tab} type="button">Báo cáo</button>
+                        <button
+                            className={`${styles.tab} ${currentPath.startsWith('/warranties') ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/warranties')}
+                            type="button"
+                        >
+                            Bao hanh
+                        </button>
+                        <button
+                            className={`${styles.tab} ${currentPath.startsWith('/repair-tickets') ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/repair-tickets')}
+                            type="button"
+                        >
+                            Sua chua
+                        </button>
                         <button
                             className={`${styles.tab} ${currentPath === '/warehouses' ? styles.activeTab : ''}`}
                             onClick={() => navigate('/warehouses')}

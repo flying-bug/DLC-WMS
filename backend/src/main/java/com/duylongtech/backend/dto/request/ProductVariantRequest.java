@@ -17,6 +17,8 @@ public class ProductVariantRequest {
     @NotBlank(message = "FIELD_REQUIRED")
     private String sku;
 
+    private String barcode;
+
     @NotBlank(message = "FIELD_REQUIRED")
     private String variantName;
 

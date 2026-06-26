@@ -45,6 +45,9 @@ public class InventoryDocumentLine {
     @Column(name = "serial_number_id")
     private Long serialNumberId;
 
+    @Column(name = "serial_numbers_text", columnDefinition = "TEXT")
+    private String serialNumbersText;
+
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 }

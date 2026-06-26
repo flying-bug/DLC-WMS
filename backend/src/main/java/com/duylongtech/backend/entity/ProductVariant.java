@@ -27,6 +27,9 @@ public class ProductVariant {
     @Column(nullable = false, unique = true, length = 50)
     private String sku;
 
+    @Column(name = "barcode", unique = true, length = 100)
+    private String barcode;
+
     @Column(name = "variant_name", nullable = false, length = 255)
     private String variantName;
 

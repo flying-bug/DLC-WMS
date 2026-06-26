@@ -1,0 +1,4 @@
+ALTER TABLE INVENTORY_DOCUMENTS
+  ADD COLUMN issue_purpose VARCHAR(30) NULL AFTER doc_type,
+  ADD COLUMN reference_type VARCHAR(30) NULL AFTER issue_purpose,
+  ADD COLUMN reference_id BIGINT UNSIGNED NULL AFTER reference_type;

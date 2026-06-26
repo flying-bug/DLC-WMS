@@ -8,6 +8,9 @@ import java.util.List;
 @Data
 public class InventoryDocumentRequest {
     private String docCode; // optional, system generates if null
+    private String issuePurpose;
+    private String referenceType;
+    private Long referenceId;
     private Long warehouseId;
     private Long sourceWarehouseId;
     private Long purchaseOrderId;
