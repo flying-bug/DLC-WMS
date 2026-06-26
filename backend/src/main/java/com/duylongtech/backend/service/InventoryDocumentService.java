@@ -82,6 +82,7 @@ public class InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse createExport(InventoryDocumentRequest req) {
         validateCreateRequest(req);
+        validateExportInventoryBalance(req.getWarehouseId(), req.getLines());
         InventoryDocument doc = buildBaseDocument(req, EXPORT_DOC_TYPE, resolveCreateDocCode(req.getDocCode()));
         for (int i = 0; i < req.getLines().size(); i++) {
             doc.getLines().add(toExportLineEntity(doc, req.getLines().get(i), i));
@@ -102,6 +103,7 @@ public class InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse updateExport(Long id, InventoryDocumentRequest req) {
         validateUpdateRequest(req);
+        validateExportInventoryBalance(req.getWarehouseId(), req.getLines());
         InventoryDocument doc = findExportOrThrow(id);
         ensureEditable(doc);
         updateBaseDocument(id, doc, req, "Ma phieu xuat kho da ton tai", false);
@@ -139,7 +141,7 @@ public class InventoryDocumentService {
                     .orElseThrow(() -> new BusinessException("Khong tim thay ton kho GOOD cho san pham " + line.getVariantId()));
 
             if (balance.getQuantityOnHand().compareTo(qtyToExport) < 0) {
-                throw new BusinessException("Khong du ton kho cho san pham " + line.getVariantId());
+                throw new BusinessException("Số lượng xuất lớn hơn số lượng tồn kho, vui lòng điều chỉnh");
             }
 
             balance.setQuantityOnHand(balance.getQuantityOnHand().subtract(qtyToExport));
@@ -365,6 +367,23 @@ public class InventoryDocumentService {
         String status = normalizeStatusValue(doc.getStatus(), DEFAULT_STATUS);
         if (!EDITABLE_STATUSES.contains(status)) {
             throw new BusinessException("Chi co the cap nhat phieu DRAFT hoac SUBMITTED");
+        }
+    }
+
+    private void validateExportInventoryBalance(Long warehouseId, List<InventoryDocumentLineRequest> lines) {
+        if (warehouseId == null || lines == null) return;
+        for (int i = 0; i < lines.size(); i++) {
+            InventoryDocumentLineRequest line = lines.get(i);
+            if (line.getVariantId() == null || line.getQuantityOut() == null) continue;
+            
+            BigDecimal qtyToExport = line.getQuantityOut();
+            InventoryBalance balance = inventoryBalanceRepository
+                    .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), "GOOD")
+                    .orElse(null);
+
+            if (balance == null || balance.getQuantityOnHand().compareTo(qtyToExport) < 0) {
+                throw new BusinessException("Số lượng xuất lớn hơn số lượng tồn kho, vui lòng điều chỉnh");
+            }
         }
     }
 
