@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import styles from './BrandModal.module.css';
 
 const BrandModal = ({ onClose, onSave, initialData = null }) => {
@@ -8,14 +8,8 @@ const BrandModal = ({ onClose, onSave, initialData = null }) => {
         status: 'ACTIVE',
         email: '',
         hotline: '',
-        description: ''
+        ...initialData
     });
-
-    useEffect(() => {
-        if (initialData) {
-            setFormData(prev => ({ ...prev, ...initialData }));
-        }
-    }, [initialData]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
