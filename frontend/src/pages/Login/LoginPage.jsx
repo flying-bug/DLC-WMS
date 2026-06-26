@@ -1,24 +1,30 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import LoginForm from './components/LoginForm';
 import styles from './LoginPage.module.css';
 import { COMPANY_NAME, COPYRIGHT_YEAR } from '../../constants';
 import axiosClient from '../../api/axiosClient';
+import { setAuthSession } from '../../auth/session';
 
 function LoginPage() {
     const [errorMsg, setErrorMsg] = useState('');
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const logoutMessage = sessionStorage.getItem('logoutMessage');
+        if (logoutMessage) {
+            setErrorMsg(logoutMessage);
+            sessionStorage.removeItem('logoutMessage');
+        }
+    }, []);
 
     const handleGoogleSuccess = async (credentialResponse) => {
         setErrorMsg('');
         try {
             const response = await axiosClient.post('/auth/login-google?token=' + credentialResponse.credential);
             if (response.data && response.data.data.token) {
-                localStorage.setItem('token', response.data.data.token);
-                if (response.data.data.role) {
-                    localStorage.setItem('role', response.data.data.role);
-                }
+                setAuthSession(response.data.data);
                 navigate('/');
             }
         } catch (error) {

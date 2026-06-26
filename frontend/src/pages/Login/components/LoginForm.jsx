@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './LoginForm.module.css';
 import { PLACEHOLDERS, ROUTES } from '../../../constants';
+import { setAuthSession } from '../../../auth/session';
 
 function LoginForm() {
     const [formData, setFormData] = useState({
@@ -57,10 +58,7 @@ function LoginForm() {
             });
 
             if (response.data && response.data.data.token) {
-                localStorage.setItem('token', response.data.data.token);
-                if (response.data.data.role) {
-                    localStorage.setItem('role', response.data.data.role);
-                }
+                setAuthSession(response.data.data);
                 // Handle remember me if necessary (e.g. store username or token preference)
                 if (formData.rememberMe) {
                     localStorage.setItem('rememberedUser', formData.usernameOrEmail);

@@ -21,16 +21,18 @@ public class AuthService {
     private final com.duylongtech.backend.repository.UserRepository userRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final RealtimeSessionService realtimeSessionService;
 
     @org.springframework.beans.factory.annotation.Value("${google.client-id:YOUR_GOOGLE_CLIENT_ID}")
     private String googleClientId;
 
-    public AuthService(AuthenticationManager authenticationManager, JwtUtils jwtUtils, com.duylongtech.backend.repository.UserRepository userRepository, org.springframework.security.crypto.password.PasswordEncoder passwordEncoder, EmailService emailService) {
+    public AuthService(AuthenticationManager authenticationManager, JwtUtils jwtUtils, com.duylongtech.backend.repository.UserRepository userRepository, org.springframework.security.crypto.password.PasswordEncoder passwordEncoder, EmailService emailService, RealtimeSessionService realtimeSessionService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtils = jwtUtils;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.realtimeSessionService = realtimeSessionService;
     }
 
     public JwtResponse login(LoginRequest request) {
@@ -131,6 +133,7 @@ public class AuthService {
         
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        realtimeSessionService.forceLogoutUser(user.getId(), "PASSWORD_RESET", "Mat khau cua ban vua duoc thay doi. Vui long dang nhap lai.");
 
         // Xóa OTP sau khi đổi pass thành công
         otpStorage.remove(email);
@@ -148,5 +151,6 @@ public class AuthService {
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+        realtimeSessionService.forceLogoutUser(user.getId(), "PASSWORD_CHANGED", "Mat khau cua ban vua duoc thay doi. Vui long dang nhap lai.");
     }
 }

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { forceLogout } from '../auth/session';
 
 const getBaseURL = () => {
     const envUrl = import.meta.env.VITE_API_URL;
@@ -47,13 +48,11 @@ axiosClient.interceptors.response.use(
     (error) => {
         const isLoginRequest = error.config?.url?.includes('/auth/login');
         if (error.response && error.response.status === 401 && !isLoginRequest) {
-            // Tự động logout và redirect về trang login khi bị khóa/hết hạn
-            localStorage.removeItem('token');
-            localStorage.removeItem('role');
-            window.location.href = '/login';
+            forceLogout(error.response?.data?.userMessage || 'Phien dang nhap cua ban da het han hoac tai khoan da bi khoa.');
         }
         return Promise.reject(error);
     }
 );
 
 export default axiosClient;
+export { getBaseURL };

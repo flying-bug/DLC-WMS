@@ -4,6 +4,7 @@ import axiosClient from '../api/axiosClient';
 import styles from './UsersPage.module.css';
 import UserProfileDropdown from '../components/ui/UserProfileDropdown/UserProfileDropdown';
 import EmployeeDrawer from '../components/ui/EmployeeDrawer/EmployeeDrawer';
+import { USER_EVENT } from '../auth/session';
 
 function UsersPage() {
     const navigate = useNavigate();
@@ -87,6 +88,33 @@ function UsersPage() {
         /* eslint-disable-next-line react-hooks/set-state-in-effect */
         fetchUsers();
         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const handleUserUpdated = (event) => {
+            const incomingUser = event.detail?.user;
+            if (!incomingUser?.id) {
+                return;
+            }
+
+            const mappedUser = mapUserToUi(incomingUser);
+
+            setUsersData((prev) => {
+                const existingIndex = prev.findIndex((item) => item.id === mappedUser.id);
+                if (existingIndex === -1) {
+                    return [mappedUser, ...prev];
+                }
+
+                const next = [...prev];
+                next[existingIndex] = mappedUser;
+                return next;
+            });
+
+            setSelectedUser((prev) => (prev && prev.id === mappedUser.id ? mappedUser : prev));
+        };
+
+        window.addEventListener(USER_EVENT, handleUserUpdated);
+        return () => window.removeEventListener(USER_EVENT, handleUserUpdated);
     }, []);
 
     const handleRowClick = (user) => {
