@@ -153,6 +153,66 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
+.scanPanel {
+  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+
+.scanTitle {
+  color: #1e3f7a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.scanHint {
+  color: #667085;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.scanForm {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: min(520px, 100%);
+}
+
+.scanInputWrap {
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  color: #0075c0;
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.scanInput {
+  border: none;
+  color: #333;
+  flex: 1;
+  font-size: 14px;
+  outline: none;
+  padding: 10px 0;
+}
+
+.serialTag {
+  background: #eef6ff;
+  border: 1px solid #b8dcff;
+  border-radius: 4px;
+  color: #1e3f7a;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 6px;
+  padding: 3px 6px;
+}
+
 .tableTitle {
   font-weight: 700;
   font-size: 16px;
@@ -403,4 +463,15 @@
 .btnSavePrint:disabled {
   cursor: not-allowed;
   opacity: 0.65;
+}
+
+@media (max-width: 900px) {
+  .scanPanel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scanForm {
+    min-width: 0;
+  }
 }

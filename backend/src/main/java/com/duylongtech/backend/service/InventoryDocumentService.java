@@ -2,18 +2,25 @@ package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.InventoryDocumentLineRequest;
 import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
+import com.duylongtech.backend.dto.request.ScanResolveRequest;
 import com.duylongtech.backend.dto.response.InventoryDocumentLineResponse;
 import com.duylongtech.backend.dto.response.InventoryDocumentResponse;
+import com.duylongtech.backend.dto.response.ScanResolveResponse;
 import com.duylongtech.backend.entity.InventoryBalance;
 import com.duylongtech.backend.entity.InventoryCostLayer;
 import com.duylongtech.backend.entity.InventoryDocument;
 import com.duylongtech.backend.entity.InventoryDocumentLine;
 import com.duylongtech.backend.entity.InventoryLedger;
+import com.duylongtech.backend.entity.Product;
+import com.duylongtech.backend.entity.ProductVariant;
+import com.duylongtech.backend.entity.SerialNumber;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.InventoryBalanceRepository;
 import com.duylongtech.backend.repository.InventoryCostLayerRepository;
 import com.duylongtech.backend.repository.InventoryDocumentRepository;
 import com.duylongtech.backend.repository.InventoryLedgerRepository;
+import com.duylongtech.backend.repository.ProductVariantRepository;
+import com.duylongtech.backend.repository.SerialNumberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +49,23 @@ public class InventoryDocumentService {
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final InventoryCostLayerRepository inventoryCostLayerRepository;
     private final InventoryLedgerRepository inventoryLedgerRepository;
+    private final SerialNumberRepository serialNumberRepository;
+    private final ProductVariantRepository productVariantRepository;
+
+    @Transactional(readOnly = true)
+    public ScanResolveResponse resolveExportScan(ScanResolveRequest req) {
+        String code = trimToNull(req != null ? req.getCode() : null);
+        if (code == null) {
+            throw new BusinessException("Ma quet la bat buoc");
+        }
+        if (req.getWarehouseId() == null) {
+            throw new BusinessException("warehouseId la bat buoc");
+        }
+
+        return serialNumberRepository.findBySerialNumber(code)
+                .map(serial -> resolveSerialScan(serial, req.getWarehouseId(), code))
+                .orElseGet(() -> resolveVariantScan(code));
+    }
 
     @Transactional(readOnly = true)
     public List<InventoryDocumentResponse> getExportHistory(String docCode, LocalDate fromDate, LocalDate toDate,
@@ -140,6 +164,12 @@ public class InventoryDocumentService {
 
         for (InventoryDocumentLine line : doc.getLines()) {
             BigDecimal qtyToExport = line.getQuantityOut();
+            SerialNumber serialNumber = null;
+            if (line.getSerialNumberId() != null) {
+                serialNumber = serialNumberRepository.findById(line.getSerialNumberId())
+                        .orElseThrow(() -> new BusinessException("Khong tim thay serial can xuat"));
+                validateExportSerial(doc, line, serialNumber, qtyToExport);
+            }
             InventoryBalance balance = inventoryBalanceRepository
                     .findByWarehouseAndVariantForUpdate(doc.getWarehouseId(), line.getVariantId(), "GOOD")
                     .orElseThrow(() -> new BusinessException("Khong tim thay ton kho GOOD cho san pham " + line.getVariantId()));
@@ -175,6 +205,10 @@ public class InventoryDocumentService {
             BigDecimal avgUnitCost = totalCost.divide(qtyToExport, 4, RoundingMode.HALF_UP);
             line.setUnitCost(avgUnitCost);
             inventoryLedgerRepository.save(buildLedger(doc, line, "OUT", ZERO, qtyToExport, avgUnitCost, balance.getQuantityOnHand()));
+
+            if (serialNumber != null) {
+                updateExportedSerialBalance(doc, line, serialNumber, avgUnitCost);
+            }
         }
 
         doc.setStatus("POSTED");
@@ -230,6 +264,7 @@ public class InventoryDocumentService {
                     .build());
 
             inventoryLedgerRepository.save(buildLedger(savedDoc, line, "IN", qtyToImport, ZERO, unitCost, balance.getQuantityOnHand()));
+            createImportedSerialsIfNeeded(savedDoc, line, unitCost);
         }
 
         savedDoc.setStatus("POSTED");
@@ -291,6 +326,7 @@ public class InventoryDocumentService {
                 .inventoryDocumentLineId(line.getId())
                 .warehouseId(doc.getWarehouseId())
                 .variantId(line.getVariantId())
+                .serialNumberId(line.getSerialNumberId())
                 .movementType(movementType)
                 .quantityIn(quantityIn)
                 .quantityOut(quantityOut)
@@ -299,6 +335,130 @@ public class InventoryDocumentService {
                 .movementAt(LocalDateTime.now())
                 .createdAt(LocalDateTime.now())
                 .build();
+    }
+
+    private ScanResolveResponse resolveSerialScan(SerialNumber serial, Long warehouseId, String code) {
+        if (!"AVAILABLE".equalsIgnoreCase(serial.getStatus())) {
+            throw new BusinessException("Serial khong kha dung de xuat kho: " + code);
+        }
+        if (!warehouseId.equals(serial.getWarehouseId())) {
+            throw new BusinessException("Serial khong nam trong kho dang chon");
+        }
+        ProductVariant variant = serial.getVariant();
+        if (variant == null) {
+            throw new BusinessException("Serial chua gan SKU san pham");
+        }
+        return buildScanResponse("SERIAL", code, variant, serial);
+    }
+
+    private ScanResolveResponse resolveVariantScan(String code) {
+        ProductVariant variant = productVariantRepository.findByBarcode(code)
+                .or(() -> productVariantRepository.findBySku(code))
+                .orElseThrow(() -> new BusinessException("Khong tim thay SKU hoac serial cho ma: " + code));
+        Product product = variant.getProduct();
+        if (Boolean.TRUE.equals(product != null ? product.getTrackSerial() : null)) {
+            throw new BusinessException("San pham quan ly serial, vui long quet serial cua tung san pham");
+        }
+        return buildScanResponse("BARCODE", code, variant, null);
+    }
+
+    private ScanResolveResponse buildScanResponse(String type, String code, ProductVariant variant, SerialNumber serial) {
+        Product product = variant.getProduct();
+        return ScanResolveResponse.builder()
+                .type(type)
+                .code(code)
+                .productId(product != null ? product.getId() : null)
+                .variantId(variant.getId())
+                .serialNumberId(serial != null ? serial.getId() : null)
+                .productCode(product != null ? product.getProductCode() : null)
+                .productName(product != null ? product.getProductName() : variant.getVariantName())
+                .sku(variant.getSku())
+                .barcode(variant.getBarcode())
+                .serialNumber(serial != null ? serial.getSerialNumber() : null)
+                .unitName(product != null && product.getUnit() != null ? product.getUnit().getName() : null)
+                .trackSerial(product != null ? product.getTrackSerial() : false)
+                .salePrice(variant.getSalePrice())
+                .build();
+    }
+
+    private void validateExportSerial(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial,
+            BigDecimal quantityOut) {
+        if (quantityOut.compareTo(BigDecimal.ONE) != 0) {
+            throw new BusinessException("Moi dong xuat serial phai co so luong bang 1");
+        }
+        if (!line.getVariantId().equals(serial.getVariantId())) {
+            throw new BusinessException("Serial khong thuoc SKU tren dong xuat");
+        }
+        if (!doc.getWarehouseId().equals(serial.getWarehouseId())) {
+            throw new BusinessException("Serial khong nam trong kho xuat");
+        }
+        if (!"AVAILABLE".equalsIgnoreCase(serial.getStatus())) {
+            throw new BusinessException("Serial khong kha dung de xuat kho");
+        }
+    }
+
+    private void updateExportedSerialBalance(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial,
+            BigDecimal unitCost) {
+        InventoryBalance serialBalance = inventoryBalanceRepository
+                .findByWarehouseVariantSerialForUpdate(doc.getWarehouseId(), line.getVariantId(), serial.getId(), "GOOD")
+                .orElseThrow(() -> new BusinessException("Khong tim thay ton kho cho serial " + serial.getSerialNumber()));
+        if (serialBalance.getQuantityOnHand().compareTo(BigDecimal.ONE) < 0) {
+            throw new BusinessException("Serial " + serial.getSerialNumber() + " khong con ton kho");
+        }
+        serialBalance.setQuantityOnHand(ZERO);
+        serialBalance.setUpdatedAt(LocalDateTime.now());
+        inventoryBalanceRepository.save(serialBalance);
+
+        serial.setStatus("SOLD");
+        serial.setSoldAt(LocalDateTime.now());
+        serial.setUpdatedAt(LocalDateTime.now());
+        serialNumberRepository.save(serial);
+    }
+
+    private void createImportedSerialsIfNeeded(InventoryDocument doc, InventoryDocumentLine line, BigDecimal unitCost) {
+        ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
+        Product product = variant != null ? variant.getProduct() : null;
+        if (product == null || !Boolean.TRUE.equals(product.getTrackSerial())) {
+            return;
+        }
+
+        List<String> serialValues = parseSerialNumbers(line.getSerialNumbersText());
+        int expectedQuantity = requireWholeNumber(line.getQuantityIn(), "So luong nhap serial");
+        if (serialValues.size() != expectedQuantity) {
+            throw new BusinessException("San pham quan ly serial phai co dung " + expectedQuantity + " serial");
+        }
+
+        for (String serialValue : serialValues) {
+            if (serialNumberRepository.findBySerialNumber(serialValue).isPresent()) {
+                throw new BusinessException("Serial da ton tai: " + serialValue);
+            }
+            SerialNumber serial = SerialNumber.builder()
+                    .variantId(line.getVariantId())
+                    .warehouseId(doc.getWarehouseId())
+                    .serialNumber(serialValue)
+                    .status("AVAILABLE")
+                    .importedAt(LocalDateTime.now())
+                    .build();
+            SerialNumber savedSerial = serialNumberRepository.save(serial);
+            inventoryBalanceRepository.save(InventoryBalance.builder()
+                    .warehouseId(doc.getWarehouseId())
+                    .variantId(line.getVariantId())
+                    .serialNumberId(savedSerial.getId())
+                    .stockStatus("GOOD")
+                    .quantityOnHand(BigDecimal.ONE)
+                    .quantityReserved(ZERO)
+                    .averageCost(unitCost)
+                    .updatedAt(LocalDateTime.now())
+                    .build());
+        }
+    }
+
+    private int requireWholeNumber(BigDecimal value, String fieldName) {
+        try {
+            return value.stripTrailingZeros().intValueExact();
+        } catch (ArithmeticException ex) {
+            throw new BusinessException(fieldName + " phai la so nguyen");
+        }
     }
 
     private InventoryDocument findExportOrThrow(Long id) {
@@ -458,6 +618,7 @@ public class InventoryDocumentService {
                 .lineAmount(lineAmount)
                 .lotBatchId(lr.getLotBatchId())
                 .serialNumberId(lr.getSerialNumberId())
+                .serialNumbersText(formatSerialNumbers(lr.getSerialNumbers()))
                 .note(lr.getNote())
                 .build();
     }
@@ -529,6 +690,31 @@ public class InventoryDocumentService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String formatSerialNumbers(List<String> serialNumbers) {
+        if (serialNumbers == null || serialNumbers.isEmpty()) {
+            return null;
+        }
+        List<String> normalized = serialNumbers.stream()
+                .map(this::trimToNull)
+                .filter(value -> value != null)
+                .distinct()
+                .toList();
+        return normalized.isEmpty() ? null : String.join("\n", normalized);
+    }
+
+    private List<String> parseSerialNumbers(String serialNumbersText) {
+        String normalized = trimToNull(serialNumbersText);
+        if (normalized == null) {
+            return List.of();
+        }
+        return List.of(normalized.split("\\R"))
+                .stream()
+                .map(this::trimToNull)
+                .filter(value -> value != null)
+                .distinct()
+                .toList();
     }
 
     private InventoryDocumentResponse toResponse(InventoryDocument doc) {

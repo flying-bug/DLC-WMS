@@ -228,10 +228,18 @@ public class ProductService {
         if (productVariantRepository.findBySku(sku).isPresent()) {
             throw new BusinessException("SKU da ton tai.");
         }
+        String barcode = trimToNull(request.getBarcode());
+        if (barcode == null) {
+            barcode = sku;
+        }
+        if (barcode != null && productVariantRepository.findByBarcode(barcode).isPresent()) {
+            throw new BusinessException("Barcode da ton tai.");
+        }
 
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
                 .sku(sku)
+                .barcode(barcode)
                 .variantName(request.getVariantName().trim())
                 .costPrice(resolveMoney(request.getCostPrice()))
                 .salePrice(resolveMoney(request.getSalePrice()))
@@ -257,8 +265,20 @@ public class ProductService {
                 .ifPresent(existing -> {
                     throw new BusinessException("SKU da ton tai.");
                 });
+        String barcode = trimToNull(request.getBarcode());
+        if (barcode == null) {
+            barcode = sku;
+        }
+        if (barcode != null) {
+            productVariantRepository.findByBarcode(barcode)
+                    .filter(existing -> !existing.getId().equals(variantId))
+                    .ifPresent(existing -> {
+                        throw new BusinessException("Barcode da ton tai.");
+                    });
+        }
 
         variant.setSku(sku);
+        variant.setBarcode(barcode);
         variant.setVariantName(request.getVariantName().trim());
         variant.setCostPrice(resolveMoney(request.getCostPrice()));
         variant.setSalePrice(resolveMoney(request.getSalePrice()));
@@ -289,6 +309,7 @@ public class ProductService {
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
                 .sku(sku)
+                .barcode(sku)
                 .variantName(dto.getProductName().trim())
                 .costPrice(BigDecimal.ZERO)
                 .salePrice(resolveMoney(dto.getSalePrice()))
@@ -324,6 +345,7 @@ public class ProductService {
                 .productId(product != null ? product.getId() : null)
                 .productCode(product != null ? product.getProductCode() : null)
                 .productName(product != null ? product.getProductName() : null)
+                .trackSerial(product != null ? product.getTrackSerial() : false)
                 .brandId(product != null && product.getBrand() != null ? product.getBrand().getId() : null)
                 .brandName(product != null && product.getBrand() != null ? product.getBrand().getName() : null)
                 .categoryId(product != null && product.getCategory() != null ? product.getCategory().getId() : null)
@@ -331,6 +353,7 @@ public class ProductService {
                 .unitId(product != null && product.getUnit() != null ? product.getUnit().getId() : null)
                 .unitName(product != null && product.getUnit() != null ? product.getUnit().getName() : null)
                 .sku(variant.getSku())
+                .barcode(variant.getBarcode())
                 .variantName(variant.getVariantName())
                 .costPrice(variant.getCostPrice())
                 .salePrice(variant.getSalePrice())

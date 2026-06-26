@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as importApi from '../../api/inventoryImportApi';
+import ManageSerialModal from './ManageSerialModal';
 import styles from './CreateImportSlipPage.module.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -15,6 +16,7 @@ const variantLabel = (item) => item?.variantName && item.variantName !== item.pr
 const emptyLine = () => ({
   localId: crypto.randomUUID(),
   variantId: '',
+  serialNumbers: [],
   quantity: 1,
   price: 0,
   note: '',
@@ -27,6 +29,7 @@ function CreateImportSlipPage() {
   const [products, setProducts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [serialModalItemId, setSerialModalItemId] = useState(null);
   const [form, setForm] = useState({
     docCode: '',
     warehouseId: '',
@@ -66,14 +69,30 @@ function CreateImportSlipPage() {
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
-  const isFormValid = Boolean(form.warehouseId && form.docDate && items.length && items.every(item => item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0));
+  const isLineValid = (item) => {
+    const product = productById.get(String(item.variantId));
+    const quantity = Number(item.quantity || 0);
+    const hasValidSerials = !product?.trackSerial || (Number.isInteger(quantity) && item.serialNumbers?.length === quantity);
+    return item.variantId && quantity > 0 && Number(item.price) >= 0 && hasValidSerials;
+  };
+  const isFormValid = Boolean(form.warehouseId && form.docDate && items.length && items.every(isLineValid));
 
   const handleFormChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
   const handleItemChange = (localId, field, value) => {
-    setItems(prev => prev.map(item => item.localId === localId ? { ...item, [field]: value } : item));
+    setItems(prev => prev.map(item => {
+      if (item.localId !== localId) return item;
+      if (field === 'quantity') {
+        const quantity = Number(value || 0);
+        return { ...item, quantity: value, serialNumbers: item.serialNumbers?.slice(0, Math.max(0, quantity)) || [] };
+      }
+      if (field === 'variantId') {
+        return { ...item, [field]: value, serialNumbers: [] };
+      }
+      return { ...item, [field]: value };
+    }));
   };
 
   const addItem = () => {
@@ -82,6 +101,18 @@ function CreateImportSlipPage() {
 
   const removeItem = (localId) => {
     setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : prev);
+  };
+
+  const selectedSerialItem = items.find(item => item.localId === serialModalItemId);
+  const selectedSerialProduct = selectedSerialItem ? productById.get(String(selectedSerialItem.variantId)) : null;
+
+  const handleSerialModalClose = (serialNumbers) => {
+    if (Array.isArray(serialNumbers) && serialModalItemId) {
+      setItems(prev => prev.map(item => item.localId === serialModalItemId
+        ? { ...item, serialNumbers }
+        : item));
+    }
+    setSerialModalItemId(null);
   };
 
   const buildPayload = (status) => ({
@@ -98,6 +129,7 @@ function CreateImportSlipPage() {
       quantityOut: 0,
       unitCost: Number(item.price),
       unitPrice: Number(item.price),
+      serialNumbers: item.serialNumbers || [],
       note: item.note,
     })),
   });
@@ -233,7 +265,21 @@ function CreateImportSlipPage() {
                           </select>
                         </td>
                         <td>{variantLabel(product)}</td>
-                        <td>{product?.unitName || ''}</td>
+                        <td>
+                          <div className={styles.serialCellContainer}>
+                            <span>{product?.unitName || ''}</span>
+                            {product?.trackSerial && (
+                              <button
+                                type="button"
+                                className={(item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? styles.serialBadgeSuccess : styles.serialBadgeWarning}
+                                onClick={() => setSerialModalItemId(item.localId)}
+                              >
+                                <i className="bi bi-upc-scan"></i>
+                                {(item.serialNumbers?.length || 0)} / {Number(item.quantity || 0)} Serial
+                              </button>
+                            )}
+                          </div>
+                        </td>
                         <td align="right">
                           <input type="number" min="0" className={styles.tableInput} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
                         </td>
@@ -280,6 +326,14 @@ function CreateImportSlipPage() {
           </div>
         </div>
       </div>
+
+      <ManageSerialModal
+        isOpen={Boolean(serialModalItemId)}
+        onClose={handleSerialModalClose}
+        productName={variantLabel(selectedSerialProduct)}
+        targetQuantity={Number(selectedSerialItem?.quantity || 0)}
+        initialSerials={selectedSerialItem?.serialNumbers || []}
+      />
     </AdminLayout>
   );
 }

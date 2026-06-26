@@ -15,6 +15,7 @@ const defaultFormData = {
     unitId: '',
     salePrice: 0,
     description: '',
+    trackSerial: false,
     active: true
 };
 
@@ -29,7 +30,10 @@ const defaultVariantData = {
     active: true
 };
 
-const getPageContent = (response) => response.data?.content || [];
+const getPageContent = (response) => {
+    const payload = response.data?.data ?? response.data;
+    return payload?.content ?? payload ?? [];
+};
 
 const ProductPage = () => {
     const navigate = useNavigate();
@@ -79,18 +83,26 @@ const ProductPage = () => {
     }, []);
 
     const fetchLookups = useCallback(async () => {
+        const lookupRequests = [
+            { key: 'units', label: 'don vi tinh', request: axiosClient.get('/units?size=1000') },
+            { key: 'categories', label: 'danh muc', request: axiosClient.get('/product-categories?size=1000') },
+            { key: 'brands', label: 'thuong hieu', request: axiosClient.get('/brands?size=1000') }
+        ];
+
         try {
-            const [unitRes, categoryRes, brandRes] = await Promise.all([
-                axiosClient.get('/units?size=1000'),
-                axiosClient.get('/product-categories?size=1000'),
-                axiosClient.get('/brands?size=1000')
-            ]);
+            const [unitRes, categoryRes, brandRes] = await Promise.all(lookupRequests.map((item) => item.request));
             setUnits(getPageContent(unitRes));
             setCategories(getPageContent(categoryRes).filter((item) => item.status !== 'INACTIVE'));
             setBrands(getPageContent(brandRes).filter((item) => item.status !== 'INACTIVE'));
         } catch (error) {
+            const results = await Promise.allSettled(lookupRequests.map((item) => item.request));
+            const failedLabels = results
+                .map((result, index) => result.status === 'rejected' ? lookupRequests[index].label : null)
+                .filter(Boolean);
             console.error('Loi lay du lieu danh muc san pham:', error);
-            showToast('error', 'Khong the tai danh muc, thuong hieu hoac don vi tinh.');
+            showToast('error', failedLabels.length
+                ? `Khong the tai ${failedLabels.join(', ')}. Vui long kiem tra quyen xem.`
+                : 'Khong the tai danh muc, thuong hieu hoac don vi tinh.');
         }
     }, []);
 
@@ -177,6 +189,7 @@ const ProductPage = () => {
             unitId: product.unitId || '',
             salePrice: Number(product.salePrice || 0),
             description: product.description || '',
+            trackSerial: Boolean(product.trackSerial),
             active: product.active !== false
         }));
         setErrorMsg('');
@@ -195,6 +208,7 @@ const ProductPage = () => {
             unitId: product.unitId || '',
             salePrice: Number(product.salePrice || 0),
             description: product.description || '',
+            trackSerial: Boolean(product.trackSerial),
             active: product.active !== false
         }));
         setErrorMsg('');
@@ -212,7 +226,7 @@ const ProductPage = () => {
         salePrice: Number(data.salePrice || 0),
         description: data.description?.trim() || '',
         active: data.active,
-        trackSerial: false,
+        trackSerial: Boolean(data.trackSerial),
         trackLot: false,
         isAssembly: false
     });
@@ -768,6 +782,14 @@ const ProductPage = () => {
                             </div>
 
                             <div className={styles.checkboxGroup}>
+                                <label className={styles.checkboxLabel}>
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.trackSerial}
+                                        onChange={(event) => setFormData({ ...formData, trackSerial: event.target.checked })}
+                                    />
+                                    <span>Quan ly theo Serial</span>
+                                </label>
                                 <label className={styles.checkboxLabel}>
                                     <input
                                         type="checkbox"

@@ -16,6 +16,8 @@ const variantLabel = (item) => item?.variantName && item.variantName !== item.pr
 const emptyLine = () => ({
   localId: crypto.randomUUID(),
   variantId: '',
+  serialNumberId: null,
+  scannedCode: '',
   quantity: 1,
   price: 0,
   note: '',
@@ -26,6 +28,8 @@ function CreateExportSlipPage() {
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [scanCode, setScanCode] = useState('');
+  const [scanLoading, setScanLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     docCode: '',
@@ -51,7 +55,6 @@ function CreateExportSlipPage() {
       if (productRes.status === 'fulfilled') {
         const data = pageContent(unwrap(productRes.value));
         setProducts(data);
-        setItems(prev => prev.map((item, index) => index === 0 && !item.variantId ? { ...item, variantId: data[0]?.id || '' } : item));
       }
     };
 
@@ -72,7 +75,98 @@ function CreateExportSlipPage() {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, { ...emptyLine(), variantId: products[0]?.id || '' }]);
+    setItems(prev => [...prev, emptyLine()]);
+  };
+
+  const ensureScannedProduct = (scanResult) => {
+    setProducts(prev => {
+      if (prev.some(product => String(product.id) === String(scanResult.variantId))) {
+        return prev;
+      }
+      return [
+        ...prev,
+        {
+          id: scanResult.variantId,
+          productCode: scanResult.productCode,
+          productName: scanResult.productName,
+          sku: scanResult.sku || scanResult.code,
+          barcode: scanResult.barcode,
+          variantName: scanResult.productName,
+          unitName: scanResult.unitName || '',
+          salePrice: scanResult.salePrice || 0,
+          trackSerial: scanResult.trackSerial,
+        },
+      ];
+    });
+  };
+
+  const addScannedItem = (scanResult) => {
+    ensureScannedProduct(scanResult);
+    setItems(prev => {
+      if (scanResult.type === 'SERIAL') {
+        if (prev.some(item => Number(item.serialNumberId) === Number(scanResult.serialNumberId))) {
+          setError('Serial nay da duoc quet trong phieu.');
+          return prev;
+        }
+        const serialLine = {
+          ...emptyLine(),
+          variantId: scanResult.variantId,
+          serialNumberId: scanResult.serialNumberId,
+          scannedCode: scanResult.serialNumber || scanResult.code,
+          quantity: 1,
+          price: scanResult.salePrice || 0,
+          note: scanResult.serialNumber ? `Serial: ${scanResult.serialNumber}` : '',
+        };
+        if (prev.length === 1 && !prev[0].variantId) {
+          return [serialLine];
+        }
+        return [...prev, serialLine];
+      }
+
+      const existingIndex = prev.findIndex(item => String(item.variantId) === String(scanResult.variantId) && !item.serialNumberId);
+      if (existingIndex >= 0) {
+        return prev.map((item, index) => index === existingIndex
+          ? { ...item, quantity: Number(item.quantity || 0) + 1, scannedCode: scanResult.barcode || scanResult.code }
+          : item);
+      }
+
+      const barcodeLine = {
+        ...emptyLine(),
+        variantId: scanResult.variantId,
+        scannedCode: scanResult.barcode || scanResult.code,
+        quantity: 1,
+        price: scanResult.salePrice || 0,
+      };
+      if (prev.length === 1 && !prev[0].variantId) {
+        return [barcodeLine];
+      }
+      return [...prev, barcodeLine];
+    });
+  };
+
+  const handleScanSubmit = async (event) => {
+    event.preventDefault();
+    const code = scanCode.trim();
+    if (!code) return;
+    if (!form.warehouseId) {
+      setError('Vui long chon kho xuat truoc khi quet ma.');
+      return;
+    }
+
+    setScanLoading(true);
+    setError('');
+    try {
+      const response = await exportApi.resolveScan({
+        code,
+        warehouseId: Number(form.warehouseId),
+      });
+      addScannedItem(unwrap(response));
+      setScanCode('');
+    } catch (err) {
+      setError(err.response?.data?.userMessage || err.response?.data?.devMessage || 'Khong tim thay ma vua quet');
+    } finally {
+      setScanLoading(false);
+    }
   };
 
   const removeItem = (localId) => {
@@ -92,6 +186,7 @@ function CreateExportSlipPage() {
       quantityOut: Number(item.quantity),
       unitCost: 0,
       unitPrice: Number(item.price),
+      serialNumberId: item.serialNumberId || null,
       note: item.note,
     })),
   });
@@ -189,6 +284,28 @@ function CreateExportSlipPage() {
         </div>
 
         <div className={styles.card}>
+          <div className={styles.scanPanel}>
+            <div>
+              <div className={styles.scanTitle}>Scan Product / Serial</div>
+              <div className={styles.scanHint}>Quet serial cho hang co serial, hoac barcode/SKU cho hang thuong.</div>
+            </div>
+            <form className={styles.scanForm} onSubmit={handleScanSubmit}>
+              <div className={styles.scanInputWrap}>
+                <i className="bi bi-upc-scan"></i>
+                <input
+                  className={styles.scanInput}
+                  value={scanCode}
+                  onChange={(event) => setScanCode(event.target.value)}
+                  placeholder="Dat con tro vao day roi quet ma"
+                  disabled={scanLoading}
+                />
+              </div>
+              <button className={styles.btnAddRow} type="submit" disabled={scanLoading}>
+                {scanLoading ? 'Dang quet...' : 'Them ma'}
+              </button>
+            </form>
+          </div>
+
           <div className={styles.tableHeaderRow}>
             <div className={styles.tableTitle}>Bảng hàng tiền</div>
             <button className={styles.btnAddRow} onClick={addItem}>
@@ -223,7 +340,10 @@ function CreateExportSlipPage() {
                         </select>
                       </td>
                       <td>{variantLabel(product)}</td>
-                      <td>{product?.unitName || ''}</td>
+                      <td>
+                        {product?.unitName || ''}
+                        {item.serialNumberId && <div className={styles.serialTag}>{item.scannedCode}</div>}
+                      </td>
                       <td className={styles.textRight}>
                         <input type="number" min="0" className={`${styles.tableInput} ${styles.textRight}`} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
                       </td>

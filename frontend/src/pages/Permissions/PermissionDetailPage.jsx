@@ -21,6 +21,7 @@ function PermissionDetailPage() {
 
         // Danh mục
         product: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+        brand: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         unit: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         customer: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         supplier: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
@@ -211,6 +212,7 @@ function PermissionDetailPage() {
                 return (
                     <>
                         {renderRow('product', 'Sản phẩm', 'bi-tags')}
+                        {renderRow('brand', 'Thương hiệu', 'bi-bookmark-star')}
                         {renderRow('unit', 'Đơn vị tính', 'bi-rulers')}
                         {renderRow('customer', 'Khách hàng', 'bi-person-vcard')}
                         {renderRow('supplier', 'Nhà cung cấp', 'bi-truck')}
