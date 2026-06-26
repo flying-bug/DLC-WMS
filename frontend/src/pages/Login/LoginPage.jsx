@@ -5,9 +5,17 @@ import LoginForm from './components/LoginForm';
 import styles from './LoginPage.module.css';
 import { COMPANY_NAME, COPYRIGHT_YEAR } from '../../constants';
 import axiosClient from '../../api/axiosClient';
+import { setAuthSession } from '../../auth/session';
 
 function LoginPage() {
-    const [errorMsg, setErrorMsg] = useState('');
+    const [errorMsg, setErrorMsg] = useState(() => {
+        const logoutMessage = sessionStorage.getItem('logoutMessage');
+        if (logoutMessage) {
+            sessionStorage.removeItem('logoutMessage');
+            return logoutMessage;
+        }
+        return '';
+    });
     const navigate = useNavigate();
 
     const handleGoogleSuccess = async (credentialResponse) => {
@@ -15,10 +23,7 @@ function LoginPage() {
         try {
             const response = await axiosClient.post('/auth/login-google?token=' + credentialResponse.credential);
             if (response.data && response.data.data.token) {
-                localStorage.setItem('token', response.data.data.token);
-                if (response.data.data.role) {
-                    localStorage.setItem('role', response.data.data.role);
-                }
+                setAuthSession(response.data.data);
                 navigate('/');
             }
         } catch (error) {

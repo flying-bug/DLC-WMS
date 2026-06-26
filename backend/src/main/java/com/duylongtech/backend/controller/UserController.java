@@ -5,6 +5,7 @@ import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.UserDetailResponseDTO;
 import com.duylongtech.backend.service.UserService;
 import com.duylongtech.backend.service.AuditLogService;
+import com.duylongtech.backend.service.RealtimeSessionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class UserController {
 
     private final UserService userService;
     private final AuditLogService auditLogService;
+    private final RealtimeSessionService realtimeSessionService;
 
     private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
         String ipAddress = request.getHeader("X-Forwarded-For");
@@ -70,6 +72,7 @@ public class UserController {
                 ip,
                 detailJson
             );
+            realtimeSessionService.publishUserUpdated(created, "USER_CREATED");
             return ApiResponse.success(created);
         } catch (Exception e) {
             auditLogService.logEvent(
@@ -122,6 +125,10 @@ public class UserController {
                 ip,
                 detailJson
             );
+            realtimeSessionService.publishUserUpdated(after, "USER_STATUS_CHANGED");
+            if ("INACTIVE".equalsIgnoreCase(after.getStatus())) {
+                realtimeSessionService.forceLogoutUser(after.getId(), "ACCOUNT_LOCKED", "Tai khoan cua ban da bi khoa boi quan tri vien.");
+            }
             return ApiResponse.success();
         } catch (Exception e) {
             auditLogService.logEvent(
@@ -167,6 +174,8 @@ public class UserController {
                 ip,
                 detailJson
             );
+            realtimeSessionService.publishUserUpdated(after, "USER_PERMISSIONS_CHANGED");
+            realtimeSessionService.forceLogoutUser(after.getId(), "PERMISSIONS_CHANGED", "Quyen truy cap cua ban vua duoc cap nhat. Vui long dang nhap lai.");
             return ApiResponse.success();
         } catch (Exception e) {
             auditLogService.logEvent(
@@ -203,6 +212,18 @@ public class UserController {
                 ip,
                 detailJson
             );
+            realtimeSessionService.publishUserUpdated(updated, "USER_UPDATED");
+            boolean statusChangedToInactive = !"INACTIVE".equalsIgnoreCase(before.getStatus())
+                    && "INACTIVE".equalsIgnoreCase(updated.getStatus());
+            boolean rolesChanged = !java.util.Objects.equals(
+                    before.getRoles() == null ? java.util.Set.of() : new java.util.HashSet<>(before.getRoles()),
+                    updated.getRoles() == null ? java.util.Set.of() : new java.util.HashSet<>(updated.getRoles())
+            );
+            if (statusChangedToInactive) {
+                realtimeSessionService.forceLogoutUser(updated.getId(), "ACCOUNT_LOCKED", "Tai khoan cua ban da bi khoa boi quan tri vien.");
+            } else if (rolesChanged) {
+                realtimeSessionService.forceLogoutUser(updated.getId(), "ROLES_CHANGED", "Vai tro cua ban vua duoc cap nhat. Vui long dang nhap lai.");
+            }
             return ApiResponse.success(updated);
         } catch (Exception e) {
             auditLogService.logEvent(
