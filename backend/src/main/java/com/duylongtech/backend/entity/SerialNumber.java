@@ -26,7 +26,6 @@ public class SerialNumber {
     @Column(name = "warehouse_id", nullable = false)
     private Long warehouseId;
 
-    @Column(name = "serial_number", nullable = false, length = 100, unique = true)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id", insertable = false, updatable = false)
     private ProductVariant variant;
@@ -56,8 +55,7 @@ public class SerialNumber {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-    @Column(name = "sales_order_line_id")
-    private Long salesOrderLineId;
+
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sales_order_line_id", insertable = false, updatable = false)

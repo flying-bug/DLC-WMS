@@ -16,6 +16,9 @@ public class BrandResponse {
     private String code;
     private String name;
     private String status;
+    private String description;
+    private String hotline;
+    private String contactEmail;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

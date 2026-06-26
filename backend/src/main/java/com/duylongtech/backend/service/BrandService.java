@@ -194,18 +194,21 @@ public class BrandService {
      * @throws BusinessException nếu không tìm thấy hoặc đang có sản phẩm liên kết
      */
     @Transactional
-    public void deleteBrand(Long id) {
+    public boolean deleteBrand(Long id) {
         Brand brand = findBrandOrThrow(id);
 
         // BR-11: Kiểm tra liên kết với sản phẩm (Referential Integrity Check)
         long linkedProductCount = brandRepository.countLinkedProducts(brand.getId());
 
         if (linkedProductCount > 0) {
-            // Có sản phẩm liên kết → chặn lại và báo lỗi theo FR 3.7.5
-            throw new BusinessException("Không thể xóa thương hiệu này vì đang có dữ liệu sản phẩm/bảo hành liên quan.");
+            // Có sản phẩm liên kết → chuyển status sang INACTIVE thay vì xóa vật lý
+            brand.setStatus(INACTIVE);
+            brandRepository.save(brand);
+            return false; // Soft deleted
         } else {
             // Chưa có sản phẩm liên kết → xóa vật lý an toàn
             brandRepository.delete(brand);
+            return true; // Hard deleted
         }
     }
 

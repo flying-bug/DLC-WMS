@@ -240,21 +240,33 @@ public class BrandController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Xóa thương hiệu (UC-40)")
     @PreAuthorize("hasRole('MANAGER') or hasAuthority('brand:delete')")
-    public ApiResponse<Void> deleteBrand(
+    public org.springframework.http.ResponseEntity<ApiResponse<Void>> deleteBrand(
             @PathVariable Long id,
             HttpServletRequest servletRequest
     ) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
-            brandService.deleteBrand(id);
+            boolean isHardDeleted = brandService.deleteBrand(id);
+            
+            if (!isHardDeleted) {
+                // Soft deleted
+                auditLogService.logEvent(
+                        actor, "DELETE", "Brand", id,
+                        "SUCCESS", "Thương hiệu có sản phẩm liên kết, tự động chuyển trạng thái về INACTIVE",
+                        ip, null
+                );
+                return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT).body(ApiResponse.error(
+                        com.duylongtech.backend.constant.SystemMessage.BRAND_INVALID_STATUS.getCode(), "Không thể xóa thương hiệu này vì đang có dữ liệu sản phẩm/bảo hành liên quan."));
+            }
+
             // BR-06: Ghi audit log thành công
             auditLogService.logEvent(
                     actor, "DELETE", "Brand", id,
-                    "SUCCESS", "Xóa / Vô hiệu hóa thương hiệu ID: " + id,
+                    "SUCCESS", "Xóa vật lý thương hiệu ID: " + id,
                     ip, null
             );
-            return ApiResponse.success(null);
+            return org.springframework.http.ResponseEntity.ok(ApiResponse.success(null));
         } catch (Exception e) {
             // BR-06: Ghi audit log thất bại
             auditLogService.logEvent(
@@ -264,5 +276,5 @@ public class BrandController {
             );
             throw e;
         }
-}
+    }
 }
