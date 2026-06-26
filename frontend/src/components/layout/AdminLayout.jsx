@@ -43,6 +43,14 @@ const AdminLayout = ({ children }) => {
                         <i className="fas fa-users"></i>
                         <span>Khách hàng</span>
                     </button>
+                    <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/brands') ? styles.active : ''}`}
+                        onClick={() => navigate('/brands')}
+                        type="button"
+                    >
+                        <i className="fas fa-tags"></i>
+                        <span>Thương hiệu</span>
+                    </button>
                 </nav>
             </aside>
 
