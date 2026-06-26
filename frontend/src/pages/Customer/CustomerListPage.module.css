@@ -37,13 +37,13 @@
 }
 
 .btnAdd {
-    background-color: var(--color-primary, #002b6b);
+    background-color: #0b57d0; /* Blue from image */
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     padding: 8px 16px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -53,7 +53,7 @@
 }
 
 .btnAdd:hover {
-    background-color: #001f4d;
+    background-color: #0842a0;
 }
 
 /* Table Card */
@@ -80,9 +80,26 @@
     align-items: center;
 }
 
+.dropdownBtn, .filterBtn {
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 4px;
+    padding: 7px 12px;
+    font-size: 13px;
+    background: white;
+    color: var(--color-text-strong, #334155);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.dropdownBtn i, .filterBtn i {
+    font-size: 12px;
+    color: #64748b;
+}
+
 .searchBox {
     position: relative;
-    width: 300px;
+    width: 240px;
 }
 
 .searchBox input {
@@ -96,7 +113,7 @@
 }
 
 .searchBox input:focus {
-    border-color: var(--color-primary, #002b6b);
+    border-color: #0b57d0;
 }
 
 .searchBox i {
@@ -112,6 +129,26 @@
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.btnImport {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid #16a34a; /* Green border for Excel */
+    border-radius: 4px;
+    background-color: white;
+    color: #16a34a;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    outline: none;
+}
+
+.btnImport:hover {
+    background-color: #dcfce7;
 }
 
 .iconBtn {
@@ -203,65 +240,133 @@
     font-style: italic;
 }
 
-/* Status Badge */
-.badgeActive {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    background-color: #dcfce7;
-    color: #16a34a;
+.checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    outline: none;
 }
 
-.badgeInactive {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    background-color: #f1f5f9;
-    color: #64748b;
+.viewBtn {
+    background-color: #f8fafc;
+    color: #0b57d0;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
 }
 
-/* Action Group */
-.actionGroup {
+.viewBtn:hover {
+    background-color: #0b57d0;
+    color: white;
+    border-color: #0b57d0;
+    box-shadow: 0 2px 4px rgba(11, 87, 208, 0.15);
+}
+
+.viewBtn i {
+    font-size: 11px;
+}
+
+.actionGroupRow {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
 }
 
-.actionBtnEdit,
-.actionBtnDeactivate {
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    border: none;
+.nameLink {
+    color: #0b57d0;
     cursor: pointer;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+
+.nameLink:hover {
+    color: #0842a0;
+    text-decoration: underline;
+}
+
+.statusBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.statusBadge i {
+    font-size: 14px;
+}
+
+.statusActive {
+    color: #22c55e; /* Green */
+}
+
+.statusInactive {
+    color: #94a3b8; /* Gray */
+}
+
+/* Action Icon Buttons */
+.actionIconGroup {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
-    transition: background-color 0.15s;
+    gap: 8px;
 }
 
-.actionBtnEdit {
-    background-color: #eff6ff;
-    color: #2563eb;
+.actionIconBtn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+    outline: none;
 }
 
-.actionBtnEdit:hover {
-    background-color: #dbeafe;
+.iconBtnView {
+    border: 1px solid #3b82f6;
+    color: #3b82f6;
+}
+.iconBtnView:hover {
+    background: #eff6ff;
+    box-shadow: 0 1px 3px rgba(59, 130, 246, 0.2);
 }
 
-.actionBtnDeactivate {
-    background-color: #fef2f2;
-    color: #dc2626;
+.iconBtnDelete {
+    border: 1px solid #ef4444;
+    color: #ef4444;
+}
+.iconBtnDelete:hover {
+    background: #fef2f2;
+    box-shadow: 0 1px 3px rgba(239, 68, 68, 0.2);
 }
 
-.actionBtnDeactivate:hover {
-    background-color: #fee2e2;
+.iconBtnActivate {
+    border: 1px solid #22c55e;
+    color: #22c55e;
+}
+.iconBtnActivate:hover {
+    background: #f0fdf4;
+    box-shadow: 0 1px 3px rgba(34, 197, 94, 0.2);
+}
+
+.actionDivider {
+    width: 1px;
+    height: 14px;
+    background-color: #cbd5e1;
 }
 
 /* Pagination */
@@ -277,6 +382,25 @@
 .pageInfo {
     font-size: 13px;
     color: var(--color-text-muted, #64748b);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.pageSize {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pageSizeSelect {
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    outline: none;
+    color: var(--color-text-strong, #334155);
+    background: white;
 }
 
 .pageControls {
@@ -313,10 +437,81 @@
 }
 
 .pageBtn.active {
-    background-color: var(--color-primary, #002b6b);
-    border-color: var(--color-primary, #002b6b);
-    color: white;
+    background-color: #e0e7ff;
+    border-color: #e0e7ff;
+    color: #0b57d0;
     font-weight: 600;
+}
+
+/* Confirm Modal Styles */
+.confirmModalContent {
+    padding: 32px 24px;
+    text-align: center;
+}
+
+.confirmIcon {
+    font-size: 56px;
+    margin-bottom: 16px;
+}
+
+.confirmTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-strong, #1e293b);
+    margin: 0 0 12px 0;
+}
+
+.confirmMessage {
+    font-size: 14px;
+    color: var(--color-text-muted, #64748b);
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.confirmActions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.btnCancel {
+    padding: 8px 24px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    background: white;
+    color: var(--color-text-strong, #334155);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 14px;
+}
+
+.btnCancel:hover {
+    background: #f8fafc;
+}
+
+.btnConfirm {
+    padding: 8px 24px;
+    border-radius: 6px;
+    border: none;
+    background: #3b82f6; /* Blue for activate */
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 14px;
+}
+
+.btnConfirm:hover {
+    background: #2563eb;
+}
+
+.btnConfirmDanger {
+    background: #ef4444; /* Red for deactivate */
+}
+
+.btnConfirmDanger:hover {
+    background: #dc2626;
 }
 
 .pageBtn:hover:not(.active),

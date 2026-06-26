@@ -1,0 +1,24 @@
+@startuml
+title Sequence Diagram: UC03 - Logout
+
+actor "User" as User
+boundary "UserProfileDropdown" as Page
+control "AuthController" as Controller
+control "AuthService" as Service
+entity "UserRepository" as Repository
+database "Database" as Database
+
+User -> Page : Click "Đăng xuất"
+activate Page
+
+Page -> Page : localStorage.clear()\n(Remove JWT Token)
+
+Page -> User : Redirect to /login\n(Chuyển hướng trang đăng nhập)
+deactivate Page
+
+note over Controller, Database
+  JWT is stateless. No backend API call is required for logout.
+  Token invalidation is handled strictly on the client side.
+end note
+
+@enduml

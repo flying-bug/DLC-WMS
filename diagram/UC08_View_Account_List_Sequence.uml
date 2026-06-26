@@ -1,0 +1,42 @@
+@startuml
+title Sequence Diagram: UC08 - View Account List
+
+actor "Admin/Manager" as User
+boundary "UsersPage" as Page
+control "UserController" as Controller
+control "UserService" as Service
+entity "UserRepository" as Repository
+database "Database" as Database
+
+User -> Page : Navigate to User Management
+activate Page
+
+Page -> Controller : GET /api/v1/users
+activate Controller
+
+Controller -> Service : getAllUsers()
+activate Service
+
+Service -> Repository : findAll()
+activate Repository
+
+Repository -> Database : SELECT * FROM users
+activate Database
+Database --> Repository : List of User records
+deactivate Database
+
+Repository --> Service : List<User> Entities
+deactivate Repository
+
+Service -> Service : mapToDto(User) for each
+
+Service --> Controller : List<UserDto>
+deactivate Service
+
+Controller --> Page : 200 OK (ApiResponse)
+deactivate Controller
+
+Page --> User : Hiển thị danh sách tài khoản
+deactivate Page
+
+@enduml
