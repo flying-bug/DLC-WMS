@@ -12,7 +12,7 @@ function UserProfileDropdown() {
     const isSA = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN';
     const isMN = userRole === 'MANAGER' || userRole === 'ROLE_MANAGER';
     const initials = isSA ? 'SA' : isMN ? 'MN' : 'ST';
-    const displayName = isSA ? 'Super Admin' : isMN ? 'Manager' : 'Staff';
+    const displayName = isSA ? 'Quản trị viên' : isMN ? 'Quản lý' : 'Nhân viên';
 
     useEffect(() => {
         function handleClickOutside(event) {

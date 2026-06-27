@@ -7,12 +7,12 @@ import { exportToExcel } from '../../utils/excelExport';
 import styles from './WarrantyListPage.module.css';
 
 const STATUS_META = {
-    DRAFT: { label: 'Nhap', tone: 'info' },
-    APPROVED: { label: 'Con hieu luc', tone: 'success' },
-    POSTED: { label: 'Da ghi nhan', tone: 'success' },
-    CANCELLED: { label: 'Da huy', tone: 'danger' },
-    EXPIRED: { label: 'Het han', tone: 'warning' },
-    VOIDED: { label: 'Khong hop le', tone: 'danger' }
+    DRAFT: { label: 'Nháp', tone: 'info' },
+    APPROVED: { label: 'Còn hiệu lực', tone: 'success' },
+    POSTED: { label: 'Đã ghi nhận', tone: 'success' },
+    CANCELLED: { label: 'Đã hủy', tone: 'danger' },
+    EXPIRED: { label: 'Hết hạn', tone: 'warning' },
+    VOIDED: { label: 'Không hợp lệ', tone: 'danger' }
 };
 
 const DEFAULT_FILTERS = {
@@ -25,12 +25,12 @@ const DEFAULT_FILTERS = {
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const totalFromPayload = (payload, fallback) => payload?.totalElements ?? fallback;
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString('vi-VN') : 'Chua co');
+const formatDate = (value) => (value ? new Date(value).toLocaleDateString('vi-VN') : 'Chưa có');
 
-const getPartnerName = (item) => item.partnerName || item.customerName || item.partner?.name || 'Khach le';
+const getPartnerName = (item) => item.partnerName || item.customerName || item.partner?.name || 'Khách lẻ';
 const getPartnerPhone = (item) => item.partnerPhone || item.customerPhone || item.partner?.phone || '';
 const getSerialCode = (item) => item.serialCode || item.serialNumber || item.serialNumberValue || item.serialNumber?.serialNo || item.serialNumber?.serialNumber || '';
-const getProductName = (item) => item.productName || item.variantName || item.serialNumber?.productName || item.serialNumber?.variant?.variantName || 'Chua ro san pham';
+const getProductName = (item) => item.productName || item.variantName || item.serialNumber?.productName || item.serialNumber?.variant?.variantName || 'Chưa rõ sản phẩm';
 
 function WarrantyListPage() {
     const navigate = useNavigate();
@@ -74,7 +74,7 @@ function WarrantyListPage() {
         } catch (err) {
             setWarranties([]);
             setTotalElements(0);
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Khong tai duoc danh sach bao hanh.');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách bảo hành.');
         } finally {
             setLoading(false);
         }
@@ -101,7 +101,7 @@ function WarrantyListPage() {
     }, [totalElements, warranties]);
 
     const rows = warranties.map((item) => {
-        const status = STATUS_META[item.warrantyStatus] || { label: item.warrantyStatus || 'Chua ro', tone: 'info' };
+        const status = STATUS_META[item.warrantyStatus] || { label: item.warrantyStatus || 'Chưa rõ', tone: 'info' };
         return {
             ...item,
             customerName: getPartnerName(item),
@@ -128,12 +128,12 @@ function WarrantyListPage() {
             <div className={styles.page}>
                 <div className={styles.pageHeader}>
                     <div>
-                        <h1 className={styles.pageTitle}>Danh sach bao hanh</h1>
-                        <p className={styles.pageSubtitle}>Theo doi serial, khach hang va trang thai xu ly bao hanh.</p>
+                        <h1 className={styles.pageTitle}>Danh sách bảo hành</h1>
+                        <p className={styles.pageSubtitle}>Theo dõi serial, khách hàng và trạng thái xử lý bảo hành.</p>
                     </div>
                     <button className={styles.primaryButton} type="button" onClick={() => navigate('/export-slips/create?type=WARRANTY')}>
                         <i className="bi bi-box-arrow-up-right"></i>
-                        Tao phieu xuat bao hanh
+                        Tạo phiếu xuất bảo hành
                     </button>
                 </div>
 
@@ -141,28 +141,28 @@ function WarrantyListPage() {
                     <div className={styles.statCard}>
                         <div className={`${styles.statIcon} ${styles.infoIcon}`}><i className="bi bi-shield-check"></i></div>
                         <div>
-                            <span className={styles.statLabel}>Tong ho so</span>
+                            <span className={styles.statLabel}>Tổng hồ sơ</span>
                             <strong className={styles.statValue}>{stats.total}</strong>
                         </div>
                     </div>
                     <div className={styles.statCard}>
                         <div className={`${styles.statIcon} ${styles.successIcon}`}><i className="bi bi-check2-circle"></i></div>
                         <div>
-                            <span className={styles.statLabel}>Con hieu luc</span>
+                            <span className={styles.statLabel}>Còn hiệu lực</span>
                             <strong className={styles.statValue}>{stats.active}</strong>
                         </div>
                     </div>
                     <div className={styles.statCard}>
                         <div className={`${styles.statIcon} ${styles.warningIcon}`}><i className="bi bi-clock-history"></i></div>
                         <div>
-                            <span className={styles.statLabel}>Het han</span>
+                            <span className={styles.statLabel}>Hết hạn</span>
                             <strong className={styles.statValue}>{stats.expired}</strong>
                         </div>
                     </div>
                     <div className={styles.statCard}>
                         <div className={`${styles.statIcon} ${styles.dangerIcon}`}><i className="bi bi-archive"></i></div>
                         <div>
-                            <span className={styles.statLabel}>Da dong/huy</span>
+                            <span className={styles.statLabel}>Đã đóng/hủy</span>
                             <strong className={styles.statValue}>{stats.closed}</strong>
                         </div>
                     </div>
@@ -171,40 +171,40 @@ function WarrantyListPage() {
                 <div className={styles.filterPanel}>
                     <div className={styles.filterGrid}>
                         <label className={styles.field}>
-                            <span>Tim kiem</span>
+                            <span>Tìm kiếm</span>
                             <input
                                 value={filters.keyword}
                                 onChange={(event) => handleFilterChange('keyword', event.target.value)}
-                                placeholder="Ma bao hanh, serial, khach hang..."
+                                placeholder="Mã bảo hành, serial, khách hàng..."
                             />
                         </label>
                         <label className={styles.field}>
-                            <span>Trang thai</span>
+                            <span>Trạng thái</span>
                             <select value={filters.status} onChange={(event) => handleFilterChange('status', event.target.value)}>
-                                <option value="">Tat ca</option>
+                                <option value="">Tất cả</option>
                                 {Object.entries(STATUS_META).map(([value, meta]) => (
                                     <option key={value} value={value}>{meta.label}</option>
                                 ))}
                             </select>
                         </label>
                         <label className={styles.field}>
-                            <span>Tu ngay</span>
+                            <span>Từ ngày</span>
                             <input type="date" value={filters.fromDate} onChange={(event) => handleFilterChange('fromDate', event.target.value)} />
                         </label>
                         <label className={styles.field}>
-                            <span>Den ngay</span>
+                            <span>Đến ngày</span>
                             <input type="date" value={filters.toDate} onChange={(event) => handleFilterChange('toDate', event.target.value)} />
                         </label>
                     </div>
                     <div className={styles.filterActions}>
-                        <button className={styles.outlineButton} type="button" onClick={resetFilters}>Lam moi</button>
+                        <button className={styles.outlineButton} type="button" onClick={resetFilters}>Làm mới</button>
                         <button className={styles.outlineButton} type="button" onClick={handleExport}>
                             <i className="bi bi-file-earmark-excel"></i>
-                            Xuat Excel
+                            Xuất Excel
                         </button>
                         <button className={styles.primaryButton} type="button" onClick={loadWarranties}>
                             <i className="bi bi-funnel"></i>
-                            Loc du lieu
+                            Lọc dữ liệu
                         </button>
                     </div>
                 </div>
@@ -215,14 +215,14 @@ function WarrantyListPage() {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th>Ma bao hanh</th>
-                                <th>Khach hang</th>
+                                <th>Mã bảo hành</th>
+                                <th>Khách hàng</th>
                                 <th>Serial</th>
-                                <th>San pham</th>
-                                <th>Ngay bat dau</th>
-                                <th>Ngay het han</th>
-                                <th>Trang thai</th>
-                                <th className={styles.actionColumn}>Thao tac</th>
+                                <th>Sản phẩm</th>
+                                <th>Ngày bắt đầu</th>
+                                <th>Ngày hết hạn</th>
+                                <th>Trạng thái</th>
+                                <th className={styles.actionColumn}>Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -237,7 +237,7 @@ function WarrantyListPage() {
                                         <div className={styles.mainText}>{item.customerName}</div>
                                         {item.customerPhone && <div className={styles.subText}>{item.customerPhone}</div>}
                                     </td>
-                                    <td>{item.serialCode || 'Chua co'}</td>
+                                    <td>{item.serialCode || 'Chưa có'}</td>
                                     <td className={styles.productCell}>{item.productName}</td>
                                     <td>{item.startDateText}</td>
                                     <td>{item.endDateText}</td>
@@ -245,10 +245,10 @@ function WarrantyListPage() {
                                         <span className={`${styles.badge} ${styles[item.statusTone]}`}>{item.statusLabel}</span>
                                     </td>
                                     <td className={styles.actionColumn}>
-                                        <button className={styles.iconButton} type="button" title="Xem chi tiet" onClick={(event) => { event.stopPropagation(); navigate(`/warranties/${item.id}`); }}>
+                                        <button className={styles.iconButton} type="button" title="Xem chi tiết" onClick={(event) => { event.stopPropagation(); navigate(`/warranties/${item.id}`); }}>
                                             <i className="bi bi-eye"></i>
                                         </button>
-                                        <button className={styles.iconButton} type="button" title="Tao phieu xuat" onClick={(event) => { event.stopPropagation(); navigate(`/export-slips/create?type=WARRANTY&warrantyId=${item.id}`); }}>
+                                        <button className={styles.iconButton} type="button" title="Tạo phiếu xuất" onClick={(event) => { event.stopPropagation(); navigate(`/export-slips/create?type=WARRANTY&warrantyId=${item.id}`); }}>
                                             <i className="bi bi-box-arrow-up-right"></i>
                                         </button>
                                     </td>
@@ -256,7 +256,7 @@ function WarrantyListPage() {
                             )) : (
                                 <tr>
                                     <td colSpan="8" className={styles.emptyCell}>
-                                        {loading ? 'Dang tai danh sach bao hanh...' : 'Chua co phieu bao hanh phu hop.'}
+                                        {loading ? 'Đang tải danh sách bảo hành...' : 'Chưa có phiếu bảo hành phù hợp.'}
                                     </td>
                                 </tr>
                             )}

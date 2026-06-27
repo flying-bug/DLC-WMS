@@ -25,12 +25,14 @@ function UpdateExportSlipPage() {
   const { id } = useParams();
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     docCode: '',
     warehouseId: '',
+    partnerId: '',
     docDate: '',
     note: '',
     status: 'DRAFT',
@@ -42,17 +44,20 @@ function UpdateExportSlipPage() {
       setLoading(true);
       setError('');
       try {
-        const [detailRes, warehouseRes, productRes] = await Promise.all([
+        const [detailRes, warehouseRes, productRes, customerRes] = await Promise.all([
           exportApi.getExportDetail(id),
           exportApi.getWarehouses({ size: 100 }),
           exportApi.getProducts({ size: 100 }),
+          exportApi.getCustomers({ size: 1000 }),
         ]);
         const detail = unwrap(detailRes);
         setWarehouses(pageContent(unwrap(warehouseRes)));
         setProducts(pageContent(unwrap(productRes)));
+        setCustomers(pageContent(unwrap(customerRes)));
         setForm({
           docCode: detail.docCode || '',
           warehouseId: detail.warehouseId || '',
+          partnerId: detail.partnerId || '',
           docDate: detail.docDate || '',
           note: detail.note || '',
           status: detail.status || 'DRAFT',
@@ -77,7 +82,7 @@ function UpdateExportSlipPage() {
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
-  const isFormValid = Boolean(form.warehouseId && form.docDate && items.length && items.every(item => item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0));
+  const isFormValid = Boolean(form.warehouseId && form.partnerId && form.docDate && items.length && items.every(item => item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0));
 
   const handleFormChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -98,6 +103,7 @@ function UpdateExportSlipPage() {
   const buildPayload = (status) => ({
     docCode: form.docCode || undefined,
     warehouseId: Number(form.warehouseId),
+    partnerId: form.partnerId ? Number(form.partnerId) : null,
     docDate: form.docDate,
     status,
     note: form.note,
@@ -148,6 +154,14 @@ function UpdateExportSlipPage() {
                 </div>
                 <div className={styles.cardBody}>
                   <div className="misa-form-row">
+                    <div className="misa-form-group">
+                      <label className="misa-label">Khách hàng <span className="required">*</span></label>
+                      <select className="misa-select" value={form.partnerId} onChange={(event) => handleFormChange('partnerId', event.target.value)}>
+                        <option value="">Chọn khách hàng</option>
+                        {customers.map(customer => <option key={customer.id} value={customer.id}>{customer.code} - {customer.name}</option>)}
+                      </select>
+                    </div>
+
                     <div className="misa-form-group">
                       <label className="misa-label">Kho xuất <span className="required">*</span></label>
                       <select className="misa-select" value={form.warehouseId} onChange={(event) => handleFormChange('warehouseId', event.target.value)}>

@@ -7,13 +7,13 @@ import { exportToExcel } from '../../utils/excelExport';
 import styles from './RepairTicketListPage.module.css';
 
 const STATUS_META = {
-    DRAFT: { label: 'Nhap', tone: 'info' },
-    SUBMITTED: { label: 'Cho duyet', tone: 'warning' },
-    APPROVED: { label: 'Da duyet', tone: 'success' },
-    POSTED: { label: 'Hoan tat', tone: 'success' },
-    CANCELLED: { label: 'Da huy', tone: 'danger' },
-    RECEIVED: { label: 'Da tiep nhan', tone: 'info' },
-    REPAIRING: { label: 'Dang sua', tone: 'warning' }
+    DRAFT: { label: 'Nháp', tone: 'info' },
+    SUBMITTED: { label: 'Chờ duyệt', tone: 'warning' },
+    APPROVED: { label: 'Đã duyệt', tone: 'success' },
+    POSTED: { label: 'Hoàn tất', tone: 'success' },
+    CANCELLED: { label: 'Đã hủy', tone: 'danger' },
+    RECEIVED: { label: 'Đã tiếp nhận', tone: 'info' },
+    REPAIRING: { label: 'Đang sửa', tone: 'warning' }
 };
 
 const DEFAULT_FILTERS = {
@@ -26,17 +26,17 @@ const DEFAULT_FILTERS = {
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const totalFromPayload = (payload, fallback) => payload?.totalElements ?? fallback;
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString('vi-VN') : 'Chua co');
+const formatDate = (value) => (value ? new Date(value).toLocaleDateString('vi-VN') : 'Chưa có');
 
 const readRepair = (item) => ({
     id: item.id,
     repairCode: item.repairCode || `SC-${item.id}`,
-    warrantyCode: item.warrantyCode || item.warranty?.warrantyCode || (item.warrantyId ? `BH #${item.warrantyId}` : 'Chua lien ket'),
-    customerName: item.partnerName || item.customerName || item.partner?.name || item.warranty?.partner?.name || 'Khach le',
-    serialCode: item.serialCode || item.serialNumber || item.serialNumberValue || item.serialNumber?.serialNo || item.warranty?.serialNumber?.serialNo || 'Chua co',
-    productName: item.productName || item.variantName || item.warranty?.productName || item.warranty?.serialNumber?.variant?.variantName || 'Chua ro san pham',
+    warrantyCode: item.warrantyCode || item.warranty?.warrantyCode || (item.warrantyId ? `BH #${item.warrantyId}` : 'Chưa liên kết'),
+    customerName: item.partnerName || item.customerName || item.partner?.name || item.warranty?.partner?.name || 'Khách lẻ',
+    serialCode: item.serialCode || item.serialNumber || item.serialNumberValue || item.serialNumber?.serialNo || item.warranty?.serialNumber?.serialNo || 'Chưa có',
+    productName: item.productName || item.variantName || item.warranty?.productName || item.warranty?.serialNumber?.variant?.variantName || 'Chưa rõ sản phẩm',
     receivedDate: formatDate(item.receivedDate),
-    status: STATUS_META[item.repairStatus] || { label: item.repairStatus || 'Chua ro', tone: 'info' }
+    status: STATUS_META[item.repairStatus] || { label: item.repairStatus || 'Chưa rõ', tone: 'info' }
 });
 
 function RepairTicketListPage() {
@@ -80,7 +80,7 @@ function RepairTicketListPage() {
         } catch (err) {
             setTickets([]);
             setTotalElements(0);
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Khong tai duoc danh sach phieu sua chua.');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách phiếu sửa chữa.');
         } finally {
             setLoading(false);
         }
@@ -110,53 +110,53 @@ function RepairTicketListPage() {
             <div className={styles.page}>
                 <div className={styles.pageHeader}>
                     <div>
-                        <h1 className={styles.pageTitle}>Danh sach phieu sua chua</h1>
-                        <p className={styles.pageSubtitle}>Theo doi tien do sua chua gan voi ho so bao hanh va serial.</p>
+                        <h1 className={styles.pageTitle}>Danh sách phiếu sửa chữa</h1>
+                        <p className={styles.pageSubtitle}>Theo dõi tiến độ sửa chữa gắn với hồ sơ bảo hành và serial.</p>
                     </div>
                     <button className={styles.primaryButton} type="button" onClick={() => navigate('/repair-tickets/create')}>
                         <i className="bi bi-plus-lg"></i>
-                        Tao phieu sua
+                        Tạo phiếu sửa
                     </button>
                 </div>
 
                 <div className={styles.statsGrid}>
-                    <Stat icon="bi-clipboard2-check" label="Tong phieu" value={stats.total} tone="info" />
-                    <Stat icon="bi-inbox" label="Da tiep nhan" value={stats.received} tone="info" />
-                    <Stat icon="bi-tools" label="Dang sua" value={stats.repairing} tone="warning" />
-                    <Stat icon="bi-check2-circle" label="Hoan tat" value={stats.done} tone="success" />
+                    <Stat icon="bi-clipboard2-check" label="Tổng phiếu" value={stats.total} tone="info" />
+                    <Stat icon="bi-inbox" label="Đã tiếp nhận" value={stats.received} tone="info" />
+                    <Stat icon="bi-tools" label="Đang sửa" value={stats.repairing} tone="warning" />
+                    <Stat icon="bi-check2-circle" label="Hoàn tất" value={stats.done} tone="success" />
                 </div>
 
                 <div className={styles.filterPanel}>
                     <div className={styles.filterGrid}>
                         <label className={styles.field}>
-                            <span>Tim kiem</span>
-                            <input value={filters.keyword} onChange={(event) => setFilter('keyword', event.target.value)} placeholder="Ma phieu, bao hanh, serial, khach hang..." />
+                            <span>Tìm kiếm</span>
+                            <input value={filters.keyword} onChange={(event) => setFilter('keyword', event.target.value)} placeholder="Mã phiếu, bảo hành, serial, khách hàng..." />
                         </label>
                         <label className={styles.field}>
-                            <span>Trang thai</span>
+                            <span>Trạng thái</span>
                             <select value={filters.status} onChange={(event) => setFilter('status', event.target.value)}>
-                                <option value="">Tat ca</option>
+                                <option value="">Tất cả</option>
                                 {Object.entries(STATUS_META).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}
                             </select>
                         </label>
                         <label className={styles.field}>
-                            <span>Tu ngay</span>
+                            <span>Từ ngày</span>
                             <input type="date" value={filters.fromDate} onChange={(event) => setFilter('fromDate', event.target.value)} />
                         </label>
                         <label className={styles.field}>
-                            <span>Den ngay</span>
+                            <span>Đến ngày</span>
                             <input type="date" value={filters.toDate} onChange={(event) => setFilter('toDate', event.target.value)} />
                         </label>
                     </div>
                     <div className={styles.filterActions}>
-                        <button className={styles.outlineButton} type="button" onClick={() => setFilters(DEFAULT_FILTERS)}>Lam moi</button>
+                        <button className={styles.outlineButton} type="button" onClick={() => setFilters(DEFAULT_FILTERS)}>Làm mới</button>
                         <button className={styles.outlineButton} type="button" onClick={handleExport}>
                             <i className="bi bi-file-earmark-excel"></i>
-                            Xuat Excel
+                            Xuất Excel
                         </button>
                         <button className={styles.primaryButton} type="button" onClick={loadTickets}>
                             <i className="bi bi-funnel"></i>
-                            Loc du lieu
+                            Lọc dữ liệu
                         </button>
                     </div>
                 </div>
@@ -167,14 +167,14 @@ function RepairTicketListPage() {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th>Ma phieu sua</th>
-                                <th>Ma bao hanh</th>
-                                <th>Khach hang</th>
+                                <th>Mã phiếu sửa</th>
+                                <th>Mã bảo hành</th>
+                                <th>Khách hàng</th>
                                 <th>Serial</th>
-                                <th>San pham</th>
-                                <th>Ngay tiep nhan</th>
-                                <th>Trang thai</th>
-                                <th className={styles.actionColumn}>Thao tac</th>
+                                <th>Sản phẩm</th>
+                                <th>Ngày tiếp nhận</th>
+                                <th>Trạng thái</th>
+                                <th className={styles.actionColumn}>Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -188,10 +188,10 @@ function RepairTicketListPage() {
                                     <td>{ticket.receivedDate}</td>
                                     <td><span className={`${styles.badge} ${styles[ticket.status.tone]}`}>{ticket.status.label}</span></td>
                                     <td className={styles.actionColumn}>
-                                        <button className={styles.iconButton} type="button" title="Cap nhat" onClick={(event) => { event.stopPropagation(); navigate(`/repair-tickets/${ticket.id}/edit`); }}>
+                                        <button className={styles.iconButton} type="button" title="Cập nhật" onClick={(event) => { event.stopPropagation(); navigate(`/repair-tickets/${ticket.id}/edit`); }}>
                                             <i className="bi bi-pencil"></i>
                                         </button>
-                                        <button className={styles.iconButton} type="button" title="Tao phieu xuat" onClick={(event) => { event.stopPropagation(); navigate(`/export-slips/create?type=WARRANTY_REPAIR&repairId=${ticket.id}`); }}>
+                                        <button className={styles.iconButton} type="button" title="Tạo phiếu xuất" onClick={(event) => { event.stopPropagation(); navigate(`/export-slips/create?type=WARRANTY_REPAIR&repairId=${ticket.id}`); }}>
                                             <i className="bi bi-box-arrow-up-right"></i>
                                         </button>
                                     </td>
@@ -199,7 +199,7 @@ function RepairTicketListPage() {
                             )) : (
                                 <tr>
                                     <td className={styles.emptyCell} colSpan="8">
-                                        {loading ? 'Dang tai danh sach phieu sua chua...' : 'Chua co phieu sua chua phu hop.'}
+                                        {loading ? 'Đang tải danh sách phiếu sửa chữa...' : 'Chưa có phiếu sửa chữa phù hợp.'}
                                     </td>
                                 </tr>
                             )}

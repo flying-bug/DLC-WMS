@@ -10,7 +10,7 @@ const defaultFormData = {
     id: null,
     productCode: '',
     productName: '',
-    productType: 'Hang hoa',
+    productType: 'Hàng hóa',
     categoryId: '',
     brandId: '',
     unitId: '',
@@ -100,9 +100,9 @@ const ProductPage = () => {
 
     const fetchLookups = useCallback(async () => {
         const lookupRequests = [
-            { key: 'units', label: 'don vi tinh', request: axiosClient.get('/units?size=1000') },
-            { key: 'categories', label: 'danh muc', request: axiosClient.get('/product-categories?size=1000') },
-            { key: 'brands', label: 'thuong hieu', request: axiosClient.get('/brands?size=1000') }
+            { key: 'units', label: 'đơn vị tính', request: axiosClient.get('/units?size=1000') },
+            { key: 'categories', label: 'danh mục', request: axiosClient.get('/product-categories?size=1000') },
+            { key: 'brands', label: 'thương hiệu', request: axiosClient.get('/brands?size=1000') }
         ];
 
         try {
@@ -115,10 +115,10 @@ const ProductPage = () => {
             const failedLabels = results
                 .map((result, index) => result.status === 'rejected' ? lookupRequests[index].label : null)
                 .filter(Boolean);
-            console.error('Loi lay du lieu danh muc san pham:', error);
+            console.error('Lỗi lấy dữ liệu danh mục sản phẩm:', error);
             showToast('error', failedLabels.length
-                ? `Khong the tai ${failedLabels.join(', ')}. Vui long kiem tra quyen xem.`
-                : 'Khong the tai danh muc, thuong hieu hoac don vi tinh.');
+                ? `Không thể tải ${failedLabels.join(', ')}. Vui lòng kiểm tra quyền xem.`
+                : 'Không thể tải danh mục, thương hiệu hoặc đơn vị tính.');
         }
     }, []);
 
@@ -145,8 +145,8 @@ const ProductPage = () => {
             setOutOfStockCount(outOfStock);
             setLowStockCount(lowStock);
         } catch (error) {
-            console.error('Loi lay danh sach hang hoa:', error);
-            showToast('error', 'Khong the tai danh sach san pham.');
+            console.error('Lỗi lấy danh sách hàng hóa:', error);
+            showToast('error', 'Không thể tải danh sách sản phẩm.');
         } finally {
             setLoading(false);
         }
@@ -199,7 +199,7 @@ const ProductPage = () => {
             id: product.id,
             productCode: product.productCode || '',
             productName: product.productName || '',
-            productType: product.productType || 'Hang hoa',
+            productType: product.productType || 'Hàng hóa',
             categoryId: product.categoryId || '',
             brandId: product.brandId || '',
             unitId: product.unitId || '',
@@ -218,7 +218,7 @@ const ProductPage = () => {
         setFormData(buildInitialFormData({
             productCode: `${product.productCode}-CP`,
             productName: `${product.productName} - Copy`,
-            productType: product.productType || 'Hang hoa',
+            productType: product.productType || 'Hàng hóa',
             categoryId: product.categoryId || '',
             brandId: product.brandId || '',
             unitId: product.unitId || '',
@@ -235,7 +235,7 @@ const ProductPage = () => {
     const buildPayload = (data) => ({
         productCode: data.productCode.trim().toUpperCase(),
         productName: data.productName.trim(),
-        productType: data.productType || 'Hang hoa',
+        productType: data.productType || 'Hàng hóa',
         categoryId: Number(data.categoryId),
         brandId: Number(data.brandId),
         unitId: Number(data.unitId),
@@ -248,13 +248,13 @@ const ProductPage = () => {
     });
 
     const validateForm = () => {
-        if (!formData.productCode.trim()) return 'Ma san pham khong duoc de trong.';
-        if (!formData.productName.trim()) return 'Ten san pham khong duoc de trong.';
-        if (!formData.categoryId) return 'Vui long chon danh muc.';
-        if (!formData.brandId) return 'Vui long chon thuong hieu.';
-        if (!formData.unitId) return 'Vui long chon don vi tinh.';
-        if (formData.salePrice === '' || Number.isNaN(Number(formData.salePrice))) return 'Gia ban khong hop le.';
-        if (Number(formData.salePrice) < 0) return 'Gia ban khong duoc am.';
+        if (!formData.productCode.trim()) return 'Mã sản phẩm không được để trống.';
+        if (!formData.productName.trim()) return 'Tên sản phẩm không được để trống.';
+        if (!formData.categoryId) return 'Vui lòng chọn danh mục.';
+        if (!formData.brandId) return 'Vui lòng chọn thương hiệu.';
+        if (!formData.unitId) return 'Vui lòng chọn đơn vị tính.';
+        if (formData.salePrice === '' || Number.isNaN(Number(formData.salePrice))) return 'Giá bán không hợp lệ.';
+        if (Number(formData.salePrice) < 0) return 'Giá bán không được âm.';
         return '';
     };
 
@@ -274,10 +274,10 @@ const ProductPage = () => {
             const payload = buildPayload(formData);
             if (isEdit) {
                 await axiosClient.put(`/products/${formData.id}`, payload);
-                showToast('success', 'Cap nhat san pham thanh cong.');
+                showToast('success', 'Cập nhật sản phẩm thành công.');
             } else {
                 await axiosClient.post('/products', payload);
-                showToast('success', 'Them san pham thanh cong.');
+                showToast('success', 'Thêm sản phẩm thành công.');
             }
             await fetchProducts();
             if (closeAfterSave) {
@@ -286,7 +286,7 @@ const ProductPage = () => {
                 resetAddForm();
             }
         } catch (error) {
-            const message = getErrorMessage(error, 'Co loi xay ra khi luu san pham.');
+            const message = getErrorMessage(error, 'Có lỗi xảy ra khi lưu sản phẩm.');
             setErrorMsg(message);
             showToast('error', message);
         }
@@ -301,23 +301,23 @@ const ProductPage = () => {
             });
             await axiosClient.put(`/products/${product.id}`, payload);
             fetchProducts();
-            showToast('success', product.active ? 'Da ngung su dung san pham.' : 'Da kich hoat san pham.');
+            showToast('success', product.active ? 'Đã ngừng sử dụng sản phẩm.' : 'Đã kích hoạt sản phẩm.');
         } catch (error) {
-            console.error('Loi cap nhat trang thai san pham:', error);
-            showToast('error', getErrorMessage(error, 'Co loi xay ra khi cap nhat trang thai san pham.'));
+            console.error('Lỗi cập nhật trạng thái sản phẩm:', error);
+            showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi cập nhật trạng thái sản phẩm.'));
         }
         setOpenDropdownId(null);
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Ban co chac chan muon xoa san pham nay khong?')) {
+        if (window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này không?')) {
             try {
                 await axiosClient.delete(`/products/${id}`);
                 fetchProducts();
-                showToast('success', 'Xoa san pham thanh cong.');
+                showToast('success', 'Xóa sản phẩm thành công.');
             } catch (error) {
-                console.error('Loi xoa san pham:', error);
-                showToast('error', getErrorMessage(error, 'Co loi xay ra khi xoa san pham.'));
+                console.error('Lỗi xóa sản phẩm:', error);
+                showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xóa sản phẩm.'));
             }
         }
         setOpenDropdownId(null);
@@ -329,7 +329,7 @@ const ProductPage = () => {
             const res = await axiosClient.get(`/products/${productId}/variants`);
             setVariants(res.data || []);
         } catch (error) {
-            showToast('error', getErrorMessage(error, 'Khong the tai danh sach SKU.'));
+            showToast('error', getErrorMessage(error, 'Không thể tải danh sách SKU.'));
         } finally {
             setLoadingVariants(false);
         }
@@ -374,11 +374,11 @@ const ProductPage = () => {
     };
 
     const validateVariantForm = () => {
-        if (!variantForm.sku.trim()) return 'SKU khong duoc de trong.';
-        if (!variantForm.variantName.trim()) return 'Ten SKU khong duoc de trong.';
-        if (variantForm.salePrice === '' || Number.isNaN(Number(variantForm.salePrice))) return 'Gia ban khong hop le.';
-        if (Number(variantForm.salePrice) < 0) return 'Gia ban khong duoc am.';
-        if (Number(variantForm.costPrice || 0) < 0) return 'Gia von khong duoc am.';
+        if (!variantForm.sku.trim()) return 'SKU không được để trống.';
+        if (!variantForm.variantName.trim()) return 'Tên SKU không được để trống.';
+        if (variantForm.salePrice === '' || Number.isNaN(Number(variantForm.salePrice))) return 'Giá bán không hợp lệ.';
+        if (Number(variantForm.salePrice) < 0) return 'Giá bán không được âm.';
+        if (Number(variantForm.costPrice || 0) < 0) return 'Giá vốn không được âm.';
         return '';
     };
 
@@ -400,28 +400,28 @@ const ProductPage = () => {
             };
             if (variantForm.id) {
                 await axiosClient.put(`/products/${selectedProduct.id}/variants/${variantForm.id}`, payload);
-                showToast('success', 'Cap nhat SKU thanh cong.');
+                showToast('success', 'Cập nhật SKU thành công.');
             } else {
                 await axiosClient.post(`/products/${selectedProduct.id}/variants`, payload);
-                showToast('success', 'Them SKU thanh cong.');
+                showToast('success', 'Thêm SKU thành công.');
             }
             resetVariantForm();
             await fetchVariants(selectedProduct.id);
         } catch (error) {
-            const message = getErrorMessage(error, 'Co loi xay ra khi luu SKU.');
+            const message = getErrorMessage(error, 'Có lỗi xảy ra khi lưu SKU.');
             setVariantError(message);
             showToast('error', message);
         }
     };
 
     const deleteVariant = async (variantId) => {
-        if (!window.confirm('Ban co chac chan muon xoa SKU nay khong?')) return;
+        if (!window.confirm('Bạn có chắc chắn muốn xóa SKU này không?')) return;
         try {
             await axiosClient.delete(`/products/${selectedProduct.id}/variants/${variantId}`);
-            showToast('success', 'Xoa SKU thanh cong.');
+            showToast('success', 'Xóa SKU thành công.');
             await fetchVariants(selectedProduct.id);
         } catch (error) {
-            showToast('error', getErrorMessage(error, 'Co loi xay ra khi xoa SKU.'));
+            showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xóa SKU.'));
         }
     };
 
@@ -449,10 +449,10 @@ const ProductPage = () => {
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
-            showToast('success', 'Xuat Excel san pham thanh cong.');
+            showToast('success', 'Xuất Excel sản phẩm thành công.');
         } catch (error) {
-            console.error('Loi xuat Excel san pham:', error);
-            showToast('error', getErrorMessage(error, 'Co loi xay ra khi xuat Excel san pham.'));
+            console.error('Lỗi xuất Excel sản phẩm:', error);
+            showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xuất Excel sản phẩm.'));
         }
     };
 
@@ -484,9 +484,9 @@ const ProductPage = () => {
             <div className={styles.container}>
                 <div className={styles.header}>
                     <div className={styles.titleArea}>
-                        <h2>Hang hoa</h2>
+                        <h2>Hàng hóa</h2>
                         <span className={styles.backLink} onClick={() => navigate('/dashboard')}>
-                            <i className="fas fa-chevron-left"></i> Tat ca danh muc
+                            <i className="fas fa-chevron-left"></i> Tất cả danh mục
                         </span>
                     </div>
                 </div>
@@ -498,7 +498,7 @@ const ProductPage = () => {
                         </div>
                         <div className={styles.kpiInfo}>
                             <div className={styles.kpiNumber}>{lowStockCount}</div>
-                            <div className={styles.kpiLabel}>San pham sap het hang</div>
+                            <div className={styles.kpiLabel}>Sản phẩm sắp hết hàng</div>
                         </div>
                     </div>
                     <div className={`${styles.kpiCard} ${styles.kpiDanger}`}>
@@ -507,7 +507,7 @@ const ProductPage = () => {
                         </div>
                         <div className={styles.kpiInfo}>
                             <div className={styles.kpiNumber}>{outOfStockCount}</div>
-                            <div className={styles.kpiLabel}>San pham het hang</div>
+                            <div className={styles.kpiLabel}>Sản phẩm hết hàng</div>
                         </div>
                     </div>
                 </div>
@@ -515,10 +515,10 @@ const ProductPage = () => {
                 <div className={styles.toolbar}>
                     <div className={styles.toolbarLeft}>
                         <div className={styles.bulkDropdown}>
-                            Thuc hien hang loat <i className="fas fa-chevron-down"></i>
+                            Thực hiện hàng loạt <i className="fas fa-chevron-down"></i>
                         </div>
                         <button className={styles.filterBtn}>
-                            <i className="fas fa-filter"></i> Loc
+                            <i className="fas fa-filter"></i> Lọc
                         </button>
                     </div>
 
@@ -526,26 +526,26 @@ const ProductPage = () => {
                         <div className={styles.searchBox}>
                             <input
                                 type="text"
-                                placeholder="Tim theo ma, ten san pham"
+                                placeholder="Tìm theo mã, tên sản phẩm"
                                 value={tempSearch}
                                 onChange={(event) => setTempSearch(event.target.value)}
                                 onKeyDown={handleSearch}
                             />
                             <i className="fas fa-search" onClick={handleSearchBtnClick}></i>
                         </div>
-                        <button className={styles.iconBtn} onClick={fetchProducts} title="Tai lai">
+                        <button className={styles.iconBtn} onClick={fetchProducts} title="Tải lại">
                             <i className="fas fa-sync-alt"></i>
                         </button>
-                        <button className={styles.iconBtn} title="Xuat Excel" onClick={handleExport}>
+                        <button className={styles.iconBtn} title="Xuất Excel" onClick={handleExport}>
                             <i className="fas fa-file-excel"></i>
                         </button>
-                        <button className={styles.iconBtn} title="Thiet lap cot">
+                        <button className={styles.iconBtn} title="Thiết lập cột">
                             <i className="fas fa-cog"></i>
                         </button>
 
                         <div className={styles.actionBtnGroup}>
                             <button className={styles.addBtn} onClick={handleOpenAdd}>
-                                Them
+                                Thêm
                             </button>
                             <button className={styles.addMoreDropdownBtn}>
                                 <i className="fas fa-chevron-down"></i>
@@ -561,28 +561,28 @@ const ProductPage = () => {
                                 <th style={{ width: '40px', textAlign: 'center' }}>
                                     <input type="checkbox" />
                                 </th>
-                                <th style={{ width: '100px' }}>Hinh anh</th>
-                                <th>Ma san pham</th>
-                                <th>Ten san pham</th>
-                                <th style={{ width: '150px' }}>Danh muc</th>
-                                <th style={{ width: '140px' }}>Thuong hieu</th>
-                                <th style={{ width: '120px' }}>Don vi tinh</th>
-                                <th style={{ textAlign: 'right', width: '140px' }}>Gia ban</th>
-                                <th style={{ textAlign: 'right', width: '120px' }}>Ton kho</th>
-                                <th style={{ width: '120px', textAlign: 'center' }}>Chuc nang</th>
+                                <th style={{ width: '100px' }}>Hình ảnh</th>
+                                <th>Mã sản phẩm</th>
+                                <th>Tên sản phẩm</th>
+                                <th style={{ width: '150px' }}>Danh mục</th>
+                                <th style={{ width: '140px' }}>Thương hiệu</th>
+                                <th style={{ width: '120px' }}>Đơn vị tính</th>
+                                <th style={{ textAlign: 'right', width: '140px' }}>Giá bán</th>
+                                <th style={{ textAlign: 'right', width: '120px' }}>Tồn kho</th>
+                                <th style={{ width: '120px', textAlign: 'center' }}>Chức năng</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr>
                                     <td colSpan="10" style={{ textAlign: 'center', padding: '40px' }}>
-                                        <div className={styles.spinner}></div> Dang tai danh sach san pham...
+                                        <div className={styles.spinner}></div> Đang tải danh sách sản phẩm...
                                     </td>
                                 </tr>
                             ) : products.length === 0 ? (
                                 <tr>
                                     <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted-2)' }}>
-                                        Khong tim thay san pham phu hop.
+                                        Không tìm thấy sản phẩm phù hợp.
                                     </td>
                                 </tr>
                             ) : (
@@ -611,7 +611,7 @@ const ProductPage = () => {
                                         <td style={{ textAlign: 'right' }}>{formatQuantity(item.stockQty)}</td>
                                         <td style={{ textAlign: 'center' }}>
                                             <div className={styles.actionCell}>
-                                                <span className={styles.editLink} onClick={() => handleOpenEdit(item)}>Sua</span>
+                                                <span className={styles.editLink} onClick={() => handleOpenEdit(item)}>Sửa</span>
                                                 <button
                                                     className={styles.dropdownBtn}
                                                     onClick={(event) => {
@@ -625,16 +625,16 @@ const ProductPage = () => {
                                                 {openDropdownId === item.id && (
                                                     <div className={styles.dropdownMenu}>
                                                         <div className={styles.dropdownItem} onClick={() => openVariantModal(item)}>
-                                                            Quan ly SKU
+                                                            Quản lý SKU
                                                         </div>
                                                         <div className={styles.dropdownItem} onClick={() => handleDuplicate(item)}>
-                                                            Nhan ban
+                                                            Nhân bản
                                                         </div>
                                                         <div className={styles.dropdownItem} onClick={() => handleDelete(item.id)}>
-                                                            Xoa
+                                                            Xóa
                                                         </div>
                                                         <div className={styles.dropdownItem} onClick={() => handleToggleStatus(item)}>
-                                                            {item.active ? 'Ngung su dung' : 'Su dung'}
+                                                            {item.active ? 'Ngừng sử dụng' : 'Sử dụng'}
                                                         </div>
                                                     </div>
                                                 )}

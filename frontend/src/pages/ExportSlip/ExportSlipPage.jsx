@@ -29,6 +29,7 @@ function ExportSlipPage() {
   const [slips, setSlips] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({ docCode: '', fromDate: '', status: '' });
@@ -37,11 +38,13 @@ function ExportSlipPage() {
 
   const warehouseById = useMemo(() => new Map(warehouses.map(item => [item.id, item])), [warehouses]);
   const productById = useMemo(() => new Map(products.map(item => [item.id, item])), [products]);
+  const customerById = useMemo(() => new Map(customers.map(item => [item.id, item])), [customers]);
 
   const loadLookups = useCallback(async () => {
-    const [warehouseRes, productRes] = await Promise.allSettled([
+    const [warehouseRes, productRes, customerRes] = await Promise.allSettled([
       exportApi.getWarehouses({ size: 100 }),
       exportApi.getProducts({ size: 100 }),
+      exportApi.getCustomers({ size: 1000 }),
     ]);
 
     if (warehouseRes.status === 'fulfilled') {
@@ -49,6 +52,9 @@ function ExportSlipPage() {
     }
     if (productRes.status === 'fulfilled') {
       setProducts(pageContent(unwrap(productRes.value)));
+    }
+    if (customerRes.status === 'fulfilled') {
+      setCustomers(pageContent(unwrap(customerRes.value)));
     }
   }, []);
 
@@ -87,6 +93,7 @@ function ExportSlipPage() {
     return {
       ...slip,
       date: formatDate(slip.docDate),
+      partner: customerById.get(slip.partnerId)?.name || (slip.partnerId ? `Khách hàng #${slip.partnerId}` : 'Chưa chọn'),
       warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa chọn'),
       total: money(sumAmount(slip.lines)),
       statusLabel: status.label,
@@ -95,10 +102,11 @@ function ExportSlipPage() {
   });
 
   const handleExport = () => {
-    const headers = ['Ngày hạch toán', 'Số chứng từ', 'Diễn giải', 'Tổng tiền', 'Kho xuất', 'Trạng thái'];
+    const headers = ['Ngày hạch toán', 'Số chứng từ', 'Khách hàng', 'Diễn giải', 'Tổng tiền', 'Kho xuất', 'Trạng thái'];
     const data = rows.map(item => [
       item.date,
       item.docCode,
+      item.partner,
       item.note || '',
       item.total,
       item.warehouse,
@@ -186,6 +194,7 @@ function ExportSlipPage() {
                 </th>
                 <th>Ngày hạch toán</th>
                 <th>Số chứng từ</th>
+                <th>Khách hàng</th>
                 <th>Diễn giải</th>
                 <th className={styles.textRight}>Tổng tiền</th>
                 <th>Kho xuất</th>
@@ -199,6 +208,7 @@ function ExportSlipPage() {
                   <td><input type="checkbox" checked={selectedIds.includes(slip.id)} onChange={(event) => toggleRow(event, slip.id)} onClick={(event) => event.stopPropagation()} /></td>
                   <td>{slip.date}</td>
                   <td><a href="#" className={styles.link} onClick={(event) => event.preventDefault()}>{slip.docCode}</a></td>
+                  <td>{slip.partner}</td>
                   <td>{slip.note || 'Không có ghi chú'}</td>
                   <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>
                   <td>{slip.warehouse}</td>
@@ -242,8 +252,8 @@ function ExportSlipPage() {
             <div className={styles.detailGrid}>
               <div className={styles.detailGroup}>
                 <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>Đối tượng</span>
-                  <span className={styles.detailValue}>{selectedSlip.partnerId ? `Đối tượng #${selectedSlip.partnerId}` : 'Chưa chọn'}</span>
+                  <span className={styles.detailLabel}>Khách hàng</span>
+                  <span className={styles.detailValue}>{customerById.get(selectedSlip.partnerId)?.name || (selectedSlip.partnerId ? `Khách hàng #${selectedSlip.partnerId}` : 'Chưa chọn')}</span>
                 </div>
                 <div className={styles.detailItem}>
                   <span className={styles.detailLabel}>Lý do xuất</span>

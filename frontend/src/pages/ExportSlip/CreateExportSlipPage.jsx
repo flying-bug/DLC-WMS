@@ -27,6 +27,7 @@ function CreateExportSlipPage() {
   const navigate = useNavigate();
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [saving, setSaving] = useState(false);
   const [scanCode, setScanCode] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
@@ -34,6 +35,7 @@ function CreateExportSlipPage() {
   const [form, setForm] = useState({
     docCode: '',
     warehouseId: '',
+    partnerId: '',
     docDate: today(),
     note: '',
     status: 'DRAFT',
@@ -42,9 +44,10 @@ function CreateExportSlipPage() {
 
   useEffect(() => {
     const loadLookups = async () => {
-      const [warehouseRes, productRes] = await Promise.allSettled([
+      const [warehouseRes, productRes, customerRes] = await Promise.allSettled([
         exportApi.getWarehouses({ size: 100 }),
         exportApi.getProducts({ size: 100 }),
+        exportApi.getCustomers({ size: 1000 }),
       ]);
 
       if (warehouseRes.status === 'fulfilled') {
@@ -56,6 +59,11 @@ function CreateExportSlipPage() {
         const data = pageContent(unwrap(productRes.value));
         setProducts(data);
       }
+      if (customerRes.status === 'fulfilled') {
+        const data = pageContent(unwrap(customerRes.value));
+        setCustomers(data);
+        setForm(prev => ({ ...prev, partnerId: prev.partnerId || data[0]?.id || '' }));
+      }
     };
 
     loadLookups();
@@ -64,7 +72,7 @@ function CreateExportSlipPage() {
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
-  const isFormValid = Boolean(form.warehouseId && form.docDate && items.length && items.every(item => item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0));
+  const isFormValid = Boolean(form.warehouseId && form.partnerId && form.docDate && items.length && items.every(item => item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0));
 
   const handleFormChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -176,6 +184,7 @@ function CreateExportSlipPage() {
   const buildPayload = (status) => ({
     docCode: form.docCode || undefined,
     warehouseId: Number(form.warehouseId),
+    partnerId: form.partnerId ? Number(form.partnerId) : null,
     docDate: form.docDate,
     status,
     note: form.note,
@@ -231,6 +240,14 @@ function CreateExportSlipPage() {
             </div>
             <div className={styles.cardBody}>
               <div className="misa-form-row">
+                <div className="misa-form-group">
+                  <label className="misa-label">Khách hàng <span className="required">*</span></label>
+                  <select className="misa-select" value={form.partnerId} onChange={(event) => handleFormChange('partnerId', event.target.value)}>
+                    <option value="">Chọn khách hàng</option>
+                    {customers.map(customer => <option key={customer.id} value={customer.id}>{customer.code} - {customer.name}</option>)}
+                  </select>
+                </div>
+
                 <div className="misa-form-group">
                   <label className="misa-label">Kho xuất <span className="required">*</span></label>
                   <select className="misa-select" value={form.warehouseId} onChange={(event) => handleFormChange('warehouseId', event.target.value)}>
@@ -325,7 +342,7 @@ function CreateExportSlipPage() {
                     <tr key={item.localId}>
                       <td className={styles.textCenter}>{index + 1}</td>
                       <td>
-                        <select className="misa-select" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={item.variantId} onChange={(event) => handleItemChange(event.localId, 'variantId', event.target.value)}>
+                        <select className="misa-select" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={item.variantId} onChange={(event) => handleItemChange(item.localId, 'variantId', event.target.value)}>
                           <option value="">Chọn hàng</option>
                           {products.map(productItem => <option key={productItem.id} value={productItem.id}>{productItem.sku}</option>)}
                         </select>
@@ -336,10 +353,10 @@ function CreateExportSlipPage() {
                         {item.serialNumberId && <div className={styles.serialTag}>{item.scannedCode}</div>}
                       </td>
                       <td className={styles.textRight}>
-                        <input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '80px', textAlign: 'center', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(event.localId, 'quantity', event.target.value)} />
+                        <input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '80px', textAlign: 'center', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
                       </td>
                       <td className={styles.textRight}>
-                        <input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price} onChange={(event) => handleItemChange(event.localId, 'price', event.target.value)} />
+                        <input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value)} />
                       </td>
                       <td className={`${styles.textRight} ${styles.textBlue}`}>{money(Number(item.quantity || 0) * Number(item.price || 0))}</td>
                       <td className={styles.textCenter}>
