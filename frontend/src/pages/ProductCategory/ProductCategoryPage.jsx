@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import axiosClient from '../../api/axiosClient';
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './ProductCategoryPage.module.css';
 
 const emptyForm = {
@@ -247,21 +248,17 @@ const ProductCategoryPage = () => {
                 return;
             }
 
-            const rows = [
-                ['STT', 'Mã danh mục', 'Tên danh mục', 'Danh mục cha', 'Trạng thái', 'Ngày tạo', 'Ngày cập nhật'],
-                ...exportData.map((item, index) => [
-                    index + 1,
-                    item.code,
-                    item.name,
-                    item.parentName || '',
-                    item.status === 'APPROVED' ? 'Đang sử dụng' : 'Ngừng sử dụng',
-                    item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '',
-                    item.updatedAt ? new Date(item.updatedAt).toLocaleString('vi-VN') : '',
-                ]),
-            ];
+            const headers = ['Mã danh mục', 'Tên danh mục', 'Danh mục cha', 'Trạng thái', 'Ngày tạo', 'Ngày cập nhật'];
+            const data = exportData.map((item) => [
+                item.code,
+                item.name,
+                item.parentName || '',
+                item.status === 'APPROVED' ? 'Đang sử dụng' : 'Ngừng sử dụng',
+                item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '',
+                item.updatedAt ? new Date(item.updatedAt).toLocaleString('vi-VN') : '',
+            ]);
 
-            const datePart = new Date().toISOString().slice(0, 10);
-            downloadCsv(`danh-muc-san-pham-${datePart}.csv`, rows);
+            exportToExcel(headers, data, 'Danh_sach_danh_muc_san_pham');
         } catch (error) {
             alert(getErrorMessage(error, 'Có lỗi xảy ra khi xuất Excel.'));
         }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as repairTicketApi from '../../api/repairTicketApi';
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './RepairTicketListPage.module.css';
 
 const STATUS_META = {
@@ -45,6 +46,20 @@ function RepairTicketListPage() {
     const [totalElements, setTotalElements] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    const handleExport = () => {
+        const headers = ['Mã phiếu sửa', 'Mã bảo hành', 'Khách hàng', 'Serial', 'Sản phẩm', 'Ngày tiếp nhận', 'Trạng thái'];
+        const data = rows.map(item => [
+            item.repairCode,
+            item.warrantyCode,
+            item.customerName,
+            item.serialCode,
+            item.productName,
+            item.receivedDate,
+            item.status.label
+        ]);
+        exportToExcel(headers, data, 'Danh_sach_phieu_sua_chua');
+    };
 
     const loadTickets = useCallback(async () => {
         setLoading(true);
@@ -135,6 +150,10 @@ function RepairTicketListPage() {
                     </div>
                     <div className={styles.filterActions}>
                         <button className={styles.outlineButton} type="button" onClick={() => setFilters(DEFAULT_FILTERS)}>Lam moi</button>
+                        <button className={styles.outlineButton} type="button" onClick={handleExport}>
+                            <i className="bi bi-file-earmark-excel"></i>
+                            Xuat Excel
+                        </button>
                         <button className={styles.primaryButton} type="button" onClick={loadTickets}>
                             <i className="bi bi-funnel"></i>
                             Loc du lieu

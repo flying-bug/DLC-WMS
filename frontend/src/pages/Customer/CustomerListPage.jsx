@@ -4,6 +4,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import CustomerQuickCreateDrawer from './components/CustomerQuickCreateDrawer';
 import Modal from '../../components/ui/Modal/Modal';
 // import { searchCustomers } from '../../api/customerApi'; // MOCK - Temporarily unused
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './CustomerListPage.module.css';
 
 const CustomerListPage = () => {
@@ -20,6 +21,20 @@ const CustomerListPage = () => {
 
     // Debounce search
     const debounceRef = useRef(null);
+
+    const handleExport = () => {
+        const headers = ['Mã khách hàng', 'Tên khách hàng', 'Địa chỉ', 'Mã số thuế', 'Số điện thoại', 'Trạng thái', 'Đơn hàng cuối'];
+        const data = customers.map(item => [
+            item.code,
+            item.name,
+            item.address || '',
+            item.taxCode || '',
+            item.phone,
+            item.status === 'APPROVED' ? 'Đang hoạt động' : 'Ngừng hoạt động',
+            item.lastOrder || ''
+        ]);
+        exportToExcel(headers, data, 'Danh_sach_khach_hang');
+    };
 
     // eslint-disable-next-line no-unused-vars
     const fetchCustomers = useCallback(async (keyword = '', currentPage = 0) => {
@@ -138,6 +153,9 @@ const CustomerListPage = () => {
                             </button>
                             <button className={styles.iconBtn} title="Cài đặt">
                                 <i className="fas fa-cog"></i>
+                            </button>
+                            <button className={styles.iconBtn} title="Xuất Excel" onClick={handleExport}>
+                                <i className="fas fa-file-excel"></i>
                             </button>
                             <button className={styles.btnImport} title="Nhập dữ liệu từ Excel">
                                 <i className="fas fa-file-import"></i> Nhập từ Excel

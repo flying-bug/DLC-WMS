@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import axiosClient from '../../api/axiosClient';
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './UnitPage.module.css';
 
 const UnitPage = () => {
@@ -22,6 +23,16 @@ const UnitPage = () => {
 
     // Dropdown state
     const [openDropdownId, setOpenDropdownId] = useState(null);
+
+    const handleExport = () => {
+        const headers = ['Đơn vị tính', 'Mô tả', 'Trạng thái'];
+        const data = units.map(unit => [
+            unit.name,
+            unit.description || '',
+            unit.status === 'ACTIVE' ? 'Đang sử dụng' : 'Ngừng sử dụng'
+        ]);
+        exportToExcel(headers, data, 'Danh_sach_don_vi_tinh');
+    };
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -153,7 +164,7 @@ const UnitPage = () => {
                     </div>
                     <div className={styles.actions}>
                         <button className={styles.iconBtn} onClick={fetchUnits} title="Tải lại"><i className="fas fa-sync-alt"></i></button>
-                        <button className={styles.iconBtn} title="Xuất Excel"><i className="fas fa-file-excel" style={{color: 'var(--color-excel)'}}></i></button>
+                        <button className={styles.iconBtn} onClick={handleExport} title="Xuất Excel"><i className="fas fa-file-excel" style={{color: 'var(--color-excel)'}}></i></button>
                         <button className={styles.primaryBtn} onClick={openAddModal}>Thêm</button>
                     </div>
                 </div>

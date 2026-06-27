@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import axiosClient from '../../api/axiosClient';
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './ProductPage.module.css';
 
 const defaultFormData = {
@@ -65,6 +66,21 @@ const ProductPage = () => {
 
     const [outOfStockCount, setOutOfStockCount] = useState(0);
     const [lowStockCount, setLowStockCount] = useState(0);
+
+    const handleExport = () => {
+        const headers = ['Mã sản phẩm', 'Tên sản phẩm', 'Danh mục', 'Thương hiệu', 'Đơn vị tính', 'Giá bán', 'Tồn kho', 'Trạng thái'];
+        const data = products.map(item => [
+            item.productCode,
+            item.productName,
+            item.categoryName || '',
+            item.brandName || '',
+            item.unitName || '',
+            item.salePrice,
+            item.stockQty || 0,
+            item.active ? 'Đang hoạt động' : 'Ngừng hoạt động'
+        ]);
+        exportToExcel(headers, data, 'Danh_sach_san_pham');
+    };
 
     const showToast = (type, message) => {
         setToast({ isVisible: true, type, message });
@@ -520,7 +536,7 @@ const ProductPage = () => {
                         <button className={styles.iconBtn} onClick={fetchProducts} title="Tai lai">
                             <i className="fas fa-sync-alt"></i>
                         </button>
-                        <button className={styles.iconBtn} title="Xuat Excel" onClick={handleExportExcel}>
+                        <button className={styles.iconBtn} title="Xuat Excel" onClick={handleExport}>
                             <i className="fas fa-file-excel"></i>
                         </button>
                         <button className={styles.iconBtn} title="Thiet lap cot">

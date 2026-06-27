@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './ExportSlipPage.module.css';
 
 const STATUS_LABELS = {
@@ -93,6 +94,19 @@ function ExportSlipPage() {
     };
   });
 
+  const handleExport = () => {
+    const headers = ['Ngày hạch toán', 'Số chứng từ', 'Diễn giải', 'Tổng tiền', 'Kho xuất', 'Trạng thái'];
+    const data = rows.map(item => [
+      item.date,
+      item.docCode,
+      item.note || '',
+      item.total,
+      item.warehouse,
+      item.statusLabel
+    ]);
+    exportToExcel(headers, data, 'Danh_sach_phieu_xuat_kho');
+  };
+
   const toggleAll = (event) => {
     setSelectedIds(event.target.checked ? rows.map(row => row.id) : []);
   };
@@ -151,6 +165,9 @@ function ExportSlipPage() {
           <div className={styles.pageControls}>
             <button className={styles.btnOutline} onClick={() => setFilters({ docCode: '', fromDate: '', status: '' })}>
               Làm mới
+            </button>
+            <button className={styles.btnOutline} onClick={handleExport}>
+              <i className="bi bi-file-earmark-excel"></i> Xuất Excel
             </button>
             <button className={styles.btnPrimary} onClick={loadSlips}>
               <i className="bi bi-funnel"></i> Lọc dữ liệu

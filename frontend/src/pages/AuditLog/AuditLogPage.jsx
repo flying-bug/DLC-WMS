@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './AuditLogPage.module.css';
 
 const formatDateTime = (isoString) => {
@@ -164,6 +165,18 @@ function AuditLogPage() {
         fetchLogs();
     }, [fetchLogs]);
 
+    const handleExport = () => {
+        const headers = ['Thời gian', 'Người dùng', 'Thao tác', 'Phân hệ', 'Địa chỉ IP'];
+        const data = logs.map(log => [
+            formatDateTime(log.timestamp),
+            log.user,
+            log.action,
+            getModuleLabel(log.module),
+            log.ipAddress || ''
+        ]);
+        exportToExcel(headers, data, 'Nhat_ky_he_thong');
+    };
+
     const handlePageChange = (newPage) => {
         if (newPage >= 0 && newPage < totalPages) {
             setPage(newPage);
@@ -279,6 +292,9 @@ function AuditLogPage() {
                     <div className={styles.filterAction}>
                         <button className={styles.btnSearch} onClick={() => { setDebouncedSearch(searchTerm); setPage(0); }}>
                             <i className="bi bi-search"></i> Tra cứu
+                        </button>
+                        <button className={styles.btnSearch} onClick={handleExport} style={{ marginLeft: '10px', backgroundColor: '#10b981' }}>
+                            <i className="bi bi-file-earmark-excel"></i> Xuất Excel
                         </button>
                     </div>
                 </div>

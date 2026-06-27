@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warrantyApi from '../../api/warrantyApi';
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './WarrantyListPage.module.css';
 
 const STATUS_META = {
@@ -38,6 +39,21 @@ function WarrantyListPage() {
     const [totalElements, setTotalElements] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    const handleExport = () => {
+        const headers = ['Mã bảo hành', 'Khách hàng', 'Số điện thoại', 'Serial', 'Sản phẩm', 'Ngày bắt đầu', 'Ngày hết hạn', 'Trạng thái'];
+        const data = rows.map(item => [
+            item.warrantyCode || `BH-${item.id}`,
+            item.customerName,
+            item.customerPhone,
+            item.serialCode || '',
+            item.productName,
+            item.startDateText,
+            item.endDateText,
+            item.statusLabel
+        ]);
+        exportToExcel(headers, data, 'Danh_sach_bao_hanh');
+    };
 
     const loadWarranties = useCallback(async () => {
         setLoading(true);
@@ -182,6 +198,10 @@ function WarrantyListPage() {
                     </div>
                     <div className={styles.filterActions}>
                         <button className={styles.outlineButton} type="button" onClick={resetFilters}>Lam moi</button>
+                        <button className={styles.outlineButton} type="button" onClick={handleExport}>
+                            <i className="bi bi-file-earmark-excel"></i>
+                            Xuat Excel
+                        </button>
                         <button className={styles.primaryButton} type="button" onClick={loadWarranties}>
                             <i className="bi bi-funnel"></i>
                             Loc du lieu

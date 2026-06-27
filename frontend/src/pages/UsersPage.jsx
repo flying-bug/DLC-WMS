@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
+import { exportToExcel } from '../utils/excelExport';
 import styles from './UsersPage.module.css';
 import UserProfileDropdown from '../components/ui/UserProfileDropdown/UserProfileDropdown';
 import EmployeeDrawer from '../components/ui/EmployeeDrawer/EmployeeDrawer';
@@ -194,6 +195,20 @@ function UsersPage() {
         }
     };
 
+    const handleExport = () => {
+        const headers = ['Mã nhân viên', 'Họ và tên', 'Email', 'Số điện thoại', 'Bộ phận', 'Vai trò', 'Trạng thái'];
+        const data = usersData.map(item => [
+            item.code,
+            item.name,
+            item.email,
+            item.phone,
+            item.department,
+            item.position,
+            item.statusLabel
+        ]);
+        exportToExcel(headers, data, 'Danh_sach_nguoi_dung');
+    };
+
     // Calculate dynamic stats
     const totalStaff = usersData.length;
     const activeStaff = usersData.filter(u => u.status === 'APPROVED').length;
@@ -277,6 +292,9 @@ function UsersPage() {
                             <i className="bi bi-search" />
                             <input type="text" placeholder="Tìm kiếm theo tên, mã hoặc email..." />
                         </div>
+                        <button className={styles.btnFilter} onClick={handleExport} style={{ marginRight: '10px' }}>
+                            <i className="bi bi-file-earmark-excel" /> Xuất Excel
+                        </button>
                         <button className={styles.btnFilter}>
                             <i className="bi bi-funnel" /> Bộ lọc
                         </button>
