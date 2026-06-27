@@ -25,26 +25,6 @@ const getErrorMessage = (error, fallback) => (
     || fallback
 );
 
-const escapeCsvCell = (value) => {
-    if (value === undefined || value === null) {
-        return '';
-    }
-    return `"${String(value).replace(/"/g, '""')}"`;
-};
-
-const downloadCsv = (filename, rows) => {
-    const csvContent = rows.map((row) => row.map(escapeCsvCell).join(',')).join('\r\n');
-    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-};
-
 const ProductCategoryPage = () => {
     const navigate = useNavigate();
     const [categories, setCategories] = useState([]);

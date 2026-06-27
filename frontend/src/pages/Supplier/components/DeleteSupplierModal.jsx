@@ -1,5 +1,3 @@
-import styles from './DeleteSupplierModal.module.css';
-
 const DeleteSupplierModal = ({ supplier, onClose, onDelete }) => {
     
     const handleBackdropClick = (e) => {

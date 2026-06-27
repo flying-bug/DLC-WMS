@@ -1,5 +1,3 @@
-import styles from './BrandDeleteModal.module.css';
-
 const BrandDeleteModal = ({ isOpen, onClose, onConfirm, brand }) => {
     if (!isOpen || !brand) return null;
 

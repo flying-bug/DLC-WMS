@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import CustomerQuickCreateDrawer from './components/CustomerQuickCreateDrawer';
 import Modal from '../../components/ui/Modal/Modal';
-import { searchCustomers, deactivateCustomer } from '../../api/customerApi';
+import { searchCustomers, deactivateCustomer, updateCustomer } from '../../api/customerApi';
 import { exportToExcel } from '../../utils/excelExport';
 import styles from './CustomerListPage.module.css';
 
