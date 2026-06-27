@@ -137,3 +137,217 @@ textarea {
   background-color: var(--status-danger-bg);
   color: var(--status-danger-text);
 }
+
+.misa-textarea {
+  width: 100%;
+  min-height: 80px;
+  border: 1px solid var(--form-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text-strong);
+  font-size: var(--font-size-body);
+  padding: 8px 12px;
+  outline: none;
+  resize: vertical;
+}
+
+.misa-textarea:focus {
+  border-color: var(--form-focus-border);
+  box-shadow: var(--shadow-focus-primary);
+}
+
+/* ── MISA Button styles for forms ── */
+.btn-misa-cancel {
+  background-color: #ffffff !important;
+  border: 1px solid var(--color-border-field) !important;
+  color: var(--color-text-secondary) !important;
+  font-weight: 600 !important;
+  height: var(--height-control) !important;
+  padding: 0 16px !important;
+  border-radius: var(--radius-control) !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+.btn-misa-cancel:hover {
+  background-color: var(--color-bg-control-hover) !important;
+}
+
+.btn-misa-draft {
+  background-color: #ffffff !important;
+  border: 1px solid var(--color-primary) !important;
+  color: var(--color-primary) !important;
+  font-weight: 600 !important;
+  height: var(--height-control) !important;
+  padding: 0 16px !important;
+  border-radius: var(--radius-control) !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+.btn-misa-draft:hover {
+  background-color: var(--color-primary-soft) !important;
+}
+
+.btn-misa-save {
+  background-color: var(--color-primary) !important;
+  border: 1px solid var(--color-primary) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  height: var(--height-control) !important;
+  padding: 0 20px !important;
+  border-radius: var(--radius-control) !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+.btn-misa-save:hover:not(:disabled) {
+  background-color: var(--color-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
+}
+
+.btn-misa-post {
+  background-color: var(--color-success-action) !important;
+  border: 1px solid var(--color-success-action) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  height: var(--height-control) !important;
+  padding: 0 20px !important;
+  border-radius: var(--radius-control) !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+.btn-misa-post:hover:not(:disabled) {
+  background-color: var(--color-success-action-hover) !important;
+  border-color: var(--color-success-action-hover) !important;
+}
+
+.btn-misa-cancel:disabled,
+.btn-misa-draft:disabled,
+.btn-misa-save:disabled,
+.btn-misa-post:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+/* ── MISA Modal System ── */
+.misa-modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: rgba(30, 41, 59, 0.6) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  z-index: 1000 !important;
+  animation: misa-fadeIn 0.2s ease-in-out !important;
+}
+
+.misa-modal {
+  background-color: var(--color-canvas, #ffffff) !important;
+  width: 650px !important; /* default width */
+  max-width: 95vw !important;
+  max-height: 90vh !important;
+  border-radius: 8px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.05) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border: 1px solid var(--color-border, #e2e8f0) !important;
+  animation: misa-slideUp 0.25s ease-out !important;
+}
+
+.misa-modal-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 16px 24px !important;
+  border-bottom: 1px solid var(--color-border, #e2e8f0) !important;
+}
+
+.misa-modal-header h3,
+.misa-modal-header h2 {
+  margin: 0 !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: var(--color-text-strong, #1e293b) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.misa-modal-body {
+  padding: 24px !important;
+  overflow-y: auto !important;
+  flex: 1 !important;
+}
+
+.misa-modal-footer {
+  padding: 16px 24px !important;
+  border-top: 1px solid var(--color-border, #e2e8f0) !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  background-color: var(--color-bg-soft, #f8fafc) !important;
+}
+
+/* ── MISA Form Layout helpers ── */
+.misa-form-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  margin-bottom: 16px !important;
+}
+
+.misa-form-group label {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--color-text-strong, #1e293b) !important;
+}
+
+.misa-form-group .required {
+  color: #ef4444 !important;
+}
+
+.misa-form-row {
+  display: flex !important;
+  gap: 16px !important;
+  width: 100% !important;
+}
+
+.misa-form-row .misa-form-group {
+  flex: 1 !important;
+}
+
+/* Danger Button style for Delete/Warning popups */
+.btn-misa-danger {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  border: 1px solid #ef4444 !important;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-misa-danger:hover {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+}
+

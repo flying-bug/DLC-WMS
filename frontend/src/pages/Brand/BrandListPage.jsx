@@ -4,6 +4,7 @@ import Pagination from '../../components/ui/Pagination/Pagination';
 import BrandDetailDrawer from './components/BrandDetailDrawer';
 import BrandModal from './components/BrandModal';
 import BrandDeleteModal from './components/BrandDeleteModal';
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './BrandListPage.module.css';
 
 const mockBrands = Array.from({ length: 45 }, (_, i) => ({
@@ -29,6 +30,17 @@ const BrandListPage = () => {
     // Pagination states (mock)
     const [page, setPage] = useState(0);
     const [size, setSize] = useState(10);
+
+    const handleExport = () => {
+        const headers = ['Mã thương hiệu', 'Tên thương hiệu', 'Mô tả', 'Trạng thái'];
+        const data = filteredBrands.map(brand => [
+            brand.code,
+            brand.name,
+            brand.description,
+            brand.status === 'ACTIVE' ? 'Đang hợp tác' : 'Ngừng hợp tác'
+        ]);
+        exportToExcel(headers, data, 'Danh_sach_thuong_hieu');
+    };
 
     const getStatusBadge = (status) => {
         if (status === 'ACTIVE') {
@@ -66,7 +78,7 @@ const BrandListPage = () => {
                         <p className={styles.pageSubtitle}>Quản lý danh sách các thương hiệu điện tử đối tác.</p>
                     </div>
                     <div className={styles.actionButtons}>
-                        <button className={styles.btnExport} type="button">
+                        <button className={styles.btnExport} type="button" onClick={handleExport}>
                             <i className="fas fa-download"></i> Xuất file
                         </button>
                         <button className={styles.btnAdd} type="button" onClick={() => {

@@ -162,28 +162,26 @@ function UpdateImportSlipPage() {
                   </h2>
                 </div>
 
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Nhà cung cấp</label>
-                    <select className={styles.formInput} value={form.partnerId} onChange={(e) => handleFormChange('partnerId', e.target.value)}>
+                <div className="misa-form-row">
+                  <div className="misa-form-group">
+                    <label className="misa-label">Nhà cung cấp</label>
+                    <select className="misa-select" value={form.partnerId} onChange={(e) => handleFormChange('partnerId', e.target.value)}>
                       <option value="">Chưa chọn</option>
                       {suppliers.map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.code} - {supplier.name}</option>)}
                     </select>
                   </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Kho nhập</label>
-                    <select className={styles.formInput} value={form.warehouseId} onChange={(e) => handleFormChange('warehouseId', e.target.value)}>
+                  <div className="misa-form-group">
+                    <label className="misa-label">Kho nhập <span className="required">*</span></label>
+                    <select className="misa-select" value={form.warehouseId} onChange={(e) => handleFormChange('warehouseId', e.target.value)}>
                       <option value="">Chọn kho</option>
                       {warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} - {warehouse.name}</option>)}
                     </select>
                   </div>
                 </div>
 
-                <div className={styles.formRow} style={{ marginBottom: 0 }}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Lý do nhập</label>
-                    <textarea className={styles.formInput} value={form.note} onChange={(e) => handleFormChange('note', e.target.value)} />
-                  </div>
+                <div className="misa-form-group" style={{ marginTop: '12px' }}>
+                  <label className="misa-label">Lý do nhập</label>
+                  <textarea className="misa-textarea" value={form.note} onChange={(e) => handleFormChange('note', e.target.value)} style={{ minHeight: '60px' }} />
                 </div>
               </div>
 
@@ -195,28 +193,22 @@ function UpdateImportSlipPage() {
                   </h2>
                 </div>
 
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Ngày ghi nhận</label>
-                    <input type="date" className={styles.formInput} value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
-                  </div>
+                <div className="misa-form-group" style={{ marginBottom: '16px' }}>
+                  <label className="misa-label">Ngày ghi nhận <span className="required">*</span></label>
+                  <input type="date" className="misa-input" value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
                 </div>
 
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Số phiếu</label>
-                    <input className={styles.formInput} value={form.docCode} onChange={(e) => handleFormChange('docCode', e.target.value)} />
-                  </div>
+                <div className="misa-form-group" style={{ marginBottom: '16px' }}>
+                  <label className="misa-label">Số phiếu</label>
+                  <input className="misa-input" value={form.docCode} onChange={(e) => handleFormChange('docCode', e.target.value)} />
                 </div>
 
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Trạng thái</label>
-                    <select className={styles.formInput} value={form.status} onChange={(e) => handleFormChange('status', e.target.value)}>
-                      <option value="DRAFT">Lưu tạm</option>
-                      <option value="SUBMITTED">Chờ duyệt</option>
-                    </select>
-                  </div>
+                <div className="misa-form-group">
+                  <label className="misa-label">Trạng thái</label>
+                  <select className="misa-select" value={form.status} onChange={(e) => handleFormChange('status', e.target.value)}>
+                    <option value="DRAFT">Lưu tạm</option>
+                    <option value="SUBMITTED">Chờ duyệt</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -250,15 +242,15 @@ function UpdateImportSlipPage() {
                         <tr key={item.localId}>
                           <td className={styles.textCenter}>{index + 1}</td>
                           <td>
-                            <select className={styles.tableSelect} value={item.variantId} onChange={(e) => handleItemChange(item.localId, 'variantId', e.target.value)}>
+                            <select className="misa-select" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={item.variantId} onChange={(e) => handleItemChange(item.localId, 'variantId', e.target.value)}>
                               <option value="">Chọn hàng</option>
                               {products.map(productItem => <option key={productItem.id} value={productItem.id}>{productItem.sku}</option>)}
                             </select>
                           </td>
                           <td>{variantLabel(product)}</td>
                           <td>{product?.unitName || ''}</td>
-                          <td><input type="number" min="0" className={`${styles.tableInput} ${styles.textCenter}`} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} /></td>
-                          <td><input type="number" min="0" className={`${styles.tableInput} ${styles.textRight}`} value={item.price} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value)} /></td>
+                          <td><input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '80px', textAlign: 'center', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} /></td>
+                          <td><input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value)} /></td>
                           <td className={`${styles.textRight} ${styles.boldText}`}>{money(Number(item.quantity || 0) * Number(item.price || 0))}</td>
                           <td><button className={styles.deleteBtn} onClick={() => removeItem(item.localId)}><i className="bi bi-trash"></i></button></td>
                         </tr>
@@ -283,12 +275,12 @@ function UpdateImportSlipPage() {
 
         <div className={styles.stickyFooter}>
           <div className={styles.footerLeft}>
-            <button className={styles.btnDefault} onClick={() => navigate('/import-history')}>Hủy bỏ</button>
+            <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>Hủy bỏ</button>
           </div>
           <div className={styles.footerRight}>
-            <button className={styles.btnOutline} style={{ color: 'var(--color-primary)' }} disabled={saving || loading} onClick={() => submit('DRAFT')}>Lưu tạm</button>
-            <button className={styles.btnSuccess} disabled={!isFormValid || saving || loading} onClick={() => submit('SUBMITTED')}><i className="bi bi-save"></i> Lưu lại</button>
-            <button className={styles.btnPrimary} disabled={!isFormValid || saving || loading} onClick={() => submit('SUBMITTED', true)}><i className="bi bi-printer"></i> Lưu và ghi sổ</button>
+            <button className="btn-misa-draft" disabled={saving || loading} onClick={() => submit('DRAFT')}>Lưu tạm</button>
+            <button className="btn-misa-save" disabled={!isFormValid || saving || loading} onClick={() => submit('SUBMITTED')}><i className="bi bi-save"></i> Lưu lại</button>
+            <button className="btn-misa-post" disabled={!isFormValid || saving || loading} onClick={() => submit('SUBMITTED', true)}><i className="bi bi-printer"></i> Lưu và ghi sổ</button>
           </div>
         </div>
       </div>

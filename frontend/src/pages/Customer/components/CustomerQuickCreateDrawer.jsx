@@ -147,7 +147,7 @@ const CustomerQuickCreateDrawer = ({ isOpen, editData, onClose, onSaved }) => {
                                 placeholder="Nhập tên khách hàng..."
                                 value={form.name}
                                 onChange={handleChange}
-                                className={`${styles.input} ${errors.name ? styles.inputError : ''}`}
+                                className={`misa-input ${errors.name ? styles.inputError : ''}`}
                                 maxLength={150}
                             />
                             {errors.name && <span className={styles.errorMsg}>{errors.name}</span>}
@@ -165,7 +165,7 @@ const CustomerQuickCreateDrawer = ({ isOpen, editData, onClose, onSaved }) => {
                                 placeholder="VD: 0901234567"
                                 value={form.phone}
                                 onChange={handleChange}
-                                className={`${styles.input} ${errors.phone ? styles.inputError : ''}`}
+                                className={`misa-input ${errors.phone ? styles.inputError : ''}`}
                             />
                             {errors.phone && <span className={styles.errorMsg}>{errors.phone}</span>}
                             {phoneWarning && <span className={styles.warningMsg}>{phoneWarning}</span>}
@@ -179,7 +179,7 @@ const CustomerQuickCreateDrawer = ({ isOpen, editData, onClose, onSaved }) => {
                                 name="groupType"
                                 value={form.groupType}
                                 onChange={handleChange}
-                                className={styles.select}
+                                className="misa-select"
                             >
                                 {GROUP_OPTIONS.map(opt => (
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -197,7 +197,7 @@ const CustomerQuickCreateDrawer = ({ isOpen, editData, onClose, onSaved }) => {
                                 placeholder="Nhập email (không bắt buộc)"
                                 value={form.email}
                                 onChange={handleChange}
-                                className={`${styles.input} ${errors.email ? styles.inputError : ''}`}
+                                className={`misa-input ${errors.email ? styles.inputError : ''}`}
                                 maxLength={100}
                             />
                             {errors.email && <span className={styles.errorMsg}>{errors.email}</span>}
@@ -212,7 +212,7 @@ const CustomerQuickCreateDrawer = ({ isOpen, editData, onClose, onSaved }) => {
                                 placeholder="Nhập địa chỉ (không bắt buộc)"
                                 value={form.address}
                                 onChange={handleChange}
-                                className={`${styles.textarea} ${errors.address ? styles.inputError : ''}`}
+                                className={`misa-textarea ${errors.address ? styles.inputError : ''}`}
                                 rows={3}
                                 maxLength={1000}
                             />
@@ -222,13 +222,13 @@ const CustomerQuickCreateDrawer = ({ isOpen, editData, onClose, onSaved }) => {
 
                     {/* Footer Actions */}
                     <div className={styles.drawerFooter}>
-                        <button type="button" id="btn-cancel-drawer" className={styles.btnCancel} onClick={onClose}>
+                        <button type="button" id="btn-cancel-drawer" className="btn-misa-cancel" onClick={onClose}>
                             Hủy
                         </button>
                         <button
                             type="submit"
                             id="btn-submit-drawer"
-                            className={styles.btnSave}
+                            className="btn-misa-save"
                             disabled={submitting}
                         >
                             {submitting

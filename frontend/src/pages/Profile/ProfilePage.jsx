@@ -7,7 +7,7 @@ function ProfilePage() {
     const navigate = useNavigate();
     const userRole = localStorage.getItem('role') || 'STAFF';
     const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN';
-    const displayRole = isSuperAdmin ? 'Super Admin' : userRole === 'MANAGER' ? 'Manager' : 'Staff';
+    const displayRole = isSuperAdmin ? 'Quản trị viên' : userRole === 'MANAGER' ? 'Quản lý' : 'Nhân viên';
     const email = isSuperAdmin ? 'admin@duylong.vn' : userRole === 'MANAGER' ? 'manager@duylong.vn' : 'staff@duylong.vn';
     const phone = '0987 654 321';
     const fullName = isSuperAdmin ? 'Nguyễn Đức Long' : userRole === 'MANAGER' ? 'Trần Văn Bình' : 'Lê Hoàng Nam';

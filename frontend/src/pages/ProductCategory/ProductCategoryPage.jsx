@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import axiosClient from '../../api/axiosClient';
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './ProductCategoryPage.module.css';
 
 const emptyForm = {
@@ -23,26 +24,6 @@ const getErrorMessage = (error, fallback) => (
     || error.response?.data?.error
     || fallback
 );
-
-const escapeCsvCell = (value) => {
-    if (value === undefined || value === null) {
-        return '';
-    }
-    return `"${String(value).replace(/"/g, '""')}"`;
-};
-
-const downloadCsv = (filename, rows) => {
-    const csvContent = rows.map((row) => row.map(escapeCsvCell).join(',')).join('\r\n');
-    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-};
 
 const ProductCategoryPage = () => {
     const navigate = useNavigate();
@@ -247,21 +228,17 @@ const ProductCategoryPage = () => {
                 return;
             }
 
-            const rows = [
-                ['STT', 'Mã danh mục', 'Tên danh mục', 'Danh mục cha', 'Trạng thái', 'Ngày tạo', 'Ngày cập nhật'],
-                ...exportData.map((item, index) => [
-                    index + 1,
-                    item.code,
-                    item.name,
-                    item.parentName || '',
-                    item.status === 'APPROVED' ? 'Đang sử dụng' : 'Ngừng sử dụng',
-                    item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '',
-                    item.updatedAt ? new Date(item.updatedAt).toLocaleString('vi-VN') : '',
-                ]),
-            ];
+            const headers = ['Mã danh mục', 'Tên danh mục', 'Danh mục cha', 'Trạng thái', 'Ngày tạo', 'Ngày cập nhật'];
+            const data = exportData.map((item) => [
+                item.code,
+                item.name,
+                item.parentName || '',
+                item.status === 'APPROVED' ? 'Đang sử dụng' : 'Ngừng sử dụng',
+                item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '',
+                item.updatedAt ? new Date(item.updatedAt).toLocaleString('vi-VN') : '',
+            ]);
 
-            const datePart = new Date().toISOString().slice(0, 10);
-            downloadCsv(`danh-muc-san-pham-${datePart}.csv`, rows);
+            exportToExcel(headers, data, 'Danh_sach_danh_muc_san_pham');
         } catch (error) {
             alert(getErrorMessage(error, 'Có lỗi xảy ra khi xuất Excel.'));
         }
@@ -395,32 +372,30 @@ const ProductCategoryPage = () => {
             </div>
 
             {showModal && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modal}>
-                        <div className={styles.modalHeader}>
+                <div className="misa-modal-overlay">
+                    <div className="misa-modal">
+                        <div className="misa-modal-header">
                             <h3>{isEdit ? 'Sửa danh mục sản phẩm' : 'Thêm danh mục sản phẩm'}</h3>
-                            <button className={styles.closeBtn} onClick={() => setShowModal(false)} type="button">
-                                <i className="fas fa-times"></i>
-                            </button>
+                            <i className="fas fa-times" onClick={() => setShowModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
                         </div>
-                        <div className={styles.modalBody}>
+                        <div className="misa-modal-body">
                             {errorMsg && <div className={styles.errorAlert}>{errorMsg}</div>}
 
-                            <div className={styles.formRow}>
-                                <div className={styles.formGroup}>
-                                    <label>Mã danh mục <span className={styles.required}>*</span></label>
+                            <div className="misa-form-row">
+                                <div className="misa-form-group">
+                                    <label>Mã danh mục <span className="required">*</span></label>
                                     <input
-                                        className={styles.inputField}
+                                        className="misa-input"
                                         value={formData.code}
                                         onChange={(event) => setFormData({ ...formData, code: event.target.value.toUpperCase() })}
                                         placeholder="Ví dụ: CPU"
                                         autoFocus
                                     />
                                 </div>
-                                <div className={styles.formGroup}>
-                                    <label>Tên danh mục <span className={styles.required}>*</span></label>
+                                <div className="misa-form-group">
+                                    <label>Tên danh mục <span className="required">*</span></label>
                                     <input
-                                        className={styles.inputField}
+                                        className="misa-input"
                                         value={formData.name}
                                         onChange={(event) => setFormData({ ...formData, name: event.target.value })}
                                         placeholder="Ví dụ: Bộ vi xử lý"
@@ -428,11 +403,11 @@ const ProductCategoryPage = () => {
                                 </div>
                             </div>
 
-                            <div className={styles.formRow}>
-                                <div className={styles.formGroup}>
+                            <div className="misa-form-row">
+                                <div className="misa-form-group">
                                     <label>Danh mục cha</label>
                                     <select
-                                        className={styles.inputField}
+                                        className="misa-select"
                                         value={formData.parentId}
                                         onChange={(event) => setFormData({ ...formData, parentId: event.target.value })}
                                     >
@@ -444,10 +419,10 @@ const ProductCategoryPage = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <div className={styles.formGroup}>
+                                <div className="misa-form-group">
                                     <label>Trạng thái</label>
                                     <select
-                                        className={styles.inputField}
+                                        className="misa-select"
                                         value={formData.status}
                                         onChange={(event) => setFormData({ ...formData, status: event.target.value })}
                                     >
@@ -458,15 +433,15 @@ const ProductCategoryPage = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className={styles.modalFooter}>
-                            <button className={styles.btnCancel} onClick={() => setShowModal(false)} type="button">Hủy</button>
-                            <div className={styles.rightButtons}>
-                                <button className={styles.btnSave} onClick={() => handleSave(true)} type="button">Cất</button>
+                        <div className="misa-modal-footer">
+                            <button className="btn-misa-cancel" onClick={() => setShowModal(false)} type="button">Hủy</button>
+                            <div className={styles.rightButtons} style={{ display: 'flex', gap: '12px' }}>
                                 {!isEdit && (
-                                    <button className={styles.btnSaveAndAdd} onClick={() => handleSave(false)} type="button">
+                                    <button className="btn-misa-draft" onClick={() => handleSave(false)} type="button">
                                         Cất và Thêm
                                     </button>
                                 )}
+                                <button className="btn-misa-save" onClick={() => handleSave(true)} type="button">Cất</button>
                             </div>
                         </div>
                     </div>
