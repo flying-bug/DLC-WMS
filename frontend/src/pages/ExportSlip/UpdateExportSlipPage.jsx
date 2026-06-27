@@ -147,33 +147,27 @@ function UpdateExportSlipPage() {
                   <i className="bi bi-person-fill"></i> Thông tin chung
                 </div>
                 <div className={styles.cardBody}>
-                  <div className={styles.formGrid}>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Kho xuất</label>
-                      <div className={styles.inputWrapper}>
-                        <select className={styles.select} value={form.warehouseId} onChange={(event) => handleFormChange('warehouseId', event.target.value)}>
-                          <option value="">Chọn kho</option>
-                          {warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} - {warehouse.name}</option>)}
-                        </select>
-                      </div>
+                  <div className="misa-form-row">
+                    <div className="misa-form-group">
+                      <label className="misa-label">Kho xuất <span className="required">*</span></label>
+                      <select className="misa-select" value={form.warehouseId} onChange={(event) => handleFormChange('warehouseId', event.target.value)}>
+                        <option value="">Chọn kho</option>
+                        {warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} - {warehouse.name}</option>)}
+                      </select>
                     </div>
 
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Trạng thái</label>
-                      <div className={styles.inputWrapper}>
-                        <select className={styles.select} value={form.status} onChange={(event) => handleFormChange('status', event.target.value)}>
-                          <option value="DRAFT">Lưu tạm</option>
-                          <option value="SUBMITTED">Chờ duyệt</option>
-                        </select>
-                      </div>
+                    <div className="misa-form-group">
+                      <label className="misa-label">Trạng thái</label>
+                      <select className="misa-select" value={form.status} onChange={(event) => handleFormChange('status', event.target.value)}>
+                        <option value="DRAFT">Lưu tạm</option>
+                        <option value="SUBMITTED">Chờ duyệt</option>
+                      </select>
                     </div>
+                  </div>
 
-                    <div className={styles.formGroupFull}>
-                      <label className={styles.label}>Lý do xuất</label>
-                      <div className={styles.inputWrapper}>
-                        <input className={styles.input} value={form.note} onChange={(event) => handleFormChange('note', event.target.value)} />
-                      </div>
-                    </div>
+                  <div className="misa-form-group" style={{ marginTop: '12px' }}>
+                    <label className="misa-label">Lý do xuất</label>
+                    <input className="misa-input" value={form.note} onChange={(event) => handleFormChange('note', event.target.value)} />
                   </div>
                 </div>
               </div>
@@ -183,18 +177,14 @@ function UpdateExportSlipPage() {
                   <i className="bi bi-file-earmark-text-fill"></i> Thông tin chứng từ
                 </div>
                 <div className={styles.cardBody}>
-                  <div className={styles.formGroup} style={{ marginBottom: '16px' }}>
-                    <label className={styles.label}>Ngày ghi nhận</label>
-                    <div className={styles.inputWrapper}>
-                      <input type="date" className={styles.input} value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
-                    </div>
+                  <div className="misa-form-group" style={{ marginBottom: '16px' }}>
+                    <label className="misa-label">Ngày ghi nhận <span className="required">*</span></label>
+                    <input type="date" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
                   </div>
 
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Số phiếu</label>
-                    <div className={styles.inputWrapper}>
-                      <input className={styles.input} value={form.docCode} onChange={(event) => handleFormChange('docCode', event.target.value)} />
-                    </div>
+                  <div className="misa-form-group">
+                    <label className="misa-label">Số phiếu</label>
+                    <input className="misa-input" value={form.docCode} onChange={(event) => handleFormChange('docCode', event.target.value)} />
                   </div>
                 </div>
               </div>
@@ -202,7 +192,7 @@ function UpdateExportSlipPage() {
 
             <div className={styles.card}>
               <div className={styles.tableHeaderRow}>
-                <div className={styles.tableTitle}>Bảng hàng tiền</div>
+                <div className={styles.tableTitle}>Bảng hàng hóa</div>
                 <button className={styles.btnAddRow} onClick={addItem}>
                   <i className="bi bi-plus-lg"></i> Thêm dòng
                 </button>
@@ -215,7 +205,7 @@ function UpdateExportSlipPage() {
                       <th className={styles.textCenter}>#</th>
                       <th>Mã hàng</th>
                       <th>Tên hàng</th>
-                      <th>DVT</th>
+                      <th>ĐVT</th>
                       <th className={styles.textRight}>Số lượng</th>
                       <th className={styles.textRight}>Đơn giá</th>
                       <th className={styles.textRight}>Thành tiền</th>
@@ -229,7 +219,7 @@ function UpdateExportSlipPage() {
                         <tr key={item.localId}>
                           <td className={styles.textCenter}>{index + 1}</td>
                           <td>
-                            <select className={styles.tableSelect} value={item.variantId} onChange={(event) => handleItemChange(item.localId, 'variantId', event.target.value)}>
+                            <select className="misa-select" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={item.variantId} onChange={(event) => handleItemChange(item.localId, 'variantId', event.target.value)}>
                               <option value="">Chọn hàng</option>
                               {products.map(productItem => <option key={productItem.id} value={productItem.id}>{productItem.sku}</option>)}
                             </select>
@@ -237,10 +227,10 @@ function UpdateExportSlipPage() {
                           <td>{variantLabel(product)}</td>
                           <td>{product?.unitName || ''}</td>
                           <td className={styles.textRight}>
-                            <input type="number" min="0" className={`${styles.tableInput} ${styles.textRight}`} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
+                            <input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '80px', textAlign: 'center', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
                           </td>
                           <td className={styles.textRight}>
-                            <input type="number" min="0" className={`${styles.tableInput} ${styles.textRight}`} value={item.price} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value)} />
+                            <input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value)} />
                           </td>
                           <td className={`${styles.textRight} ${styles.textBlue}`}>{money(Number(item.quantity || 0) * Number(item.price || 0))}</td>
                           <td className={styles.textCenter}>
@@ -271,18 +261,17 @@ function UpdateExportSlipPage() {
       </div>
 
       <div className={styles.bottomBar}>
-        <button className={styles.attachmentBtn} onClick={() => navigate('/export-slips')}>
-          <i className="bi bi-arrow-left" style={{ fontSize: '18px' }}></i> Quay lại
+        <button className="btn-misa-cancel" onClick={() => navigate('/export-slips')}>
+          Hủy bỏ
         </button>
         <div className={styles.actionButtons}>
-          <button className={styles.btnCancel} onClick={() => navigate('/export-slips')}>Hủy</button>
-          <button className={styles.btnDraft} disabled={saving || loading} onClick={() => submit('DRAFT')}>
+          <button className="btn-misa-draft" disabled={saving || loading} onClick={() => submit('DRAFT')}>
             <i className="bi bi-save"></i> Lưu tạm
           </button>
-          <button className={styles.btnSave} disabled={!isFormValid || saving || loading} onClick={() => submit('SUBMITTED')}>
+          <button className="btn-misa-save" disabled={!isFormValid || saving || loading} onClick={() => submit('SUBMITTED')}>
             <i className="bi bi-check-circle"></i> Lưu lại
           </button>
-          <button className={styles.btnSavePrint} disabled={!isFormValid || saving || loading} onClick={() => submit('SUBMITTED', true)}>
+          <button className="btn-misa-post" disabled={!isFormValid || saving || loading} onClick={() => submit('SUBMITTED', true)}>
             <i className="bi bi-printer"></i> Lưu và ghi sổ
           </button>
         </div>

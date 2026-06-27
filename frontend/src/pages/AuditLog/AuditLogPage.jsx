@@ -365,16 +365,14 @@ function AuditLogPage() {
             </main>
 
             {(selectedLog || detailLoading || detailError) && (
-                <div className={styles.modalOverlay} onClick={closeDetail}>
-                    <div className={styles.detailModal} onClick={(e) => e.stopPropagation()}>
-                        <div className={styles.detailHeader}>
+                <div className="misa-modal-overlay" onClick={closeDetail}>
+                    <div className="misa-modal" onClick={(e) => e.stopPropagation()} style={{ width: '900px', maxWidth: '95vw', height: '80vh' }}>
+                        <div className="misa-modal-header">
                             <div>
                                 <h2>Chi tiết nhật ký thao tác</h2>
-                                <p>{selectedLog?.description || 'Đang tải chi tiết nhật ký'}</p>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--color-text-light, #64748b)' }}>{selectedLog?.description || 'Đang tải chi tiết nhật ký'}</p>
                             </div>
-                            <button className={styles.closeBtn} onClick={closeDetail}>
-                                <i className="bi bi-x-lg"></i>
-                            </button>
+                            <i className="fas fa-times" onClick={closeDetail} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
                         </div>
 
                         {detailLoading ? (
@@ -382,7 +380,7 @@ function AuditLogPage() {
                         ) : detailError ? (
                             <div className={styles.detailEmpty}>{detailError}</div>
                         ) : (
-                            <div className={styles.detailBody}>
+                            <div className="misa-modal-body">
                                 <section className={styles.detailPanel}>
                                     <h3>Thông tin chung</h3>
                                     <dl className={styles.infoList}>

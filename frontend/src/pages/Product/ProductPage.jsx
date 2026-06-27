@@ -671,297 +671,295 @@ const ProductPage = () => {
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {showModal && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent}>
-                        <div className={styles.modalHeader}>
-                            <h3>{isEdit ? 'Sua san pham' : 'Them san pham'}</h3>
-                            <button className={styles.closeModalBtn} onClick={() => setShowModal(false)}>
-                                <i className="fas fa-times"></i>
-                            </button>
-                        </div>
-
-                        <div className={styles.modalBody}>
-                            {errorMsg && <div className={styles.modalError}>{errorMsg}</div>}
-
-                            <div className={styles.formRow}>
-                                <div className={styles.formGroup}>
-                                    <label>Ma san pham <span className={styles.required}>*</span></label>
-                                    <input
-                                        type="text"
-                                        value={formData.productCode}
-                                        onChange={(event) => setFormData({ ...formData, productCode: event.target.value })}
-                                        placeholder="Vi du: VT00001"
-                                        className={styles.formInput}
-                                    />
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label>Ten san pham <span className={styles.required}>*</span></label>
-                                    <input
-                                        type="text"
-                                        value={formData.productName}
-                                        onChange={(event) => setFormData({ ...formData, productName: event.target.value })}
-                                        placeholder="Ten day du cua san pham"
-                                        className={styles.formInput}
-                                    />
-                                </div>
+                {showModal && (
+                    <div className="misa-modal-overlay">
+                        <div className="misa-modal" style={{ width: '800px', maxWidth: '90%' }}>
+                            <div className="misa-modal-header">
+                                <h3>{isEdit ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}</h3>
+                                <i className="fas fa-times" onClick={() => setShowModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
                             </div>
 
-                            <div className={styles.formRow}>
-                                <div className={styles.formGroup}>
-                                    <label>Danh muc <span className={styles.required}>*</span></label>
-                                    <select
-                                        value={formData.categoryId}
-                                        onChange={(event) => setFormData({ ...formData, categoryId: event.target.value })}
-                                        className={styles.formSelect}
-                                    >
-                                        <option value="">-- Chon danh muc --</option>
-                                        {categories.map((category) => (
-                                            <option key={category.id} value={category.id}>
-                                                {category.code} - {category.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label>Thuong hieu <span className={styles.required}>*</span></label>
-                                    <select
-                                        value={formData.brandId}
-                                        onChange={(event) => setFormData({ ...formData, brandId: event.target.value })}
-                                        className={styles.formSelect}
-                                    >
-                                        <option value="">-- Chon thuong hieu --</option>
-                                        {brands.map((brand) => (
-                                            <option key={brand.id} value={brand.id}>
-                                                {brand.code} - {brand.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+                            <div className="misa-modal-body">
+                                {errorMsg && <div className={styles.modalError}>{errorMsg}</div>}
 
-                            <div className={styles.formRow}>
-                                <div className={styles.formGroup}>
-                                    <label>Don vi tinh <span className={styles.required}>*</span></label>
-                                    <select
-                                        value={formData.unitId}
-                                        onChange={(event) => setFormData({ ...formData, unitId: event.target.value })}
-                                        className={styles.formSelect}
-                                    >
-                                        <option value="">-- Chon don vi tinh --</option>
-                                        {units.map((unit) => (
-                                            <option key={unit.id} value={unit.id}>{unit.name}</option>
-                                        ))}
-                                    </select>
+                                <div className="misa-form-row">
+                                    <div className="misa-form-group">
+                                        <label>Mã sản phẩm <span className="required">*</span></label>
+                                        <input
+                                            type="text"
+                                            value={formData.productCode}
+                                            onChange={(event) => setFormData({ ...formData, productCode: event.target.value })}
+                                            placeholder="Ví dụ: VT00001"
+                                            className="misa-input"
+                                        />
+                                    </div>
+                                    <div className="misa-form-group">
+                                        <label>Tên sản phẩm <span className="required">*</span></label>
+                                        <input
+                                            type="text"
+                                            value={formData.productName}
+                                            onChange={(event) => setFormData({ ...formData, productName: event.target.value })}
+                                            placeholder="Tên đầy đủ của sản phẩm"
+                                            className="misa-input"
+                                        />
+                                    </div>
                                 </div>
-                                <div className={styles.formGroup}>
-                                    <label>Gia ban <span className={styles.required}>*</span></label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="1000"
-                                        value={formData.salePrice}
-                                        onChange={(event) => setFormData({ ...formData, salePrice: event.target.value })}
-                                        placeholder="0"
-                                        className={styles.formInput}
+
+                                <div className="misa-form-row">
+                                    <div className="misa-form-group">
+                                        <label>Danh mục <span className="required">*</span></label>
+                                        <select
+                                            value={formData.categoryId}
+                                            onChange={(event) => setFormData({ ...formData, categoryId: event.target.value })}
+                                            className="misa-select"
+                                        >
+                                            <option value="">-- Chọn danh mục --</option>
+                                            {categories.map((category) => (
+                                                <option key={category.id} value={category.id}>
+                                                    {category.code} - {category.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="misa-form-group">
+                                        <label>Thương hiệu <span className="required">*</span></label>
+                                        <select
+                                            value={formData.brandId}
+                                            onChange={(event) => setFormData({ ...formData, brandId: event.target.value })}
+                                            className="misa-select"
+                                        >
+                                            <option value="">-- Chọn thương hiệu --</option>
+                                            {brands.map((brand) => (
+                                                <option key={brand.id} value={brand.id}>
+                                                    {brand.code} - {brand.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="misa-form-row">
+                                    <div className="misa-form-group">
+                                        <label>Đơn vị tính <span className="required">*</span></label>
+                                        <select
+                                            value={formData.unitId}
+                                            onChange={(event) => setFormData({ ...formData, unitId: event.target.value })}
+                                            className="misa-select"
+                                        >
+                                            <option value="">-- Chọn đơn vị tính --</option>
+                                            {units.map((unit) => (
+                                                <option key={unit.id} value={unit.id}>{unit.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="misa-form-group">
+                                        <label>Giá bán <span className="required">*</span></label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1000"
+                                            value={formData.salePrice}
+                                            onChange={(event) => setFormData({ ...formData, salePrice: event.target.value })}
+                                            placeholder="0"
+                                            className="misa-input"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="misa-form-group">
+                                    <label>Mô tả</label>
+                                    <textarea
+                                        value={formData.description}
+                                        onChange={(event) => setFormData({ ...formData, description: event.target.value })}
+                                        placeholder="Mô tả thông số kỹ thuật, quy cách hoặc ghi chú sản phẩm..."
+                                        rows="4"
+                                        className="misa-input"
+                                        style={{ minHeight: '80px', fontFamily: 'inherit', resize: 'vertical' }}
                                     />
                                 </div>
-                            </div>
 
-                            <div className={styles.formGroup}>
-                                <label>Mo ta</label>
-                                <textarea
-                                    value={formData.description}
-                                    onChange={(event) => setFormData({ ...formData, description: event.target.value })}
-                                    placeholder="Mo ta thong so ky thuat, quy cach hoac ghi chu san pham..."
-                                    rows="4"
-                                    className={styles.formTextarea}
-                                />
-                            </div>
-
-                            <div className={styles.checkboxGroup}>
-                                <label className={styles.checkboxLabel}>
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.trackSerial}
-                                        onChange={(event) => setFormData({ ...formData, trackSerial: event.target.checked })}
-                                    />
-                                    <span>Quan ly theo Serial</span>
-                                </label>
-                                <label className={styles.checkboxLabel}>
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.active}
-                                        onChange={(event) => setFormData({ ...formData, active: event.target.checked })}
-                                    />
-                                    <span>Dang su dung</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div className={styles.modalFooter}>
-                            <button className={styles.cancelBtn} onClick={() => setShowModal(false)}>Huy</button>
-                            <div className={styles.footerRight}>
-                                <button className={styles.saveBtn} onClick={() => handleSave(true)}>Cat</button>
-                                <button className={styles.saveAddBtn} onClick={() => handleSave(false)}>Cat va Them</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {showVariantModal && selectedProduct && (
-                <div className={styles.modalOverlay}>
-                    <div className={styles.modalContent}>
-                        <div className={styles.modalHeader}>
-                            <h3>Quan ly SKU - {selectedProduct.productCode}</h3>
-                            <button className={styles.closeModalBtn} onClick={() => setShowVariantModal(false)}>
-                                <i className="fas fa-times"></i>
-                            </button>
-                        </div>
-
-                        <div className={styles.modalBody}>
-                            {variantError && <div className={styles.modalError}>{variantError}</div>}
-
-                            <div className={styles.formRow}>
-                                <div className={styles.formGroup}>
-                                    <label>SKU <span className={styles.required}>*</span></label>
-                                    <input
-                                        type="text"
-                                        value={variantForm.sku}
-                                        onChange={(event) => setVariantForm({ ...variantForm, sku: event.target.value })}
-                                        className={styles.formInput}
-                                        placeholder="Vi du: DELL-5420-I5-8G"
-                                    />
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label>Ten SKU <span className={styles.required}>*</span></label>
-                                    <input
-                                        type="text"
-                                        value={variantForm.variantName}
-                                        onChange={(event) => setVariantForm({ ...variantForm, variantName: event.target.value })}
-                                        className={styles.formInput}
-                                        placeholder="Vi du: i5 / 8GB / 256GB"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className={styles.formRow}>
-                                <div className={styles.formGroup}>
-                                    <label>Gia von</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="1000"
-                                        value={variantForm.costPrice}
-                                        onChange={(event) => setVariantForm({ ...variantForm, costPrice: event.target.value })}
-                                        className={styles.formInput}
-                                    />
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label>Gia ban <span className={styles.required}>*</span></label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="1000"
-                                        value={variantForm.salePrice}
-                                        onChange={(event) => setVariantForm({ ...variantForm, salePrice: event.target.value })}
-                                        className={styles.formInput}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className={styles.formRow}>
-                                <div className={styles.formGroup}>
-                                    <label>Ma nha san xuat / Part number</label>
-                                    <input
-                                        type="text"
-                                        value={variantForm.manufacturerPartNumber}
-                                        onChange={(event) => setVariantForm({ ...variantForm, manufacturerPartNumber: event.target.value })}
-                                        className={styles.formInput}
-                                    />
-                                </div>
-                                <div className={styles.formGroup}>
-                                    <label>Trang thai</label>
-                                    <label className={styles.checkboxLabel} style={{ minHeight: 34 }}>
+                                <div className={styles.checkboxGroup}>
+                                    <label className={styles.checkboxLabel}>
                                         <input
                                             type="checkbox"
-                                            checked={variantForm.active}
-                                            onChange={(event) => setVariantForm({ ...variantForm, active: event.target.checked })}
+                                            checked={formData.trackSerial}
+                                            onChange={(event) => setFormData({ ...formData, trackSerial: event.target.checked })}
                                         />
-                                        <span>Dang su dung</span>
+                                        <span>Quản lý theo Serial</span>
+                                    </label>
+                                    <label className={styles.checkboxLabel}>
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.active}
+                                            onChange={(event) => setFormData({ ...formData, active: event.target.checked })}
+                                        />
+                                        <span>Đang sử dụng</span>
                                     </label>
                                 </div>
                             </div>
 
-                            <div className={styles.formGroup}>
-                                <label>Thong so JSON</label>
-                                <textarea
-                                    value={variantForm.specsJson}
-                                    onChange={(event) => setVariantForm({ ...variantForm, specsJson: event.target.value })}
-                                    rows="3"
-                                    className={styles.formTextarea}
-                                    placeholder='{"cpu":"i5","ram":"8GB","ssd":"256GB"}'
-                                />
+                            <div className="misa-modal-footer">
+                                <button className="btn-misa-cancel" onClick={() => setShowModal(false)}>Hủy</button>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <button className="btn-misa-draft" onClick={() => handleSave(false)}>Cất và Thêm</button>
+                                    <button className="btn-misa-save" onClick={() => handleSave(true)}>Cất</button>
+                                </div>
                             </div>
-
-                            <div className={styles.footerRight} style={{ marginBottom: 16 }}>
-                                <button className={styles.saveBtn} type="button" onClick={resetVariantForm}>Nhap lai</button>
-                                <button className={styles.saveAddBtn} type="button" onClick={saveVariant}>
-                                    {variantForm.id ? 'Cap nhat SKU' : 'Them SKU'}
-                                </button>
-                            </div>
-
-                            <div className={styles.tableWrapper} style={{ minHeight: 0, border: '1px solid var(--color-border-soft)' }}>
-                                <table className={styles.table}>
-                                    <thead>
-                                        <tr>
-                                            <th>SKU</th>
-                                            <th>Ten SKU</th>
-                                            <th style={{ textAlign: 'right' }}>Gia von</th>
-                                            <th style={{ textAlign: 'right' }}>Gia ban</th>
-                                            <th>Trang thai</th>
-                                            <th style={{ textAlign: 'center' }}>Chuc nang</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {loadingVariants ? (
-                                            <tr>
-                                                <td colSpan="6" style={{ textAlign: 'center', padding: 24 }}>Dang tai SKU...</td>
-                                            </tr>
-                                        ) : variants.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="6" style={{ textAlign: 'center', padding: 24 }}>Chua co SKU.</td>
-                                            </tr>
-                                        ) : (
-                                            variants.map((variant) => (
-                                                <tr key={variant.id}>
-                                                    <td className={styles.codeCell}>{variant.sku}</td>
-                                                    <td>{variant.variantName}</td>
-                                                    <td style={{ textAlign: 'right' }}>{formatCurrency(variant.costPrice)}</td>
-                                                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(variant.salePrice)}</td>
-                                                    <td>{variant.active === false ? 'Ngung su dung' : 'Dang su dung'}</td>
-                                                    <td style={{ textAlign: 'center' }}>
-                                                        <span className={styles.editLink} onClick={() => editVariant(variant)}>Sua</span>
-                                                        <span style={{ margin: '0 8px', color: 'var(--color-border-field)' }}>|</span>
-                                                        <span className={styles.editLink} onClick={() => deleteVariant(variant.id)}>Xoa</span>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div className={styles.modalFooter}>
-                            <button className={styles.cancelBtn} onClick={() => setShowVariantModal(false)}>Dong</button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+
+                {showVariantModal && selectedProduct && (
+                    <div className="misa-modal-overlay">
+                        <div className="misa-modal" style={{ width: '900px', maxWidth: '95vw', maxHeight: '90vh' }}>
+                            <div className="misa-modal-header">
+                                <h3>Quản lý SKU - {selectedProduct.productCode}</h3>
+                                <i className="fas fa-times" onClick={() => setShowVariantModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
+                            </div>
+
+                            <div className="misa-modal-body">
+                                {variantError && <div className={styles.modalError}>{variantError}</div>}
+
+                                <div className="misa-form-row">
+                                    <div className="misa-form-group">
+                                        <label>SKU <span className="required">*</span></label>
+                                        <input
+                                            type="text"
+                                            value={variantForm.sku}
+                                            onChange={(event) => setVariantForm({ ...variantForm, sku: event.target.value })}
+                                            className="misa-input"
+                                            placeholder="Ví dụ: DELL-5420-I5-8G"
+                                        />
+                                    </div>
+                                    <div className="misa-form-group">
+                                        <label>Tên SKU <span className="required">*</span></label>
+                                        <input
+                                            type="text"
+                                            value={variantForm.variantName}
+                                            onChange={(event) => setVariantForm({ ...variantForm, variantName: event.target.value })}
+                                            className="misa-input"
+                                            placeholder="Ví dụ: i5 / 8GB / 256GB"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="misa-form-row">
+                                    <div className="misa-form-group">
+                                        <label>Giá vốn</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1000"
+                                            value={variantForm.costPrice}
+                                            onChange={(event) => setVariantForm({ ...variantForm, costPrice: event.target.value })}
+                                            className="misa-input"
+                                        />
+                                    </div>
+                                    <div className="misa-form-group">
+                                        <label>Giá bán <span className="required">*</span></label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1000"
+                                            value={variantForm.salePrice}
+                                            onChange={(event) => setVariantForm({ ...variantForm, salePrice: event.target.value })}
+                                            className="misa-input"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="misa-form-row">
+                                    <div className="misa-form-group">
+                                        <label>Mã nhà sản xuất / Part number</label>
+                                        <input
+                                            type="text"
+                                            value={variantForm.manufacturerPartNumber}
+                                            onChange={(event) => setVariantForm({ ...variantForm, manufacturerPartNumber: event.target.value })}
+                                            className="misa-input"
+                                        />
+                                    </div>
+                                    <div className="misa-form-group">
+                                        <label>Trạng thái</label>
+                                        <label className={styles.checkboxLabel} style={{ minHeight: 34 }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={variantForm.active}
+                                                onChange={(event) => setVariantForm({ ...variantForm, active: event.target.checked })}
+                                            />
+                                            <span>Đang sử dụng</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="misa-form-group">
+                                    <label>Thông số JSON</label>
+                                    <textarea
+                                        value={variantForm.specsJson}
+                                        onChange={(event) => setVariantForm({ ...variantForm, specsJson: event.target.value })}
+                                        rows="3"
+                                        className="misa-input"
+                                        placeholder='{"cpu":"i5","ram":"8GB","ssd":"256GB"}'
+                                        style={{ fontFamily: 'inherit', resize: 'vertical' }}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginBottom: 16 }}>
+                                    <button className="btn-misa-cancel" type="button" onClick={resetVariantForm}>Nhập lại</button>
+                                    <button className="btn-misa-save" type="button" onClick={saveVariant}>
+                                        {variantForm.id ? 'Cập nhật SKU' : 'Thêm SKU'}
+                                    </button>
+                                </div>
+
+                                <div className={styles.tableWrapper} style={{ minHeight: 0, border: '1px solid var(--color-border-soft)' }}>
+                                    <table className={styles.table}>
+                                        <thead>
+                                            <tr>
+                                                <th>SKU</th>
+                                                <th>Tên SKU</th>
+                                                <th style={{ textAlign: 'right' }}>Giá vốn</th>
+                                                <th style={{ textAlign: 'right' }}>Giá bán</th>
+                                                <th>Trạng thái</th>
+                                                <th style={{ textAlign: 'center' }}>Chức năng</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {loadingVariants ? (
+                                                <tr>
+                                                    <td colSpan="6" style={{ textAlign: 'center', padding: 24 }}>Đang tải SKU...</td>
+                                                </tr>
+                                            ) : variants.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="6" style={{ textAlign: 'center', padding: 24 }}>Chưa có SKU.</td>
+                                                </tr>
+                                            ) : (
+                                                variants.map((variant) => (
+                                                    <tr key={variant.id}>
+                                                        <td className={styles.codeCell}>{variant.sku}</td>
+                                                        <td>{variant.variantName}</td>
+                                                        <td style={{ textAlign: 'right' }}>{formatCurrency(variant.costPrice)}</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(variant.salePrice)}</td>
+                                                        <td>{variant.active === false ? 'Ngừng sử dụng' : 'Đang sử dụng'}</td>
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <span className={styles.editLink} onClick={() => editVariant(variant)}>Sửa</span>
+                                                            <span style={{ margin: '0 8px', color: 'var(--color-border-field)' }}>|</span>
+                                                            <span className={styles.editLink} onClick={() => deleteVariant(variant.id)}>Xóa</span>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div className="misa-modal-footer">
+                                <button className="btn-misa-cancel" onClick={() => setShowVariantModal(false)}>Đóng</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
         </AdminLayout>
     );
 };

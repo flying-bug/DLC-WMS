@@ -187,13 +187,13 @@ function ImportHistoryPage() {
                     onChange={handleSelectAll}
                   />
                 </th>
-                <th>NGÀY GHI NHẬN</th>
-                <th>MÃ SỐ ĐƠN</th>
-                <th>NƠI GIAO HÀNG</th>
-                <th>KHO HÀNG</th>
-                <th className={styles.textRight}>TỔNG TIỀN</th>
-                <th>TÌNH TRẠNG</th>
-                <th className={styles.textCenter}>THAO TÁC</th>
+                <th>Ngày ghi nhận</th>
+                <th>Số phiếu</th>
+                <th>Nhà cung cấp</th>
+                <th>Kho nhập</th>
+                <th className={styles.textRight}>Tổng tiền</th>
+                <th>Trạng thái</th>
+                <th className={styles.textCenter}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -257,11 +257,11 @@ function ImportHistoryPage() {
             <div className={styles.detailGrid}>
               <div className={styles.detailGroup} style={{ gridColumn: 'span 2' }}>
                 <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>NHÀ CUNG CẤP</span>
+                  <span className={styles.detailLabel}>Nhà cung cấp</span>
                   <span className={styles.detailValue}>{supplierById.get(selectedSlip.partnerId)?.name || 'Chưa chọn'}</span>
                 </div>
                 <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>GHI CHÚ</span>
+                  <span className={styles.detailLabel}>Ghi chú</span>
                   <span className={styles.detailValue}>{selectedSlip.note || 'Không có ghi chú'}</span>
                 </div>
               </div>

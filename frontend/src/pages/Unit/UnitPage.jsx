@@ -239,46 +239,43 @@ const UnitPage = () => {
 
                 {/* Modal Thêm / Sửa */}
                 {showModal && (
-                    <div className={styles.modalOverlay}>
-                        <div className={styles.modal}>
-                            <div className={styles.modalHeader}>
+                    <div className="misa-modal-overlay">
+                        <div className="misa-modal">
+                            <div className="misa-modal-header">
                                 <h3>{isEdit ? 'Sửa Đơn vị tính' : 'Thêm Đơn vị tính'}</h3>
-                                <div className={styles.modalIcons}>
-                                    <i className="far fa-question-circle"></i>
-                                    <i className="fas fa-times" onClick={() => setShowModal(false)}></i>
-                                </div>
+                                <i className="fas fa-times" onClick={() => setShowModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
                             </div>
-                            <div className={styles.modalBody}>
+                            <div className="misa-modal-body">
                                 {errorMsg && <div className={styles.errorAlert}>{errorMsg}</div>}
 
-                                <div className={styles.formGroup}>
-                                    <label>Đơn vị tính <span className={styles.required}>*</span></label>
+                                <div className="misa-form-group">
+                                    <label>Đơn vị tính <span className="required">*</span></label>
                                     <input
                                         type="text"
-                                        className={styles.inputField}
+                                        className="misa-input"
                                         value={formData.name}
                                         onChange={(e) => setFormData({...formData, name: e.target.value})}
                                         autoFocus
                                     />
                                 </div>
 
-                                <div className={styles.formGroup}>
+                                <div className="misa-form-group">
                                     <label>Mô tả</label>
                                     <textarea
-                                        className={styles.textareaField}
+                                        className="misa-textarea"
                                         rows="3"
                                         value={formData.description}
                                         onChange={(e) => setFormData({...formData, description: e.target.value})}
                                     ></textarea>
                                 </div>
                             </div>
-                            <div className={styles.modalFooter}>
-                                <button className={styles.btnCancel} onClick={() => setShowModal(false)}>Hủy</button>
-                                <div className={styles.rightButtons}>
-                                    <button className={styles.btnSave} onClick={() => handleSave(true)}>Cất</button>
+                            <div className="misa-modal-footer">
+                                <button className="btn-misa-cancel" onClick={() => setShowModal(false)}>Hủy</button>
+                                <div className={styles.rightButtons} style={{ display: 'flex', gap: '12px' }}>
                                     {!isEdit && (
-                                        <button className={styles.btnSaveAndAdd} onClick={() => handleSave(false)}>Cất và Thêm</button>
+                                        <button className="btn-misa-draft" onClick={() => handleSave(false)}>Cất và Thêm</button>
                                     )}
+                                    <button className="btn-misa-save" onClick={() => handleSave(true)}>Cất</button>
                                 </div>
                             </div>
                         </div>

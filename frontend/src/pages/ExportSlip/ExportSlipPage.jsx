@@ -104,7 +104,7 @@ function ExportSlipPage() {
 
   return (
     <AdminLayout>
-      <div className={styles.pageBody} style={{ padding: 0 }}>
+      <div className={styles.pageBody}>
         <div className={styles.pageTitleContainer}>
           <h1 className={styles.pageTitle}>Danh sách phiếu xuất kho</h1>
           <button className={styles.btnPrimary} onClick={() => navigate('/export-slips/create')}>

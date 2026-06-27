@@ -36,114 +36,115 @@ const BrandModal = ({ onClose, onSave, initialData = null }) => {
     };
 
     return (
-        <div className={styles.backdrop} onClick={handleBackdropClick}>
-            <div className={styles.modal}>
+        <div className="misa-modal-overlay" onClick={handleBackdropClick}>
+            <div className="misa-modal">
                 
                 {/* Header */}
-                <div className={styles.header}>
-                    <h2 className={styles.headerTitle}>
+                <div className="misa-modal-header">
+                    <h2>
                         <i className={initialData ? "fas fa-edit" : "fas fa-plus-circle"}></i>
                         {initialData ? 'Sửa Thương hiệu' : 'Thêm Thương hiệu Mới'}
                     </h2>
-                    <div className={styles.headerActions}>
-                        <button className={styles.iconBtn} onClick={onClose} title="Đóng">
-                            <i className="fas fa-times"></i>
-                        </button>
-                    </div>
+                    <button className={styles.iconBtn} onClick={onClose} title="Đóng">
+                        <i className="fas fa-times"></i>
+                    </button>
                 </div>
 
                 {/* Body */}
-                <div className={styles.body}>
-                    <div className={styles.formGrid}>
-                        {/* Mã thương hiệu */}
-                        <div className={`${styles.formGroup} ${styles.col12}`}>
-                            <label className={styles.formLabel}>Mã Thương hiệu</label>
-                            <input 
-                                type="text" 
-                                className={styles.input} 
-                                name="code"
-                                value={formData.code}
-                                onChange={handleChange}
-                                placeholder="Nhập mã thương hiệu (tự động nếu để trống)..." 
-                            />
-                        </div>
+                <div className="misa-modal-body">
+                    {/* Mã thương hiệu */}
+                    <div className="misa-form-group">
+                        <label>Mã Thương hiệu</label>
+                        <input 
+                            type="text" 
+                            className="misa-input" 
+                            name="code"
+                            value={formData.code}
+                            onChange={handleChange}
+                            placeholder="Nhập mã thương hiệu (tự động nếu để trống)..." 
+                        />
+                    </div>
 
-                        {/* Tên thương hiệu */}
-                        <div className={`${styles.formGroup} ${styles.col12}`}>
-                            <label className={styles.formLabel}>Tên Thương hiệu <span className={styles.required}>*</span></label>
-                            <input 
-                                type="text" 
-                                className={styles.input} 
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                placeholder="Nhập tên thương hiệu..." 
-                                autoFocus
-                            />
-                        </div>
+                    {/* Tên thương hiệu */}
+                    <div className="misa-form-group">
+                        <label>Tên Thương hiệu <span className="required">*</span></label>
+                        <input 
+                            type="text" 
+                            className="misa-input" 
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            placeholder="Nhập tên thương hiệu..." 
+                            autoFocus
+                        />
+                    </div>
 
-                        {/* Trạng thái & Email Liên hệ */}
-                        <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Trạng thái</label>
-                            <div className={styles.inputWrapper}>
-                                <select 
-                                    className={styles.select} 
-                                    name="status"
-                                    value={formData.status}
-                                    onChange={handleChange}
-                                >
-                                    <option value="ACTIVE">Đang hoạt động</option>
-                                    <option value="INACTIVE">Ngừng hoạt động</option>
-                                </select>
-                                <i className={`fas fa-chevron-down ${styles.selectIcon}`}></i>
-                            </div>
+                    {/* Trạng thái & Email Liên hệ */}
+                    <div className="misa-form-row">
+                        <div className="misa-form-group">
+                            <label>Trạng thái</label>
+                            <select 
+                                className="misa-select" 
+                                name="status"
+                                value={formData.status}
+                                onChange={handleChange}
+                            >
+                                <option value="ACTIVE">Đang hoạt động</option>
+                                <option value="INACTIVE">Ngừng hoạt động</option>
+                            </select>
                         </div>
-                        <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Email Liên hệ</label>
+                        <div className="misa-form-group">
+                            <label>Email Liên hệ</label>
                             <input 
                                 type="email" 
-                                className={styles.input} 
+                                className="misa-input" 
                                 name="email"
                                 value={formData.email}
                                 onChange={handleChange}
                                 placeholder="contact@brand.com" 
                             />
                         </div>
+                    </div>
 
-                        {/* Hotline */}
-                        <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Hotline</label>
+                    {/* Hotline & Trống */}
+                    <div className="misa-form-row">
+                        <div className="misa-form-group">
+                            <label>Hotline</label>
                             <input 
                                 type="text" 
-                                className={styles.input} 
+                                className="misa-input" 
                                 name="hotline"
                                 value={formData.hotline}
                                 onChange={handleChange}
                                 placeholder="Nhập số hotline..." 
                             />
                         </div>
-
-                        {/* Mô tả chi tiết */}
-                        <div className={`${styles.formGroup} ${styles.col12}`}>
-                            <label className={styles.formLabel}>Mô tả chi tiết</label>
-                            <textarea 
-                                className={styles.textarea} 
-                                name="description"
-                                value={formData.description}
-                                onChange={handleChange}
-                                placeholder="Nhập thông tin mô tả về thương hiệu..." 
-                                rows="3"
-                            ></textarea>
+                        <div className="misa-form-group" style={{ visibility: 'hidden' }}>
+                            <label>Spacer</label>
+                            <input className="misa-input" />
                         </div>
+                    </div>
+
+                    {/* Mô tả chi tiết */}
+                    <div className="misa-form-group">
+                        <label>Mô tả chi tiết</label>
+                        <textarea 
+                            className="misa-textarea" 
+                            name="description"
+                            value={formData.description}
+                            onChange={handleChange}
+                            placeholder="Nhập thông tin mô tả về thương hiệu..." 
+                            rows="3"
+                        ></textarea>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className={styles.footer}>
-                    <button className={styles.btnCancel} onClick={onClose}>Hủy</button>
-                    <button className={styles.btnSave} onClick={handleSave}>
+                <div className="misa-modal-footer">
+                    <button className="btn-misa-cancel" onClick={onClose}>Hủy</button>
+                    <button className="btn-misa-save" onClick={handleSave}>
                         <i className="fas fa-save"></i>
-                        {initialData ? 'Cập nhật Thương hiệu' : 'Lưu Thương hiệu'}
+                        {initialData ? 'Cập nhật' : 'Lưu'}
                     </button>
                 </div>
 
