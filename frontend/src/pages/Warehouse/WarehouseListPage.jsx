@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warehouseApi from '../../api/warehouseApi';
 import WarehouseFormModal from '../../components/warehouse/WarehouseFormModal';
+import WarehouseDeleteModal from '../../components/warehouse/WarehouseDeleteModal';
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './WarehouseListPage.module.css';
 
@@ -26,6 +27,10 @@ const WarehouseListPage = () => {
     const [showModal, setShowModal] = useState(false);
     const [isEdit, setIsEdit] = useState(false);
     const [selectedData, setSelectedData] = useState(null);
+
+    // Delete Modal
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletingWarehouse, setDeletingWarehouse] = useState(null);
 
     // Toast state
     const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
@@ -112,20 +117,27 @@ const WarehouseListPage = () => {
         } catch (error) {
             console.error(error);
             showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra!');
+            throw error; // Re-throw để WarehouseFormModal không tự động clear form nếu lỗi
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa kho này không? (Hệ thống sẽ vô hiệu hóa nếu kho có chứa hàng)')) {
-            try {
-                await warehouseApi.deleteWarehouse(id);
-                fetchWarehouses();
-                showToast('success', 'Xóa kho thành công!');
-            } catch (error) {
-                console.error("Lỗi xóa kho:", error);
-                showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
-                fetchWarehouses();
-            }
+    const handleDelete = (warehouse) => {
+        setDeletingWarehouse(warehouse);
+        setShowDeleteModal(true);
+    };
+
+    const handleDeleteConfirm = async (id) => {
+        try {
+            await warehouseApi.deleteWarehouse(id);
+            fetchWarehouses();
+            showToast('success', 'Xóa kho thành công!');
+        } catch (error) {
+            console.error("Lỗi xóa kho:", error);
+            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
+            fetchWarehouses();
+        } finally {
+            setShowDeleteModal(false);
+            setDeletingWarehouse(null);
         }
     };
 
@@ -289,16 +301,13 @@ const WarehouseListPage = () => {
                                     <th style={{ width: '15%' }} onClick={() => handleSort('status')} className={styles.sortableHeader}>
                                         TRẠNG THÁI {getSortIcon('status')}
                                     </th>
-                                    <th style={{ width: '15%' }}>
-                                        LOẠI KHO
-                                    </th>
                                     <th style={{ width: '10%', textAlign: 'center' }}>THAO TÁC</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {warehouses.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" style={{ padding: '0' }}>
+                                        <td colSpan="5" style={{ padding: '0' }}>
                                             <div className={styles.emptyState}>
                                                 <div className={styles.emptyIcon}>
                                                     <i className="fas fa-box-open"></i>
@@ -318,7 +327,6 @@ const WarehouseListPage = () => {
                                             <td className={styles.nameCell}>{warehouse.name}</td>
                                             <td>{warehouse.address}</td>
                                             <td>{getStatusBadge(warehouse.status)}</td>
-                                            <td>{warehouse.type === 'STANDARD' ? 'Kho tiêu chuẩn' : (warehouse.type || 'N/A')}</td>
                                             <td>
                                                 <div className={styles.rowActions}>
                                                     <button className={styles.iconBtn} title="Xem chi tiết" onClick={() => navigate(`/warehouses/${warehouse.id}`)}>
@@ -331,7 +339,12 @@ const WarehouseListPage = () => {
                                                     }}>
                                                         <i className="fas fa-pencil-alt"></i>
                                                     </button>
-                                                    <button className={styles.iconBtn} title="Xóa" onClick={() => handleDelete(warehouse.id)}>
+                                                    <button 
+                                                        className={styles.iconBtn} 
+                                                        title="Xóa" 
+                                                        onClick={() => handleDelete(warehouse)}
+                                                        disabled={warehouse.status === 'INACTIVE' || warehouse.status === 'STOPPED'}
+                                                    >
                                                         <i className="far fa-trash-alt"></i>
                                                     </button>
                                                 </div>
@@ -383,13 +396,19 @@ const WarehouseListPage = () => {
                     )}
                 </div>
 
-                {/* Modal Thêm / Sửa */}
                 <WarehouseFormModal
                     isOpen={showModal}
                     onClose={() => setShowModal(false)}
                     onSave={handleSaveModal}
                     isEdit={isEdit}
                     initialData={selectedData}
+                />
+
+                <WarehouseDeleteModal 
+                    isOpen={showDeleteModal}
+                    onClose={() => setShowDeleteModal(false)}
+                    onConfirm={handleDeleteConfirm}
+                    warehouse={deletingWarehouse}
                 />
 
                 <Toast 

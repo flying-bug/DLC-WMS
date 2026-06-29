@@ -49,6 +49,15 @@
     gap: 5px;
 }
 
+.formRow {
+    display: flex;
+    gap: 15px;
+}
+
+.formRow .formGroup {
+    flex: 1;
+}
+
 .formGroup label {
     font-size: 0.9rem;
     font-weight: 600;
@@ -165,24 +174,6 @@
 }
 
 .btnSave {
-    background-color: white;
-    border: 1px solid #cbd5e1;
-    padding: 8px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-}
-
-.btnSave:hover {
-    background-color: #f1f5f9;
-}
-
-.btnSave:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.btnSaveAndAdd {
     background-color: #0ea5e9;
     color: white;
     border: none;
@@ -192,8 +183,27 @@
     font-weight: 500;
 }
 
-.btnSaveAndAdd:hover {
+.btnSave:hover {
     background-color: #0284c7;
+}
+
+.btnSave:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btnSaveAndAdd {
+    background-color: white;
+    color: #0ea5e9;
+    border: 1px solid #0ea5e9;
+    padding: 8px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btnSaveAndAdd:hover {
+    background-color: #f0f9ff;
 }
 
 .btnSaveAndAdd:disabled {
