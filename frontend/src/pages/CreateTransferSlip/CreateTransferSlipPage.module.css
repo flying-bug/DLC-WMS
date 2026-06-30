@@ -1,0 +1,514 @@
+.pageBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #f4f6f8;
+  position: relative;
+  height: 100%;
+}
+
+.scrollableContent {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  padding-bottom: 90px;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.backLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e3f7a;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.topGrid {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.card {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 12px;
+}
+
+.cardHeaderRight {
+  margin-left: auto;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formGroupFull {
+  grid-column: span 2;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.inputGroup {
+  display: flex;
+}
+
+.input {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+  background-color: white;
+  color: #374151;
+}
+
+.input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.inputReadonly {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: none;
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.inputReadonlyText {
+  font-weight: 600;
+  color: #1e3f7a;
+  background-color: #f0f4ff;
+}
+
+.btnAppend {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.btnAppend:hover {
+  background-color: #2563eb;
+}
+
+.inputWithAppend {
+  border-radius: 4px 0 0 4px;
+}
+
+.textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+  min-height: 80px;
+  resize: vertical;
+  color: #374151;
+}
+
+.linksBox {
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 4px;
+  padding: 12px;
+}
+
+.linkItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #2563eb;
+  margin-bottom: 8px;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.linkItem:hover {
+  text-decoration: underline;
+}
+
+.linkItemAdd {
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.linkItemAdd:hover {
+  color: #475569;
+}
+
+.btnOutlineBlue {
+  background: white;
+  border: 1px solid #3b82f6;
+  color: #3b82f6;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnOutlineBlue:hover {
+  background-color: #eff6ff;
+}
+
+.tableContainer {
+  margin-top: 10px;
+  max-height: 500px;
+  overflow-y: auto;
+  position: relative;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  background-color: #f9fafb;
+  padding: 12px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  box-shadow: 0 1px 0 #e5e7eb, 0 -1px 0 #e5e7eb;
+}
+
+.table td {
+  padding: 16px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+  color: #374151;
+}
+
+.tableInput {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 6px 8px;
+  width: 80px;
+  text-align: right;
+  font-size: 13px;
+  color: #1f2937;
+  font-weight: 500;
+}
+.tableInputWide {
+  width: 130px;
+}
+.tableSelect {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 6px 8px;
+  width: 150px;
+  font-size: 13px;
+  color: #1f2937;
+  font-weight: 500;
+  outline: none;
+  background-color: white;
+}
+.tableSelect:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+.tableInput:focus {
+  border-color: #3b82f6;
+  outline: none;
+}
+
+.serialCellContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.serialBadgeSuccess {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+.serialBadgeSuccess:hover {
+  background-color: #d1fae5;
+}
+
+.serialBadgeWarning {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+.serialBadgeWarning:hover {
+  background-color: #ffedd5;
+}
+
+.serialSubtext {
+  font-size: 11px;
+  color: #64748b;
+  margin-left: 2px;
+  font-style: italic;
+}
+
+.textBold {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.textBlue {
+  color: #1e40af;
+}
+
+.iconBtnDanger {
+  color: #ef4444;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+.iconBtnDanger:hover {
+  color: #dc2626;
+}
+
+.tableFooter {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 16px;
+  background-color: #f9fafb;
+  font-weight: 600;
+  font-size: 15px;
+  gap: 60px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tableActions {
+  padding: 16px;
+  display: flex;
+  gap: 24px;
+  background: white;
+}
+
+.actionLink {
+  color: #3b82f6;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+.actionLink:hover {
+  background-color: #eff6ff;
+  text-decoration: none;
+}
+
+.actionLinkGray {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.actionLinkGray:hover { color: #475569; }
+
+.fixedFooter {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 68px;
+  background-color: white;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+}
+
+.footerLeft, .footerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btnDefault {
+  background-color: white;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #4b5563;
+}
+.btnDefault:hover { background-color: #f9fafb; }
+
+.btnTextBlue {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btnTextBlue:hover { text-decoration: underline; }
+
+.btnOutlinePrimary {
+  background-color: white;
+  border: 1px solid #3b82f6;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #3b82f6;
+}
+.btnOutlinePrimary:hover { background-color: #eff6ff; }
+
+.btnPrimary {
+  background-color: #1d4ed8;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btnPrimary:hover { background-color: #1e40af; }
+
+.btnSuccess {
+  background-color: #22c55e;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btnSuccess:hover { background-color: #16a34a; }
+
+.flexCenter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.miniBtnAppend {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.miniBtnAppend:hover { background-color: #2563eb; }

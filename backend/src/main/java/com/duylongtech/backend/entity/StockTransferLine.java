@@ -30,6 +30,9 @@ public class StockTransferLine {
     @Column(name = "unit_cost", nullable = false, precision = 15, scale = 4)
     private BigDecimal unitCost;
 
+    @Column(name = "serial_numbers_text", columnDefinition = "TEXT")
+    private String serialNumbersText;
+
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 }
