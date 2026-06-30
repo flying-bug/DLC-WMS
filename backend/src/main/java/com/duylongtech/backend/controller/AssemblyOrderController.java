@@ -1,5 +1,6 @@
 package com.duylongtech.backend.controller;
 
+import com.duylongtech.backend.dto.request.AssemblyBomRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.AssemblyBomResponse;
@@ -21,10 +22,24 @@ public class AssemblyOrderController {
     private final AssemblyOrderService assemblyOrderService;
 
     @GetMapping("/assembly-boms")
-    @Operation(summary = "View approved assembly BOMs")
+    @Operation(summary = "View assembly BOMs")
     @PreAuthorize("hasAuthority('assembly:view')")
-    public ApiResponse<List<AssemblyBomResponse>> getApprovedBoms() {
-        return ApiResponse.success(assemblyOrderService.getApprovedBoms());
+    public ApiResponse<List<AssemblyBomResponse>> getBoms(@RequestParam(required = false) String status) {
+        return ApiResponse.success(assemblyOrderService.getBoms(status));
+    }
+
+    @PostMapping("/assembly-boms")
+    @Operation(summary = "Create assembly BOM")
+    @PreAuthorize("hasAuthority('assembly:add')")
+    public ApiResponse<AssemblyBomResponse> createBom(@RequestBody AssemblyBomRequest request) {
+        return ApiResponse.success(assemblyOrderService.createBom(request));
+    }
+
+    @PutMapping("/assembly-boms/{id}")
+    @Operation(summary = "Update assembly BOM")
+    @PreAuthorize("hasAuthority('assembly:edit')")
+    public ApiResponse<AssemblyBomResponse> updateBom(@PathVariable Long id, @RequestBody AssemblyBomRequest request) {
+        return ApiResponse.success(assemblyOrderService.updateBom(id, request));
     }
 
     @GetMapping("/assembly-orders")

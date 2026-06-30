@@ -30,6 +30,7 @@ import CreateRepairTicketPage from '../pages/RepairTicket/CreateRepairTicketPage
 import RepairTicketListPage from '../pages/RepairTicket/RepairTicketListPage';
 import UpdateRepairTicketPage from '../pages/RepairTicket/UpdateRepairTicketPage';
 import BrandListPage from '../pages/Brand/BrandListPage';
+import AssemblyBomPage from '../pages/AssemblyOrder/AssemblyBomPage';
 import AssemblyOrderListPage from '../pages/AssemblyOrder/AssemblyOrderListPage';
 import AssemblyOrderFormPage from '../pages/AssemblyOrder/AssemblyOrderFormPage';
 
@@ -94,6 +95,7 @@ function AppRouter() {
                     <Route path="/repair-tickets" element={<RepairTicketListPage />} />
                     <Route path="/repair-tickets/create" element={<CreateRepairTicketPage />} />
                     <Route path="/repair-tickets/:id/edit" element={<UpdateRepairTicketPage />} />
+                    <Route path="/assembly-boms" element={<AssemblyBomPage />} />
                     <Route path="/assembly-orders" element={<AssemblyOrderListPage />} />
                     <Route path="/assembly-orders/create" element={<AssemblyOrderFormPage />} />
                     <Route path="/assembly-orders/:id" element={<AssemblyOrderFormPage />} />

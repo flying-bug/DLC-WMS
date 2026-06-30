@@ -9,6 +9,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface AssemblyBomRepository extends JpaRepository<AssemblyBom, Long> {
+    boolean existsByBomCode(String bomCode);
+
+    boolean existsByBomCodeAndIdNot(String bomCode, Long id);
+
     @Query("SELECT DISTINCT b FROM AssemblyBom b " +
             "JOIN FETCH b.product p " +
             "LEFT JOIN FETCH p.unit " +

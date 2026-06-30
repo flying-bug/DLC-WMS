@@ -78,6 +78,17 @@
     resize: vertical;
 }
 
+.numberInput {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.inlineField {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
 .full {
     grid-column: 1 / -1;
 }
@@ -149,6 +160,18 @@
     color: var(--color-text-muted);
     font-size: 0.78rem;
     text-transform: uppercase;
+}
+
+.table input,
+.table select {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 7px 8px;
+    font: inherit;
+    background: var(--color-white);
+    color: var(--color-text-body);
 }
 
 .table tbody tr {
@@ -226,6 +249,177 @@
     overflow: hidden;
 }
 
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.modal {
+    width: min(980px, 96vw);
+    max-height: 92vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface);
+    border-radius: 8px;
+    box-shadow: var(--shadow-dropdown);
+}
+
+.modalHeader,
+.modalFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.modalHeader h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: var(--color-text-strong);
+}
+
+.modalBody {
+    padding: 16px;
+    overflow: auto;
+}
+
+.modalFooter {
+    justify-content: flex-end;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 0;
+}
+
+.lineActions {
+    display: flex;
+    justify-content: flex-end;
+    margin: 12px 0;
+}
+
+.deleteButton {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 6px;
+    color: #991b1b;
+    background: #fee2e2;
+    cursor: pointer;
+}
+
+.flowGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.flowPanel {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-card-soft);
+}
+
+.flowPanelHeader {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    font-weight: 800;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.flowPanelHeader i {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.lossPanel {
+    background: #fff7f7;
+    border-color: #fecaca;
+}
+
+.gainPanel {
+    background: #f4fbf6;
+    border-color: #bbf7d0;
+}
+
+.lossHeader {
+    color: #991b1b;
+    background: #fee2e2;
+}
+
+.lossHeader i {
+    color: #991b1b;
+    background: #fecaca;
+}
+
+.gainHeader {
+    color: #166534;
+    background: #dcfce7;
+}
+
+.gainHeader i {
+    color: #166534;
+    background: #bbf7d0;
+}
+
+.flowList {
+    display: flex;
+    flex-direction: column;
+}
+
+.flowRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.flowRow:last-child {
+    border-bottom: 0;
+}
+
+.flowName {
+    min-width: 0;
+}
+
+.flowSku {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    margin-top: 2px;
+}
+
+.flowQty {
+    min-width: 76px;
+    text-align: right;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.lossQty {
+    color: #991b1b;
+}
+
+.gainQty {
+    color: #166534;
+}
+
 .detailItem {
     padding: 14px;
     border-right: 1px solid var(--color-border);
@@ -245,7 +439,8 @@
 
 @media (max-width: 1100px) {
     .filterGrid,
-    .detailGrid {
+    .detailGrid,
+    .flowGrid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
@@ -257,7 +452,8 @@
 
     .filterGrid,
     .formGrid,
-    .detailGrid {
+    .detailGrid,
+    .flowGrid {
         grid-template-columns: 1fr;
     }
 

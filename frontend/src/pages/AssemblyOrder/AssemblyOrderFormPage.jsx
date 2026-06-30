@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import * as warehouseApi from '../../api/warehouseApi';
+import axiosClient from '../../api/axiosClient';
 import styles from './AssemblyOrderPage.module.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -18,6 +19,17 @@ const STATUS_META = {
     CANCELLED: { label: 'Đã hủy', tone: 'danger' }
 };
 
+const defaultBomLine = { componentVariantId: '', quantity: '1', note: '' };
+
+const createDefaultBomForm = () => ({
+    productId: '',
+    bomCode: '',
+    bomName: '',
+    versionNo: '1',
+    status: 'APPROVED',
+    lines: [{ ...defaultBomLine }]
+});
+
 function AssemblyOrderFormPage() {
     const { id } = useParams();
     const [searchParams] = useSearchParams();
@@ -25,8 +37,14 @@ function AssemblyOrderFormPage() {
     const editing = Boolean(id);
     const [boms, setBoms] = useState([]);
     const [warehouses, setWarehouses] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [variants, setVariants] = useState([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [savingBom, setSavingBom] = useState(false);
+    const [showBomModal, setShowBomModal] = useState(false);
+    const [bomForm, setBomForm] = useState(createDefaultBomForm);
+    const [bomError, setBomError] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [form, setForm] = useState({
@@ -49,7 +67,7 @@ function AssemblyOrderFormPage() {
         setError('');
         try {
             const [bomResponse, warehouseResponse] = await Promise.all([
-                assemblyApi.getAssemblyBoms(),
+                assemblyApi.getAssemblyBoms({ status: 'APPROVED' }),
                 warehouseApi.getWarehouses({ page: 0, size: 200 })
             ]);
             setBoms(listFrom(unwrap(bomResponse)));
@@ -58,6 +76,19 @@ function AssemblyOrderFormPage() {
             setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được dữ liệu BOM/kho.');
         } finally {
             setLoading(false);
+        }
+    }, []);
+
+    const loadBomLookups = useCallback(async () => {
+        try {
+            const [productResponse, variantResponse] = await Promise.all([
+                axiosClient.get('/products', { params: { page: 0, size: 500 } }),
+                axiosClient.get('/products/variants', { params: { page: 0, size: 1000 } })
+            ]);
+            setProducts(listFrom(unwrap(productResponse)).filter((item) => item.active !== false));
+            setVariants(listFrom(unwrap(variantResponse)).filter((item) => item.active !== false));
+        } catch (err) {
+            setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách thành phẩm/SKU.');
         }
     }, []);
 
@@ -92,6 +123,13 @@ function AssemblyOrderFormPage() {
         }, 0);
         return () => window.clearTimeout(timeoutId);
     }, [loadBaseData]);
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            loadBomLookups();
+        }, 0);
+        return () => window.clearTimeout(timeoutId);
+    }, [loadBomLookups]);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -153,10 +191,113 @@ function AssemblyOrderFormPage() {
         }
     };
 
+    const setBomField = (field, value) => {
+        setBomForm((current) => ({ ...current, [field]: value }));
+        setBomError('');
+    };
+
+    const setBomLineField = (index, field, value) => {
+        setBomForm((current) => ({
+            ...current,
+            lines: current.lines.map((line, lineIndex) => lineIndex === index ? { ...line, [field]: value } : line)
+        }));
+        setBomError('');
+    };
+
+    const addBomLine = () => {
+        setBomForm((current) => ({
+            ...current,
+            lines: [...current.lines, { ...defaultBomLine }]
+        }));
+    };
+
+    const removeBomLine = (index) => {
+        setBomForm((current) => ({
+            ...current,
+            lines: current.lines.length === 1 ? current.lines : current.lines.filter((_, lineIndex) => lineIndex !== index)
+        }));
+    };
+
+    const openBomModal = () => {
+        setBomError('');
+        setBomForm(createDefaultBomForm());
+        setShowBomModal(true);
+    };
+
+    const validateBomForm = () => {
+        if (!bomForm.productId) return 'Vui lòng chọn thành phẩm.';
+        if (!bomForm.bomName.trim()) return 'Vui lòng nhập tên BOM.';
+        if (!bomForm.versionNo || Number(bomForm.versionNo) <= 0) return 'Phiên bản BOM phải lớn hơn 0.';
+        if (!bomForm.lines.length) return 'BOM phải có ít nhất một linh kiện.';
+        for (let index = 0; index < bomForm.lines.length; index += 1) {
+            const line = bomForm.lines[index];
+            if (!line.componentVariantId) return `Vui lòng chọn SKU linh kiện dòng ${index + 1}.`;
+            if (!line.quantity || Number(line.quantity) <= 0) return `Định mức dòng ${index + 1} phải lớn hơn 0.`;
+            if (!Number.isInteger(Number(line.quantity))) return `Định mức dòng ${index + 1} phải là số nguyên.`;
+        }
+        return '';
+    };
+
+    const saveQuickBom = async () => {
+        const validationMessage = validateBomForm();
+        if (validationMessage) {
+            setBomError(validationMessage);
+            return;
+        }
+        setSavingBom(true);
+        setBomError('');
+        try {
+            const payload = {
+                productId: Number(bomForm.productId),
+                bomCode: bomForm.bomCode.trim() || null,
+                bomName: bomForm.bomName.trim(),
+                versionNo: Number(bomForm.versionNo),
+                status: 'APPROVED',
+                lines: bomForm.lines.map((line) => ({
+                    componentVariantId: Number(line.componentVariantId),
+                    quantity: Number.parseInt(line.quantity, 10),
+                    note: line.note?.trim() || null
+                }))
+            };
+            const savedBom = unwrap(await assemblyApi.createAssemblyBom(payload));
+            const refreshed = listFrom(unwrap(await assemblyApi.getAssemblyBoms({ status: 'APPROVED' })));
+            setBoms(refreshed);
+            setField('bomId', savedBom.id || '');
+            setShowBomModal(false);
+            setSuccess('Đã tạo BOM nhanh và chọn vào lệnh.');
+        } catch (err) {
+            setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tạo được BOM nhanh.');
+        } finally {
+            setSavingBom(false);
+        }
+    };
+
     const previewLines = selectedBom?.lines?.map((line) => ({
         ...line,
         required: Number(line.quantity || 0) * Number(form.quantity || 0)
     })) || [];
+    const targetItem = selectedBom ? {
+        name: selectedBom.productName,
+        sku: selectedBom.productCode,
+        quantity: Number(form.quantity || 0),
+        unitName: selectedBom.unitName
+    } : null;
+    const lossItems = form.orderType === 'DISASSEMBLY'
+        ? (targetItem ? [targetItem] : [])
+        : previewLines.map((line) => ({
+            name: line.componentName,
+            sku: line.componentSku,
+            quantity: line.required,
+            unitName: line.unitName
+        }));
+    const gainItems = form.orderType === 'DISASSEMBLY'
+        ? previewLines.map((line) => ({
+            name: line.componentName,
+            sku: line.componentSku,
+            quantity: line.required,
+            unitName: line.unitName
+        }))
+        : (targetItem ? [targetItem] : []);
 
     return (
         <AdminLayout>
@@ -204,10 +345,16 @@ function AssemblyOrderFormPage() {
                         </label>
                         <label className={styles.field}>
                             <span>BOM</span>
-                            <select value={form.bomId} onChange={(event) => setField('bomId', event.target.value)} disabled={!canEdit || loading}>
-                                <option value="">{loading ? 'Đang tải BOM...' : 'Chọn BOM đã duyệt'}</option>
-                                {boms.map((bom) => <option key={bom.id} value={bom.id}>{bom.bomCode} - {bom.bomName}</option>)}
-                            </select>
+                            <div className={styles.inlineField}>
+                                <select value={form.bomId} onChange={(event) => setField('bomId', event.target.value)} disabled={!canEdit || loading}>
+                                    <option value="">{loading ? 'Đang tải BOM...' : 'Chọn BOM đã duyệt'}</option>
+                                    {boms.map((bom) => <option key={bom.id} value={bom.id}>{bom.bomCode} - {bom.bomName}</option>)}
+                                </select>
+                                <button className={styles.secondaryButton} type="button" onClick={openBomModal} disabled={!canEdit}>
+                                    <i className="bi bi-plus-lg"></i>
+                                    Tạo nhanh
+                                </button>
+                            </div>
                         </label>
                         <label className={styles.field}>
                             <span>Kho</span>
@@ -218,7 +365,7 @@ function AssemblyOrderFormPage() {
                         </label>
                         <label className={styles.field}>
                             <span>Số lượng</span>
-                            <input type="number" min="0.0001" step="0.0001" value={form.quantity} onChange={(event) => setField('quantity', event.target.value)} disabled={!canEdit} />
+                            <input className={styles.numberInput} inputMode="decimal" type="number" min="0.0001" step="0.0001" value={form.quantity} onChange={(event) => setField('quantity', event.target.value)} disabled={!canEdit} />
                         </label>
                         <label className={styles.field}>
                             <span>Ngày thực hiện</span>
@@ -245,38 +392,145 @@ function AssemblyOrderFormPage() {
                     <div className={styles.detailItem}><span>Số linh kiện</span><strong>{previewLines.length}</strong></div>
                 </div>
 
-                <div className={styles.tablePanel}>
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th>SKU linh kiện</th>
-                                <th>Tên linh kiện</th>
-                                <th>Định mức</th>
-                                <th>Số lượng cần</th>
-                                <th>Đơn vị</th>
-                                <th>Ghi chú</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {previewLines.length > 0 ? previewLines.map((line) => (
-                                <tr key={line.id}>
-                                    <td>{line.componentSku}</td>
-                                    <td>{line.componentName}</td>
-                                    <td>{Number(line.quantity || 0).toLocaleString('vi-VN')}</td>
-                                    <td><strong>{line.required.toLocaleString('vi-VN')}</strong></td>
-                                    <td>{line.unitName || '-'}</td>
-                                    <td>{line.note || '-'}</td>
-                                </tr>
-                            )) : (
-                                <tr>
-                                    <td className={styles.emptyCell} colSpan="6">{loading ? 'Đang tải BOM...' : 'Chọn BOM để xem danh sách linh kiện.'}</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                <div className={styles.flowGrid}>
+                    <FlowPanel
+                        tone="loss"
+                        title="Bị trừ khỏi kho"
+                        icon="bi-dash-lg"
+                        emptyText={loading ? 'Đang tải BOM...' : 'Chọn BOM để xem hàng bị trừ.'}
+                        items={lossItems}
+                    />
+                    <FlowPanel
+                        tone="gain"
+                        title="Được cộng vào kho"
+                        icon="bi-plus-lg"
+                        emptyText={loading ? 'Đang tải BOM...' : 'Chọn BOM để xem hàng được cộng.'}
+                        items={gainItems}
+                    />
                 </div>
+
+                {showBomModal && (
+                    <div className={styles.modalOverlay}>
+                        <div className={styles.modal}>
+                            <div className={styles.modalHeader}>
+                                <h2>Tạo nhanh BOM</h2>
+                                <button className={styles.iconButton} type="button" title="Đóng" onClick={() => setShowBomModal(false)}>
+                                    <i className="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+
+                            <div className={styles.modalBody}>
+                                {bomError && <div className={styles.errorBox}>{bomError}</div>}
+
+                                <div className={styles.formGrid}>
+                                    <label className={styles.field}>
+                                        <span>Thành phẩm</span>
+                                        <select value={bomForm.productId} onChange={(event) => setBomField('productId', event.target.value)}>
+                                            <option value="">Chọn thành phẩm</option>
+                                            {products.map((product) => (
+                                                <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className={styles.field}>
+                                        <span>Mã BOM</span>
+                                        <input value={bomForm.bomCode} onChange={(event) => setBomField('bomCode', event.target.value)} placeholder="Để trống để tự sinh mã" />
+                                    </label>
+                                    <label className={styles.field}>
+                                        <span>Tên BOM</span>
+                                        <input value={bomForm.bomName} onChange={(event) => setBomField('bomName', event.target.value)} placeholder="Ví dụ: Cấu hình PC văn phòng" />
+                                    </label>
+                                    <label className={styles.field}>
+                                        <span>Phiên bản</span>
+                                        <input className={styles.numberInput} inputMode="decimal" type="number" min="0.01" step="0.01" value={bomForm.versionNo} onChange={(event) => setBomField('versionNo', event.target.value)} />
+                                    </label>
+                                </div>
+
+                                <div className={styles.lineActions}>
+                                    <button className={styles.secondaryButton} type="button" onClick={addBomLine}>
+                                        <i className="bi bi-plus-lg"></i>
+                                        Thêm linh kiện
+                                    </button>
+                                </div>
+
+                                <div className={styles.tablePanel}>
+                                    <table className={styles.table}>
+                                        <thead>
+                                            <tr>
+                                                <th>SKU linh kiện</th>
+                                                <th>Định mức</th>
+                                                <th>Ghi chú</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {bomForm.lines.map((line, index) => (
+                                                <tr key={`${index}-${line.componentVariantId}`}>
+                                                    <td>
+                                                        <select value={line.componentVariantId} onChange={(event) => setBomLineField(index, 'componentVariantId', event.target.value)}>
+                                                            <option value="">Chọn SKU</option>
+                                                            {variants.map((variant) => (
+                                                                <option key={variant.id} value={variant.id}>{variant.sku} - {variant.productName} / {variant.variantName}</option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
+                                                    <td>
+                                                        <input className={styles.numberInput} inputMode="numeric" type="number" min="1" step="1" value={line.quantity} onChange={(event) => setBomLineField(index, 'quantity', event.target.value)} />
+                                                    </td>
+                                                    <td>
+                                                        <input value={line.note} onChange={(event) => setBomLineField(index, 'note', event.target.value)} placeholder="Ghi chú dòng" />
+                                                    </td>
+                                                    <td>
+                                                        <button className={styles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeBomLine(index)}>
+                                                            <i className="bi bi-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div className={styles.modalFooter}>
+                                <button className={styles.secondaryButton} type="button" onClick={() => setShowBomModal(false)}>Hủy</button>
+                                <button className={styles.primaryButton} type="button" onClick={saveQuickBom} disabled={savingBom}>
+                                    <i className="bi bi-save"></i>
+                                    {savingBom ? 'Đang cất...' : 'Cất và chọn'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </form>
         </AdminLayout>
+    );
+}
+
+function FlowPanel({ tone, title, icon, items, emptyText }) {
+    const isLoss = tone === 'loss';
+    return (
+        <div className={`${styles.flowPanel} ${isLoss ? styles.lossPanel : styles.gainPanel}`}>
+            <div className={`${styles.flowPanelHeader} ${isLoss ? styles.lossHeader : styles.gainHeader}`}>
+                <i className={`bi ${icon}`}></i>
+                <span>{title}</span>
+            </div>
+            <div className={styles.flowList}>
+                {items.length > 0 ? items.map((item, index) => (
+                    <div className={styles.flowRow} key={`${item.sku || item.name}-${index}`}>
+                        <div className={styles.flowName}>
+                            <strong>{item.name || 'Chưa có tên hàng'}</strong>
+                            <span className={styles.flowSku}>{item.sku || 'Chưa có mã'}</span>
+                        </div>
+                        <div className={`${styles.flowQty} ${isLoss ? styles.lossQty : styles.gainQty}`}>
+                            {isLoss ? '-' : '+'}{Number(item.quantity || 0).toLocaleString('vi-VN')} {item.unitName || ''}
+                        </div>
+                    </div>
+                )) : (
+                    <div className={styles.emptyCell}>{emptyText}</div>
+                )}
+            </div>
+        </div>
     );
 }
 

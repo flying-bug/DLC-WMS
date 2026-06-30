@@ -1,7 +1,15 @@
 import axiosClient from './axiosClient';
 
-export const getAssemblyBoms = () => {
-    return axiosClient.get('/assembly-boms');
+export const getAssemblyBoms = (params = {}) => {
+    return axiosClient.get('/assembly-boms', { params });
+};
+
+export const createAssemblyBom = (data) => {
+    return axiosClient.post('/assembly-boms', data);
+};
+
+export const updateAssemblyBom = (id, data) => {
+    return axiosClient.put(`/assembly-boms/${id}`, data);
 };
 
 export const getAssemblyOrders = (params = {}) => {
