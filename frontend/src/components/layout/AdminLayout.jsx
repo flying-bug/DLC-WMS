@@ -68,6 +68,14 @@ const AdminLayout = ({ children }) => {
                         <span>Thương hiệu</span>
                     </button>
                     <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/assembly-orders') ? styles.active : ''}`}
+                        onClick={() => navigate('/assembly-orders')}
+                        type="button"
+                    >
+                        <i className="fas fa-boxes-stacked"></i>
+                        <span>Lắp ráp / Tháo dỡ</span>
+                    </button>
+                    <button
                         className={`${styles.navItem} ${currentPath.startsWith('/units') ? styles.active : ''}`}
                         onClick={() => navigate('/units')}
                         type="button"
@@ -113,6 +121,13 @@ const AdminLayout = ({ children }) => {
                         </button>
                         <button className={styles.tab} type="button">Chuyển kho</button>
                         <button className={styles.tab} type="button">Kiểm kê</button>
+                        <button
+                            className={`${styles.tab} ${currentPath.startsWith('/assembly-orders') ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/assembly-orders')}
+                            type="button"
+                        >
+                            Lắp ráp / Tháo dỡ
+                        </button>
                         <button className={styles.tab} type="button">Báo cáo</button>
                         <button
                             className={`${styles.tab} ${currentPath === '/warehouses' ? styles.activeTab : ''}`}
