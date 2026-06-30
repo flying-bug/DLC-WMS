@@ -1,0 +1,104 @@
+.modalContent {
+    display: flex;
+    flex-direction: column;
+}
+
+.modalBody {
+    padding: 24px 24px 16px 24px;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.iconWrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background-color: #fee2e2;
+    color: #b91c1c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #111827;
+    font-weight: 700;
+}
+
+.content {
+    font-size: 1rem;
+    color: #374151;
+}
+
+.content p {
+    margin: 0 0 12px 0;
+}
+
+.content p:last-child {
+    margin-bottom: 0;
+}
+
+.warehouseName {
+    font-weight: 700;
+    color: #1e3a8a;
+    font-size: 1.1rem;
+}
+
+.warningText {
+    color: #b91c1c;
+}
+
+.infoText {
+    margin-top: 4px;
+}
+
+.modalFooter {
+    background-color: #f3f4f6;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #e5e7eb;
+    border-bottom-left-radius: 28px;
+    border-bottom-right-radius: 28px;
+}
+
+.btnCancel {
+    background-color: #f9fafb;
+    border: 1px solid #6b7280;
+    color: #374151;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.btnCancel:hover {
+    background-color: #f3f4f6;
+}
+
+.btnDelete {
+    background-color: #b91c1c;
+    border: none;
+    color: white;
+    padding: 8px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.btnDelete:hover {
+    background-color: #991b1b;
+}
