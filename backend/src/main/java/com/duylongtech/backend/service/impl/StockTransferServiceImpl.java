@@ -321,6 +321,8 @@ public class StockTransferServiceImpl implements StockTransferService {
             destBalance.setQuantityOnHand(destBalance.getQuantityOnHand().add(qty));
             inventoryBalanceRepository.save(destBalance);
         }
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<StockTransferResponseDTO> getAllTransfers() {
