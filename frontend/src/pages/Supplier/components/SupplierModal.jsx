@@ -20,6 +20,7 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
         bank_account_number: '',
         bank_beneficiary_name: ''
     });
+    const [errors, setErrors] = useState({});
 
     useEffect(() => {
         if (initialData) {
@@ -34,11 +35,14 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
             ...prev,
             [name]: value
         }));
+        if (errors[name]) {
+            setErrors(prev => ({ ...prev, [name]: null }));
+        }
     };
 
     const handleSave = () => {
-        if (!formData.name) {
-            alert('Vui lòng nhập tên nhà cung cấp!');
+        if (!formData.name.trim()) {
+            setErrors({ name: 'Vui lòng nhập tên nhà cung cấp!' });
             return;
         }
         if (onSave) {
@@ -123,12 +127,13 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
                             <label className={styles.formLabel}>Tên nhà cung cấp <span className={styles.required}>*</span></label>
                             <input 
                                 type="text" 
-                                className={styles.input} 
+                                className={`${styles.input} ${errors.name ? styles.inputError : ''}`} 
                                 name="name"
                                 value={formData.name}
                                 onChange={handleChange}
                                 placeholder="Ví dụ: Công ty TNHH Duy Long" 
                             />
+                            {errors.name && <span className={styles.errorMsg}>{errors.name}</span>}
                         </div>
 
                         <div className={`${styles.formGroup} ${styles.col6}`}>
