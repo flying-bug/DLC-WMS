@@ -78,6 +78,68 @@
     margin: 4px 0;
 }
 
+.themeSection {
+    padding: 8px;
+}
+
+.themeTitle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.themeTitle i {
+    color: var(--color-text-muted);
+    font-size: 15px;
+}
+
+.themeOptions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.themeOption {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+    color: var(--color-text-body);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.themeOption:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.themeOptionActive {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    box-shadow: var(--shadow-focus-primary);
+}
+
+.themeSwatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--color-white);
+    box-shadow: 0 0 0 1px var(--color-border);
+    flex: 0 0 14px;
+}
+
 .dropdownItemDanger {
     color: var(--color-danger);
 }

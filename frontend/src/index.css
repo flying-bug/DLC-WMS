@@ -10,16 +10,16 @@ button {
 /* ── MISA Design System — shared table/button/badge classes ── */
 
 .misa-table {
-  background: white;
+  background: var(--color-surface);
   border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-card-subtle);
 }
 
 .misa-table thead th {
-  background-color: #f8f9fa;
+  background-color: var(--table-header-bg);
   border-bottom: 2px solid var(--misa-border);
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-strong);
   text-transform: uppercase;
   font-size: 12px;
   padding: 12px 16px;
@@ -32,13 +32,13 @@ button {
 }
 
 .misa-table tbody tr:hover {
-  background-color: #f1f8fe;
+  background-color: var(--table-hover-bg);
   cursor: pointer;
 }
 
 .btn-misa-primary {
   background-color: var(--misa-primary);
-  color: white;
+  color: var(--color-white);
   border: none;
   font-weight: 500;
   padding: 6px 16px;
@@ -47,21 +47,21 @@ button {
 }
 
 .btn-misa-primary:hover {
-  background-color: #005a96;
-  color: white;
+  background-color: var(--button-primary-hover-bg);
+  color: var(--color-white);
 }
 
 .btn-misa-outline {
   border: 1px solid var(--misa-border);
-  background-color: white;
-  color: #333;
+  background-color: var(--button-outline-bg);
+  color: var(--color-text-strong);
   font-weight: 500;
   padding: 6px 16px;
   border-radius: 3px;
 }
 
 .btn-misa-outline:hover {
-  background-color: #f4f5f8;
+  background-color: var(--button-outline-hover-bg);
 }
 
 .status-badge {
@@ -72,16 +72,16 @@ button {
 }
 
 .status-approved {
-  background-color: #e6f8ec;
-  color: #00b050;
+  background-color: var(--status-success-bg);
+  color: var(--status-success-text);
 }
 
 .status-draft {
-  background-color: #f4f5f8;
-  color: #888;
+  background-color: var(--color-surface-muted);
+  color: var(--color-text-subtle);
 }
 
 .status-inactive {
-  background-color: #feeced;
-  color: #ff0000;
+  background-color: var(--status-danger-bg);
+  color: var(--status-danger-text);
 }
