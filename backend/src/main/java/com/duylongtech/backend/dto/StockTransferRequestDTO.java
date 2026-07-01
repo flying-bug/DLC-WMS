@@ -16,5 +16,6 @@ public class StockTransferRequestDTO {
     private Long toWarehouseId;
     private LocalDate transferDate;
     private String note;
+    private String status;
     private List<StockTransferLineDTO> lines;
 }

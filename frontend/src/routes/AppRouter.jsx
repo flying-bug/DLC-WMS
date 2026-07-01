@@ -16,6 +16,9 @@ import UpdateExportSlipPage from '../pages/ExportSlip/UpdateExportSlipPage';
 import ImportHistoryPage from '../pages/ImportHistory/ImportHistoryPage';
 import CreateImportSlipPage from '../pages/CreateImportSlip/CreateImportSlipPage';
 import UpdateImportSlipPage from '../pages/UpdateImportSlip/UpdateImportSlipPage';
+import TransferHistoryPage from '../pages/TransferHistory/TransferHistoryPage';
+import CreateTransferSlipPage from '../pages/CreateTransferSlip/CreateTransferSlipPage';
+import UpdateTransferSlipPage from '../pages/CreateTransferSlip/UpdateTransferSlipPage';
 import ProfilePage from '../pages/Profile/ProfilePage';
 import AuditLogPage from '../pages/AuditLog/AuditLogPage';
 import WarehouseListPage from '../pages/Warehouse/WarehouseListPage';
@@ -79,6 +82,9 @@ function AppRouter() {
                     <Route path="/import-history" element={<ImportHistoryPage />} />
                     <Route path="/import-history/create" element={<CreateImportSlipPage />} />
                     <Route path="/import-slips/:id/edit" element={<UpdateImportSlipPage />} />
+                    <Route path="/transfer-history" element={<TransferHistoryPage />} />
+                    <Route path="/transfer-history/create" element={<CreateTransferSlipPage />} />
+                    <Route path="/transfer-history/:id/edit" element={<UpdateTransferSlipPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/units" element={<UnitPage />} />
