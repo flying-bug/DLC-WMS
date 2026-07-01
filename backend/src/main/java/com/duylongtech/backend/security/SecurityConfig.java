@@ -1,7 +1,9 @@
 package com.duylongtech.backend.security;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -53,10 +55,13 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> 
-                    auth.requestMatchers(
+                    auth.dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC, DispatcherType.FORWARD).permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(
                             "/api/v1/auth/login", 
                             "/api/v1/auth/login-google", 
                             "/api/v1/auth/forgot-password/**",
+                            "/error",
                             "/v3/api-docs",
                             "/v3/api-docs/**",
                             "/swagger-resources",
@@ -67,6 +72,7 @@ public class SecurityConfig {
                             "/swagger-ui.html",
                             "/webjars/**"
                         ).permitAll()
+                        .requestMatchers("/api/v1/ai/**").authenticated()
                         .anyRequest().authenticated()
                 );
 

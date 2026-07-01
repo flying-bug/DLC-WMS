@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 public class AiChatRequest {
-    @NotBlank(message = "Cau hoi khong duoc de trong")
-    @Size(max = 2000, message = "Cau hoi khong duoc vuot qua 2000 ky tu")
+    @NotBlank(message = "Câu hỏi không được để trống")
+    @Size(max = 2000, message = "Câu hỏi không được vượt quá 2000 ký tự")
     private String message;
 }

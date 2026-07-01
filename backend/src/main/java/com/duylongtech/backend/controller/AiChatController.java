@@ -7,6 +7,7 @@ import com.duylongtech.backend.service.AiChatService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +20,7 @@ public class AiChatController {
     private final AiChatService aiChatService;
 
     @PostMapping("/chat")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<AiChatResponse>> chat(@Valid @RequestBody AiChatRequest request) {
         return ResponseEntity.ok(ApiResponse.success(aiChatService.chat(request.getMessage())));
     }

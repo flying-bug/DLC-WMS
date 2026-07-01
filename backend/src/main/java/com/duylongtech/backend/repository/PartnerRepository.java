@@ -69,6 +69,28 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
 
     Optional<Partner> findByIdAndIsCustomerTrue(Long id);
 
+    @Query("SELECT COUNT(p) FROM Partner p WHERE p.isCustomer = true")
+    long countCustomersForAi();
+
+    @Query("SELECT COUNT(p) FROM Partner p WHERE p.isSupplier = true")
+    long countSuppliersForAi();
+
+    @Query("""
+           SELECT p FROM Partner p
+           WHERE (:keyword IS NULL OR :keyword = ''
+              OR LOWER(p.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(p.phone) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(p.email) LIKE LOWER(CONCAT('%', :keyword, '%')))
+             AND (:customerOnly = false OR p.isCustomer = true)
+             AND (:supplierOnly = false OR p.isSupplier = true)
+           ORDER BY p.createdAt DESC
+           """)
+    Page<Partner> searchPartnersForAi(@Param("keyword") String keyword,
+                                      @Param("customerOnly") boolean customerOnly,
+                                      @Param("supplierOnly") boolean supplierOnly,
+                                      Pageable pageable);
+
     /**
      * Kiểm tra khách hàng có thiết bị đang trong trạng thái sửa chữa không.
      * Dùng để chặn vô hiệu hóa (CUST03).
