@@ -71,6 +71,63 @@
     font-weight: 700;
     margin-bottom: 16px;
     box-shadow: var(--shadow-focus-blue-strong);
+    overflow: hidden;
+}
+
+.avatarUpload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.avatarUpload input {
+    display: none;
+}
+
+.avatarImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatarAction {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    margin-top: -8px;
+    margin-bottom: 12px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-primary-sidebar);
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: var(--shadow-card-soft);
+}
+
+.loadingState,
+.errorState {
+    width: 100%;
+    max-width: 500px;
+    padding: 12px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.loadingState {
+    color: var(--color-text-muted);
+    background: var(--color-surface-muted);
+}
+
+.errorState {
+    color: var(--color-danger-strong);
+    background: var(--color-danger-bg-soft);
+    border: 1px solid var(--color-danger-strong);
+    margin-bottom: 16px;
 }
 
 .profileName {

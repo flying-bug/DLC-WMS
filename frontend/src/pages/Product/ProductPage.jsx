@@ -15,6 +15,7 @@ const defaultFormData = {
     unitId: '',
     salePrice: 0,
     description: '',
+    imageUrl: '',
     trackSerial: false,
     active: true
 };
@@ -56,6 +57,7 @@ const ProductPage = () => {
     const [errorMsg, setErrorMsg] = useState('');
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [showVariantModal, setShowVariantModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [variants, setVariants] = useState([]);
@@ -189,6 +191,7 @@ const ProductPage = () => {
             unitId: product.unitId || '',
             salePrice: Number(product.salePrice || 0),
             description: product.description || '',
+            imageUrl: product.imageUrl || '',
             trackSerial: Boolean(product.trackSerial),
             active: product.active !== false
         }));
@@ -208,6 +211,7 @@ const ProductPage = () => {
             unitId: product.unitId || '',
             salePrice: Number(product.salePrice || 0),
             description: product.description || '',
+            imageUrl: product.imageUrl || '',
             trackSerial: Boolean(product.trackSerial),
             active: product.active !== false
         }));
@@ -225,11 +229,38 @@ const ProductPage = () => {
         unitId: Number(data.unitId),
         salePrice: Number(data.salePrice || 0),
         description: data.description?.trim() || '',
+        imageUrl: data.imageUrl || '',
         active: data.active,
         trackSerial: Boolean(data.trackSerial),
         trackLot: false,
         isAssembly: false
     });
+
+    const handleProductImageUpload = async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) {
+            return;
+        }
+
+        const uploadData = new FormData();
+        uploadData.append('file', file);
+        uploadData.append('folder', 'products');
+
+        try {
+            setUploadingImage(true);
+            setErrorMsg('');
+            const response = await axiosClient.post('/uploads/images', uploadData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            const imageUrl = response.data?.data?.secureUrl || response.data?.data?.url || '';
+            setFormData((current) => ({ ...current, imageUrl }));
+        } catch (error) {
+            setErrorMsg(getErrorMessage(error, 'Khong the tai anh san pham.'));
+        } finally {
+            setUploadingImage(false);
+        }
+    };
 
     const validateForm = () => {
         if (!formData.productCode.trim()) return 'Mã sản phẩm không được để trống.';
@@ -764,6 +795,37 @@ const ProductPage = () => {
                                             placeholder="0"
                                             className="misa-input"
                                         />
+                                    </div>
+                                </div>
+
+                                <div className={styles.imageUploadRow}>
+                                    <div className={styles.imagePreview}>
+                                        {formData.imageUrl ? (
+                                            <img src={formData.imageUrl} alt={formData.productName || 'Anh san pham'} />
+                                        ) : (
+                                            <i className="fas fa-image"></i>
+                                        )}
+                                    </div>
+                                    <div className={styles.imageUploadControls}>
+                                        <label className={styles.imageUploadBtn}>
+                                            <i className={uploadingImage ? 'fas fa-spinner fa-spin' : 'fas fa-cloud-upload-alt'}></i>
+                                            {uploadingImage ? 'Dang tai anh...' : 'Tai anh len Cloudinary'}
+                                            <input
+                                                type="file"
+                                                accept="image/png,image/jpeg,image/webp,image/gif"
+                                                onChange={handleProductImageUpload}
+                                                disabled={uploadingImage}
+                                            />
+                                        </label>
+                                        {formData.imageUrl && (
+                                            <button
+                                                type="button"
+                                                className={styles.removeImageBtn}
+                                                onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                                            >
+                                                Xoa anh
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 

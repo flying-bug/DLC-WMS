@@ -1,18 +1,50 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axiosClient from '../../../api/axiosClient';
+import { forceLogout, getAuthRole, USER_EVENT } from '../../../auth/session';
 import styles from './UserProfileDropdown.module.css';
-import { forceLogout, getAuthRole } from '../../../auth/session';
 
 function UserProfileDropdown() {
     const navigate = useNavigate();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [profile, setProfile] = useState(null);
     const dropdownRef = useRef(null);
 
     const userRole = getAuthRole() || 'STAFF';
     const isSA = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN';
     const isMN = userRole === 'MANAGER' || userRole === 'ROLE_MANAGER';
-    const initials = isSA ? 'SA' : isMN ? 'MN' : 'ST';
-    const displayName = isSA ? 'Quản trị viên' : isMN ? 'Quản lý' : 'Nhân viên';
+    const fallbackName = isSA ? 'Quan tri vien' : isMN ? 'Quan ly' : 'Nhan vien';
+    const displayName = profile?.fullName || fallbackName;
+    const initials = displayName
+        .split(' ')
+        .filter(Boolean)
+        .slice(-2)
+        .map((part) => part[0])
+        .join('')
+        .toUpperCase() || (isSA ? 'SA' : isMN ? 'MN' : 'ST');
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await axiosClient.get('/users/me');
+                setProfile(response.data?.data || null);
+            } catch {
+                setProfile(null);
+            }
+        };
+
+        const handleUserUpdated = (event) => {
+            if (event.detail?.user) {
+                setProfile(event.detail.user);
+            } else {
+                fetchProfile();
+            }
+        };
+
+        fetchProfile();
+        window.addEventListener(USER_EVENT, handleUserUpdated);
+        return () => window.removeEventListener(USER_EVENT, handleUserUpdated);
+    }, []);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -37,7 +69,11 @@ function UserProfileDropdown() {
             onMouseLeave={() => setIsDropdownOpen(false)}
             ref={dropdownRef}
         >
-            <div className={styles.avatarCircle} aria-hidden="true">{initials}</div>
+            <div className={styles.avatarCircle} aria-hidden="true">
+                {profile?.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt="" className={styles.avatarImage} />
+                ) : initials}
+            </div>
             <span className={styles.userName}>{displayName}</span>
             <i className={`bi bi-chevron-down ${styles.chevronIcon}`} aria-hidden="true" />
 
