@@ -169,6 +169,18 @@
     box-shadow: 0 0 0 3px rgba(0, 82, 255, 0.1);
 }
 
+.inputError {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.errorMsg {
+    font-size: 12px;
+    color: #ef4444;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
 .inputIcon {
     position: absolute;
     right: 12px;
