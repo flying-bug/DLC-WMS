@@ -90,9 +90,11 @@ public class BrandController {
     @Operation(summary = "Xem danh sách thương hiệu (UC-36)")
     @PreAuthorize("hasRole('MANAGER') or hasRole('SUPER_ADMIN') or hasAuthority('brand:view')")
     public ApiResponse<List<BrandResponse>> getAllBrands(
+            @RequestParam(value = "search", required = false) String search,
             @RequestParam(required = false) String keyword
     ) {
-        return ApiResponse.success(brandService.getAllBrands(keyword));
+        String actualKeyword = (search != null && !search.isBlank()) ? search : keyword;
+        return ApiResponse.success(brandService.getAllBrands(actualKeyword));
     }
 
     /**
