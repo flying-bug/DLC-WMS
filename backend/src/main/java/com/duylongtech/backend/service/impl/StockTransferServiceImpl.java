@@ -159,6 +159,22 @@ public class StockTransferServiceImpl implements StockTransferService {
         return mapToResponseDTO(stockTransfer);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<StockTransferResponseDTO> getAllTransfers() {
+        return stockTransferRepository.findAll().stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public StockTransferResponseDTO getTransferById(Long transferId) {
+        StockTransfer stockTransfer = stockTransferRepository.findById(transferId)
+                .orElseThrow(() -> new BusinessException(SystemMessage.INV_DOC_NOT_FOUND));
+        return mapToResponseDTO(stockTransfer);
+    }
+
     private StockTransferResponseDTO mapToResponseDTO(StockTransfer transfer) {
         List<StockTransferLineDTO> lines = transfer.getLines().stream()
                 .map(line -> StockTransferLineDTO.builder()
