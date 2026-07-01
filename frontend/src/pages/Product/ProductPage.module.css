@@ -509,6 +509,74 @@
     border-left: 4px solid var(--color-danger-strong);
 }
 
+.imageUploadRow {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 12px;
+    border: 1px solid var(--color-border-soft);
+    border-radius: 6px;
+    background: var(--color-bg);
+}
+
+.imagePreview {
+    width: 96px;
+    height: 72px;
+    flex: 0 0 96px;
+    border: 1px solid var(--color-border-field);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--color-surface);
+    color: var(--color-text-disabled);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.imagePreview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.imageUploadControls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.imageUploadBtn,
+.removeImageBtn {
+    min-height: 34px;
+    border-radius: var(--radius-control);
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.imageUploadBtn {
+    border: 1px solid var(--color-primary);
+    background: var(--color-surface);
+    color: var(--color-primary);
+}
+
+.imageUploadBtn input {
+    display: none;
+}
+
+.removeImageBtn {
+    border: 1px solid var(--color-border-field);
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
 .formRow {
     display: flex;
     gap: 16px;

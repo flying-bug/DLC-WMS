@@ -9,8 +9,10 @@ import com.duylongtech.backend.service.RealtimeSessionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -44,6 +46,12 @@ public class UserController {
     @Operation(summary = "Xem thông tin cá nhân", description = "Lấy thông tin profile của user đang đăng nhập. Yêu cầu Bearer Token.")
     public ApiResponse<UserDetailResponseDTO> getCurrentUserProfile() {
         return ApiResponse.success(userService.getCurrentUserProfile());
+    }
+
+    @PutMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Cap nhat anh dai dien", description = "Tai anh len Cloudinary va luu URL vao profile user dang dang nhap.")
+    public ApiResponse<UserDetailResponseDTO> updateCurrentUserAvatar(@RequestParam("file") MultipartFile file) {
+        return ApiResponse.success(userService.updateCurrentUserAvatar(file));
     }
 
     // 5. View Account List
