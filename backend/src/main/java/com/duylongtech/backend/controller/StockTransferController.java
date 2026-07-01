@@ -69,4 +69,21 @@ public class StockTransferController {
     //     StockTransferResponseDTO response = stockTransferService.receiveTransfer(transferId, receiptDTO, currentUserId);
     //     return ResponseEntity.ok(response);
     // }
+    @PostMapping("/{id}/receive")
+    public ResponseEntity<StockTransferResponseDTO> receiveTransfer(
+            @PathVariable("id") Long transferId,
+            @RequestBody StockTransferReceiptDTO receiptDTO) {
+        StockTransferResponseDTO response = stockTransferService.receiveTransfer(transferId, receiptDTO, currentUserId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping
+    public ResponseEntity<java.util.List<StockTransferResponseDTO>> getAllTransfers() {
+        return ResponseEntity.ok(stockTransferService.getAllTransfers());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<StockTransferResponseDTO> getTransferById(@PathVariable("id") Long transferId) {
+        return ResponseEntity.ok(stockTransferService.getTransferById(transferId));
+    }
 }

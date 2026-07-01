@@ -49,21 +49,32 @@ public class WarehouseService {
             throw new BusinessException(SystemMessage.WH_CODE_EXISTS);
         }
 
+        com.duylongtech.backend.entity.User creator = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
+
         Warehouse warehouse = Warehouse.builder()
                 .code(request.getCode())
                 .name(request.getName())
                 .address(request.getAddress())
                 .type("STANDARD") // Cố định theo spec
                 .status("APPROVED")
-                .creator(userRepository.findById(currentUserId).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND)))
+                .creator(creator)
                 .build();
 
         Warehouse saved = warehouseRepository.save(warehouse);
+
+        Long roleId = null;
+        if (creator.getRoles() != null && !creator.getRoles().isEmpty()) {
+            roleId = creator.getRoles().iterator().next().getId();
+        } else {
+            roleId = 1L;
+        }
 
         // Ghi nhận người tạo vào USER_WAREHOUSE_ROLES
         UserWarehouseRole ownerRole = UserWarehouseRole.builder()
                 .userId(currentUserId)
                 .warehouseId(saved.getId())
+                .roleId(roleId)
                 .isActive(true)
                 .build();
         userWarehouseRoleRepository.save(ownerRole);

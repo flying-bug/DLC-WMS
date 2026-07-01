@@ -321,6 +321,20 @@ public class StockTransferServiceImpl implements StockTransferService {
             destBalance.setQuantityOnHand(destBalance.getQuantityOnHand().add(qty));
             inventoryBalanceRepository.save(destBalance);
         }
+    @Override
+    @Transactional(readOnly = true)
+    public List<StockTransferResponseDTO> getAllTransfers() {
+        return stockTransferRepository.findAll().stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public StockTransferResponseDTO getTransferById(Long transferId) {
+        StockTransfer stockTransfer = stockTransferRepository.findById(transferId)
+                .orElseThrow(() -> new BusinessException(SystemMessage.INV_DOC_NOT_FOUND));
+        return mapToResponseDTO(stockTransfer);
     }
 
     private StockTransferResponseDTO mapToResponseDTO(StockTransfer transfer) {
