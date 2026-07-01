@@ -99,6 +99,14 @@ const AdminLayout = ({ children }) => {
                         <i className="fas fa-layer-group"></i>
                         <span>Danh mục sản phẩm</span>
                     </button>
+                    <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/ai-chat') ? styles.active : ''}`}
+                        onClick={() => navigate('/ai-chat')}
+                        type="button"
+                    >
+                        <i className="fas fa-robot"></i>
+                        <span>AI Chat</span>
+                    </button>
                 </nav>
             </aside>
 
@@ -163,6 +171,13 @@ const AdminLayout = ({ children }) => {
                             type="button"
                         >
                             Hàng hóa, dịch vụ
+                        </button>
+                        <button
+                            className={`${styles.tab} ${currentPath.startsWith('/ai-chat') ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/ai-chat')}
+                            type="button"
+                        >
+                            AI Chat
                         </button>
                     </nav>
                     <div className={styles.headerRight}>

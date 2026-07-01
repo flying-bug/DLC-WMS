@@ -36,6 +36,7 @@ import BrandListPage from '../pages/Brand/BrandListPage';
 import AssemblyBomPage from '../pages/AssemblyOrder/AssemblyBomPage';
 import AssemblyOrderListPage from '../pages/AssemblyOrder/AssemblyOrderListPage';
 import AssemblyOrderFormPage from '../pages/AssemblyOrder/AssemblyOrderFormPage';
+import AiChatPage from '../pages/AiChat/AiChatPage';
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -106,6 +107,7 @@ function AppRouter() {
                     <Route path="/assembly-orders/create" element={<AssemblyOrderFormPage />} />
                     <Route path="/assembly-orders/:id" element={<AssemblyOrderFormPage />} />
                     <Route path="/brands" element={<BrandListPage />} />
+                    <Route path="/ai-chat" element={<AiChatPage />} />
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}
