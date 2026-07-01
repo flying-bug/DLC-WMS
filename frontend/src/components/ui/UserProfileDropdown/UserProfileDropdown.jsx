@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../../api/axiosClient';
 import { forceLogout, getAuthRole, USER_EVENT } from '../../../auth/session';
+import { useTheme } from '../../../theme/useTheme';
 import styles from './UserProfileDropdown.module.css';
 
 function UserProfileDropdown() {
     const navigate = useNavigate();
+    const { theme, themes, setTheme } = useTheme();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [profile, setProfile] = useState(null);
     const dropdownRef = useRef(null);
@@ -84,6 +86,31 @@ function UserProfileDropdown() {
                     </div>
                     <div className={styles.dropdownItem} onClick={(e) => { e.stopPropagation(); navigate('/change-password'); setIsDropdownOpen(false); }}>
                         <i className="bi bi-shield-lock" /> Doi mat khau
+                    </div>
+                    <div className={styles.dropdownDivider} />
+                    <div className={styles.themeSection} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.themeTitle}>
+                            <i className="bi bi-palette" /> Giao dien
+                        </div>
+                        <div className={styles.themeOptions}>
+                            {themes.map((item) => (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    className={`${styles.themeOption} ${theme === item.id ? styles.themeOptionActive : ''}`}
+                                    onClick={() => setTheme(item.id)}
+                                    aria-pressed={theme === item.id}
+                                    title={item.name}
+                                >
+                                    <span
+                                        className={styles.themeSwatch}
+                                        style={{ backgroundColor: item.color }}
+                                        aria-hidden="true"
+                                    />
+                                    <span>{item.name}</span>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                     <div className={styles.dropdownDivider} />
                     <div className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`} onClick={(e) => { e.stopPropagation(); setIsDropdownOpen(false); forceLogout(); }}>
