@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import axiosClient from '../../api/axiosClient';
 import AdminLayout from '../../components/layout/AdminLayout';
 import styles from './AiChatPage.module.css';
 
@@ -19,7 +20,7 @@ const initialMessages = [
 ];
 
 function buildMockReply(question) {
-    return `Minh da nhan cau hoi: "${question}". Hien tai giao dien chat dang chay o che do demo. Buoc tiep theo la noi endpoint RAG de lay cau tra loi tu tai lieu va du lieu he thong.`;
+    return `Minh chua goi duoc backend cho cau hoi: "${question}". Hay kiem tra backend da chay chua, sau do thu lai.`;
 }
 
 function AiChatPage() {
@@ -53,22 +54,44 @@ function AiChatPage() {
         setInput('');
         setIsThinking(true);
 
-        window.setTimeout(() => {
-            setMessages((prev) => [
-                ...prev,
-                {
-                    id: Date.now() + 1,
-                    role: 'assistant',
-                    content: buildMockReply(question),
-                    time: new Intl.DateTimeFormat('vi-VN', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    }).format(new Date())
-                }
-            ]);
-            setIsThinking(false);
-            textareaRef.current?.focus();
-        }, 500);
+        axiosClient.post('/ai/chat', { message: question })
+            .then((response) => {
+                const data = response.data?.data;
+                const sources = Array.isArray(data?.sources) ? data.sources : [];
+                const sourceText = sources.length > 0
+                    ? `\n\nNguon du lieu: ${sources.map((source) => source.name).join(', ')}`
+                    : '';
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        id: Date.now() + 1,
+                        role: 'assistant',
+                        content: `${data?.answer || buildMockReply(question)}${sourceText}`,
+                        time: new Intl.DateTimeFormat('vi-VN', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }).format(new Date())
+                    }
+                ]);
+            })
+            .catch(() => {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        id: Date.now() + 1,
+                        role: 'assistant',
+                        content: buildMockReply(question),
+                        time: new Intl.DateTimeFormat('vi-VN', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }).format(new Date())
+                    }
+                ]);
+            })
+            .finally(() => {
+                setIsThinking(false);
+                textareaRef.current?.focus();
+            });
     };
 
     const handleSubmit = (event) => {
