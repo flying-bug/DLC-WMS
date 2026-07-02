@@ -10,13 +10,16 @@ const SupplierListPage = () => {
     const navigate = useNavigate();
     const [suppliers, setSuppliers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const fetchSuppliers = async () => {
+    const fetchSuppliers = async (keyword = '') => {
         try {
             setLoading(true);
-            const res = await axiosClient.get('/suppliers');
+            const res = await axiosClient.get('/suppliers', {
+                params: { search: keyword }
+            });
             if (res.data && res.data.data) {
                 setSuppliers(res.data.data);
             }
@@ -28,12 +31,8 @@ const SupplierListPage = () => {
     };
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            fetchSuppliers();
-        }, 0);
-
-        return () => clearTimeout(timer);
-    }, []);
+        fetchSuppliers(searchTerm);
+    }, [searchTerm]);
 
     const formatCurrency = (val) => {
         if (!val) return '0';
@@ -105,12 +104,38 @@ const SupplierListPage = () => {
                             </button>
                             <div className={styles.searchBox}>
                                 <i className="fas fa-search"></i>
-                                <input 
-                                    type="text" 
-                                    placeholder="Tìm tên hoặc mã NCC..." 
+                                <input
+                                    type="text"
+                                    placeholder="Tìm tên hoặc mã NCC..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
+                                    onFocus={() => setIsSearchFocused(true)}
+                                    onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                                 />
+                                {isSearchFocused && searchTerm && (
+                                    <div className={styles.searchDropdown}>
+                                        {loading ? (
+                                            <div className={styles.dropdownLoading}>Đang tìm kiếm...</div>
+                                        ) : suppliers.length > 0 ? (
+                                            suppliers.slice(0, 5).map(item => (
+                                                <div 
+                                                    key={item.id} 
+                                                    className={styles.dropdownItem}
+                                                    onClick={() => {
+                                                        setSearchTerm(item.name);
+                                                        fetchSuppliers(item.name);
+                                                        setIsSearchFocused(false);
+                                                    }}
+                                                >
+                                                    <div className={styles.dropdownItemName}>{item.name}</div>
+                                                    <div className={styles.dropdownItemCode}>{item.code}</div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className={styles.dropdownLoading}>Không tìm thấy kết quả</div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className={styles.toolbarRight}>
@@ -143,18 +168,18 @@ const SupplierListPage = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {loading ? (
-                                    <tr><td colSpan="7" style={{textAlign:'center', padding:'20px'}}>Đang tải dữ liệu...</td></tr>
+                                {loading && suppliers.length === 0 ? (
+                                    <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>Đang tải dữ liệu...</td></tr>
                                 ) : suppliers.length === 0 ? (
-                                    <tr><td colSpan="7" style={{textAlign:'center', padding:'20px'}}>Chưa có dữ liệu.</td></tr>
+                                    <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>Chưa có dữ liệu.</td></tr>
                                 ) : suppliers.map((item) => (
                                     <tr key={item.id}>
                                         <td style={{ textAlign: 'center' }}>
                                             <input type="checkbox" />
                                         </td>
                                         <td className={styles.codeCell}>{item.code}</td>
-                                        <td 
-                                            className={styles.nameCell} 
+                                        <td
+                                            className={styles.nameCell}
                                             style={{ cursor: 'pointer', color: 'var(--color-primary, #002b6b)' }}
                                             onClick={() => navigate(`/suppliers/${item.id}`)}
                                         >
@@ -204,12 +229,12 @@ const SupplierListPage = () => {
             </div>
 
             {isModalOpen && (
-                <SupplierModal 
-                    onClose={() => setIsModalOpen(false)} 
+                <SupplierModal
+                    onClose={() => setIsModalOpen(false)}
                     onSave={async (data) => {
                         try {
                             const cleanString = (str) => (str && str.trim() !== '') ? str.trim() : null;
-                            
+
                             const newSupplier = {
                                 code: cleanString(data.code) || `NCC${Math.floor(Math.random() * 1000)}`,
                                 name: cleanString(data.name),
@@ -232,7 +257,7 @@ const SupplierListPage = () => {
                         } catch (error) {
                             alert(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi tạo NCC');
                         }
-                    }} 
+                    }}
                 />
             )}
         </AdminLayout>
