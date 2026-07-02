@@ -43,8 +43,35 @@ const SupplierListPage = () => {
         }
     };
 
+    // Fix: Move state update logic into useEffect to prevent cascading renders
     useEffect(() => {
-        fetchSuppliers(searchTerm);
+        let isMounted = true;
+
+        const loadSuppliers = async () => {
+            try {
+                setLoading(true);
+                const res = await axiosClient.get('/suppliers', {
+                    params: { search: searchTerm }
+                });
+                if (isMounted && res.data && res.data.data) {
+                    setSuppliers(res.data.data);
+                }
+            } catch (error) {
+                if (isMounted) {
+                    console.error('Lỗi tải danh sách NCC:', error);
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadSuppliers();
+
+        return () => {
+            isMounted = false;
+        };
     }, [searchTerm]);
 
     const formatCurrency = (val) => {
