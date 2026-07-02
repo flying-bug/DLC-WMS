@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import CustomerQuickCreateDrawer from './components/CustomerQuickCreateDrawer';
 import Modal from '../../components/ui/Modal/Modal';
-// import { searchCustomers } from '../../api/customerApi'; // MOCK - Temporarily unused
+import { searchCustomers, deactivateCustomer, updateCustomer } from '../../api/customerApi';
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './CustomerListPage.module.css';
 
 const CustomerListPage = () => {
@@ -21,30 +22,30 @@ const CustomerListPage = () => {
     // Debounce search
     const debounceRef = useRef(null);
 
-    // eslint-disable-next-line no-unused-vars
+    const handleExport = () => {
+        const headers = ['Mã khách hàng', 'Tên khách hàng', 'Địa chỉ', 'Mã số thuế', 'Số điện thoại', 'Trạng thái', 'Đơn hàng cuối'];
+        const data = customers.map(item => [
+            item.code,
+            item.name,
+            item.address || '',
+            item.taxCode || '',
+            item.phone,
+            item.status === 'APPROVED' ? 'Đang hoạt động' : 'Ngừng hoạt động',
+            item.lastOrder || ''
+        ]);
+        exportToExcel(headers, data, 'Danh_sach_khach_hang');
+    };
+
     const fetchCustomers = useCallback(async (keyword = '', currentPage = 0) => {
         try {
             setLoading(true);
-
-            // MOCK DATA START
-            const mockCustomers = [
-                { id: 1, code: 'KH00001', name: 'Ng Thu Uyên', address: '123 Lê Lợi, Q.1, TP.HCM', taxCode: '0123456789', phone: '0912 345 678', status: 'APPROVED', lastOrder: '2026-06-20' },
-                { id: 2, code: 'KH00002', name: 'Công ty TNHH ABC', address: '456 Nguyễn Huệ, Q.1, TP.HCM', taxCode: '0987654321', phone: '0987 654 321', status: 'APPROVED', lastOrder: '2026-06-18' },
-                { id: 3, code: 'KH00003', name: 'Trần Văn Bình', address: '789 Hai Bà Trưng, Q.3, TP.HCM', taxCode: '', phone: '0901 234 567', status: 'INACTIVE', lastOrder: '2026-05-12' },
-                { id: 4, code: 'KH00004', name: 'Công ty CP XYZ', address: '321 Võ Văn Tần, Q.3, TP.HCM', taxCode: '1122334455', phone: '0938 765 432', status: 'APPROVED', lastOrder: '2026-06-22' },
-                { id: 5, code: 'KH00005', name: 'Lê Thị Hương', address: '654 Pasteur, Q.1, TP.HCM', taxCode: '', phone: '0945 678 901', status: 'APPROVED', lastOrder: '2026-06-01' },
-                { id: 6, code: 'KH00006', name: 'DNTN Phú Thịnh', address: '987 Trần Hưng Đạo, Q.5, TP.HCM', taxCode: '5566778899', phone: '0976 543 210', status: 'INACTIVE', lastOrder: '2026-04-30' },
-                { id: 7, code: 'KH00007', name: 'Nguyễn Minh Tuấn', address: '159 Điện Biên Phủ, Bình Thạnh', taxCode: '', phone: '0923 456 789', status: 'APPROVED', lastOrder: '2026-06-24' },
-            ];
-
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            setCustomers(mockCustomers);
-            setTotalPages(5);
-            setTotalElements(42);
-            // MOCK DATA END
-
+            const response = await searchCustomers(keyword, currentPage, PAGE_SIZE);
+            const payload = response.data?.data ?? response.data;
+            if (payload) {
+                setCustomers(payload.content || []);
+                setTotalPages(payload.totalPages || 0);
+                setTotalElements(payload.totalElements || 0);
+            }
         } catch (error) {
             console.error('Lỗi tải danh sách khách hàng:', error);
         } finally {
@@ -76,16 +77,33 @@ const CustomerListPage = () => {
         setConfirmModal({ isOpen: true, customer, action });
     };
 
-    const executeToggleStatus = () => {
+    const executeToggleStatus = async () => {
         if (!confirmModal.customer) return;
-
-        // MOCK: Toggle status locally
-        setCustomers(prev => prev.map(c =>
-            c.id === confirmModal.customer.id
-                ? { ...c, status: c.status === 'APPROVED' ? 'INACTIVE' : 'APPROVED' }
-                : c
-        ));
-        setConfirmModal({ isOpen: false, customer: null, action: '' });
+        try {
+            setLoading(true);
+            if (confirmModal.customer.status === 'APPROVED') {
+                await deactivateCustomer(confirmModal.customer.id);
+            } else {
+                // If backend supports activating, update status or just call updateCustomer
+                // Since there's no activateCustomer, we use updateCustomer
+                const payload = {
+                    name: confirmModal.customer.name,
+                    phone: confirmModal.customer.phone,
+                    email: confirmModal.customer.email,
+                    address: confirmModal.customer.address,
+                    groupType: confirmModal.customer.groupType,
+                    status: 'APPROVED' // set active status
+                };
+                // wait, let's just toggle status via update
+                await updateCustomer(confirmModal.customer.id, payload);
+            }
+            fetchCustomers(keywordSearch, page);
+        } catch (error) {
+            console.error('Lỗi thay đổi trạng thái khách hàng:', error);
+        } finally {
+            setConfirmModal({ isOpen: false, customer: null, action: '' });
+            setLoading(false);
+        }
     };
 
     const handleSavedSuccess = () => {
@@ -138,6 +156,9 @@ const CustomerListPage = () => {
                             </button>
                             <button className={styles.iconBtn} title="Cài đặt">
                                 <i className="fas fa-cog"></i>
+                            </button>
+                            <button className={styles.iconBtn} title="Xuất Excel" onClick={handleExport}>
+                                <i className="fas fa-file-excel"></i>
                             </button>
                             <button className={styles.btnImport} title="Nhập dữ liệu từ Excel">
                                 <i className="fas fa-file-import"></i> Nhập từ Excel

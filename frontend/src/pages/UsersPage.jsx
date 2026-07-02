@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
+import { exportToExcel } from '../utils/excelExport';
 import styles from './UsersPage.module.css';
 import UserProfileDropdown from '../components/ui/UserProfileDropdown/UserProfileDropdown';
 import EmployeeDrawer from '../components/ui/EmployeeDrawer/EmployeeDrawer';
+import { USER_EVENT } from '../auth/session';
 
 function UsersPage() {
     const navigate = useNavigate();
@@ -89,6 +91,33 @@ function UsersPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    useEffect(() => {
+        const handleUserUpdated = (event) => {
+            const incomingUser = event.detail?.user;
+            if (!incomingUser?.id) {
+                return;
+            }
+
+            const mappedUser = mapUserToUi(incomingUser);
+
+            setUsersData((prev) => {
+                const existingIndex = prev.findIndex((item) => item.id === mappedUser.id);
+                if (existingIndex === -1) {
+                    return [mappedUser, ...prev];
+                }
+
+                const next = [...prev];
+                next[existingIndex] = mappedUser;
+                return next;
+            });
+
+            setSelectedUser((prev) => (prev && prev.id === mappedUser.id ? mappedUser : prev));
+        };
+
+        window.addEventListener(USER_EVENT, handleUserUpdated);
+        return () => window.removeEventListener(USER_EVENT, handleUserUpdated);
+    }, []);
+
     const handleRowClick = (user) => {
         setSelectedUser(user);
         setIsDrawerOpen(true);
@@ -164,6 +193,20 @@ function UsersPage() {
             alert('Có lỗi xảy ra khi cập nhật thông tin nhân viên.');
             throw error;
         }
+    };
+
+    const handleExport = () => {
+        const headers = ['Mã nhân viên', 'Họ và tên', 'Email', 'Số điện thoại', 'Bộ phận', 'Vai trò', 'Trạng thái'];
+        const data = usersData.map(item => [
+            item.code,
+            item.name,
+            item.email,
+            item.phone,
+            item.department,
+            item.position,
+            item.statusLabel
+        ]);
+        exportToExcel(headers, data, 'Danh_sach_nguoi_dung');
     };
 
     // Calculate dynamic stats
@@ -249,6 +292,9 @@ function UsersPage() {
                             <i className="bi bi-search" />
                             <input type="text" placeholder="Tìm kiếm theo tên, mã hoặc email..." />
                         </div>
+                        <button className={styles.btnFilter} onClick={handleExport} style={{ marginRight: '10px' }}>
+                            <i className="bi bi-file-earmark-excel" /> Xuất Excel
+                        </button>
                         <button className={styles.btnFilter}>
                             <i className="bi bi-funnel" /> Bộ lọc
                         </button>

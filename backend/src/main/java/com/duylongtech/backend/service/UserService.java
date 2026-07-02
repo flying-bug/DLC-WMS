@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.UserDto;
+import com.duylongtech.backend.dto.response.UploadResponse;
 import com.duylongtech.backend.dto.response.UserDetailResponseDTO;
 import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.repository.UserRepository;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +34,7 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final PermissionRepository permissionRepository;
+    private final CloudinaryService cloudinaryService;
 
     private Optional<RoleEntity> findRoleByCode(String roleCode) {
         if (roleCode == null || roleCode.isBlank()) {
@@ -61,6 +64,18 @@ public class UserService {
 
         // 3. Map Entity -> DTO (Data Masking: không trả về password_hash)
         return mapToDetailDto(user);
+    }
+
+    public UserDetailResponseDTO updateCurrentUserAvatar(MultipartFile file) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+        User user = userRepository.findWithRolesById(userDetails.getId())
+                .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
+        UploadResponse uploaded = cloudinaryService.uploadImage(file, "avatars");
+        user.setAvatarUrl(uploaded.getSecureUrl() != null ? uploaded.getSecureUrl() : uploaded.getUrl());
+        User saved = userRepository.save(user);
+        return mapToDetailDto(saved);
     }
 
     /**

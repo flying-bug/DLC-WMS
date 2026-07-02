@@ -1,8 +1,10 @@
 package com.duylongtech.backend.controller;
 
 import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
+import com.duylongtech.backend.dto.request.ScanResolveRequest;
 import com.duylongtech.backend.dto.response.InventoryDocumentResponse;
 import com.duylongtech.backend.dto.response.ApiResponse;
+import com.duylongtech.backend.dto.response.ScanResolveResponse;
 import com.duylongtech.backend.service.InventoryDocumentService;
 import com.duylongtech.backend.service.AuditLogService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,9 +47,14 @@ public class InventoryDocumentController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Long warehouseId
+            @RequestParam(required = false) Long warehouseId,
+            @RequestParam(required = false) String issuePurpose,
+            @RequestParam(required = false) String referenceType,
+            @RequestParam(required = false) Long referenceId
     ) {
-        return ApiResponse.success(inventoryDocumentService.getExportHistory(docCode, fromDate, toDate, status, warehouseId));
+        return ApiResponse.success(inventoryDocumentService.getExportHistory(
+                docCode, fromDate, toDate, status, warehouseId, issuePurpose, referenceType, referenceId
+        ));
     }
 
     @GetMapping("/{id}")
@@ -55,6 +62,13 @@ public class InventoryDocumentController {
     @PreAuthorize("hasAuthority('export:view')")
     public ApiResponse<InventoryDocumentResponse> getExportDetail(@PathVariable Long id) {
         return ApiResponse.success(inventoryDocumentService.getExportDetail(id));
+    }
+
+    @PostMapping("/resolve-scan")
+    @Operation(summary = "Resolve scanned product barcode or serial")
+    @PreAuthorize("hasAuthority('export:add') or hasAuthority('export:edit')")
+    public ApiResponse<ScanResolveResponse> resolveScan(@RequestBody ScanResolveRequest req) {
+        return ApiResponse.success(inventoryDocumentService.resolveExportScan(req));
     }
 
     @PostMapping("/create")

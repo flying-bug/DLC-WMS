@@ -1,19 +1,53 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axiosClient from '../../../api/axiosClient';
+import { forceLogout, getAuthRole, USER_EVENT } from '../../../auth/session';
+import { useTheme } from '../../../theme/useTheme';
 import styles from './UserProfileDropdown.module.css';
 
 function UserProfileDropdown() {
     const navigate = useNavigate();
+    const { theme, themes, setTheme } = useTheme();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [profile, setProfile] = useState(null);
     const dropdownRef = useRef(null);
 
-    const userRole = localStorage.getItem('role') || 'STAFF';
+    const userRole = getAuthRole() || 'STAFF';
     const isSA = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN';
     const isMN = userRole === 'MANAGER' || userRole === 'ROLE_MANAGER';
-    const initials = isSA ? 'SA' : isMN ? 'MN' : 'ST';
-    const displayName = isSA ? 'Super Admin' : isMN ? 'Manager' : 'Staff';
+    const fallbackName = isSA ? 'Quan tri vien' : isMN ? 'Quan ly' : 'Nhan vien';
+    const displayName = profile?.fullName || fallbackName;
+    const initials = displayName
+        .split(' ')
+        .filter(Boolean)
+        .slice(-2)
+        .map((part) => part[0])
+        .join('')
+        .toUpperCase() || (isSA ? 'SA' : isMN ? 'MN' : 'ST');
 
-    // Close dropdown on click outside
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const response = await axiosClient.get('/users/me');
+                setProfile(response.data?.data || null);
+            } catch {
+                setProfile(null);
+            }
+        };
+
+        const handleUserUpdated = (event) => {
+            if (event.detail?.user) {
+                setProfile(event.detail.user);
+            } else {
+                fetchProfile();
+            }
+        };
+
+        fetchProfile();
+        window.addEventListener(USER_EVENT, handleUserUpdated);
+        return () => window.removeEventListener(USER_EVENT, handleUserUpdated);
+    }, []);
+
     useEffect(() => {
         function handleClickOutside(event) {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -31,28 +65,56 @@ function UserProfileDropdown() {
             className={styles.userInfo}
             role="button"
             tabIndex={0}
-            aria-label="Tài khoản người dùng"
+            aria-label="Tai khoan nguoi dung"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             onMouseEnter={() => setIsDropdownOpen(true)}
             onMouseLeave={() => setIsDropdownOpen(false)}
             ref={dropdownRef}
         >
-            <div className={styles.avatarCircle} aria-hidden="true">{initials}</div>
+            <div className={styles.avatarCircle} aria-hidden="true">
+                {profile?.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt="" className={styles.avatarImage} />
+                ) : initials}
+            </div>
             <span className={styles.userName}>{displayName}</span>
             <i className={`bi bi-chevron-down ${styles.chevronIcon}`} aria-hidden="true" />
 
-            {/* Dropdown Menu */}
             {isDropdownOpen && (
                 <div className={`${styles.userDropdown} ${isDropdownOpen ? styles.showDropdown : ''}`}>
                     <div className={styles.dropdownItem} onClick={(e) => { e.stopPropagation(); navigate('/profile'); setIsDropdownOpen(false); }}>
-                        <i className="bi bi-person" /> Xem thông tin cá nhân
+                        <i className="bi bi-person" /> Xem thong tin ca nhan
                     </div>
                     <div className={styles.dropdownItem} onClick={(e) => { e.stopPropagation(); navigate('/change-password'); setIsDropdownOpen(false); }}>
-                        <i className="bi bi-shield-lock" /> Đổi mật khẩu
+                        <i className="bi bi-shield-lock" /> Doi mat khau
                     </div>
                     <div className={styles.dropdownDivider} />
-                    <div className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`} onClick={(e) => { e.stopPropagation(); localStorage.clear(); navigate('/login'); setIsDropdownOpen(false); }}>
-                        <i className="bi bi-box-arrow-right" /> Đăng xuất
+                    <div className={styles.themeSection} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.themeTitle}>
+                            <i className="bi bi-palette" /> Giao dien
+                        </div>
+                        <div className={styles.themeOptions}>
+                            {themes.map((item) => (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    className={`${styles.themeOption} ${theme === item.id ? styles.themeOptionActive : ''}`}
+                                    onClick={() => setTheme(item.id)}
+                                    aria-pressed={theme === item.id}
+                                    title={item.name}
+                                >
+                                    <span
+                                        className={styles.themeSwatch}
+                                        style={{ backgroundColor: item.color }}
+                                        aria-hidden="true"
+                                    />
+                                    <span>{item.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className={styles.dropdownDivider} />
+                    <div className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`} onClick={(e) => { e.stopPropagation(); setIsDropdownOpen(false); forceLogout(); }}>
+                        <i className="bi bi-box-arrow-right" /> Dang xuat
                     </div>
                 </div>
             )}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './AuditLogPage.module.css';
 
 const formatDateTime = (isoString) => {
@@ -164,6 +165,18 @@ function AuditLogPage() {
         fetchLogs();
     }, [fetchLogs]);
 
+    const handleExport = () => {
+        const headers = ['Thời gian', 'Người dùng', 'Thao tác', 'Phân hệ', 'Địa chỉ IP'];
+        const data = logs.map(log => [
+            formatDateTime(log.timestamp),
+            log.user,
+            log.action,
+            getModuleLabel(log.module),
+            log.ipAddress || ''
+        ]);
+        exportToExcel(headers, data, 'Nhat_ky_he_thong');
+    };
+
     const handlePageChange = (newPage) => {
         if (newPage >= 0 && newPage < totalPages) {
             setPage(newPage);
@@ -280,6 +293,9 @@ function AuditLogPage() {
                         <button className={styles.btnSearch} onClick={() => { setDebouncedSearch(searchTerm); setPage(0); }}>
                             <i className="bi bi-search"></i> Tra cứu
                         </button>
+                        <button className={styles.btnSearch} onClick={handleExport} style={{ marginLeft: '10px', backgroundColor: '#10b981' }}>
+                            <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                        </button>
                     </div>
                 </div>
 
@@ -365,16 +381,14 @@ function AuditLogPage() {
             </main>
 
             {(selectedLog || detailLoading || detailError) && (
-                <div className={styles.modalOverlay} onClick={closeDetail}>
-                    <div className={styles.detailModal} onClick={(e) => e.stopPropagation()}>
-                        <div className={styles.detailHeader}>
+                <div className="misa-modal-overlay" onClick={closeDetail}>
+                    <div className="misa-modal" onClick={(e) => e.stopPropagation()} style={{ width: '900px', maxWidth: '95vw', height: '80vh' }}>
+                        <div className="misa-modal-header">
                             <div>
                                 <h2>Chi tiết nhật ký thao tác</h2>
-                                <p>{selectedLog?.description || 'Đang tải chi tiết nhật ký'}</p>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--color-text-light, #64748b)' }}>{selectedLog?.description || 'Đang tải chi tiết nhật ký'}</p>
                             </div>
-                            <button className={styles.closeBtn} onClick={closeDetail}>
-                                <i className="bi bi-x-lg"></i>
-                            </button>
+                            <i className="fas fa-times" onClick={closeDetail} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
                         </div>
 
                         {detailLoading ? (
@@ -382,7 +396,7 @@ function AuditLogPage() {
                         ) : detailError ? (
                             <div className={styles.detailEmpty}>{detailError}</div>
                         ) : (
-                            <div className={styles.detailBody}>
+                            <div className="misa-modal-body">
                                 <section className={styles.detailPanel}>
                                     <h3>Thông tin chung</h3>
                                     <dl className={styles.infoList}>

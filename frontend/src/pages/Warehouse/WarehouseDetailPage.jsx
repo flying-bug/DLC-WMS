@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warehouseApi from '../../api/warehouseApi';
 import WarehouseFormModal from '../../components/warehouse/WarehouseFormModal';
+import WarehouseDeleteModal from '../../components/warehouse/WarehouseDeleteModal';
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './WarehouseDetailPage.module.css';
 
@@ -97,6 +98,7 @@ const WarehouseDetailPage = () => {
 
     // Modal
     const [showModal, setShowModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
 
     // Toast state
     const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
@@ -152,20 +154,25 @@ const WarehouseDetailPage = () => {
         } catch (error) {
             console.error(error);
             showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra!');
+            throw error;
         }
     };
 
-    const handleDelete = async () => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa kho này không? (Hệ thống sẽ vô hiệu hóa nếu kho có chứa hàng)')) {
-            try {
-                await warehouseApi.deleteWarehouse(id);
-                showToast('success', 'Xóa kho thành công!');
-                setTimeout(() => navigate('/warehouses'), 1500);
-            } catch (error) {
-                console.error("Lỗi xóa kho:", error);
-                showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
-                fetchDetail(); // Reload to reflect INACTIVE status if 409 Soft delete occurred
-            }
+    const handleDelete = () => {
+        setShowDeleteModal(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        try {
+            await warehouseApi.deleteWarehouse(id);
+            showToast('success', 'Xóa kho thành công!');
+            setTimeout(() => navigate('/warehouses'), 1500);
+        } catch (error) {
+            console.error("Lỗi xóa kho:", error);
+            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
+            fetchDetail(); // Reload to reflect INACTIVE status if 409 Soft delete occurred
+        } finally {
+            setShowDeleteModal(false);
         }
     };
 
@@ -204,7 +211,7 @@ const WarehouseDetailPage = () => {
                         <button className={styles.btnEdit} onClick={() => setShowModal(true)}>
                             <i className="fas fa-pencil-alt"></i> Chỉnh sửa
                         </button>
-                        <button className={styles.btnDelete} onClick={handleDelete}>
+                        <button className={styles.btnDelete} onClick={handleDelete} disabled={!isActiveStatus(warehouse.status)}>
                             <i className="far fa-trash-alt"></i> Xóa
                         </button>
                     </div>
@@ -217,12 +224,6 @@ const WarehouseDetailPage = () => {
                         onClick={() => setActiveTab('info')}
                     >
                         Thông tin chung
-                    </button>
-                    <button 
-                        className={`${styles.tabItem} ${activeTab === 'stats' ? styles.active : ''}`}
-                        onClick={() => setActiveTab('stats')}
-                    >
-                        Thống kê
                     </button>
                     <button 
                         className={`${styles.tabItem} ${activeTab === 'history' ? styles.active : ''}`}
@@ -275,14 +276,11 @@ const WarehouseDetailPage = () => {
                             </div>
                         </div>
 
-                        {/* 4. Main Content Grid (2 Columns) */}
-                        <div className={styles.mainGrid}>
-                            {/* Left Column */}
-                            <div className={styles.leftColumn}>
-                                <div className={styles.card}>
-                                    <div className={styles.cardHeader}>
-                                        <i className="fas fa-info-circle"></i>
-                                        <h3>Thông tin cơ bản</h3>
+                        {/* 4. Main Content */}
+                        <div className={styles.card}>
+                            <div className={styles.cardHeader}>
+                                <i className="fas fa-info-circle"></i>
+                                <h3>Thông tin cơ bản</h3>
                                     </div>
                                     <div className={styles.cardBody}>
                                         <div className={styles.infoGrid}>
@@ -297,14 +295,6 @@ const WarehouseDetailPage = () => {
                                             <div className={`${styles.infoItem} ${styles.fullWidth}`}>
                                                 <label>ĐỊA CHỈ</label>
                                                 <p>{warehouse.address}</p>
-                                            </div>
-                                            <div className={styles.infoItem}>
-                                                <label>LOẠI KHO</label>
-                                                <p>{warehouse.type === 'STANDARD' ? 'Kho tiêu chuẩn' : (warehouse.type || 'Tiêu chuẩn')}</p>
-                                            </div>
-                                            <div className={styles.infoItem}>
-                                                <label>TRẠNG THÁI</label>
-                                                <p>{getStatusLabel(warehouse.status)}</p>
                                             </div>
                                         </div>
                                         
@@ -328,36 +318,6 @@ const WarehouseDetailPage = () => {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Right Column */}
-                            <div className={styles.rightColumn}>
-                                {/* Alert Card */}
-                                <div className={styles.alertCard}>
-                                    <div className={styles.alertHeader}>
-                                        <i className="fas fa-info-circle" style={{color: '#3b82f6'}}></i>
-                                        <h4>Ghi chú hoạt động</h4>
-                                    </div>
-                                    <p className={styles.alertText} style={{color: '#475569', backgroundColor: 'transparent'}}>
-                                        Mọi thay đổi thông tin liên quan đến kho hàng sẽ được ghi nhận vào nhật ký hệ thống (Audit Log).
-                                    </p>
-                                    <button className={styles.btnAlertAction} style={{backgroundColor: '#e2e8f0', color: '#475569'}} onClick={() => navigate('/audit-log')}>
-                                        Xem nhật ký hệ thống
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Tab Stats */}
-                {activeTab === 'stats' && (
-                    <div className={styles.tabContent}>
-                        <div className={styles.card}>
-                            <div className={styles.cardBody}>
-                                <p>Tính năng Thống kê chi tiết đang được phát triển...</p>
-                            </div>
-                        </div>
                     </div>
                 )}
 
@@ -427,13 +387,19 @@ const WarehouseDetailPage = () => {
                     © 2026 Duy Long Computer - Hệ thống quản lý kho v2.4.1
                 </div>
 
-                {/* Modal Edit */}
                 <WarehouseFormModal
                     isOpen={showModal}
                     onClose={() => setShowModal(false)}
                     onSave={handleSaveModal}
                     isEdit={true}
                     initialData={warehouse}
+                />
+
+                <WarehouseDeleteModal 
+                    isOpen={showDeleteModal}
+                    onClose={() => setShowDeleteModal(false)}
+                    onConfirm={handleDeleteConfirm}
+                    warehouse={warehouse}
                 />
 
                 <Toast 

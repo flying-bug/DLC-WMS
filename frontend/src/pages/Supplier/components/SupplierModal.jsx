@@ -57,11 +57,11 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
     };
 
     return (
-        <div className={styles.backdrop} onClick={handleBackdropClick}>
-            <div className={styles.modal}>
+        <div className="misa-modal-overlay" onClick={handleBackdropClick}>
+            <div className="misa-modal" style={{ width: '800px', maxWidth: '90%' }}>
                 
                 {/* Header */}
-                <div className={styles.header}>
+                <div className="misa-modal-header">
                     <div className={styles.headerTitle}>
                         {initialData ? 'Chỉnh sửa Nhà Cung Cấp' : 'Thêm Nhà Cung Cấp'}
                         <div className={styles.radioGroup}>
@@ -98,7 +98,7 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
                 </div>
 
                 {/* Body */}
-                <div className={styles.body}>
+                <div className="misa-modal-body">
                     {/* General Info Grid */}
                     <div className={styles.formGrid}>
                         <div className={`${styles.formGroup} ${styles.col6}`}>
@@ -278,15 +278,15 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
                 </div>
 
                 {/* Footer */}
-                <div className={styles.footer}>
+                <div className="misa-modal-footer">
                     <div className={styles.footerLeft}>
-                        <button className={styles.btnCancel} onClick={onClose}>Hủy</button>
+                        <button className="btn-misa-cancel" onClick={onClose}>Hủy</button>
                     </div>
                     <div className={styles.footerRight}>
                         {!initialData && (
-                            <button className={styles.btnSaveNext} onClick={handleSave}>Lưu & Thêm tiếp</button>
+                            <button className="btn-misa-draft" onClick={handleSave}>Lưu & Thêm tiếp</button>
                         )}
-                        <button className={styles.btnSave} onClick={handleSave}>
+                        <button className="btn-misa-save" onClick={handleSave}>
                             {initialData ? 'Cập nhật' : 'Lưu'}
                         </button>
                     </div>

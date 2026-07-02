@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SupplierModal from './components/SupplierModal';
+import { exportToExcel } from '../../utils/excelExport';
 import styles from './SupplierListPage.module.css';
 
 import axiosClient from '../../api/axiosClient';
@@ -15,6 +16,19 @@ const SupplierListPage = () => {
     const [loading, setLoading] = useState(false);
 
     const fetchSuppliers = async (keyword = '') => {
+    const handleExport = () => {
+        const headers = ['Mã nhà cung cấp', 'Tên nhà cung cấp', 'Địa chỉ', 'Số tiền nợ', 'Mã số thuế'];
+        const data = suppliers.map(item => [
+            item.code,
+            item.name,
+            item.address || '',
+            item.debt || 0,
+            item.taxCode || ''
+        ]);
+        exportToExcel(headers, data, 'Danh_sach_nha_cung_cap');
+    };
+
+    const fetchSuppliers = async () => {
         try {
             setLoading(true);
             const res = await axiosClient.get('/suppliers', {
@@ -142,7 +156,7 @@ const SupplierListPage = () => {
                             <button className={styles.iconBtn} title="Tải lại">
                                 <i className="fas fa-sync-alt"></i>
                             </button>
-                            <button className={styles.iconBtn} title="Xuất Excel">
+                            <button className={styles.iconBtn} onClick={handleExport} title="Xuất Excel">
                                 <i className="fas fa-file-excel"></i>
                             </button>
                             <button className={styles.iconBtn} title="Thiết lập">

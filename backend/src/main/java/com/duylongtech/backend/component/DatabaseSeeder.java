@@ -28,6 +28,8 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final BrandRepository brandRepository;
     private final ProductCategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final WarehouseRepository warehouseRepository;
+    private final PartnerRepository partnerRepository;
 
     @Override
     public void run(String... args) throws Exception {
@@ -46,10 +48,98 @@ public class DatabaseSeeder implements CommandLineRunner {
         seedUsers(superAdminRole, managerRole, staffRole);
 
         // 5. Seed Dữ liệu kinh doanh (Units, Brands, Categories, Products)
+        seedWarehouses();
+        seedPartners();
         seedBusinessData();
 
         // 6. Seed Lịch sử hệ thống (Mock Audit Logs)
         seedAuditLogs();
+    }
+
+    private void seedWarehouses() {
+        if (warehouseRepository.count() == 0) {
+            warehouseRepository.save(Warehouse.builder()
+                    .code("K01")
+                    .name("Kho chính")
+                    .address("123 Cầu Giấy, Hà Nội")
+                    .type("STANDARD")
+                    .status("APPROVED")
+                    .build());
+            warehouseRepository.save(Warehouse.builder()
+                    .code("K02")
+                    .name("Kho phụ")
+                    .address("456 Giải Phóng, Hà Nội")
+                    .type("STANDARD")
+                    .status("APPROVED")
+                    .build());
+            System.out.println("✅ Seeded default warehouses successfully.");
+        }
+    }
+
+    private void seedPartners() {
+        if (partnerRepository.count() == 0) {
+            partnerRepository.save(Partner.builder()
+                    .code("KH00001")
+                    .name("Ng Thu Uyên")
+                    .phone("0912 345 678")
+                    .email("uyennt@gmail.com")
+                    .address("123 Lê Lợi, Q.1, TP.HCM")
+                    .taxCode("0123456789")
+                    .isCustomer(true)
+                    .isSupplier(false)
+                    .groupType("RETAIL")
+                    .status("APPROVED")
+                    .build());
+            partnerRepository.save(Partner.builder()
+                    .code("KH00002")
+                    .name("Công ty TNHH ABC")
+                    .phone("0987 654 321")
+                    .email("contact@abc.com")
+                    .address("456 Nguyễn Huệ, Q.1, TP.HCM")
+                    .taxCode("0987654321")
+                    .isCustomer(true)
+                    .isSupplier(false)
+                    .groupType("WHOLESALE")
+                    .status("APPROVED")
+                    .build());
+            partnerRepository.save(Partner.builder()
+                    .code("KH00003")
+                    .name("Trần Văn Bình")
+                    .phone("0901 234 567")
+                    .email("binhtv@gmail.com")
+                    .address("789 Hai Bà Trưng, Q.3, TP.HCM")
+                    .taxCode("")
+                    .isCustomer(true)
+                    .isSupplier(false)
+                    .groupType("RETAIL")
+                    .status("INACTIVE")
+                    .build());
+            partnerRepository.save(Partner.builder()
+                    .code("NCC00001")
+                    .name("Công ty Máy tính Phong Vũ")
+                    .phone("19001808")
+                    .email("contact@phongvu.vn")
+                    .address("264 Nguyễn Thị Minh Khai, Q.3, TP.HCM")
+                    .taxCode("0303102148")
+                    .isCustomer(false)
+                    .isSupplier(true)
+                    .groupType("RETAIL")
+                    .status("APPROVED")
+                    .build());
+            partnerRepository.save(Partner.builder()
+                    .code("NCC00002")
+                    .name("FPT Shop")
+                    .phone("18006601")
+                    .email("fptshop@fpt.com.vn")
+                    .address("261-263 Khánh Hội, Q.4, TP.HCM")
+                    .taxCode("0311609355")
+                    .isCustomer(false)
+                    .isSupplier(true)
+                    .groupType("RETAIL")
+                    .status("APPROVED")
+                    .build());
+            System.out.println("✅ Seeded default partners successfully.");
+        }
     }
 
     private RoleEntity createRoleIfNotFound(String code, String name) {
@@ -72,6 +162,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         moduleActions.put("stocktake", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("product", new String[]{"view", "add", "edit", "delete", "export", "print"});
+        moduleActions.put("brand", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("unit", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("customer", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("supplier", new String[]{"view", "add", "edit", "delete", "export", "print"});

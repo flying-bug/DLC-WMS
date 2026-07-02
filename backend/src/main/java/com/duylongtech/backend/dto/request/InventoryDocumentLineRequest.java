@@ -3,6 +3,7 @@ package com.duylongtech.backend.dto.request;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class InventoryDocumentLineRequest {
@@ -14,5 +15,6 @@ public class InventoryDocumentLineRequest {
     private BigDecimal lineAmount;
     private Long lotBatchId;
     private Long serialNumberId;
+    private List<String> serialNumbers;
     private String note;
 }

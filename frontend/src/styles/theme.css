@@ -95,3 +95,141 @@
   --misa-header-height: 56px;
   --misa-sidebar-width: 220px;
 }
+
+:root[data-theme='emerald'] {
+  --color-primary: #059669;
+  --color-primary-hover: #047857;
+  --color-primary-soft: #ecfdf5;
+  --color-primary-accent: #10b981;
+  --color-primary-dark: #065f46;
+  --color-primary-deep: #064e3b;
+  --color-primary-navy: #065f46;
+  --color-primary-sidebar: #047857;
+  --color-primary-sidebar-hover: #065f46;
+  --color-primary-bright: #10b981;
+  --color-primary-bright-hover: #059669;
+  --color-primary-link: #047857;
+  --color-primary-pale: #d1fae5;
+  --color-primary-tint: #ccfbf1;
+  --color-primary-tint-2: #d1fae5;
+  --color-info-bg: #ecfdf5;
+  --color-info-border: #a7f3d0;
+  --color-secondary: #164e43;
+  --color-secondary-hover: #0f3d35;
+}
+
+:root[data-theme='violet'] {
+  --color-primary: #7c3aed;
+  --color-primary-hover: #6d28d9;
+  --color-primary-soft: #f5f3ff;
+  --color-primary-accent: #a855f7;
+  --color-primary-dark: #5b21b6;
+  --color-primary-deep: #4c1d95;
+  --color-primary-navy: #5b21b6;
+  --color-primary-sidebar: #6d28d9;
+  --color-primary-sidebar-hover: #5b21b6;
+  --color-primary-bright: #8b5cf6;
+  --color-primary-bright-hover: #7c3aed;
+  --color-primary-link: #6d28d9;
+  --color-primary-pale: #ede9fe;
+  --color-primary-tint: #ede9fe;
+  --color-primary-tint-2: #f3e8ff;
+  --color-info-bg: #f5f3ff;
+  --color-info-border: #ddd6fe;
+  --color-secondary: #3b2a5f;
+  --color-secondary-hover: #2f214f;
+}
+
+:root[data-theme='dark'] {
+  --color-primary: #38bdf8;
+  --color-primary-hover: #0ea5e9;
+  --color-primary-soft: #0f2d3f;
+  --color-primary-accent: #22d3ee;
+  --color-primary-dark: #082f49;
+  --color-primary-deep: #0c4a6e;
+  --color-primary-navy: #075985;
+  --color-primary-sidebar: #111827;
+  --color-primary-sidebar-hover: #1f2937;
+  --color-primary-bright: #60a5fa;
+  --color-primary-bright-hover: #38bdf8;
+  --color-primary-link: #7dd3fc;
+  --color-primary-pale: #0f2d3f;
+  --color-primary-tint: #172554;
+  --color-primary-tint-2: #082f49;
+  --color-secondary: #0f172a;
+  --color-secondary-hover: #1e293b;
+
+  --color-info: #38bdf8;
+  --color-info-hover: #0ea5e9;
+  --color-info-bg: #082f49;
+  --color-info-border: #075985;
+  --color-info-border-soft: #0e7490;
+  --color-success: #34d399;
+  --color-success-strong: #34d399;
+  --color-success-bg: #052e24;
+  --color-success-bg-soft: #063f31;
+  --color-success-border: #047857;
+  --color-success-border-soft: #059669;
+  --color-warning: #fbbf24;
+  --color-warning-bg: #422006;
+  --color-warning-bg-soft: #451a03;
+  --color-warning-border: #92400e;
+  --color-danger: #f87171;
+  --color-danger-strong: #fca5a5;
+  --color-danger-text: #fca5a5;
+  --color-danger-bg: #450a0a;
+  --color-danger-bg-soft: #3f1212;
+  --color-danger-border: #991b1b;
+  --color-danger-border-soft: #7f1d1d;
+
+  --color-bg: #0f172a;
+  --color-bg-page-alt: #111827;
+  --color-bg-soft: #111827;
+  --color-bg-table: #1f2937;
+  --color-bg-hover: #172033;
+  --color-bg-muted: #1f2937;
+  --color-bg-elevated: #111827;
+  --color-bg-subtle: #0b1120;
+  --color-bg-control-hover: #1f2937;
+  --color-bg-soft-blue: #0f2d3f;
+  --color-surface: #111827;
+  --color-surface-muted: #1f2937;
+
+  --color-text: #f8fafc;
+  --color-text-2: #f1f5f9;
+  --color-text-strong: #f8fafc;
+  --color-text-heading: #e2e8f0;
+  --color-text-body: #e5e7eb;
+  --color-text-secondary: #d1d5db;
+  --color-text-muted: #cbd5e1;
+  --color-text-muted-2: #94a3b8;
+  --color-text-muted-3: #94a3b8;
+  --color-text-subtle: #64748b;
+  --color-text-placeholder: #64748b;
+  --color-text-disabled: #475569;
+  --color-icon-muted: #64748b;
+
+  --color-border: #334155;
+  --color-border-strong: #475569;
+  --color-border-field: #475569;
+  --color-border-soft: #1f2937;
+  --color-border-card: #334155;
+  --color-border-muted: #334155;
+  --color-border-focus-soft: #38bdf8;
+  --color-border-auth: #334155;
+  --color-white: #ffffff;
+
+  --overlay-dark: rgba(0, 0, 0, 0.65);
+  --overlay-modal: rgba(0, 0, 0, 0.72);
+  --dashboard-grid-line: rgba(125, 211, 252, 0.07);
+  --dashboard-action-bg: rgba(17, 24, 39, 0.88);
+
+  --shadow-card: 0 16px 36px rgba(0, 0, 0, 0.28);
+  --shadow-card-soft: 0 1px 3px rgba(0, 0, 0, 0.22);
+  --shadow-card-subtle: 0 1px 3px rgba(0, 0, 0, 0.18);
+  --shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.32);
+  --shadow-dropdown: 0 18px 34px rgba(0, 0, 0, 0.38);
+  --shadow-dropdown-strong: 0 20px 38px rgba(0, 0, 0, 0.46);
+  --shadow-table: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-focus-primary: 0 0 0 2px rgba(56, 189, 248, 0.18);
+}

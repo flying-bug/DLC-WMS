@@ -315,6 +315,16 @@
     color: var(--color-text-strong, #1e293b);
 }
 
+.iconBtn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.iconBtn:disabled:hover {
+    background-color: transparent;
+    color: #64748b;
+}
+
 /* Pagination */
 .pagination {
     display: flex;

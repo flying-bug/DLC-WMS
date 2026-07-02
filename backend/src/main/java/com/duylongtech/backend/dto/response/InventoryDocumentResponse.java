@@ -10,6 +10,9 @@ public class InventoryDocumentResponse {
     private Long id;
     private String docCode;
     private String docType;
+    private String issuePurpose;
+    private String referenceType;
+    private Long referenceId;
     private Long warehouseId;
     private Long sourceWarehouseId;
     private Long purchaseOrderId;

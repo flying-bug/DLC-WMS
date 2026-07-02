@@ -1,0 +1,10 @@
+ALTER TABLE PRODUCT_VARIANTS
+  ADD COLUMN barcode VARCHAR(100) NULL AFTER sku,
+  ADD UNIQUE KEY uk_product_variants_barcode (barcode);
+
+UPDATE PRODUCT_VARIANTS
+SET barcode = sku
+WHERE barcode IS NULL;
+
+ALTER TABLE INVENTORY_DOCUMENT_LINES
+  ADD COLUMN serial_numbers_text TEXT NULL AFTER serial_number_id;

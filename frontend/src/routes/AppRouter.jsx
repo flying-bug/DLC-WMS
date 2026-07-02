@@ -16,6 +16,9 @@ import UpdateExportSlipPage from '../pages/ExportSlip/UpdateExportSlipPage';
 import ImportHistoryPage from '../pages/ImportHistory/ImportHistoryPage';
 import CreateImportSlipPage from '../pages/CreateImportSlip/CreateImportSlipPage';
 import UpdateImportSlipPage from '../pages/UpdateImportSlip/UpdateImportSlipPage';
+import TransferHistoryPage from '../pages/TransferHistory/TransferHistoryPage';
+import CreateTransferSlipPage from '../pages/CreateTransferSlip/CreateTransferSlipPage';
+import UpdateTransferSlipPage from '../pages/CreateTransferSlip/UpdateTransferSlipPage';
 import ProfilePage from '../pages/Profile/ProfilePage';
 import AuditLogPage from '../pages/AuditLog/AuditLogPage';
 import WarehouseListPage from '../pages/Warehouse/WarehouseListPage';
@@ -24,6 +27,16 @@ import SupplierListPage from '../pages/Supplier/SupplierListPage';
 import SupplierDetailPage from '../pages/Supplier/SupplierDetailPage';
 import CustomerListPage from '../pages/Customer/CustomerListPage';
 import CustomerDetailPage from '../pages/Customer/CustomerDetailPage';
+import WarrantyListPage from '../pages/Warranty/WarrantyListPage';
+import WarrantyDetailPage from '../pages/Warranty/WarrantyDetailPage';
+import CreateRepairTicketPage from '../pages/RepairTicket/CreateRepairTicketPage';
+import RepairTicketListPage from '../pages/RepairTicket/RepairTicketListPage';
+import UpdateRepairTicketPage from '../pages/RepairTicket/UpdateRepairTicketPage';
+import BrandListPage from '../pages/Brand/BrandListPage';
+import AssemblyBomPage from '../pages/AssemblyOrder/AssemblyBomPage';
+import AssemblyOrderListPage from '../pages/AssemblyOrder/AssemblyOrderListPage';
+import AssemblyOrderFormPage from '../pages/AssemblyOrder/AssemblyOrderFormPage';
+import AiChatPage from '../pages/AiChat/AiChatPage';
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -70,6 +83,9 @@ function AppRouter() {
                     <Route path="/import-history" element={<ImportHistoryPage />} />
                     <Route path="/import-history/create" element={<CreateImportSlipPage />} />
                     <Route path="/import-slips/:id/edit" element={<UpdateImportSlipPage />} />
+                    <Route path="/transfer-history" element={<TransferHistoryPage />} />
+                    <Route path="/transfer-history/create" element={<CreateTransferSlipPage />} />
+                    <Route path="/transfer-history/:id/edit" element={<UpdateTransferSlipPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/units" element={<UnitPage />} />
@@ -81,6 +97,17 @@ function AppRouter() {
                     <Route path="/warehouses/:id" element={<WarehouseDetailPage />} />
                     <Route path="/customers" element={<CustomerListPage />} />
                     <Route path="/customers/:id" element={<CustomerDetailPage />} />
+                    <Route path="/warranties" element={<WarrantyListPage />} />
+                    <Route path="/warranties/:id" element={<WarrantyDetailPage />} />
+                    <Route path="/repair-tickets" element={<RepairTicketListPage />} />
+                    <Route path="/repair-tickets/create" element={<CreateRepairTicketPage />} />
+                    <Route path="/repair-tickets/:id/edit" element={<UpdateRepairTicketPage />} />
+                    <Route path="/assembly-boms" element={<AssemblyBomPage />} />
+                    <Route path="/assembly-orders" element={<AssemblyOrderListPage />} />
+                    <Route path="/assembly-orders/create" element={<AssemblyOrderFormPage />} />
+                    <Route path="/assembly-orders/:id" element={<AssemblyOrderFormPage />} />
+                    <Route path="/brands" element={<BrandListPage />} />
+                    <Route path="/ai-chat" element={<AiChatPage />} />
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}

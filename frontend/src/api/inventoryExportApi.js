@@ -22,8 +22,16 @@ export const postExportSlip = (id) => {
   return axiosClient.post(`${EXPORT_BASE}/${id}/post`);
 };
 
+export const resolveScan = (data) => {
+  return axiosClient.post(`${EXPORT_BASE}/resolve-scan`, data);
+};
+
 export const getProducts = (params = {}) => {
   return axiosClient.get('/products/variants', { params });
+};
+
+export const getCustomers = (params = {}) => {
+  return axiosClient.get('/customers', { params });
 };
 
 export const getWarehouses = (params = {}) => {

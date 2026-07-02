@@ -17,6 +17,7 @@ public class ProductVariantResponse {
     private Long productId;
     private String productCode;
     private String productName;
+    private Boolean trackSerial;
     private Long brandId;
     private String brandName;
     private Long categoryId;
@@ -24,6 +25,7 @@ public class ProductVariantResponse {
     private Long unitId;
     private String unitName;
     private String sku;
+    private String barcode;
     private String variantName;
     private BigDecimal costPrice;
     private BigDecimal salePrice;

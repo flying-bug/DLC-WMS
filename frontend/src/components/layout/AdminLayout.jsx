@@ -43,6 +43,70 @@ const AdminLayout = ({ children }) => {
                         <i className="fas fa-users"></i>
                         <span>Khách hàng</span>
                     </button>
+                    <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/warranties') ? styles.active : ''}`}
+                        onClick={() => navigate('/warranties')}
+                        type="button"
+                    >
+                        <i className="fas fa-shield-alt"></i>
+                        <span>Bảo hành</span>
+                    </button>
+                    <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/repair-tickets') ? styles.active : ''}`}
+                        onClick={() => navigate('/repair-tickets')}
+                        type="button"
+                    >
+                        <i className="fas fa-tools"></i>
+                        <span>Sửa chữa</span>
+                    </button>
+                    <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/brands') ? styles.active : ''}`}
+                        onClick={() => navigate('/brands')}
+                        type="button"
+                    >
+                        <i className="fas fa-tags"></i>
+                        <span>Thương hiệu</span>
+                    </button>
+                    <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/assembly-orders') ? styles.active : ''}`}
+                        onClick={() => navigate('/assembly-orders')}
+                        type="button"
+                    >
+                        <i className="fas fa-boxes-stacked"></i>
+                        <span>Lắp ráp / Tháo dỡ</span>
+                    </button>
+                    <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/assembly-boms') ? styles.active : ''}`}
+                        onClick={() => navigate('/assembly-boms')}
+                        type="button"
+                    >
+                        <i className="fas fa-sitemap"></i>
+                        <span>Quản lý BOM</span>
+                    </button>
+                    <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/units') ? styles.active : ''}`}
+                        onClick={() => navigate('/units')}
+                        type="button"
+                    >
+                        <i className="fas fa-ruler-combined"></i>
+                        <span>Đơn vị tính</span>
+                    </button>
+                    <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/product-categories') ? styles.active : ''}`}
+                        onClick={() => navigate('/product-categories')}
+                        type="button"
+                    >
+                        <i className="fas fa-layer-group"></i>
+                        <span>Danh mục sản phẩm</span>
+                    </button>
+                    <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/ai-chat') ? styles.active : ''}`}
+                        onClick={() => navigate('/ai-chat')}
+                        type="button"
+                    >
+                        <i className="fas fa-robot"></i>
+                        <span>AI Chat</span>
+                    </button>
                 </nav>
             </aside>
 
@@ -71,8 +135,28 @@ const AdminLayout = ({ children }) => {
                         >
                             Xuất kho
                         </button>
-                        <button className={styles.tab} type="button">Chuyển kho</button>
+                        <button
+                            className={`${styles.tab} ${currentPath.startsWith('/transfer-history') ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/transfer-history')}
+                            type="button"
+                        >
+                            Chuyển kho
+                        </button>
                         <button className={styles.tab} type="button">Kiểm kê</button>
+                        <button
+                            className={`${styles.tab} ${currentPath.startsWith('/assembly-orders') ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/assembly-orders')}
+                            type="button"
+                        >
+                            Lắp ráp / Tháo dỡ
+                        </button>
+                        <button
+                            className={`${styles.tab} ${currentPath.startsWith('/assembly-boms') ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/assembly-boms')}
+                            type="button"
+                        >
+                            BOM
+                        </button>
                         <button className={styles.tab} type="button">Báo cáo</button>
                         <button
                             className={`${styles.tab} ${currentPath === '/warehouses' ? styles.activeTab : ''}`}
@@ -89,18 +173,11 @@ const AdminLayout = ({ children }) => {
                             Hàng hóa, dịch vụ
                         </button>
                         <button
-                            className={`${styles.tab} ${currentPath === '/units' ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/units')}
+                            className={`${styles.tab} ${currentPath.startsWith('/ai-chat') ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/ai-chat')}
                             type="button"
                         >
-                            Đơn vị tính
-                        </button>
-                        <button
-                            className={`${styles.tab} ${currentPath === '/product-categories' ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/product-categories')}
-                            type="button"
-                        >
-                            Danh mục sản phẩm
+                            AI Chat
                         </button>
                     </nav>
                     <div className={styles.headerRight}>

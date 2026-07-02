@@ -44,4 +44,7 @@ public class Warranty {
 
     @Column(name = "warranty_status", nullable = false, length = 30)
     private String warrantyStatus;
+
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
 }
