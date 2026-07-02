@@ -15,7 +15,6 @@ const SupplierListPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const fetchSuppliers = async (keyword = '') => {
     const handleExport = () => {
         const headers = ['Mã nhà cung cấp', 'Tên nhà cung cấp', 'Địa chỉ', 'Số tiền nợ', 'Mã số thuế'];
         const data = suppliers.map(item => [
@@ -28,7 +27,7 @@ const SupplierListPage = () => {
         exportToExcel(headers, data, 'Danh_sach_nha_cung_cap');
     };
 
-    const fetchSuppliers = async () => {
+    const fetchSuppliers = async (keyword = '') => {
         try {
             setLoading(true);
             const res = await axiosClient.get('/suppliers', {
