@@ -20,6 +20,18 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
 
 google:
   client-id: 889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com
+
+cloudinary:
+  url: ${CLOUDINARY_URL:}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dummy_cloud_name}
+  api-key: ${CLOUDINARY_API_KEY:dummy_api_key}
+  api-secret: ${CLOUDINARY_API_SECRET:dummy_api_secret}
+  folder: ${CLOUDINARY_FOLDER:duy-long-computer}
+  max-file-size: ${CLOUDINARY_MAX_FILE_SIZE:5242880}

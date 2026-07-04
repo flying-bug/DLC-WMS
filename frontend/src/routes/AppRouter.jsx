@@ -16,6 +16,9 @@ import UpdateExportSlipPage from '../pages/ExportSlip/UpdateExportSlipPage';
 import ImportHistoryPage from '../pages/ImportHistory/ImportHistoryPage';
 import CreateImportSlipPage from '../pages/CreateImportSlip/CreateImportSlipPage';
 import UpdateImportSlipPage from '../pages/UpdateImportSlip/UpdateImportSlipPage';
+import TransferHistoryPage from '../pages/TransferHistory/TransferHistoryPage';
+import CreateTransferSlipPage from '../pages/CreateTransferSlip/CreateTransferSlipPage';
+import UpdateTransferSlipPage from '../pages/CreateTransferSlip/UpdateTransferSlipPage';
 import ProfilePage from '../pages/Profile/ProfilePage';
 import AuditLogPage from '../pages/AuditLog/AuditLogPage';
 import WarehouseListPage from '../pages/Warehouse/WarehouseListPage';
@@ -33,6 +36,7 @@ import BrandListPage from '../pages/Brand/BrandListPage';
 import AssemblyBomPage from '../pages/AssemblyOrder/AssemblyBomPage';
 import AssemblyOrderListPage from '../pages/AssemblyOrder/AssemblyOrderListPage';
 import AssemblyOrderFormPage from '../pages/AssemblyOrder/AssemblyOrderFormPage';
+import AiChatPage from '../pages/AiChat/AiChatPage';
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -79,6 +83,9 @@ function AppRouter() {
                     <Route path="/import-history" element={<ImportHistoryPage />} />
                     <Route path="/import-history/create" element={<CreateImportSlipPage />} />
                     <Route path="/import-slips/:id/edit" element={<UpdateImportSlipPage />} />
+                    <Route path="/transfer-history" element={<TransferHistoryPage />} />
+                    <Route path="/transfer-history/create" element={<CreateTransferSlipPage />} />
+                    <Route path="/transfer-history/:id/edit" element={<UpdateTransferSlipPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/units" element={<UnitPage />} />
@@ -100,6 +107,7 @@ function AppRouter() {
                     <Route path="/assembly-orders/create" element={<AssemblyOrderFormPage />} />
                     <Route path="/assembly-orders/:id" element={<AssemblyOrderFormPage />} />
                     <Route path="/brands" element={<BrandListPage />} />
+                    <Route path="/ai-chat" element={<AiChatPage />} />
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}
