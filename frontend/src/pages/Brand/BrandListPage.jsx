@@ -43,12 +43,9 @@ const BrandListPage = () => {
         return () => clearTimeout(timer);
     }, []);
 
-    // Debounce search
     useEffect(() => {
-        setIsLoading(true);
         const handler = setTimeout(() => {
             setDebouncedSearchTerm(searchTerm);
-            setIsLoading(false);
         }, 400);
         return () => clearTimeout(handler);
     }, [searchTerm, filterStatus]);
