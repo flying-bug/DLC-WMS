@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
 import { exportToExcel } from '../../utils/excelExport';
+import StocktakeInitModal from './components/StocktakeInitModal';
+import Toast from '../../components/ui/Toast/Toast';
 import styles from './StocktakeListPage.module.css';
 
 const STATUS_LABELS = {
@@ -19,13 +21,28 @@ const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN'
 
 function StocktakeListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [stocktakes, setStocktakes] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [selectedStocktake, setSelectedStocktake] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({ stocktakeCode: '', fromDate: '', status: '' });
   const [loading, setLoading] = useState(false);
+  const [showInitModal, setShowInitModal] = useState(false);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
+
+  const showToast = (type, message) => {
+    setToast({ isVisible: true, type, message });
+  };
+
+  useEffect(() => {
+    if (location.state?.toastMessage) {
+      showToast(location.state.toastType || 'success', location.state.toastMessage);
+      // Clear state so refresh doesn't trigger it again
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const warehouseById = useMemo(() => new Map(warehouses.map(item => [item.id, item])), [warehouses]);
 
@@ -106,7 +123,7 @@ function StocktakeListPage() {
       <div className={styles.pageBody}>
         <div className={styles.pageTitleContainer}>
           <h1 className={styles.pageTitle}>Kiểm kê vật tư hàng hóa</h1>
-          <button className={styles.btnPrimary} style={{ backgroundColor: '#2e7d32' }} onClick={() => navigate('/stocktakes/create')}>
+          <button className={styles.btnPrimary} style={{ backgroundColor: '#2e7d32' }} onClick={() => setShowInitModal(true)}>
             Thêm bảng kiểm kê
           </button>
         </div>
@@ -148,11 +165,11 @@ function StocktakeListPage() {
             </div>
           </div>
           <div className={styles.filterActions}>
-            <button className={styles.btnOutline} onClick={() => setFilters({ stocktakeCode: '', fromDate: '', status: '' })}>
-              <i className="bi bi-arrow-clockwise"></i>
+            <button className={`${styles.iconBtnAction} ${styles.reload}`} onClick={() => setFilters({ stocktakeCode: '', fromDate: '', status: '' })} title="Tải lại">
+              <i className="bi bi-arrow-clockwise"></i> Tải lại
             </button>
-            <button className={styles.btnOutline} onClick={handleExport} title="Xuất ra file excel">
-              <i className="bi bi-file-earmark-excel"></i>
+            <button className={`${styles.iconBtnAction} ${styles.excel}`} onClick={handleExport} title="Xuất ra file excel">
+              <i className="bi bi-file-earmark-excel"></i> Xuất Excel
             </button>
             <button className={styles.btnPrimary} onClick={loadStocktakes}>
               <i className="bi bi-funnel"></i> Lọc
@@ -272,7 +289,20 @@ function StocktakeListPage() {
             </div>
           </div>
         )}
+        
+        {showInitModal && (
+          <StocktakeInitModal 
+            onClose={() => setShowInitModal(false)} 
+            warehouses={warehouses} 
+          />
+        )}
       </div>
+      <Toast 
+        isVisible={toast.isVisible}
+        type={toast.type}
+        message={toast.message}
+        onClose={() => setToast({ ...toast, isVisible: false })}
+      />
     </AdminLayout>
   );
 }

@@ -671,3 +671,33 @@
   font-size: 15px;
   font-weight: 500;
 }
+
+.iconBtnAction {
+  height: 36px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  color: #475569;
+}
+
+.iconBtnAction:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.iconBtnAction.reload {
+  color: #0284c7;
+}
+
+.iconBtnAction.excel {
+  color: #10b981;
+}
