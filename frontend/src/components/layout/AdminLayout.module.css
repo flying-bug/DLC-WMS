@@ -268,3 +268,19 @@
         padding: 14px;
     }
 }
+
+@media print {
+    .sidebar, .header {
+        display: none !important;
+    }
+
+    .mainWrapper {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .content {
+        padding: 0 !important;
+        background: none !important;
+    }
+}

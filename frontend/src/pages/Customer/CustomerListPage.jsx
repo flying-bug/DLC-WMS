@@ -2,60 +2,97 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import CustomerQuickCreateDrawer from './components/CustomerQuickCreateDrawer';
+import CustomerImportModal from './components/CustomerImportModal';
 import Modal from '../../components/ui/Modal/Modal';
-import { searchCustomers, deactivateCustomer, updateCustomer } from '../../api/customerApi';
-import { exportToExcel } from '../../utils/excelExport';
+import Toast from '../../components/ui/Toast/Toast';
+import { searchCustomers, deactivateCustomer, activateCustomer, exportCustomersToExcel } from '../../api/customerApi';
 import styles from './CustomerListPage.module.css';
 
 const CustomerListPage = () => {
     const navigate = useNavigate();
     const [customers, setCustomers] = useState([]);
     const [keywordSearch, setKeywordSearch] = useState('');
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filters, setFilters] = useState({ status: '', groupType: '' });
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, customer: null, action: '' });
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
+    const [toast, setToast] = useState({ isVisible: false, type: 'success', title: '', message: '' });
+    const [selectedIds, setSelectedIds] = useState(new Set());
     const PAGE_SIZE = 10;
+
+    const showToast = (type, title, message) => {
+        setToast({ isVisible: true, type, title, message });
+    };
+    const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
     // Debounce search
     const debounceRef = useRef(null);
 
-    const handleExport = () => {
-        const headers = ['Mã khách hàng', 'Tên khách hàng', 'Địa chỉ', 'Mã số thuế', 'Số điện thoại', 'Trạng thái', 'Đơn hàng cuối'];
-        const data = customers.map(item => [
-            item.code,
-            item.name,
-            item.address || '',
-            item.taxCode || '',
-            item.phone,
-            item.status === 'APPROVED' ? 'Đang hoạt động' : 'Ngừng hoạt động',
-            item.lastOrder || ''
-        ]);
-        exportToExcel(headers, data, 'Danh_sach_khach_hang');
-    };
-
-    const fetchCustomers = useCallback(async (keyword = '', currentPage = 0) => {
+    const handleExport = async () => {
         try {
             setLoading(true);
-            const response = await searchCustomers(keyword, currentPage, PAGE_SIZE);
+            await exportCustomersToExcel({ keyword: keywordSearch, ...filters }, Array.from(selectedIds));
+            showToast('success', 'Thành công', 'Đã tải xuống file Excel.');
+        } catch (err) {
+            console.error(err);
+            showToast('error', 'Lỗi', 'Có lỗi xảy ra khi xuất Excel.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSelectRow = (id) => {
+        setSelectedIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            const newSet = new Set(selectedIds);
+            customers.forEach(item => newSet.add(item.id));
+            setSelectedIds(newSet);
+        } else {
+            const newSet = new Set(selectedIds);
+            customers.forEach(item => newSet.delete(item.id));
+            setSelectedIds(newSet);
+        }
+    };
+
+    const isAllCurrentPageSelected = customers.length > 0 && customers.every(item => selectedIds.has(item.id));
+
+    const fetchCustomers = useCallback(async (keyword = keywordSearch, filterParams = filters, currentPage = page) => {
+        try {
+            setLoading(true);
+            const response = await searchCustomers(keyword, filterParams.status, filterParams.groupType, currentPage, PAGE_SIZE);
             const payload = response.data?.data ?? response.data;
             if (payload) {
                 setCustomers(payload.content || []);
                 setTotalPages(payload.totalPages || 0);
                 setTotalElements(payload.totalElements || 0);
             }
-        } catch (error) {
-            console.error('Lỗi tải danh sách khách hàng:', error);
+        } catch (err) {
+            console.error(err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [keywordSearch, filters, page]);
 
     useEffect(() => {
-        Promise.resolve().then(() => fetchCustomers('', 0));
-    }, [fetchCustomers]);
+        Promise.resolve().then(() => fetchCustomers(keywordSearch, filters, page));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, filters]);
 
     const handleSearchChange = (e) => {
         const value = e.target.value;
@@ -63,13 +100,22 @@ const CustomerListPage = () => {
         setPage(0);
         clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
-            fetchCustomers(value, 0);
+            fetchCustomers(value, filters, 0);
         }, 400);
+    };
+
+    const handleFilterChange = (key, value) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
+        setPage(0);
+    };
+
+    const clearFilters = () => {
+        setFilters({ status: '', groupType: '' });
+        setPage(0);
     };
 
     const handlePageChange = (newPage) => {
         setPage(newPage);
-        fetchCustomers(keywordSearch, newPage);
     };
 
     const handleToggleStatus = (customer) => {
@@ -83,32 +129,25 @@ const CustomerListPage = () => {
             setLoading(true);
             if (confirmModal.customer.status === 'APPROVED') {
                 await deactivateCustomer(confirmModal.customer.id);
+                showToast('success', 'Thành công', `Đã vô hiệu hóa khách hàng "${confirmModal.customer.name}".`);
             } else {
-                // If backend supports activating, update status or just call updateCustomer
-                // Since there's no activateCustomer, we use updateCustomer
-                const payload = {
-                    name: confirmModal.customer.name,
-                    phone: confirmModal.customer.phone,
-                    email: confirmModal.customer.email,
-                    address: confirmModal.customer.address,
-                    groupType: confirmModal.customer.groupType,
-                    status: 'APPROVED' // set active status
-                };
-                // wait, let's just toggle status via update
-                await updateCustomer(confirmModal.customer.id, payload);
+                await activateCustomer(confirmModal.customer.id);
+                showToast('success', 'Thành công', `Đã kích hoạt lại khách hàng "${confirmModal.customer.name}".`);
             }
             fetchCustomers(keywordSearch, page);
         } catch (error) {
-            console.error('Lỗi thay đổi trạng thái khách hàng:', error);
+            const msg = error.response?.data?.userMessage || 'Có lỗi xảy ra. Vui lòng thử lại.';
+            showToast('error', 'Thao tác thất bại', msg);
         } finally {
             setConfirmModal({ isOpen: false, customer: null, action: '' });
             setLoading(false);
         }
     };
 
-    const handleSavedSuccess = () => {
+    const handleSavedSuccess = (isEdit) => {
         setIsDrawerOpen(false);
         fetchCustomers(keywordSearch, page);
+        showToast('success', 'Thành công', isEdit ? 'Đã cập nhật thông tin khách hàng.' : 'Đã thêm khách hàng mới thành công.');
     };
 
     const startItem = page * PAGE_SIZE + 1;
@@ -129,29 +168,29 @@ const CustomerListPage = () => {
                     {/* Toolbar */}
                     <div className={styles.tableToolbar}>
                         <div className={styles.toolbarLeft}>
-                            <div className={styles.dropdownBtn}>
-                                Thực hiện hàng loạt <i className="fas fa-chevron-down"></i>
+                            <div
+                                className={`${styles.filterBtn} ${isFilterOpen ? styles.activeFilter : ''}`}
+                                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                            >
+                                <i className="fas fa-filter"></i> Lọc {Object.values(filters).some(x => x) && <span className={styles.filterDot}></span>}
                             </div>
-                            <div className={styles.filterBtn}>
-                                <i className="fas fa-filter"></i> Lọc
-                            </div>
-                        </div>
-                        <div className={styles.toolbarRight}>
                             <div className={styles.searchBox}>
                                 <i className="fas fa-search"></i>
                                 <input
                                     id="input-search"
                                     type="text"
-                                    placeholder="Tìm kiếm"
+                                    placeholder="Tìm theo tên, SĐT..."
                                     value={keywordSearch}
                                     onChange={handleSearchChange}
                                     autoComplete="off"
                                 />
                             </div>
+                        </div>
+                        <div className={styles.toolbarRight}>
                             <button className={styles.iconBtn} title="Tải lại" onClick={() => fetchCustomers(keywordSearch, page)}>
                                 <i className="fas fa-sync-alt"></i>
                             </button>
-                            <button className={styles.iconBtn} title="In">
+                            <button className={styles.iconBtn} title="In" onClick={() => window.print()}>
                                 <i className="fas fa-print"></i>
                             </button>
                             <button className={styles.iconBtn} title="Cài đặt">
@@ -160,7 +199,7 @@ const CustomerListPage = () => {
                             <button className={styles.iconBtn} title="Xuất Excel" onClick={handleExport}>
                                 <i className="fas fa-file-excel"></i>
                             </button>
-                            <button className={styles.btnImport} title="Nhập dữ liệu từ Excel">
+                            <button className={styles.btnImport} title="Nhập dữ liệu từ Excel" onClick={() => setIsImportModalOpen(true)}>
                                 <i className="fas fa-file-import"></i> Nhập từ Excel
                             </button>
                             <button id="btn-add-customer" className={styles.btnAdd} onClick={() => setIsDrawerOpen(true)}>
@@ -169,18 +208,54 @@ const CustomerListPage = () => {
                         </div>
                     </div>
 
+                    {/* Filter Panel (MISA Style) */}
+                    {isFilterOpen && (
+                        <div className={styles.filterPanel}>
+                            <div className={styles.filterGroup}>
+                                <label>Trạng thái</label>
+                                <select
+                                    value={filters.status}
+                                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                                >
+                                    <option value="">Tất cả</option>
+                                    <option value="APPROVED">Đang hoạt động</option>
+                                    <option value="INACTIVE">Ngừng hoạt động</option>
+                                </select>
+                            </div>
+                            <div className={styles.filterGroup}>
+                                <label>Nhóm khách hàng</label>
+                                <select
+                                    value={filters.groupType}
+                                    onChange={(e) => handleFilterChange('groupType', e.target.value)}
+                                >
+                                    <option value="">Tất cả</option>
+                                    <option value="RETAIL">Khách lẻ</option>
+                                    <option value="WHOLESALE">Khách thợ</option>
+                                    <option value="DISTRIBUTOR">Đại lý</option>
+                                </select>
+                            </div>
+                            <div className={styles.filterActions}>
+                                <span className={styles.clearFilter} onClick={clearFilters}>Xóa bộ lọc</span>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Data Table */}
                     <div className={styles.tableWrapper}>
                         <table className={styles.table}>
                             <thead>
                                 <tr>
                                     <th style={{ width: '40px', textAlign: 'center' }}>
-                                        <input type="checkbox" className={styles.checkbox} />
+                                        <input 
+                                            type="checkbox" 
+                                            className={styles.checkbox} 
+                                            checked={isAllCurrentPageSelected}
+                                            onChange={handleSelectAll}
+                                        />
                                     </th>
                                     <th>MÃ KHÁCH HÀNG</th>
                                     <th>TÊN KHÁCH HÀNG</th>
                                     <th>ĐỊA CHỈ</th>
-                                    <th>MÃ SỐ THUẾ</th>
                                     <th>SỐ ĐIỆN THOẠI</th>
                                     <th>TRẠNG THÁI</th>
                                     <th>ĐƠN HÀNG CUỐI</th>
@@ -189,13 +264,18 @@ const CustomerListPage = () => {
                             </thead>
                             <tbody>
                                 {loading ? (
-                                    <tr><td colSpan="9" className={styles.emptyRow}>Đang tải dữ liệu...</td></tr>
+                                    <tr><td colSpan="8" className={styles.emptyRow}>Đang tải dữ liệu...</td></tr>
                                 ) : customers.length === 0 ? (
-                                    <tr><td colSpan="9" className={styles.emptyRow}>Chưa có dữ liệu.</td></tr>
+                                    <tr><td colSpan="8" className={styles.emptyRow}>Chưa có dữ liệu.</td></tr>
                                 ) : customers.map((item) => (
                                     <tr key={item.id}>
                                         <td style={{ textAlign: 'center' }}>
-                                            <input type="checkbox" className={styles.checkbox} />
+                                            <input 
+                                                type="checkbox" 
+                                                className={styles.checkbox} 
+                                                checked={selectedIds.has(item.id)}
+                                                onChange={() => handleSelectRow(item.id)}
+                                            />
                                         </td>
                                         <td className={styles.codeCell}>{item.code}</td>
                                         <td>
@@ -208,7 +288,6 @@ const CustomerListPage = () => {
                                             </span>
                                         </td>
                                         <td>{item.address || '---'}</td>
-                                        <td>{item.taxCode || '---'}</td>
                                         <td>{item.phone}</td>
                                         <td>
                                             {item.status === 'APPROVED' ? (
@@ -309,7 +388,24 @@ const CustomerListPage = () => {
                 isOpen={isDrawerOpen}
                 editData={null}
                 onClose={() => setIsDrawerOpen(false)}
-                onSaved={handleSavedSuccess}
+                onSaved={(isEdit) => handleSavedSuccess(isEdit)}
+                onError={(msg) => showToast('error', 'Lỗi', msg)}
+            />
+
+            <CustomerImportModal 
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                onSuccess={() => fetchCustomers(keywordSearch, page)}
+                showToast={showToast}
+            />
+
+            {/* Toast Notification */}
+            <Toast
+                isVisible={toast.isVisible}
+                type={toast.type}
+                title={toast.title}
+                message={toast.message}
+                onClose={hideToast}
             />
 
             {/* Confirm Modal */}

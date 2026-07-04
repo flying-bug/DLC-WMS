@@ -4,6 +4,10 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import java.util.List;
+import com.duylongtech.backend.dto.request.CustomerRequest.CustomerExcelDTO;
 
 /**
  * Response DTO cho Khách hàng (Customer).
@@ -41,4 +45,19 @@ public class CustomerResponse {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ImportPreviewResponse {
+        private int totalRows;
+        private int validCount;
+        private int duplicateCount;
+        private int errorCount;
+        
+        private List<CustomerExcelDTO> validRows;
+        private List<CustomerExcelDTO> duplicateRows;
+        private List<CustomerExcelDTO> errorRows;
+    }
 }

@@ -140,7 +140,13 @@ const AdminLayout = ({ children }) => {
                         >
                             Chuyển kho
                         </button>
-                        <button className={styles.tab} type="button">Kiểm kê</button>
+                        <button
+                            className={`${styles.tab} ${currentPath.startsWith('/stocktakes') ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/stocktakes')}
+                            type="button"
+                        >
+                            Kiểm kê
+                        </button>
                         <button
                             className={`${styles.tab} ${currentPath.startsWith('/assembly-orders') ? styles.activeTab : ''}`}
                             onClick={() => navigate('/assembly-orders')}
