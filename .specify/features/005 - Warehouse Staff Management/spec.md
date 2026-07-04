@@ -1,10 +1,10 @@
 # Feature Specification: Warehouse Staff Management
 
-**Feature Branch**: `[001-warehouse-staff-management]`
+**Feature Branch**: `[005-warehouse-staff-management]`
 
 **Created**: 2026-06-30
 
-**Status**: Ready for Development
+**Status**: Processing
 
 **Input**: User description: "Quản lý nhân sự kho theo ngữ cảnh (Contextual RBAC), hỗ trợ đa kho/đa vai trò, quản lý trạng thái tài khoản và lịch sử phân quyền."
 
