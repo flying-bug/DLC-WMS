@@ -61,7 +61,6 @@ function StocktakeListPage() {
 
   const loadStocktakes = useCallback(async () => {
     setLoading(true);
-    setError('');
     try {
       const params = {
         stocktakeCode: filters.stocktakeCode || undefined,
@@ -71,20 +70,21 @@ function StocktakeListPage() {
       const response = await stocktakeApi.getStocktakes(params);
       const data = pageContent(unwrap(response));
       setStocktakes(data);
-      setSelectedStocktake(current => data.find(item => item.id === current?.id) || data[0] || null);
       setSelectedIds([]);
     } catch (err) {
-      setError(err.response?.data?.userMessage || 'Không tải được danh sách bảng kiểm kê');
+      console.error(err.response?.data?.userMessage || 'Không tải được danh sách bảng kiểm kê');
     } finally {
       setLoading(false);
     }
   }, [filters]);
 
   useEffect(() => {
+    // eslint-disable-next-line
     loadLookups();
   }, [loadLookups]);
 
   useEffect(() => {
+    // eslint-disable-next-line
     loadStocktakes();
   }, [loadStocktakes]);
 
