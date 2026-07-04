@@ -9,8 +9,8 @@
 
 .sidebar {
     width: 248px;
-    background: var(--color-secondary);
-    color: var(--color-border);
+    background: var(--color-primary-sidebar);
+    color: var(--overlay-white-soft-text);
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-dropdown);
@@ -18,35 +18,38 @@
 }
 
 .logoArea {
-    padding: 20px;
+    padding: 16px 20px;
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 12px;
     border-bottom: 1px solid var(--overlay-white-line);
+    min-height: 80px;
 }
 
-.logoIcon {
+.brandLogo {
     width: 44px;
     height: 44px;
-    background: var(--color-primary);
-    border-radius: 8px;
+    object-fit: contain;
+    border-radius: 4px;
+    background: var(--color-white);
+    padding: 2px;
+}
+
+.brandText {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 1.2rem;
+    flex-direction: column;
     color: var(--color-white);
 }
 
-.logoText {
+.brandTitle {
     font-size: 1rem;
     font-weight: 700;
     line-height: 1.2;
 }
 
-.logoText small {
+.brandSubtitle {
     font-size: 0.75rem;
-    color: var(--overlay-white-muted);
+    color: var(--overlay-white-soft-text);
     font-weight: 500;
 }
 
@@ -54,8 +57,8 @@
     margin: 20px;
     padding: 10px 15px;
     background-color: transparent;
-    border: 1px solid var(--color-primary);
-    color: var(--color-primary);
+    border: 1px solid var(--color-white);
+    color: var(--color-white);
     border-radius: 20px;
     cursor: pointer;
     font-weight: 500;
@@ -67,8 +70,8 @@
 }
 
 .quickAddBtn:hover {
-    background-color: var(--color-primary);
-    color: var(--color-white);
+    background-color: var(--color-white);
+    color: var(--color-primary-sidebar);
 }
 
 .plusIcon {
@@ -90,7 +93,7 @@
     align-items: center;
     gap: 15px;
     cursor: pointer;
-    color: var(--color-border-strong);
+    color: var(--color-white);
     transition: all 0.2s ease;
     border: 0;
     border-left: 3px solid transparent;
@@ -106,14 +109,14 @@
 }
 
 .navItem:hover {
-    background-color: var(--color-secondary-hover);
+    background-color: var(--color-primary-sidebar-hover);
     color: var(--color-white);
 }
 
 .navItem.active {
-    background-color: var(--color-secondary-hover);
+    background-color: var(--color-primary-sidebar-hover);
     color: var(--color-white);
-    border-left-color: var(--color-primary);
+    border-left-color: var(--color-white);
     font-weight: 600;
 }
 

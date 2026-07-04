@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import styles from './BrandDetailDrawer.module.css';
 
-const BrandDetailDrawer = ({ isOpen, onClose, brand, onEdit }) => {
+const BrandDetailDrawer = ({ isOpen, onClose, brand, onEdit, onDeactivate }) => {
     const [isSkuOpen, setIsSkuOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [isDeactivating, setIsDeactivating] = useState(false);
 
     if (!isOpen || !brand) return null;
 
@@ -13,6 +14,7 @@ const BrandDetailDrawer = ({ isOpen, onClose, brand, onEdit }) => {
         { id: 3, code: 'SKU-SAM-03', name: 'Neo QLED 8K', stock: 12, status: 'Sắp hết' },
     ];
 
+    // TODO: [TC-DETAIL-03] API getBrandById hiện chưa trả về dữ liệu lịch sử (History). Giữ nguyên giao diện render, chưa thể map dữ liệu thật.
     const mockHistory = [
         { id: 1, action: 'Cập nhật thông tin hotline', by: 'Admin', time: '12/05/2023 14:30' },
         { id: 2, action: 'Thay đổi mô tả thương hiệu', by: 'Manager', time: '10/05/2023 09:15' },
@@ -54,13 +56,17 @@ const BrandDetailDrawer = ({ isOpen, onClose, brand, onEdit }) => {
                         <div className={styles.contactInfo}>
                             <div className={styles.contactItem}>
                                 <span className={styles.contactLabel}>HOTLINE</span>
-                                <span className={styles.contactValue}>1800 588889</span>
+                                <span className={styles.contactValue}>{brand.hotline || 'Chưa cập nhật'}</span>
                             </div>
                             <div className={styles.contactItem}>
                                 <span className={styles.contactLabel}>EMAIL</span>
-                                <a href={`mailto:support@${brand.name.toLowerCase().replace(/\s/g, '')}.vn`} className={styles.contactLink}>
-                                    support@{brand.name.toLowerCase().replace(/\s/g, '')}.vn
-                                </a>
+                                {brand.email ? (
+                                    <a href={`mailto:${brand.email}`} className={styles.contactLink}>
+                                        {brand.email}
+                                    </a>
+                                ) : (
+                                    <span className={styles.contactValue}>Chưa cập nhật</span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -124,7 +130,25 @@ const BrandDetailDrawer = ({ isOpen, onClose, brand, onEdit }) => {
                 </div>
 
                 <div className={styles.footer}>
-                    <button className={styles.btnDanger}>Vô hiệu hóa</button>
+                    <button 
+                        className={styles.btnDanger} 
+                        onClick={() => {
+                            if (onDeactivate && brand.status === 'ACTIVE') {
+                                if (window.confirm('Bạn có chắc chắn muốn ngừng hợp tác với thương hiệu này? Sản phẩm thuộc thương hiệu sẽ không thể nhập kho thêm.')) {
+                                    setIsDeactivating(true);
+                                    // Simulate API call
+                                    setTimeout(() => {
+                                        onDeactivate(brand.id);
+                                        setIsDeactivating(false);
+                                        onClose();
+                                    }, 500);
+                                }
+                            }
+                        }}
+                        disabled={isDeactivating || brand.status !== 'ACTIVE'}
+                    >
+                        {isDeactivating ? 'Đang xử lý...' : 'Vô hiệu hóa'}
+                    </button>
                     <div className={styles.footerRight}>
                         <button className={styles.btnPrimary} onClick={onEdit}>Chỉnh sửa</button>
                         <button className={styles.btnSecondary} onClick={onClose}>Đóng</button>
