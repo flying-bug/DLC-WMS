@@ -47,22 +47,26 @@ public class CustomerController {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * UC-CUST-01: Tìm kiếm khách hàng theo SĐT (Autocomplete).
-     * Bắt buộc phân trang.
+     * UC-CUST-01: Tìm kiếm khách hàng.
+     * Hỗ trợ lọc theo keyword (SĐT, tên), status, groupType. Bắt buộc phân trang.
      *
-     * @param phone từ khóa SĐT (partial match, optional)
-     * @param page  trang hiện tại (default: 0)
-     * @param size  số bản ghi mỗi trang (default: 10)
+     * @param keyword    từ khóa (SĐT, tên) (optional)
+     * @param status     trạng thái (optional)
+     * @param groupType  nhóm khách hàng (optional)
+     * @param page       trang hiện tại (default: 0)
+     * @param size       số bản ghi mỗi trang (default: 10)
      */
     @GetMapping
-    @Operation(summary = "Tìm kiếm khách hàng theo SĐT (UC-CUST-01)")
+    @Operation(summary = "Tìm kiếm khách hàng (UC-CUST-01)")
     @PreAuthorize("hasAuthority('customer:view')")
     public ApiResponse<Page<CustomerResponse>> searchCustomers(
-            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String groupType,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        return ApiResponse.success(customerService.searchCustomers(phone, page, size));
+        return ApiResponse.success(customerService.searchCustomers(keyword, status, groupType, page, size));
     }
 
     /**
@@ -118,6 +122,73 @@ public class CustomerController {
             @RequestParam(defaultValue = "10") int size
     ) {
         return ApiResponse.success(customerService.getReceiptHistory(id, page, size));
+    }
+
+    /**
+     * UC-CUST-EXPORT: Xuất Excel
+     */
+    @GetMapping("/export")
+    @Operation(summary = "Xuất dữ liệu khách hàng ra Excel")
+    @PreAuthorize("hasAuthority('customer:view')")
+    public org.springframework.http.ResponseEntity<byte[]> exportCustomers(
+            @RequestParam(required = false) java.util.List<Long> ids,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String groupType
+    ) {
+        java.util.List<com.duylongtech.backend.entity.Partner> customers = customerService.getCustomersForExport(ids, keyword, status, groupType);
+        byte[] excelBytes = customerService.exportToExcel(customers);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment", "customers.xlsx");
+        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+        return new org.springframework.http.ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
+    }
+
+    /**
+     * UC-CUST-IMPORT-1.5: Tải file template Excel
+     */
+    @GetMapping("/import/template")
+    @Operation(summary = "Tải file Excel mẫu để Import")
+    @PreAuthorize("hasAuthority('customer:view')")
+    public org.springframework.http.ResponseEntity<byte[]> downloadTemplate() {
+        byte[] excelBytes = customerService.exportTemplateToExcel();
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDispositionFormData("attachment", "DLC_WMS_Template_Khach_Hang.xlsx");
+        headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+        return new org.springframework.http.ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
+    }
+
+    /**
+     * UC-CUST-IMPORT-1: Upload file Excel để Preview
+     */
+    @PostMapping(value = "/import/preview", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Preview file Excel để Import")
+    @PreAuthorize("hasAuthority('customer:add')")
+    public ApiResponse<com.duylongtech.backend.dto.response.CustomerResponse.ImportPreviewResponse> previewImport(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file
+    ) {
+        return ApiResponse.success(customerService.previewImport(file));
+    }
+
+    /**
+     * UC-CUST-IMPORT-2: Xác nhận Import dữ liệu (Insert + Merge)
+     */
+    @PostMapping("/import/confirm")
+    @Operation(summary = "Xác nhận lưu dữ liệu Import")
+    @PreAuthorize("hasAuthority('customer:add')")
+    public ApiResponse<Void> confirmImport(
+            @RequestBody com.duylongtech.backend.dto.request.CustomerRequest.ImportConfirmRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        String actor = getCurrentUser();
+        customerService.confirmImport(request, actor);
+        return ApiResponse.success(null);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -231,6 +302,39 @@ public class CustomerController {
             auditLogService.logEvent(
                     actor, "DEACTIVATE", "Customer", id,
                     "FAILED", "Vô hiệu hóa khách hàng ID " + id + " thất bại: " + e.getMessage(),
+                    ip, null
+            );
+            throw e;
+        }
+    }
+
+    /**
+     * UC-CUST-05b: Kích hoạt lại khách hàng (Re-activate).
+     *
+     * @param id             ID khách hàng
+     * @param servletRequest HTTP request (lấy IP)
+     */
+    @PatchMapping("/{id}/activate")
+    @Operation(summary = "Kích hoạt lại khách hàng (UC-CUST-05b)")
+    @PreAuthorize("hasAuthority('customer:edit')")
+    public ApiResponse<Void> activateCustomer(
+            @PathVariable Long id,
+            HttpServletRequest servletRequest
+    ) {
+        String actor = getCurrentUser();
+        String ip    = getClientIp(servletRequest);
+        try {
+            customerService.activateCustomer(id);
+            auditLogService.logEvent(
+                    actor, "ACTIVATE", "Customer", id,
+                    "SUCCESS", "Kích hoạt lại khách hàng ID: " + id,
+                    ip, null
+            );
+            return ApiResponse.success(null);
+        } catch (Exception e) {
+            auditLogService.logEvent(
+                    actor, "ACTIVATE", "Customer", id,
+                    "FAILED", "Kích hoạt lại khách hàng ID " + id + " thất bại: " + e.getMessage(),
                     ip, null
             );
             throw e;

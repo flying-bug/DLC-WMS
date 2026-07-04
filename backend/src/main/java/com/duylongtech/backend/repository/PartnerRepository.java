@@ -64,8 +64,29 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
 
     boolean existsByPhoneAndIsCustomerTrueAndIdNot(String phone, Long id);
 
-    @Query("SELECT p FROM Partner p WHERE p.isCustomer = true AND (:phone IS NULL OR p.phone LIKE CONCAT('%', :phone, '%'))")
-    Page<Partner> searchCustomers(@Param("phone") String phone, Pageable pageable);
+    @Query("SELECT p FROM Partner p WHERE p.isCustomer = true " +
+           "AND (:keyword IS NULL OR p.phone LIKE CONCAT('%', :keyword, '%') " +
+           "     OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (:status IS NULL OR p.status = :status) " +
+           "AND (:groupType IS NULL OR p.groupType = :groupType)")
+    Page<Partner> searchCustomers(
+            @Param("keyword") String keyword,
+            @Param("status") String status,
+            @Param("groupType") String groupType,
+            Pageable pageable);
+
+    @Query("SELECT p FROM Partner p WHERE p.isCustomer = true AND p.id IN :ids")
+    List<Partner> findCustomersByIds(@Param("ids") List<Long> ids);
+
+    @Query("SELECT p FROM Partner p WHERE p.isCustomer = true " +
+           "AND (:keyword IS NULL OR p.phone LIKE CONCAT('%', :keyword, '%') " +
+           "     OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (:status IS NULL OR p.status = :status) " +
+           "AND (:groupType IS NULL OR p.groupType = :groupType)")
+    List<Partner> findAllCustomersForExport(
+            @Param("keyword") String keyword,
+            @Param("status") String status,
+            @Param("groupType") String groupType);
 
     Optional<Partner> findByIdAndIsCustomerTrue(Long id);
 

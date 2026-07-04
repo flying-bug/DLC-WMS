@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
-import { getCustomerById, deactivateCustomer } from '../../api/customerApi';
-// import { getCustomerSalesHistory, getCustomerWarranties, getCustomerReceipts } from '../../api/customerApi';
+import { getCustomerById, deactivateCustomer, getCustomerSalesHistory, getCustomerWarranties, getCustomerReceipts } from '../../api/customerApi';
 import CustomerQuickCreateDrawer from './components/CustomerQuickCreateDrawer';
+import SalesHistoryTab from './components/SalesHistoryTab';
+import WarrantyTab from './components/WarrantyTab';
+import ReceiptsTab from './components/ReceiptsTab';
+import Toast from '../../components/ui/Toast/Toast';
+import Modal from '../../components/ui/Modal/Modal';
 import styles from './CustomerDetailPage.module.css';
 
 const TABS = {
@@ -28,89 +32,72 @@ const CustomerDetailPage = () => {
     const [page, setPage] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [toast, setToast] = useState({ isVisible: false, type: 'success', title: '', message: '' });
+    const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+
+    const showToast = (type, title, message) => {
+        setToast({ isVisible: true, type, title, message });
+    };
+    const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
     // Lấy thông tin chung khách hàng
     useEffect(() => {
         const fetchCustomerInfo = async () => {
             try {
-                // MOCK DATA START
-                setCustomer({
-                    id: id,
-                    code: 'KH00001',
-                    name: 'Ng Thu Uyên',
-                    phone: '0912 345 678',
-                    email: 'uyen.ng@example.com',
-                    address: '123 Lê Lợi, Q.1, TP.HCM',
-                    taxCode: '0123456789',
-                    groupType: 'RETAIL',
-                    status: 'APPROVED'
-                });
-
-                // --- ORIGINAL API CALL (Commented for UI Preview) ---
-                // const res = await getCustomerById(id);
-                // setCustomer(res.data?.data);
+                const res = await getCustomerById(id);
+                setCustomer(res.data?.data || res.data);
             } catch (err) {
-                const msg = err.response?.data?.message || '';
-                if (msg.includes('CUST_VIEW_SEED_DATA_DENIED')) {
-                    alert('Không thể xem chi tiết Khách vãng lai.');
-                    navigate('/customers');
+                const errCode = err.response?.data?.errorCode || '';
+                const errMsg = err.response?.data?.userMessage || '';
+                if (errCode === 'CUST04' || errMsg.includes('vãng lai')) {
+                    showToast('error', 'Không có quyền', 'Không thể xem chi tiết Khách vãng lai.');
+                    setTimeout(() => navigate('/customers'), 1500);
                 } else {
-                    setError('Không thể tải thông tin khách hàng.');
+                    setError(errMsg || 'Không thể tải thông tin khách hàng.');
                 }
             }
         };
         fetchCustomerInfo();
     }, [id, navigate]);
 
-    // eslint-disable-next-line no-unused-vars
+     
     const fetchTabData = useCallback(async (currentTab, currentPage = 0) => {
         try {
             setLoading(true);
             // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 400));
-
-            // MOCK DATA START
             if (currentTab === TABS.SALES) {
+                const res = await getCustomerSalesHistory(id, currentPage, 10);
+                const payload = res.data?.data || res.data;
                 setSalesData({
-                    content: [
-                        { orderCode: 'HD00102', orderDate: '2026-06-20T10:00:00Z', productName: 'iPhone 15 Pro Max 256GB', quantity: 1, serialNumber: 'IMEI123456789' },
-                        { orderCode: 'HD00085', orderDate: '2026-05-15T14:30:00Z', productName: 'AirPods Pro Gen 2', quantity: 2, serialNumber: 'SN987654321' }
-                    ],
-                    totalElements: 2,
-                    totalPages: 1
+                    content: payload?.content || [],
+                    totalElements: payload?.totalElements || 0,
+                    totalPages: payload?.totalPages || 0
                 });
             } else if (currentTab === TABS.WARRANTY) {
+                const res = await getCustomerWarranties(id, currentPage, 10);
+                const payload = res.data?.data || res.data;
                 setWarrantyData({
-                    content: [
-                        {
-                            warrantyCode: 'BH00045', serialNumber: 'IMEI123456789', startDate: '2026-06-20T10:00:00Z', endDate: '2027-06-20T10:00:00Z', warrantyStatus: 'ACTIVE', repairs: [
-                                { repairCode: 'SC001', repairStatus: 'Hoàn thành', receivedDate: '2026-08-01T09:00:00Z' }
-                            ]
-                        }
-                    ],
-                    totalElements: 1,
-                    totalPages: 1
+                    content: payload?.content || [],
+                    totalElements: payload?.totalElements || 0,
+                    totalPages: payload?.totalPages || 0
                 });
             } else if (currentTab === TABS.RECEIPT) {
+                const res = await getCustomerReceipts(id, currentPage, 10);
+                const payload = res.data?.data || res.data;
                 setReceiptData({
-                    content: [
-                        { receiptCode: 'PT00120', type: 'RECEIPT', createdAt: '2026-06-20T10:05:00Z', amount: 29990000, paymentMethod: 'Chuyển khoản', status: 'Hoàn thành' },
-                        { receiptCode: 'PT00095', type: 'RECEIPT', createdAt: '2026-05-15T14:35:00Z', amount: 5990000, paymentMethod: 'Tiền mặt', status: 'Hoàn thành' },
-                        { receiptCode: 'PC00012', type: 'VOUCHER', createdAt: '2026-06-25T08:00:00Z', amount: 500000, paymentMethod: 'Tiền mặt', status: 'Hoàn thành' }
-                    ],
-                    totalElements: 3,
-                    totalPages: 1,
-                    totalPaid: 35470000,
-                    currentDebt: 5000000
+                    content: payload?.receipts?.content || [],
+                    totalElements: payload?.receipts?.totalElements || 0,
+                    totalPages: payload?.receipts?.totalPages || 0,
+                    totalPaid: payload?.summary?.totalPaid || 0,
+                    currentDebt: 0 // Assumed 0 as not returned by the API
                 });
             }
-            // MOCK DATA END
         } catch (err) {
             console.error('Lỗi tải dữ liệu tab:', err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [id]);
 
     useEffect(() => {
         Promise.resolve().then(() => fetchTabData(activeTab, page));
@@ -122,21 +109,27 @@ const CustomerDetailPage = () => {
     };
 
     const handleDeactivate = async () => {
-        if (!window.confirm(`Bạn có chắc muốn vô hiệu hóa khách hàng "${customer.name}" không?`)) return;
+        setConfirmDeactivate(true);
+    };
+
+    const executeDeactivate = async () => {
+        setConfirmDeactivate(false);
         try {
             await deactivateCustomer(id);
-            // Refresh customer info
+            showToast('success', 'Thành công', `Đã vô hiệu hóa khách hàng "${customer.name}".`);
             const res = await getCustomerById(id);
-            setCustomer(res.data?.data);
-        } catch (error) {
-            alert(error.response?.data?.message || 'Không thể vô hiệu hóa. Vui lòng kiểm tra lại.');
+            setCustomer(res.data?.data || res.data);
+        } catch (err) {
+            const msg = err.response?.data?.userMessage || 'Không thể vô hiệu hóa. Vui lòng kiểm tra lại.';
+            showToast('error', 'Thao tác thất bại', msg);
         }
     };
 
     const handleSavedSuccess = async () => {
         setIsDrawerOpen(false);
+        showToast('success', 'Thành công', 'Đã cập nhật thông tin khách hàng.');
         const res = await getCustomerById(id);
-        setCustomer(res.data?.data);
+        setCustomer(res.data?.data || res.data);
     };
 
     const formatCurrency = (val) => new Intl.NumberFormat('vi-VN').format(val || 0);
@@ -158,136 +151,6 @@ const CustomerDetailPage = () => {
     // ─────────────────────────────────────────────────────────────────────────
     // RENDERS
     // ─────────────────────────────────────────────────────────────────────────
-
-    const renderPagination = (totalPages) => (
-        <div className={styles.pagination}>
-            <div className={styles.pageInfo}>
-                Trang {page + 1} / {totalPages || 1}
-            </div>
-            <div className={styles.pageNav}>
-                <button className={styles.pageBtn} disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-                    <i className="fas fa-chevron-left"></i>
-                </button>
-                <button className={styles.pageBtn} disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
-                    <i className="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        </div>
-    );
-
-    const renderSalesTab = () => (
-        <>
-            <table className={styles.table}>
-                <thead>
-                    <tr>
-                        <th>MÃ ĐƠN HÀNG</th>
-                        <th>NGÀY MUA</th>
-                        <th>SẢN PHẨM</th>
-                        <th style={{ textAlign: 'center' }}>SỐ LƯỢNG</th>
-                        <th>SERIAL / IMEI</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {loading ? (
-                        <tr><td colSpan="5" className={styles.loadingState}>Đang tải...</td></tr>
-                    ) : salesData.content.length === 0 ? (
-                        <tr><td colSpan="5" className={styles.emptyState}>Chưa có lịch sử mua hàng</td></tr>
-                    ) : salesData.content.map((item, idx) => (
-                        <tr key={idx}>
-                            <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{item.orderCode}</td>
-                            <td>{formatDate(item.orderDate)}</td>
-                            <td>{item.productName}</td>
-                            <td style={{ textAlign: 'center' }}>{item.quantity}</td>
-                            <td>{item.serialNumber || '-'}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-            {renderPagination(salesData.totalPages)}
-        </>
-    );
-
-    const renderWarrantyTab = () => (
-        <>
-            <table className={styles.table}>
-                <thead>
-                    <tr>
-                        <th>MÃ BẢO HÀNH</th>
-                        <th>SERIAL SẢN PHẨM</th>
-                        <th>THỜI GIAN BH</th>
-                        <th>TRẠNG THÁI</th>
-                        <th>LỊCH SỬ SỬA CHỮA</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {loading ? (
-                        <tr><td colSpan="5" className={styles.loadingState}>Đang tải...</td></tr>
-                    ) : warrantyData.content.length === 0 ? (
-                        <tr><td colSpan="5" className={styles.emptyState}>Chưa có lịch sử bảo hành</td></tr>
-                    ) : warrantyData.content.map((item, idx) => (
-                        <tr key={idx}>
-                            <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{item.warrantyCode}</td>
-                            <td>{item.serialNumber || '-'}</td>
-                            <td>{formatDate(item.startDate)} - {formatDate(item.endDate)}</td>
-                            <td>{item.warrantyStatus}</td>
-                            <td>
-                                {item.repairs?.length > 0 ? (
-                                    item.repairs.map(r => (
-                                        <div key={r.repairCode} style={{ fontSize: '12px' }}>
-                                            {r.repairCode} - {r.repairStatus} ({formatDate(r.receivedDate)})
-                                        </div>
-                                    ))
-                                ) : '-'}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-            {renderPagination(warrantyData.totalPages)}
-        </>
-    );
-
-    const renderReceiptTab = () => (
-        <>
-            <table className={styles.table}>
-                <thead>
-                    <tr>
-                        <th>MÃ CHỨNG TỪ</th>
-                        <th>LOẠI</th>
-                        <th>NGÀY GIAO DỊCH</th>
-                        <th style={{ textAlign: 'right' }}>SỐ TIỀN (VNĐ)</th>
-                        <th>PHƯƠNG THỨC</th>
-                        <th>TRẠNG THÁI</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {loading ? (
-                        <tr><td colSpan="6" className={styles.loadingState}>Đang tải...</td></tr>
-                    ) : receiptData.content.length === 0 ? (
-                        <tr><td colSpan="6" className={styles.emptyState}>Chưa có lịch sử giao dịch</td></tr>
-                    ) : receiptData.content.map((item, idx) => (
-                        <tr key={idx}>
-                            <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{item.receiptCode}</td>
-                            <td>
-                                {item.type === 'RECEIPT' ? (
-                                    <span style={{ color: '#16a34a', fontWeight: 600 }}>Phiếu Thu</span>
-                                ) : (
-                                    <span style={{ color: '#dc2626', fontWeight: 600 }}>Phiếu Chi</span>
-                                )}
-                            </td>
-                            <td>{formatDate(item.createdAt)}</td>
-                            <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                                {item.type === 'VOUCHER' ? '-' : '+'}{formatCurrency(item.amount)}
-                            </td>
-                            <td>{item.paymentMethod || '-'}</td>
-                            <td>{item.status}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-            {renderPagination(receiptData.totalPages)}
-        </>
-    );
 
     return (
         <AdminLayout>
@@ -344,10 +207,6 @@ const CustomerDetailPage = () => {
                                 <span className={styles.infoLabel}>Nhóm khách hàng</span>
                                 <span className={styles.infoValue}>{getGroupLabel(customer.groupType)}</span>
                             </div>
-                            <div className={styles.infoItem}>
-                                <span className={styles.infoLabel}>Mã số thuế</span>
-                                <span className={styles.infoValue}>{customer.taxCode || '—'}</span>
-                            </div>
                             <div className={styles.infoItem} style={{ gridColumn: '1 / -1' }}>
                                 <span className={styles.infoLabel}>Email</span>
                                 <span className={styles.infoValue}>{customer.email || '—'}</span>
@@ -397,9 +256,15 @@ const CustomerDetailPage = () => {
                     </div>
 
                     <div className={styles.tabContent}>
-                        {activeTab === TABS.SALES && renderSalesTab()}
-                        {activeTab === TABS.WARRANTY && renderWarrantyTab()}
-                        {activeTab === TABS.RECEIPT && renderReceiptTab()}
+                        {activeTab === TABS.SALES && (
+                            <SalesHistoryTab data={salesData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} styles={styles} />
+                        )}
+                        {activeTab === TABS.WARRANTY && (
+                            <WarrantyTab data={warrantyData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} styles={styles} />
+                        )}
+                        {activeTab === TABS.RECEIPT && (
+                            <ReceiptsTab data={receiptData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} formatCurrency={formatCurrency} styles={styles} />
+                        )}
                     </div>
                 </div>
             </div>
@@ -409,7 +274,39 @@ const CustomerDetailPage = () => {
                 editData={customer}
                 onClose={() => setIsDrawerOpen(false)}
                 onSaved={handleSavedSuccess}
+                onError={(msg) => showToast('error', 'Lỗi', msg)}
             />
+
+            {/* Toast Notification */}
+            <Toast
+                isVisible={toast.isVisible}
+                type={toast.type}
+                title={toast.title}
+                message={toast.message}
+                onClose={hideToast}
+            />
+
+            {/* Confirm Deactivate Modal */}
+            <Modal
+                isOpen={confirmDeactivate}
+                onClose={() => setConfirmDeactivate(false)}
+            >
+                <div style={{ padding: '8px 4px' }}>
+                    <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                        <i className="fas fa-exclamation-circle" style={{ fontSize: '40px', color: '#ef4444' }}></i>
+                    </div>
+                    <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700 }}>Xác nhận vô hiệu hóa</h3>
+                    <p style={{ margin: '0 0 20px', color: '#6b7280' }}>
+                        Bạn có chắc chắn muốn vô hiệu hóa khách hàng <strong>"{customer?.name}"</strong> không?
+                    </p>
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                        <button className="btn-misa-cancel" onClick={() => setConfirmDeactivate(false)}>Hủy bỏ</button>
+                        <button className="btn-misa-save" style={{ background: '#ef4444', borderColor: '#ef4444' }} onClick={executeDeactivate}>
+                            <i className="fas fa-ban"></i> Vô hiệu hóa
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </AdminLayout>
     );
 };

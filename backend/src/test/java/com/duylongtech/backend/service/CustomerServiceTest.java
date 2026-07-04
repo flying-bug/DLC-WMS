@@ -92,10 +92,10 @@ class CustomerServiceTest {
         // Arrange
         PageRequest pageRequest = PageRequest.of(0, 10);
         Page<Partner> page = new PageImpl<>(List.of(normalCustomer));
-        when(partnerRepository.searchCustomers(any(), any())).thenReturn(page);
+        when(partnerRepository.searchCustomers(any(), any(), any(), any())).thenReturn(page);
 
         // Act
-        Page<CustomerResponse> result = customerService.searchCustomers("090", 0, 10);
+        Page<CustomerResponse> result = customerService.searchCustomers("090", null, null, 0, 10);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
