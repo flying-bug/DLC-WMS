@@ -9,8 +9,8 @@ function WarehouseDashboard() {
         { label: 'Lắp ráp, tháo dỡ', icon: 'fas fa-tools' },
         { label: 'Xuất kho', icon: 'fas fa-truck-loading', action: () => navigate('/export-slips') },
         { label: 'Nhập kho', icon: 'fas fa-boxes', action: () => navigate('/import-history') },
-        { label: 'Chuyển kho', icon: 'fas fa-exchange-alt' },
-        { label: 'Tính giá xuất kho', icon: 'fas fa-calculator' },
+        { label: 'Chuyển kho', icon: 'fas fa-exchange-alt', action: () => navigate('/transfer-history') },
+        { label: 'Quản lý kho', icon: 'fas fa-warehouse', action: () => navigate('/warehouses') },
         { label: 'Kiểm kê', icon: 'fas fa-clipboard-check' },
     ];
 

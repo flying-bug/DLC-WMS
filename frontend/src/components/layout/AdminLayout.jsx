@@ -11,12 +11,11 @@ const AdminLayout = ({ children }) => {
         <div className={styles.layout}>
             <aside className={styles.sidebar}>
                 <div className={styles.logoArea}>
-                    <div className={styles.logoIcon}>DL</div>
-                    <span className={styles.logoText}>
-                        Duy Long
-                        <br />
-                        <small>Tech System</small>
-                    </span>
+                    <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.brandLogo} />
+                    <div className={styles.brandText}>
+                        <span className={styles.brandTitle}>Duy Long</span>
+                        <span className={styles.brandSubtitle}>Warehouse Management</span>
+                    </div>
                 </div>
                 <nav className={styles.navMenu}>
                     <button
@@ -120,7 +119,6 @@ const AdminLayout = ({ children }) => {
                         >
                             Quy trình
                         </button>
-                        <button className={styles.tab} type="button">Biểu đồ</button>
                         <button
                             className={`${styles.tab} ${currentPath === '/import-history' ? styles.activeTab : ''}`}
                             onClick={() => navigate('/import-history')}
