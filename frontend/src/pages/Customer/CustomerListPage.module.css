@@ -80,7 +80,7 @@
     align-items: center;
 }
 
-.dropdownBtn, .filterBtn {
+.filterBtn {
     border: 1px solid var(--color-border, #e2e8f0);
     border-radius: 4px;
     padding: 7px 12px;
@@ -92,9 +92,82 @@
     align-items: center;
     gap: 6px;
 }
-.dropdownBtn i, .filterBtn i {
+.filterBtn i {
     font-size: 12px;
     color: #64748b;
+}
+
+.activeFilter {
+    border-color: #0b57d0;
+    color: #0b57d0;
+    background-color: #f0f4f9;
+}
+
+.activeFilter i {
+    color: #0b57d0;
+}
+
+.filterDot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background-color: #ef4444;
+    border-radius: 50%;
+    margin-left: 4px;
+}
+
+/* Filter Panel */
+.filterPanel {
+    display: flex;
+    gap: 20px;
+    padding: 16px;
+    background-color: #f8fafc;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+    align-items: flex-end;
+}
+
+.filterGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filterGroup label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-strong, #334155);
+}
+
+.filterGroup select {
+    padding: 7px 12px;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 4px;
+    font-size: 13px;
+    outline: none;
+    min-width: 160px;
+    background-color: white;
+    cursor: pointer;
+}
+
+.filterGroup select:focus {
+    border-color: #0b57d0;
+}
+
+.filterActions {
+    display: flex;
+    align-items: center;
+    padding-bottom: 8px;
+}
+
+.clearFilter {
+    font-size: 13px;
+    color: #0b57d0;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.clearFilter:hover {
+    text-decoration: underline;
 }
 
 .searchBox {
@@ -532,5 +605,47 @@
     .toolbarRight {
         width: 100%;
         justify-content: flex-end;
+    }
+}
+
+@media print {
+    /* Hide toolbar, pagination, filter panel */
+    .tableToolbar, .filterPanel, .pagination, .tableWrapper::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .container {
+        padding: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .tableWrapper {
+        overflow: visible !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    .table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    .table th, .table td {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+        padding: 8px !important;
+    }
+
+    /* Hide the first (checkbox) and last (actions) columns */
+    .table th:first-child, .table td:first-child,
+    .table th:last-child, .table td:last-child {
+        display: none !important;
+    }
+
+    /* Optimize text color */
+    .nameLink {
+        color: #000 !important;
+        text-decoration: none !important;
     }
 }
