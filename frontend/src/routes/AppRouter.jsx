@@ -37,6 +37,9 @@ import AssemblyBomPage from '../pages/AssemblyOrder/AssemblyBomPage';
 import AssemblyOrderListPage from '../pages/AssemblyOrder/AssemblyOrderListPage';
 import AssemblyOrderFormPage from '../pages/AssemblyOrder/AssemblyOrderFormPage';
 import AiChatPage from '../pages/AiChat/AiChatPage';
+import StocktakeListPage from '../pages/Stocktake/StocktakeListPage';
+import CreateStocktakePage from '../pages/Stocktake/CreateStocktakePage';
+import StocktakeDetailPage from '../pages/Stocktake/StocktakeDetailPage';
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -107,6 +110,10 @@ function AppRouter() {
                     <Route path="/assembly-orders/create" element={<AssemblyOrderFormPage />} />
                     <Route path="/assembly-orders/:id" element={<AssemblyOrderFormPage />} />
                     <Route path="/brands" element={<BrandListPage />} />
+                    <Route path="/stocktakes" element={<StocktakeListPage />} />
+                    <Route path="/stocktakes/create" element={<CreateStocktakePage />} />
+                    <Route path="/stocktakes/:id" element={<StocktakeDetailPage />} />
+                    <Route path="/stocktakes/:id/edit" element={<CreateStocktakePage />} />
                     <Route path="/ai-chat" element={<AiChatPage />} />
                 </Route>
 
