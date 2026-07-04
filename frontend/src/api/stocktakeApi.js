@@ -2,7 +2,7 @@ import axiosClient from './axiosClient';
 
 const STOCKTAKE_BASE = '/stocktakes';
 
-export const getStocktakes = (params = {}) => {
+export const getStocktakes = () => {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({

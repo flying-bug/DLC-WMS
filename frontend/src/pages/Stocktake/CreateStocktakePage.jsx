@@ -29,7 +29,7 @@ function CreateStocktakePage() {
     setToast({ isVisible: true, type, message });
   };
 
-  const [lines, setLines] = useState([
+  const [lines] = useState([
     { id: 1, itemCode: 'VT001', sku: 'SKU-BP-001', itemName: 'Bàn phím cơ', unit: 'Cái', bookQty: 10, countQty: 10, diffQty: 0, good100: 10, bad: 0, lost: 0, action: 'Không xử lý' }
   ]);
 
@@ -64,9 +64,7 @@ function CreateStocktakePage() {
     navigate('/stocktakes');
   };
 
-  const handleSave = () => {
-    // alert('Lưu nháp thành công!');
-  };
+
 
   const handleSaveAndClose = () => {
     // navigate and pass state for toast

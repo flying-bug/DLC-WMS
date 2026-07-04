@@ -30,7 +30,6 @@ function StocktakeListPage() {
   const [editingRowId, setEditingRowId] = useState(null);
   const [editStatusValue, setEditStatusValue] = useState('');
   const [showInitModal, setShowInitModal] = useState(false);
-  const [error, setError] = useState('');
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
 
   const showToast = (type, message) => {
@@ -39,7 +38,11 @@ function StocktakeListPage() {
 
   useEffect(() => {
     if (location.state?.toastMessage) {
-      showToast(location.state.toastType || 'success', location.state.toastMessage);
+      const type = location.state.toastType || 'success';
+      const msg = location.state.toastMessage;
+      setTimeout(() => {
+        showToast(type, msg);
+      }, 0);
       // Clear state so refresh doesn't trigger it again
       window.history.replaceState({}, document.title);
     }

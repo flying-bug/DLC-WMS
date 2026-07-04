@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warehouseApi from '../../api/warehouseApi';
 import styles from './CreateStocktakePage.module.css';
@@ -8,7 +8,6 @@ import Toast from '../../components/ui/Toast/Toast';
 function StocktakeDetailPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { id } = useParams();
 
   const [warehouses, setWarehouses] = useState([]);
 
@@ -31,12 +30,12 @@ function StocktakeDetailPage() {
     setToast({ isVisible: true, type, message });
   };
 
-  const [lines, setLines] = useState([
+  const [lines] = useState([
     { id: 1, itemCode: 'VT001', sku: 'SKU-BP-001', itemName: 'Bàn phím cơ', unit: 'Cái', bookQty: 10, countQty: 10, diffQty: 0, good100: 10, bad: 0, lost: 0, action: 'Không xử lý' }
   ]);
 
   const [isParticipantsExpanded, setIsParticipantsExpanded] = useState(false);
-  const [participants, setParticipants] = useState([
+  const [participants] = useState([
     { name: 'Nguyễn Văn A', title: 'Thủ kho', represent: 'Kho thành phẩm' }
   ]);
 
@@ -66,9 +65,7 @@ function StocktakeDetailPage() {
     navigate('/stocktakes');
   };
 
-  const handleSave = () => {
-    // alert('Lưu nháp thành công!');
-  };
+
 
   const handleSaveAndClose = () => {
     // navigate and pass state for toast
