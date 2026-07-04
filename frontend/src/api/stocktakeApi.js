@@ -39,7 +39,7 @@ export const getStocktakes = (params = {}) => {
                 stocktakeDate: "2024-07-04T10:00:00Z",
                 warehouseId: 2,
                 note: "Đối soát sổ sách",
-                status: "APPROVED"
+                status: "POSTED"
               },
               {
                 id: 5,

@@ -9,7 +9,6 @@ import styles from './StocktakeListPage.module.css';
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
   SUBMITTED: { label: 'Chờ xử lý', code: 'warning' },
-  APPROVED: { label: 'Đã duyệt', code: 'success' },
   POSTED: { label: 'Đã xử lý chênh lệch', code: 'success' },
   CANCELLED: { label: 'Đã hủy', code: 'danger' },
 };
