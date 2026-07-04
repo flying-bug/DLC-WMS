@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warehouseApi from '../../api/warehouseApi';
 import styles from './CreateStocktakePage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 
-function CreateStocktakePage() {
+function StocktakeDetailPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { id } = useParams();
 
   const [warehouses, setWarehouses] = useState([]);
 
@@ -22,7 +23,8 @@ function CreateStocktakePage() {
     isValueStocktake: false
   });
 
-  const [isSaved, setIsSaved] = useState(false);
+  // In Detail Page, default to view mode (true)
+  const [isSaved, setIsSaved] = useState(true);
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
 
   const showToast = (type, message) => {
@@ -95,12 +97,12 @@ function CreateStocktakePage() {
           <div className={styles.formGridLeft}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Mục đích</label>
-              <input type="text" className={styles.formInput} name="purpose" value={formData.purpose} onChange={handleChange} />
+              <input type="text" className={styles.formInput} name="purpose" value={formData.purpose} onChange={handleChange} disabled />
             </div>
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Kiểm kê kho</label>
-                <select className={styles.formSelect} name="warehouseId" value={formData.warehouseId} onChange={handleChange}>
+                <select className={styles.formSelect} name="warehouseId" value={formData.warehouseId} onChange={handleChange} disabled>
                   <option value="all">Tất cả</option>
                   {warehouses.map(wh => (
                     <option key={wh.id} value={wh.id}>{wh.name}</option>
@@ -109,7 +111,7 @@ function CreateStocktakePage() {
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Đến ngày</label>
-                <input type="date" className={styles.formInput} name="toDate" value={formData.toDate} onChange={handleChange} />
+                <input type="date" className={styles.formInput} name="toDate" value={formData.toDate} onChange={handleChange} disabled />
               </div>
             </div>
 
@@ -122,7 +124,7 @@ function CreateStocktakePage() {
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Ngày</label>
-              <input type="datetime-local" className={styles.formInput} name="createdDate" value={formData.createdDate} onChange={handleChange} />
+              <input type="datetime-local" className={styles.formInput} name="createdDate" value={formData.createdDate} onChange={handleChange} disabled />
             </div>
           </div>
         </div>
@@ -152,25 +154,13 @@ function CreateStocktakePage() {
                     <tr key={idx}>
                       <td style={{ textAlign: 'center' }}>{idx + 1}</td>
                       <td>
-                        <input type="text" value={p.name} onChange={(e) => {
-                          const newP = [...participants];
-                          newP[idx].name = e.target.value;
-                          setParticipants(newP);
-                        }} />
+                        <input type="text" value={p.name} disabled />
                       </td>
                       <td>
-                        <input type="text" value={p.title} onChange={(e) => {
-                          const newP = [...participants];
-                          newP[idx].title = e.target.value;
-                          setParticipants(newP);
-                        }} />
+                        <input type="text" value={p.title} disabled />
                       </td>
                       <td>
-                        <input type="text" value={p.represent} onChange={(e) => {
-                          const newP = [...participants];
-                          newP[idx].represent = e.target.value;
-                          setParticipants(newP);
-                        }} />
+                        <input type="text" value={p.represent} disabled />
                       </td>
                     </tr>
                   ))}
@@ -184,20 +174,7 @@ function CreateStocktakePage() {
                 </tbody>
               </table>
             </div>
-            <div className={styles.tableFooterActions} style={{ marginBottom: '16px' }}>
-              <button
-                className={styles.btnOutline}
-                onClick={() => setParticipants([...participants, { name: '', title: '', represent: '' }])}
-              >
-                Thêm dòng
-              </button>
-              <button
-                className={styles.btnOutline}
-                onClick={() => setParticipants([])}
-              >
-                Xóa hết dòng
-              </button>
-            </div>
+
           </div>
         )}
 
@@ -206,14 +183,9 @@ function CreateStocktakePage() {
           <div style={{ fontWeight: 600, marginBottom: '12px', color: '#334155' }}>Vật tư, hàng hóa cần điều chỉnh</div>
           <div className={styles.detailToolbar}>
             <label className={styles.toolbarCheckbox}>
-              <input type="checkbox" name="isValueStocktake" checked={formData.isValueStocktake} onChange={handleChange} />
+              <input type="checkbox" name="isValueStocktake" checked={formData.isValueStocktake} disabled />
               Kiểm kê giá trị
             </label>
-            <div className={styles.toolbarActions}>
-              <button className={styles.btnOutline}>Lấy lại số tồn</button>
-              <button className={styles.btnOutline}>Tải danh sách VTHH</button>
-              <button className={styles.btnOutline}>Nhập kết quả từ Excel</button>
-            </div>
           </div>
 
           <div className={styles.tableContainer}>
@@ -246,20 +218,20 @@ function CreateStocktakePage() {
                     <td>{line.unit}</td>
                     <td className={styles.numberCol}>{line.bookQty}</td>
                     <td className={styles.numberCol}>
-                      <input type="number" value={line.countQty} onChange={() => { }} />
+                      <input type="number" value={line.countQty} disabled />
                     </td>
                     <td className={styles.numberCol}>{line.diffQty}</td>
                     <td className={styles.numberCol}>
-                      <input type="number" value={line.good100} onChange={() => { }} />
+                      <input type="number" value={line.good100} disabled />
                     </td>
                     <td className={styles.numberCol}>
-                      <input type="number" value={line.bad} onChange={() => { }} />
+                      <input type="number" value={line.bad} disabled />
                     </td>
                     <td className={styles.numberCol}>
-                      <input type="number" value={line.lost} onChange={() => { }} />
+                      <input type="number" value={line.lost} disabled />
                     </td>
                     <td>
-                      <select value={line.action} onChange={() => { }}>
+                      <select value={line.action} disabled>
                         <option value="Không xử lý">Không xử lý</option>
                         <option value="Xử lý chênh lệch">Xử lý chênh lệch</option>
                       </select>
@@ -289,21 +261,18 @@ function CreateStocktakePage() {
             </div>
           </div>
 
-          <div className={styles.tableFooterActions}>
-            <button className={styles.btnOutline}>Thêm dòng</button>
-            <button className={styles.btnOutline}>Xóa hết dòng</button>
-          </div>
+
         </div>
 
         {/* Conclusion Section */}
         <div className={styles.conclusionSection}>
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Kết luận</label>
-            <textarea className={styles.textareaControl} name="conclusion" value={formData.conclusion} onChange={handleChange}></textarea>
+            <textarea className={styles.textareaControl} name="conclusion" value={formData.conclusion} onChange={handleChange} disabled></textarea>
           </div>
 
           <label className={styles.toolbarCheckbox} style={{ marginBottom: '8px' }}>
-            <input type="checkbox" name="isProcessed" checked={formData.isProcessed} onChange={handleChange} />
+            <input type="checkbox" name="isProcessed" checked={formData.isProcessed} onChange={handleChange} disabled />
             Đã xử lý chênh lệch
           </label>
 
@@ -344,9 +313,9 @@ function CreateStocktakePage() {
             <button className={`${styles.btnFooter} ${styles.btnFooterCancel}`} onClick={handleCancel}>Hủy bỏ</button>
           </div>
           <div className={styles.footerRight}>
-            <button className={`${styles.btnFooter} ${styles.btnFooterDraft}`} onClick={() => alert('Đã lưu nháp!')}>
+            {/* <button className={`${styles.btnFooter} ${styles.btnFooterDraft}`} onClick={() => alert('Đã lưu nháp!')}>
               <i className="bi bi-box-arrow-in-down"></i> Lưu tạm
-            </button>
+            </button> */}
             <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} onClick={() => {
               setIsSaved(true);
               showToast('success', 'Lưu lại thành công!');
@@ -359,7 +328,7 @@ function CreateStocktakePage() {
           </div>
         </div>
       )}
-      <Toast
+      <Toast 
         isVisible={toast.isVisible}
         type={toast.type}
         message={toast.message}
@@ -369,4 +338,4 @@ function CreateStocktakePage() {
   );
 }
 
-export default CreateStocktakePage;
+export default StocktakeDetailPage;

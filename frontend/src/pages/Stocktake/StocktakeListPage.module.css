@@ -701,3 +701,19 @@
 .iconBtnAction.excel {
   color: #10b981;
 }
+
+.statusSelect {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--color-text-body);
+  background-color: var(--color-surface);
+  outline: none;
+  cursor: pointer;
+  min-width: 130px;
+}
+
+.statusSelect:focus {
+  border-color: var(--color-primary);
+}

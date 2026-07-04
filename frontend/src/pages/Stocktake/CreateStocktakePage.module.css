@@ -441,3 +441,18 @@
 .btnViewText:hover {
   background-color: #52525b;
 }
+
+/* Processed Stamp */
+.processedStamp {
+  border: 2px solid #b91c1c;
+  color: #b91c1c;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 4px 12px;
+  text-transform: uppercase;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+  user-select: none;
+  display: inline-block;
+  margin-left: 16px;
+}

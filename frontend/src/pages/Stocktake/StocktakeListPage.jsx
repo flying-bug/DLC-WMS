@@ -24,10 +24,11 @@ function StocktakeListPage() {
   const location = useLocation();
   const [stocktakes, setStocktakes] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
-  const [selectedStocktake, setSelectedStocktake] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({ stocktakeCode: '', fromDate: '', status: '' });
   const [loading, setLoading] = useState(false);
+  const [editingRowId, setEditingRowId] = useState(null);
+  const [editStatusValue, setEditStatusValue] = useState('');
   const [showInitModal, setShowInitModal] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
@@ -209,7 +210,7 @@ function StocktakeListPage() {
             </thead>
             <tbody>
               {rows.length > 0 ? rows.map(st => (
-                <tr key={st.id} className={selectedStocktake?.id === st.id ? styles.activeRow : ''} onClick={() => setSelectedStocktake(st)}>
+                <tr key={st.id} onClick={() => navigate(`/stocktakes/${st.id}`)}>
                   <td style={{ textAlign: 'center' }}>
                     <input
                       type="checkbox"
@@ -224,21 +225,62 @@ function StocktakeListPage() {
                   <td>{st.warehouse}</td>
                   <td>{st.note || ''}</td>
                   <td>
-                    <span className={`${styles.badge} ${
-                      st.statusCode === 'success' ? styles.badgeSuccess :
-                      st.statusCode === 'info' ? styles.badgeInfo :
-                      st.statusCode === 'warning' ? styles.badgeWarning :
-                      styles.badgeDanger
-                    }`}>
-                      {st.statusLabel}
-                    </span>
+                    {editingRowId === st.id ? (
+                      <select 
+                        value={editStatusValue} 
+                        onChange={(e) => setEditStatusValue(e.target.value)}
+                        className={styles.statusSelect}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {Object.entries(STATUS_LABELS).map(([key, val]) => (
+                          <option key={key} value={key}>{val.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className={`${styles.badge} ${
+                        st.statusCode === 'success' ? styles.badgeSuccess :
+                        st.statusCode === 'info' ? styles.badgeInfo :
+                        st.statusCode === 'warning' ? styles.badgeWarning :
+                        styles.badgeDanger
+                      }`}
+                      style={{ cursor: 'pointer' }}
+                      title="Nhấn để đổi trạng thái"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setEditingRowId(st.id);
+                        setEditStatusValue(st.status || 'DRAFT');
+                      }}
+                      >
+                        {st.statusLabel}
+                      </span>
+                    )}
                   </td>
                   <td className={styles.textCenter}>
                     {st.isProcessed ? <i className="bi bi-check-circle-fill" style={{ color: 'var(--color-success-strong)' }}></i> : ''}
                   </td>
                   <td className={styles.textCenter}>
-                    <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); setSelectedStocktake(st); }}></i>
-                    <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa" onClick={(e) => { e.stopPropagation(); navigate(`/stocktakes/${st.id}/edit`); }}></i>
+                    {editingRowId === st.id ? (
+                      <>
+                        <i className="bi bi-check-lg" style={{ cursor: 'pointer', color: 'var(--color-success-strong)', fontSize: '18px', marginRight: '12px' }} title="Lưu" onClick={(e) => { 
+                          e.stopPropagation(); 
+                          // Update mock data logic here
+                          const updated = stocktakes.map(item => item.id === st.id ? { 
+                            ...item, 
+                            status: editStatusValue,
+                            statusCode: STATUS_LABELS[editStatusValue]?.code,
+                            statusLabel: STATUS_LABELS[editStatusValue]?.label
+                          } : item);
+                          setStocktakes(updated);
+                          setEditingRowId(null);
+                          showToast('success', 'Đã cập nhật trạng thái phiếu kiểm kê!');
+                        }}></i>
+                        <i className="bi bi-x-lg" style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '18px' }} title="Hủy" onClick={(e) => { e.stopPropagation(); setEditingRowId(null); }}></i>
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); navigate(`/stocktakes/${st.id}`); }}></i>
+                      </>
+                    )}
                   </td>
                 </tr>
               )) : (
@@ -259,36 +301,7 @@ function StocktakeListPage() {
           </div>
         </div>
 
-        {selectedStocktake && (
-          <div className={styles.detailSection}>
-            <div className={styles.detailHeader}>
-              <i className={`bi bi-card-checklist ${styles.detailIcon}`}></i>
-              <h2 className={styles.detailTitle}>Chi tiết kiểm kê: {selectedStocktake.stocktakeCode}</h2>
-            </div>
-            <div className={styles.detailGrid} style={{ gridTemplateColumns: '1fr 1fr' }}>
-              <div className={styles.detailGroup}>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>Kho kiểm kê</span>
-                  <span className={`${styles.detailValue} ${styles.textBlue}`}>{warehouseById.get(selectedStocktake.warehouseId)?.name || `Kho #${selectedStocktake.warehouseId}`}</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>Ngày kiểm kê</span>
-                  <span className={styles.detailValue}>{formatDate(selectedStocktake.stocktakeDate)}</span>
-                </div>
-              </div>
-              <div className={styles.detailGroup}>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>Mục đích / Ghi chú</span>
-                  <span className={styles.detailValue}>{selectedStocktake.note || 'Không có ghi chú'}</span>
-                </div>
-                 <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>Trạng thái</span>
-                  <span className={styles.detailValue}>{STATUS_LABELS[selectedStocktake.status]?.label || selectedStocktake.status}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+
         
         {showInitModal && (
           <StocktakeInitModal 
