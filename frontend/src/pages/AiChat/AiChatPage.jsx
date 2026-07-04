@@ -59,7 +59,7 @@ function AiChatPage() {
             hour: '2-digit',
             minute: '2-digit'
         }).format(new Date());
-    }, [messages.length]);
+    }, []);
 
     const sendMessage = (value = input) => {
         const question = value.trim();
