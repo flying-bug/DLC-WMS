@@ -5,7 +5,11 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.util.List;
 
 /**
  * Request DTO cho tạo mới / cập nhật Khách hàng (Customer).
@@ -54,4 +58,32 @@ public class CustomerRequest {
      * Mặc định: RETAIL.
      */
     private String groupType;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CustomerExcelDTO {
+        private String code;
+        private String name;
+        private String phone;
+        private String email;
+        private String address;
+        private String groupType;
+        private String status;
+        
+        private Boolean valid;
+        private String validationMessage;
+        private Boolean duplicate;
+        private Long existingCustomerId;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ImportConfirmRequest {
+        private List<CustomerExcelDTO> validRows;
+        private List<CustomerExcelDTO> duplicateRowsToMerge;
+    }
 }
