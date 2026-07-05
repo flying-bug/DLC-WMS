@@ -56,28 +56,25 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
         const timeoutId = window.setTimeout(async () => {
             setAddressLoading(true);
             try {
-                const params = new URLSearchParams({ q: query, lang: 'vi', limit: '6' });
-                const response = await fetch(`https://photon.komoot.io/api/?${params.toString()}`, {
+                // Sử dụng API Nominatim của OpenStreetMap để hỗ trợ tiếng Việt
+                const params = new URLSearchParams({ 
+                    q: query, 
+                    format: 'json', 
+                    addressdetails: '1', 
+                    limit: '6', 
+                    'accept-language': 'vi' 
+                });
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
                     signal: controller.signal,
+                    headers: { 'User-Agent': 'DLC-WMS-App/1.0' }
                 });
                 if (!response.ok) throw new Error('Address lookup failed');
 
                 const data = await response.json();
-                const suggestions = (data.features || []).map((feature) => {
-                    const props = feature.properties || {};
-                    const parts = [
-                        props.name,
-                        props.street,
-                        props.district,
-                        props.city,
-                        props.state,
-                        props.country,
-                    ].filter(Boolean);
-                    return {
-                        id: `${props.osm_type || 'place'}-${props.osm_id || parts.join('-')}`,
-                        label: [...new Set(parts)].join(', '),
-                    };
-                }).filter((item) => item.label);
+                const suggestions = (data || []).map((item) => ({
+                    id: item.place_id ? item.place_id.toString() : Math.random().toString(),
+                    label: item.display_name,
+                })).filter((item) => item.label);
                 setAddressSuggestions(suggestions);
             } catch (error) {
                 if (error.name !== 'AbortError') {
