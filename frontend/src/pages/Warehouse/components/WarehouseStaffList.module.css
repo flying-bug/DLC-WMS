@@ -1,0 +1,171 @@
+.container {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.filters {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.searchInput, .roleSelect {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+}
+
+.searchInput:focus, .roleSelect:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #4b5563;
+    cursor: pointer;
+}
+
+.btnAssign {
+    padding: 8px 16px;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.btnAssign:hover {
+    background-color: #2563eb;
+}
+
+.tableContainer {
+    overflow-x: auto;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+.table th, .table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.table th {
+    background-color: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+}
+
+.inactiveRow {
+    background-color: #f3f4f6;
+    color: #9ca3af;
+}
+
+.rolesList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.roleBadge {
+    padding: 2px 8px;
+    background-color: #e0e7ff;
+    color: #4338ca;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.inactiveRow .roleBadge {
+    background-color: #e5e7eb;
+    color: #6b7280;
+}
+
+.statusBadge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.statusBadge.active {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.statusBadge.inactive {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.btnRevoke {
+    padding: 6px 10px;
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btnRevoke:hover {
+    background-color: #dc2626;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.pageBtn {
+    padding: 6px 12px;
+    border: 1px solid #d1d5db;
+    background-color: white;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.pageBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pageInfo {
+    font-size: 14px;
+    color: #4b5563;
+}
+
+.loading, .empty {
+    text-align: center;
+    padding: 40px;
+    color: #6b7280;
+}
