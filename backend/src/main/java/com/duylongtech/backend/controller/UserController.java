@@ -54,11 +54,17 @@ public class UserController {
         return ApiResponse.success(userService.updateCurrentUserAvatar(file));
     }
 
-    // 5. View Account List
+    // 5. View Account List (SUPER_ADMIN only)
     @GetMapping
     @PreAuthorize("hasAuthority('account:view')")
     public ApiResponse<List<UserDto>> getUsers() {
         return ApiResponse.success(userService.getAllUsers());
+    }
+
+    // 5b. Search Users for warehouse staff assignment (accessible to Manager)
+    @GetMapping("/search")
+    public ApiResponse<List<UserDto>> searchUsers(@RequestParam(required = false) String keyword) {
+        return ApiResponse.success(userService.searchUsers(keyword));
     }
 
     // 6. Create Account
