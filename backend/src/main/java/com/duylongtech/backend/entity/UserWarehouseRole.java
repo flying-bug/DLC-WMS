@@ -5,7 +5,9 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "USER_WAREHOUSE_ROLES")
+@Table(name = "USER_WAREHOUSE_ROLES", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_user_warehouse_role", columnNames = {"user_id", "warehouse_id", "role_id"})
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -33,8 +35,17 @@ public class UserWarehouseRole {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 }

@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-30
 
-**Status**: Processing
+**Status**: Done
 
 **Input**: User description: "Quản lý nhân sự kho theo ngữ cảnh (Contextual RBAC), hỗ trợ đa kho/đa vai trò, quản lý trạng thái tài khoản và lịch sử phân quyền."
 

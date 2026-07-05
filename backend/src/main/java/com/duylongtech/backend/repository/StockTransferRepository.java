@@ -30,4 +30,6 @@ public interface StockTransferRepository extends JpaRepository<StockTransfer, Lo
 
     @Query("SELECT DISTINCT t FROM StockTransfer t LEFT JOIN FETCH t.lines l WHERE t.id = :id")
     Optional<StockTransfer> findByIdWithLines(@Param("id") Long id);
+
+    boolean existsByCreatedByAndFromWarehouseIdAndStatusIn(Long createdBy, Long fromWarehouseId, List<String> statuses);
 }

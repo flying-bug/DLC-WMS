@@ -81,6 +81,12 @@ public enum SystemMessage {
     WH_HAS_TRANSACTION("WH03", "Không thể xóa kho đã phát sinh giao dịch hoặc đang chứa linh kiện. Hệ thống đã tự động chuyển trạng thái kho này về ngừng hoạt động (INACTIVE)."),
     WH_OPTIMISTIC_LOCK("WH04", "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại trang để xem dữ liệu mới nhất."),
 
+    // Warehouse Staff
+    WH_STAFF_NOT_FOUND("WHS01", "Không tìm thấy nhân viên trong kho chỉ định."),
+    WH_STAFF_HAS_PENDING_DOCS("WHS02", "Nhân viên đang là người tạo chứng từ chưa hoàn tất. Vui lòng xử lý chứng từ trước khi thu hồi quyền."),
+    WH_STAFF_CANNOT_REVOKE_SELF("WHS03", "Không thể tự thu hồi quyền của chính mình tại kho đang làm việc."),
+    WH_STAFF_INVALID_ROLE("WHS04", "Vai trò gán không hợp lệ. Chỉ được phép gán các vai trò thuộc phân hệ kho."),
+
     // Brand
     BRAND_NOT_FOUND("BRND01", "Không tìm thấy thương hiệu."),
     BRAND_CODE_EXISTS("BRND02", "Mã thương hiệu đã tồn tại trên hệ thống."),

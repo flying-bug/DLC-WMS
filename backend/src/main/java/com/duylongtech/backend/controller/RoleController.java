@@ -19,8 +19,14 @@ public class RoleController {
     private final RoleRepository roleRepository;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('auth:view')")
-    public ApiResponse<List<RoleEntity>> getRoles() {
-        return ApiResponse.success(roleRepository.findAll());
+    @PreAuthorize("hasAnyAuthority('auth:view', 'warehouse:edit')")
+    public ApiResponse<List<RoleEntity>> getRoles(@org.springframework.web.bind.annotation.RequestParam(required = false) String module) {
+        List<RoleEntity> roles = roleRepository.findAll();
+        if ("WAREHOUSE".equalsIgnoreCase(module)) {
+            roles = roles.stream()
+                    .filter(r -> !"SUPER_ADMIN".equals(r.getCode()) && !"HR_MANAGER".equals(r.getCode()))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        return ApiResponse.success(roles);
     }
 }

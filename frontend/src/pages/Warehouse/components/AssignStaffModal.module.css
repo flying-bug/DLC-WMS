@@ -1,0 +1,231 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal {
+    background-color: white;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.btnClose {
+    background: none;
+    border: none;
+    font-size: 24px;
+    line-height: 1;
+    color: #6b7280;
+    cursor: pointer;
+}
+
+.btnClose:hover {
+    color: #111827;
+}
+
+.form {
+    padding: 20px;
+}
+
+.errorAlert {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    padding: 10px 12px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.formGroup {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #374151;
+    font-size: 14px;
+}
+
+.required {
+    color: #ef4444;
+}
+
+.input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.searchingText {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.userDropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 150px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    z-index: 10;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.userDropdown li {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.userDropdown li:hover {
+    background-color: #f3f4f6;
+}
+
+.selectedUser {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #16a34a;
+    display: flex;
+    justify-content: space-between;
+}
+
+.selectedUser button {
+    background: none;
+    border: none;
+    color: #3b82f6;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.rolesGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 2px;
+}
+
+.roleItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.roleItem:hover {
+    border-color: #d1d5db;
+    background-color: #f9fafb;
+}
+
+.roleItem input[type="checkbox"] {
+    margin-top: 4px;
+}
+
+.roleInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.roleName {
+    font-weight: 500;
+    color: #111827;
+    font-size: 14px;
+}
+
+.roleCode {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.btnCancel {
+    padding: 8px 16px;
+    background-color: white;
+    border: 1px solid #d1d5db;
+    color: #374151;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btnCancel:hover:not(:disabled) {
+    background-color: #f9fafb;
+}
+
+.btnSave {
+    padding: 8px 16px;
+    background-color: #3b82f6;
+    border: none;
+    color: white;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btnSave:hover:not(:disabled) {
+    background-color: #2563eb;
+}
+
+.btnSave:disabled, .btnCancel:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
