@@ -2,7 +2,7 @@
 
 - **Feature Branch**: `feat-customer-management`
 - **Created**: 24/06/2026
-- **Status**: Ready for Development
+- **Status**: Done
 - **Input**: User description: "Hệ thống quản lý kho và bảo hành linh kiện điện tử. Chỉ xử lý thu chi cơ bản, không dính dáng đến kế toán, công nợ hay tính lương."
 
 ## Revision History
