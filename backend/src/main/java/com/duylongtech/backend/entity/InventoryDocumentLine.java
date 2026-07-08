@@ -50,4 +50,11 @@ public class InventoryDocumentLine {
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
+
+    /**
+     * Thời hạn bảo hành (tính theo tháng) cho dòng sản phẩm này.
+     * Nếu null hoặc <= 0, không sinh phiếu WARRANTY tự động khi POST phiếu xuất.
+     */
+    @Column(name = "warranty_months")
+    private Integer warrantyMonths;
 }

@@ -14,6 +14,7 @@ import com.duylongtech.backend.entity.InventoryLedger;
 import com.duylongtech.backend.entity.Product;
 import com.duylongtech.backend.entity.ProductVariant;
 import com.duylongtech.backend.entity.SerialNumber;
+import com.duylongtech.backend.entity.Warranty;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.InventoryBalanceRepository;
 import com.duylongtech.backend.repository.InventoryCostLayerRepository;
@@ -21,6 +22,7 @@ import com.duylongtech.backend.repository.InventoryDocumentRepository;
 import com.duylongtech.backend.repository.InventoryLedgerRepository;
 import com.duylongtech.backend.repository.ProductVariantRepository;
 import com.duylongtech.backend.repository.SerialNumberRepository;
+import com.duylongtech.backend.repository.WarrantyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,6 +53,7 @@ public class InventoryDocumentService {
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final SerialNumberRepository serialNumberRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final WarrantyRepository warrantyRepository;
 
     @Transactional(readOnly = true)
     public ScanResolveResponse resolveExportScan(ScanResolveRequest req) {
@@ -208,6 +211,8 @@ public class InventoryDocumentService {
 
             if (serialNumber != null) {
                 updateExportedSerialBalance(doc, line, serialNumber, avgUnitCost);
+                // Tự động tạo phiếu bảo hành nếu line có khai báo warrantyMonths > 0
+                generateWarrantyIfNeeded(doc, line, serialNumber);
             }
         }
 
@@ -415,6 +420,50 @@ public class InventoryDocumentService {
         serialNumberRepository.save(serial);
     }
 
+    /**
+     * Tự động tạo phiếu bảo hành (WARRANTY) cho serial number vừa được xuất bán,
+     * nếu dòng sản phẩm có khai báo warrantyMonths > 0.
+     * Điều kiện:
+     *   - line.warrantyMonths phải được lưu trước trong entity (xem InventoryDocumentLine.warrantyMonths)
+     *   - doc phải có partnerId (khách hàng mua)
+     * Phiếu bảo hành sẽ không được tạo nếu serial đó đã có warranty tồn tại
+     * (tránh duplicate khi gọi lại postExport do lỗi retry).
+     */
+    private void generateWarrantyIfNeeded(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial) {
+        Integer warrantyMonths = line.getWarrantyMonths();
+        if (warrantyMonths == null || warrantyMonths <= 0) {
+            return; // Sản phẩm này không có chính sách bảo hành
+        }
+        if (doc.getPartnerId() == null) {
+            return; // Không có khách hàng — không tạo bảo hành
+        }
+        // Kiểm tra idempotency: tránh tạo trùng nếu có retry
+        boolean alreadyExists = warrantyRepository.existsBySerialNumberId(serial.getId());
+        if (alreadyExists) {
+            return;
+        }
+
+        LocalDate startDate = doc.getDocDate();
+        LocalDate endDate = startDate.plusMonths(warrantyMonths);
+        String warrantyCode = "BH-" + doc.getDocCode() + "-" + serial.getSerialNumber();
+        // Đảm bảo warrantyCode không vượt quá 50 ký tự (giới hạn schema)
+        if (warrantyCode.length() > 50) {
+            warrantyCode = "BH-" + System.currentTimeMillis() + "-" + serial.getId();
+        }
+
+        Warranty warranty = Warranty.builder()
+                .warrantyCode(warrantyCode)
+                .serialNumberId(serial.getId())
+                .partnerId(doc.getPartnerId())
+                .salesOrderId(doc.getSalesOrderId())
+                .startDate(startDate)
+                .endDate(endDate)
+                .warrantyStatus("APPROVED")
+                .note("Phieu bao hanh tu dong tao tu phieu xuat kho " + doc.getDocCode())
+                .build();
+        warrantyRepository.save(warranty);
+    }
+
     private void createImportedSerialsIfNeeded(InventoryDocument doc, InventoryDocumentLine line, BigDecimal unitCost) {
         ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
         Product product = variant != null ? variant.getProduct() : null;
@@ -597,6 +646,7 @@ public class InventoryDocumentService {
                 .lineAmount(lineAmount)
                 .lotBatchId(lr.getLotBatchId())
                 .serialNumberId(lr.getSerialNumberId())
+                .warrantyMonths(lr.getWarrantyMonths())
                 .note(lr.getNote())
                 .build();
     }

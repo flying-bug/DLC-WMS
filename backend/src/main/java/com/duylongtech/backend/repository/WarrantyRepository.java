@@ -15,6 +15,8 @@ public interface WarrantyRepository extends JpaRepository<Warranty, Long> {
     boolean existsByWarrantyCode(String warrantyCode);
 
     boolean existsByWarrantyCodeAndIdNot(String warrantyCode, Long id);
+
+    boolean existsBySerialNumberId(Long serialNumberId);
     
     @Query("SELECT w FROM Warranty w " +
            "LEFT JOIN FETCH w.serialNumber sn " +
