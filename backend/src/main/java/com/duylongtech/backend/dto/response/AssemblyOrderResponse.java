@@ -22,6 +22,7 @@ public class AssemblyOrderResponse {
     private String targetName;
     private Long warehouseId;
     private BigDecimal quantity;
+    private BigDecimal quantityProduced;
     private String status;
     private LocalDate executionDate;
     private String note;

@@ -43,6 +43,10 @@ public class AssemblyOrder {
     @Column(nullable = false, precision = 15, scale = 4)
     private BigDecimal quantity;
 
+    @Column(name = "quantity_produced", nullable = false, precision = 15, scale = 4)
+    @Builder.Default
+    private BigDecimal quantityProduced = BigDecimal.ZERO;
+
     @Column(nullable = false, length = 30)
     @Builder.Default
     private String status = "DRAFT";
