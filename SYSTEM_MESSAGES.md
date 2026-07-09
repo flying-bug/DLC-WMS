@@ -41,3 +41,7 @@
 | 36 | SYS401 | In line / Popup | Token or session is expired | Your session has expired. |
 | 37 | SYS403 | In line / Popup | User tries to access a page without sufficient permissions | Access Denied. You do not have permission. |
 | 38 | SYS500 | Toast message | System internal error (500) | An unexpected error occurred. Please contact the administrator. |
+| 39 | ASM01 | Toast message | Invalid BOM cost allocation | Tổng tỷ lệ phân bổ giá vốn của các linh kiện phải bằng 100%. |
+| 40 | ASM02 | Toast message | BOM locked by active orders | Không thể sửa Định mức lắp ráp vì đang có Lệnh đang sử dụng định mức này. |
+| 41 | ASM03 | Toast message | Insufficient target or components | Không đủ tồn kho thành phẩm hoặc linh kiện để thực hiện lệnh. |
+| 42 | ASM04 | Toast message | Order has posted docs | Không thể Hủy lệnh vì đã có chứng từ kho (Phiếu Nhập/Xuất) liên quan. |

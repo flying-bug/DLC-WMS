@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-08
 
-**Status**: In Progress
+**Status**: Done
 
 **Input**: User description: "Hoàn thiện logic nghiệp vụ thực thi lệnh Lắp ráp (Assembly) và Tháo dỡ (Disassembly) thông qua quy trình tạo Phiếu xuất kho và Phiếu nhập kho (tương tự chuẩn ERP/MISA). Cập nhật theo các quyết định từ tài liệu Clarify."
 
