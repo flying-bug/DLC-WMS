@@ -14,7 +14,7 @@ const STATUS_META = {
     INACTIVE: { label: 'Ngừng dùng', tone: 'danger' }
 };
 
-const defaultBomLine = { componentVariantId: '', quantity: '1', note: '' };
+const defaultBomLine = { componentVariantId: '', quantity: '1', costAllocationPct: '0', note: '' };
 
 const createDefaultForm = () => ({
     id: null,
@@ -104,6 +104,7 @@ function AssemblyBomPage() {
             lines: bom.lines?.length ? bom.lines.map((line) => ({
                 componentVariantId: line.componentVariantId || '',
                 quantity: String(Number(line.quantity || 1)),
+                costAllocationPct: String(Number(line.costAllocationPct ?? 0)),
                 note: line.note || ''
             })) : [{ ...defaultBomLine }]
         });
@@ -147,7 +148,10 @@ function AssemblyBomPage() {
             if (!line.componentVariantId) return `Vui lòng chọn SKU linh kiện dòng ${index + 1}.`;
             if (!line.quantity || Number(line.quantity) <= 0) return `Định mức dòng ${index + 1} phải lớn hơn 0.`;
             if (!Number.isInteger(Number(line.quantity))) return `Định mức dòng ${index + 1} phải là số nguyên.`;
+            if (line.costAllocationPct === '' || Number(line.costAllocationPct) < 0) return `Tỷ lệ phân bổ dòng ${index + 1} không được âm.`;
         }
+        const totalPct = form.lines.reduce((sum, l) => sum + Number(l.costAllocationPct || 0), 0);
+        if (Math.abs(totalPct - 100) > 0.01) return `Tổng tỷ lệ phân bổ giá vốn phải bằng 100% (hiện tại: ${totalPct.toFixed(2)}%).`;
         return '';
     };
 
@@ -160,6 +164,7 @@ function AssemblyBomPage() {
         lines: form.lines.map((line) => ({
             componentVariantId: Number(line.componentVariantId),
             quantity: Number.parseInt(line.quantity, 10),
+            costAllocationPct: Number(line.costAllocationPct || 0),
             note: line.note?.trim() || null
         }))
     });
@@ -328,19 +333,30 @@ function AssemblyBomPage() {
                                     </button>
                                 </div>
 
+                                {/* Cảnh báo tổng phân bổ */}
+                                {(() => {
+                                    const total = form.lines.reduce((sum, l) => sum + Number(l.costAllocationPct || 0), 0);
+                                    return Math.abs(total - 100) > 0.01 ? (
+                                        <div className={styles.errorBox} style={{ marginBottom: 8 }}>
+                                            ⚠️ Tổng tỷ lệ phân bổ giá vốn: <strong>{total.toFixed(2)}%</strong> — phải bằng đúng <strong>100%</strong>.
+                                        </div>
+                                    ) : null;
+                                })()}
+
                                 <div className={styles.tablePanel}>
                                     <table className={styles.table}>
                                         <thead>
                                             <tr>
                                                 <th>SKU linh kiện</th>
                                                 <th>Định mức</th>
+                                                <th>% Phân bổ giá vốn</th>
                                                 <th>Ghi chú</th>
                                                 <th></th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {form.lines.map((line, index) => (
-                                                <tr key={`${index}-${line.componentVariantId}`}>
+                                                <tr key={index}>
                                                     <td>
                                                         <select value={line.componentVariantId} onChange={(event) => setLineField(index, 'componentVariantId', event.target.value)}>
                                                             <option value="">Chọn SKU</option>
@@ -351,6 +367,9 @@ function AssemblyBomPage() {
                                                     </td>
                                                     <td>
                                                         <input className={styles.numberInput} inputMode="numeric" type="number" min="1" step="1" value={line.quantity} onChange={(event) => setLineField(index, 'quantity', event.target.value)} />
+                                                    </td>
+                                                    <td>
+                                                        <input className={styles.numberInput} inputMode="decimal" type="number" min="0" max="100" step="0.01" value={line.costAllocationPct} onChange={(event) => setLineField(index, 'costAllocationPct', event.target.value)} placeholder="0.00" />
                                                     </td>
                                                     <td>
                                                         <input value={line.note} onChange={(event) => setLineField(index, 'note', event.target.value)} placeholder="Ghi chú dòng" />
