@@ -17,4 +17,9 @@ public class InventoryDocumentLineRequest {
     private Long serialNumberId;
     private List<String> serialNumbers;
     private String note;
+    /**
+     * Thời hạn bảo hành tính theo tháng cho dòng sản phẩm này.
+     * Nếu null hoặc <= 0, sản phẩm sẽ không được tạo phiếu bảo hành tự động.
+     */
+    private Integer warrantyMonths;
 }
