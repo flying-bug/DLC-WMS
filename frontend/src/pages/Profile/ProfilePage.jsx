@@ -19,7 +19,7 @@ function ProfilePage() {
 
     const roles = profile?.roles?.length ? profile.roles : [{ code: userRole, name: userRole }];
     const displayRole = roles.map((role) => role.name || role.code).join(', ');
-    const fullName = profile?.fullName || profile?.username || 'Nguoi dung';
+    const fullName = profile?.fullName || profile?.username || 'Người dùng';
     const initials = useMemo(() => {
         return fullName
             .split(' ')
@@ -37,7 +37,7 @@ function ProfilePage() {
                 const response = await axiosClient.get('/users/me');
                 setProfile(response.data?.data || null);
             } catch (err) {
-                setError(err.response?.data?.userMessage || 'Khong the tai thong tin ca nhan.');
+                setError(err.response?.data?.userMessage || 'Không thể tải thông tin cá nhân.');
             } finally {
                 setLoading(false);
             }
@@ -66,7 +66,7 @@ function ProfilePage() {
             setProfile(updatedProfile);
             emitUserUpdated({ type: 'avatar-updated', user: updatedProfile });
         } catch (err) {
-            setError(err.response?.data?.userMessage || 'Khong the tai anh dai dien.');
+            setError(err.response?.data?.userMessage || 'Không thể tải ảnh đại diện.');
         } finally {
             setUploading(false);
         }
@@ -76,17 +76,17 @@ function ProfilePage() {
         <Layout>
             <div className={styles.container}>
                 <div className={styles.header}>
-                    <h2>Thong tin ca nhan</h2>
+                    <h2>Thông tin cá nhân</h2>
                     <div className={styles.breadcrumb}>
                         <span className={styles.breadcrumbLink} onClick={() => navigate('/dashboard')}>Dashboard</span>
                         <i className="fas fa-chevron-right"></i>
-                        <span>Thong tin ca nhan</span>
+                        <span>Thông tin cá nhân</span>
                     </div>
                 </div>
 
                 <div className={styles.profileCard}>
                     {loading ? (
-                        <div className={styles.loadingState}>Dang tai thong tin...</div>
+                        <div className={styles.loadingState}>Đang tải thông tin...</div>
                     ) : (
                         <>
                             {error && <div className={styles.errorState}>{error}</div>}
@@ -106,7 +106,7 @@ function ProfilePage() {
                                     />
                                     <span className={styles.avatarAction}>
                                         <i className={uploading ? 'fas fa-spinner fa-spin' : 'fas fa-camera'}></i>
-                                        {uploading ? 'Dang tai...' : 'Doi anh'}
+                                        {uploading ? 'Đang tải...' : 'Đổi ảnh'}
                                     </span>
                                 </label>
                                 <h3 className={styles.profileName}>{fullName}</h3>
@@ -115,7 +115,7 @@ function ProfilePage() {
 
                             <div className={styles.detailsSection}>
                                 <div className={styles.detailGroup}>
-                                    <label className={styles.detailLabel}>Ho va ten</label>
+                                    <label className={styles.detailLabel}>Họ và tên</label>
                                     <div className={styles.detailValue}>{fullName}</div>
                                 </div>
 
@@ -125,22 +125,22 @@ function ProfilePage() {
                                 </div>
 
                                 <div className={styles.detailGroup}>
-                                    <label className={styles.detailLabel}>So dien thoai</label>
+                                    <label className={styles.detailLabel}>Số điện thoại</label>
                                     <div className={styles.detailValue}>{profile?.phone || '-'}</div>
                                 </div>
 
                                 <div className={styles.detailGroup}>
-                                    <label className={styles.detailLabel}>Vai tro he thong</label>
+                                    <label className={styles.detailLabel}>Vai trò hệ thống</label>
                                     <div className={styles.detailValue}>{displayRole}</div>
                                 </div>
                             </div>
 
                             <div className={styles.actionsSection}>
                                 <button className={styles.btnPrimary} onClick={() => navigate('/change-password')}>
-                                    <i className="fas fa-key"></i> Doi mat khau
+                                    <i className="fas fa-key"></i> Đổi mật khẩu
                                 </button>
                                 <button className={styles.btnSecondary} onClick={() => navigate('/dashboard')}>
-                                    Quay lai Dashboard
+                                    Quay lại Dashboard
                                 </button>
                             </div>
                         </>

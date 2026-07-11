@@ -124,6 +124,27 @@ public class UserService {
         return userRepository.findAll().stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
+    /**
+     * Tìm kiếm nhân sự theo keyword (fullName, username, email, phone).
+     * Dùng cho AssignStaffModal — không yêu cầu quyền SUPER_ADMIN.
+     * Chỉ trả về tài khoản đang APPROVED để tránh gán quyền cho tài khoản bị khóa.
+     */
+    public List<UserDto> searchUsers(String keyword) {
+        String kw = (keyword == null || keyword.isBlank()) ? "" : keyword.trim().toLowerCase();
+        return userRepository.findAll().stream()
+                .filter(u -> "APPROVED".equalsIgnoreCase(u.getStatus()))
+                .filter(u -> {
+                    if (kw.isEmpty()) return true;
+                    return (u.getFullName() != null && u.getFullName().toLowerCase().contains(kw))
+                            || (u.getUsername() != null && u.getUsername().toLowerCase().contains(kw))
+                            || (u.getEmail() != null && u.getEmail().toLowerCase().contains(kw))
+                            || (u.getPhone() != null && u.getPhone().contains(kw));
+                })
+                .limit(10)
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+    }
+
     public UserDto createUser(UserDto userDto) {
         String username = userDto.getUsername().trim();
         String email = userDto.getEmail().trim();

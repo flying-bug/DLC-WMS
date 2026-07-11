@@ -24,6 +24,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
+import org.springframework.web.multipart.MultipartFile;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import com.duylongtech.backend.dto.request.CustomerRequest.CustomerExcelDTO;
+import com.duylongtech.backend.dto.response.CustomerResponse.ImportPreviewResponse;
 
 /**
  * Service xử lý nghiệp vụ Quản lý Khách hàng (Customer Management).
@@ -63,23 +73,38 @@ public class CustomerService {
     private final WarrantyRepository warrantyRepository;
     private final RepairRepository repairRepository;
 
+    private static final String[] EXCEL_HEADERS = {
+            "Mã KH", "Tên khách hàng", "Số điện thoại", "Email", "Địa chỉ", "Nhóm KH", "Trạng thái"
+    };
+
+    private static final String[] TEMPLATE_HEADERS = {
+            "Tên khách hàng", "Số điện thoại", "Email", "Địa chỉ", "Nhóm KH"
+    };
+
     // ─────────────────────────────────────────────────────────────────────────
     // READ
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * UC-CUST-01: Tìm kiếm khách hàng theo SĐT (hỗ trợ Autocomplete, có phân trang).
+     * UC-CUST-01: Tìm kiếm khách hàng (hỗ trợ Autocomplete, có phân trang).
+     * - keyword: tìm theo Tên hoặc SĐT
+     * - status: lọc theo trạng thái (APPROVED / INACTIVE)
+     * - groupType: lọc theo nhóm (RETAIL / WHOLESALE / DISTRIBUTOR)
      *
-     * @param phone từ khóa SĐT (partial match, optional)
-     * @param page  trang hiện tại (0-indexed)
-     * @param size  số bản ghi mỗi trang
+     * @param keyword  từ khóa tìm kiếm (partial match, optional)
+     * @param status   trạng thái khách hàng (optional)
+     * @param groupType nhóm khách hàng (optional)
+     * @param page     trang hiện tại (0-indexed)
+     * @param size     số bản ghi mỗi trang
      * @return Page<CustomerResponse>
      */
     @Transactional(readOnly = true)
-    public Page<CustomerResponse> searchCustomers(String phone, int page, int size) {
-        String trimmedPhone = trimToNull(phone);
+    public Page<CustomerResponse> searchCustomers(String keyword, String status, String groupType, int page, int size) {
+        String trimmedKeyword = trimToNull(keyword);
+        String trimmedStatus  = trimToNull(status);
+        String trimmedGroup   = trimToNull(groupType);
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return partnerRepository.searchCustomers(trimmedPhone, pageRequest)
+        return partnerRepository.searchCustomers(trimmedKeyword, trimmedStatus, trimmedGroup, pageRequest)
                 .map(this::toResponse);
     }
 
@@ -96,13 +121,297 @@ public class CustomerService {
         Partner customer = findCustomerOrThrow(id);
         // CUST04: Chặn xem chi tiết Khách vãng lai
         if (SEED_DATA_CODE.equals(customer.getCode())) {
-            throw new BusinessException(SystemMessage.CUST_VIEW_SEED_DATA_DENIED.getMessage());
+            throw new BusinessException(SystemMessage.CUST_VIEW_SEED_DATA_DENIED);
         }
         return toResponse(customer);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // HISTORY QUERIES (PHASE 4 - US2)
+    // EXPORT & IMPORT
+    // ─────────────────────────────────────────────────────────────────────────
+    
+    public byte[] exportTemplateToExcel() {
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("Template");
+
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setColor(IndexedColors.BLACK.getIndex());
+
+            CellStyle headerCellStyle = workbook.createCellStyle();
+            headerCellStyle.setFont(headerFont);
+            headerCellStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            headerCellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerCellStyle.setBorderBottom(BorderStyle.THIN);
+            headerCellStyle.setBorderTop(BorderStyle.THIN);
+            headerCellStyle.setBorderLeft(BorderStyle.THIN);
+            headerCellStyle.setBorderRight(BorderStyle.THIN);
+
+            Row headerRow = sheet.createRow(0);
+
+            for (int col = 0; col < TEMPLATE_HEADERS.length; col++) {
+                Cell cell = headerRow.createCell(col);
+                cell.setCellValue(TEMPLATE_HEADERS[col]);
+                cell.setCellStyle(headerCellStyle);
+                sheet.autoSizeColumn(col);
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("Lỗi khi tạo file Excel Template: " + e.getMessage());
+        }
+    }
+
+    public byte[] exportToExcel(List<Partner> customers) {
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet("KhachHang");
+
+            // Header Font
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setColor(IndexedColors.BLACK.getIndex());
+
+            // Header Style
+            CellStyle headerCellStyle = workbook.createCellStyle();
+            headerCellStyle.setFont(headerFont);
+            headerCellStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            headerCellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerCellStyle.setBorderBottom(BorderStyle.THIN);
+            headerCellStyle.setBorderTop(BorderStyle.THIN);
+            headerCellStyle.setBorderLeft(BorderStyle.THIN);
+            headerCellStyle.setBorderRight(BorderStyle.THIN);
+
+            // Row for Header
+            Row headerRow = sheet.createRow(0);
+
+            // Header
+            for (int col = 0; col < EXCEL_HEADERS.length; col++) {
+                Cell cell = headerRow.createCell(col);
+                cell.setCellValue(EXCEL_HEADERS[col]);
+                cell.setCellStyle(headerCellStyle);
+            }
+
+            // Data Style
+            CellStyle dataCellStyle = workbook.createCellStyle();
+            dataCellStyle.setBorderBottom(BorderStyle.THIN);
+            dataCellStyle.setBorderTop(BorderStyle.THIN);
+            dataCellStyle.setBorderLeft(BorderStyle.THIN);
+            dataCellStyle.setBorderRight(BorderStyle.THIN);
+
+            // Data rows
+            int rowIdx = 1;
+            for (Partner customer : customers) {
+                Row row = sheet.createRow(rowIdx++);
+
+                row.createCell(0).setCellValue(customer.getCode() != null ? customer.getCode() : "");
+                row.createCell(1).setCellValue(customer.getName() != null ? customer.getName() : "");
+                row.createCell(2).setCellValue(customer.getPhone() != null ? customer.getPhone() : "");
+                row.createCell(3).setCellValue(customer.getEmail() != null ? customer.getEmail() : "");
+                row.createCell(4).setCellValue(customer.getAddress() != null ? customer.getAddress() : "");
+                
+                String groupTypeStr = "";
+                if ("RETAIL".equals(customer.getGroupType())) groupTypeStr = "Khách lẻ";
+                else if ("WHOLESALE".equals(customer.getGroupType())) groupTypeStr = "Khách thợ";
+                else if ("DISTRIBUTOR".equals(customer.getGroupType())) groupTypeStr = "Đại lý";
+                row.createCell(5).setCellValue(groupTypeStr);
+                
+                String statusStr = "APPROVED".equals(customer.getStatus()) ? "Đang hoạt động" : "Ngừng hoạt động";
+                row.createCell(6).setCellValue(statusStr);
+
+                for (int i = 0; i < EXCEL_HEADERS.length; i++) {
+                    Cell cell = row.getCell(i);
+                    if (cell == null) {
+                        cell = row.createCell(i);
+                    }
+                    cell.setCellStyle(dataCellStyle);
+                }
+            }
+
+            for (int col = 0; col < EXCEL_HEADERS.length; col++) {
+                sheet.autoSizeColumn(col);
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("Lỗi khi tạo file Excel: " + e.getMessage());
+        }
+    }
+
+    public ImportPreviewResponse previewImport(MultipartFile file) {
+        List<CustomerExcelDTO> validRows = new ArrayList<>();
+        List<CustomerExcelDTO> duplicateRows = new ArrayList<>();
+        List<CustomerExcelDTO> errorRows = new ArrayList<>();
+
+        try (InputStream is = file.getInputStream();
+             Workbook workbook = new XSSFWorkbook(is)) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+            int rowCount = sheet.getPhysicalNumberOfRows();
+
+            for (int i = 1; i < rowCount; i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+
+                CustomerExcelDTO dto = new CustomerExcelDTO();
+                dto.setName(getCellValueAsString(row.getCell(0)));
+                dto.setPhone(getCellValueAsString(row.getCell(1)));
+                String email = getCellValueAsString(row.getCell(2));
+                String address = getCellValueAsString(row.getCell(3));
+                String groupType = getCellValueAsString(row.getCell(4));
+                
+                dto.setEmail(email.isBlank() ? null : email);
+                dto.setAddress(address.isBlank() ? null : address);
+                dto.setGroupType(groupType.isBlank() ? null : groupType);
+                // Code và Status sẽ được tự động generate khi lưu
+
+                if (dto.getName() == null || dto.getName().isBlank()) {
+                    dto.setValid(false);
+                    dto.setValidationMessage("Tên không được để trống");
+                    errorRows.add(dto);
+                    continue;
+                }
+                if (dto.getPhone() == null || dto.getPhone().isBlank() || !dto.getPhone().matches("^0[0-9]{9}$")) {
+                    dto.setValid(false);
+                    dto.setValidationMessage("SĐT không hợp lệ");
+                    errorRows.add(dto);
+                    continue;
+                }
+
+                partnerRepository.findByPhoneAndIsCustomerTrue(dto.getPhone()).ifPresentOrElse(
+                        existing -> {
+                            dto.setValid(false);
+                            dto.setDuplicate(true);
+                            dto.setExistingCustomerId(existing.getId());
+                            dto.setValidationMessage("Trùng Số điện thoại với khách hàng: " + existing.getName());
+                            duplicateRows.add(dto);
+                        },
+                        () -> {
+                            dto.setValid(true);
+                            dto.setDuplicate(false);
+                            validRows.add(dto);
+                        }
+                );
+            }
+
+            return ImportPreviewResponse.builder()
+                    .totalRows(rowCount - 1)
+                    .validCount(validRows.size())
+                    .duplicateCount(duplicateRows.size())
+                    .errorCount(errorRows.size())
+                    .validRows(validRows)
+                    .duplicateRows(duplicateRows)
+                    .errorRows(errorRows)
+                    .build();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Không thể đọc file Excel: " + e.getMessage());
+        }
+    }
+
+    private String getCellValueAsString(Cell cell) {
+        if (cell == null) return "";
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue().trim();
+            case NUMERIC -> {
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    yield cell.getLocalDateTimeCellValue().toString();
+                }
+                double val = cell.getNumericCellValue();
+                if (val == Math.floor(val)) {
+                    yield String.valueOf((long) val);
+                }
+                yield String.valueOf(val);
+            }
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            default -> "";
+        };
+    }
+    
+    @Transactional(readOnly = true)
+    public java.util.List<Partner> getCustomersForExport(java.util.List<Long> ids, String keyword, String status, String groupType) {
+        if (ids != null && !ids.isEmpty()) {
+            return partnerRepository.findCustomersByIds(ids);
+        } else {
+            return partnerRepository.findAllCustomersForExport(
+                    keyword != null && !keyword.isBlank() ? keyword : null,
+                    status != null && !status.isBlank() ? status : null,
+                    groupType != null && !groupType.isBlank() ? groupType : null
+            );
+        }
+    }
+
+    @Transactional
+    public void confirmImport(com.duylongtech.backend.dto.request.CustomerRequest.ImportConfirmRequest request, String actor) {
+        java.util.List<Partner> toSave = new java.util.ArrayList<>();
+        
+        // 1. Insert Valid Rows
+        if (request.getValidRows() != null) {
+            for (CustomerExcelDTO dto : request.getValidRows()) {
+                Partner newPartner = Partner.builder()
+                        .code(generateCustomerCode()) // Tự sinh mã KH
+                        .name(dto.getName())
+                        .phone(dto.getPhone())
+                        .email(dto.getEmail())
+                        .address(dto.getAddress())
+                        .type("INDIVIDUAL")
+                        .groupType(mapGroupTypeFromExcel(dto.getGroupType()))
+                        .status("APPROVED")
+                        .isCustomer(true)
+                        .creditLimit(java.math.BigDecimal.ZERO)
+                        .paymentTermDays(0)
+                        .build();
+                toSave.add(newPartner);
+            }
+        }
+
+        // 2. Merge Duplicate Rows (OVERWRITE)
+        if (request.getDuplicateRowsToMerge() != null) {
+            for (CustomerExcelDTO dto : request.getDuplicateRowsToMerge()) {
+                if (dto.getExistingCustomerId() != null) {
+                    Partner existing = partnerRepository.findByIdAndIsCustomerTrue(dto.getExistingCustomerId())
+                            .orElse(null);
+                    if (existing != null) {
+                        existing.setName(dto.getName());
+                        if (dto.getEmail() != null && !dto.getEmail().isBlank()) existing.setEmail(dto.getEmail());
+                        if (dto.getAddress() != null && !dto.getAddress().isBlank()) existing.setAddress(dto.getAddress());
+                        existing.setGroupType(mapGroupTypeFromExcel(dto.getGroupType()));
+                        toSave.add(existing);
+                        
+                        auditLogService.logEvent(
+                                actor, "UPDATE", "Customer", existing.getId(),
+                                "SUCCESS", "Gộp dữ liệu từ file Excel (Overwrite). Tên mới: " + dto.getName(),
+                                "SYSTEM", null
+                        );
+                    }
+                }
+            }
+        }
+
+        if (!toSave.isEmpty()) {
+            partnerRepository.saveAll(toSave);
+            auditLogService.logEvent(
+                    actor, "IMPORT", "Customer", null,
+                    "SUCCESS", "Import Excel thành công " + toSave.size() + " khách hàng",
+                    "SYSTEM", null
+            );
+        }
+    }
+    
+    private String mapGroupTypeFromExcel(String excelVal) {
+        if (excelVal == null) return "RETAIL";
+        if (excelVal.equalsIgnoreCase("Khách thợ")) return "WHOLESALE";
+        if (excelVal.equalsIgnoreCase("Đại lý")) return "DISTRIBUTOR";
+        return "RETAIL";
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TAB: LỊCH SỬ MUA HÀNG & BẢO HÀNH
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
@@ -203,7 +512,7 @@ public class CustomerService {
 
         // CUST02: Kiểm tra SĐT đã tồn tại
         if (partnerRepository.existsByPhoneAndIsCustomerTrue(phone)) {
-            throw new BusinessException(SystemMessage.CUST_PHONE_EXISTS.getMessage());
+            throw new BusinessException(SystemMessage.CUST_PHONE_EXISTS);
         }
 
         String code = generateCustomerCode();
@@ -248,7 +557,7 @@ public class CustomerService {
         // CUST02: Nếu đổi SĐT → kiểm tra unique
         if (phoneChanged) {
             if (partnerRepository.existsByPhoneAndIsCustomerTrueAndIdNot(newPhone, id)) {
-                throw new BusinessException(SystemMessage.CUST_PHONE_EXISTS.getMessage());
+                throw new BusinessException(SystemMessage.CUST_PHONE_EXISTS);
             }
             // Ghi Audit Log khi đổi SĐT (Issue #2 - SĐT là khóa định danh sở hữu thiết bị)
             auditLogService.logEvent(
@@ -289,10 +598,30 @@ public class CustomerService {
         // CUST03: Kiểm tra có thiết bị đang sửa chữa không
         boolean hasRepairingDevice = partnerRepository.hasActiveRepairByPartnerId(id);
         if (hasRepairingDevice) {
-            throw new BusinessException(SystemMessage.CUST_HAS_REPAIRING_WARRANTY.getMessage());
+            throw new BusinessException(SystemMessage.CUST_HAS_REPAIRING_WARRANTY);
         }
 
         customer.setStatus(INACTIVE);
+        partnerRepository.save(customer);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ACTIVATE (Re-activate)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * UC-CUST-05b: Kích hoạt lại khách hàng đã bị vô hiệu hóa.
+     *
+     * @param id ID khách hàng
+     * @throws BusinessException nếu khách hàng không tồn tại hoặc đã đang APPROVED
+     */
+    @Transactional
+    public void activateCustomer(Long id) {
+        Partner customer = findCustomerOrThrow(id);
+        if (APPROVED.equals(customer.getStatus())) {
+            throw new BusinessException(SystemMessage.CUST_ALREADY_ACTIVE);
+        }
+        customer.setStatus(APPROVED);
         partnerRepository.save(customer);
     }
 
@@ -302,7 +631,7 @@ public class CustomerService {
 
     private Partner findCustomerOrThrow(Long id) {
         return partnerRepository.findByIdAndIsCustomerTrue(id)
-                .orElseThrow(() -> new BusinessException(SystemMessage.CUST_NOT_FOUND.getMessage()));
+                .orElseThrow(() -> new BusinessException(SystemMessage.CUST_NOT_FOUND));
     }
 
     /**
@@ -311,7 +640,7 @@ public class CustomerService {
     private Long idCheckSeed(Long id) {
         Partner customer = findCustomerOrThrow(id);
         if (SEED_DATA_CODE.equals(customer.getCode())) {
-            throw new BusinessException(SystemMessage.CUST_VIEW_SEED_DATA_DENIED.getMessage());
+            throw new BusinessException(SystemMessage.CUST_VIEW_SEED_DATA_DENIED);
         }
         return id;
     }
@@ -322,9 +651,8 @@ public class CustomerService {
      */
     private String generateCustomerCode() {
         String prefix = "KH" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
-        // Dùng timestamp-based suffix để đảm bảo unique trong scope hiện tại.
-        // TODO: Chuyển sang sequence counter khi có CustomerCodeSequence bean.
-        String suffix = String.format("%04d", (System.currentTimeMillis() % 10000));
+        // Sử dụng UUID để đảm bảo sinh mã unique trong vòng lặp tốc độ cao
+        String suffix = java.util.UUID.randomUUID().toString().substring(0, 4).toUpperCase();
         return prefix + suffix;
     }
 

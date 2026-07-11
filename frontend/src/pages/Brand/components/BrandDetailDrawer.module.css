@@ -61,8 +61,8 @@
 }
 
 .statusInactive {
-    background-color: #f1f5f9;
-    color: #64748b;
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #b91c1c;
 }
 
 .closeBtn {
@@ -291,6 +291,12 @@
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
+}
+
+.footer button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .btnDanger {

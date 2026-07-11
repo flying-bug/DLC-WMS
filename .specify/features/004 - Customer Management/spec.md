@@ -2,7 +2,7 @@
 
 - **Feature Branch**: `feat-customer-management`
 - **Created**: 24/06/2026
-- **Status**: Ready for Development
+- **Status**: Done
 - **Input**: User description: "Hệ thống quản lý kho và bảo hành linh kiện điện tử. Chỉ xử lý thu chi cơ bản, không dính dáng đến kế toán, công nợ hay tính lương."
 
 ## Revision History
@@ -96,3 +96,35 @@ Quản trị viên hoặc nhân viên có quyền cần cập nhật thông tin 
 - **Mô hình định danh**: Một số điện thoại chỉ đại diện cho một khách hàng cá nhân duy nhất. Hệ thống không xử lý logic một SĐT dùng chung cho nhiều khách hàng.
 - **Giới hạn nghiệp vụ**: Doanh nghiệp sẽ không có nhu cầu quản lý công nợ (`credit_limit`), xuất hóa đơn VAT (`tax_code`) hay tài khoản ngân hàng (`bank_account_number`) của khách. Các field này trong DB `PARTNERS` tồn tại chỉ để dự phòng hoặc phục vụ cho loại Đối tác là Nhà cung cấp (`is_supplier`).
 - **Tích hợp**: Các module Sales, Warranty và Finance (Cash) đã sẵn sàng các Endpoint API (List) để module Customer gọi và hiển thị dữ liệu lên 3 Tab chi tiết.
+
+## Feature Extension: Import & Export Excel (Pending Review)
+
+*(Bổ sung theo yêu cầu ngày 04/07/2026)*
+
+Tính năng Nhập/Xuất Excel hỗ trợ kế toán/quản lý kho làm việc với khối lượng dữ liệu lớn. Các nghiệp vụ này cần được làm rõ logic xử lý trước khi tiến hành code.
+
+### 1. Import Excel & Xử lý Trùng lặp
+- **Luồng cơ bản**: Người dùng tải file Excel template -> Điền dữ liệu -> Upload file -> Hệ thống parse dữ liệu -> Import vào DB.
+- **Business Rule (Trùng lặp)**: 
+  - Khóa định danh (Unique Key) để xác định trùng lặp là **Số điện thoại** (do SĐT là duy nhất trên toàn hệ thống).
+  - Khi phát hiện SĐT đã tồn tại, hệ thống đưa ra cảnh báo và tùy chọn **"Gộp khách hàng (Merge)"** làm 1.
+
+**[BA Review & Open Questions - IMPORT]**
+1. **Logic Gộp (Merge Logic)**: Khi merge khách hàng cũ (trong DB) và khách hàng mới (từ file Excel), dữ liệu nào sẽ được ưu tiên? 
+   - *Option A (Khuyên dùng)*: Cập nhật thông tin (Update) - Ghi đè thông tin từ Excel lên DB (VD: Đổi tên, đổi địa chỉ) nếu có sự sai khác. 
+   - *Option B*: Chỉ bổ sung (Fill) - Chỉ lấy thông tin từ Excel điền vào những trường còn trống trong DB, không ghi đè dữ liệu cũ.
+2. **Giao diện xác nhận (UX)**: Trong một file Excel 1000 dòng có thể có 50 dòng bị trùng. 
+   - Hệ thống sẽ hiển thị **1 màn hình Preview** tổng hợp liệt kê danh sách 50 dòng trùng này để người dùng bấm "Xác nhận gộp tất cả", hay chỉ hiện 1 popup chung "Có 50 bản ghi trùng, bạn có muốn gộp không?". Màn hình Preview (giống MISA) sẽ trực quan hơn rất nhiều.
+
+### 2. Export Excel (Tùy chọn)
+- **Luồng cơ bản**: Người dùng bấm nút "Xuất Excel" -> Hệ thống sinh file Excel và tải xuống.
+- **Business Rule**:
+  - Giao diện có các **nút checkbox** ở đầu mỗi dòng (cần khôi phục lại cột checkbox đã ẩn).
+  - Nếu **có** tích chọn các checkbox: Chỉ xuất ra file Excel những khách hàng được chọn.
+  - Nếu **không** tích chọn checkbox nào: Xuất **toàn bộ** danh sách khách hàng.
+  - Template Excel xuất ra có cấu trúc cột giống hệt Template của tính năng Quản lý Kho (tuy nhiên thay bằng các cột nghiệp vụ khách hàng: Mã KH, Tên, SĐT, Nhóm KH, Địa chỉ, Trạng thái).
+
+**[BA Review & Open Questions - EXPORT]**
+3. **Phân trang & Lọc (Pagination & Filter)**: 
+   - Khi bấm "Xuất tất cả" (không tick checkbox), hệ thống sẽ xuất toàn bộ khách hàng trong DB, **HAY** chỉ xuất những khách hàng đang thỏa mãn bộ lọc (VD: Đang lọc "Khách thợ", bấm xuất thì ra toàn bộ "Khách thợ"). *Standard UI (chuẩn MISA): Xuất theo bộ lọc hiện tại.*
+   - Việc tick chọn (checkbox) có được lưu giữ khi chuyển trang không? (Standard UI: Tích chọn ở trang 1, sang trang 2 tích thêm, hệ thống vẫn nhớ cả 2 trang). Điều này đòi hỏi xử lý state Frontend phức tạp hơn một chút.

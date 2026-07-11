@@ -5,6 +5,7 @@ import * as warehouseApi from '../../api/warehouseApi';
 import WarehouseFormModal from '../../components/warehouse/WarehouseFormModal';
 import WarehouseDeleteModal from '../../components/warehouse/WarehouseDeleteModal';
 import Toast from '../../components/ui/Toast/Toast';
+import WarehouseStaffList from './components/WarehouseStaffList';
 import styles from './WarehouseDetailPage.module.css';
 
 const formatCurrency = (value) => {
@@ -226,6 +227,12 @@ const WarehouseDetailPage = () => {
                         Thông tin chung
                     </button>
                     <button 
+                        className={`${styles.tabItem} ${activeTab === 'staff' ? styles.active : ''}`}
+                        onClick={() => setActiveTab('staff')}
+                    >
+                        Nhân sự
+                    </button>
+                    <button 
                         className={`${styles.tabItem} ${activeTab === 'history' ? styles.active : ''}`}
                         onClick={() => setActiveTab('history')}
                     >
@@ -318,6 +325,13 @@ const WarehouseDetailPage = () => {
                                         </div>
                                     </div>
                                 </div>
+                    </div>
+                )}
+
+                {/* Tab Staff */}
+                {activeTab === 'staff' && (
+                    <div className={styles.tabContent}>
+                        <WarehouseStaffList warehouseId={id} />
                     </div>
                 )}
 

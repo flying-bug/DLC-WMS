@@ -4,23 +4,46 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import styles from './AiChatPage.module.css';
 
 const suggestedPrompts = [
-    'Ton kho hien tai cua san pham nao dang thap?',
-    'Tom tat phieu sua chua dang cho xu ly',
-    'Huong dan tao phieu chuyen kho',
-    'Tim don bao hanh theo so serial'
+    'Tồn kho hiện tại của sản phẩm nào đang thấp?',
+    'Tóm tắt phiếu sửa chữa đang chờ xử lý',
+    'Hướng dẫn tạo phiếu chuyển kho',
+    'Tìm đơn bảo hành theo số serial'
 ];
 
 const initialMessages = [
     {
         id: 1,
         role: 'assistant',
-        content: 'Xin chao, toi la tro ly AI cua DLC WMS. Ban co the hoi ve ton kho, phieu nhap xuat, bao hanh, sua chua hoac quy trinh van hanh.',
+        content: 'Xin chào, tôi là trợ lý AI của DLC WMS. Bạn có thể hỏi về tồn kho, phiếu nhập xuất, bảo hành, sửa chữa hoặc quy trình vận hành.',
         time: '09:00'
     }
 ];
 
-function buildMockReply(question) {
-    return `Minh chua goi duoc backend cho cau hoi: "${question}". Hay kiem tra backend da chay chua, sau do thu lai.`;
+function buildErrorReply(error) {
+    if (!error.response) {
+        return 'Chưa kết nối được backend. Hãy kiểm tra backend Spring Boot đã chạy ở port 8080 chưa, rồi thử lại.';
+    }
+
+    if (error.response.status === 401) {
+        return 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Hãy đăng nhập lại rồi hỏi tiếp.';
+    }
+
+    const userMessage = error.response.data?.userMessage || error.response.data?.message;
+    if (userMessage) {
+        return `Backend trả về lỗi: ${userMessage}`;
+    }
+
+    return `Backend đang lỗi ${error.response.status}. Hãy xem log Spring Boot để biết chi tiết.`;
+}
+
+function formatSource(source) {
+    if (!source?.name) return null;
+
+    if (source.type === 'model_status' && source.description) {
+        return `${source.name} (${source.description})`;
+    }
+
+    return source.name;
 }
 
 function AiChatPage() {
@@ -36,7 +59,7 @@ function AiChatPage() {
             hour: '2-digit',
             minute: '2-digit'
         }).format(new Date());
-    }, [messages.length]);
+    }, []);
 
     const sendMessage = (value = input) => {
         const question = value.trim();
@@ -58,15 +81,17 @@ function AiChatPage() {
             .then((response) => {
                 const data = response.data?.data;
                 const sources = Array.isArray(data?.sources) ? data.sources : [];
-                const sourceText = sources.length > 0
-                    ? `\n\nNguon du lieu: ${sources.map((source) => source.name).join(', ')}`
+                const sourceNames = sources.map(formatSource).filter(Boolean);
+                const sourceText = sourceNames.length > 0
+                    ? `\n\nNguồn dữ liệu: ${sourceNames.join(', ')}`
                     : '';
+
                 setMessages((prev) => [
                     ...prev,
                     {
                         id: Date.now() + 1,
                         role: 'assistant',
-                        content: `${data?.answer || buildMockReply(question)}${sourceText}`,
+                        content: `${data?.answer || 'Backend đã phản hồi nhưng không có nội dung trả lời.'}${sourceText}`,
                         time: new Intl.DateTimeFormat('vi-VN', {
                             hour: '2-digit',
                             minute: '2-digit'
@@ -74,13 +99,13 @@ function AiChatPage() {
                     }
                 ]);
             })
-            .catch(() => {
+            .catch((error) => {
                 setMessages((prev) => [
                     ...prev,
                     {
                         id: Date.now() + 1,
                         role: 'assistant',
-                        content: buildMockReply(question),
+                        content: buildErrorReply(error),
                         time: new Intl.DateTimeFormat('vi-VN', {
                             hour: '2-digit',
                             minute: '2-digit'
@@ -124,13 +149,13 @@ function AiChatPage() {
                         <div className={styles.statusBox}>
                             <span className={styles.statusDot} />
                             <div>
-                                <strong>Demo UI</strong>
-                                <p>San sang noi API RAG</p>
+                                <strong>Đã nối backend</strong>
+                                <p>Đọc dữ liệu hệ thống và gọi model khi được bật</p>
                             </div>
                         </div>
 
                         <div className={styles.promptGroup}>
-                            <h3>Goi y cau hoi</h3>
+                            <h3>Gợi ý câu hỏi</h3>
                             {suggestedPrompts.map((prompt) => (
                                 <button
                                     key={prompt}
@@ -149,8 +174,8 @@ function AiChatPage() {
                     <main className={styles.chatArea}>
                         <div className={styles.chatHeader}>
                             <div>
-                                <h1>Tro ly hoi dap AI</h1>
-                                <p>Hoi nhanh ve nghiep vu kho, san pham, bao hanh va sua chua.</p>
+                                <h1>Trợ lý hỏi đáp AI</h1>
+                                <p>Hỏi nhanh về nghiệp vụ kho, sản phẩm, bảo hành và sửa chữa.</p>
                             </div>
                             <span className={styles.badge}>RAG ready</span>
                         </div>
@@ -166,7 +191,7 @@ function AiChatPage() {
                                     </div>
                                     <div className={styles.messageBubble}>
                                         <div className={styles.messageMeta}>
-                                            <strong>{message.role === 'user' ? 'Ban' : 'AI Assistant'}</strong>
+                                            <strong>{message.role === 'user' ? 'Bạn' : 'AI Assistant'}</strong>
                                             <span>{message.time}</span>
                                         </div>
                                         <p>{message.content}</p>
@@ -194,10 +219,10 @@ function AiChatPage() {
                                 value={input}
                                 onChange={(event) => setInput(event.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder="Nhap cau hoi cho AI..."
+                                placeholder="Nhập câu hỏi cho AI..."
                                 rows={2}
                             />
-                            <button type="submit" disabled={!canSend} title="Gui cau hoi">
+                            <button type="submit" disabled={!canSend} title="Gửi câu hỏi">
                                 <i className="fas fa-paper-plane" aria-hidden="true" />
                             </button>
                         </form>

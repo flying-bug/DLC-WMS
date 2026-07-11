@@ -55,7 +55,7 @@
     background-color: var(--color-primary, #002b6b);
     color: white;
     border: none;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .btnAdd:hover {
@@ -90,7 +90,7 @@
     border: 1px solid var(--color-border, #e2e8f0);
     padding: 24px;
     margin-bottom: 24px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .filterGrid {
@@ -181,7 +181,7 @@
     border-radius: 12px;
     border: 1px solid var(--color-border, #e2e8f0);
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .tableResponsive {
@@ -268,9 +268,9 @@
 }
 
 .statusStopped {
-    background-color: #f1f5f9;
-    color: #64748b;
-    border: 1px solid #e2e8f0;
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 /* Row Actions */
@@ -309,22 +309,103 @@
     background-color: var(--color-bg-soft, #f8fafc);
 }
 
+/* Skeleton Loading */
+.skeletonRow {
+    pointer-events: none;
+}
+
+.skeletonCell {
+    height: 16px;
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+.skeletonIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Empty State */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+    text-align: center;
+}
+
+.emptyIcon {
+    width: 64px;
+    height: 64px;
+    background-color: #f8fafc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #94a3b8;
+    margin-bottom: 16px;
+}
+
+.emptyState h4 {
+    margin: 0 0 8px 0;
+    font-size: 1.125rem;
+    color: var(--color-text-strong, #1e293b);
+}
+
+.emptyState p {
+    margin: 0 0 24px 0;
+    color: var(--color-text-muted, #64748b);
+    font-size: 0.875rem;
+}
+
+.btnClearFilter {
+    background-color: white;
+    color: var(--color-primary, #002b6b);
+    border: 1px solid var(--color-border, #e2e8f0);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btnClearFilter:hover {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+}
+
 /* Responsive Styles */
 @media (max-width: 992px) {
     .pageHeader {
         flex-direction: column;
         gap: 16px;
     }
-    
+
     .filterGrid {
         flex-direction: column;
         align-items: stretch;
     }
-    
-    .filterSearch, .selectWrapper {
+
+    .filterSearch,
+    .selectWrapper {
         width: 100%;
     }
 }
 
-@media (max-width: 768px) {
-}
+@media (max-width: 768px) {}

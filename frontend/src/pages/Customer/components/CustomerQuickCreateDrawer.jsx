@@ -15,9 +15,10 @@ const GROUP_OPTIONS = [
  * @param {boolean}  isOpen   - Hiện/ẩn drawer
  * @param {object}   editData - null = tạo mới, object = chỉnh sửa
  * @param {function} onClose  - Callback đóng drawer
- * @param {function} onSaved  - Callback sau khi lưu thành công
+ * @param {function} onSaved(isEdit)  - Callback sau khi lưu thành công
+ * @param {function} onError(msg)     - Callback khi có lỗi không thuộc form field (optional)
  */
-const CustomerQuickCreateDrawer = ({ isOpen, editData, onClose, onSaved }) => {
+const CustomerQuickCreateDrawer = ({ isOpen, editData, onClose, onSaved, onError }) => {
     const isEditMode = !!editData;
 
     const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', groupType: 'RETAIL' });
@@ -98,13 +99,28 @@ const CustomerQuickCreateDrawer = ({ isOpen, editData, onClose, onSaved }) => {
                 await createCustomer(payload);
             }
 
-            onSaved();
+            onSaved(isEditMode);
         } catch (error) {
-            const serverMsg = error.response?.data?.message;
-            if (serverMsg?.includes('CUST02') || serverMsg?.includes('điện thoại')) {
-                setErrors(prev => ({ ...prev, phone: serverMsg }));
+            const responseData = error.response?.data;
+            // errorCode: CUST02 = SĐT đã tồn tại
+            if (responseData?.errorCode === 'CUST02') {
+                setErrors(prev => ({ ...prev, phone: responseData.userMessage }));
+            } else if (responseData?.errorCode === 'VAL400') {
+                // Lỗi @Valid — phân loại vào đúng field
+                const msg = responseData.userMessage || '';
+                const newErrors = {};
+                if (msg.toLowerCase().includes('tên') || msg.toLowerCase().includes('name')) newErrors.name = msg;
+                else if (msg.toLowerCase().includes('điện thoại') || msg.toLowerCase().includes('phone')) newErrors.phone = msg;
+                else if (msg.toLowerCase().includes('email')) newErrors.email = msg;
+                else if (msg.toLowerCase().includes('địa chỉ') || msg.toLowerCase().includes('address')) newErrors.address = msg;
+                if (Object.keys(newErrors).length > 0) {
+                    setErrors(prev => ({ ...prev, ...newErrors }));
+                } else if (onError) {
+                    onError(msg);
+                }
             } else {
-                alert(serverMsg || 'Có lỗi xảy ra. Vui lòng thử lại.');
+                const msg = responseData?.userMessage || 'Có lỗi xảy ra. Vui lòng thử lại.';
+                if (onError) onError(msg);
             }
         } finally {
             setSubmitting(false);
