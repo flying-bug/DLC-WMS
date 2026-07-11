@@ -93,6 +93,12 @@ public enum SystemMessage {
     BRAND_CODE_NOT_MODIFIABLE("BRND03", "Mã thương hiệu không thể thay đổi sau khi tạo."),
     BRAND_INVALID_STATUS("BRND04", "Trạng thái thương hiệu không hợp lệ."),
 
+    // Assembly & Disassembly
+    ASM_INVALID_COST_PCT("ASM01", "Tổng tỷ lệ phân bổ giá vốn của các linh kiện phải bằng 100%."),
+    ASM_ORDER_LOCKED("ASM02", "Không thể sửa Định mức lắp ráp vì đang có Lệnh đang sử dụng định mức này."),
+    ASM_INSUFFICIENT_INVENTORY("ASM03", "Không đủ tồn kho thành phẩm hoặc linh kiện để thực hiện lệnh."),
+    ASM_HAS_POSTED_DOCS("ASM04", "Không thể Hủy lệnh vì đã có chứng từ kho (Phiếu Nhập/Xuất) liên quan."),
+
     // General Errors
     ACCESS_DENIED("SYS403", "Bạn không có quyền thực hiện thao tác này"),
     SESSION_EXPIRED("SYS401", "Phiên đăng nhập đã hết hạn"),

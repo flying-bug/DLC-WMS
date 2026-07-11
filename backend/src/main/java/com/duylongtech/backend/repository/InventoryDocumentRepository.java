@@ -48,4 +48,6 @@ public interface InventoryDocumentRepository extends JpaRepository<InventoryDocu
     boolean existsByAnyWarehouseId(@Param("warehouseId") Long warehouseId);
 
     boolean existsByCreatedByAndWarehouseIdAndStatusIn(Long createdBy, Long warehouseId, List<String> statuses);
+
+    boolean existsByReferenceTypeAndReferenceId(String referenceType, Long referenceId);
 }

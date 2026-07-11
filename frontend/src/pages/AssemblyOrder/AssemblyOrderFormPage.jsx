@@ -324,12 +324,10 @@ function AssemblyOrderFormPage() {
                     </div>
                     <div className={styles.actions}>
                         <button className={styles.secondaryButton} type="button" onClick={() => navigate('/assembly-orders')}>Quay lại</button>
-                        {canEdit && (
-                            <button className={styles.primaryButton} type="submit" disabled={saving}>
-                                <i className="bi bi-save"></i>
-                                {saving ? 'Đang lưu...' : 'Lưu lệnh'}
-                            </button>
-                        )}
+                        <button className={styles.primaryButton} type="submit" disabled={saving || !canEdit}>
+                            <i className="bi bi-save"></i>
+                            {saving ? 'Đang lưu...' : 'Lưu lệnh'}
+                        </button>
                     </div>
                 </div>
 

@@ -184,6 +184,7 @@ function AssemblyOrderListPage() {
                                 <th>Thành phẩm</th>
                                 <th>Kho</th>
                                 <th>Số lượng</th>
+                                <th>Tiến độ</th>
                                 <th>Ngày thực hiện</th>
                                 <th>Trạng thái</th>
                                 <th></th>
@@ -200,6 +201,11 @@ function AssemblyOrderListPage() {
                                         <td>{order.targetName || order.targetSku || 'Chưa có'}</td>
                                         <td>{warehouseName(order.warehouseId)}</td>
                                         <td>{Number(order.quantity || 0).toLocaleString('vi-VN')}</td>
+                                        <td>
+                                            <span title={`Đã thực hiện: ${order.quantityProduced ?? 0} / ${order.quantity ?? 0}`}>
+                                                {Number(order.quantityProduced ?? 0).toLocaleString('vi-VN')} / {Number(order.quantity ?? 0).toLocaleString('vi-VN')}
+                                            </span>
+                                        </td>
                                         <td>{formatDate(order.executionDate)}</td>
                                         <td><span className={`${styles.badge} ${styles[status.tone]}`}>{status.label}</span></td>
                                         <td>
@@ -211,21 +217,7 @@ function AssemblyOrderListPage() {
                                 );
                             }) : (
                                 <tr>
-                                    <td className={styles.emptyCell} colSpan="9">
-                                        <div style={{ padding: '2rem', textAlign: 'center', color: '#6c757d' }}>
-                                            {loading ? (
-                                                <>
-                                                    <div className="spinner-border spinner-border-sm me-2" role="status" style={{ width: '1.5rem', height: '1.5rem', marginBottom: '1rem' }}></div>
-                                                    <div>Đang tải dữ liệu...</div>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <i className="bi bi-inbox" style={{ fontSize: '2.5rem', opacity: 0.5, marginBottom: '0.5rem', display: 'block' }}></i>
-                                                    <div>Không tìm thấy lệnh lắp ráp/tháo dỡ nào phù hợp.</div>
-                                                </>
-                                            )}
-                                        </div>
-                                    </td>
+                                    <td className={styles.emptyCell} colSpan="9">{loading ? 'Đang tải lịch sử...' : 'Chưa có lệnh lắp ráp/tháo dỡ phù hợp.'}</td>
                                 </tr>
                             )}
                         </tbody>

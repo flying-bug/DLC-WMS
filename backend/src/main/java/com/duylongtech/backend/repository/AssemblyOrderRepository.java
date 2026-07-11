@@ -53,4 +53,6 @@ public interface AssemblyOrderRepository extends JpaRepository<AssemblyOrder, Lo
             "LEFT JOIN FETCH cp.unit " +
             "WHERE o.id = :id")
     Optional<AssemblyOrder> findByIdWithLines(@Param("id") Long id);
+
+    boolean existsByBomIdAndStatusIn(Long bomId, List<String> statuses);
 }
