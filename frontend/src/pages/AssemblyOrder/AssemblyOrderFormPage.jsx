@@ -47,6 +47,7 @@ function AssemblyOrderFormPage() {
     const [bomError, setBomError] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [orderDetail, setOrderDetail] = useState(null);
     const [form, setForm] = useState({
         orderType: searchParams.get('type') === 'DISASSEMBLY' ? 'DISASSEMBLY' : 'ASSEMBLY',
         orderCode: '',
