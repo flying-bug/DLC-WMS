@@ -217,7 +217,7 @@ function AssemblyOrderListPage() {
                                 );
                             }) : (
                                 <tr>
-                                    <td className={styles.emptyCell} colSpan="10">{loading ? 'Đang tải lịch sử...' : 'Chưa có lệnh lắp ráp/tháo dỡ phù hợp.'}</td>
+                                    <td className={styles.emptyCell} colSpan="9">{loading ? 'Đang tải lịch sử...' : 'Chưa có lệnh lắp ráp/tháo dỡ phù hợp.'}</td>
                                 </tr>
                             )}
                         </tbody>

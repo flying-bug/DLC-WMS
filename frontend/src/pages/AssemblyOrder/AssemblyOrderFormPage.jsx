@@ -13,6 +13,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 const STATUS_META = {
     DRAFT: { label: 'Nháp', tone: 'info' },
+    SUBMITTED: { label: 'Chờ duyệt', tone: 'warning' },
     APPROVED: { label: 'Đã duyệt', tone: 'success' },
     POSTED: { label: 'Đã ghi sổ', tone: 'success' },
     CANCELLED: { label: 'Đã hủy', tone: 'danger' }
@@ -46,9 +47,6 @@ function AssemblyOrderFormPage() {
     const [bomError, setBomError] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    const [updatingStatus, setUpdatingStatus] = useState(false);
-    const [showGenModal, setShowGenModal] = useState(false);
-    const [genDocType, setGenDocType] = useState('');
     const [form, setForm] = useState({
         orderType: searchParams.get('type') === 'DISASSEMBLY' ? 'DISASSEMBLY' : 'ASSEMBLY',
         orderCode: '',
@@ -61,7 +59,7 @@ function AssemblyOrderFormPage() {
     });
 
     const selectedBom = useMemo(() => boms.find((bom) => String(bom.id) === String(form.bomId)), [boms, form.bomId]);
-    const canEdit = !editing || ['DRAFT'].includes(form.status);
+    const canEdit = !editing || ['DRAFT', 'SUBMITTED'].includes(form.status);
     const status = STATUS_META[form.status] || { label: form.status || 'Chưa rõ', tone: 'info' };
 
     const loadBaseData = useCallback(async () => {
@@ -102,6 +100,7 @@ function AssemblyOrderFormPage() {
         setError('');
         try {
             const order = unwrap(await assemblyApi.getAssemblyOrderById(id));
+            setOrderDetail(order);
             setForm({
                 orderType: order.orderType || 'ASSEMBLY',
                 orderCode: order.orderCode || '',
@@ -193,22 +192,6 @@ function AssemblyOrderFormPage() {
         }
     };
 
-    const handleChangeStatus = async (newStatus) => {
-        if (!window.confirm(`Xác nhận chuyển trạng thái lệnh thành: ${newStatus}?`)) return;
-        setUpdatingStatus(true);
-        setError('');
-        setSuccess('');
-        try {
-            const updated = unwrap(await assemblyApi.updateOrderStatus(id, newStatus));
-            setForm((current) => ({ ...current, status: updated.status }));
-            setSuccess(`Đã chuyển trạng thái lệnh thành: ${updated.status}.`);
-        } catch (err) {
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không thể đổi trạng thái lệnh.');
-        } finally {
-            setUpdatingStatus(false);
-        }
-    };
-
     const setBomField = (field, value) => {
         setBomForm((current) => ({ ...current, [field]: value }));
         setBomError('');
@@ -290,11 +273,24 @@ function AssemblyOrderFormPage() {
         }
     };
 
-    const previewLines = selectedBom?.lines?.map((line) => ({
-        ...line,
-        required: Number(line.quantity || 0) * Number(form.quantity || 0)
-    })) || [];
-    const targetItem = selectedBom ? {
+    const previewLines = editing && orderDetail?.lines?.length > 0
+        ? orderDetail.lines.map(line => ({
+            componentName: line.componentName,
+            componentSku: line.componentSku,
+            unitName: line.unitName,
+            required: line.quantityRequired,
+        }))
+        : selectedBom?.lines?.map((line) => ({
+            ...line,
+            required: Number(line.quantity || 0) * Number(form.quantity || 0)
+        })) || [];
+
+    const targetItem = editing && orderDetail ? {
+        name: orderDetail.targetName,
+        sku: orderDetail.targetSku,
+        quantity: Number(orderDetail.quantity || 0),
+        unitName: selectedBom?.unitName || ''
+    } : selectedBom ? {
         name: selectedBom.productName,
         sku: selectedBom.productCode,
         quantity: Number(form.quantity || 0),
@@ -327,32 +323,6 @@ function AssemblyOrderFormPage() {
                     </div>
                     <div className={styles.actions}>
                         <button className={styles.secondaryButton} type="button" onClick={() => navigate('/assembly-orders')}>Quay lại</button>
-                        {/* T015: Nút đổi trạng thái (chỉ hiện khi đang xem chi tiết) */}
-                        {editing && form.status === 'DRAFT' && (
-                            <button className={styles.primaryButton} type="button" disabled={updatingStatus} onClick={() => handleChangeStatus('APPROVED')}>
-                                <i className="bi bi-check-circle"></i>
-                                {updatingStatus ? 'Đang duyệt...' : 'Duyệt lệnh'}
-                            </button>
-                        )}
-                        {editing && (form.status === 'DRAFT' || form.status === 'APPROVED') && (
-                            <button className={styles.secondaryButton} type="button" style={{ color: '#991b1b' }} disabled={updatingStatus} onClick={() => handleChangeStatus('CANCELLED')}>
-                                <i className="bi bi-x-circle"></i>
-                                Hủy lệnh
-                            </button>
-                        )}
-                        {/* T018: Nút sinh phiếu kho (chỉ hiện khi APPROVED) */}
-                        {editing && form.status === 'APPROVED' && (
-                            <>
-                                <button className={styles.secondaryButton} type="button" onClick={() => { setGenDocType('GOODS_ISSUE'); setShowGenModal(true); }}>
-                                    <i className="bi bi-box-arrow-right"></i>
-                                    Tạo phiếu xuất
-                                </button>
-                                <button className={styles.primaryButton} type="button" onClick={() => { setGenDocType('GOODS_RECEIPT'); setShowGenModal(true); }}>
-                                    <i className="bi bi-box-arrow-in-left"></i>
-                                    Tạo phiếu nhập
-                                </button>
-                            </>
-                        )}
                         <button className={styles.primaryButton} type="submit" disabled={saving || !canEdit}>
                             <i className="bi bi-save"></i>
                             {saving ? 'Đang lưu...' : 'Lưu lệnh'}
@@ -366,6 +336,8 @@ function AssemblyOrderFormPage() {
                         <div className={styles.detailItem}><span>Loại lệnh</span><strong>{form.orderType === 'DISASSEMBLY' ? 'Tháo dỡ' : 'Lắp ráp'}</strong></div>
                         <div className={styles.detailItem}><span>Trạng thái</span><strong><span className={`${styles.badge} ${styles[status.tone]}`}>{status.label}</span></strong></div>
                         <div className={styles.detailItem}><span>Quyền cập nhật</span><strong>{canEdit ? 'Cho phép' : 'Đã khóa'}</strong></div>
+                        <div className={styles.detailItem}><span>Ngày tạo</span><strong>{orderDetail?.createdAt ? new Date(orderDetail.createdAt).toLocaleString('vi-VN') : 'Chưa có'}</strong></div>
+                        <div className={styles.detailItem}><span>Người tạo</span><strong>{orderDetail?.createdBy ? `ID: ${orderDetail.createdBy}` : 'Hệ thống'}</strong></div>
                     </div>
                 )}
 
@@ -419,8 +391,7 @@ function AssemblyOrderFormPage() {
                             <span>Trạng thái</span>
                             <select value={form.status} onChange={(event) => setField('status', event.target.value)} disabled={!canEdit}>
                                 <option value="DRAFT">Nháp</option>
-                                <option value="APPROVED">Đã duyệt</option>
-                                <option value="POSTED">Đã ghi sổ</option>
+                                <option value="SUBMITTED">Chờ duyệt</option>
                             </select>
                         </label>
                         <label className={`${styles.field} ${styles.full}`}>
@@ -510,7 +481,7 @@ function AssemblyOrderFormPage() {
                                         </thead>
                                         <tbody>
                                             {bomForm.lines.map((line, index) => (
-                                                <tr key={index}>
+                                                <tr key={`${index}-${line.componentVariantId}`}>
                                                     <td>
                                                         <select value={line.componentVariantId} onChange={(event) => setBomLineField(index, 'componentVariantId', event.target.value)}>
                                                             <option value="">Chọn SKU</option>
@@ -547,20 +518,6 @@ function AssemblyOrderFormPage() {
                         </div>
                     </div>
                 )}
-
-                {/* T019: GenerateInventoryDocumentModal */}
-                {showGenModal && (
-                    <GenerateInventoryDocumentModal
-                        orderId={id}
-                        docType={genDocType}
-                        bom={selectedBom}
-                        orderQuantity={Number(form.quantity || 1)}
-                        onClose={() => setShowGenModal(false)}
-                        onSuccess={(msg) => { setShowGenModal(false); setSuccess(msg); }}
-                        onError={(msg) => { setError(msg); }}
-                        variants={variants}
-                    />
-                )}
             </form>
         </AdminLayout>
     );
@@ -593,162 +550,4 @@ function FlowPanel({ tone, title, icon, items, emptyText }) {
     );
 }
 
-/**
- * T019: Modal sinh Phiếu Nhập / Xuất kho từ Lệnh lắp ráp/tháo dỡ đã APPROVED.
- * Props:
- *   orderId - ID lệnh
- *   docType - "GOODS_ISSUE" | "GOODS_RECEIPT"
- *   bom - object BOM đang chọn (để tính danh sách dòng mặc định)
- *   orderQuantity - số lượng lệnh
- *   onClose, onSuccess, onError - callbacks
- *   variants - danh sách SKU để chọn
- */
-function GenerateInventoryDocumentModal({ orderId, docType, bom, orderQuantity, onClose, onSuccess, onError, variants = [] }) {
-    const isIssue = docType === 'GOODS_ISSUE';
-    const title = isIssue ? 'Tạo Phiếu Xuất Kho' : 'Tạo Phiếu Nhập Kho';
-
-    // Khởi tạo dòng mặc định từ BOM lines (hoặc rỗng)
-    const defaultLines = () => {
-        if (!bom?.lines?.length) return [{ variantId: '', quantity: '', serialNumbers: '' }];
-        return bom.lines.map((line) => ({
-            variantId: String(line.componentVariantId || ''),
-            quantity: String(Number(line.quantity || 1) * (orderQuantity || 1)),
-            serialNumbers: ''
-        }));
-    };
-
-    const [lines, setLines] = useState(defaultLines);
-    const [submitting, setSubmitting] = useState(false);
-    const [localError, setLocalError] = useState('');
-
-    const setLineField = (index, field, value) => {
-        setLines((current) => current.map((l, i) => i === index ? { ...l, [field]: value } : l));
-    };
-
-    const addLine = () => setLines((current) => [...current, { variantId: '', quantity: '', serialNumbers: '' }]);
-    const removeLine = (index) => setLines((current) => current.length === 1 ? current : current.filter((_, i) => i !== index));
-
-    const handleSubmit = async () => {
-        setLocalError('');
-        for (let i = 0; i < lines.length; i += 1) {
-            if (!lines[i].variantId) { setLocalError(`Dòng ${i + 1}: Vui lòng nhập Variant ID.`); return; }
-            if (!lines[i].quantity || Number(lines[i].quantity) <= 0) { setLocalError(`Dòng ${i + 1}: Số lượng phải lớn hơn 0.`); return; }
-        }
-        setSubmitting(true);
-        try {
-            const payload = {
-                documentType: docType,
-                lines: lines.map((l) => ({
-                    variantId: Number(l.variantId),
-                    quantity: Number(l.quantity),
-                    serialNumbers: l.serialNumbers ? l.serialNumbers.split('\n').map((s) => s.trim()).filter(Boolean) : []
-                }))
-            };
-            await assemblyApi.generateInventoryDocument(orderId, payload);
-            onSuccess(`Đã tạo ${isIssue ? 'Phiếu Xuất' : 'Phiếu Nhập'} kho thành công.`);
-        } catch (err) {
-            const msg = err.response?.data?.userMessage || err.response?.data?.message || 'Không tạo được phiếu kho.';
-            setLocalError(msg);
-            onError(msg);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <div className={styles.modalOverlay}>
-            <div className={styles.modal}>
-                <div className={styles.modalHeader}>
-                    <h2>{title}</h2>
-                    <button className={styles.iconButton} type="button" title="Đóng" onClick={onClose}>
-                        <i className="bi bi-x-lg"></i>
-                    </button>
-                </div>
-
-                <div className={styles.modalBody}>
-                    {localError && <div className={styles.errorBox} style={{ marginBottom: 12 }}>{localError}</div>}
-                    <p style={{ marginTop: 0, color: 'var(--color-text-muted)', fontSize: '0.88rem' }}>
-                        {isIssue
-                            ? 'Tạo Phiếu Xuất để trừ tồn kho linh kiện (nguyên vật liệu) phục vụ lắp ráp.'
-                            : 'Tạo Phiếu Nhập để cộng tồn kho thành phẩm / linh kiện thu hồi sau tháo dỡ.'}
-                    </p>
-
-                    <div className={styles.lineActions}>
-                        <button className={styles.secondaryButton} type="button" onClick={addLine}>
-                            <i className="bi bi-plus-lg"></i>
-                            Thêm dòng
-                        </button>
-                    </div>
-
-                    <div className={styles.tablePanel}>
-                        <table className={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th>Variant ID (SKU)</th>
-                                    <th>Số lượng</th>
-                                    <th>Serial Numbers (mỗi dòng 1 serial)</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {lines.map((line, index) => (
-                                    <tr key={index}>
-                                        <td>
-                                            <select
-                                                value={line.variantId}
-                                                onChange={(e) => setLineField(index, 'variantId', e.target.value)}
-                                            >
-                                                <option value="">Chọn SKU...</option>
-                                                {variants.map((v) => (
-                                                    <option key={v.id} value={v.id}>
-                                                        {v.sku} - {v.productName} / {v.variantName}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input
-                                                className={styles.numberInput}
-                                                type="number"
-                                                min="0.0001"
-                                                step="0.0001"
-                                                value={line.quantity}
-                                                onChange={(e) => setLineField(index, 'quantity', e.target.value)}
-                                                placeholder="Số lượng"
-                                            />
-                                        </td>
-                                        <td>
-                                            <textarea
-                                                value={line.serialNumbers}
-                                                onChange={(e) => setLineField(index, 'serialNumbers', e.target.value)}
-                                                placeholder="SN001&#10;SN002&#10;(để trống nếu không theo dõi serial)"
-                                                rows={2}
-                                                style={{ width: '100%', resize: 'vertical', padding: '6px 8px', border: '1px solid var(--color-border)', borderRadius: 6, font: 'inherit' }}
-                                            />
-                                        </td>
-                                        <td>
-                                            <button className={styles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeLine(index)}>
-                                                <i className="bi bi-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div className={styles.modalFooter}>
-                    <button className={styles.secondaryButton} type="button" onClick={onClose}>Hủy</button>
-                    <button className={styles.primaryButton} type="button" onClick={handleSubmit} disabled={submitting}>
-                        <i className={`bi ${isIssue ? 'bi-box-arrow-right' : 'bi-box-arrow-in-left'}`}></i>
-                        {submitting ? 'Đang tạo...' : title}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
 export default AssemblyOrderFormPage;
-
