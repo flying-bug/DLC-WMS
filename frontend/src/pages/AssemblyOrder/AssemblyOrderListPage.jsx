@@ -211,7 +211,21 @@ function AssemblyOrderListPage() {
                                 );
                             }) : (
                                 <tr>
-                                    <td className={styles.emptyCell} colSpan="9">{loading ? 'Đang tải lịch sử...' : 'Chưa có lệnh lắp ráp/tháo dỡ phù hợp.'}</td>
+                                    <td className={styles.emptyCell} colSpan="9">
+                                        <div style={{ padding: '2rem', textAlign: 'center', color: '#6c757d' }}>
+                                            {loading ? (
+                                                <>
+                                                    <div className="spinner-border spinner-border-sm me-2" role="status" style={{ width: '1.5rem', height: '1.5rem', marginBottom: '1rem' }}></div>
+                                                    <div>Đang tải dữ liệu...</div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <i className="bi bi-inbox" style={{ fontSize: '2.5rem', opacity: 0.5, marginBottom: '0.5rem', display: 'block' }}></i>
+                                                    <div>Không tìm thấy lệnh lắp ráp/tháo dỡ nào phù hợp.</div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </td>
                                 </tr>
                             )}
                         </tbody>
