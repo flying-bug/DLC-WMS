@@ -2,7 +2,7 @@
 
 autonumber
 
-actor "Manager/Staff" as Actor
+actor "Staff" as Actor
 boundary "WarrantyDetailPage" as Page
 control "WarrantyController" as Controller
 participant "WarrantyService" as Service
@@ -37,7 +37,7 @@ alt Warranty Not Found
     Controller --> Page: 404 Not Found (Error Message)
     deactivate Controller
     
-    Page --> Actor: Hiển thị thông báo lỗi không tìm thấy phiếu bảo hành
+    Page --> Actor: Displaying an error: The warranty was not found.
 else Warranty Found
     Repository --> Service: Optional[Warranty]
     deactivate Repository
@@ -51,7 +51,7 @@ else Warranty Found
     Controller --> Page: 200 OK (WarrantyDetailDTO)
     deactivate Controller
     
-    Page --> Actor: Hiển thị chi tiết phiếu bảo hành (thông tin chung, thiết bị, lịch sử sửa chữa)
+    Page --> Actor: Displaying a message: The warranty details were successfully displayed.
 end
 
 deactivate Page

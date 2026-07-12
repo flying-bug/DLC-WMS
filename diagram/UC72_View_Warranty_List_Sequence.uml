@@ -2,7 +2,7 @@
 
 autonumber
 
-actor "Manager/Staff" as Actor
+actor "Staff" as Actor
 boundary "WarrantyListPage" as Page
 control "WarrantyController" as Controller
 participant "WarrantyService" as Service
@@ -20,7 +20,7 @@ alt Validation Error (e.g., Invalid date range)
     Controller --> Page: 400 Bad Request (Validation details)
     deactivate Controller
     
-    Page --> Actor: Hiển thị lỗi thông số tìm kiếm không hợp lệ
+    Page --> Actor: Displaying an error: Invalid search parameters error
 else Valid Parameters
     Controller -> Service: getWarranties(filters, pageable)
     activate Service
@@ -45,7 +45,7 @@ else Valid Parameters
     Controller --> Page: 200 OK (PageResponse)
     deactivate Controller
 
-    Page --> Actor: Hiển thị danh sách phiếu bảo hành (Warranty List)
+    Page --> Actor: Displaying a message: The warranty list was successfully displayed.
 end
 
 opt View details of a specific warranty
@@ -75,7 +75,7 @@ opt View details of a specific warranty
         Controller --> Page: 404 Not Found (Error message)
         deactivate Controller
         
-        Page --> Actor: Hiển thị lỗi không tìm thấy phiếu bảo hành
+        Page --> Actor: Displaying an error: The warranty was not found.
     else Warranty Found
         Repository --> Service: Optional[Warranty]
         deactivate Repository
@@ -87,7 +87,7 @@ opt View details of a specific warranty
         Controller --> Page: 200 OK (WarrantyDetailDTO)
         deactivate Controller
         
-        Page --> Actor: Hiển thị chi tiết phiếu bảo hành
+        Page --> Actor: Displaying a message: The warranty details were successfully displayed.
     end
 end
 

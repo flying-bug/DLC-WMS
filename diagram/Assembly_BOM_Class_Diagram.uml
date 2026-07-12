@@ -1,0 +1,130 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+
+package "Controller Layer" {
+    class AssemblyOrderController {
+        - assemblyOrderService: AssemblyOrderService
+        + getBoms(status): ApiResponse<List<AssemblyBomResponse>>
+        + getBomById(id): ApiResponse<AssemblyBomResponse>
+        + createBom(request: AssemblyBomRequest): ApiResponse<AssemblyBomResponse>
+        + updateBom(id, request: AssemblyBomRequest): ApiResponse<AssemblyBomResponse>
+        + getAssemblyOrders(keyword, orderType, status, warehouseId, fromDate, toDate): ApiResponse<List<AssemblyOrderResponse>>
+        + getAssemblyOrderById(id): ApiResponse<AssemblyOrderResponse>
+        + createAssemblyOrder(request: AssemblyOrderRequest): ApiResponse<AssemblyOrderResponse>
+        + createDisassemblyOrder(request: AssemblyOrderRequest): ApiResponse<AssemblyOrderResponse>
+        + updateAssemblyOrder(id, request: AssemblyOrderRequest): ApiResponse<AssemblyOrderResponse>
+        + updateOrderStatus(id, status): ApiResponse<AssemblyOrderResponse>
+    }
+}
+
+package "Service Layer" {
+    class AssemblyOrderService {
+        - assemblyBomRepository: AssemblyBomRepository
+        - assemblyOrderRepository: AssemblyOrderRepository
+        - productRepository: ProductRepository
+        - productVariantRepository: ProductVariantRepository
+        + getBoms(status): List<AssemblyBomResponse>
+        + getBomById(id): AssemblyBomResponse
+        + createBom(request: AssemblyBomRequest): AssemblyBomResponse
+        + updateBom(id, request: AssemblyBomRequest): AssemblyBomResponse
+        + getAssemblyOrders(...): List<AssemblyOrderResponse>
+        + getAssemblyOrderById(id): AssemblyOrderResponse
+        + createAssemblyOrder(request: AssemblyOrderRequest): AssemblyOrderResponse
+        + createDisassemblyOrder(request: AssemblyOrderRequest): AssemblyOrderResponse
+        + updateAssemblyOrder(id, request: AssemblyOrderRequest): AssemblyOrderResponse
+        + updateOrderStatus(id, status): AssemblyOrderResponse
+    }
+}
+
+package "Repository Layer" {
+    interface AssemblyBomRepository {
+        + findByIdWithLines(id): Optional<AssemblyBom>
+        + existsByBomCode(bomCode): boolean
+    }
+    
+    interface AssemblyOrderRepository {
+        + search(...): List<AssemblyOrder>
+        + findByIdWithLines(id): Optional<AssemblyOrder>
+    }
+}
+
+package "Domain Entities" {
+    class AssemblyBom {
+        - id: Long
+        - bomCode: String
+        - bomName: String
+        - versionNo: BigDecimal
+        - status: String
+    }
+
+    class AssemblyBomLine {
+        - id: Long
+        - quantity: BigDecimal
+        - costAllocationPct: BigDecimal
+    }
+
+    class AssemblyOrder {
+        - id: Long
+        - orderCode: String
+        - orderType: String
+        - quantity: BigDecimal
+        - status: String
+    }
+
+    class AssemblyOrderLine {
+        - id: Long
+        - quantityRequired: BigDecimal
+        - quantityActual: BigDecimal
+    }
+}
+
+package "DTOs" {
+    class AssemblyBomRequest {
+        - bomCode: String
+        - bomName: String
+        - productId: Long
+        - lines: List<AssemblyBomLineRequest>
+    }
+
+    class AssemblyBomResponse {
+        - bomCode: String
+        - productId: Long
+        - lines: List<AssemblyBomLineResponse>
+    }
+
+    class AssemblyOrderRequest {
+        - orderCode: String
+        - bomId: Long
+        - warehouseId: Long
+        - quantity: BigDecimal
+    }
+
+    class AssemblyOrderResponse {
+        - orderCode: String
+        - orderType: String
+        - lines: List<AssemblyOrderLineResponse>
+    }
+}
+
+' Relationships
+AssemblyOrderController -down-> AssemblyOrderService
+AssemblyOrderService -down-> AssemblyBomRepository
+AssemblyOrderService -down-> AssemblyOrderRepository
+
+AssemblyBomRepository -down-> AssemblyBom
+AssemblyOrderRepository -down-> AssemblyOrder
+
+AssemblyBom "1" -right-* "1..*" AssemblyBomLine
+AssemblyOrder "1" -right-* "1..*" AssemblyOrderLine
+AssemblyOrder "0..*" -down-> "0..1" AssemblyBom
+
+AssemblyOrderController -right-> AssemblyBomRequest
+AssemblyOrderController -right-> AssemblyBomResponse
+AssemblyOrderController -right-> AssemblyOrderRequest
+AssemblyOrderController -right-> AssemblyOrderResponse
+
+@enduml
