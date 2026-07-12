@@ -126,7 +126,7 @@ public class ReportRepository {
     }
 
     // 3. Stock Transfer Report
-    public List<StockTransferReportResponse> getStockTransferReport(Long warehouseId, LocalDate startDate, LocalDate endDate, String search) {
+    public List<StockTransferReportResponse> getStockTransferReport(Long warehouseId, LocalDate startDate, LocalDate endDate, String search, String status) {
         StringBuilder sql = new StringBuilder(
                 "SELECT " +
                         "st.transfer_date AS documentDate, " +
@@ -138,7 +138,8 @@ public class ReportRepository {
                         "u.name AS unitName, " +
                         "stl.quantity AS quantity, " +
                         "stl.unit_cost AS unitPrice, " +
-                        "(stl.quantity * stl.unit_cost) AS amount " +
+                        "(stl.quantity * stl.unit_cost) AS amount, " +
+                        "st.status AS status " +
                         "FROM STOCK_TRANSFERS st " +
                         "JOIN STOCK_TRANSFER_LINES stl ON st.id = stl.stock_transfer_id " +
                         "JOIN WAREHOUSES w_from ON st.from_warehouse_id = w_from.id " +
@@ -146,9 +147,17 @@ public class ReportRepository {
                         "JOIN PRODUCT_VARIANTS pv ON stl.variant_id = pv.id " +
                         "JOIN PRODUCTS p ON pv.product_id = p.id " +
                         "JOIN UNITS u ON p.unit_id = u.id " +
-                        "WHERE st.status IN ('APPROVED', 'POSTED') "
+                        "WHERE 1=1 "
         );
         List<Object> params = new ArrayList<>();
+
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND st.status = ? ");
+            params.add(status);
+        } else {
+            // Default to not showing DRAFT or CANCELLED unless explicitly requested
+            sql.append(" AND st.status IN ('APPROVED', 'POSTED') ");
+        }
 
         if (warehouseId != null) {
             sql.append(" AND (st.from_warehouse_id = ? OR st.to_warehouse_id = ?) ");
@@ -183,6 +192,7 @@ public class ReportRepository {
                 .quantity(rs.getBigDecimal("quantity"))
                 .unitPrice(rs.getBigDecimal("unitPrice"))
                 .amount(rs.getBigDecimal("amount"))
+                .status(rs.getString("status"))
                 .transactionType("STOCK_TRANSFER")
                 .build(), params.toArray());
     }
@@ -308,24 +318,113 @@ public class ReportRepository {
 
     // 6. Dashboard metrics 
     public DashboardResponse getDashboardMetrics() {
-        // low stock items count
-        String lowStockSql = "SELECT COUNT(DISTINCT pv.id) FROM INVENTORY_BALANCES ib JOIN PRODUCT_VARIANTS pv ON ib.variant_id = pv.id WHERE ib.quantity_on_hand > 0 AND ib.quantity_on_hand <= 5";
-        Integer lowStockCount = jdbcTemplate.queryForObject(lowStockSql, Integer.class);
+        LocalDate startOfMonth = LocalDate.now().withDayOfMonth(1);
+        LocalDate endOfMonth = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
 
-        // out of stock items count
-        String outOfStockSql = "SELECT COUNT(DISTINCT pv.id) FROM PRODUCT_VARIANTS pv WHERE pv.active = TRUE AND NOT EXISTS (SELECT 1 FROM INVENTORY_BALANCES ib WHERE ib.variant_id = pv.id AND ib.quantity_on_hand > 0)";
-        Integer outOfStockCount = jdbcTemplate.queryForObject(outOfStockSql, Integer.class);
+        // CompletableFuture to fetch all metrics in parallel
+        var lowStockFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            String sql = "SELECT COUNT(DISTINCT pv.id) FROM INVENTORY_BALANCES ib JOIN PRODUCT_VARIANTS pv ON ib.variant_id = pv.id WHERE ib.quantity_on_hand > 0 AND ib.quantity_on_hand <= 5";
+            return jdbcTemplate.queryForObject(sql, Integer.class);
+        });
 
-        // total value
-        String totalValueSql = "SELECT COALESCE(SUM(quantity_on_hand * average_cost), 0) FROM INVENTORY_BALANCES";
-        BigDecimal totalValue = jdbcTemplate.queryForObject(totalValueSql, BigDecimal.class);
-        
-        return DashboardResponse.builder()
-            .lowStockItemsCount(lowStockCount != null ? lowStockCount : 0)
-            .outOfStockItemsCount(outOfStockCount != null ? outOfStockCount : 0)
-            .inventoryTurnoverRatio(BigDecimal.ZERO) // Simplified for dashboard
-            .averageDaysInInventory(BigDecimal.ZERO) // Simplified for dashboard
-            .totalInventoryValue(totalValue != null ? totalValue : BigDecimal.ZERO)
-            .build();
+        var outOfStockFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            String sql = "SELECT COUNT(DISTINCT pv.id) FROM PRODUCT_VARIANTS pv WHERE pv.active = TRUE AND NOT EXISTS (SELECT 1 FROM INVENTORY_BALANCES ib WHERE ib.variant_id = pv.id AND ib.quantity_on_hand > 0)";
+            return jdbcTemplate.queryForObject(sql, Integer.class);
+        });
+
+        var totalValueFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            String sql = "SELECT COALESCE(SUM(quantity_on_hand * average_cost), 0) FROM INVENTORY_BALANCES";
+            return jdbcTemplate.queryForObject(sql, BigDecimal.class);
+        });
+
+        var importExportFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            // doc_type values from schema: IN_PO (import), EX_SO (export)
+            String sql = "SELECT " +
+                "COALESCE(SUM(CASE WHEN idoc.doc_type = 'IN_PO' THEN idl.quantity_in * idl.unit_cost ELSE 0 END), 0) AS totalImport, " +
+                "COALESCE(SUM(CASE WHEN idoc.doc_type = 'EX_SO' THEN idl.quantity_out * idl.unit_cost ELSE 0 END), 0) AS totalExport " +
+                "FROM INVENTORY_DOCUMENTS idoc " +
+                "JOIN INVENTORY_DOCUMENT_LINES idl ON idoc.id = idl.inventory_document_id " +
+                "WHERE idoc.status = 'POSTED' AND idoc.doc_date >= ? AND idoc.doc_date <= ?";
+            return jdbcTemplate.queryForMap(sql, startOfMonth, endOfMonth);
+        });
+
+        var debtFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            try {
+                // Try using PARTNER_LEDGER table
+                String sql = "SELECT " +
+                    "COALESCE(SUM(CASE WHEN pt.is_customer = 1 AND pl.balance_after > 0 THEN pl.balance_after ELSE 0 END), 0) AS totalCustomerDebt, " +
+                    "COALESCE(SUM(CASE WHEN pt.is_supplier = 1 AND pl.balance_after > 0 THEN pl.balance_after ELSE 0 END), 0) AS totalSupplierDebt " +
+                    "FROM PARTNER_LEDGER pl " +
+                    "INNER JOIN PARTNERS pt ON pl.partner_id = pt.id";
+                return jdbcTemplate.queryForMap(sql);
+            } catch (Exception e) {
+                // Fallback: estimate debt from PAYMENT_VOUCHERS (supplier) and PAYMENT_RECEIPTS (customer)
+                try {
+                    String fallbackSql = "SELECT " +
+                        "COALESCE((SELECT SUM(amount) FROM PAYMENT_RECEIPTS WHERE status = 'POSTED'), 0) AS totalCustomerDebt, " +
+                        "COALESCE((SELECT SUM(amount) FROM PAYMENT_VOUCHERS WHERE status = 'POSTED'), 0) AS totalSupplierDebt";
+                    return jdbcTemplate.queryForMap(fallbackSql);
+                } catch (Exception e2) {
+                    // Final fallback: return zeros
+                    java.util.Map<String, Object> zeros = new java.util.HashMap<>();
+                    zeros.put("totalCustomerDebt", java.math.BigDecimal.ZERO);
+                    zeros.put("totalSupplierDebt", java.math.BigDecimal.ZERO);
+                    return zeros;
+                }
+            }
+        });
+
+        var warrantyFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            String sql = "SELECT COUNT(id) FROM REPAIRS WHERE received_date >= ? AND received_date <= ?";
+            return jdbcTemplate.queryForObject(sql, Integer.class, startOfMonth, endOfMonth);
+        });
+
+        var recentActivityFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            String sql = "SELECT action, description, u.username AS username, a.created_at AS timestamp " +
+                         "FROM AUDIT_LOGS a LEFT JOIN USERS u ON a.user_id = u.id " +
+                         "ORDER BY a.created_at DESC LIMIT 5";
+            return jdbcTemplate.query(sql, (rs, rowNum) -> DashboardResponse.RecentActivityDto.builder()
+                .action(rs.getString("action"))
+                .description(rs.getString("description"))
+                .user(rs.getString("username"))
+                .timestamp(rs.getTimestamp("timestamp").toLocalDateTime())
+                .build());
+        });
+
+        // Ensure debtFuture never fails allOf by adding a final exceptionally fallback
+        var safeDebtFuture = debtFuture.exceptionally(ex -> {
+            java.util.Map<String, Object> zeros = new java.util.HashMap<>();
+            zeros.put("totalCustomerDebt", java.math.BigDecimal.ZERO);
+            zeros.put("totalSupplierDebt", java.math.BigDecimal.ZERO);
+            return zeros;
+        });
+
+        java.util.concurrent.CompletableFuture.allOf(
+            lowStockFuture, outOfStockFuture, totalValueFuture,
+            importExportFuture, safeDebtFuture, warrantyFuture, recentActivityFuture
+        ).join();
+
+
+        try {
+            var importExportMap = importExportFuture.get();
+            var debtMap = safeDebtFuture.get();
+
+
+            return DashboardResponse.builder()
+                .lowStockItemsCount(lowStockFuture.get() != null ? lowStockFuture.get() : 0)
+                .outOfStockItemsCount(outOfStockFuture.get() != null ? outOfStockFuture.get() : 0)
+                .inventoryTurnoverRatio(BigDecimal.ZERO) 
+                .averageDaysInInventory(BigDecimal.ZERO) 
+                .totalInventoryValue(totalValueFuture.get() != null ? totalValueFuture.get() : BigDecimal.ZERO)
+                .totalImportThisMonth(new BigDecimal(importExportMap.get("totalImport").toString()))
+                .totalExportThisMonth(new BigDecimal(importExportMap.get("totalExport").toString()))
+                .totalCustomerDebt(new BigDecimal(debtMap.get("totalCustomerDebt").toString()))
+                .totalSupplierDebt(new BigDecimal(debtMap.get("totalSupplierDebt").toString()))
+                .newWarrantyTickets(warrantyFuture.get() != null ? warrantyFuture.get() : 0)
+                .recentActivities(recentActivityFuture.get())
+                .build();
+        } catch (Exception e) {
+            throw new RuntimeException("Error fetching dashboard metrics", e);
+        }
     }
 }

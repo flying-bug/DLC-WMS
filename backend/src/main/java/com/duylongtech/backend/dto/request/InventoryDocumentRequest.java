@@ -20,5 +20,8 @@ public class InventoryDocumentRequest {
     private String status;
     private String note;
     private Long createdBy;
+    private String recipientName;
+    private String recipientAddress;
+    private Long salespersonId;
     private List<InventoryDocumentLineRequest> lines;
 }

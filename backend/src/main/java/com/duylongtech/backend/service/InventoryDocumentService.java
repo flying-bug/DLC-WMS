@@ -23,6 +23,10 @@ import com.duylongtech.backend.repository.InventoryLedgerRepository;
 import com.duylongtech.backend.repository.ProductVariantRepository;
 import com.duylongtech.backend.repository.SerialNumberRepository;
 import com.duylongtech.backend.repository.WarrantyRepository;
+import com.duylongtech.backend.repository.PartnerRepository;
+import com.duylongtech.backend.repository.UserRepository;
+import com.duylongtech.backend.entity.Partner;
+import com.duylongtech.backend.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +38,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -54,6 +59,8 @@ public class InventoryDocumentService {
     private final SerialNumberRepository serialNumberRepository;
     private final ProductVariantRepository productVariantRepository;
     private final WarrantyRepository warrantyRepository;
+    private final PartnerRepository partnerRepository;
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public ScanResolveResponse resolveExportScan(ScanResolveRequest req) {
@@ -297,6 +304,9 @@ public class InventoryDocumentService {
         doc.setStatus(normalizeEditableStatus(req.getStatus(), DEFAULT_STATUS));
         doc.setNote(req.getNote());
         doc.setCreatedBy(req.getCreatedBy());
+        doc.setRecipientName(req.getRecipientName());
+        doc.setRecipientAddress(req.getRecipientAddress());
+        doc.setSalespersonId(req.getSalespersonId());
         doc.setCreatedAt(LocalDateTime.now());
         doc.setUpdatedAt(LocalDateTime.now());
         return doc;
@@ -321,6 +331,9 @@ public class InventoryDocumentService {
                 ? normalizeEditableImportStatus(req.getStatus(), doc.getStatus())
                 : normalizeEditableStatus(req.getStatus(), doc.getStatus()));
         doc.setNote(req.getNote());
+        doc.setRecipientName(req.getRecipientName());
+        doc.setRecipientAddress(req.getRecipientAddress());
+        doc.setSalespersonId(req.getSalespersonId());
         doc.setUpdatedAt(LocalDateTime.now());
     }
 
@@ -609,7 +622,18 @@ public class InventoryDocumentService {
     private String resolveCreateDocCode(String requestedCode) {
         String docCode = trimToNull(requestedCode);
         if (docCode == null) {
-            docCode = "EXP-" + System.currentTimeMillis();
+            Optional<InventoryDocument> lastDoc = inventoryDocumentRepository.findTopByDocCodeStartingWithOrderByDocCodeDesc("XK-");
+            if (lastDoc.isPresent()) {
+                String lastCode = lastDoc.get().getDocCode();
+                try {
+                    int lastNum = Integer.parseInt(lastCode.substring(3));
+                    docCode = String.format("XK-%05d", lastNum + 1);
+                } catch (NumberFormatException e) {
+                    docCode = "XK-" + System.currentTimeMillis();
+                }
+            } else {
+                docCode = "XK-00001";
+            }
         }
         if (inventoryDocumentRepository.existsByDocCode(docCode)) {
             throw new BusinessException("Ma phieu xuat kho da ton tai");
@@ -788,6 +812,24 @@ public class InventoryDocumentService {
         r.setApprovedBy(doc.getApprovedBy());
         r.setCreatedAt(doc.getCreatedAt());
         r.setUpdatedAt(doc.getUpdatedAt());
+        r.setRecipientName(doc.getRecipientName());
+        r.setRecipientAddress(doc.getRecipientAddress());
+        r.setSalespersonId(doc.getSalespersonId());
+
+        if (doc.getPartnerId() != null) {
+            Partner partner = partnerRepository.findById(doc.getPartnerId()).orElse(null);
+            if (partner != null) {
+                r.setPartnerCode(partner.getCode());
+                r.setPartnerName(partner.getName());
+            }
+        }
+
+        if (doc.getSalespersonId() != null) {
+            User salesperson = userRepository.findById(doc.getSalespersonId()).orElse(null);
+            if (salesperson != null) {
+                r.setSalespersonName(salesperson.getFullName());
+            }
+        }
         if (doc.getLines() != null) {
             List<InventoryDocumentLineResponse> lines = doc.getLines().stream().map(l -> {
                 InventoryDocumentLineResponse lr = new InventoryDocumentLineResponse();
