@@ -28,6 +28,10 @@ public class AssemblyBomLine {
     @Column(nullable = false, precision = 15, scale = 4)
     private BigDecimal quantity;
 
+    @Column(name = "cost_allocation_pct", nullable = false, precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal costAllocationPct = BigDecimal.ZERO;
+
     @Column(columnDefinition = "TEXT")
     private String note;
 }

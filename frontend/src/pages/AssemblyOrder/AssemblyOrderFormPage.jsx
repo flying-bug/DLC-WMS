@@ -47,6 +47,7 @@ function AssemblyOrderFormPage() {
     const [bomError, setBomError] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [orderDetail, setOrderDetail] = useState(null);
     const [form, setForm] = useState({
         orderType: searchParams.get('type') === 'DISASSEMBLY' ? 'DISASSEMBLY' : 'ASSEMBLY',
         orderCode: '',
@@ -100,6 +101,7 @@ function AssemblyOrderFormPage() {
         setError('');
         try {
             const order = unwrap(await assemblyApi.getAssemblyOrderById(id));
+            setOrderDetail(order);
             setForm({
                 orderType: order.orderType || 'ASSEMBLY',
                 orderCode: order.orderCode || '',
@@ -272,11 +274,24 @@ function AssemblyOrderFormPage() {
         }
     };
 
-    const previewLines = selectedBom?.lines?.map((line) => ({
-        ...line,
-        required: Number(line.quantity || 0) * Number(form.quantity || 0)
-    })) || [];
-    const targetItem = selectedBom ? {
+    const previewLines = editing && orderDetail?.lines?.length > 0
+        ? orderDetail.lines.map(line => ({
+            componentName: line.componentName,
+            componentSku: line.componentSku,
+            unitName: line.unitName,
+            required: line.quantityRequired,
+        }))
+        : selectedBom?.lines?.map((line) => ({
+            ...line,
+            required: Number(line.quantity || 0) * Number(form.quantity || 0)
+        })) || [];
+
+    const targetItem = editing && orderDetail ? {
+        name: orderDetail.targetName,
+        sku: orderDetail.targetSku,
+        quantity: Number(orderDetail.quantity || 0),
+        unitName: selectedBom?.unitName || ''
+    } : selectedBom ? {
         name: selectedBom.productName,
         sku: selectedBom.productCode,
         quantity: Number(form.quantity || 0),
@@ -322,6 +337,8 @@ function AssemblyOrderFormPage() {
                         <div className={styles.detailItem}><span>Loại lệnh</span><strong>{form.orderType === 'DISASSEMBLY' ? 'Tháo dỡ' : 'Lắp ráp'}</strong></div>
                         <div className={styles.detailItem}><span>Trạng thái</span><strong><span className={`${styles.badge} ${styles[status.tone]}`}>{status.label}</span></strong></div>
                         <div className={styles.detailItem}><span>Quyền cập nhật</span><strong>{canEdit ? 'Cho phép' : 'Đã khóa'}</strong></div>
+                        <div className={styles.detailItem}><span>Ngày tạo</span><strong>{orderDetail?.createdAt ? new Date(orderDetail.createdAt).toLocaleString('vi-VN') : 'Chưa có'}</strong></div>
+                        <div className={styles.detailItem}><span>Người tạo</span><strong>{orderDetail?.createdBy ? `ID: ${orderDetail.createdBy}` : 'Hệ thống'}</strong></div>
                     </div>
                 )}
 

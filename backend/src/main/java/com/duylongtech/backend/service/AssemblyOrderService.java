@@ -11,6 +11,7 @@ import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
 import com.duylongtech.backend.repository.AssemblyOrderRepository;
+import com.duylongtech.backend.repository.InventoryDocumentRepository;
 import com.duylongtech.backend.repository.ProductRepository;
 import com.duylongtech.backend.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,8 @@ public class AssemblyOrderService {
     private final AssemblyOrderRepository assemblyOrderRepository;
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final InventoryDocumentRepository inventoryDocumentRepository;
+    private final InventoryDocumentService inventoryDocumentService;
 
     @Transactional(readOnly = true)
     public List<AssemblyBomResponse> getBoms(String status) {
@@ -47,6 +50,13 @@ public class AssemblyOrderService {
         return assemblyBomRepository.findAllWithLines(normalizedStatus).stream()
                 .map(this::toBomResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public AssemblyBomResponse getBomById(Long id) {
+        AssemblyBom bom = assemblyBomRepository.findByIdWithLines(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy định mức vật tư"));
+        return toBomResponse(bom);
     }
 
     @Transactional
@@ -71,6 +81,9 @@ public class AssemblyOrderService {
     @Transactional
     public AssemblyBomResponse updateBom(Long id, AssemblyBomRequest request) {
         validateBomRequest(request, false);
+        if (assemblyOrderRepository.existsByBomIdAndStatusIn(id, List.of("DRAFT", "SUBMITTED", "APPROVED"))) {
+            throw new BusinessException(com.duylongtech.backend.constant.SystemMessage.ASM_ORDER_LOCKED.getMessage());
+        }
         AssemblyBom bom = assemblyBomRepository.findByIdWithLines(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy định mức vật tư"));
         Product product = productRepository.findById(request.getProductId())
@@ -147,6 +160,61 @@ public class AssemblyOrderService {
         return toOrderResponse(assemblyOrderRepository.save(order));
     }
 
+    @Transactional
+    public AssemblyOrderResponse updateOrderStatus(Long id, String newStatus) {
+        AssemblyOrder order = findOrderOrThrow(id);
+        String status = normalizeStatus(newStatus, order.getStatus());
+        
+        if ("CANCELLED".equals(status)) {
+            if (inventoryDocumentRepository.existsByReferenceTypeAndReferenceId("ASSEMBLY_ORDER", id)) {
+                throw new BusinessException(com.duylongtech.backend.constant.SystemMessage.ASM_HAS_POSTED_DOCS.getMessage());
+            }
+        }
+        order.setStatus(status);
+        order.setUpdatedAt(LocalDateTime.now());
+        return toOrderResponse(assemblyOrderRepository.save(order));
+    }
+
+    @Transactional
+    public void generateInventoryDocument(Long id, com.duylongtech.backend.dto.request.GenerateInventoryDocumentRequest request, String actor) {
+        AssemblyOrder order = findOrderOrThrow(id);
+        if (!"APPROVED".equals(order.getStatus())) {
+            throw new BusinessException("Chỉ có thể tạo phiếu kho cho lệnh đã APPROVED");
+        }
+        
+        com.duylongtech.backend.dto.request.InventoryDocumentRequest docReq = new com.duylongtech.backend.dto.request.InventoryDocumentRequest();
+        docReq.setWarehouseId(order.getWarehouseId());
+        docReq.setDocDate(LocalDate.now());
+        docReq.setReferenceType("ASSEMBLY_ORDER");
+        docReq.setReferenceId(order.getId());
+        docReq.setIssuePurpose(order.getOrderType().equals(ASSEMBLY) ? "Lắp ráp" : "Tháo dỡ");
+        docReq.setCreatedBy(order.getCreatedBy());
+        docReq.setStatus("DRAFT");
+        
+        List<com.duylongtech.backend.dto.request.InventoryDocumentLineRequest> lines = request.getLines().stream().map(line -> {
+            com.duylongtech.backend.dto.request.InventoryDocumentLineRequest lr = new com.duylongtech.backend.dto.request.InventoryDocumentLineRequest();
+            lr.setVariantId(line.getVariantId());
+            if ("GOODS_ISSUE".equals(request.getDocumentType())) {
+                lr.setQuantityOut(line.getQuantity());
+            } else {
+                lr.setQuantityIn(line.getQuantity());
+            }
+            lr.setUnitCost(BigDecimal.ZERO);
+            lr.setUnitPrice(BigDecimal.ZERO);
+            lr.setSerialNumbers(line.getSerialNumbers());
+            return lr;
+        }).toList();
+        docReq.setLines(lines);
+        
+        if ("GOODS_ISSUE".equals(request.getDocumentType())) {
+            inventoryDocumentService.createExport(docReq);
+        } else if ("GOODS_RECEIPT".equals(request.getDocumentType())) {
+            inventoryDocumentService.createImport(docReq);
+        } else {
+            throw new BusinessException("Loại phiếu không hợp lệ");
+        }
+    }
+
     private AssemblyOrderResponse createOrder(AssemblyOrderRequest request, String orderType) {
         validateRequest(request, true);
         AssemblyBom bom = findBomOrThrow(request.getBomId());
@@ -207,6 +275,7 @@ public class AssemblyOrderService {
         if (request.getLines() == null || request.getLines().isEmpty()) {
             throw new BusinessException("BOM phải có ít nhất một linh kiện");
         }
+        BigDecimal totalCostPct = BigDecimal.ZERO;
         for (int i = 0; i < request.getLines().size(); i++) {
             AssemblyBomLineRequest line = request.getLines().get(i);
             if (line == null || line.getComponentVariantId() == null) {
@@ -215,11 +284,18 @@ public class AssemblyOrderService {
             if (line.getQuantity() == null || line.getQuantity().compareTo(ZERO) <= 0) {
                 throw new BusinessException("Định mức dòng " + (i + 1) + " phải lớn hơn 0");
             }
+            if (line.getCostAllocationPct() == null || line.getCostAllocationPct().compareTo(ZERO) < 0) {
+                throw new BusinessException(com.duylongtech.backend.constant.SystemMessage.ASM_INVALID_COST_PCT.getMessage());
+            }
+            totalCostPct = totalCostPct.add(line.getCostAllocationPct());
             try {
                 line.getQuantity().stripTrailingZeros().intValueExact();
             } catch (ArithmeticException ex) {
                 throw new BusinessException("Định mức dòng " + (i + 1) + " phải là số nguyên");
             }
+        }
+        if (totalCostPct.compareTo(BigDecimal.valueOf(100)) != 0) {
+            throw new BusinessException(com.duylongtech.backend.constant.SystemMessage.ASM_INVALID_COST_PCT.getMessage());
         }
     }
 
@@ -232,6 +308,7 @@ public class AssemblyOrderService {
                     .assemblyBom(bom)
                     .componentVariant(component)
                     .quantity(requestLine.getQuantity())
+                    .costAllocationPct(requestLine.getCostAllocationPct())
                     .note(requestLine.getNote())
                     .build();
             bom.getLines().add(line);
@@ -417,6 +494,7 @@ public class AssemblyOrderService {
                 .componentName(variantName(variant))
                 .unitName(product != null && product.getUnit() != null ? product.getUnit().getName() : null)
                 .quantity(line.getQuantity())
+                .costAllocationPct(line.getCostAllocationPct())
                 .note(line.getNote())
                 .build();
     }
