@@ -2,7 +2,7 @@
 
 autonumber
 
-actor "Manager/Staff" as Actor
+actor "Staff" as Actor
 boundary "AssemblyOrderDetailPage" as Page
 control "AssemblyOrderController" as Controller
 participant "AssemblyOrderService" as Service
@@ -37,7 +37,7 @@ alt Order Not Found
     Controller --> Page: 404 Not Found (Error Message)
     deactivate Controller
     
-    Page --> Actor: Hiển thị thông báo lỗi không tìm thấy lệnh lắp ráp/tháo dỡ
+    Page --> Actor: Displaying an error: The assembly/disassembly command was not found.
 else Order Found
     Repository --> Service: Optional[AssemblyOrder]
     deactivate Repository
@@ -51,7 +51,7 @@ else Order Found
     Controller --> Page: 200 OK (AssemblyOrderDetailDTO)
     deactivate Controller
     
-    Page --> Actor: Hiển thị chi tiết lệnh lắp ráp/tháo dỡ (thông tin chung, danh sách linh kiện, trạng thái)
+    Page --> Actor: Displaying detailed assembly/disassembly commands.
 end
 
 deactivate Page

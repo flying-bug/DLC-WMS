@@ -2,7 +2,7 @@
 
 autonumber
 
-actor "Manager/Staff" as Actor
+actor "Staff" as Actor
 boundary "CreateDisassemblyOrderPage" as Page
 control "AssemblyOrderController" as Controller
 participant "AssemblyOrderService" as Service
@@ -20,7 +20,7 @@ alt Validation Error (e.g., Missing fields, Quantity <= 0)
     Controller -> Controller: validateRequest(request)
     Controller --> Page: 400 Bad Request (Validation Errors)
     deactivate Controller
-    Page --> Actor: Hiển thị lỗi dữ liệu không hợp lệ
+    Page --> Actor: Displaying an error: Invalid data error
 else Valid Request
     Controller -> Service: createDisassemblyOrder(request)
     activate Service
@@ -44,7 +44,7 @@ else Valid Request
         Controller --> Page: 404 Not Found (Error message)
         deactivate Controller
         
-        Page --> Actor: Hiển thị lỗi định mức vật tư không tồn tại
+        Page --> Actor: Displaying an error: The specified material quantity does not exist.
     else BOM Found
         Service -> Service: validateBusinessRules(request, bom)
         note right: Calculate yielded components\nbased on BOM and Quantity
@@ -76,7 +76,7 @@ else Valid Request
         Controller --> Page: 201 Created (DisassemblyOrderDetailDTO)
         deactivate Controller
         
-        Page --> Actor: Hiển thị thông báo tạo lệnh tháo dỡ thành công\nvà chuyển hướng về trang chi tiết
+        Page --> Actor: Displaying a message: The disassembly order was successfully created.
     end
 end
 

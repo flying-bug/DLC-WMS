@@ -141,7 +141,7 @@ const CustomerQuickCreateDrawer = ({ isOpen, editData, onClose, onSaved, onError
                 <div className={styles.drawerHeader}>
                     <h3 className={styles.drawerTitle}>
                         <i className={`fas ${isEditMode ? 'fa-pen' : 'fa-user-plus'}`}></i>
-                        {isEditMode ? 'Chỉnh sửa khách hàng' : 'Thêm nhanh khách hàng'}
+                        {isEditMode ? 'Chỉnh sửa khách hàng' : 'Thêm khách hàng'}
                     </h3>
                     <button id="btn-close-drawer" className={styles.closeBtn} onClick={onClose}>
                         <i className="fas fa-times"></i>

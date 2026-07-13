@@ -1,0 +1,138 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+
+package "Controller Layer" {
+    class ReportController {
+        - reportService: ReportService
+        + getInventoryBalanceReport(search, warehouseId): ApiResponse<List<InventoryBalanceReportResponse>>
+        + getStockLedgerReport(warehouseId, startDate, endDate, search): ApiResponse<List<StockLedgerReportResponse>>
+        + getStockTransferReport(warehouseId, startDate, endDate, search): ApiResponse<List<StockTransferReportResponse>>
+        + getDebtReport(startDate, endDate, search): ApiResponse<List<DebtReportResponse>>
+        + getInventorySummaryReport(warehouseId, startDate, endDate, search): ApiResponse<List<InventorySummaryReportResponse>>
+        + getDashboardMetrics(): ApiResponse<DashboardResponse>
+    }
+}
+
+package "Service Layer" {
+    interface ReportService {
+        + getInventoryBalanceReport(search, warehouseId): List<InventoryBalanceReportResponse>
+        + getStockLedgerReport(warehouseId, startDate, endDate, search): List<StockLedgerReportResponse>
+        + getStockTransferReport(warehouseId, startDate, endDate, search): List<StockTransferReportResponse>
+        + getDebtReport(startDate, endDate, search): List<DebtReportResponse>
+        + getInventorySummaryReport(warehouseId, startDate, endDate, search): List<InventorySummaryReportResponse>
+        + getDashboardMetrics(): DashboardResponse
+    }
+
+    class ReportServiceImpl {
+        - reportRepository: ReportRepository
+        + getInventoryBalanceReport(...)
+        + getStockLedgerReport(...)
+        + getStockTransferReport(...)
+        + getDebtReport(...)
+        + getInventorySummaryReport(...)
+        + getDashboardMetrics(...)
+    }
+}
+
+package "Repository Layer" {
+    class ReportRepository {
+        - jdbcTemplate: JdbcTemplate
+        + getInventoryBalanceReport(search, warehouseId): List<InventoryBalanceReportResponse>
+        + getStockLedgerReport(warehouseId, startDate, endDate, search): List<StockLedgerReportResponse>
+        + getStockTransferReport(warehouseId, startDate, endDate, search): List<StockTransferReportResponse>
+        + getDebtReport(startDate, endDate, search): List<DebtReportResponse>
+        + getInventorySummaryReport(warehouseId, startDate, endDate, search): List<InventorySummaryReportResponse>
+        + getDashboardMetrics(): DashboardResponse
+    }
+}
+
+package "DTOs" {
+    class InventoryBalanceReportResponse {
+        - itemCode: String
+        - itemName: String
+        - unitName: String
+        - warehouseCode: String
+        - warehouseName: String
+        - totalQuantity: BigDecimal
+        - totalValue: BigDecimal
+    }
+
+    class StockLedgerReportResponse {
+        - warehouseName: String
+        - productCode: String
+        - productName: String
+        - description: String
+        - movementAt: LocalDateTime
+        - documentNumber: String
+        - documentType: String
+        - unitName: String
+        - unitPrice: BigDecimal
+        - quantityIn: BigDecimal
+        - quantityOut: BigDecimal
+        - balanceAfter: BigDecimal
+    }
+
+    class StockTransferReportResponse {
+        - documentDate: LocalDate
+        - documentNumber: String
+        - itemCode: String
+        - itemName: String
+        - sourceWarehouse: String
+        - destinationWarehouse: String
+        - unitName: String
+        - quantity: BigDecimal
+        - unitPrice: BigDecimal
+        - amount: BigDecimal
+    }
+
+    class DebtReportResponse {
+        - customerCode: String
+        - customerName: String
+        - openingBalance: BigDecimal
+        - debitIncrease: BigDecimal
+        - creditDecrease: BigDecimal
+        - closingBalance: BigDecimal
+        - debtStatus: String
+    }
+
+    class InventorySummaryReportResponse {
+        - warehouseName: String
+        - productCode: String
+        - productName: String
+        - unitName: String
+        - openingQuantity: BigDecimal
+        - openingValue: BigDecimal
+        - receiptQuantity: BigDecimal
+        - receiptValue: BigDecimal
+        - issueQuantity: BigDecimal
+        - issueValue: BigDecimal
+        - endingQuantity: BigDecimal
+        - endingValue: BigDecimal
+    }
+
+    class DashboardResponse {
+        - lowStockItemsCount: Integer
+        - outOfStockItemsCount: Integer
+        - inventoryTurnoverRatio: BigDecimal
+        - averageDaysInInventory: BigDecimal
+        - totalInventoryValue: BigDecimal
+    }
+}
+
+' Relationships
+ReportController -down-> ReportService
+ReportServiceImpl .up.|> ReportService
+ReportServiceImpl -down-> ReportRepository
+
+ReportRepository -right-> InventoryBalanceReportResponse
+ReportRepository -right-> StockLedgerReportResponse
+ReportRepository -right-> StockTransferReportResponse
+ReportRepository -right-> DebtReportResponse
+ReportRepository -right-> InventorySummaryReportResponse
+ReportRepository -right-> DashboardResponse
+
+@enduml

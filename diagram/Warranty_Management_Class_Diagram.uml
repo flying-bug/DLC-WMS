@@ -1,0 +1,105 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 80
+skinparam ranksep 80
+
+package "Controller Layer" {
+    class WarrantyController {
+        - warrantyService: WarrantyService
+        + getWarranties(keyword, status, fromDate, toDate, page, size): ApiResponse<Page<WarrantyResponse>>
+        + getWarrantyById(id): ApiResponse<WarrantyResponse>
+    }
+
+    class RepairTicketController {
+        - repairTicketService: RepairTicketService
+        + getRepairTickets(keyword, status, fromDate, toDate, page, size): ApiResponse<Page<RepairTicketResponse>>
+        + getRepairTicketById(id): ApiResponse<RepairTicketResponse>
+        + createRepairTicket(request: RepairTicketRequest): ApiResponse<RepairTicketResponse>
+        + updateRepairTicket(id, request: RepairTicketRequest): ApiResponse<RepairTicketResponse>
+    }
+}
+
+package "Service Layer" {
+    interface WarrantyService {
+        + getWarranties(...): Page<WarrantyResponse>
+        + getWarrantyById(id): WarrantyResponse
+    }
+
+    interface RepairTicketService {
+        + getRepairTickets(...): Page<RepairTicketResponse>
+        + getRepairTicketById(id): RepairTicketResponse
+        + createRepairTicket(request: RepairTicketRequest): RepairTicketResponse
+        + updateRepairTicket(id, request: RepairTicketRequest): RepairTicketResponse
+    }
+}
+
+package "Repository Layer" {
+    interface WarrantyRepository {
+        + findById(id): Optional<Warranty>
+        + findAll(...): Page<Warranty>
+    }
+
+    interface RepairTicketRepository {
+        + findById(id): Optional<RepairTicket>
+        + findAll(...): Page<RepairTicket>
+    }
+}
+
+package "Domain Entities" {
+    class Warranty {
+        - id: Long
+        - warrantyCode: String
+        - startDate: LocalDate
+        - endDate: LocalDate
+        - warrantyStatus: String
+    }
+
+    class RepairTicket {
+        - id: Long
+        - repairCode: String
+        - receivedDate: LocalDate
+        - repairStatus: String
+        - repairCost: BigDecimal
+    }
+}
+
+package "DTOs" {
+    class RepairTicketRequest {
+        - warrantyId: Long
+        - issueDescription: String
+        - partnerId: Long
+    }
+
+    class RepairTicketResponse {
+        - id: Long
+        - repairCode: String
+        - repairStatus: String
+        - repairCost: BigDecimal
+    }
+
+    class WarrantyResponse {
+        - id: Long
+        - warrantyCode: String
+        - warrantyStatus: String
+    }
+}
+
+' Relationships
+WarrantyController -down-> WarrantyService
+RepairTicketController -down-> RepairTicketService
+
+WarrantyService -down-> WarrantyRepository
+RepairTicketService -down-> RepairTicketRepository
+
+WarrantyRepository -down-> Warranty
+RepairTicketRepository -down-> RepairTicket
+
+Warranty "1" -right-> "0..*" RepairTicket
+
+WarrantyController -right-> WarrantyResponse
+RepairTicketController -right-> RepairTicketRequest
+RepairTicketController -right-> RepairTicketResponse
+
+@enduml

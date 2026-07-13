@@ -2,7 +2,7 @@
 
 autonumber
 
-actor "Manager/Staff" as Actor
+actor "Staff" as Actor
 boundary "CreateRepairTicketPage" as Page
 control "RepairTicketController" as Controller
 participant "RepairTicketService" as Service
@@ -22,7 +22,7 @@ alt Validation Error
     Controller --> Page: 400 Bad Request (Validation Errors)
     deactivate Controller
     
-    Page --> Actor: Hiển thị lỗi dữ liệu đầu vào không hợp lệ
+    Page --> Actor: Displaying an error: Invalid input data error
 else Valid Request
     Controller -> Service: createRepairTicket(request)
     activate Service
@@ -46,7 +46,7 @@ else Valid Request
         Controller --> Page: 404 Not Found (Error Message)
         deactivate Controller
         
-        Page --> Actor: Hiển thị lỗi không tìm thấy phiếu bảo hành
+        Page --> Actor: Displaying an error: The warranty was not found.
     else Warranty Found
         Service -> Service: validateWarrantyStatus(warranty)
         note right: Ensure warranty is active/approved\nand device is not already in repair
@@ -58,7 +58,7 @@ else Valid Request
             Controller --> Page: 400 Bad Request (Invalid Status)
             deactivate Controller
             
-            Page --> Actor: Hiển thị lỗi thiết bị không đủ điều kiện bảo hành/sửa chữa
+            Page --> Actor: Displaying an error: The device is not eligible for warranty/repair.
         else Valid Warranty Status
             Service -> Service: initializeRepairTicket(RepairTicket)
             note right: Set default status to PENDING
@@ -97,7 +97,7 @@ else Valid Request
             Controller --> Page: 201 Created (RepairTicketDTO)
             deactivate Controller
             
-            Page --> Actor: Hiển thị thông báo tạo phiếu sửa chữa thành công
+            Page --> Actor: Displaying a message: The repair ticket was successfully created.
         end
     end
 end
