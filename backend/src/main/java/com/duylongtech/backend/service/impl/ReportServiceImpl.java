@@ -31,9 +31,9 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public List<StockTransferReportResponse> getStockTransferReport(Long warehouseId, LocalDate startDate, LocalDate endDate, String search) {
-        log.info("Fetching Stock Transfer Report. warehouseId={}, startDate={}, endDate={}, search={}", warehouseId, startDate, endDate, search);
-        return reportRepository.getStockTransferReport(warehouseId, startDate, endDate, search);
+    public List<StockTransferReportResponse> getStockTransferReport(Long warehouseId, LocalDate startDate, LocalDate endDate, String search, String status) {
+        log.info("Fetching Stock Transfer Report. warehouseId={}, startDate={}, endDate={}, search={}, status={}", warehouseId, startDate, endDate, search, status);
+        return reportRepository.getStockTransferReport(warehouseId, startDate, endDate, search, status);
     }
 
     @Override

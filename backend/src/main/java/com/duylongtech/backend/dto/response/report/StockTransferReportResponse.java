@@ -24,5 +24,6 @@ public class StockTransferReportResponse {
     private BigDecimal quantity;
     private BigDecimal unitPrice;
     private BigDecimal amount;
+    private String status;
     private String transactionType;
 }
