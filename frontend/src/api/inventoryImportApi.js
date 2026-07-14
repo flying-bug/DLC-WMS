@@ -30,6 +30,14 @@ export const getSuppliers = (params = {}) => {
   return axiosClient.get('/suppliers', { params });
 };
 
+export const createSupplier = (data) => {
+  return axiosClient.post('/suppliers', data);
+};
+
 export const getWarehouses = (params = {}) => {
   return axiosClient.get('/warehouses', { params });
+};
+
+export const getUsers = (params = {}) => {
+  return axiosClient.get('/users', { params });
 };

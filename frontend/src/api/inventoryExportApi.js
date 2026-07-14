@@ -34,6 +34,18 @@ export const getCustomers = (params = {}) => {
   return axiosClient.get('/customers', { params });
 };
 
+export const getUsers = (params = {}) => {
+  return axiosClient.get('/users', { params });
+};
+
 export const getWarehouses = (params = {}) => {
   return axiosClient.get('/warehouses', { params });
+};
+
+export const createCustomer = (data) => {
+  return axiosClient.post('/customers', data);
+};
+
+export const getInventoryBalance = (params = {}) => {
+  return axiosClient.get('/reports/inventory-balance', { params });
 };

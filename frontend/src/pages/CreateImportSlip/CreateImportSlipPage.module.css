@@ -1,5 +1,38 @@
 .pageBody {
   flex: 1;
+  background-color: #f4f5f8;
+  display: flex;
+  flex-direction: column;
+}
+
+.customerInputWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btnAddCustomer {
+  background-color: #f1f8fe;
+  color: #0075c0;
+  border: 1px solid #b8dcff;
+  border-radius: 4px;
+  padding: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.btnAddCustomer:hover {
+  background-color: #0075c0;
+  color: white;
+}
+
+.pageBody {
+  flex: 1;
   display: flex;
   flex-direction: column;
   background-color: #f4f6f8;
@@ -512,3 +545,14 @@
   cursor: pointer;
 }
 .miniBtnAppend:hover { background-color: #2563eb; }
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f8fafc;
+}
+.textRight {
+  text-align: right !important;
+}
+

@@ -301,6 +301,7 @@
   color: var(--color-text-muted);
   border-bottom: 1px solid var(--color-border);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .table td {
@@ -579,3 +580,175 @@
   text-align: right;
   color: var(--color-primary);
 }
+
+/* Filter Section */
+.filterSection {
+  background: var(--color-white);
+  padding: 16px 20px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  border: 1px solid var(--color-border);
+  gap: 16px;
+}
+
+.filterGroup {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filterLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted-2);
+  text-transform: uppercase;
+}
+
+.filterInput, .filterSelect {
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+  min-width: 200px;
+  color: var(--color-text-strong);
+}
+
+.filterInput:focus, .filterSelect:focus {
+  border-color: var(--color-primary);
+}
+
+.filterActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btnOutline {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-white);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.btnOutline:hover {
+  background-color: var(--color-bg);
+}
+
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.modalContent {
+  background-color: var(--color-white);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.modalHeader {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modalTitle {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--color-text-muted-2);
+  line-height: 1;
+}
+
+.modalClose:hover {
+  color: var(--color-text-strong);
+}
+
+.modalBody {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.paginationNumbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pageNumber {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pageNumber.dots {
+  cursor: default;
+  background-color: transparent;
+}
+
+.pageNumber:not(.dots):not(.active):hover {
+  background-color: var(--color-bg);
+}
+
+.pageNumber.active {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.pageNumber.active:focus {
+  background-color: var(--color-white);
+  color: var(--color-text, #1e293b);
+  border: 1px solid var(--color-primary);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
