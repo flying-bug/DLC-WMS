@@ -1,0 +1,94 @@
+@startuml UC-61_UpdateTransferSlip_Sequence
+
+actor WarehouseStaff as "Warehouse Staff"
+boundary UpdateTransferSlipPage as "UpdateTransferSlipPage"
+control TransferDocumentController as "TransferDocumentController"
+control InventoryDocumentService as "InventoryDocumentService"
+entity InventoryDocumentRepository as "InventoryDocumentRepository"
+database Database as "Database"
+
+WarehouseStaff -> UpdateTransferSlipPage : Modify fields and click "Update"
+activate UpdateTransferSlipPage
+
+UpdateTransferSlipPage -> TransferDocumentController : PUT /api/v1/transfers/{id} (InventoryDocumentRequest)
+activate TransferDocumentController
+
+TransferDocumentController -> InventoryDocumentService : updateTransfer(id, req)
+activate InventoryDocumentService
+
+InventoryDocumentService -> InventoryDocumentRepository : findTransferByIdWithLines(id)
+activate InventoryDocumentRepository
+InventoryDocumentRepository -> Database : Query transfer document
+activate Database
+Database --> InventoryDocumentRepository : InventoryDocument Entity
+deactivate Database
+InventoryDocumentRepository --> InventoryDocumentService : Optional<InventoryDocument>
+deactivate InventoryDocumentRepository
+
+alt Document Not Editable (Status is not DRAFT or SUBMITTED)
+    InventoryDocumentService -> InventoryDocumentService : ensureEditable(doc)
+    InventoryDocumentService --> TransferDocumentController : throws BusinessException ("Chi co the cap nhat phieu DRAFT hoac SUBMITTED")
+    TransferDocumentController -> TransferDocumentController : catch Exception
+    TransferDocumentController -> Database : auditLogService.logEvent(..., "FAILED", "Cập nhật phiếu chuyển kho ... thất bại", ...)
+    activate Database
+    Database --> TransferDocumentController : saved
+    deactivate Database
+    TransferDocumentController --> UpdateTransferSlipPage : 400 Bad Request / INV03 (ApiResponse with error message)
+    UpdateTransferSlipPage --> WarehouseStaff : Display "Invalid inventory document state."
+else Document Code Duplicated (when docCode is changed)
+    InventoryDocumentService -> InventoryDocumentService : ensureEditable(doc)
+    InventoryDocumentService -> InventoryDocumentRepository : existsByDocCodeAndIdNot(requestedCode, id)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query existence with different ID
+    activate Database
+    Database --> InventoryDocumentRepository : true
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : true
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService --> TransferDocumentController : throws BusinessException ("Ma phieu chuyen kho da ton tai")
+    TransferDocumentController -> TransferDocumentController : catch Exception
+    TransferDocumentController -> Database : auditLogService.logEvent(..., "FAILED", "Cập nhật phiếu chuyển kho ... thất bại", ...)
+    activate Database
+    Database --> TransferDocumentController : saved
+    deactivate Database
+    TransferDocumentController --> UpdateTransferSlipPage : 400 Bad Request / INV01 (ApiResponse with error message)
+    UpdateTransferSlipPage --> WarehouseStaff : Display "Inventory document code already exists."
+else Successful Update
+    InventoryDocumentService -> InventoryDocumentService : ensureEditable(doc)
+    InventoryDocumentService -> InventoryDocumentRepository : existsByDocCodeAndIdNot(requestedCode, id)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query existence
+    activate Database
+    Database --> InventoryDocumentRepository : false
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : false
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : updateBaseDocument & reload lines
+    InventoryDocumentService -> InventoryDocumentRepository : save(doc)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Update InventoryDocument & lines
+    activate Database
+    Database --> InventoryDocumentRepository : Saved Entity
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : Saved Entity
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : Map entity to DTO
+    InventoryDocumentService --> TransferDocumentController : InventoryDocumentResponse
+    deactivate InventoryDocumentService
+    
+    TransferDocumentController -> Database : auditLogService.logEvent(..., "SUCCESS", "Cập nhật phiếu chuyển kho ...", ...)
+    activate Database
+    Database --> TransferDocumentController : saved
+    deactivate Database
+    
+    TransferDocumentController --> UpdateTransferSlipPage : 200 OK (ApiResponse with success DTO)
+    deactivate TransferDocumentController
+    
+    UpdateTransferSlipPage --> WarehouseStaff : Display "Update data successfully." and redirect
+    deactivate UpdateTransferSlipPage
+end
+
+@enduml

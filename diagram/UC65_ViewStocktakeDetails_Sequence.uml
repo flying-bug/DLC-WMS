@@ -1,0 +1,51 @@
+@startuml UC-65_ViewStocktakeDetails_Sequence
+
+actor WarehouseStaff as "Warehouse Staff"
+boundary StocktakeDetailPage as "StocktakeDetailPage"
+control StocktakeController as "StocktakeController"
+control StocktakeService as "StocktakeService"
+entity StocktakeRepository as "StocktakeRepository"
+database Database as "Database"
+
+WarehouseStaff -> StocktakeDetailPage : Click on stocktake from history list
+activate StocktakeDetailPage
+
+StocktakeDetailPage -> StocktakeController : GET /api/v1/stocktakes/{id}
+activate StocktakeController
+
+StocktakeController -> StocktakeService : getStocktakeDetail(id)
+activate StocktakeService
+
+StocktakeService -> StocktakeRepository : findStocktakeByIdWithLines(id)
+activate StocktakeRepository
+StocktakeRepository -> Database : Query stocktake by id and fetch lines
+activate Database
+
+alt Document Not Found
+    Database --> StocktakeRepository : null
+    deactivate Database
+    StocktakeRepository --> StocktakeService : empty Optional
+    deactivate StocktakeRepository
+    StocktakeService --> StocktakeController : throws BusinessException ("Khong tim thay phieu kiem ke")
+    StocktakeController --> StocktakeDetailPage : 400 Bad Request / INV02 (ApiResponse with error message)
+    StocktakeDetailPage --> WarehouseStaff : Display "Inventory document not found."
+else Document Found
+    activate Database
+    Database --> StocktakeRepository : Stocktake Entity
+    deactivate Database
+    activate StocktakeRepository
+    StocktakeRepository --> StocktakeService : Optional<Stocktake>
+    deactivate StocktakeRepository
+    
+    StocktakeService -> StocktakeService : Map entity to StocktakeResponse DTO
+    StocktakeService --> StocktakeController : StocktakeResponse
+    deactivate StocktakeService
+    
+    StocktakeController --> StocktakeDetailPage : 200 OK (ApiResponse with success DTO)
+    deactivate StocktakeController
+    
+    StocktakeDetailPage --> WarehouseStaff : Render stocktake details
+    deactivate StocktakeDetailPage
+end
+
+@enduml

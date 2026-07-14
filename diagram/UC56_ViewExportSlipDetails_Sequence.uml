@@ -1,0 +1,51 @@
+@startuml UC-56_ViewExportSlipDetails_Sequence
+
+actor WarehouseStaff as "Warehouse Staff"
+boundary ExportSlipDetailPage as "ExportSlipDetailPage"
+control InventoryDocumentController as "InventoryDocumentController"
+control InventoryDocumentService as "InventoryDocumentService"
+entity InventoryDocumentRepository as "InventoryDocumentRepository"
+database Database as "Database"
+
+WarehouseStaff -> ExportSlipDetailPage : Click on export slip from history list
+activate ExportSlipDetailPage
+
+ExportSlipDetailPage -> InventoryDocumentController : GET /api/v1/exports/{id}
+activate InventoryDocumentController
+
+InventoryDocumentController -> InventoryDocumentService : getExportDetail(id)
+activate InventoryDocumentService
+
+InventoryDocumentService -> InventoryDocumentRepository : findExportByIdWithLines(id)
+activate InventoryDocumentRepository
+InventoryDocumentRepository -> Database : Query export document by id and fetch lines
+activate Database
+
+alt Document Not Found
+    Database --> InventoryDocumentRepository : null
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : empty Optional
+    deactivate InventoryDocumentRepository
+    InventoryDocumentService --> InventoryDocumentController : throws BusinessException ("Khong tim thay phieu xuat kho")
+    InventoryDocumentController --> ExportSlipDetailPage : 400 Bad Request / INV02 (ApiResponse with error message)
+    ExportSlipDetailPage --> WarehouseStaff : Display "Inventory document not found."
+else Document Found
+    activate Database
+    Database --> InventoryDocumentRepository : InventoryDocument Entity
+    deactivate Database
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository --> InventoryDocumentService : Optional<InventoryDocument>
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : Map entity to InventoryDocumentResponse DTO
+    InventoryDocumentService --> InventoryDocumentController : InventoryDocumentResponse
+    deactivate InventoryDocumentService
+    
+    InventoryDocumentController --> ExportSlipDetailPage : 200 OK (ApiResponse with success DTO)
+    deactivate InventoryDocumentController
+    
+    ExportSlipDetailPage --> WarehouseStaff : Render export slip details
+    deactivate ExportSlipDetailPage
+end
+
+@enduml

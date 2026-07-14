@@ -1,0 +1,49 @@
+@startuml UC-54_ViewExportHistoryList_Sequence
+
+actor WarehouseStaff as "Warehouse Staff"
+boundary ExportHistoryPage as "ExportHistoryPage"
+control InventoryDocumentController as "InventoryDocumentController"
+control InventoryDocumentService as "InventoryDocumentService"
+entity InventoryDocumentRepository as "InventoryDocumentRepository"
+database Database as "Database"
+
+WarehouseStaff -> ExportHistoryPage : Open page or apply filters and click Search
+activate ExportHistoryPage
+
+ExportHistoryPage -> InventoryDocumentController : GET /api/v1/exports/history\n(docCode, fromDate, toDate, status, warehouseId)
+activate InventoryDocumentController
+
+InventoryDocumentController -> InventoryDocumentService : getExportHistory(docCode, fromDate, toDate, status, warehouseId)
+activate InventoryDocumentService
+
+alt No filters applied
+    InventoryDocumentService -> InventoryDocumentRepository : findAllExports()
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query all export documents
+    activate Database
+    Database --> InventoryDocumentRepository : List of InventoryDocuments
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : List of InventoryDocuments
+    deactivate InventoryDocumentRepository
+else Filters applied
+    InventoryDocumentService -> InventoryDocumentRepository : searchExports(...)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Search export documents by filters
+    activate Database
+    Database --> InventoryDocumentRepository : List of matched InventoryDocuments
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : List of matched InventoryDocuments
+    deactivate InventoryDocumentRepository
+end
+
+InventoryDocumentService -> InventoryDocumentService : Map entities to InventoryDocumentResponse DTOs
+InventoryDocumentService --> InventoryDocumentController : List of InventoryDocumentResponse
+deactivate InventoryDocumentService
+
+InventoryDocumentController --> ExportHistoryPage : 200 OK (ApiResponse with success list)
+deactivate InventoryDocumentController
+
+ExportHistoryPage --> WarehouseStaff : Display export history list
+deactivate ExportHistoryPage
+
+@enduml

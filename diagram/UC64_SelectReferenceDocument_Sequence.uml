@@ -1,0 +1,83 @@
+@startuml UC-64_SelectReferenceDocument_Sequence
+
+actor WarehouseStaff as "Warehouse Staff"
+boundary CreateStocktakePage as "CreateStocktakePage"
+boundary SelectRefDocModal as "SelectRefDocModal"
+control StocktakeController as "StocktakeController"
+control StocktakeService as "StocktakeService"
+entity InventoryDocumentRepository as "InventoryDocumentRepository"
+entity InventoryBalanceRepository as "InventoryBalanceRepository"
+database Database as "Database"
+
+WarehouseStaff -> CreateStocktakePage : Click "Select Reference Document"
+activate CreateStocktakePage
+
+CreateStocktakePage -> SelectRefDocModal : Open modal
+activate SelectRefDocModal
+
+WarehouseStaff -> SelectRefDocModal : Enter filters (docType, docCode) and search
+SelectRefDocModal -> StocktakeController : GET /api/v1/stocktakes/reference-documents?type=...&code=...
+activate StocktakeController
+
+StocktakeController -> StocktakeService : getEligibleRefDocs(type, code)
+activate StocktakeService
+
+StocktakeService -> InventoryDocumentRepository : findEligibleRefDocs(type, code)
+activate InventoryDocumentRepository
+InventoryDocumentRepository -> Database : Query documents
+activate Database
+Database --> InventoryDocumentRepository : List of documents
+deactivate Database
+InventoryDocumentRepository --> StocktakeService : List of documents
+deactivate InventoryDocumentRepository
+
+StocktakeService --> StocktakeController : List of RefDocResponse DTOs
+deactivate StocktakeService
+
+StocktakeController --> SelectRefDocModal : 200 OK (ApiResponse with documents list)
+deactivate StocktakeController
+
+SelectRefDocModal --> WarehouseStaff : Display list of documents
+
+WarehouseStaff -> SelectRefDocModal : Select document and confirm
+SelectRefDocModal -> StocktakeController : GET /api/v1/stocktakes/reference-documents/{id}/details?type=...
+activate StocktakeController
+
+StocktakeController -> StocktakeService : getRefDocDetailsForStocktake(id, type)
+activate StocktakeService
+
+StocktakeService -> InventoryDocumentRepository : findByIdWithLines(id)
+activate InventoryDocumentRepository
+InventoryDocumentRepository -> Database : Query document and lines
+activate Database
+Database --> InventoryDocumentRepository : Document with lines
+deactivate Database
+InventoryDocumentRepository --> StocktakeService : Document Entity
+deactivate InventoryDocumentRepository
+
+loop For each line in document
+    StocktakeService -> InventoryBalanceRepository : findByWarehouseAndVariant(warehouseId, variantId)
+    activate InventoryBalanceRepository
+    InventoryBalanceRepository -> Database : Query on-hand quantity
+    activate Database
+    Database --> InventoryBalanceRepository : InventoryBalance Entity
+    deactivate Database
+    InventoryBalanceRepository --> StocktakeService : InventoryBalance Entity
+    deactivate InventoryBalanceRepository
+end
+
+StocktakeService -> StocktakeService : Map lines to StocktakeLineResponse (prefill systemQty = quantityOnHand)
+StocktakeService --> StocktakeController : StocktakePrefillResponse DTO
+deactivate StocktakeService
+
+StocktakeController --> SelectRefDocModal : 200 OK (ApiResponse with prefill data)
+deactivate StocktakeController
+
+SelectRefDocModal --> CreateStocktakePage : Return prefilled lines data
+deactivate SelectRefDocModal
+
+CreateStocktakePage -> CreateStocktakePage : Prefill stocktake lines grid
+CreateStocktakePage --> WarehouseStaff : Render prefilled stocktake form
+deactivate CreateStocktakePage
+
+@enduml
