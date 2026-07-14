@@ -1,0 +1,77 @@
+@startuml
+title Sequence Diagram: UC49 - Delete Unit
+
+actor "Staff" as Actor
+boundary "UnitPage" as Page
+control "UnitController" as Controller
+control "UnitService" as Service
+entity "UnitRepository" as Repository
+database "Database" as Database
+
+Actor -> Page : Click Delete button & Confirm
+activate Page
+
+Page -> Controller : DELETE /api/v1/units/{id}
+activate Controller
+
+alt Missing 'unit:delete' permission
+    Controller --> Page : 403 Forbidden
+    Page --> Actor : Hiển thị thông báo lỗi (Không có quyền truy cập)
+else Valid Permission
+    opt Fetch target unit
+        Controller -> Service : getUnitById(id)
+        activate Service
+        
+        Service -> Repository : findById(id)
+        activate Repository
+        Repository -> Database : SELECT * FROM units WHERE id = ?
+        activate Database
+        Database --> Repository : Result (Unit / Empty)
+        deactivate Database
+        
+        Repository --> Service : Optional<Unit>
+        deactivate Repository
+        
+        Service --> Controller : UnitResponse
+        deactivate Service
+    end
+    
+    Controller -> Service : deleteUnit(id)
+    activate Service
+    
+    Service -> Repository : existsById(id)
+    activate Repository
+    Repository -> Database : SELECT COUNT(*) FROM units WHERE id = ?
+    activate Database
+    Database --> Repository : Result (true / false)
+    deactivate Database
+    
+    Repository --> Service : boolean
+    deactivate Repository
+    
+    alt Unit Not Found
+        Service --> Controller : throw BusinessException(UNIT_NOT_FOUND)
+        Controller --> Page : 400 Bad Request
+        Page --> Actor : Hiển thị thông báo lỗi (Không tìm thấy đơn vị tính)
+    else Unit Exists
+        Service -> Repository : deleteById(id)
+        activate Repository
+        Repository -> Database : DELETE FROM units WHERE id = ?
+        activate Database
+        Database --> Repository : Query OK
+        deactivate Database
+        Repository --> Service : void
+        deactivate Repository
+        
+        Service --> Controller : void
+        deactivate Service
+        
+        Controller --> Page : 204 No Content
+        Page --> Actor : Hiển thị thông báo thành công
+    end
+end
+
+deactivate Controller
+deactivate Page
+
+@enduml

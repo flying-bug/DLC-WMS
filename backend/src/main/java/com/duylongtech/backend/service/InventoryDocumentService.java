@@ -14,15 +14,11 @@ import com.duylongtech.backend.entity.InventoryLedger;
 import com.duylongtech.backend.entity.Product;
 import com.duylongtech.backend.entity.ProductVariant;
 import com.duylongtech.backend.entity.SerialNumber;
+import com.duylongtech.backend.entity.User;
+import com.duylongtech.backend.entity.Partner;
 import com.duylongtech.backend.entity.Warranty;
 import com.duylongtech.backend.exception.BusinessException;
-import com.duylongtech.backend.repository.InventoryBalanceRepository;
-import com.duylongtech.backend.repository.InventoryCostLayerRepository;
-import com.duylongtech.backend.repository.InventoryDocumentRepository;
-import com.duylongtech.backend.repository.InventoryLedgerRepository;
-import com.duylongtech.backend.repository.ProductVariantRepository;
-import com.duylongtech.backend.repository.SerialNumberRepository;
-import com.duylongtech.backend.repository.WarrantyRepository;
+import com.duylongtech.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -603,7 +599,7 @@ public class InventoryDocumentService {
         for (int i = 0; i < lines.size(); i++) {
             InventoryDocumentLineRequest line = lines.get(i);
             if (line.getVariantId() == null || line.getQuantityOut() == null) continue;
-            
+
             BigDecimal qtyToExport = line.getQuantityOut();
             InventoryBalance balance = inventoryBalanceRepository
                     .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), "GOOD")

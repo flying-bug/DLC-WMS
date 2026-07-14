@@ -1,0 +1,59 @@
+@startuml
+title Sequence Diagram: UC46 - View Unit List
+
+actor "Staff" as Actor
+boundary "UnitPage" as Page
+control "UnitControllerController" as Controller
+control "UnitService" as Service
+entity "UnitRepository" as Repository
+database "Database" as Database
+
+Actor -> Page : Access "Unit List" page / Search unit
+activate Page
+
+Page -> Controller : GET /api/v1/units?search={search}&page={page}&size={size}
+activate Controller
+
+alt Missing 'unit:view' permission
+    Controller --> Page : 403 Forbidden
+    Page --> Actor : Hiển thị thông báo lỗi (Không có quyền truy cập)
+else Valid Permission
+    Controller -> Service : getAllUnits(search, pageable)
+    activate Service
+
+    alt search is not null and not empty
+        Service -> Repository : findByNameContainingIgnoreCase(search, pageable)
+        activate Repository
+        
+        Repository -> Database : SELECT * FROM units WHERE name LIKE %search%
+        activate Database
+        Database --> Repository : ResultSet (Page<Unit>)
+        deactivate Database
+        
+        Repository --> Service : Page<Unit>
+        deactivate Repository
+        
+    else search is null or empty
+        Service -> Repository : findAll(pageable)
+        activate Repository
+        
+        Repository -> Database : SELECT * FROM units
+        activate Database
+        Database --> Repository : ResultSet (Page<Unit>)
+        deactivate Database
+        
+        Repository --> Service : Page<Unit>
+        deactivate Repository
+    end
+
+    Service --> Controller : Page<UnitResponse>
+    deactivate Service
+
+    Controller --> Page : 200 OK (Page<UnitResponse>)
+    Page --> Actor : Display unit list
+end
+
+deactivate Controller
+deactivate Page
+
+@enduml
