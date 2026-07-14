@@ -35,7 +35,7 @@ function ExportSlipPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({ docCode: '', fromDate: '', status: '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -68,7 +68,7 @@ function ExportSlipPage() {
 
   const loadSlips = useCallback(async () => {
     setLoading(true);
-    setError('');
+
     try {
       const response = await exportApi.getExportHistory({
         docCode: filters.docCode || undefined,
@@ -80,7 +80,7 @@ function ExportSlipPage() {
       setSelectedSlip(current => data.find(item => item.id === current?.id) || null);
       setSelectedIds([]);
     } catch (err) {
-      showToast('error', err.response?.data?.userMessage || 'Không tải được danh sách phiếu xuất kho');
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Có lỗi xảy ra khi tải dữ liệu');
     } finally {
       setLoading(false);
     }
@@ -132,9 +132,6 @@ function ExportSlipPage() {
     setSelectedIds(current => current.includes(id) ? current.filter(selectedId => selectedId !== id) : [...current, id]);
   };
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filters, slips]);
 
   const totalItems = rows.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -283,10 +280,10 @@ function ExportSlipPage() {
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>Hiển thị</span>
-              <select 
-                className="misa-select" 
-                style={{ width: '70px', height: '32px', padding: '0 8px' }} 
-                value={pageSize} 
+              <select
+                className="misa-select"
+                style={{ width: '70px', height: '32px', padding: '0 8px' }}
+                value={pageSize}
                 onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
               >
                 <option value={10}>10</option>
@@ -296,11 +293,11 @@ function ExportSlipPage() {
               </select>
               <span>trên tổng số {totalItems} bản ghi</span>
             </div>
-            
+
             {totalPages > 1 && (
               <div className={styles.pageControls}>
-                <button 
-                  disabled={currentPage === 1} 
+                <button
+                  disabled={currentPage === 1}
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   className={styles.pageBtn}
                 >
@@ -332,8 +329,8 @@ function ExportSlipPage() {
                         }}
                       />
                     ) : (
-                      <span 
-                        key={idx} 
+                      <span
+                        key={idx}
                         className={`${styles.pageNumber} ${num === '...' ? styles.dots : ''}`}
                         onClick={() => num !== '...' && setCurrentPage(num)}
                       >
@@ -343,8 +340,8 @@ function ExportSlipPage() {
                   ))}
                 </div>
 
-                <button 
-                  disabled={currentPage === totalPages} 
+                <button
+                  disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   className={styles.pageBtn}
                 >

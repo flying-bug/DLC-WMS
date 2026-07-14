@@ -1,4 +1,4 @@
-import React from 'react';
+
 import styles from './ConfirmModal.module.css';
 
 const ConfirmModal = ({ isOpen, title, message, onConfirm, onCancel, confirmText = "Xác nhận", cancelText = "Hủy bỏ", isDanger = false }) => {

@@ -132,9 +132,7 @@ function ImportHistoryPage() {
     setSelectedIds(current => current.includes(id) ? current.filter(selectedId => selectedId !== id) : [...current, id]);
   };
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filters, slips]);
+
 
   const totalItems = rows.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -442,32 +440,7 @@ function ImportHistoryPage() {
                   <tbody>
                     {(selectedSlip.lines || []).map((line, index) => {
                       const product = productById.get(line.variantId);
-                    
-  const getPageNumbers = () => {
-    const pages = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      if (currentPage <= 4) {
-        for (let i = 1; i <= 5; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 3) {
-        pages.push(1);
-        pages.push('...');
-        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
-      } else {
-        pages.push(1);
-        pages.push('...');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
-      }
-    }
-    return pages;
-  };
-
-  return (
+                      return (
                         <tr key={line.id || index}>
                           <td>{index + 1}</td>
                           <td className={styles.textBlue}>{product?.sku || `SKU #${line.variantId}`}</td>

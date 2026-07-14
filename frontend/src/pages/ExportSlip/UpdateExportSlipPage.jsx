@@ -382,7 +382,6 @@ function UpdateExportSlipPage() {
       return showToast('error', 'Vui lòng điền đầy đủ thông tin bắt buộc.');
     }
     setSaving(true);
-    let createdId = null;
     try {
       await exportApi.updateExportSlip(id, buildPayload(status));
       if (shouldPost) {
@@ -413,203 +412,203 @@ function UpdateExportSlipPage() {
         ) : (
           <>
 
-        <div className={styles.topSection}>
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <i className="bi bi-person-fill"></i> Thông tin chung
-            </div>
-            <div className={styles.cardBody}>
-              <div className="misa-form-row">
-                <div className="misa-form-group" style={{ flex: '0 0 35%' }}>
-                  <label className="misa-label">Mã KH <span className="required">*</span></label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <div style={{ flex: 1 }}>
+            <div className={styles.topSection}>
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <i className="bi bi-person-fill"></i> Thông tin chung
+                </div>
+                <div className={styles.cardBody}>
+                  <div className="misa-form-row">
+                    <div className="misa-form-group" style={{ flex: '0 0 35%' }}>
+                      <label className="misa-label">Mã KH <span className="required">*</span></label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ flex: 1 }}>
+                          <Select
+                            options={customers.map(c => ({ value: c.id, label: c.code }))}
+                            value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).code } : null}
+                            onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
+                            placeholder="Chọn khách hàng"
+                            isClearable
+                            styles={customSelectStyles}
+                          />
+                        </div>
+                        <button type="button" onClick={() => setShowPartnerModal(true)} style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <i className="bi bi-plus" style={{ fontSize: '18px', color: 'var(--color-primary)' }}></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="misa-form-group" style={{ flex: '0 0 65%' }}>
+                      <label className="misa-label">Tên Khách hàng</label>
+                      <input type="text" className="misa-input" readOnly value={customers.find(s => String(s.id) === String(form.partnerId))?.name || ''} style={{ backgroundColor: '#f3f4f6' }} />
+                    </div>
+                  </div>
+
+                  <div className="misa-form-group" style={{ marginTop: '12px' }}>
+                    <label className="misa-label">Địa chỉ khách hàng</label>
+                    <input type="text" className="misa-input" readOnly value={customers.find(s => String(s.id) === String(form.partnerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} placeholder="Tự động điền theo Mã KH" />
+                  </div>
+
+                  <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                      <label className="misa-label">Kho xuất <span className="required">*</span></label>
                       <Select
-                        options={customers.map(c => ({ value: c.id, label: c.code }))}
-                        value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).code } : null}
-                        onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
-                        placeholder="Chọn khách hàng"
+                        options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
+                        value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
+                        onChange={(selected) => handleFormChange('warehouseId', selected ? selected.value : '')}
+                        placeholder="Chọn kho"
                         isClearable
                         styles={customSelectStyles}
                       />
                     </div>
-                    <button type="button" onClick={() => setShowPartnerModal(true)} style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <i className="bi bi-plus" style={{ fontSize: '18px', color: 'var(--color-primary)' }}></i>
-                    </button>
+                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                      <label className="misa-label">Nhân viên xuất hàng</label>
+                      <input
+                        list="export-staff-list"
+                        className="misa-input"
+                        value={form.salespersonName || ''}
+                        onChange={(e) => handleFormChange('salespersonName', e.target.value)}
+                        placeholder="Nhập hoặc chọn tên nhân viên"
+                      />
+                      <datalist id="export-staff-list">
+                        {users.map(user => <option key={user.id} value={user.fullName || user.username} />)}
+                      </datalist>
+                    </div>
+                  </div>
+
+                  <div className="misa-form-group" style={{ marginTop: '12px' }}>
+                    <label className="misa-label">Ghi chú</label>
+                    <input className="misa-input" value={form.note} onChange={(event) => handleFormChange('note', event.target.value)} placeholder="Nhập ghi chú" />
+                  </div>
+
+
+                </div>
+              </div>
+
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <i className="bi bi-truck"></i> Thông tin người nhận
+                </div>
+                <div className={styles.cardBody}>
+                  <div className="misa-form-row">
+                    <div className="misa-form-group">
+                      <label className="misa-label">Họ tên người nhận</label>
+                      <input className="misa-input" value={form.receiverName} onChange={(event) => handleFormChange('receiverName', event.target.value)} placeholder="Tên người nhận hàng" />
+                    </div>
+                    <div className="misa-form-group">
+                      <label className="misa-label">Số điện thoại</label>
+                      <input className="misa-input" value={form.receiverPhone} onChange={(event) => handleFormChange('receiverPhone', event.target.value)} placeholder="SĐT người nhận" />
+                    </div>
+                  </div>
+                  <div className="misa-form-group" style={{ marginTop: '12px' }}>
+                    <label className="misa-label">Địa chỉ nhận hàng <span className="required">*</span></label>
+                    <input className="misa-input" value={form.receiverAddress} onChange={(event) => handleFormChange('receiverAddress', event.target.value)} placeholder="Địa chỉ giao hàng" />
                   </div>
                 </div>
-                <div className="misa-form-group" style={{ flex: '0 0 65%' }}>
-                  <label className="misa-label">Tên Khách hàng</label>
-                  <input type="text" className="misa-input" readOnly value={customers.find(s => String(s.id) === String(form.partnerId))?.name || ''} style={{ backgroundColor: '#f3f4f6' }} />
+              </div>
+
+              <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                  <i className="bi bi-file-earmark-text-fill"></i> Thông tin chứng từ
+                </div>
+                <div className={styles.cardBody}>
+                  <div className="misa-form-group" style={{ marginBottom: '16px' }}>
+                    <label className="misa-label">Ngày ghi nhận <span className="required">*</span></label>
+                    <input type="date" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
+                  </div>
+
+                  <div className="misa-form-group" style={{ marginBottom: '16px' }}>
+                    <label className="misa-label">Số phiếu</label>
+                    <input className="misa-input" placeholder="Để trống để hệ thống tự sinh" value={form.docCode} onChange={(event) => handleFormChange('docCode', event.target.value)} />
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                <label className="misa-label">Địa chỉ khách hàng</label>
-                <input type="text" className="misa-input" readOnly value={customers.find(s => String(s.id) === String(form.partnerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} placeholder="Tự động điền theo Mã KH" />
-              </div>
-
-              <div className="misa-form-row" style={{ marginTop: '12px' }}>
-                <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                  <label className="misa-label">Kho xuất <span className="required">*</span></label>
-                  <Select
-                    options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
-                    value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
-                    onChange={(selected) => handleFormChange('warehouseId', selected ? selected.value : '')}
-                    placeholder="Chọn kho"
-                    isClearable
-                    styles={customSelectStyles}
-                  />
+            <div className={styles.card}>
+              <div className={styles.scanPanel}>
+                <div>
+                  <div className={styles.scanTitle}>Scan Product / Serial</div>
+                  <div className={styles.scanHint}>Quét serial cho hàng có serial, hoặc barcode/SKU cho hàng thường.</div>
                 </div>
-                <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                  <label className="misa-label">Nhân viên xuất hàng</label>
-                  <input
-                    list="export-staff-list"
-                    className="misa-input"
-                    value={form.salespersonName || ''}
-                    onChange={(e) => handleFormChange('salespersonName', e.target.value)}
-                    placeholder="Nhập hoặc chọn tên nhân viên"
-                  />
-                  <datalist id="export-staff-list">
-                    {users.map(user => <option key={user.id} value={user.fullName || user.username} />)}
-                  </datalist>
-                </div>
+                <form className={styles.scanForm} onSubmit={handleScanSubmit}>
+                  <div className={styles.scanInputWrap}>
+                    <i className="bi bi-upc-scan"></i>
+                    <input
+                      className="misa-input"
+                      style={{ paddingLeft: '32px', height: '34px' }}
+                      value={scanCode}
+                      onChange={(event) => setScanCode(event.target.value)}
+                      placeholder="Đặt con trỏ vào đây rồi quét mã"
+                      disabled={scanLoading}
+                    />
+                  </div>
+                  <button className={styles.btnAddRow} type="submit" disabled={scanLoading}>
+                    {scanLoading ? 'Đang quét...' : 'Thêm mã'}
+                  </button>
+                </form>
               </div>
 
-              <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                <label className="misa-label">Ghi chú</label>
-                <input className="misa-input" value={form.note} onChange={(event) => handleFormChange('note', event.target.value)} placeholder="Nhập ghi chú" />
+              <div className={styles.tableHeaderRow}>
+                <div className={styles.tableTitle}>Bảng hàng hóa</div>
               </div>
 
-
-            </div>
-          </div>
-
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <i className="bi bi-truck"></i> Thông tin người nhận
-            </div>
-            <div className={styles.cardBody}>
-              <div className="misa-form-row">
-                <div className="misa-form-group">
-                  <label className="misa-label">Họ tên người nhận</label>
-                  <input className="misa-input" value={form.receiverName} onChange={(event) => handleFormChange('receiverName', event.target.value)} placeholder="Tên người nhận hàng" />
-                </div>
-                <div className="misa-form-group">
-                  <label className="misa-label">Số điện thoại</label>
-                  <input className="misa-input" value={form.receiverPhone} onChange={(event) => handleFormChange('receiverPhone', event.target.value)} placeholder="SĐT người nhận" />
-                </div>
-              </div>
-              <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                <label className="misa-label">Địa chỉ nhận hàng <span className="required">*</span></label>
-                <input className="misa-input" value={form.receiverAddress} onChange={(event) => handleFormChange('receiverAddress', event.target.value)} placeholder="Địa chỉ giao hàng" />
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <i className="bi bi-file-earmark-text-fill"></i> Thông tin chứng từ
-            </div>
-            <div className={styles.cardBody}>
-              <div className="misa-form-group" style={{ marginBottom: '16px' }}>
-                <label className="misa-label">Ngày ghi nhận <span className="required">*</span></label>
-                <input type="date" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
-              </div>
-
-              <div className="misa-form-group" style={{ marginBottom: '16px' }}>
-                <label className="misa-label">Số phiếu</label>
-                <input className="misa-input" placeholder="Để trống để hệ thống tự sinh" value={form.docCode} onChange={(event) => handleFormChange('docCode', event.target.value)} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.card}>
-          <div className={styles.scanPanel}>
-            <div>
-              <div className={styles.scanTitle}>Scan Product / Serial</div>
-              <div className={styles.scanHint}>Quét serial cho hàng có serial, hoặc barcode/SKU cho hàng thường.</div>
-            </div>
-            <form className={styles.scanForm} onSubmit={handleScanSubmit}>
-              <div className={styles.scanInputWrap}>
-                <i className="bi bi-upc-scan"></i>
-                <input
-                  className="misa-input"
-                  style={{ paddingLeft: '32px', height: '34px' }}
-                  value={scanCode}
-                  onChange={(event) => setScanCode(event.target.value)}
-                  placeholder="Đặt con trỏ vào đây rồi quét mã"
-                  disabled={scanLoading}
-                />
-              </div>
-              <button className={styles.btnAddRow} type="submit" disabled={scanLoading}>
-                {scanLoading ? 'Đang quét...' : 'Thêm mã'}
-              </button>
-            </form>
-          </div>
-
-          <div className={styles.tableHeaderRow}>
-            <div className={styles.tableTitle}>Bảng hàng hóa</div>
-          </div>
-
-          <div className={styles.tableContainer}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={{ width: '50px', textAlign: 'center' }}>STT</th>
-                  <th style={{ width: '18%' }}>Mã hàng</th>
-                  <th style={{ width: '22%' }}>Tên hàng</th>
-                  <th style={{ width: '8%' }}>ĐVT</th>
-                  <th style={{ width: '8%' }} className={styles.textCenter}>Tồn kho</th>
-                  <th style={{ width: '12%' }} className={styles.textRight}>Số lượng</th>
-                  <th style={{ width: '15%' }} className={styles.textRight}>Đơn giá</th>
-                  <th style={{ width: '15%' }} className={styles.textRight}>Thành tiền</th>
-                  <th style={{ width: '50px', textAlign: 'center' }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, index) => {
-                  const product = productById.get(String(item.variantId));
-                  return (
-                    <tr key={item.localId}>
-                      <td className={styles.textCenter}>{index + 1}</td>
-                      <td>
-                        <Select
-                          options={products.map(p => ({ value: p.id, label: p.sku }))}
-                          value={products.find(p => String(p.id) === String(item.variantId)) ? { value: item.variantId, label: products.find(p => String(p.id) === String(item.variantId)).sku } : null}
-                          onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.value : '')}
-                          placeholder="Chọn hàng"
-                          isClearable
-                          styles={customSelectStyles}
-                        />
-                      </td>
-                      <td>
-                        {variantLabel(product)}
-                      </td>
-                      <td>
-                        {product?.unitName || ''}
-                        {item.serialNumberId && <div className={styles.serialTag}>{item.scannedCode}</div>}
-                      </td>
-                      <td className={styles.textCenter} style={{ fontWeight: '600', color: '#0052cc' }}>
-                        {product ? (inventoryBalances.find(b => String(b.itemCode) === String(product?.productCode) || String(b.itemCode) === String(product?.sku))?.totalQuantity || 0) : ''}
-                      </td>
-                      <td className={styles.textRight}>
-                        <input type="number" min="0" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
-                      </td>
-                      <td className={styles.textRight}>
-                        <input type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} />
-                      </td>
-                      <td className={`${styles.textRight} ${styles.textBlue}`}>{money(Number(item.quantity || 0) * Number(item.price || 0))}</td>
-                      <td className={styles.textCenter}>
-                        <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)}><i className="bi bi-trash"></i></button>
-                      </td>
+              <div className={styles.tableContainer}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '50px', textAlign: 'center' }}>STT</th>
+                      <th style={{ width: '18%' }}>Mã hàng</th>
+                      <th style={{ width: '22%' }}>Tên hàng</th>
+                      <th style={{ width: '8%' }}>ĐVT</th>
+                      <th style={{ width: '8%' }} className={styles.textCenter}>Tồn kho</th>
+                      <th style={{ width: '12%' }} className={styles.textRight}>Số lượng</th>
+                      <th style={{ width: '15%' }} className={styles.textRight}>Đơn giá</th>
+                      <th style={{ width: '15%' }} className={styles.textRight}>Thành tiền</th>
+                      <th style={{ width: '50px', textAlign: 'center' }}></th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {items.map((item, index) => {
+                      const product = productById.get(String(item.variantId));
+                      return (
+                        <tr key={item.localId}>
+                          <td className={styles.textCenter}>{index + 1}</td>
+                          <td>
+                            <Select
+                              options={products.map(p => ({ value: p.id, label: p.sku }))}
+                              value={products.find(p => String(p.id) === String(item.variantId)) ? { value: item.variantId, label: products.find(p => String(p.id) === String(item.variantId)).sku } : null}
+                              onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.value : '')}
+                              placeholder="Chọn hàng"
+                              isClearable
+                              styles={customSelectStyles}
+                            />
+                          </td>
+                          <td>
+                            {variantLabel(product)}
+                          </td>
+                          <td>
+                            {product?.unitName || ''}
+                            {item.serialNumberId && <div className={styles.serialTag}>{item.scannedCode}</div>}
+                          </td>
+                          <td className={styles.textCenter} style={{ fontWeight: '600', color: '#0052cc' }}>
+                            {product ? (inventoryBalances.find(b => String(b.itemCode) === String(product?.productCode) || String(b.itemCode) === String(product?.sku))?.totalQuantity || 0) : ''}
+                          </td>
+                          <td className={styles.textRight}>
+                            <input type="number" min="0" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
+                          </td>
+                          <td className={styles.textRight}>
+                            <input type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} />
+                          </td>
+                          <td className={`${styles.textRight} ${styles.textBlue}`}>{money(Number(item.quantity || 0) * Number(item.price || 0))}</td>
+                          <td className={styles.textCenter}>
+                            <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)}><i className="bi bi-trash"></i></button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
               <div className={styles.tableFooter}>
                 <div className={styles.summaryBox}>
@@ -628,9 +627,9 @@ function UpdateExportSlipPage() {
                   <i className="bi bi-plus-circle"></i> Thêm dòng mới
                 </button>
               </div>
-        </div>
-      </>
-      )}</div>
+            </div>
+          </>
+        )}</div>
 
       <div className={styles.bottomBar}>
         <button className="btn-misa-cancel" onClick={() => navigate('/export-slips')}>
