@@ -1,7 +1,7 @@
 @startuml
 title Sequence Diagram: UC09 - Create Account
 
-actor "Admin/Manager" as User
+actor "Admin" as User
 boundary "CreateUserPage" as Page
 control "UserController" as Controller
 control "UserService" as Service

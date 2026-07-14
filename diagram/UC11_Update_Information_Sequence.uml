@@ -1,7 +1,7 @@
 @startuml
 title Sequence Diagram: UC11 - Update Information
 
-actor "Admin/Manager" as User
+actor "Admin" as User
 boundary "EditUserPage" as Page
 control "UserController" as Controller
 control "UserService" as Service

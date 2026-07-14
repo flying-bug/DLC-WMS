@@ -120,14 +120,14 @@ const AdminLayout = ({ children }) => {
                             Quy trình
                         </button>
                         <button
-                            className={`${styles.tab} ${currentPath === '/import-history' ? styles.activeTab : ''}`}
+                            className={`${styles.tab} ${(currentPath.startsWith('/import-history') || currentPath.startsWith('/import-slips/')) ? styles.activeTab : ''}`}
                             onClick={() => navigate('/import-history')}
                             type="button"
                         >
                             Nhập kho
                         </button>
                         <button
-                            className={`${styles.tab} ${currentPath === '/export-slips' ? styles.activeTab : ''}`}
+                            className={`${styles.tab} ${currentPath.startsWith('/export-slips') ? styles.activeTab : ''}`}
                             onClick={() => navigate('/export-slips')}
                             type="button"
                         >

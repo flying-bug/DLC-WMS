@@ -1,7 +1,7 @@
 @startuml
 title Sequence Diagram: UC14 - View System Audit Logs
 
-actor "Super Admin" as User
+actor "Admin" as User
 boundary "AuditLogsPage" as Page
 control "AuditLogController" as Controller
 control "AuditLogService" as Service

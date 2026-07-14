@@ -13,6 +13,27 @@
   margin-bottom: 24px;
 }
 
+.pageHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.backLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e3f7a;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
 .card {
   background: white;
   border-radius: 8px;
@@ -103,6 +124,32 @@
   appearance: auto;
 }
 
+.customerInputWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btnAddCustomer {
+  background-color: #f1f8fe;
+  color: #0075c0;
+  border: 1px solid #b8dcff;
+  border-radius: 4px;
+  padding: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.btnAddCustomer:hover {
+  background-color: #0075c0;
+  color: white;
+}
+
 .iconBtn {
   background: none;
   border: none;
@@ -151,6 +198,66 @@
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid #e0e0e0;
+}
+
+.scanPanel {
+  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+
+.scanTitle {
+  color: #1e3f7a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.scanHint {
+  color: #667085;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.scanForm {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: min(520px, 100%);
+}
+
+.scanInputWrap {
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  color: #0075c0;
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.scanInput {
+  border: none;
+  color: #333;
+  flex: 1;
+  font-size: 14px;
+  outline: none;
+  padding: 10px 0;
+}
+
+.serialTag {
+  background: #eef6ff;
+  border: 1px solid #b8dcff;
+  border-radius: 4px;
+  color: #1e3f7a;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 6px;
+  padding: 3px 6px;
 }
 
 .tableTitle {
@@ -274,7 +381,7 @@
 .bottomBar {
   position: fixed;
   bottom: 0;
-  left: 250px; /* Adjust based on sidebar width */
+  left: 250px; /* Adjust based on sidebar width, AdminLayout uses 250px sidebar */
   right: 0;
   height: 70px;
   background: white;
@@ -286,6 +393,8 @@
   box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
   z-index: 10;
 }
+
+/* Adjust if SuperAdminLayout has no sidebar or different width, but we use AdminLayout */
 
 .attachmentBtn {
   background: none;
@@ -402,3 +511,53 @@
   cursor: not-allowed;
   opacity: 0.65;
 }
+
+@media (max-width: 900px) {
+  .scanPanel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scanForm {
+    min-width: 0;
+  }
+}
+
+.tableActions {
+  padding: 16px;
+  display: flex;
+  gap: 24px;
+  background: white;
+}
+
+.actionLink {
+  color: #3b82f6;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.actionLink:hover {
+  background-color: #eff6ff;
+  text-decoration: none;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f8fafc;
+}
+.textRight {
+  text-align: right !important;
+}
+

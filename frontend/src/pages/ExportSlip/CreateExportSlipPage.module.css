@@ -13,6 +13,27 @@
   margin-bottom: 24px;
 }
 
+.pageHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.backLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e3f7a;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
 .card {
   background: white;
   border-radius: 8px;
@@ -101,6 +122,32 @@
   background: transparent;
   color: #333;
   appearance: auto;
+}
+
+.customerInputWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btnAddCustomer {
+  background-color: #f1f8fe;
+  color: #0075c0;
+  border: 1px solid #b8dcff;
+  border-radius: 4px;
+  padding: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.btnAddCustomer:hover {
+  background-color: #0075c0;
+  color: white;
 }
 
 .iconBtn {
@@ -475,3 +522,42 @@
     min-width: 0;
   }
 }
+
+.tableActions {
+  padding: 16px;
+  display: flex;
+  gap: 24px;
+  background: white;
+}
+
+.actionLink {
+  color: #3b82f6;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.actionLink:hover {
+  background-color: #eff6ff;
+  text-decoration: none;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f8fafc;
+}
+.textRight {
+  text-align: right !important;
+}
+

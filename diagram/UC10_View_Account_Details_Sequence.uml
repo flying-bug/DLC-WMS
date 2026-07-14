@@ -1,7 +1,7 @@
 @startuml
 title Sequence Diagram: UC10 - View Account Details
 
-actor "Admin/Manager" as User
+actor "Admin" as User
 boundary "UserDetailPage" as Page
 control "UserController" as Controller
 control "UserService" as Service

@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
 import { exportToExcel } from '../../utils/excelExport';
+import Toast from '../../components/ui/Toast/Toast';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './ExportSlipPage.module.css';
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
-  SUBMITTED: { label: 'Chờ duyệt', code: 'warning' },
   APPROVED: { label: 'Đã duyệt', code: 'success' },
   POSTED: { label: 'Hoàn thành', code: 'success' },
   CANCELLED: { label: 'Đã hủy', code: 'danger' },
@@ -34,7 +35,14 @@ function ExportSlipPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({ docCode: '', fromDate: '', status: '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+
+  const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [confirmPost, setConfirmPost] = useState(false);
+
+  const showToast = (type, message) => setToast({ isVisible: true, type, message });
+  const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
   const warehouseById = useMemo(() => new Map(warehouses.map(item => [item.id, item])), [warehouses]);
   const productById = useMemo(() => new Map(products.map(item => [item.id, item])), [products]);
@@ -60,7 +68,7 @@ function ExportSlipPage() {
 
   const loadSlips = useCallback(async () => {
     setLoading(true);
-    setError('');
+
     try {
       const response = await exportApi.getExportHistory({
         docCode: filters.docCode || undefined,
@@ -69,10 +77,10 @@ function ExportSlipPage() {
       });
       const data = unwrap(response) || [];
       setSlips(data);
-      setSelectedSlip(current => data.find(item => item.id === current?.id) || data[0] || null);
+      setSelectedSlip(current => data.find(item => item.id === current?.id) || null);
       setSelectedIds([]);
     } catch (err) {
-      setError(err.response?.data?.userMessage || 'Không tải được danh sách phiếu xuất kho');
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Có lỗi xảy ra khi tải dữ liệu');
     } finally {
       setLoading(false);
     }
@@ -115,13 +123,43 @@ function ExportSlipPage() {
     exportToExcel(headers, data, 'Danh_sach_phieu_xuat_kho');
   };
 
-  const toggleAll = (event) => {
-    setSelectedIds(event.target.checked ? rows.map(row => row.id) : []);
+  const handleSelectAll = (e) => {
+    setSelectedIds(e.target.checked ? rows.map(row => row.id) : []);
   };
 
-  const toggleRow = (event, id) => {
-    event.stopPropagation();
-    setSelectedIds(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
+  const handleSelectRow = (e, id) => {
+    e.stopPropagation();
+    setSelectedIds(current => current.includes(id) ? current.filter(selectedId => selectedId !== id) : [...current, id]);
+  };
+
+
+  const totalItems = rows.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedRows = rows.slice(startIndex, startIndex + pageSize);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        for (let i = 1; i <= 5; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    return pages;
   };
 
   return (
@@ -137,7 +175,7 @@ function ExportSlipPage() {
         <div className={styles.filterSection}>
           <div className={styles.filterGroup}>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>Tìm kiếm</span>
+              <span className={styles.filterLabel}>TÌM KIẾM</span>
               <input
                 type="text"
                 className={styles.filterInput}
@@ -147,7 +185,7 @@ function ExportSlipPage() {
               />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>Từ ngày</span>
+              <span className={styles.filterLabel}>TỪ NGÀY</span>
               <input
                 type="date"
                 className={styles.filterInput}
@@ -156,7 +194,7 @@ function ExportSlipPage() {
               />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>Trạng thái phiếu</span>
+              <span className={styles.filterLabel}>TÌNH TRẠNG</span>
               <select
                 className={styles.filterSelect}
                 value={filters.status}
@@ -164,13 +202,11 @@ function ExportSlipPage() {
               >
                 <option value="">Tất cả</option>
                 <option value="DRAFT">Lưu tạm</option>
-                <option value="SUBMITTED">Chờ duyệt</option>
                 <option value="POSTED">Hoàn thành</option>
-                <option value="CANCELLED">Đã hủy</option>
               </select>
             </div>
           </div>
-          <div className={styles.pageControls}>
+          <div className={styles.filterActions}>
             <button className={styles.btnOutline} onClick={() => setFilters({ docCode: '', fromDate: '', status: '' })}>
               Làm mới
             </button>
@@ -183,29 +219,27 @@ function ExportSlipPage() {
           </div>
         </div>
 
-        {error && <div className={styles.detailSection} style={{ color: '#b91c1c', marginBottom: 24 }}>{error}</div>}
-
         <div className={styles.tableContainer}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th style={{ width: '40px' }}>
-                  <input type="checkbox" checked={rows.length > 0 && selectedIds.length === rows.length} onChange={toggleAll} />
+                <th style={{ width: '40px', textAlign: 'center' }}>
+                  <input type="checkbox" className={styles.checkbox} checked={rows.length > 0 && selectedIds.length === rows.length} onChange={handleSelectAll} />
                 </th>
-                <th>Ngày hạch toán</th>
-                <th>Số chứng từ</th>
-                <th>Khách hàng</th>
-                <th>Diễn giải</th>
-                <th className={styles.textRight}>Tổng tiền</th>
-                <th>Kho xuất</th>
-                <th>Trạng thái</th>
-                <th className={styles.textCenter}>Thao tác</th>
+                <th style={{ width: '160px' }}>Ngày xuất kho</th>
+                <th style={{ width: '150px' }}>Số chứng từ</th>
+                <th style={{ width: '200px' }}>Khách hàng</th>
+                <th>Ghi chú</th>
+                <th className={styles.textRight} style={{ width: '140px' }}>Tổng tiền</th>
+                <th style={{ width: '140px' }}>Kho xuất</th>
+                <th style={{ width: '140px' }}>Trạng thái</th>
+                <th className={styles.textCenter} style={{ width: '100px' }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              {rows.length > 0 ? rows.map(slip => (
-                <tr key={slip.id} className={selectedSlip?.id === slip.id ? styles.activeRow : ''} onClick={() => setSelectedSlip(slip)}>
-                  <td><input type="checkbox" checked={selectedIds.includes(slip.id)} onChange={(event) => toggleRow(event, slip.id)} onClick={(event) => event.stopPropagation()} /></td>
+              {paginatedRows.length > 0 ? paginatedRows.map(slip => (
+                <tr key={slip.id} className={selectedSlip?.id === slip.id ? styles.activeRow : ''}>
+                  <td style={{ textAlign: 'center' }}><input type="checkbox" className={styles.checkbox} checked={selectedIds.includes(slip.id)} onChange={(event) => handleSelectRow(event, slip.id)} onClick={(event) => event.stopPropagation()} /></td>
                   <td>{slip.date}</td>
                   <td><a href="#" className={styles.link} onClick={(event) => event.preventDefault()}>{slip.docCode}</a></td>
                   <td>{slip.partner}</td>
@@ -213,23 +247,29 @@ function ExportSlipPage() {
                   <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>
                   <td>{slip.warehouse}</td>
                   <td>
-                    <span className={`${styles.badge} ${
-                      slip.statusCode === 'success' ? styles.badgeSuccess :
+                    <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
                       slip.statusCode === 'info' ? styles.badgeInfo :
-                      slip.statusCode === 'warning' ? styles.badgeWarning :
-                      styles.badgeDanger
-                    }`}>
+                        slip.statusCode === 'warning' ? styles.badgeWarning :
+                          styles.badgeDanger
+                      }`}>
                       {slip.statusLabel}
                     </span>
                   </td>
                   <td className={styles.textCenter}>
                     <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(event) => { event.stopPropagation(); setSelectedSlip(slip); }}></i>
-                    <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu xuất kho" onClick={(event) => { event.stopPropagation(); navigate(`/export-slips/${slip.id}/edit`); }}></i>
+                    <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu xuất kho" onClick={(event) => {
+                      event.stopPropagation();
+                      if (slip.status !== 'DRAFT') {
+                        showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm.');
+                      } else {
+                        navigate(`/export-slips/${slip.id}/edit`);
+                      }
+                    }}></i>
                   </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan="8" className={styles.textCenter}>
+                  <td colSpan="9" className={styles.textCenter}>
                     {loading ? 'Đang tải dữ liệu...' : 'Không tìm thấy phiếu xuất nào'}
                   </td>
                 </tr>
@@ -238,92 +278,206 @@ function ExportSlipPage() {
           </table>
 
           <div className={styles.pagination}>
-            <span>Hiển thị {rows.length} bản ghi</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>Hiển thị</span>
+              <select
+                className="misa-select"
+                style={{ width: '70px', height: '32px', padding: '0 8px' }}
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>trên tổng số {totalItems} bản ghi</span>
+            </div>
+
+            {totalPages > 1 && (
+              <div className={styles.pageControls}>
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className={styles.pageBtn}
+                >
+                  <i className="bi bi-chevron-left"></i>
+                  <span>Trước</span>
+                </button>
+
+                <div className={styles.paginationNumbers}>
+                  {getPageNumbers().map((num, idx) => (
+                    num === currentPage ? (
+                      <input
+                        key={idx}
+                        className={`${styles.pageNumber} ${styles.active}`}
+                        style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
+                        defaultValue={num}
+                        title="Nhập số trang và nhấn Enter"
+                        onBlur={(e) => e.target.value = currentPage}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            let p = parseInt(e.target.value, 10);
+                            if (!isNaN(p)) {
+                              p = Math.max(1, Math.min(totalPages, p));
+                              setCurrentPage(p);
+                              e.target.blur();
+                            } else {
+                              e.target.value = currentPage;
+                            }
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span
+                        key={idx}
+                        className={`${styles.pageNumber} ${num === '...' ? styles.dots : ''}`}
+                        onClick={() => num !== '...' && setCurrentPage(num)}
+                      >
+                        {num}
+                      </span>
+                    )
+                  ))}
+                </div>
+
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className={styles.pageBtn}
+                >
+                  <span>Sau</span>
+                  <i className="bi bi-chevron-right"></i>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {selectedSlip && (
-          <div className={styles.detailSection}>
-            <div className={styles.detailHeader}>
-              <i className={`bi bi-receipt ${styles.detailIcon}`}></i>
-              <h2 className={styles.detailTitle}>Chi tiết phiếu xuất kho: {selectedSlip.docCode}</h2>
-            </div>
-
-            <div className={styles.detailGrid}>
-              <div className={styles.detailGroup}>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>Khách hàng</span>
-                  <span className={styles.detailValue}>{customerById.get(selectedSlip.partnerId)?.name || (selectedSlip.partnerId ? `Khách hàng #${selectedSlip.partnerId}` : 'Chưa chọn')}</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>Lý do xuất</span>
-                  <span className={styles.detailValue}>{selectedSlip.note || 'Không có ghi chú'}</span>
-                </div>
-              </div>
-
-              <div className={styles.detailGroup}>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>Diễn giải</span>
-                  <span className={styles.detailValue}>{selectedSlip.note || 'Không có ghi chú'}</span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>Trạng thái</span>
-                  <span className={styles.detailValue}>{STATUS_LABELS[selectedSlip.status]?.label || selectedSlip.status}</span>
+          <div className={styles.modalOverlay} onClick={() => setSelectedSlip(null)}>
+            <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+              <div className={styles.modalHeader}>
+                <h2 className={styles.modalTitle}>
+                  <i className={`bi bi-receipt ${styles.detailIcon}`}></i>
+                  Chi tiết phiếu xuất kho: {selectedSlip.docCode}
+                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {selectedSlip.status === 'DRAFT' && (
+                    <button
+                      onClick={() => setConfirmPost(true)}
+                      className={styles.btnPrimary}
+                      style={{ padding: '6px 12px', fontSize: '13px' }}
+                    >
+                      <i className="bi bi-printer" style={{ marginRight: '6px' }}></i> Ghi sổ
+                    </button>
+                  )}
+                  <button className={styles.modalClose} onClick={() => setSelectedSlip(null)}>&times;</button>
                 </div>
               </div>
 
-              <div className={styles.detailRight}>
-                <div className={styles.detailRightRow}>
-                  <span className={styles.detailRightLabel}>Ngày chứng từ</span>
-                  <span className={styles.detailRightValue}>{formatDate(selectedSlip.docDate)}</span>
+              <div className={styles.modalBody}>
+                <div className={styles.detailGrid}>
+                  <div className={styles.detailGroup} style={{ gridColumn: 'span 2' }}>
+                    <div className={styles.detailItem}>
+                      <span className={styles.detailLabel}>Khách hàng</span>
+                      <span className={styles.detailValue}>{customerById.get(selectedSlip.partnerId)?.name || (selectedSlip.partnerId ? `Khách hàng #${selectedSlip.partnerId}` : 'Chưa chọn')}</span>
+                    </div>
+                    <div className={styles.detailItem}>
+                      <span className={styles.detailLabel}>Lý do xuất</span>
+                      <span className={styles.detailValue}>{selectedSlip.note || 'Không có ghi chú'}</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.detailRight}>
+                    <div className={styles.detailRightRow}>
+                      <span className={styles.detailRightLabel}>Ngày chứng từ</span>
+                      <span className={styles.detailRightValue}>{formatDate(selectedSlip.docDate)}</span>
+                    </div>
+                    <div className={styles.detailRightRow}>
+                      <span className={styles.detailRightLabel}>Kho xuất</span>
+                      <span className={`${styles.detailRightValue} ${styles.textBlue}`}>{warehouseById.get(selectedSlip.warehouseId)?.name || `Kho #${selectedSlip.warehouseId}`}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className={styles.detailRightRow}>
-                  <span className={styles.detailRightLabel}>Kho xuất</span>
-                  <span className={`${styles.detailRightValue} ${styles.textBlue}`}>{warehouseById.get(selectedSlip.warehouseId)?.name || `Kho #${selectedSlip.warehouseId}`}</span>
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table className={styles.detailTable}>
+                    <thead>
+                      <tr>
+                        <th>STT</th>
+                        <th>Mã hàng</th>
+                        <th>Tên hàng</th>
+                        <th>DVT</th>
+                        <th className={styles.textCenter}>Số lượng</th>
+                        <th className={styles.textRight}>Đơn giá</th>
+                        <th className={styles.textRight}>Thành tiền</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(selectedSlip.lines || []).map((line, index) => {
+                        const product = productById.get(line.variantId);
+                        return (
+                          <tr key={line.id || index}>
+                            <td>{index + 1}</td>
+                            <td className={styles.textBlue}>{product?.sku || `SKU #${line.variantId}`}</td>
+                            <td>
+                              {variantLabel(product) || 'Chưa có tên sản phẩm'}
+                              {line.serialNumbers && line.serialNumbers.length > 0 && (
+                                <div style={{ marginTop: '6px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                  {line.serialNumbers.map(serial => (
+                                    <span key={serial} style={{ fontSize: '11px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '2px 6px', color: '#475569' }}>
+                                      <i className="bi bi-upc-scan" style={{ marginRight: '4px' }}></i>
+                                      {serial}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                            <td>{product?.unitName || ''}</td>
+                            <td className={styles.textCenter}>{Number(line.quantityOut || 0).toLocaleString('vi-VN')}</td>
+                            <td className={styles.textRight}>{money(line.unitCost || line.unitPrice)}</td>
+                            <td className={styles.textRight}>{money(line.lineAmount)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <div className={styles.detailRightRow}>
-                  <span className={styles.detailRightLabel}>Nhân viên lập</span>
-                  <span className={styles.detailRightValue}>{selectedSlip.createdBy ? `User #${selectedSlip.createdBy}` : 'Chưa có'}</span>
+
+                <div className={styles.detailFooter}>
+                  <div className={styles.footerTotalLabel}>Tổng cộng hàng xuất:</div>
+                  <div className={styles.footerQty}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</div>
+                  <div className={styles.footerTotalLabel} style={{ flex: 0, whiteSpace: 'nowrap', paddingRight: '16px' }}>Tổng tiền:</div>
+                  <div className={styles.footerMoney}>{money(sumAmount(selectedSlip.lines))}</div>
                 </div>
               </div>
-            </div>
-
-            <table className={styles.detailTable}>
-              <thead>
-                <tr>
-                  <th>Mã hàng</th>
-                  <th>Tên hàng</th>
-                  <th>DVT</th>
-                  <th className={styles.textRight}>Số lượng</th>
-                  <th className={styles.textRight}>Đơn giá</th>
-                  <th className={styles.textRight}>Thành tiền</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(selectedSlip.lines || []).map((line, index) => {
-                  const product = productById.get(line.variantId);
-                  return (
-                    <tr key={line.id || index}>
-                      <td><a href="#" className={styles.link} onClick={(event) => event.preventDefault()}>{product?.sku || `SKU #${line.variantId}`}</a></td>
-                      <td>{variantLabel(product) || 'Chưa có tên sản phẩm'}</td>
-                      <td>{product?.unitName || ''}</td>
-                      <td className={styles.textRight}>{Number(line.quantityOut || 0).toLocaleString('vi-VN')}</td>
-                      <td className={styles.textRight}>{money(line.unitPrice)}</td>
-                      <td className={`${styles.textRight} ${styles.money}`}>{money(line.lineAmount)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            <div className={styles.detailFooter}>
-              <div className={styles.footerTotalLabel}>Tổng cộng:</div>
-              <div className={styles.footerQty}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</div>
-              <div className={styles.footerMoney}>{money(sumAmount(selectedSlip.lines))}</div>
             </div>
           </div>
         )}
+        <ConfirmModal
+          isOpen={confirmPost}
+          title="Xác nhận ghi sổ"
+          message="Bạn có chắc chắn muốn ghi sổ phiếu xuất này không? Thao tác này không thể hoàn tác và sẽ cập nhật lại số lượng hàng hóa trong kho."
+          onConfirm={async () => {
+            setConfirmPost(false);
+            try {
+              await exportApi.postExportSlip(selectedSlip.id);
+              loadSlips();
+              setSelectedSlip(prev => ({ ...prev, status: 'POSTED', statusLabel: STATUS_LABELS['POSTED'].label, statusCode: STATUS_LABELS['POSTED'].code }));
+              showToast('success', 'Ghi sổ phiếu xuất thành công!');
+            } catch (err) {
+              showToast('error', err.response?.data?.userMessage || 'Không thể ghi sổ phiếu xuất kho');
+            }
+          }}
+          onCancel={() => setConfirmPost(false)}
+        />
       </div>
+      <Toast
+        isVisible={toast.isVisible}
+        type={toast.type}
+        message={toast.message}
+        onClose={hideToast}
+      />
     </AdminLayout>
   );
 }

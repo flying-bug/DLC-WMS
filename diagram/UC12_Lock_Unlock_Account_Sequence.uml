@@ -1,7 +1,7 @@
 @startuml
 title Sequence Diagram: UC12 - Lock/Unlock Account
 
-actor "Admin/Manager" as User
+actor "Admin" as User
 boundary "UsersPage" as Page
 control "UserController" as Controller
 control "UserService" as Service
