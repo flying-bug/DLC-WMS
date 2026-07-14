@@ -2,7 +2,7 @@
 
 autonumber
 
-actor "Manager/Staff" as Actor
+actor "Staff" as Actor
 boundary "UpdateAssemblyOrderPage" as Page
 control "AssemblyOrderController" as Controller
 participant "AssemblyOrderService" as Service
@@ -20,7 +20,7 @@ alt Validation Error
     Controller -> Controller: validateRequest(request)
     Controller --> Page: 400 Bad Request (Validation details)
     deactivate Controller
-    Page --> Actor: Hiển thị lỗi dữ liệu không hợp lệ
+    Page --> Actor: Displaying an error: Invalid data error
 else Valid Request
     Controller -> Service: updateAssemblyOrder(id, request)
     activate Service
@@ -44,7 +44,7 @@ else Valid Request
         Controller --> Page: 404 Not Found (Error message)
         deactivate Controller
         
-        Page --> Actor: Hiển thị lỗi không tìm thấy đơn lệnh
+        Page --> Actor: Displaying an error: The assembly/disassembly command was not found.
     else Order Found
         Service -> Service: validateUpdatability(existingOrder)
         note right: Ensure order status is PENDING.\nCannot update COMPLETED/CANCELLED
@@ -53,10 +53,10 @@ else Valid Request
             Service --> Controller: IllegalStateException (Invalid status)
             deactivate Service
             
-            Controller --> Page: 400 Bad Request (Trạng thái không hợp lệ)
+            Controller --> Page: 400 Bad Request (Invalid status)
             deactivate Controller
             
-            Page --> Actor: Hiển thị lỗi không thể cập nhật lệnh đã xử lý
+            Page --> Actor: Displaying an error: The assembly/disassembly command cannot be updated.
         else Can Update
             opt BOM or Quantity changed
                 Service -> BomRepository: findById(request.bomId)
@@ -100,7 +100,7 @@ else Valid Request
             Controller --> Page: 200 OK (AssemblyOrderDetailDTO)
             deactivate Controller
             
-            Page --> Actor: Hiển thị thông báo cập nhật thành công\nvà tải lại chi tiết lệnh
+            Page --> Actor: Displaying a message: The assembly/disassembly command was successfully updated.
         end
     end
 end

@@ -1,0 +1,51 @@
+@startuml UC-60_ViewTransferSlipDetails_Sequence
+
+actor WarehouseStaff as "Warehouse Staff"
+boundary TransferSlipDetailPage as "TransferSlipDetailPage"
+control TransferDocumentController as "TransferDocumentController"
+control InventoryDocumentService as "InventoryDocumentService"
+entity InventoryDocumentRepository as "InventoryDocumentRepository"
+database Database as "Database"
+
+WarehouseStaff -> TransferSlipDetailPage : Click on transfer slip from history list
+activate TransferSlipDetailPage
+
+TransferSlipDetailPage -> TransferDocumentController : GET /api/v1/transfers/{id}
+activate TransferDocumentController
+
+TransferDocumentController -> InventoryDocumentService : getTransferDetail(id)
+activate InventoryDocumentService
+
+InventoryDocumentService -> InventoryDocumentRepository : findTransferByIdWithLines(id)
+activate InventoryDocumentRepository
+InventoryDocumentRepository -> Database : Query transfer document by id and fetch lines
+activate Database
+
+alt Document Not Found
+    Database --> InventoryDocumentRepository : null
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : empty Optional
+    deactivate InventoryDocumentRepository
+    InventoryDocumentService --> TransferDocumentController : throws BusinessException ("Khong tim thay phieu chuyen kho")
+    TransferDocumentController --> TransferSlipDetailPage : 400 Bad Request / INV02 (ApiResponse with error message)
+    TransferSlipDetailPage --> WarehouseStaff : Display "Inventory document not found."
+else Document Found
+    activate Database
+    Database --> InventoryDocumentRepository : InventoryDocument Entity
+    deactivate Database
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository --> InventoryDocumentService : Optional<InventoryDocument>
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : Map entity to InventoryDocumentResponse DTO
+    InventoryDocumentService --> TransferDocumentController : InventoryDocumentResponse
+    deactivate InventoryDocumentService
+    
+    TransferDocumentController --> TransferSlipDetailPage : 200 OK (ApiResponse with success DTO)
+    deactivate TransferDocumentController
+    
+    TransferSlipDetailPage --> WarehouseStaff : Render transfer slip details
+    deactivate TransferSlipDetailPage
+end
+
+@enduml

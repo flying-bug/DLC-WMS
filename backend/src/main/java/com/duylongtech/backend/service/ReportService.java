@@ -12,7 +12,7 @@ public interface ReportService {
     
     List<StockLedgerReportResponse> getStockLedgerReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search);
     
-    List<StockTransferReportResponse> getStockTransferReport(Long warehouseId, LocalDate startDate, LocalDate endDate, String search);
+    List<StockTransferReportResponse> getStockTransferReport(Long warehouseId, LocalDate startDate, LocalDate endDate, String search, String status);
     
     List<DebtReportResponse> getDebtReport(LocalDateTime startDate, LocalDateTime endDate, String search);
     

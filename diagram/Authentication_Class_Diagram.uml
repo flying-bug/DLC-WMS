@@ -1,6 +1,8 @@
 @startuml
 title Class Diagram: Authentication Module
 
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
 package "Controller Layer" {
     class AuthController {
         - authService : AuthService

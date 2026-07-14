@@ -81,4 +81,13 @@ public class InventoryDocument {
 
     @OneToMany(mappedBy = "inventoryDocument", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InventoryDocumentLine> lines = new ArrayList<>();
+
+    @Column(name = "recipient_name", length = 150)
+    private String recipientName;
+
+    @Column(name = "recipient_address", columnDefinition = "TEXT")
+    private String recipientAddress;
+
+    @Column(name = "salesperson_id")
+    private Long salespersonId;
 }

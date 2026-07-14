@@ -1,0 +1,90 @@
+@startuml UC-63_CreateStocktake_Sequence
+
+actor WarehouseStaff as "Warehouse Staff"
+boundary CreateStocktakePage as "CreateStocktakePage"
+control StocktakeController as "StocktakeController"
+control StocktakeService as "StocktakeService"
+entity StocktakeRepository as "StocktakeRepository"
+database Database as "Database"
+
+WarehouseStaff -> CreateStocktakePage : Fill form details and click "Create"
+activate CreateStocktakePage
+
+CreateStocktakePage -> StocktakeController : POST /api/v1/stocktakes/create (StocktakeRequest)
+activate StocktakeController
+
+StocktakeController -> StocktakeService : createStocktake(req)
+activate StocktakeService
+
+alt Validation Fails (missing warehouseId, docDate, or lines empty)
+    StocktakeService --> StocktakeController : throws BusinessException (Validation error)
+    StocktakeController -> StocktakeController : catch Exception
+    StocktakeController -> Database : auditLogService.logEvent(..., "FAILED", "Tạo phiếu kiểm kê thất bại", ...)
+    activate Database
+    Database --> StocktakeController : saved
+    deactivate Database
+    StocktakeController --> CreateStocktakePage : 400 Bad Request (ApiResponse with error message)
+    CreateStocktakePage --> WarehouseStaff : Display error toast
+else Warehouse is Blocked (Another stocktake is active - INV11)
+    StocktakeService -> StocktakeRepository : existsActiveStocktakeByWarehouseId(warehouseId)
+    activate StocktakeRepository
+    StocktakeRepository -> Database : Query active stocktake in warehouse
+    activate Database
+    Database --> StocktakeRepository : true
+    deactivate Database
+    StocktakeRepository --> StocktakeService : true
+    deactivate StocktakeRepository
+    StocktakeService --> StocktakeController : throws BusinessException (INV11: "Kho đang bị khóa...")
+    StocktakeController -> StocktakeController : catch Exception
+    StocktakeController -> Database : auditLogService.logEvent(..., "FAILED", "Tạo phiếu kiểm kê thất bại: Kho bị khóa", ...)
+    activate Database
+    Database --> StocktakeController : saved
+    deactivate Database
+    StocktakeController --> CreateStocktakePage : 400 Bad Request / INV11 (ApiResponse with error message)
+    CreateStocktakePage --> WarehouseStaff : Display "Warehouse is blocked due to an active stocktake."
+else Validation Passes & Warehouse Open
+    StocktakeService -> StocktakeRepository : existsActiveStocktakeByWarehouseId(warehouseId)
+    activate StocktakeRepository
+    StocktakeRepository -> Database : Query active stocktake
+    activate Database
+    Database --> StocktakeRepository : false
+    deactivate Database
+    StocktakeRepository --> StocktakeService : false
+    deactivate StocktakeRepository
+    
+    StocktakeService -> StocktakeRepository : existsByDocCode(docCode)
+    activate StocktakeRepository
+    StocktakeRepository -> Database : Query docCode existence
+    activate Database
+    Database --> StocktakeRepository : false
+    deactivate Database
+    StocktakeRepository --> StocktakeService : false
+    deactivate StocktakeRepository
+    
+    StocktakeService -> StocktakeService : buildStocktake & add lines
+    StocktakeService -> StocktakeRepository : save(stocktake)
+    activate StocktakeRepository
+    StocktakeRepository -> Database : Insert Stocktake & Lines
+    activate Database
+    Database --> StocktakeRepository : Saved Entity
+    deactivate Database
+    StocktakeRepository --> StocktakeService : Saved Entity
+    deactivate StocktakeRepository
+    
+    StocktakeService -> StocktakeService : Map entity to DTO
+    StocktakeService --> StocktakeController : StocktakeResponse
+    deactivate StocktakeService
+    
+    StocktakeController -> Database : auditLogService.logEvent(..., "SUCCESS", "Tạo phiếu kiểm kê [DocCode]", ...)
+    activate Database
+    Database --> StocktakeController : saved
+    deactivate Database
+    
+    StocktakeController --> CreateStocktakePage : 200 OK (ApiResponse with success DTO)
+    deactivate StocktakeController
+    
+    CreateStocktakePage --> WarehouseStaff : Display "Add data successfully." and redirect
+    deactivate CreateStocktakePage
+end
+
+@enduml

@@ -1,0 +1,81 @@
+@startuml UC-51_CreateImportSlip_Sequence
+
+actor Actor
+boundary CreateImportSlipPage as "CreateImportSlipPage"
+control ImportDocumentController as "ImportDocumentController"
+control InventoryDocumentService as "InventoryDocumentService"
+entity InventoryDocumentRepository as "InventoryDocumentRepository"
+database Database as "Database"
+
+Actor -> CreateImportSlipPage : Fill form details and click "Create"
+activate CreateImportSlipPage
+
+CreateImportSlipPage -> ImportDocumentController : POST /api/v1/imports/create (InventoryDocumentRequest)
+activate ImportDocumentController
+
+ImportDocumentController -> InventoryDocumentService : createImport(req)
+activate InventoryDocumentService
+
+alt Validation Fails (missing warehouseId, docDate, lines, or quantityIn <= 0)
+    InventoryDocumentService --> ImportDocumentController : throws BusinessException (Validation error)
+    ImportDocumentController -> ImportDocumentController : catch Exception
+    ImportDocumentController -> Database : auditLogService.logEvent(..., "FAILED", "Tao phieu nhap kho that bai", ...)
+    activate Database
+    Database --> ImportDocumentController : saved
+    deactivate Database
+    ImportDocumentController --> CreateImportSlipPage : 400 Bad Request (ApiResponse with error message)
+    CreateImportSlipPage --> Actor : Display error toast
+else Document Code Duplicated
+    InventoryDocumentService -> InventoryDocumentRepository : existsByDocCode(docCode)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query docCode existence
+    activate Database
+    Database --> InventoryDocumentRepository : true
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : true
+    deactivate InventoryDocumentRepository
+    InventoryDocumentService --> ImportDocumentController : throws BusinessException ("Ma phieu nhap kho da ton tai")
+    ImportDocumentController -> ImportDocumentController : catch Exception
+    ImportDocumentController -> Database : auditLogService.logEvent(..., "FAILED", "Tao phieu nhap kho that bai: ...", ...)
+    activate Database
+    Database --> ImportDocumentController : saved
+    deactivate Database
+    ImportDocumentController --> CreateImportSlipPage : 400 Bad Request / INV01 (ApiResponse with error message)
+    CreateImportSlipPage --> Actor : Display "Inventory document code already exists."
+else Validation Passes & Code Unique
+    InventoryDocumentService -> InventoryDocumentRepository : existsByDocCode(docCode)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query docCode existence
+    activate Database
+    Database --> InventoryDocumentRepository : false
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : false
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : buildBaseDocument & add lines
+    InventoryDocumentService -> InventoryDocumentRepository : save(doc)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Insert InventoryDocument & Lines
+    activate Database
+    Database --> InventoryDocumentRepository : Saved Entity
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : Saved Entity
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : Map entity to DTO
+    InventoryDocumentService --> ImportDocumentController : InventoryDocumentResponse
+    deactivate InventoryDocumentService
+    
+    ImportDocumentController -> Database : auditLogService.logEvent(..., "SUCCESS", "Tao phieu nhap kho [DocCode]", ...)
+    activate Database
+    Database --> ImportDocumentController : saved
+    deactivate Database
+    
+    ImportDocumentController --> CreateImportSlipPage : 200 OK (ApiResponse with success DTO)
+    deactivate ImportDocumentController
+    
+    CreateImportSlipPage --> Actor : Display "Add data successfully." and redirect
+    deactivate CreateImportSlipPage
+end
+
+@enduml
