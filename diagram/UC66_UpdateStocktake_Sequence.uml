@@ -1,0 +1,94 @@
+@startuml UC-66_UpdateStocktake_Sequence
+
+actor WarehouseStaff as "Warehouse Staff"
+boundary UpdateStocktakePage as "UpdateStocktakePage"
+control StocktakeController as "StocktakeController"
+control StocktakeService as "StocktakeService"
+entity StocktakeRepository as "StocktakeRepository"
+database Database as "Database"
+
+WarehouseStaff -> UpdateStocktakePage : Modify fields and click "Update"
+activate UpdateStocktakePage
+
+UpdateStocktakePage -> StocktakeController : PUT /api/v1/stocktakes/{id} (StocktakeRequest)
+activate StocktakeController
+
+StocktakeController -> StocktakeService : updateStocktake(id, req)
+activate StocktakeService
+
+StocktakeService -> StocktakeRepository : findStocktakeByIdWithLines(id)
+activate StocktakeRepository
+StocktakeRepository -> Database : Query stocktake document
+activate Database
+Database --> StocktakeRepository : Stocktake Entity
+deactivate Database
+StocktakeRepository --> StocktakeService : Optional<Stocktake>
+deactivate StocktakeRepository
+
+alt Document Not Editable (Status is not DRAFT or SUBMITTED)
+    StocktakeService -> StocktakeService : ensureEditable(doc)
+    StocktakeService --> StocktakeController : throws BusinessException ("Chi co the cap nhat phieu DRAFT hoac SUBMITTED")
+    StocktakeController -> StocktakeController : catch Exception
+    StocktakeController -> Database : auditLogService.logEvent(..., "FAILED", "Cập nhật phiếu kiểm kê ... thất bại", ...)
+    activate Database
+    Database --> StocktakeController : saved
+    deactivate Database
+    StocktakeController --> UpdateStocktakePage : 400 Bad Request / INV03 (ApiResponse with error message)
+    UpdateStocktakePage --> WarehouseStaff : Display "Invalid inventory document state."
+else Document Code Duplicated (when docCode is changed)
+    StocktakeService -> StocktakeService : ensureEditable(doc)
+    StocktakeService -> StocktakeRepository : existsByDocCodeAndIdNot(requestedCode, id)
+    activate StocktakeRepository
+    StocktakeRepository -> Database : Query existence with different ID
+    activate Database
+    Database --> StocktakeRepository : true
+    deactivate Database
+    StocktakeRepository --> StocktakeService : true
+    deactivate StocktakeRepository
+    
+    StocktakeService --> StocktakeController : throws BusinessException ("Ma phieu kiem ke da ton tai")
+    StocktakeController -> StocktakeController : catch Exception
+    StocktakeController -> Database : auditLogService.logEvent(..., "FAILED", "Cập nhật phiếu kiểm kê ... thất bại", ...)
+    activate Database
+    Database --> StocktakeController : saved
+    deactivate Database
+    StocktakeController --> UpdateStocktakePage : 400 Bad Request / INV01 (ApiResponse with error message)
+    UpdateStocktakePage --> WarehouseStaff : Display "Inventory document code already exists."
+else Successful Update
+    StocktakeService -> StocktakeService : ensureEditable(doc)
+    StocktakeService -> StocktakeRepository : existsByDocCodeAndIdNot(requestedCode, id)
+    activate StocktakeRepository
+    StocktakeRepository -> Database : Query existence
+    activate Database
+    Database --> StocktakeRepository : false
+    deactivate Database
+    StocktakeRepository --> StocktakeService : false
+    deactivate StocktakeRepository
+    
+    StocktakeService -> StocktakeService : updateBaseStocktake & reload lines
+    StocktakeService -> StocktakeRepository : save(doc)
+    activate StocktakeRepository
+    StocktakeRepository -> Database : Update Stocktake & lines
+    activate Database
+    Database --> StocktakeRepository : Saved Entity
+    deactivate Database
+    StocktakeRepository --> StocktakeService : Saved Entity
+    deactivate StocktakeRepository
+    
+    StocktakeService -> StocktakeService : Map entity to DTO
+    StocktakeService --> StocktakeController : StocktakeResponse
+    deactivate StocktakeService
+    
+    StocktakeController -> Database : auditLogService.logEvent(..., "SUCCESS", "Cập nhật phiếu kiểm kê ...", ...)
+    activate Database
+    Database --> StocktakeController : saved
+    deactivate Database
+    
+    StocktakeController --> UpdateStocktakePage : 200 OK (ApiResponse with success DTO)
+    deactivate StocktakeController
+    
+    UpdateStocktakePage --> WarehouseStaff : Display "Update data successfully." and redirect
+    deactivate WarehouseStaff
+end
+
+@enduml

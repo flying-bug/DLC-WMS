@@ -1,0 +1,81 @@
+@startuml UC-59_CreateTransferSlip_Sequence
+
+actor WarehouseStaff as "Warehouse Staff"
+boundary CreateTransferSlipPage as "CreateTransferSlipPage"
+control TransferDocumentController as "TransferDocumentController"
+control InventoryDocumentService as "InventoryDocumentService"
+entity InventoryDocumentRepository as "InventoryDocumentRepository"
+database Database as "Database"
+
+WarehouseStaff -> CreateTransferSlipPage : Fill form details and click "Create"
+activate CreateTransferSlipPage
+
+CreateTransferSlipPage -> TransferDocumentController : POST /api/v1/transfers/create (InventoryDocumentRequest)
+activate TransferDocumentController
+
+TransferDocumentController -> InventoryDocumentService : createTransfer(req)
+activate InventoryDocumentService
+
+alt Validation Fails (missing sourceWarehouseId, targetWarehouseId, docDate, or lines empty)
+    InventoryDocumentService --> TransferDocumentController : throws BusinessException (Validation error)
+    TransferDocumentController -> TransferDocumentController : catch Exception
+    TransferDocumentController -> Database : auditLogService.logEvent(..., "FAILED", "Tạo phiếu chuyển kho thất bại", ...)
+    activate Database
+    Database --> TransferDocumentController : saved
+    deactivate Database
+    TransferDocumentController --> CreateTransferSlipPage : 400 Bad Request (ApiResponse with error message)
+    CreateTransferSlipPage --> WarehouseStaff : Display error toast
+else Document Code Duplicated
+    InventoryDocumentService -> InventoryDocumentRepository : existsByDocCode(docCode)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query docCode existence
+    activate Database
+    Database --> InventoryDocumentRepository : true
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : true
+    deactivate InventoryDocumentRepository
+    InventoryDocumentService --> TransferDocumentController : throws BusinessException ("Ma phieu chuyen kho da ton tai")
+    TransferDocumentController -> TransferDocumentController : catch Exception
+    TransferDocumentController -> Database : auditLogService.logEvent(..., "FAILED", "Tạo phiếu chuyển kho thất bại: ...", ...)
+    activate Database
+    Database --> TransferDocumentController : saved
+    deactivate Database
+    TransferDocumentController --> CreateTransferSlipPage : 400 Bad Request / INV01 (ApiResponse with error message)
+    CreateTransferSlipPage --> WarehouseStaff : Display "Inventory document code already exists."
+else Validation Passes & Code Unique
+    InventoryDocumentService -> InventoryDocumentRepository : existsByDocCode(docCode)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query docCode existence
+    activate Database
+    Database --> InventoryDocumentRepository : false
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : false
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : buildBaseDocument & add lines
+    InventoryDocumentService -> InventoryDocumentRepository : save(doc)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Insert InventoryDocument & Lines
+    activate Database
+    Database --> InventoryDocumentRepository : Saved Entity
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : Saved Entity
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : Map entity to DTO
+    InventoryDocumentService --> TransferDocumentController : InventoryDocumentResponse
+    deactivate InventoryDocumentService
+    
+    TransferDocumentController -> Database : auditLogService.logEvent(..., "SUCCESS", "Tạo phiếu chuyển kho [DocCode]", ...)
+    activate Database
+    Database --> TransferDocumentController : saved
+    deactivate Database
+    
+    TransferDocumentController --> CreateTransferSlipPage : 200 OK (ApiResponse with success DTO)
+    deactivate TransferDocumentController
+    
+    CreateTransferSlipPage --> WarehouseStaff : Display "Add data successfully." and redirect
+    deactivate CreateTransferSlipPage
+end
+
+@enduml

@@ -1,0 +1,94 @@
+@startuml UC-53_UpdateImportSlip_Sequence
+
+actor Actor
+boundary UpdateImportSlipPage as "UpdateImportSlipPage"
+control ImportDocumentController as "ImportDocumentController"
+control InventoryDocumentService as "InventoryDocumentService"
+entity InventoryDocumentRepository as "InventoryDocumentRepository"
+database Database as "Database"
+
+Actor -> UpdateImportSlipPage : Modify fields and click "Update"
+activate UpdateImportSlipPage
+
+UpdateImportSlipPage -> ImportDocumentController : PUT /api/v1/imports/{id} (InventoryDocumentRequest)
+activate ImportDocumentController
+
+ImportDocumentController -> InventoryDocumentService : updateImport(id, req)
+activate InventoryDocumentService
+
+InventoryDocumentService -> InventoryDocumentRepository : findImportByIdWithLines(id)
+activate InventoryDocumentRepository
+InventoryDocumentRepository -> Database : Query import document
+activate Database
+Database --> InventoryDocumentRepository : InventoryDocument Entity
+deactivate Database
+InventoryDocumentRepository --> InventoryDocumentService : Optional<InventoryDocument>
+deactivate InventoryDocumentRepository
+
+alt Document Not Editable (Status is not DRAFT or SUBMITTED)
+    InventoryDocumentService -> InventoryDocumentService : ensureEditable(doc)
+    InventoryDocumentService --> ImportDocumentController : throws BusinessException ("Chi co the cap nhat phieu DRAFT hoac SUBMITTED")
+    ImportDocumentController -> ImportDocumentController : catch Exception
+    ImportDocumentController -> Database : auditLogService.logEvent(..., "FAILED", "Cap nhat phieu nhap kho ... that bai", ...)
+    activate Database
+    Database --> ImportDocumentController : saved
+    deactivate Database
+    ImportDocumentController --> UpdateImportSlipPage : 400 Bad Request / INV03 (ApiResponse with error message)
+    UpdateImportSlipPage --> Actor : Display "Invalid inventory document state."
+else Document Code Duplicated (when docCode is changed)
+    InventoryDocumentService -> InventoryDocumentService : ensureEditable(doc)
+    InventoryDocumentService -> InventoryDocumentRepository : existsByDocCodeAndIdNot(requestedCode, id)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query existence with different ID
+    activate Database
+    Database --> InventoryDocumentRepository : true
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : true
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService --> ImportDocumentController : throws BusinessException ("Ma phieu nhap kho da ton tai")
+    ImportDocumentController -> ImportDocumentController : catch Exception
+    ImportDocumentController -> Database : auditLogService.logEvent(..., "FAILED", "Cap nhat phieu nhap kho ... that bai", ...)
+    activate Database
+    Database --> ImportDocumentController : saved
+    deactivate Database
+    ImportDocumentController --> UpdateImportSlipPage : 400 Bad Request / INV01 (ApiResponse with error message)
+    UpdateImportSlipPage --> Actor : Display "Inventory document code already exists."
+else Successful Update
+    InventoryDocumentService -> InventoryDocumentService : ensureEditable(doc)
+    InventoryDocumentService -> InventoryDocumentRepository : existsByDocCodeAndIdNot(requestedCode, id)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query existence
+    activate Database
+    Database --> InventoryDocumentRepository : false
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : false
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : updateBaseDocument & reload lines
+    InventoryDocumentService -> InventoryDocumentRepository : save(doc)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Update InventoryDocument & lines
+    activate Database
+    Database --> InventoryDocumentRepository : Saved Entity
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : Saved Entity
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : Map entity to DTO
+    InventoryDocumentService --> ImportDocumentController : InventoryDocumentResponse
+    deactivate InventoryDocumentService
+    
+    ImportDocumentController -> Database : auditLogService.logEvent(..., "SUCCESS", "Cap nhat phieu nhap kho ...", ...)
+    activate Database
+    Database --> ImportDocumentController : saved
+    deactivate Database
+    
+    ImportDocumentController --> UpdateImportSlipPage : 200 OK (ApiResponse with success DTO)
+    deactivate ImportDocumentController
+    
+    UpdateImportSlipPage --> Actor : Display "Update data successfully." and redirect
+    deactivate UpdateImportSlipPage
+end
+
+@enduml

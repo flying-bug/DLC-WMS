@@ -1,0 +1,49 @@
+@startuml UC-62_ViewStocktakeHistoryList_Sequence
+
+actor WarehouseStaff as "Warehouse Staff"
+boundary StocktakeHistoryPage as "StocktakeHistoryPage"
+control StocktakeController as "StocktakeController"
+control StocktakeService as "StocktakeService"
+entity StocktakeRepository as "StocktakeRepository"
+database Database as "Database"
+
+WarehouseStaff -> StocktakeHistoryPage : Open page or apply filters and click Search
+activate StocktakeHistoryPage
+
+StocktakeHistoryPage -> StocktakeController : GET /api/v1/stocktakes/history\n(docCode, fromDate, toDate, status, warehouseId)
+activate StocktakeController
+
+StocktakeController -> StocktakeService : getStocktakeHistory(docCode, fromDate, toDate, status, warehouseId)
+activate StocktakeService
+
+alt No filters applied
+    StocktakeService -> StocktakeRepository : findAllStocktakes()
+    activate StocktakeRepository
+    StocktakeRepository -> Database : Query all stocktakes
+    activate Database
+    Database --> StocktakeRepository : List of Stocktakes
+    deactivate Database
+    StocktakeRepository --> StocktakeService : List of Stocktakes
+    deactivate StocktakeRepository
+else Filters applied
+    StocktakeService -> StocktakeRepository : searchStocktakes(...)
+    activate StocktakeRepository
+    StocktakeRepository -> Database : Search stocktakes by filters
+    activate Database
+    Database --> StocktakeRepository : List of matched Stocktakes
+    deactivate Database
+    StocktakeRepository --> StocktakeService : List of matched Stocktakes
+    deactivate StocktakeRepository
+end
+
+StocktakeService -> StocktakeService : Map entities to StocktakeResponse DTOs
+StocktakeService --> StocktakeController : List of StocktakeResponse
+deactivate StocktakeService
+
+StocktakeController --> StocktakeHistoryPage : 200 OK (ApiResponse with success list)
+deactivate StocktakeController
+
+StocktakeHistoryPage --> WarehouseStaff : Display stocktake history list
+deactivate StocktakeHistoryPage
+
+@enduml

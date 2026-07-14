@@ -1,0 +1,49 @@
+@startuml UC-58_ViewTransferHistoryList_Sequence
+
+actor WarehouseStaff as "Warehouse Staff"
+boundary TransferHistoryPage as "TransferHistoryPage"
+control TransferDocumentController as "TransferDocumentController"
+control InventoryDocumentService as "InventoryDocumentService"
+entity InventoryDocumentRepository as "InventoryDocumentRepository"
+database Database as "Database"
+
+WarehouseStaff -> TransferHistoryPage : Open page or apply filters and click Search
+activate TransferHistoryPage
+
+TransferHistoryPage -> TransferDocumentController : GET /api/v1/transfers/history\n(docCode, fromDate, toDate, status, sourceWarehouseId, targetWarehouseId)
+activate TransferDocumentController
+
+TransferDocumentController -> InventoryDocumentService : getTransferHistory(docCode, fromDate, toDate, status, sourceWarehouseId, targetWarehouseId)
+activate InventoryDocumentService
+
+alt No filters applied
+    InventoryDocumentService -> InventoryDocumentRepository : findAllTransfers()
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query all transfer documents
+    activate Database
+    Database --> InventoryDocumentRepository : List of InventoryDocuments
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : List of InventoryDocuments
+    deactivate InventoryDocumentRepository
+else Filters applied
+    InventoryDocumentService -> InventoryDocumentRepository : searchTransfers(...)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Search transfer documents by filters
+    activate Database
+    Database --> InventoryDocumentRepository : List of matched InventoryDocuments
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : List of matched InventoryDocuments
+    deactivate InventoryDocumentRepository
+end
+
+InventoryDocumentService -> InventoryDocumentService : Map entities to InventoryDocumentResponse DTOs
+InventoryDocumentService --> TransferDocumentController : List of InventoryDocumentResponse
+deactivate InventoryDocumentService
+
+TransferDocumentController --> TransferHistoryPage : 200 OK (ApiResponse with success list)
+deactivate TransferDocumentController
+
+TransferHistoryPage --> WarehouseStaff : Display transfer history list
+deactivate TransferHistoryPage
+
+@enduml

@@ -1,0 +1,49 @@
+@startuml UC-50_ViewImportHistoryList_Sequence
+
+actor Actor
+boundary ImportHistoryPage as "ImportHistoryPage"
+control ImportDocumentController as "ImportDocumentController"
+control InventoryDocumentService as "InventoryDocumentService"
+entity InventoryDocumentRepository as "InventoryDocumentRepository"
+database Database as "Database"
+
+Actor -> ImportHistoryPage : Open page or apply filters and click Search
+activate ImportHistoryPage
+
+ImportHistoryPage -> ImportDocumentController : GET /api/v1/imports/history\n(docCode, fromDate, toDate, status, warehouseId)
+activate ImportDocumentController
+
+ImportDocumentController -> InventoryDocumentService : getImportHistory(docCode, fromDate, toDate, status, warehouseId)
+activate InventoryDocumentService
+
+alt No filters applied
+    InventoryDocumentService -> InventoryDocumentRepository : findAllImports()
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query all import documents
+    activate Database
+    Database --> InventoryDocumentRepository : List of InventoryDocuments
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : List of InventoryDocuments
+    deactivate InventoryDocumentRepository
+else Filters applied
+    InventoryDocumentService -> InventoryDocumentRepository : searchImports(...)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Search import documents by filters
+    activate Database
+    Database --> InventoryDocumentRepository : List of matched InventoryDocuments
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : List of matched InventoryDocuments
+    deactivate InventoryDocumentRepository
+end
+
+InventoryDocumentService -> InventoryDocumentService : Map entities to InventoryDocumentResponse DTOs
+InventoryDocumentService --> ImportDocumentController : List of InventoryDocumentResponse
+deactivate InventoryDocumentService
+
+ImportDocumentController --> ImportHistoryPage : 200 OK (ApiResponse with success list)
+deactivate ImportDocumentController
+
+ImportHistoryPage --> Actor : Display import history list
+deactivate ImportHistoryPage
+
+@enduml

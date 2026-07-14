@@ -1,0 +1,51 @@
+@startuml UC-52_ViewImportSlipDetails_Sequence
+
+actor Actor
+boundary ImportSlipDetailPage as "ImportSlipDetailPage"
+control ImportDocumentController as "ImportDocumentController"
+control InventoryDocumentService as "InventoryDocumentService"
+entity InventoryDocumentRepository as "InventoryDocumentRepository"
+database Database as "Database"
+
+Actor -> ImportSlipDetailPage : Click on import slip from history list
+activate ImportSlipDetailPage
+
+ImportSlipDetailPage -> ImportDocumentController : GET /api/v1/imports/{id}
+activate ImportDocumentController
+
+ImportDocumentController -> InventoryDocumentService : getImportDetail(id)
+activate InventoryDocumentService
+
+InventoryDocumentService -> InventoryDocumentRepository : findImportByIdWithLines(id)
+activate InventoryDocumentRepository
+InventoryDocumentRepository -> Database : Query import document by id and fetch lines
+activate Database
+
+alt Document Not Found
+    Database --> InventoryDocumentRepository : null
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : empty Optional
+    deactivate InventoryDocumentRepository
+    InventoryDocumentService --> ImportDocumentController : throws BusinessException ("Khong tim thay phieu nhap kho")
+    ImportDocumentController --> ImportSlipDetailPage : 400 Bad Request / INV02 (ApiResponse with error message)
+    ImportSlipDetailPage --> Actor : Display "Inventory document not found."
+else Document Found
+    activate Database
+    Database --> InventoryDocumentRepository : InventoryDocument Entity
+    deactivate Database
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository --> InventoryDocumentService : Optional<InventoryDocument>
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : Map entity to InventoryDocumentResponse DTO
+    InventoryDocumentService --> ImportDocumentController : InventoryDocumentResponse
+    deactivate InventoryDocumentService
+    
+    ImportDocumentController --> ImportSlipDetailPage : 200 OK (ApiResponse with success DTO)
+    deactivate ImportDocumentController
+    
+    ImportSlipDetailPage --> Actor : Render import slip details
+    deactivate ImportSlipDetailPage
+end
+
+@enduml

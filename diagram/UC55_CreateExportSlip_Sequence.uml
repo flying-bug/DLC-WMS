@@ -1,0 +1,81 @@
+@startuml UC-55_CreateExportSlip_Sequence
+
+actor WarehouseStaff as "Warehouse Staff"
+boundary CreateExportSlipPage as "CreateExportSlipPage"
+control InventoryDocumentController as "InventoryDocumentController"
+control InventoryDocumentService as "InventoryDocumentService"
+entity InventoryDocumentRepository as "InventoryDocumentRepository"
+database Database as "Database"
+
+WarehouseStaff -> CreateExportSlipPage : Fill form details and click "Create"
+activate CreateExportSlipPage
+
+CreateExportSlipPage -> InventoryDocumentController : POST /api/v1/exports/create (InventoryDocumentRequest)
+activate InventoryDocumentController
+
+InventoryDocumentController -> InventoryDocumentService : createExport(req)
+activate InventoryDocumentService
+
+alt Validation Fails (missing warehouseId, docDate, lines, or quantityOut <= 0)
+    InventoryDocumentService --> InventoryDocumentController : throws BusinessException (Validation error)
+    InventoryDocumentController -> InventoryDocumentController : catch Exception
+    InventoryDocumentController -> Database : auditLogService.logEvent(..., "FAILED", "Tạo phiếu xuất kho thất bại", ...)
+    activate Database
+    Database --> InventoryDocumentController : saved
+    deactivate Database
+    InventoryDocumentController --> CreateExportSlipPage : 400 Bad Request (ApiResponse with error message)
+    CreateExportSlipPage --> WarehouseStaff : Display error toast
+else Document Code Duplicated
+    InventoryDocumentService -> InventoryDocumentRepository : existsByDocCode(docCode)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query docCode existence
+    activate Database
+    Database --> InventoryDocumentRepository : true
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : true
+    deactivate InventoryDocumentRepository
+    InventoryDocumentService --> InventoryDocumentController : throws BusinessException ("Ma phieu xuat kho da ton tai")
+    InventoryDocumentController -> InventoryDocumentController : catch Exception
+    InventoryDocumentController -> Database : auditLogService.logEvent(..., "FAILED", "Tạo phiếu xuất kho thất bại: ...", ...)
+    activate Database
+    Database --> InventoryDocumentController : saved
+    deactivate Database
+    InventoryDocumentController --> CreateExportSlipPage : 400 Bad Request / INV01 (ApiResponse with error message)
+    CreateExportSlipPage --> WarehouseStaff : Display "Inventory document code already exists."
+else Validation Passes & Code Unique
+    InventoryDocumentService -> InventoryDocumentRepository : existsByDocCode(docCode)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Query docCode existence
+    activate Database
+    Database --> InventoryDocumentRepository : false
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : false
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : buildBaseDocument & add lines
+    InventoryDocumentService -> InventoryDocumentRepository : save(doc)
+    activate InventoryDocumentRepository
+    InventoryDocumentRepository -> Database : Insert InventoryDocument & Lines
+    activate Database
+    Database --> InventoryDocumentRepository : Saved Entity
+    deactivate Database
+    InventoryDocumentRepository --> InventoryDocumentService : Saved Entity
+    deactivate InventoryDocumentRepository
+    
+    InventoryDocumentService -> InventoryDocumentService : Map entity to DTO
+    InventoryDocumentService --> InventoryDocumentController : InventoryDocumentResponse
+    deactivate InventoryDocumentService
+    
+    InventoryDocumentController -> Database : auditLogService.logEvent(..., "SUCCESS", "Tạo phiếu xuất kho [DocCode]", ...)
+    activate Database
+    Database --> InventoryDocumentController : saved
+    deactivate Database
+    
+    InventoryDocumentController --> CreateExportSlipPage : 200 OK (ApiResponse with success DTO)
+    deactivate InventoryDocumentController
+    
+    CreateExportSlipPage --> WarehouseStaff : Display "Add data successfully." and redirect
+    deactivate CreateExportSlipPage
+end
+
+@enduml
