@@ -25,8 +25,8 @@ import com.duylongtech.backend.repository.InventoryLedgerRepository;
 import com.duylongtech.backend.repository.ProductVariantRepository;
 import com.duylongtech.backend.repository.SerialNumberRepository;
 import com.duylongtech.backend.repository.WarrantyRepository;
-import com.duylongtech.backend.repository.PartnerRepository; 
-import com.duylongtech.backend.repository.UserRepository; 
+import com.duylongtech.backend.repository.PartnerRepository;
+import com.duylongtech.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -607,7 +607,7 @@ public class InventoryDocumentService {
         for (int i = 0; i < lines.size(); i++) {
             InventoryDocumentLineRequest line = lines.get(i);
             if (line.getVariantId() == null || line.getQuantityOut() == null) continue;
-            
+
             BigDecimal qtyToExport = line.getQuantityOut();
             InventoryBalance balance = inventoryBalanceRepository
                     .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), "GOOD")

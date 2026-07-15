@@ -1,0 +1,58 @@
+@startuml
+title Sequence Diagram: UC47 - Create Unit
+
+actor "Staff" as Actor
+boundary "UnitPage" as Page
+control "UnitController" as Controller
+control "UnitService" as Service
+entity "UnitRepository" as Repository
+database "Database" as Database
+
+Actor -> Page : Fill unit information & Submit
+activate Page
+
+Page -> Controller : POST /api/v1/units
+activate Controller
+
+alt Missing 'unit:add' permission
+    Controller --> Page : 403 Forbidden
+    Page --> Actor : Hiển thị thông báo lỗi (Không có quyền truy cập)
+else Valid Permission
+    Controller -> Service : createUnit(unitDto)
+    activate Service
+
+    Service -> Repository : findByName(dto.getName())
+    activate Repository
+    Repository -> Database : SELECT * FROM units WHERE name = ?
+    activate Database
+    Database --> Repository : Result (Empty / Unit)
+    deactivate Database
+    Repository --> Service : Optional<Unit>
+    deactivate Repository
+
+    alt Unit Name Exists
+        Service --> Controller : throw BusinessException(UNIT_EXISTS)
+        Controller --> Page : 400 Bad Request
+        Page --> Actor : Hiển thị thông báo lỗi (Đơn vị tính đã tồn tại)
+    else Unit Name is Valid
+        Service -> Repository : save(unit)
+        activate Repository
+        Repository -> Database : INSERT INTO units
+        activate Database
+        Database --> Repository : saved Unit
+        deactivate Database
+        Repository --> Service : saved Unit
+        deactivate Repository
+
+        Service --> Controller : UnitResponse
+        deactivate Service
+
+        Controller --> Page : 200 OK (UnitResponse)
+        Page --> Actor : Hiển thị thông báo thành công
+    end
+end
+
+deactivate Controller
+deactivate Page
+
+@enduml

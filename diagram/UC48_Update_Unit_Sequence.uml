@@ -1,0 +1,90 @@
+@startuml
+title Sequence Diagram: UC48 - Update Unit
+
+actor "Staff" as Actor
+boundary "UnitPage" as Page
+control "UnitController" as Controller
+control "UnitService" as Service
+entity "UnitRepository" as Repository
+database "Database" as Database
+
+Actor -> Page : Edit unit information & Submit
+activate Page
+
+Page -> Controller : PUT /api/v1/units/{id}
+activate Controller
+
+alt Missing 'unit:edit' permission
+    Controller --> Page : 403 Forbidden
+    Page --> Actor : Hiển thị thông báo lỗi (Không có quyền truy cập)
+else Valid Permission
+    Controller -> Service : getUnitById(id)
+    activate Service
+    
+    Service -> Repository : findById(id)
+    activate Repository
+    Repository -> Database : SELECT * FROM units WHERE id = ?
+    activate Database
+    Database --> Repository : Result (Unit / Empty)
+    deactivate Database
+    
+    alt Unit Not Found
+        Repository --> Service : Optional.empty()
+        Service --> Controller : throw BusinessException(UNIT_NOT_FOUND)
+        Controller --> Page : 400 Bad Request
+        Page --> Actor : Hiển thị thông báo lỗi (Không tìm thấy đơn vị tính)
+    else Unit Found
+        Repository --> Service : Optional<Unit>
+        Service --> Controller : UnitResponse (before update)
+        deactivate Repository
+        deactivate Service
+        
+        Controller -> Service : updateUnit(id, unitDto)
+        activate Service
+        
+        Service -> Repository : findById(id)
+        activate Repository
+        Repository -> Database : SELECT * FROM units WHERE id = ?
+        activate Database
+        Database --> Repository : Result (Unit)
+        deactivate Database
+        Repository --> Service : Optional<Unit>
+        deactivate Repository
+        
+        alt Name changed and Name exists
+            Service -> Repository : findByName(dto.getName())
+            activate Repository
+            Repository -> Database : SELECT * FROM units WHERE name = ?
+            activate Database
+            Database --> Repository : Result (Unit)
+            deactivate Database
+            Repository --> Service : Optional<Unit>
+            deactivate Repository
+            
+            Service --> Controller : throw BusinessException(UNIT_EXISTS)
+            Controller --> Page : 400 Bad Request
+            Page --> Actor : Hiển thị thông báo lỗi (Đơn vị tính đã tồn tại)
+            
+        else Name is valid
+            Service -> Repository : save(unit)
+            activate Repository
+            Repository -> Database : UPDATE units
+            activate Database
+            Database --> Repository : updated Unit
+            deactivate Database
+            Repository --> Service : updated Unit
+            deactivate Repository
+            
+            Service --> Controller : UnitResponse (updated)
+            deactivate Service
+            
+            Controller --> Page : 200 OK (UnitResponse)
+            Page --> Actor : Hiển thị thông báo thành công
+        end
+    end
+end
+
+deactivate Controller
+deactivate Page
+
+@enduml
