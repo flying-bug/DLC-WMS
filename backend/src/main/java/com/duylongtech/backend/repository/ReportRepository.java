@@ -22,8 +22,8 @@ public class ReportRepository {
     public List<InventoryBalanceReportResponse> getInventoryBalanceReport(String search, Long warehouseId) {
         StringBuilder sql = new StringBuilder(
                 "SELECT " +
-                        "p.product_code AS itemCode, " +
-                        "p.product_name AS itemName, " +
+                        "pv.sku AS itemCode, " +
+                        "pv.variant_name AS itemName, " +
                         "u.name AS unitName, " +
                         "w.code AS warehouseCode, " +
                         "w.name AS warehouseName, " +
@@ -43,13 +43,13 @@ public class ReportRepository {
             params.add(warehouseId);
         }
         if (search != null && !search.trim().isEmpty()) {
-            sql.append(" AND (p.product_code LIKE ? OR p.product_name LIKE ?) ");
+            sql.append(" AND (pv.sku LIKE ? OR pv.variant_name LIKE ?) ");
             params.add("%" + search + "%");
             params.add("%" + search + "%");
         }
 
-        sql.append(" GROUP BY p.product_code, p.product_name, u.name, w.code, w.name ");
-        sql.append(" ORDER BY w.code, p.product_code ");
+        sql.append(" GROUP BY pv.sku, pv.variant_name, u.name, w.code, w.name ");
+        sql.append(" ORDER BY w.code, pv.sku ");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> InventoryBalanceReportResponse.builder()
                 .itemCode(rs.getString("itemCode"))
