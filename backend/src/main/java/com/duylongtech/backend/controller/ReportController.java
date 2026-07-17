@@ -63,14 +63,15 @@ public class ReportController {
     public ResponseEntity<ApiResponse<List<DebtReportResponse>>> getDebtReport(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
-            @RequestParam(required = false) String search) {
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String partnerType) {
         // Default to start of month and end of month if null
         if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
         if (endDate == null) endDate = LocalDate.now().plusDays(1).atStartOfDay();
 
         return ResponseEntity.ok(ApiResponse.<List<DebtReportResponse>>builder()
                 .success(true)
-                .data(reportService.getDebtReport(startDate, endDate, search))
+                .data(reportService.getDebtReport(startDate, endDate, search, partnerType))
                 .build());
     }
 

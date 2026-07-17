@@ -14,7 +14,7 @@ public interface ReportService {
     
     List<StockTransferReportResponse> getStockTransferReport(Long warehouseId, LocalDate startDate, LocalDate endDate, String search, String status);
     
-    List<DebtReportResponse> getDebtReport(LocalDateTime startDate, LocalDateTime endDate, String search);
+    List<DebtReportResponse> getDebtReport(LocalDateTime startDate, LocalDateTime endDate, String search, String partnerType);
     
     List<InventorySummaryReportResponse> getInventorySummaryReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search);
     
