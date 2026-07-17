@@ -40,6 +40,8 @@ import AiChatPage from '../pages/AiChat/AiChatPage';
 import StocktakeListPage from '../pages/Stocktake/StocktakeListPage';
 import CreateStocktakePage from '../pages/Stocktake/CreateStocktakePage';
 import StocktakeDetailPage from '../pages/Stocktake/StocktakeDetailPage';
+import ReportListPage from '../pages/Report/ReportListPage';
+
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -115,6 +117,7 @@ function AppRouter() {
                     <Route path="/stocktakes/:id" element={<StocktakeDetailPage />} />
                     <Route path="/stocktakes/:id/edit" element={<CreateStocktakePage />} />
                     <Route path="/ai-chat" element={<AiChatPage />} />
+                    <Route path="/reports" element={<ReportListPage />} />
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}

@@ -30,6 +30,8 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
     private final PartnerRepository partnerRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final InventoryBalanceRepository inventoryBalanceRepository;
 
     @Override
     public void run(String... args) throws Exception {
@@ -313,8 +315,9 @@ public class DatabaseSeeder implements CommandLineRunner {
         ProductCategory gamingCategory = seedCategoryIfNotFound("GAMING_GEAR", "Gaming Gear", computerCategory.getId());
 
         // Seed Sản phẩm (Hàng hóa, dịch vụ) khớp hình ảnh mẫu
-        if (productRepository.findByProductCode("CPMH").isEmpty()) {
-            Product p1 = Product.builder()
+        Product p1 = productRepository.findByProductCode("CPMH").orElse(null);
+        if (p1 == null) {
+            p1 = Product.builder()
                     .productCode("CPMH")
                     .productName("Chi phí mua hàng")
                     .productType("Dịch vụ")
@@ -326,27 +329,30 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .active(true)
                     .taxReductionStatus("Chưa xác định")
                     .build();
-            productRepository.save(p1);
+            p1 = productRepository.save(p1);
         }
 
-        if (productRepository.findByProductCode("VT00001").isEmpty()) {
-            Product p2 = Product.builder()
+        Product p2 = productRepository.findByProductCode("VT00001").orElse(null);
+        if (p2 == null) {
+            p2 = Product.builder()
                     .productCode("VT00001")
                     .productName("Bánh Bông")
                     .productType("Hàng hóa")
                     .brand(genericBrand)
                     .category(computerCategory)
                     .unit(caiUnit)
-                    .stockQty(BigDecimal.ZERO)
-                    .stockValue(BigDecimal.ZERO)
+                    .stockQty(new BigDecimal("700.0000"))
+                    .stockValue(new BigDecimal("10500000.00"))
                     .active(true)
                     .taxReductionStatus("Chưa xác định")
                     .build();
-            productRepository.save(p2);
+            p2 = productRepository.save(p2);
         }
+        ProductVariant v2 = seedVariantIfNotFound(p2, "VT00001", "Bánh Bông", new BigDecimal("15000.00"), new BigDecimal("20000.00"));
 
-        if (productRepository.findByProductCode("VT00002").isEmpty()) {
-            Product p3 = Product.builder()
+        Product p3 = productRepository.findByProductCode("VT00002").orElse(null);
+        if (p3 == null) {
+            p3 = Product.builder()
                     .productCode("VT00002")
                     .productName("Máy tính")
                     .productType("Hàng hóa")
@@ -359,11 +365,13 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .taxReductionStatus("Chưa xác định")
                     .imageUrl("https://picsum.photos/id/1/200/120") // Placeholder image
                     .build();
-            productRepository.save(p3);
+            p3 = productRepository.save(p3);
         }
+        ProductVariant v3 = seedVariantIfNotFound(p3, "VT00002", "Máy tính", new BigDecimal("14170040.4858"), new BigDecimal("18000000.00"));
 
-        if (productRepository.findByProductCode("VT00004").isEmpty()) {
-            Product p4 = Product.builder()
+        Product p4 = productRepository.findByProductCode("VT00004").orElse(null);
+        if (p4 == null) {
+            p4 = Product.builder()
                     .productCode("VT00004")
                     .productName("Hiếu")
                     .productType("Thành phẩm")
@@ -375,7 +383,22 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .active(true)
                     .taxReductionStatus("Chưa xác định")
                     .build();
-            productRepository.save(p4);
+            p4 = productRepository.save(p4);
+        }
+        ProductVariant v4 = seedVariantIfNotFound(p4, "VT00004", "Hiếu", new BigDecimal("0.00"), new BigDecimal("0.00"));
+
+        // Seed inventory balances for Kho chính (code K01) and Kho phụ (code K02)
+        Warehouse k1 = warehouseRepository.findByCodeIgnoreCase("K01").orElse(null);
+        Warehouse k2 = warehouseRepository.findByCodeIgnoreCase("K02").orElse(null);
+
+        if (k1 != null && k2 != null) {
+            // Seed for K01 (Kho chính)
+            seedInventoryBalanceIfNotFound(k1.getId(), v3.getId(), new BigDecimal("150.0000"), new BigDecimal("14170040.4858"));
+            seedInventoryBalanceIfNotFound(k1.getId(), v2.getId(), new BigDecimal("500.0000"), new BigDecimal("15000.0000"));
+
+            // Seed for K02 (Kho phụ)
+            seedInventoryBalanceIfNotFound(k2.getId(), v3.getId(), new BigDecimal("97.0000"), new BigDecimal("14170040.4858"));
+            seedInventoryBalanceIfNotFound(k2.getId(), v2.getId(), new BigDecimal("200.0000"), new BigDecimal("15000.0000"));
         }
     }
 
@@ -486,5 +509,38 @@ public class DatabaseSeeder implements CommandLineRunner {
                 .status("APPROVED")
                 .build();
         return categoryRepository.save(newCat);
+    }
+
+    private ProductVariant seedVariantIfNotFound(Product product, String sku, String name, BigDecimal costPrice, BigDecimal salePrice) {
+        Optional<ProductVariant> opt = productVariantRepository.findBySku(sku);
+        if (opt.isPresent()) {
+            return opt.get();
+        }
+        ProductVariant variant = ProductVariant.builder()
+                .product(product)
+                .sku(sku)
+                .barcode(sku)
+                .variantName(name)
+                .costPrice(costPrice)
+                .salePrice(salePrice)
+                .active(true)
+                .build();
+        return productVariantRepository.save(variant);
+    }
+
+    private void seedInventoryBalanceIfNotFound(Long warehouseId, Long variantId, BigDecimal qtyOnHand, BigDecimal avgCost) {
+        Optional<InventoryBalance> opt = inventoryBalanceRepository.findByWarehouseIdAndVariantIdAndStockStatus(warehouseId, variantId, "AVAILABLE");
+        if (opt.isEmpty()) {
+            InventoryBalance balance = InventoryBalance.builder()
+                    .warehouseId(warehouseId)
+                    .variantId(variantId)
+                    .stockStatus("AVAILABLE")
+                    .quantityOnHand(qtyOnHand)
+                    .quantityReserved(BigDecimal.ZERO)
+                    .averageCost(avgCost)
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+            inventoryBalanceRepository.save(balance);
+        }
     }
 }

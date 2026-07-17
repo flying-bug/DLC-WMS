@@ -77,14 +77,14 @@ function WarehouseDashboard() {
                     </div>
                     <ul className={styles.reportList}>
                         {reportItems.map((report) => (
-                            <li key={report}>
+                            <li key={report} onClick={() => navigate('/reports')} style={{ cursor: 'pointer' }}>
                                 <i className="fas fa-chart-line"></i>
                                 <span>{report}</span>
                             </li>
                         ))}
                     </ul>
                     <div className={styles.allReports}>
-                        <a href="#" onClick={(e) => e.preventDefault()}>
+                        <a href="#" onClick={(e) => { e.preventDefault(); navigate('/reports'); }}>
                             Tất cả báo cáo
                             <i className="fas fa-arrow-right"></i>
                         </a>

@@ -29,11 +29,11 @@ public class ReportRepository {
                         "w.name AS warehouseName, " +
                         "SUM(ib.quantity_on_hand) AS totalQuantity, " +
                         "SUM(ib.quantity_on_hand * ib.average_cost) AS totalValue " +
-                        "FROM INVENTORY_BALANCES ib " +
-                        "JOIN PRODUCT_VARIANTS pv ON ib.variant_id = pv.id " +
-                        "JOIN PRODUCTS p ON pv.product_id = p.id " +
-                        "JOIN UNITS u ON p.unit_id = u.id " +
-                        "JOIN WAREHOUSES w ON ib.warehouse_id = w.id " +
+                        "FROM inventory_balances ib " +
+                        "JOIN product_variants pv ON ib.variant_id = pv.id " +
+                        "JOIN products p ON pv.product_id = p.id " +
+                        "JOIN units u ON p.unit_id = u.id " +
+                        "JOIN warehouses w ON ib.warehouse_id = w.id " +
                         "WHERE 1=1 "
         );
         List<Object> params = new ArrayList<>();
@@ -80,12 +80,12 @@ public class ReportRepository {
                         "l.quantity_in AS quantityIn, " +
                         "l.quantity_out AS quantityOut, " +
                         "l.balance_after AS balanceAfter " +
-                        "FROM INVENTORY_LEDGER l " +
-                        "JOIN WAREHOUSES w ON l.warehouse_id = w.id " +
-                        "JOIN PRODUCT_VARIANTS pv ON l.variant_id = pv.id " +
-                        "JOIN PRODUCTS p ON pv.product_id = p.id " +
-                        "JOIN UNITS u ON p.unit_id = u.id " +
-                        "JOIN INVENTORY_DOCUMENTS doc ON l.inventory_document_id = doc.id " +
+                        "FROM inventory_ledger l " +
+                        "JOIN warehouses w ON l.warehouse_id = w.id " +
+                        "JOIN product_variants pv ON l.variant_id = pv.id " +
+                        "JOIN products p ON pv.product_id = p.id " +
+                        "JOIN units u ON p.unit_id = u.id " +
+                        "JOIN inventory_documents doc ON l.inventory_document_id = doc.id " +
                         "WHERE 1=1 "
         );
         List<Object> params = new ArrayList<>();
@@ -144,13 +144,13 @@ public class ReportRepository {
                         "stl.unit_cost AS unitPrice, " +
                         "(stl.quantity * stl.unit_cost) AS amount, " +
                         "st.status AS status " +
-                        "FROM STOCK_TRANSFERS st " +
-                        "JOIN STOCK_TRANSFER_LINES stl ON st.id = stl.stock_transfer_id " +
-                        "JOIN WAREHOUSES w_from ON st.from_warehouse_id = w_from.id " +
-                        "JOIN WAREHOUSES w_to ON st.to_warehouse_id = w_to.id " +
-                        "JOIN PRODUCT_VARIANTS pv ON stl.variant_id = pv.id " +
-                        "JOIN PRODUCTS p ON pv.product_id = p.id " +
-                        "JOIN UNITS u ON p.unit_id = u.id " +
+                        "FROM stock_transfers st " +
+                        "JOIN stock_transfer_lines stl ON st.id = stl.stock_transfer_id " +
+                        "JOIN warehouses w_from ON st.from_warehouse_id = w_from.id " +
+                        "JOIN warehouses w_to ON st.to_warehouse_id = w_to.id " +
+                        "JOIN product_variants pv ON stl.variant_id = pv.id " +
+                        "JOIN products p ON pv.product_id = p.id " +
+                        "JOIN units u ON p.unit_id = u.id " +
                         "WHERE 1=1 "
         );
         List<Object> params = new ArrayList<>();
@@ -209,11 +209,11 @@ public class ReportRepository {
             "pt.name AS partnerName, " +
             "pt.is_customer AS isCustomer, " +
             "pt.is_supplier AS isSupplier, " +
-            "COALESCE(SUM(CASE WHEN pl.created_at < ? THEN pl.amount_debt - pl.amount_receipt ELSE 0 END), 0) AS openingBalance, " +
-            "COALESCE(SUM(CASE WHEN pl.created_at >= ? AND pl.created_at <= ? THEN pl.amount_debt ELSE 0 END), 0) AS debitIncrease, " +
-            "COALESCE(SUM(CASE WHEN pl.created_at >= ? AND pl.created_at <= ? THEN pl.amount_receipt ELSE 0 END), 0) AS creditDecrease " +
-            "FROM PARTNERS pt " +
-            "LEFT JOIN PARTNER_LEDGER pl ON pt.id = pl.partner_id " +
+            "COALESCE(SUM(CASE WHEN pl.created_at < CAST(? AS DATETIME) THEN pl.amount_debt - pl.amount_receipt ELSE 0 END), 0) AS openingBalance, " +
+            "COALESCE(SUM(CASE WHEN pl.created_at >= CAST(? AS DATETIME) AND pl.created_at <= CAST(? AS DATETIME) THEN pl.amount_debt ELSE 0 END), 0) AS debitIncrease, " +
+            "COALESCE(SUM(CASE WHEN pl.created_at >= CAST(? AS DATETIME) AND pl.created_at <= CAST(? AS DATETIME) THEN pl.amount_receipt ELSE 0 END), 0) AS creditDecrease " +
+            "FROM partners pt " +
+            "LEFT JOIN partner_ledger pl ON pt.id = pl.partner_id " +
             "WHERE 1=1 "
         );
             
@@ -278,17 +278,17 @@ public class ReportRepository {
             "p.product_code AS productCode, " +
             "p.product_name AS productName, " +
             "u.name AS unitName, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at < ? THEN l.quantity_in - l.quantity_out ELSE 0 END), 0) AS openingQuantity, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at < ? THEN (l.quantity_in * l.unit_cost) - (l.quantity_out * l.unit_cost) ELSE 0 END), 0) AS openingValue, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= ? AND l.movement_at <= ? THEN l.quantity_in ELSE 0 END), 0) AS receiptQuantity, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= ? AND l.movement_at <= ? THEN l.quantity_in * l.unit_cost ELSE 0 END), 0) AS receiptValue, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= ? AND l.movement_at <= ? THEN l.quantity_out ELSE 0 END), 0) AS issueQuantity, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at >= ? AND l.movement_at <= ? THEN l.quantity_out * l.unit_cost ELSE 0 END), 0) AS issueValue " +
-            "FROM PRODUCT_VARIANTS pv " +
-            "JOIN PRODUCTS p ON pv.product_id = p.id " +
-            "JOIN UNITS u ON p.unit_id = u.id " +
-            "JOIN INVENTORY_LEDGER l ON l.variant_id = pv.id " +
-            "JOIN WAREHOUSES w ON l.warehouse_id = w.id " +
+            "COALESCE(SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN l.quantity_in - l.quantity_out ELSE 0 END), 0) AS openingQuantity, " +
+            "COALESCE(SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN (l.quantity_in * l.unit_cost) - (l.quantity_out * l.unit_cost) ELSE 0 END), 0) AS openingValue, " +
+            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_in ELSE 0 END), 0) AS receiptQuantity, " +
+            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_in * l.unit_cost ELSE 0 END), 0) AS receiptValue, " +
+            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_out ELSE 0 END), 0) AS issueQuantity, " +
+            "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_out * l.unit_cost ELSE 0 END), 0) AS issueValue " +
+            "FROM product_variants pv " +
+            "JOIN products p ON pv.product_id = p.id " +
+            "JOIN units u ON p.unit_id = u.id " +
+            "JOIN inventory_ledger l ON l.variant_id = pv.id " +
+            "JOIN warehouses w ON l.warehouse_id = w.id " +
             "WHERE 1=1 "
         );
         
@@ -349,17 +349,17 @@ public class ReportRepository {
 
         // CompletableFuture to fetch all metrics in parallel
         var lowStockFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT COUNT(DISTINCT pv.id) FROM INVENTORY_BALANCES ib JOIN PRODUCT_VARIANTS pv ON ib.variant_id = pv.id WHERE ib.quantity_on_hand > 0 AND ib.quantity_on_hand <= 5";
+            String sql = "SELECT COUNT(DISTINCT pv.id) FROM inventory_balances ib JOIN product_variants pv ON ib.variant_id = pv.id WHERE ib.quantity_on_hand > 0 AND ib.quantity_on_hand <= 5";
             return jdbcTemplate.queryForObject(sql, Integer.class);
         });
 
         var outOfStockFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT COUNT(DISTINCT pv.id) FROM PRODUCT_VARIANTS pv WHERE pv.active = TRUE AND NOT EXISTS (SELECT 1 FROM INVENTORY_BALANCES ib WHERE ib.variant_id = pv.id AND ib.quantity_on_hand > 0)";
+            String sql = "SELECT COUNT(DISTINCT pv.id) FROM product_variants pv WHERE pv.active = TRUE AND NOT EXISTS (SELECT 1 FROM inventory_balances ib WHERE ib.variant_id = pv.id AND ib.quantity_on_hand > 0)";
             return jdbcTemplate.queryForObject(sql, Integer.class);
         });
 
         var totalValueFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT COALESCE(SUM(quantity_on_hand * average_cost), 0) FROM INVENTORY_BALANCES";
+            String sql = "SELECT COALESCE(SUM(quantity_on_hand * average_cost), 0) FROM inventory_balances";
             return jdbcTemplate.queryForObject(sql, BigDecimal.class);
         });
 
@@ -368,8 +368,8 @@ public class ReportRepository {
             String sql = "SELECT " +
                 "COALESCE(SUM(CASE WHEN idoc.doc_type = 'IN_PO' THEN idl.quantity_in * idl.unit_cost ELSE 0 END), 0) AS totalImport, " +
                 "COALESCE(SUM(CASE WHEN idoc.doc_type = 'EX_SO' THEN idl.quantity_out * idl.unit_cost ELSE 0 END), 0) AS totalExport " +
-                "FROM INVENTORY_DOCUMENTS idoc " +
-                "JOIN INVENTORY_DOCUMENT_LINES idl ON idoc.id = idl.inventory_document_id " +
+                "FROM inventory_documents idoc " +
+                "JOIN inventory_document_lines idl ON idoc.id = idl.inventory_document_id " +
                 "WHERE idoc.status = 'POSTED' AND idoc.doc_date >= ? AND idoc.doc_date <= ?";
             return jdbcTemplate.queryForMap(sql, startOfMonth, endOfMonth);
         });
@@ -380,15 +380,15 @@ public class ReportRepository {
                 String sql = "SELECT " +
                     "COALESCE(SUM(CASE WHEN pt.is_customer = 1 AND pl.balance_after > 0 THEN pl.balance_after ELSE 0 END), 0) AS totalCustomerDebt, " +
                     "COALESCE(SUM(CASE WHEN pt.is_supplier = 1 AND pl.balance_after > 0 THEN pl.balance_after ELSE 0 END), 0) AS totalSupplierDebt " +
-                    "FROM PARTNER_LEDGER pl " +
-                    "INNER JOIN PARTNERS pt ON pl.partner_id = pt.id";
+                    "FROM partner_ledger pl " +
+                    "INNER JOIN partners pt ON pl.partner_id = pt.id";
                 return jdbcTemplate.queryForMap(sql);
             } catch (Exception e) {
                 // Fallback: estimate debt from PAYMENT_VOUCHERS (supplier) and PAYMENT_RECEIPTS (customer)
                 try {
                     String fallbackSql = "SELECT " +
-                        "COALESCE((SELECT SUM(amount) FROM PAYMENT_RECEIPTS WHERE status = 'POSTED'), 0) AS totalCustomerDebt, " +
-                        "COALESCE((SELECT SUM(amount) FROM PAYMENT_VOUCHERS WHERE status = 'POSTED'), 0) AS totalSupplierDebt";
+                        "COALESCE((SELECT SUM(amount) FROM payment_receipts WHERE status = 'POSTED'), 0) AS totalCustomerDebt, " +
+                        "COALESCE((SELECT SUM(amount) FROM payment_vouchers WHERE status = 'POSTED'), 0) AS totalSupplierDebt";
                     return jdbcTemplate.queryForMap(fallbackSql);
                 } catch (Exception e2) {
                     // Final fallback: return zeros
@@ -401,13 +401,13 @@ public class ReportRepository {
         });
 
         var warrantyFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT COUNT(id) FROM REPAIRS WHERE received_date >= ? AND received_date <= ?";
+            String sql = "SELECT COUNT(id) FROM repairs WHERE received_date >= ? AND received_date <= ?";
             return jdbcTemplate.queryForObject(sql, Integer.class, startOfMonth, endOfMonth);
         });
 
         var recentActivityFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
             String sql = "SELECT action, description, u.username AS username, a.created_at AS timestamp " +
-                         "FROM AUDIT_LOGS a LEFT JOIN USERS u ON a.user_id = u.id " +
+                         "FROM audit_logs a LEFT JOIN users u ON a.user_id = u.id " +
                          "ORDER BY a.created_at DESC LIMIT 5";
             return jdbcTemplate.query(sql, (rs, rowNum) -> DashboardResponse.RecentActivityDto.builder()
                 .action(rs.getString("action"))
