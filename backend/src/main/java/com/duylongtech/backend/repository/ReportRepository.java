@@ -71,6 +71,8 @@ public class ReportRepository {
                         "p.product_name AS productName, " +
                         "doc.note AS description, " +
                         "l.movement_at AS movementAt, " +
+                        "doc.id AS documentId, " +
+                        "doc.doc_date AS documentDate, " +
                         "doc.doc_code AS documentNumber, " +
                         "doc.doc_type AS documentType, " +
                         "u.name AS unitName, " +
@@ -114,6 +116,8 @@ public class ReportRepository {
                 .productName(rs.getString("productName"))
                 .description(rs.getString("description"))
                 .movementAt(rs.getTimestamp("movementAt").toLocalDateTime())
+                .documentId(rs.getLong("documentId"))
+                .documentDate(rs.getDate("documentDate") != null ? rs.getDate("documentDate").toLocalDate() : null)
                 .documentNumber(rs.getString("documentNumber"))
                 .documentType(rs.getString("documentType"))
                 .reference(rs.getString("documentType"))
@@ -198,17 +202,20 @@ public class ReportRepository {
     }
 
     // 4. Debt Report
-    public List<DebtReportResponse> getDebtReport(LocalDateTime startDate, LocalDateTime endDate, String search) {
-        String sql = 
+    public List<DebtReportResponse> getDebtReport(LocalDateTime startDate, LocalDateTime endDate, String search, String partnerType) {
+        StringBuilder sql = new StringBuilder(
             "SELECT " +
-            "pt.code AS customerCode, " +
-            "pt.name AS customerName, " +
+            "pt.code AS partnerCode, " +
+            "pt.name AS partnerName, " +
+            "pt.is_customer AS isCustomer, " +
+            "pt.is_supplier AS isSupplier, " +
             "COALESCE(SUM(CASE WHEN pl.created_at < ? THEN pl.amount_debt - pl.amount_receipt ELSE 0 END), 0) AS openingBalance, " +
             "COALESCE(SUM(CASE WHEN pl.created_at >= ? AND pl.created_at <= ? THEN pl.amount_debt ELSE 0 END), 0) AS debitIncrease, " +
             "COALESCE(SUM(CASE WHEN pl.created_at >= ? AND pl.created_at <= ? THEN pl.amount_receipt ELSE 0 END), 0) AS creditDecrease " +
             "FROM PARTNERS pt " +
             "LEFT JOIN PARTNER_LEDGER pl ON pt.id = pl.partner_id " +
-            "WHERE pt.is_customer = TRUE ";
+            "WHERE 1=1 "
+        );
             
         List<Object> params = new ArrayList<>();
         params.add(startDate);
@@ -217,24 +224,43 @@ public class ReportRepository {
         params.add(startDate);
         params.add(endDate);
 
+        if (partnerType != null && !partnerType.trim().isEmpty()) {
+            if (partnerType.equalsIgnoreCase("CUSTOMER")) {
+                sql.append(" AND pt.is_customer = ? ");
+                params.add(true);
+            } else if (partnerType.equalsIgnoreCase("SUPPLIER")) {
+                sql.append(" AND pt.is_supplier = ? ");
+                params.add(true);
+            }
+        } else {
+            sql.append(" AND (pt.is_customer = ? OR pt.is_supplier = ?) ");
+            params.add(true);
+            params.add(true);
+        }
+
         if (search != null && !search.trim().isEmpty()) {
-            sql += " AND (pt.code LIKE ? OR pt.name LIKE ?) ";
+            sql.append(" AND (pt.code LIKE ? OR pt.name LIKE ?) ");
             params.add("%" + search + "%");
             params.add("%" + search + "%");
         }
 
-        sql += " GROUP BY pt.id, pt.code, pt.name ORDER BY pt.code";
+        sql.append(" GROUP BY pt.id, pt.code, pt.name, pt.is_customer, pt.is_supplier ORDER BY pt.code");
 
-        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> {
             BigDecimal open = rs.getBigDecimal("openingBalance");
             BigDecimal inc = rs.getBigDecimal("debitIncrease");
             BigDecimal dec = rs.getBigDecimal("creditDecrease");
             BigDecimal close = open.add(inc).subtract(dec);
             String status = close.compareTo(BigDecimal.ZERO) > 0 ? "CO_NO" : "HET_NO";
             
+            boolean isCust = rs.getBoolean("isCustomer");
+            boolean isSupp = rs.getBoolean("isSupplier");
+            String type = isCust ? "CUSTOMER" : (isSupp ? "SUPPLIER" : "OTHER");
+            
             return DebtReportResponse.builder()
-                .customerCode(rs.getString("customerCode"))
-                .customerName(rs.getString("customerName"))
+                .partnerCode(rs.getString("partnerCode"))
+                .partnerName(rs.getString("partnerName"))
+                .partnerType(type)
                 .openingBalance(open)
                 .debitIncrease(inc)
                 .creditDecrease(dec)

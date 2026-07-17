@@ -37,9 +37,9 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public List<DebtReportResponse> getDebtReport(LocalDateTime startDate, LocalDateTime endDate, String search) {
-        log.info("Fetching Debt Report. startDate={}, endDate={}, search={}", startDate, endDate, search);
-        return reportRepository.getDebtReport(startDate, endDate, search);
+    public List<DebtReportResponse> getDebtReport(LocalDateTime startDate, LocalDateTime endDate, String search, String partnerType) {
+        log.info("Fetching Debt Report. startDate={}, endDate={}, search={}, partnerType={}", startDate, endDate, search, partnerType);
+        return reportRepository.getDebtReport(startDate, endDate, search, partnerType);
     }
 
     @Override
