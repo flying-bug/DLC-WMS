@@ -12,8 +12,9 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DebtReportResponse {
-    private String customerCode;
-    private String customerName;
+    private String partnerCode;
+    private String partnerName;
+    private String partnerType;
     private BigDecimal openingBalance;
     private BigDecimal debitIncrease;
     private BigDecimal creditDecrease;

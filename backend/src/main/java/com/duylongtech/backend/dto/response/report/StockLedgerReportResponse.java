@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -18,6 +19,8 @@ public class StockLedgerReportResponse {
     private String productName;
     private String description;
     private LocalDateTime movementAt;
+    private Long documentId;
+    private LocalDate documentDate;
     private String documentNumber;
     private String documentType;
     private String reference;
