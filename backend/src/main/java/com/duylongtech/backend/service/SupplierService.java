@@ -151,7 +151,7 @@ public class SupplierService {
         String requestedCode = trimToNull(req.getCode());
         if (requestedCode != null && !requestedCode.equals(partner.getCode())) {
             if (partnerRepository.existsByCodeAndIdNot(requestedCode, id)) {
-                throw new BusinessException(SystemMessage.SUPPLIER_CODE_EXISTS.getMessage());
+                throw new BusinessException(SystemMessage.SUPPLIER_CODE_EXISTS);
             }
             partner.setCode(requestedCode);
         }
@@ -209,7 +209,7 @@ public class SupplierService {
 
         if (hasTransactions) {
             // Hiển thị thông báo lỗi chặn thao tác xóa và yêu cầu giải quyết công nợ theo UC-24
-            throw new BusinessException("Nhà cung cấp đang có công nợ hoặc giao dịch liên kết, vui lòng giải quyết công nợ trước khi xóa.");
+            throw new BusinessException(SystemMessage.SUPPLIER_HAS_TRANSACTIONS);
         } else {
             // Chưa có giao dịch - xóa vật lý an toàn
             partnerRepository.delete(partner);
@@ -225,10 +225,10 @@ public class SupplierService {
      */
     private Partner findSupplierOrThrow(Long id) {
         if (id == null) {
-            throw new BusinessException(SystemMessage.SUPPLIER_NOT_FOUND.getMessage());
+            throw new BusinessException(SystemMessage.SUPPLIER_NOT_FOUND);
         }
         return partnerRepository.findByIdAndIsSupplierTrue(id)
-                .orElseThrow(() -> new BusinessException(SystemMessage.SUPPLIER_NOT_FOUND.getMessage()));
+                .orElseThrow(() -> new BusinessException(SystemMessage.SUPPLIER_NOT_FOUND));
     }
 
     /**
@@ -261,7 +261,7 @@ public class SupplierService {
         }
         // BR-09: Kiểm tra unique
         if (partnerRepository.existsByCode(code)) {
-            throw new BusinessException(SystemMessage.SUPPLIER_CODE_EXISTS.getMessage());
+            throw new BusinessException(SystemMessage.SUPPLIER_CODE_EXISTS);
         }
         return code;
     }
@@ -275,7 +275,7 @@ public class SupplierService {
         }
         String normalized = type.toUpperCase().trim();
         if (!VALID_TYPES.contains(normalized)) {
-            throw new BusinessException(SystemMessage.SUPPLIER_INVALID_TYPE.getMessage());
+            throw new BusinessException(SystemMessage.SUPPLIER_INVALID_TYPE);
         }
         return normalized;
     }
@@ -289,7 +289,7 @@ public class SupplierService {
         }
         String normalized = status.toUpperCase().trim();
         if (!VALID_STATUSES.contains(normalized)) {
-            throw new BusinessException(SystemMessage.SUPPLIER_INVALID_STATUS.getMessage());
+            throw new BusinessException(SystemMessage.SUPPLIER_INVALID_STATUS);
         }
         return normalized;
     }
@@ -304,7 +304,7 @@ public class SupplierService {
         }
         String normalized = groupType.toUpperCase().trim();
         if (!VALID_GROUP_TYPES.contains(normalized)) {
-            throw new BusinessException(SystemMessage.SUPPLIER_INVALID_GROUP_TYPE.getMessage());
+            throw new BusinessException(SystemMessage.SUPPLIER_INVALID_GROUP_TYPE);
         }
         return normalized;
     }

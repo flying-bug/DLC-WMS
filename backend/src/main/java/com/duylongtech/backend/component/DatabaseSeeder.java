@@ -162,6 +162,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         moduleActions.put("stocktake", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("product", new String[]{"view", "add", "edit", "delete", "export", "print"});
+        moduleActions.put("product_category", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("brand", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("unit", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("customer", new String[]{"view", "add", "edit", "delete", "export", "print"});
@@ -290,12 +291,26 @@ public class DatabaseSeeder implements CommandLineRunner {
         seedUnitIfNotFound("Bộ");
 
         // Seed Thương hiệu
-        Brand dellBrand = seedBrandIfNotFound("DELL", "Dell");
-        Brand genericBrand = seedBrandIfNotFound("GENERIC", "Khác");
+        Brand dellBrand = seedBrandIfNotFound("DELL", "Dell", "Hãng máy tính Hoa Kỳ", "18008182", "support@dell.com");
+        Brand genericBrand = seedBrandIfNotFound("GENERIC", "Khác", "Nhà sản xuất khác", null, null);
+        Brand asusBrand = seedBrandIfNotFound("ASUS", "ASUS", "Linh kiện máy tính & Laptop", "18006588", "hotline@asus.com.vn");
+        Brand samsungBrand = seedBrandIfNotFound("SAMSUNG", "Samsung", "Thiết bị lưu trữ & Màn hình", "1800588889", "support@samsung.com");
+        Brand gigabyteBrand = seedBrandIfNotFound("GIGABYTE", "Gigabyte", "Bo mạch chủ & Card đồ họa", "02838389389", "sales@gigabyte.com.vn");
+        Brand ciscoBrand = seedBrandIfNotFound("CISCO", "Cisco", "Thiết bị mạng cao cấp", "180012345", "info@cisco.com");
+        Brand logitechBrand = seedBrandIfNotFound("LOGITECH", "Logitech", "Phụ kiện Gaming & Văn phòng", "02873006000", "support@logitech.com");
+        Brand intelBrand = seedBrandIfNotFound("INTEL", "Intel", "Bộ vi xử lý", "18001090", "support@intel.com");
+        Brand amdBrand = seedBrandIfNotFound("AMD", "AMD", "Bộ vi xử lý & Card đồ họa", null, "support@amd.com");
+        Brand hpBrand = seedBrandIfNotFound("HP", "HP", "Máy in & Laptop doanh nghiệp", "1800585850", "support@hp.com");
+        Brand lenovoBrand = seedBrandIfNotFound("LENOVO", "Lenovo", "Laptop & Máy chủ", "18001096", "support@lenovo.com");
 
         // Seed Danh mục sản phẩm
-        ProductCategory computerCategory = seedCategoryIfNotFound("MAY_TINH", "Máy tính");
-        ProductCategory serviceCategory = seedCategoryIfNotFound("DICH_VU", "Dịch vụ");
+        ProductCategory computerCategory = seedCategoryIfNotFound("MAY_TINH", "Máy tính", null);
+        ProductCategory serviceCategory = seedCategoryIfNotFound("DICH_VU", "Dịch vụ", null);
+        ProductCategory laptopCategory = seedCategoryIfNotFound("LAPTOP", "Máy tính xách tay", computerCategory.getId());
+        ProductCategory componentCategory = seedCategoryIfNotFound("LINH_KIEN", "Linh kiện máy tính", computerCategory.getId());
+        ProductCategory storageCategory = seedCategoryIfNotFound("LUU_TRU", "Thiết bị lưu trữ", componentCategory.getId());
+        ProductCategory networkCategory = seedCategoryIfNotFound("THIET_BI_MANG", "Thiết bị mạng", componentCategory.getId());
+        ProductCategory gamingCategory = seedCategoryIfNotFound("GAMING_GEAR", "Gaming Gear", computerCategory.getId());
 
         // Seed Sản phẩm (Hàng hóa, dịch vụ) khớp hình ảnh mẫu
         if (productRepository.findByProductCode("CPMH").isEmpty()) {
@@ -443,7 +458,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         return unitRepository.save(newUnit);
     }
 
-    private Brand seedBrandIfNotFound(String code, String name) {
+    private Brand seedBrandIfNotFound(String code, String name, String description, String hotline, String email) {
         Optional<Brand> brandOpt = brandRepository.findByCode(code);
         if (brandOpt.isPresent()) {
             return brandOpt.get();
@@ -452,11 +467,14 @@ public class DatabaseSeeder implements CommandLineRunner {
                 .code(code)
                 .name(name)
                 .status("APPROVED")
+                .description(description)
+                .hotline(hotline)
+                .contactEmail(email)
                 .build();
         return brandRepository.save(newBrand);
     }
 
-    private ProductCategory seedCategoryIfNotFound(String code, String name) {
+    private ProductCategory seedCategoryIfNotFound(String code, String name, Long parentId) {
         Optional<ProductCategory> catOpt = categoryRepository.findByCode(code);
         if (catOpt.isPresent()) {
             return catOpt.get();
@@ -464,6 +482,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         ProductCategory newCat = ProductCategory.builder()
                 .code(code)
                 .name(name)
+                .parentId(parentId)
                 .status("APPROVED")
                 .build();
         return categoryRepository.save(newCat);

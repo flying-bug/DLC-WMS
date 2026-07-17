@@ -64,7 +64,7 @@ function StepVerifyOTP({ email, onNext }) {
         try {
             await import('../../../api/axiosClient').then(m => m.default.post('/auth/forgot-password/request-otp?email=' + encodeURIComponent(email)));
         } catch (err) {
-            setError(err.response?.data?.message || 'Có lỗi xảy ra khi gửi lại mã OTP!');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Có lỗi xảy ra khi gửi lại mã OTP!');
         }
     };
 
@@ -80,7 +80,7 @@ function StepVerifyOTP({ email, onNext }) {
             await import('../../../api/axiosClient').then(m => m.default.post('/auth/forgot-password/verify-otp?email=' + encodeURIComponent(email) + '&otp=' + code));
             onNext(code);
         } catch (err) {
-            setError(err.response?.data?.message || 'Mã OTP không hợp lệ hoặc đã hết hạn!');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Mã OTP không hợp lệ hoặc đã hết hạn!');
             setOtp(Array(OTP_LENGTH).fill(''));
             inputRefs.current[0]?.focus();
         } finally {

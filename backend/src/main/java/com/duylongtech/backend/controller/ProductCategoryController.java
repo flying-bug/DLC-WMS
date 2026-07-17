@@ -46,7 +46,7 @@ public class ProductCategoryController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('product:view')")
+    @PreAuthorize("hasAuthority('product_category:view')")
     public ResponseEntity<Page<ProductCategoryResponse>> getCategories(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
@@ -56,13 +56,13 @@ public class ProductCategoryController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('product:view')")
+    @PreAuthorize("hasAuthority('product_category:view')")
     public ResponseEntity<ProductCategoryResponse> getCategoryById(@PathVariable Long id) {
         return ResponseEntity.ok(categoryService.getCategoryById(id));
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('product:add')")
+    @PreAuthorize("hasAuthority('product_category:add')")
     public ResponseEntity<ProductCategoryResponse> createCategory(
             @Valid @RequestBody ProductCategoryRequest dto,
             HttpServletRequest servletRequest) {
@@ -98,7 +98,7 @@ public class ProductCategoryController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('product:edit')")
+    @PreAuthorize("hasAuthority('product_category:edit')")
     public ResponseEntity<ProductCategoryResponse> updateCategory(
             @PathVariable Long id,
             @Valid @RequestBody ProductCategoryRequest dto,
@@ -136,7 +136,7 @@ public class ProductCategoryController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('product:delete')")
+    @PreAuthorize("hasAuthority('product_category:delete')")
     public ResponseEntity<Void> deleteCategory(
             @PathVariable Long id,
             HttpServletRequest servletRequest) {
