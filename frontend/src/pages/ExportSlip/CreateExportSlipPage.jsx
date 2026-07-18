@@ -14,10 +14,6 @@ const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const today = () => new Date().toISOString().slice(0, 10);
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
-const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
-  ? `${item.productName} - ${item.variantName}`
-  : item?.productName || '';
-
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,

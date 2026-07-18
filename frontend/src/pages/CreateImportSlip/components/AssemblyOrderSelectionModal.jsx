@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as assemblyOrderApi from '../../../api/assemblyOrderApi';
 import styles from './AssemblyOrderSelectionModal.module.css';
 
@@ -26,15 +26,7 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
         toDate: ''
     });
 
-    useEffect(() => {
-        if (isOpen) {
-            loadOrders();
-        } else {
-            setSelectedOrderId(null);
-        }
-    }, [isOpen]);
-
-    const loadOrders = async () => {
+    const loadOrders = useCallback(async () => {
         setLoading(true);
         try {
             const payload = {
@@ -52,7 +44,16 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [filters]);
+
+    useEffect(() => {
+        if (isOpen) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            loadOrders();
+        } else {
+            setSelectedOrderId(null);
+        }
+    }, [isOpen, loadOrders]);
 
     const handleConfirm = () => {
         if (!selectedOrderId) return;
