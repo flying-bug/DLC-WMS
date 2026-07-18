@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import * as importApi from '../api/inventoryImportApi';
 import * as exportApi from '../api/inventoryExportApi';
@@ -22,7 +22,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     setLoading(true);
     try {
       let res;
@@ -62,7 +62,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, keyword, docType]);
 
   useEffect(() => {
     if (isOpen) {
