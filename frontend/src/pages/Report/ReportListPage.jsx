@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import { getWarehouses } from '../../api/warehouseApi';
@@ -52,7 +51,6 @@ const MOCK_CATEGORIES = [
 ];
 
 const ReportListPage = () => {
-    const navigate = useNavigate();
     const [warehouses, setWarehouses] = useState([]);
     const [favorites, setFavorites] = useState(() => {
         const saved = localStorage.getItem('favorite_reports');
