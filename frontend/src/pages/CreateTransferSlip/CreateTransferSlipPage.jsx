@@ -329,7 +329,7 @@ function CreateTransferSlipPage() {
                     disabled={scanLoading}
                   />
                 </div>
-                <button type="submit" disabled={scanLoading} style={{ padding: '0 16px', height: '34px', backgroundColor: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>
+                <button type="submit" disabled={scanLoading} style={{ display: 'none' }}>
                   {scanLoading ? 'Đang quét...' : 'Thêm mã'}
                 </button>
               </form>
@@ -357,7 +357,7 @@ function CreateTransferSlipPage() {
                         <td>
                           <select className="misa-select" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={item.variantId} onChange={(e) => handleItemChange(item.localId, 'variantId', e.target.value)}>
                             <option value="">Chọn hàng</option>
-                            {products.map(productItem => <option key={productItem.id} value={productItem.id}>{productItem.sku}</option>)}
+                            {products.map(productItem => <option key={productItem.id} value={productItem.id}>{productItem.sku || productItem.productCode}</option>)}
                           </select>
                         </td>
                         <td>

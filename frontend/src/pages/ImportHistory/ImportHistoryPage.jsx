@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as importApi from '../../api/inventoryImportApi';
+import * as customerApi from '../../api/customerApi';
+import * as assemblyOrderApi from '../../api/assemblyOrderApi';
+import * as exportApi from '../../api/inventoryExportApi';
 import { exportToExcel } from '../../utils/excelExport';
 import styles from './ImportHistoryPage.module.css';
 
@@ -28,10 +31,14 @@ const variantLabel = (item) => item?.variantName && item.variantName !== item.pr
 
 function ImportHistoryPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [slips, setSlips] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [assemblyOrders, setAssemblyOrders] = useState([]);
+  const [users, setUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [confirmPost, setConfirmPost] = useState(false);
@@ -46,23 +53,26 @@ function ImportHistoryPage() {
   const warehouseById = useMemo(() => new Map(warehouses.map(item => [item.id, item])), [warehouses]);
   const supplierById = useMemo(() => new Map(suppliers.map(item => [item.id, item])), [suppliers]);
   const productById = useMemo(() => new Map(products.map(item => [item.id, item])), [products]);
+  const customerById = useMemo(() => new Map(customers.map(item => [item.id, item])), [customers]);
+  const assemblyOrderById = useMemo(() => new Map(assemblyOrders.map(item => [item.id, item])), [assemblyOrders]);
+  const userById = useMemo(() => new Map(users.map(item => [item.id, item])), [users]);
 
   const loadLookups = useCallback(async () => {
-    const [warehouseRes, supplierRes, productRes] = await Promise.allSettled([
+    const [warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes] = await Promise.allSettled([
       importApi.getWarehouses({ size: 100 }),
       importApi.getSuppliers(),
       importApi.getProducts({ size: 100 }),
+      customerApi.searchCustomers('', '', '', 0, 100),
+      assemblyOrderApi.getAssemblyOrders({ size: 100 }),
+      exportApi.getUsers({ size: 1000 })
     ]);
 
-    if (warehouseRes.status === 'fulfilled') {
-      setWarehouses(pageContent(unwrap(warehouseRes.value)));
-    }
-    if (supplierRes.status === 'fulfilled') {
-      setSuppliers(pageContent(unwrap(supplierRes.value)));
-    }
-    if (productRes.status === 'fulfilled') {
-      setProducts(pageContent(unwrap(productRes.value)));
-    }
+    if (warehouseRes.status === 'fulfilled') setWarehouses(pageContent(unwrap(warehouseRes.value)));
+    if (supplierRes.status === 'fulfilled') setSuppliers(pageContent(unwrap(supplierRes.value)));
+    if (productRes.status === 'fulfilled') setProducts(pageContent(unwrap(productRes.value)));
+    if (customerRes.status === 'fulfilled') setCustomers(pageContent(unwrap(customerRes.value)));
+    if (assemblyOrderRes.status === 'fulfilled') setAssemblyOrders(pageContent(unwrap(assemblyOrderRes.value)));
+    if (userRes.status === 'fulfilled') setUsers(pageContent(unwrap(userRes.value)));
   }, []);
 
   const loadSlips = useCallback(async () => {
@@ -96,12 +106,29 @@ function ImportHistoryPage() {
     loadSlips();
   }, [loadSlips]);
 
+  useEffect(() => {
+    if (location.state?.toastMessage) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      showToast(location.state.toastType || 'success', location.state.toastMessage);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
+
   const rows = slips.map(slip => {
     const status = STATUS_LABELS[slip.status] || { label: slip.status || 'Không rõ', code: 'info' };
+    let partnerLabel = 'Chưa chọn';
+    if (!slip.issuePurpose || slip.issuePurpose === 'PURCHASE') {
+      partnerLabel = supplierById.get(slip.partnerId)?.name || (slip.partnerId ? `NCC #${slip.partnerId}` : 'Chưa chọn');
+    } else if (slip.issuePurpose === 'RETURN') {
+      partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `KH #${slip.partnerId}` : 'Chưa chọn');
+    } else if (slip.issuePurpose === 'PRODUCTION') {
+      partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');
+    }
+
     return {
       ...slip,
       date: formatDate(slip.docDate),
-      partner: supplierById.get(slip.partnerId)?.name || (slip.partnerId ? `NCC #${slip.partnerId}` : 'Chưa chọn'),
+      partner: partnerLabel,
       warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa chọn'),
       total: money(sumAmount(slip.lines)),
       quantity: sumQuantity(slip.lines),
@@ -111,7 +138,7 @@ function ImportHistoryPage() {
   });
 
   const handleExport = () => {
-    const headers = ['Ngày ghi nhận', 'Số chứng từ', 'Nhà cung cấp', 'Kho nhập', 'Tổng tiền', 'Trạng thái'];
+    const headers = ['Ngày ghi nhận', 'Số chứng từ', 'Đối tác / Tham chiếu', 'Kho nhập', 'Tổng tiền', 'Trạng thái'];
     const data = rows.map(item => [
       item.date,
       item.docCode,
@@ -121,6 +148,7 @@ function ImportHistoryPage() {
       item.statusLabel
     ]);
     exportToExcel(headers, data, 'Danh_sach_phieu_nhap_kho');
+    showToast('success', 'Xuất Excel thành công!');
   };
 
   const handleSelectAll = (e) => {
@@ -242,13 +270,14 @@ function ImportHistoryPage() {
                     onChange={handleSelectAll}
                   />
                 </th>
-                <th>Ngày ghi nhận</th>
-                <th>Số phiếu</th>
-                <th>Nhà cung cấp</th>
-                <th>Kho nhập</th>
-                <th className={styles.textRight}>Tổng tiền</th>
-                <th>Trạng thái</th>
-                <th className={styles.textCenter}>Thao tác</th>
+                <th style={{ width: '120px' }}>Ngày Nhập</th>
+                <th style={{ width: '180px' }}>Số Phiếu</th>
+                <th style={{ width: '200px' }}>Đối tác / Tham chiếu</th>
+                <th style={{ width: '120px' }}>Kho Nhập</th>
+                <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>
+                <th style={{ minWidth: '150px' }}>Ghi Chú</th>
+                <th style={{ width: '120px' }}>Trạng Thái</th>
+                <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
               </tr>
             </thead>
             <tbody>
@@ -264,10 +293,16 @@ function ImportHistoryPage() {
                     />
                   </td>
                   <td>{slip.date}</td>
-                  <td><a href="#" className={styles.link} onClick={(e) => e.preventDefault()}>{slip.docCode}</a></td>
+                  <td style={{ whiteSpace: 'nowrap' }}><a href="#" className={styles.link} onClick={(e) => e.preventDefault()}>{slip.docCode}</a></td>
                   <td>{slip.partner}</td>
                   <td>{slip.warehouse}</td>
                   <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>
+                  <td style={{ maxWidth: '180px' }}>
+                    <div className={styles.tooltipContainer}>
+                      <span className={styles.noteText}>{slip.note || 'Không có ghi chú'}</span>
+                      {slip.note && <span className={styles.tooltipText}>{slip.note}</span>}
+                    </div>
+                  </td>
                   <td>
                     <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
                         slip.statusCode === 'info' ? styles.badgeInfo :
@@ -384,7 +419,10 @@ function ImportHistoryPage() {
               <div className={styles.modalHeader}>
                 <h2 className={styles.modalTitle}>
                   <i className={`bi bi-file-earmark-text ${styles.detailIcon}`}></i>
-                  Chi tiết đơn nhập hàng: {selectedSlip.docCode}
+                  {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && 'Chi tiết phiếu nhập mua hàng: '}
+                  {selectedSlip.issuePurpose === 'PRODUCTION' && 'Chi tiết phiếu nhập thành phẩm sản xuất: '}
+                  {selectedSlip.issuePurpose === 'RETURN' && 'Chi tiết phiếu nhập hàng trả lại: '}
+                  {selectedSlip.docCode}
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   {selectedSlip.status === 'DRAFT' && (
@@ -404,9 +442,39 @@ function ImportHistoryPage() {
                 <div className={styles.detailGrid}>
                   <div className={styles.detailGroup} style={{ gridColumn: 'span 2' }}>
                     <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Nhà cung cấp</span>
-                      <span className={styles.detailValue}>{supplierById.get(selectedSlip.partnerId)?.name || 'Chưa chọn'}</span>
+                      <span className={styles.detailLabel}>
+                        {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && 'Nhà cung cấp'}
+                        {selectedSlip.issuePurpose === 'PRODUCTION' && 'Lệnh sản xuất'}
+                        {selectedSlip.issuePurpose === 'RETURN' && 'Khách hàng'}
+                      </span>
+                      <span className={styles.detailValue}>
+                        {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && (supplierById.get(selectedSlip.partnerId)?.name || 'Chưa chọn')}
+                        {selectedSlip.issuePurpose === 'PRODUCTION' && (assemblyOrderById.get(selectedSlip.referenceId)?.orderCode || 'Chưa chọn')}
+                        {selectedSlip.issuePurpose === 'RETURN' && (customerById.get(selectedSlip.partnerId)?.name || 'Chưa chọn')}
+                      </span>
                     </div>
+                    {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE' || selectedSlip.issuePurpose === 'PRODUCTION') && (
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Người giao hàng</span>
+                        <span className={styles.detailValue}>{selectedSlip.recipientName || 'Chưa có thông tin'}</span>
+                      </div>
+                    )}
+                    <div className={styles.detailItem}>
+                      <span className={styles.detailLabel}>
+                        {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && 'Nhân viên mua hàng'}
+                        {selectedSlip.issuePurpose === 'PRODUCTION' && 'Nhân viên phụ trách'}
+                        {selectedSlip.issuePurpose === 'RETURN' && 'Nhân viên bán hàng'}
+                      </span>
+                      <span className={styles.detailValue}>{userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || 'Chưa có thông tin'}</span>
+                    </div>
+                    {(selectedSlip.referenceType && selectedSlip.referenceId) && (
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Kèm chứng từ</span>
+                        <span className={styles.detailValue} style={{ color: 'var(--color-primary)', cursor: 'pointer' }}>
+                           <i className="bi bi-link-45deg"></i> {selectedSlip.referenceCode || selectedSlip.referenceId}
+                        </span>
+                      </div>
+                    )}
                     <div className={styles.detailItem}>
                       <span className={styles.detailLabel}>Ghi chú</span>
                       <span className={styles.detailValue}>{selectedSlip.note || 'Không có ghi chú'}</span>
@@ -435,6 +503,7 @@ function ImportHistoryPage() {
                       <th className={styles.textCenter}>Số lượng</th>
                       <th className={styles.textRight}>Giá nhập</th>
                       <th className={styles.textRight}>Thành tiền</th>
+                      <th>Số Serial</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -449,6 +518,11 @@ function ImportHistoryPage() {
                           <td className={styles.textCenter}>{Number(line.quantityIn || 0).toLocaleString('vi-VN')}</td>
                           <td className={styles.textRight}>{money(line.unitCost)}</td>
                           <td className={styles.textRight}>{money(line.lineAmount)}</td>
+                          <td style={{ maxWidth: '200px', wordWrap: 'break-word', whiteSpace: 'normal' }}>
+                            {line.serialNumbers && line.serialNumbers.length > 0 
+                              ? line.serialNumbers.join(', ') 
+                              : <span style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '13px' }}>Không có</span>}
+                          </td>
                         </tr>
                       );
                     })}

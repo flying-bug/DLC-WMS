@@ -13,6 +13,7 @@ public class InventoryDocumentResponse {
     private String issuePurpose;
     private String referenceType;
     private Long referenceId;
+    private String referenceCode;
     private Long warehouseId;
     private Long sourceWarehouseId;
     private Long purchaseOrderId;

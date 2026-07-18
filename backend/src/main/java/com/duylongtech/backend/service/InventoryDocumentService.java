@@ -27,6 +27,8 @@ import com.duylongtech.backend.repository.SerialNumberRepository;
 import com.duylongtech.backend.repository.WarrantyRepository;
 import com.duylongtech.backend.repository.PartnerRepository;
 import com.duylongtech.backend.repository.UserRepository;
+import com.duylongtech.backend.repository.AssemblyOrderRepository;
+import com.duylongtech.backend.repository.AssemblyBomRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,15 +63,17 @@ public class InventoryDocumentService {
     private final WarrantyRepository warrantyRepository;
     private final PartnerRepository partnerRepository;
     private final UserRepository userRepository;
+    private final AssemblyOrderRepository assemblyOrderRepository;
+    private final AssemblyBomRepository assemblyBomRepository;
 
     @Transactional(readOnly = true)
     public ScanResolveResponse resolveExportScan(ScanResolveRequest req) {
         String code = trimToNull(req != null ? req.getCode() : null);
         if (code == null) {
-            throw new BusinessException("Ma quet la bat buoc");
+            throw new BusinessException("Mã quét là bắt buộc");
         }
         if (req.getWarehouseId() == null) {
-            throw new BusinessException("warehouseId la bat buoc");
+            throw new BusinessException("warehouseId là bắt buộc");
         }
 
         return serialNumberRepository.findBySerialNumber(code)
@@ -144,7 +148,7 @@ public class InventoryDocumentService {
         validateExportInventoryBalance(req.getWarehouseId(), req.getLines());
         InventoryDocument doc = findExportOrThrow(id);
         ensureEditable(doc);
-        updateBaseDocument(id, doc, req, "Ma phieu xuat kho da ton tai", false);
+        updateBaseDocument(id, doc, req, "Mã phiếu xuất kho đã tồn tại", false);
         doc.getLines().clear();
         for (int i = 0; i < req.getLines().size(); i++) {
             doc.getLines().add(toExportLineEntity(doc, req.getLines().get(i), i));
@@ -157,7 +161,7 @@ public class InventoryDocumentService {
         validateUpdateImportRequest(req);
         InventoryDocument doc = findImportOrThrow(id);
         ensureEditable(doc);
-        updateBaseDocument(id, doc, req, "Ma phieu nhap kho da ton tai", true);
+        updateBaseDocument(id, doc, req, "Mã phiếu nhập kho đã tồn tại", true);
         doc.getLines().clear();
         for (int i = 0; i < req.getLines().size(); i++) {
             doc.getLines().add(toImportLineEntity(doc, req.getLines().get(i), i));
@@ -169,7 +173,7 @@ public class InventoryDocumentService {
     public InventoryDocumentResponse postExport(Long id) {
         InventoryDocument doc = findExportOrThrow(id);
         if (!"DRAFT".equals(doc.getStatus()) && !"SUBMITTED".equals(doc.getStatus())) {
-            throw new BusinessException("Chi phieu xuat kho DRAFT hoac SUBMITTED moi co the ghi so");
+            throw new BusinessException("Chỉ phiếu xuất kho lưu tạm mới có thể ghi sổ");
         }
 
         for (InventoryDocumentLine line : doc.getLines()) {
@@ -209,7 +213,7 @@ public class InventoryDocumentService {
             }
 
             if (remainingQty.compareTo(ZERO) > 0) {
-                throw new BusinessException("Khong du cost layer FIFO cho san pham " + line.getVariantId());
+                throw new BusinessException("Không đủ cost layer FIFO cho sản phẩm " + line.getVariantId());
             }
 
             BigDecimal avgUnitCost = totalCost.divide(qtyToExport, 4, RoundingMode.HALF_UP);
@@ -233,7 +237,7 @@ public class InventoryDocumentService {
     public InventoryDocumentResponse postImport(Long id) {
         InventoryDocument doc = findImportOrThrow(id);
         if (!"DRAFT".equals(doc.getStatus()) && !"SUBMITTED".equals(doc.getStatus())) {
-            throw new BusinessException("Chi phieu nhap kho DRAFT hoac SUBMITTED moi co the ghi so");
+            throw new BusinessException("Chỉ phiếu nhập kho lưu tạm mới có thể ghi sổ");
         }
 
         InventoryDocument savedDoc = inventoryDocumentRepository.saveAndFlush(doc);
@@ -326,6 +330,9 @@ public class InventoryDocumentService {
         doc.setPurchaseOrderId(req.getPurchaseOrderId());
         doc.setSalesOrderId(req.getSalesOrderId());
         doc.setPartnerId(req.getPartnerId());
+        doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
+        doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
+        doc.setReferenceId(req.getReferenceId());
         doc.setDocDate(req.getDocDate());
         doc.setStatus(importDocument
                 ? normalizeEditableImportStatus(req.getStatus(), doc.getStatus())
@@ -357,14 +364,14 @@ public class InventoryDocumentService {
 
     private ScanResolveResponse resolveSerialScan(SerialNumber serial, Long warehouseId, String code) {
         if (!"AVAILABLE".equalsIgnoreCase(serial.getStatus())) {
-            throw new BusinessException("Serial khong kha dung de xuat kho: " + code);
+            throw new BusinessException("Serial không khả dụng để xuất kho: " + code);
         }
         if (!warehouseId.equals(serial.getWarehouseId())) {
-            throw new BusinessException("Serial khong nam trong kho dang chon");
+            throw new BusinessException("Serial không nằm trong kho đang chọn");
         }
         ProductVariant variant = serial.getVariant();
         if (variant == null) {
-            throw new BusinessException("Serial chua gan SKU san pham");
+            throw new BusinessException("Serial chưa gắn SKU sản phẩm");
         }
         return buildScanResponse("SERIAL", code, variant, serial);
     }
@@ -375,7 +382,7 @@ public class InventoryDocumentService {
                 .orElseThrow(() -> new BusinessException("Khong tim thay SKU hoac serial cho ma: " + code));
         Product product = variant.getProduct();
         if (Boolean.TRUE.equals(product != null ? product.getTrackSerial() : null)) {
-            throw new BusinessException("San pham quan ly serial, vui long quet serial cua tung san pham");
+            throw new BusinessException("Sản phẩm quản lý serial, vui lòng quét serial của từng sản phẩm");
         }
         return buildScanResponse("BARCODE", code, variant, null);
     }
@@ -402,16 +409,16 @@ public class InventoryDocumentService {
     private void validateExportSerial(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial,
             BigDecimal quantityOut) {
         if (quantityOut.compareTo(BigDecimal.ONE) != 0) {
-            throw new BusinessException("Moi dong xuat serial phai co so luong bang 1");
+            throw new BusinessException("Mỗi dòng xuất serial phải có số lượng bằng 1");
         }
         if (!line.getVariantId().equals(serial.getVariantId())) {
-            throw new BusinessException("Serial khong thuoc SKU tren dong xuat");
+            throw new BusinessException("Serial không thuộc SKU trên dòng xuất");
         }
         if (!doc.getWarehouseId().equals(serial.getWarehouseId())) {
-            throw new BusinessException("Serial khong nam trong kho xuat");
+            throw new BusinessException("Serial không nằm trong kho xuất");
         }
         if (!"AVAILABLE".equalsIgnoreCase(serial.getStatus())) {
-            throw new BusinessException("Serial khong kha dung de xuat kho");
+            throw new BusinessException("Serial không khả dụng để xuất kho");
         }
     }
 
@@ -421,7 +428,7 @@ public class InventoryDocumentService {
                 .findByWarehouseVariantSerialForUpdate(doc.getWarehouseId(), line.getVariantId(), serial.getId(), "GOOD")
                 .orElseThrow(() -> new BusinessException("Khong tim thay ton kho cho serial " + serial.getSerialNumber()));
         if (serialBalance.getQuantityOnHand().compareTo(BigDecimal.ONE) < 0) {
-            throw new BusinessException("Serial " + serial.getSerialNumber() + " khong con ton kho");
+            throw new BusinessException("Serial " + serial.getSerialNumber() + " không còn tồn kho");
         }
         serialBalance.setQuantityOnHand(ZERO);
         serialBalance.setUpdatedAt(LocalDateTime.now());
@@ -487,12 +494,12 @@ public class InventoryDocumentService {
         List<String> serialValues = parseSerialNumbers(line.getSerialNumbersText());
         int expectedQuantity = requireWholeNumber(line.getQuantityIn(), "So luong nhap serial");
         if (serialValues.size() != expectedQuantity) {
-            throw new BusinessException("San pham quan ly serial phai co dung " + expectedQuantity + " serial");
+            throw new BusinessException("Sản phẩm quản lý serial phải có đúng " + expectedQuantity + " serial");
         }
 
         for (String serialValue : serialValues) {
             if (serialNumberRepository.findBySerialNumber(serialValue).isPresent()) {
-                throw new BusinessException("Serial da ton tai: " + serialValue);
+                throw new BusinessException("Serial đã tồn tại: " + serialValue);
             }
             SerialNumber serial = SerialNumber.builder()
                     .variantId(line.getVariantId())
@@ -519,13 +526,13 @@ public class InventoryDocumentService {
         try {
             return value.stripTrailingZeros().intValueExact();
         } catch (ArithmeticException ex) {
-            throw new BusinessException(fieldName + " phai la so nguyen");
+            throw new BusinessException(fieldName + " phải là số nguyên");
         }
     }
 
     private InventoryDocument findExportOrThrow(Long id) {
         if (id == null) {
-            throw new BusinessException("ID phieu xuat kho la bat buoc");
+            throw new BusinessException("ID phiếu xuất kho là bắt buộc");
         }
         return inventoryDocumentRepository.findExportByIdWithLines(id)
                 .orElseThrow(() -> new BusinessException("Khong tim thay phieu xuat kho"));
@@ -533,7 +540,7 @@ public class InventoryDocumentService {
 
     private InventoryDocument findImportOrThrow(Long id) {
         if (id == null) {
-            throw new BusinessException("ID phieu nhap kho la bat buoc");
+            throw new BusinessException("ID phiếu nhập kho là bắt buộc");
         }
         return inventoryDocumentRepository.findImportByIdWithLines(id)
                 .orElseThrow(() -> new BusinessException("Khong tim thay phieu nhap kho"));
@@ -542,7 +549,7 @@ public class InventoryDocumentService {
     private void validateCreateRequest(InventoryDocumentRequest req) {
         validateRequiredExportFields(req);
         if (req.getCreatedBy() == null) {
-            throw new BusinessException("Nguoi tao phieu (createdBy) la bat buoc");
+            throw new BusinessException("Người tạo phiếu (createdBy) là bắt buộc");
         }
     }
 
@@ -553,7 +560,7 @@ public class InventoryDocumentService {
     private void validateCreateImportRequest(InventoryDocumentRequest req) {
         validateRequiredImportFields(req);
         if (req.getCreatedBy() == null) {
-            throw new BusinessException("Nguoi tao phieu (createdBy) la bat buoc");
+            throw new BusinessException("Người tạo phiếu (createdBy) là bắt buộc");
         }
     }
 
@@ -571,16 +578,16 @@ public class InventoryDocumentService {
 
     private void validateCommonRequiredFields(InventoryDocumentRequest req, String label, boolean exportDocument) {
         if (req == null) {
-            throw new BusinessException("Du lieu yeu cau phieu " + label + " kho la bat buoc");
+            throw new BusinessException("Dữ liệu yêu cầu phiếu " + label + " kho là bắt buộc");
         }
         if (req.getWarehouseId() == null) {
-            throw new BusinessException("warehouseId la bat buoc");
+            throw new BusinessException("warehouseId là bắt buộc");
         }
         if (req.getDocDate() == null) {
-            throw new BusinessException("docDate la bat buoc");
+            throw new BusinessException("docDate là bắt buộc");
         }
         if (req.getLines() == null || req.getLines().isEmpty()) {
-            throw new BusinessException("Phieu " + label + " kho phai co it nhat mot dong chi tiet");
+            throw new BusinessException("Phiếu " + label + " kho phải có ít nhất một dòng chi tiết");
         }
         for (int i = 0; i < req.getLines().size(); i++) {
             InventoryDocumentLineRequest line = req.getLines().get(i);
@@ -598,7 +605,7 @@ public class InventoryDocumentService {
     private void ensureEditable(InventoryDocument doc) {
         String status = normalizeStatusValue(doc.getStatus(), DEFAULT_STATUS);
         if (!EDITABLE_STATUSES.contains(status)) {
-            throw new BusinessException("Chi co the cap nhat phieu DRAFT hoac SUBMITTED");
+            throw new BusinessException("Chỉ có thể cập nhật phiếu lưu tạm");
         }
     }
 
@@ -636,7 +643,7 @@ public class InventoryDocumentService {
             }
         }
         if (inventoryDocumentRepository.existsByDocCode(docCode)) {
-            throw new BusinessException("Ma phieu xuat kho da ton tai");
+            throw new BusinessException("Mã phiếu xuất kho đã tồn tại");
         }
         return docCode;
     }
@@ -647,14 +654,14 @@ public class InventoryDocumentService {
             docCode = "IMP-" + System.currentTimeMillis();
         }
         if (inventoryDocumentRepository.existsByDocCode(docCode)) {
-            throw new BusinessException("Ma phieu nhap kho da ton tai");
+            throw new BusinessException("Mã phiếu nhập kho đã tồn tại");
         }
         return docCode;
     }
 
     private InventoryDocumentLine toExportLineEntity(InventoryDocument doc, InventoryDocumentLineRequest lr, int index) {
         if (lr.getQuantityIn() != null && lr.getQuantityIn().compareTo(ZERO) > 0) {
-            throw new BusinessException("Phieu xuat kho khong duoc co quantityIn");
+            throw new BusinessException("Phiếu xuất kho không được có quantityIn");
         }
         BigDecimal quantityOut = requirePositive(lr.getQuantityOut(), "lines[" + index + "].quantityOut");
         BigDecimal unitCost = nonNegativeOrZero(lr.getUnitCost(), "lines[" + index + "].unitCost");
@@ -677,7 +684,7 @@ public class InventoryDocumentService {
 
     private InventoryDocumentLine toImportLineEntity(InventoryDocument doc, InventoryDocumentLineRequest lr, int index) {
         if (lr.getQuantityOut() != null && lr.getQuantityOut().compareTo(ZERO) > 0) {
-            throw new BusinessException("Phieu nhap kho khong duoc co quantityOut");
+            throw new BusinessException("Phiếu nhập kho không được có quantityOut");
         }
         BigDecimal quantityIn = requirePositive(lr.getQuantityIn(), "lines[" + index + "].quantityIn");
         BigDecimal unitCost = nonNegativeOrZero(lr.getUnitCost(), "lines[" + index + "].unitCost");
@@ -699,7 +706,7 @@ public class InventoryDocumentService {
 
     private BigDecimal requirePositive(BigDecimal value, String fieldName) {
         if (value == null || value.compareTo(ZERO) <= 0) {
-            throw new BusinessException(fieldName + " phai lon hon 0");
+            throw new BusinessException(fieldName + " phải lớn hơn 0");
         }
         return value;
     }
@@ -709,7 +716,7 @@ public class InventoryDocumentService {
             return ZERO;
         }
         if (value.compareTo(ZERO) < 0) {
-            throw new BusinessException(fieldName + " phai lon hon hoac bang 0");
+            throw new BusinessException(fieldName + " phải lớn hơn hoặc bằng 0");
         }
         return value;
     }
@@ -725,7 +732,7 @@ public class InventoryDocumentService {
     private String normalizeEditableStatus(String status, String fallback) {
         String normalized = normalizeStatusValue(status, fallback);
         if (!EDITABLE_STATUSES.contains(normalized)) {
-            throw new BusinessException("Trang thai phieu xuat kho phai la DRAFT hoac SUBMITTED");
+            throw new BusinessException("Trạng thái phiếu xuất kho phải là lưu tạm");
         }
         return normalized;
     }
@@ -738,7 +745,7 @@ public class InventoryDocumentService {
     private String normalizeEditableImportStatus(String status, String fallback) {
         String normalized = normalizeStatusValue(status, fallback);
         if (!EDITABLE_STATUSES.contains(normalized)) {
-            throw new BusinessException("Trang thai phieu nhap kho phai la DRAFT hoac SUBMITTED");
+            throw new BusinessException("Trạng thái phiếu nhập kho phải là lưu tạm");
         }
         return normalized;
     }
@@ -753,7 +760,7 @@ public class InventoryDocumentService {
         }
         normalized = normalized.toUpperCase(Locale.ROOT);
         if (!VALID_STATUSES.contains(normalized)) {
-            throw new BusinessException("Trang thai phieu kho khong hop le");
+            throw new BusinessException("Trạng thái phiếu kho không hợp lệ");
         }
         return normalized;
     }
@@ -830,6 +837,15 @@ public class InventoryDocumentService {
                 r.setSalespersonName(salesperson.getFullName());
             }
         }
+
+        if (doc.getReferenceType() != null && doc.getReferenceId() != null) {
+            if ("ASSEMBLY_ORDER".equals(doc.getReferenceType())) {
+                assemblyOrderRepository.findById(doc.getReferenceId()).ifPresent(order -> r.setReferenceCode(order.getOrderCode()));
+            } else if ("BOM".equals(doc.getReferenceType())) {
+                assemblyBomRepository.findById(doc.getReferenceId()).ifPresent(bom -> r.setReferenceCode(bom.getBomCode()));
+            }
+        }
+
         if (doc.getLines() != null) {
             List<InventoryDocumentLineResponse> lines = doc.getLines().stream().map(l -> {
                 InventoryDocumentLineResponse lr = new InventoryDocumentLineResponse();
@@ -842,6 +858,7 @@ public class InventoryDocumentService {
                 lr.setLineAmount(l.getLineAmount());
                 lr.setLotBatchId(l.getLotBatchId());
                 lr.setSerialNumberId(l.getSerialNumberId());
+                lr.setSerialNumbers(parseSerialNumbers(l.getSerialNumbersText()));
                 lr.setNote(l.getNote());
                 return lr;
             }).collect(Collectors.toList());
