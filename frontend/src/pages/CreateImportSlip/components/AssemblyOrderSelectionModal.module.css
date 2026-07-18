@@ -1,0 +1,227 @@
+.backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(30, 41, 59, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal {
+    background-color: var(--color-canvas, #ffffff);
+    width: 900px;
+    max-width: 95vw;
+    max-height: 90vh;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.headerTitle {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text-strong, #1e293b);
+}
+
+.closeBtn {
+    background: none;
+    border: none;
+    color: var(--color-text-light, #94a3b8);
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.body {
+    padding: 16px 24px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.filterBar {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border, #e2e8f0);
+}
+
+.filterGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filterGroup label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text, #475569);
+}
+
+.filterInput {
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+
+.filterInput:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px #2563eb;
+}
+
+.btnFetch {
+    height: 36px;
+    padding: 0 16px;
+    background-color: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btnFetch:hover {
+    background-color: #e2e8f0;
+}
+
+.tableWrapper {
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.table th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+    vertical-align: middle;
+}
+
+.table tr.selected {
+    background-color: #eff6ff;
+}
+
+.table tr:hover:not(.selected) {
+    background-color: #f8fafc;
+    cursor: pointer;
+}
+
+.radioCell {
+    width: 40px;
+    text-align: center;
+}
+
+.radioCell input {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: #2563eb;
+}
+
+.footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+    background-color: #f8fafc;
+}
+
+.recordCount {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.footerActions {
+    display: flex;
+    gap: 12px;
+}
+
+.btnCancel {
+    padding: 8px 16px;
+    background-color: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+}
+
+.btnCancel:hover {
+    background-color: #f8fafc;
+}
+
+.btnConfirm {
+    padding: 8px 24px;
+    background-color: #2563eb;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+}
+
+.btnConfirm:hover {
+    background-color: #1d4ed8;
+}
+
+.btnConfirm:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 40px;
+    color: #94a3b8;
+}

@@ -9,14 +9,12 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Select from 'react-select';
 import styles from './UpdateExportSlipPage.module.css';
 
+import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
+
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const today = () => new Date().toISOString().slice(0, 10);
-const money = (value) => Number(value || 0).toLocaleString('vi-VN');
-const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
-  ? `${item.productName} - ${item.variantName}`
-  : item?.productName || '';
-
+const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')} đ`;
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
@@ -59,6 +57,10 @@ const customSelectStyles = {
     fontSize: '13px',
     zIndex: 9999
   }),
+  menuPortal: (base) => ({
+    ...base,
+    zIndex: 9999
+  }),
   menuList: (base) => ({
     ...base,
     maxHeight: '200px',
@@ -93,19 +95,23 @@ function UpdateExportSlipPage() {
   const [scanLoading, setScanLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPartnerModal, setShowPartnerModal] = useState(false);
+  const [showReferenceModal, setShowReferenceModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'error', message: '' });
   const [showConfirm, setShowConfirm] = useState(false);
   const [form, setForm] = useState({
     docCode: '',
     warehouseId: '',
     partnerId: '',
-    salespersonName: '',
+    salespersonId: '',
     customerAddress: '',
     receiverName: '',
     receiverPhone: '',
     receiverAddress: '',
     docDate: today(),
     note: '',
+    referenceType: '',
+    referenceId: '',
+    referenceCode: '',
   });
   const [items, setItems] = useState([emptyLine()]);
   const [inventoryBalances, setInventoryBalances] = useState([]);
@@ -157,14 +163,17 @@ function UpdateExportSlipPage() {
             docCode: detail.docCode || '',
             warehouseId: detail.warehouseId || '',
             partnerId: detail.partnerId || '',
-            salespersonName: detail.salespersonName || '',
+            salespersonId: detail.salespersonId || '',
             customerAddress: detail.customerAddress || '',
-            receiverName: detail.receiverName || '',
+            receiverName: detail.recipientName || '',
             receiverPhone: detail.receiverPhone || '',
-            receiverAddress: detail.receiverAddress || '',
+            receiverAddress: detail.recipientAddress || '',
             docDate: detail.docDate || '',
             note: detail.note || '',
             status: detail.status || 'DRAFT',
+            referenceType: detail.referenceType || '',
+            referenceId: detail.referenceId || '',
+            referenceCode: detail.referenceCode || (detail.referenceId ? `Tham chiếu #${detail.referenceId}` : ''),
           });
           setItems((detail.lines || []).map(line => ({
             localId: crypto.randomUUID(),
@@ -350,11 +359,11 @@ function UpdateExportSlipPage() {
     docCode: form.docCode || undefined,
     warehouseId: Number(form.warehouseId),
     partnerId: form.partnerId ? Number(form.partnerId) : null,
-    salespersonName: form.salespersonName,
+    salespersonId: form.salespersonId ? Number(form.salespersonId) : null,
     customerAddress: form.customerAddress,
-    receiverName: form.receiverName || customers.find(s => String(s.id) === String(form.partnerId))?.name || '',
+    recipientName: form.receiverName || customers.find(s => String(s.id) === String(form.partnerId))?.name || '',
     receiverPhone: form.receiverPhone || selectedCustomer?.phone || '',
-    receiverAddress: form.receiverAddress || form.customerAddress || customers.find(s => String(s.id) === String(form.partnerId))?.address || '',
+    recipientAddress: form.receiverAddress || form.customerAddress || customers.find(s => String(s.id) === String(form.partnerId))?.address || '',
     docDate: form.docDate,
     status,
     note: form.note,
@@ -368,6 +377,8 @@ function UpdateExportSlipPage() {
       serialNumberId: item.serialNumberId || null,
       note: item.note,
     })),
+    referenceType: form.referenceType || undefined,
+    referenceId: form.referenceId || undefined,
   });
 
   const submit = async (status, shouldPost = false) => {
@@ -387,7 +398,7 @@ function UpdateExportSlipPage() {
       if (shouldPost) {
         await exportApi.postExportSlip(id);
       }
-      navigate('/export-slips');
+      navigate('/export-slips', { state: { toastMessage: shouldPost ? 'Ghi sổ phiếu xuất kho thành công!' : 'Cập nhật phiếu xuất kho thành công!', toastType: 'success' } });
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không cập nhật được phiếu xuất kho');
     } finally {
@@ -462,22 +473,46 @@ function UpdateExportSlipPage() {
                     </div>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                       <label className="misa-label">Nhân viên xuất hàng</label>
-                      <input
-                        list="export-staff-list"
-                        className="misa-input"
-                        value={form.salespersonName || ''}
-                        onChange={(e) => handleFormChange('salespersonName', e.target.value)}
-                        placeholder="Nhập hoặc chọn tên nhân viên"
-                      />
-                      <datalist id="export-staff-list">
-                        {users.map(user => <option key={user.id} value={user.fullName || user.username} />)}
-                      </datalist>
+                      <select className="misa-input" value={form.salespersonId} onChange={(e) => handleFormChange('salespersonId', e.target.value)}>
+                        <option value="">Chọn nhân viên</option>
+                        {users.map(user => <option key={user.id} value={user.id}>{user.fullName || user.username}</option>)}
+                      </select>
                     </div>
                   </div>
 
                   <div className="misa-form-group" style={{ marginTop: '12px' }}>
                     <label className="misa-label">Ghi chú</label>
                     <input className="misa-input" value={form.note} onChange={(event) => handleFormChange('note', event.target.value)} placeholder="Nhập ghi chú" />
+                  </div>
+
+                  <div className="misa-form-group" style={{ marginTop: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
+                      {!form.referenceId && (
+                        <button 
+                          type="button" 
+                          style={{ padding: 0, fontSize: '13px', background: 'none', border: 'none', color: '#0070cc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          onClick={() => setShowReferenceModal(true)}
+                        >
+                          <i className="bi bi-link-45deg" style={{ fontSize: '16px' }}></i> Tham chiếu
+                        </button>
+                      )}
+                    </div>
+                    {form.referenceId ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                        <span style={{ color: 'var(--color-primary)', fontWeight: '500', cursor: 'pointer' }} onClick={() => setShowReferenceModal(true)}>
+                          <i className="bi bi-file-earmark-text"></i> {form.referenceCode}
+                        </span>
+                        <i 
+                          className="bi bi-x-circle-fill" 
+                          style={{ color: '#dc3545', cursor: 'pointer', fontSize: '14px' }}
+                          onClick={() => setForm(prev => ({ ...prev, referenceType: '', referenceId: '', referenceCode: '' }))}
+                          title="Xóa tham chiếu"
+                        ></i>
+                      </div>
+                    ) : (
+                      <input type="text" className="misa-input" style={{ marginTop: '8px' }} placeholder="Số chứng từ đính kèm..." />
+                    )}
                   </div>
 
 
@@ -542,7 +577,7 @@ function UpdateExportSlipPage() {
                       disabled={scanLoading}
                     />
                   </div>
-                  <button className={styles.btnAddRow} type="submit" disabled={scanLoading}>
+                  <button className={styles.btnAddRow} type="submit" disabled={scanLoading} style={{ display: 'none' }}>
                     {scanLoading ? 'Đang quét...' : 'Thêm mã'}
                   </button>
                 </form>
@@ -557,11 +592,11 @@ function UpdateExportSlipPage() {
                   <thead>
                     <tr>
                       <th style={{ width: '50px', textAlign: 'center' }}>STT</th>
-                      <th style={{ width: '18%' }}>Mã hàng</th>
                       <th style={{ width: '22%' }}>Tên hàng</th>
+                      <th style={{ width: '14%' }}>Mã hàng</th>
                       <th style={{ width: '8%' }}>ĐVT</th>
-                      <th style={{ width: '8%' }} className={styles.textCenter}>Tồn kho</th>
-                      <th style={{ width: '12%' }} className={styles.textRight}>Số lượng</th>
+                      <th style={{ width: '8%' }} className={styles.textCenter}>Tồn</th>
+                      <th style={{ width: '12%' }} className={styles.textRight}>SL</th>
                       <th style={{ width: '15%' }} className={styles.textRight}>Đơn giá</th>
                       <th style={{ width: '15%' }} className={styles.textRight}>Thành tiền</th>
                       <th style={{ width: '50px', textAlign: 'center' }}></th>
@@ -575,16 +610,17 @@ function UpdateExportSlipPage() {
                           <td className={styles.textCenter}>{index + 1}</td>
                           <td>
                             <Select
-                              options={products.map(p => ({ value: p.id, label: p.sku }))}
-                              value={products.find(p => String(p.id) === String(item.variantId)) ? { value: item.variantId, label: products.find(p => String(p.id) === String(item.variantId)).sku } : null}
+                              options={products.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}` }))}
+                              value={products.find(p => String(p.id) === String(item.variantId)) ? { value: item.variantId, label: `${products.find(p => String(p.id) === String(item.variantId)).productName} - ${products.find(p => String(p.id) === String(item.variantId)).sku || products.find(p => String(p.id) === String(item.variantId)).productCode}` } : null}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.value : '')}
                               placeholder="Chọn hàng"
                               isClearable
                               styles={customSelectStyles}
+                              menuPortalTarget={document.body}
                             />
                           </td>
                           <td>
-                            {variantLabel(product)}
+                            {product?.sku || product?.productCode || ''}
                           </td>
                           <td>
                             {product?.unitName || ''}
@@ -649,6 +685,20 @@ function UpdateExportSlipPage() {
         onClose={() => setShowPartnerModal(false)}
         onSaved={handleSavePartner}
         onError={(msg) => showToast('error', msg)}
+      />
+      <ReferenceDocumentModal
+        isOpen={showReferenceModal}
+        onClose={() => setShowReferenceModal(false)}
+        onSelect={(doc) => {
+          setForm(prev => ({
+            ...prev,
+            referenceType: doc.type,
+            referenceId: doc.id,
+            referenceCode: doc.code
+          }));
+          setShowReferenceModal(false);
+        }}
+        type="EXPORT"
       />
       <ConfirmModal
         isOpen={showConfirm}
