@@ -26,6 +26,21 @@
   margin-bottom: 24px;
 }
 
+.backLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e3f7a;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
 .backBtn {
   background: none;
   border: none;

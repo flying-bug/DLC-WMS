@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -27,10 +27,12 @@ const variantLabel = (item) => item?.variantName && item.variantName !== item.pr
 
 function ExportSlipPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [slips, setSlips] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [users, setUsers] = useState([]);
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({ docCode: '', fromDate: '', status: '' });
@@ -47,12 +49,14 @@ function ExportSlipPage() {
   const warehouseById = useMemo(() => new Map(warehouses.map(item => [item.id, item])), [warehouses]);
   const productById = useMemo(() => new Map(products.map(item => [item.id, item])), [products]);
   const customerById = useMemo(() => new Map(customers.map(item => [item.id, item])), [customers]);
+  const userById = useMemo(() => new Map(users.map(item => [item.id, item])), [users]);
 
   const loadLookups = useCallback(async () => {
-    const [warehouseRes, productRes, customerRes] = await Promise.allSettled([
+    const [warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
       exportApi.getWarehouses({ size: 100 }),
       exportApi.getProducts({ size: 100 }),
       exportApi.getCustomers({ size: 1000 }),
+      exportApi.getUsers({ size: 1000 }).catch(() => null),
     ]);
 
     if (warehouseRes.status === 'fulfilled') {
@@ -63,6 +67,9 @@ function ExportSlipPage() {
     }
     if (customerRes.status === 'fulfilled') {
       setCustomers(pageContent(unwrap(customerRes.value)));
+    }
+    if (userRes.status === 'fulfilled' && userRes.value) {
+      setUsers(pageContent(unwrap(userRes.value)));
     }
   }, []);
 
@@ -96,6 +103,13 @@ function ExportSlipPage() {
     loadSlips();
   }, [loadSlips]);
 
+  useEffect(() => {
+    if (location.state?.toastMessage) {
+      showToast(location.state.toastType || 'success', location.state.toastMessage);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
+
   const rows = slips.map(slip => {
     const status = STATUS_LABELS[slip.status] || { label: slip.status || 'Không rõ', code: 'info' };
     return {
@@ -121,6 +135,7 @@ function ExportSlipPage() {
       item.statusLabel
     ]);
     exportToExcel(headers, data, 'Danh_sach_phieu_xuat_kho');
+    showToast('success', 'Xuất Excel thành công!');
   };
 
   const handleSelectAll = (e) => {
@@ -226,14 +241,14 @@ function ExportSlipPage() {
                 <th style={{ width: '40px', textAlign: 'center' }}>
                   <input type="checkbox" className={styles.checkbox} checked={rows.length > 0 && selectedIds.length === rows.length} onChange={handleSelectAll} />
                 </th>
-                <th style={{ width: '160px' }}>Ngày xuất kho</th>
-                <th style={{ width: '150px' }}>Số chứng từ</th>
-                <th style={{ width: '200px' }}>Khách hàng</th>
-                <th>Ghi chú</th>
-                <th className={styles.textRight} style={{ width: '140px' }}>Tổng tiền</th>
-                <th style={{ width: '140px' }}>Kho xuất</th>
-                <th style={{ width: '140px' }}>Trạng thái</th>
-                <th className={styles.textCenter} style={{ width: '100px' }}>Thao tác</th>
+                <th style={{ width: '120px' }}>Ngày Xuất</th>
+                <th style={{ width: '180px' }}>Số Phiếu</th>
+                <th style={{ width: '200px' }}>Khách Hàng</th>
+                <th style={{ width: '120px' }}>Kho Xuất</th>
+                <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>
+                <th style={{ minWidth: '150px' }}>Ghi Chú</th>
+                <th style={{ width: '120px' }}>Trạng Thái</th>
+                <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
               </tr>
             </thead>
             <tbody>
@@ -241,11 +256,16 @@ function ExportSlipPage() {
                 <tr key={slip.id} className={selectedSlip?.id === slip.id ? styles.activeRow : ''}>
                   <td style={{ textAlign: 'center' }}><input type="checkbox" className={styles.checkbox} checked={selectedIds.includes(slip.id)} onChange={(event) => handleSelectRow(event, slip.id)} onClick={(event) => event.stopPropagation()} /></td>
                   <td>{slip.date}</td>
-                  <td><a href="#" className={styles.link} onClick={(event) => event.preventDefault()}>{slip.docCode}</a></td>
+                  <td style={{ whiteSpace: 'nowrap' }}><a href="#" className={styles.link} onClick={(event) => event.preventDefault()}>{slip.docCode}</a></td>
                   <td>{slip.partner}</td>
-                  <td>{slip.note || 'Không có ghi chú'}</td>
-                  <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>
                   <td>{slip.warehouse}</td>
+                  <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>
+                  <td style={{ maxWidth: '180px' }}>
+                    <div className={styles.tooltipContainer}>
+                      <span className={styles.noteText}>{slip.note || 'Không có ghi chú'}</span>
+                      {slip.note && <span className={styles.tooltipText}>{slip.note}</span>}
+                    </div>
+                  </td>
                   <td>
                     <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
                       slip.statusCode === 'info' ? styles.badgeInfo :
@@ -382,6 +402,26 @@ function ExportSlipPage() {
                       <span className={styles.detailLabel}>Khách hàng</span>
                       <span className={styles.detailValue}>{customerById.get(selectedSlip.partnerId)?.name || (selectedSlip.partnerId ? `Khách hàng #${selectedSlip.partnerId}` : 'Chưa chọn')}</span>
                     </div>
+                    <div className={styles.detailItem}>
+                      <span className={styles.detailLabel}>Người nhận hàng</span>
+                      <span className={styles.detailValue}>{selectedSlip.recipientName || 'Chưa có thông tin'}</span>
+                    </div>
+                    <div className={styles.detailItem}>
+                      <span className={styles.detailLabel}>Địa chỉ nhận hàng</span>
+                      <span className={styles.detailValue}>{selectedSlip.recipientAddress || 'Chưa có thông tin'}</span>
+                    </div>
+                    <div className={styles.detailItem}>
+                      <span className={styles.detailLabel}>Nhân viên xuất hàng</span>
+                      <span className={styles.detailValue}>{userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || 'Chưa có thông tin'}</span>
+                    </div>
+                    {(selectedSlip.referenceType && selectedSlip.referenceId) && (
+                      <div className={styles.detailItem}>
+                        <span className={styles.detailLabel}>Kèm chứng từ</span>
+                        <span className={styles.detailValue} style={{ color: 'var(--color-primary)', cursor: 'pointer' }}>
+                           <i className="bi bi-link-45deg"></i> {selectedSlip.referenceCode || selectedSlip.referenceId}
+                        </span>
+                      </div>
+                    )}
                     <div className={styles.detailItem}>
                       <span className={styles.detailLabel}>Lý do xuất</span>
                       <span className={styles.detailValue}>{selectedSlip.note || 'Không có ghi chú'}</span>

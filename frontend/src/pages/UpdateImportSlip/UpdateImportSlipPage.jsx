@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as importApi from '../../api/inventoryImportApi';
+import * as customerApi from '../../api/customerApi';
+import * as assemblyOrderApi from '../../api/assemblyOrderApi';
+import * as exportApi from '../../api/inventoryExportApi';
 import SupplierModal from '../Supplier/components/SupplierModal';
+import CustomerQuickCreateDrawer from '../Customer/components/CustomerQuickCreateDrawer';
+import AssemblyOrderSelectionModal from '../CreateImportSlip/components/AssemblyOrderSelectionModal';
+import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
@@ -58,6 +64,10 @@ const customSelectStyles = {
     fontSize: '13px',
     zIndex: 9999
   }),
+  menuPortal: (base) => ({
+    ...base,
+    zIndex: 9999
+  }),
   menuList: (base) => ({
     ...base,
     maxHeight: '200px',
@@ -100,6 +110,13 @@ function UpdateImportSlipPage() {
     note: '',
     status: 'DRAFT',
   });
+  const [importType, setImportType] = useState('PURCHASE');
+  const [customers, setCustomers] = useState([]);
+  const [assemblyOrders, setAssemblyOrders] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [showCustomerDrawer, setShowCustomerDrawer] = useState(false);
+  const [showAssemblyOrderModal, setShowAssemblyOrderModal] = useState(false);
+  const [showReferenceModal, setShowReferenceModal] = useState(false);
   const [items, setItems] = useState([emptyLine()]);
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
@@ -118,25 +135,58 @@ function UpdateImportSlipPage() {
     }
   };
 
+  const handleSaveCustomer = async (formData) => {
+    try {
+      const res = await customerApi.createCustomer(formData);
+      const newCustomer = res.data?.data || res.data;
+      setCustomers(prev => [...prev, newCustomer]);
+      setForm(prev => ({ ...prev, customerId: newCustomer.id }));
+      setShowCustomerDrawer(false);
+      showToast('success', 'Thêm mới khách hàng thành công!');
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || 'Có lỗi xảy ra khi tạo khách hàng');
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [detailRes, warehouseRes, supplierRes, productRes] = await Promise.all([
+        const [detailRes, warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes] = await Promise.allSettled([
           importApi.getImportDetail(id),
           importApi.getWarehouses({ size: 100 }),
           importApi.getSuppliers(),
           importApi.getProducts({ size: 100 }),
+          customerApi.searchCustomers('', '', '', 0, 100),
+          assemblyOrderApi.getAssemblyOrders({ size: 100 }),
+          exportApi.getUsers({ size: 1000 })
         ]);
 
-        const detail = unwrap(detailRes);
-        setWarehouses(pageContent(unwrap(warehouseRes)));
-        setSuppliers(pageContent(unwrap(supplierRes)));
-        setProducts(pageContent(unwrap(productRes)));
+        if (warehouseRes.status === 'fulfilled') setWarehouses(pageContent(unwrap(warehouseRes.value)));
+        if (supplierRes.status === 'fulfilled') setSuppliers(pageContent(unwrap(supplierRes.value)));
+        if (productRes.status === 'fulfilled') setProducts(pageContent(unwrap(productRes.value)));
+        if (customerRes.status === 'fulfilled') setCustomers(pageContent(unwrap(customerRes.value)));
+        if (assemblyOrderRes.status === 'fulfilled') setAssemblyOrders(pageContent(unwrap(assemblyOrderRes.value)));
+        if (userRes.status === 'fulfilled') setUsers(pageContent(unwrap(userRes.value)));
+
+        const detail = detailRes.status === 'fulfilled' ? unwrap(detailRes.value) : null;
+        if (!detail) throw new Error('Cannot load slip details');
+
+        const loadedImportType = detail.issuePurpose || 'PURCHASE';
+        setImportType(loadedImportType);
+
         setForm({
           docCode: detail.docCode || '',
           warehouseId: detail.warehouseId || '',
-          partnerId: detail.partnerId || '',
+          partnerId: loadedImportType === 'PURCHASE' ? detail.partnerId || '' : '',
+          customerId: loadedImportType === 'RETURN' ? detail.partnerId || '' : '',
+          assemblyOrderId: loadedImportType === 'PRODUCTION' ? detail.referenceId || '' : '',
+          assemblyOrderCode: '', // will be resolved in render
+          deliverer: detail.recipientName || '',
+          purchaser: detail.salespersonId || '',
+          referenceType: detail.referenceType || '',
+          referenceId: detail.referenceId || '',
+          referenceCode: detail.referenceCode || '',
           docDate: detail.docDate ? detail.docDate.split('T')[0] : '',
           note: detail.note || '',
           status: detail.status || 'DRAFT',
@@ -194,7 +244,7 @@ function UpdateImportSlipPage() {
   const buildPayload = (status) => ({
     docCode: form.docCode || undefined,
     warehouseId: Number(form.warehouseId),
-    partnerId: form.partnerId ? Number(form.partnerId) : null,
+    partnerId: importType === 'RETURN' ? (form.customerId ? Number(form.customerId) : null) : (form.partnerId ? Number(form.partnerId) : null),
     docDate: form.docDate,
     status,
     note: form.note,
@@ -207,6 +257,11 @@ function UpdateImportSlipPage() {
       serialNumbers: item.serialNumbers || [],
       note: item.note,
     })),
+    issuePurpose: importType,
+    recipientName: form.deliverer,
+    salespersonId: form.purchaser ? Number(form.purchaser) : null,
+    referenceType: importType === 'PRODUCTION' && form.assemblyOrderId ? 'ASSEMBLY_ORDER' : (form.referenceType || undefined),
+    referenceId: importType === 'PRODUCTION' && form.assemblyOrderId ? Number(form.assemblyOrderId) : (form.referenceId || undefined),
   });
 
   const submit = async (status, shouldPost = false) => {
@@ -220,7 +275,7 @@ function UpdateImportSlipPage() {
       if (shouldPost) {
         await importApi.postImportSlip(id);
       }
-      navigate('/import-history', { state: { toastMessage: 'Cập nhật phiếu nhập kho thành công!', toastType: 'success' } });
+      navigate('/import-history', { state: { toastMessage: shouldPost ? 'Ghi sổ phiếu nhập kho thành công!' : 'Cập nhật phiếu nhập kho thành công!', toastType: 'success' } });
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không cập nhật được phiếu nhập kho');
     } finally {
@@ -232,10 +287,36 @@ function UpdateImportSlipPage() {
     <AdminLayout>
       <div className={styles.pageBody}>
         <div className={styles.pageHeader}>
-          <button className={styles.backBtn} onClick={() => navigate('/import-history')}>
-            <i className="bi bi-arrow-left"></i>
-          </button>
-          <h1 className={styles.pageTitle}>Sửa phiếu nhập kho {form.docCode ? form.docCode : ''}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/import-history'); }}>
+              <i className="bi bi-arrow-left"></i> Sửa phiếu nhập kho {form.docCode ? form.docCode : ''}
+            </a>
+            <span style={{ color: '#d1d5db', fontSize: '20px' }}>|</span>
+            <div style={{ width: '280px' }}>
+              <Select
+                value={[{ value: 'PURCHASE', label: 'Nhập kho mua hàng' }, { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' }, { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' }].find(o => o.value === importType)}
+                options={[
+                  { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
+                  { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
+                  { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' }
+                ]}
+                onChange={(option) => {
+                  setImportType(option.value);
+                  setForm(prev => ({
+                    ...prev,
+                    partnerId: '',
+                    customerId: '',
+                    assemblyOrderId: ''
+                  }));
+                }}
+                styles={{
+                  ...customSelectStyles,
+                  control: (base, state) => ({ ...customSelectStyles.control(base, state), fontWeight: 'bold' })
+                }}
+                isSearchable={false}
+              />
+            </div>
+          </div>
         </div>
 
         {loading ? (
@@ -250,31 +331,93 @@ function UpdateImportSlipPage() {
                     Thông tin chung
                   </h2>
                 </div>
-
-                <div className="misa-form-row">
-                <div className="misa-form-group" style={{ flex: '0 0 35%' }}>
-                  <label className="misa-label">Mã NCC</label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <div style={{ flex: 1 }}>
-                      <Select
-                        options={suppliers.map(s => ({ value: s.id, label: s.code }))}
-                        value={suppliers.find(s => String(s.id) === String(form.partnerId)) ? { value: form.partnerId, label: suppliers.find(s => String(s.id) === String(form.partnerId)).code } : null}
-                        onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
-                        placeholder="Chọn NCC"
-                        isClearable
-                        styles={customSelectStyles}
-                      />
+                {importType === 'PURCHASE' && (
+                  <div className="misa-form-row">
+                    <div className="misa-form-group" style={{ flex: '0 0 35%' }}>
+                      <label className="misa-label">Mã NCC <span className="required">*</span></label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ flex: 1 }}>
+                          <Select
+                            options={suppliers.map(s => ({ value: s.id, label: s.code }))}
+                            value={suppliers.find(s => String(s.id) === String(form.partnerId)) ? { value: form.partnerId, label: suppliers.find(s => String(s.id) === String(form.partnerId)).code } : null}
+                            onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
+                            placeholder="Chọn NCC"
+                            isClearable
+                            styles={customSelectStyles}
+                          />
+                        </div>
+                        <button type="button" onClick={() => setShowPartnerModal(true)} style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <i className="bi bi-plus" style={{ fontSize: '18px', color: 'var(--color-primary)' }}></i>
+                        </button>
+                      </div>
                     </div>
-                    <button type="button" onClick={() => setShowPartnerModal(true)} style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <i className="bi bi-plus" style={{ fontSize: '18px', color: 'var(--color-primary)' }}></i>
-                    </button>
+                    <div className="misa-form-group" style={{ flex: '0 0 65%' }}>
+                      <label className="misa-label">Tên NCC</label>
+                      <input type="text" className="misa-input" readOnly value={suppliers.find(s => String(s.id) === String(form.partnerId))?.name || ''} style={{ backgroundColor: '#f3f4f6' }} />
+                    </div>
                   </div>
-                </div>
-                <div className="misa-form-group" style={{ flex: '0 0 65%' }}>
-                  <label className="misa-label">Tên NCC</label>
-                  <input type="text" className="misa-input" readOnly value={suppliers.find(s => String(s.id) === String(form.partnerId))?.name || ''} style={{ backgroundColor: '#f3f4f6' }} />
-                </div>
-              </div>
+                )}
+
+                {importType === 'PRODUCTION' && (
+                  <div className="misa-form-row">
+                    <div className="misa-form-group" style={{ flex: '0 0 100%' }}>
+                      <label className="misa-label">Lệnh sản xuất <span className="required">*</span></label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input 
+                          type="text" 
+                          className="misa-input" 
+                          readOnly 
+                          value={assemblyOrders.find(o => String(o.id) === String(form.assemblyOrderId))?.orderCode || ''} 
+                          placeholder="Nhấn biểu tượng bên cạnh để chọn lệnh..."
+                          style={{ flex: 1, backgroundColor: '#f3f4f6', cursor: 'pointer' }}
+                          onClick={() => setShowAssemblyOrderModal(true)}
+                        />
+                        <button 
+                          type="button" 
+                          onClick={() => setShowAssemblyOrderModal(true)} 
+                          style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <i className="bi bi-search" style={{ fontSize: '16px', color: 'var(--color-primary)' }}></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {importType === 'RETURN' && (
+                  <>
+                    <div className="misa-form-row">
+                      <div className="misa-form-group" style={{ flex: '0 0 35%' }}>
+                        <label className="misa-label">Mã KH <span className="required">*</span></label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <div style={{ flex: 1 }}>
+                            <Select
+                              options={customers.map(c => ({ value: c.id, label: c.code || c.phone }))}
+                              value={customers.find(c => String(c.id) === String(form.customerId)) ? { value: form.customerId, label: customers.find(c => String(c.id) === String(form.customerId)).code || customers.find(c => String(c.id) === String(form.customerId)).phone } : null}
+                              onChange={(selected) => handleFormChange('customerId', selected ? selected.value : '')}
+                              placeholder="Chọn KH"
+                              isClearable
+                              styles={customSelectStyles}
+                            />
+                          </div>
+                          <button type="button" onClick={() => setShowCustomerDrawer(true)} style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <i className="bi bi-plus" style={{ fontSize: '18px', color: 'var(--color-primary)' }}></i>
+                          </button>
+                        </div>
+                      </div>
+                      <div className="misa-form-group" style={{ flex: '0 0 65%' }}>
+                        <label className="misa-label">Tên Khách hàng</label>
+                        <input type="text" className="misa-input" readOnly value={customers.find(c => String(c.id) === String(form.customerId))?.name || ''} style={{ backgroundColor: '#f3f4f6' }} />
+                      </div>
+                    </div>
+                    <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                      <div className="misa-form-group" style={{ flex: '1' }}>
+                        <label className="misa-label">Địa chỉ</label>
+                        <input type="text" className="misa-input" readOnly value={customers.find(c => String(c.id) === String(form.customerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} />
+                      </div>
+                    </div>
+                  </>
+                )}
 
               <div className="misa-form-row" style={{ marginTop: '12px' }}>
                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
@@ -291,10 +434,56 @@ function UpdateImportSlipPage() {
                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                 </div>
               </div>
+              <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                {(importType === 'PURCHASE' || importType === 'PRODUCTION') && (
+                  <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                    <label className="misa-label">Người giao hàng</label>
+                    <input type="text" className="misa-input" value={form.deliverer} onChange={(e) => handleFormChange('deliverer', e.target.value)} />
+                  </div>
+                )}
+                <div className="misa-form-group" style={{ flex: importType === 'RETURN' ? '1' : '0 0 50%' }}>
+                  <label className="misa-label">Nhân viên mua hàng</label>
+                  <select className="misa-input" value={form.purchaser || ''} onChange={(e) => handleFormChange('purchaser', e.target.value)}>
+                    <option value="">Chọn nhân viên</option>
+                    {users.map(user => <option key={user.id} value={user.id}>{user.fullName || user.username}</option>)}
+                  </select>
+                </div>
+              </div>
 
                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
                   <label className="misa-label">Ghi chú</label>
                   <textarea className="misa-textarea" value={form.note} onChange={(e) => handleFormChange('note', e.target.value)} style={{ minHeight: '60px' }} />
+                </div>
+
+                <div className="misa-form-group" style={{ marginTop: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
+                    {!form.referenceId && (
+                      <button 
+                        type="button" 
+                        style={{ padding: 0, fontSize: '13px', background: 'none', border: 'none', color: '#0070cc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        onClick={() => setShowReferenceModal(true)}
+                      >
+                        <i className="bi bi-link-45deg" style={{ fontSize: '16px' }}></i> Tham chiếu
+                      </button>
+                    )}
+                  </div>
+                  {form.referenceId && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '4px' }}>
+                      <span className={styles.textBlue} style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <i className="bi bi-file-earmark-text"></i>
+                        {form.referenceCode}
+                      </span>
+                      <button 
+                        type="button" 
+                        className={styles.deleteBtn} 
+                        onClick={() => setForm(prev => ({ ...prev, referenceType: '', referenceId: '', referenceCode: '' }))}
+                        title="Bỏ đính kèm"
+                      >
+                        <i className="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -331,12 +520,13 @@ function UpdateImportSlipPage() {
                   <thead>
                     <tr>
                       <th className={styles.textCenter} style={{ width: '40px' }}>#</th>
+                      <th>Tên hàng</th>
                       <th>Mã hàng</th>
-                      <th style={{ minWidth: '150px' }}>Tên hàng</th>
                       <th>ĐVT</th>
-                      <th className={styles.textCenter} style={{ width: '100px' }}>Số lượng</th>
-                      <th className={styles.textRight}>Đơn giá nhập</th>
-                      <th className={styles.textRight}>Thành tiền</th>
+                      <th style={{ textAlign: 'right' }}>SL</th>
+                      <th style={{ textAlign: 'center' }}>Serial</th>
+                      <th style={{ textAlign: 'right' }}>Đơn giá</th>
+                      <th style={{ textAlign: 'right' }}>Thành tiền</th>
                       <th style={{ width: '40px' }}></th>
                     </tr>
                   </thead>
@@ -348,19 +538,23 @@ function UpdateImportSlipPage() {
                           <td className={styles.textCenter}>{index + 1}</td>
                           <td>
                             <Select
-                              options={products.map(p => ({ value: p.id, label: p.sku }))}
-                              value={products.find(p => String(p.id) === String(item.variantId)) ? { value: item.variantId, label: products.find(p => String(p.id) === String(item.variantId)).sku } : null}
+                              options={products.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}` }))}
+                              value={products.find(p => String(p.id) === String(item.variantId)) ? { value: item.variantId, label: `${products.find(p => String(p.id) === String(item.variantId)).productName} - ${products.find(p => String(p.id) === String(item.variantId)).sku || products.find(p => String(p.id) === String(item.variantId)).productCode}` } : null}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.value : '')}
                               placeholder="Chọn hàng"
                               isClearable
                               autoFocus={item.isNew}
                               styles={customSelectStyles}
+                              menuPortalTarget={document.body}
                             />
                           </td>
-                          <td>{variantLabel(product)}</td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span>{product?.unitName || ''}</span>
+                          <td>{product?.sku || product?.productCode || ''}</td>
+                          <td>{product?.unitName || ''}</td>
+                          <td align="right">
+                            <input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
+                          </td>
+                          <td align="center">
+                            <div className={styles.serialCellContainer} style={{ justifyContent: 'center' }}>
                               {product?.trackSerial && (
                                 <button
                                   type="button"
@@ -368,14 +562,17 @@ function UpdateImportSlipPage() {
                                   onClick={() => setSerialModalItemId(item.localId)}
                                 >
                                   <i className="bi bi-upc-scan"></i>
-                                  {(item.serialNumbers?.length || 0)} / {Number(item.quantity || 0)} Serial
+                                  {(item.serialNumbers?.length || 0)} / {Number(item.quantity || 0)}
                                 </button>
                               )}
                             </div>
                           </td>
-                          <td><input type="number" min="0" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '80px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} /></td>
-                          <td><input type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} /></td>
-                          <td className={`${styles.textRight} ${styles.boldText}`}>{money(Number(item.quantity || 0) * Number(item.price || 0))}</td>
+                          <td align="right">
+                            <input type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
+                          </td>
+                          <td align="right" className={`${styles.textBold} ${styles.textBlue}`}>
+                            {money(Number(item.quantity || 0) * Number(item.price || 0))} đ
+                          </td>
                           <td><button className={styles.deleteBtn} onClick={() => removeItem(item.localId)}><i className="bi bi-trash"></i></button></td>
                         </tr>
                       );
@@ -414,6 +611,11 @@ function UpdateImportSlipPage() {
         targetQuantity={Number(selectedSerialItem?.quantity || 0)}
         initialSerials={selectedSerialItem?.serialNumbers || []}
       />
+      <CustomerQuickCreateDrawer
+        isOpen={showCustomerDrawer}
+        onClose={() => setShowCustomerDrawer(false)}
+        onSaved={handleSaveCustomer}
+      />
       {showPartnerModal && (
         <SupplierModal
           isOpen={showPartnerModal}
@@ -422,6 +624,23 @@ function UpdateImportSlipPage() {
           onError={(msg) => showToast('error', msg)}
         />
       )}
+      <AssemblyOrderSelectionModal
+        isOpen={showAssemblyOrderModal}
+        onClose={() => setShowAssemblyOrderModal(false)}
+        assemblyOrders={assemblyOrders}
+        onSelect={(order) => {
+          setForm(prev => ({ ...prev, assemblyOrderId: order.id, assemblyOrderCode: order.orderCode }));
+          setShowAssemblyOrderModal(false);
+        }}
+      />
+      <ReferenceDocumentModal
+        isOpen={showReferenceModal}
+        onClose={() => setShowReferenceModal(false)}
+        onSelect={(docType, docId, docCode) => {
+          setForm(prev => ({ ...prev, referenceType: docType, referenceId: docId, referenceCode: docCode }));
+          setShowReferenceModal(false);
+        }}
+      />
       <ConfirmModal
         isOpen={showConfirm}
         title="Xác nhận ghi sổ"
