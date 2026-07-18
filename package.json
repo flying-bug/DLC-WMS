@@ -1,5 +1,9 @@
 {
+  "scripts": {
+    "lint": "npm run --prefix frontend lint"
+  },
   "dependencies": {
     "bcryptjs": "^3.0.3"
   }
 }
+

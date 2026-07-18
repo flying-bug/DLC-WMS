@@ -50,6 +50,7 @@ const BrandListPage = () => {
 
     // Initial load
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchBrands();
     }, [fetchBrands]);
 
@@ -354,7 +355,7 @@ const BrandListPage = () => {
                     onClose={() => setIsDeleteModalOpen(false)}
                     onConfirm={async (brandId) => {
                         try {
-                            const res = await axiosClient.delete(`/brands/${brandId}`);
+                            await axiosClient.delete(`/brands/${brandId}`);
                             setBrands(brands.filter(b => b.id !== brandId));
                             showToast('success', 'Xóa thương hiệu thành công!');
                         } catch (err) {
