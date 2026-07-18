@@ -53,3 +53,10 @@ export const deleteWarehouse = (id) => {
 export const getWarehouseLogs = (id, params = {}) => {
     return axiosClient.get(`${WAREHOUSE_BASE}/${id}/logs`, { params });
 };
+
+/**
+ * Lấy danh sách sản phẩm tồn kho trong kho
+ */
+export const getWarehouseInventory = (id) => {
+    return axiosClient.get(`${WAREHOUSE_BASE}/${id}/inventory`);
+};

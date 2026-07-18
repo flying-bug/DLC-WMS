@@ -30,6 +30,8 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final ProductRepository productRepository;
     private final WarehouseRepository warehouseRepository;
     private final PartnerRepository partnerRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final InventoryBalanceRepository inventoryBalanceRepository;
 
     @Override
     public void run(String... args) throws Exception {
@@ -162,6 +164,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         moduleActions.put("stocktake", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("product", new String[]{"view", "add", "edit", "delete", "export", "print"});
+        moduleActions.put("product_category", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("brand", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("unit", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("customer", new String[]{"view", "add", "edit", "delete", "export", "print"});
@@ -290,16 +293,31 @@ public class DatabaseSeeder implements CommandLineRunner {
         seedUnitIfNotFound("Bộ");
 
         // Seed Thương hiệu
-        Brand dellBrand = seedBrandIfNotFound("DELL", "Dell");
-        Brand genericBrand = seedBrandIfNotFound("GENERIC", "Khác");
+        Brand dellBrand = seedBrandIfNotFound("DELL", "Dell", "Hãng máy tính Hoa Kỳ", "18008182", "support@dell.com");
+        Brand genericBrand = seedBrandIfNotFound("GENERIC", "Khác", "Nhà sản xuất khác", null, null);
+        Brand asusBrand = seedBrandIfNotFound("ASUS", "ASUS", "Linh kiện máy tính & Laptop", "18006588", "hotline@asus.com.vn");
+        Brand samsungBrand = seedBrandIfNotFound("SAMSUNG", "Samsung", "Thiết bị lưu trữ & Màn hình", "1800588889", "support@samsung.com");
+        Brand gigabyteBrand = seedBrandIfNotFound("GIGABYTE", "Gigabyte", "Bo mạch chủ & Card đồ họa", "02838389389", "sales@gigabyte.com.vn");
+        Brand ciscoBrand = seedBrandIfNotFound("CISCO", "Cisco", "Thiết bị mạng cao cấp", "180012345", "info@cisco.com");
+        Brand logitechBrand = seedBrandIfNotFound("LOGITECH", "Logitech", "Phụ kiện Gaming & Văn phòng", "02873006000", "support@logitech.com");
+        Brand intelBrand = seedBrandIfNotFound("INTEL", "Intel", "Bộ vi xử lý", "18001090", "support@intel.com");
+        Brand amdBrand = seedBrandIfNotFound("AMD", "AMD", "Bộ vi xử lý & Card đồ họa", null, "support@amd.com");
+        Brand hpBrand = seedBrandIfNotFound("HP", "HP", "Máy in & Laptop doanh nghiệp", "1800585850", "support@hp.com");
+        Brand lenovoBrand = seedBrandIfNotFound("LENOVO", "Lenovo", "Laptop & Máy chủ", "18001096", "support@lenovo.com");
 
         // Seed Danh mục sản phẩm
-        ProductCategory computerCategory = seedCategoryIfNotFound("MAY_TINH", "Máy tính");
-        ProductCategory serviceCategory = seedCategoryIfNotFound("DICH_VU", "Dịch vụ");
+        ProductCategory computerCategory = seedCategoryIfNotFound("MAY_TINH", "Máy tính", null);
+        ProductCategory serviceCategory = seedCategoryIfNotFound("DICH_VU", "Dịch vụ", null);
+        ProductCategory laptopCategory = seedCategoryIfNotFound("LAPTOP", "Máy tính xách tay", computerCategory.getId());
+        ProductCategory componentCategory = seedCategoryIfNotFound("LINH_KIEN", "Linh kiện máy tính", computerCategory.getId());
+        ProductCategory storageCategory = seedCategoryIfNotFound("LUU_TRU", "Thiết bị lưu trữ", componentCategory.getId());
+        ProductCategory networkCategory = seedCategoryIfNotFound("THIET_BI_MANG", "Thiết bị mạng", componentCategory.getId());
+        ProductCategory gamingCategory = seedCategoryIfNotFound("GAMING_GEAR", "Gaming Gear", computerCategory.getId());
 
         // Seed Sản phẩm (Hàng hóa, dịch vụ) khớp hình ảnh mẫu
-        if (productRepository.findByProductCode("CPMH").isEmpty()) {
-            Product p1 = Product.builder()
+        Product p1 = productRepository.findByProductCode("CPMH").orElse(null);
+        if (p1 == null) {
+            p1 = Product.builder()
                     .productCode("CPMH")
                     .productName("Chi phí mua hàng")
                     .productType("Dịch vụ")
@@ -311,27 +329,30 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .active(true)
                     .taxReductionStatus("Chưa xác định")
                     .build();
-            productRepository.save(p1);
+            p1 = productRepository.save(p1);
         }
 
-        if (productRepository.findByProductCode("VT00001").isEmpty()) {
-            Product p2 = Product.builder()
+        Product p2 = productRepository.findByProductCode("VT00001").orElse(null);
+        if (p2 == null) {
+            p2 = Product.builder()
                     .productCode("VT00001")
                     .productName("Bánh Bông")
                     .productType("Hàng hóa")
                     .brand(genericBrand)
                     .category(computerCategory)
                     .unit(caiUnit)
-                    .stockQty(BigDecimal.ZERO)
-                    .stockValue(BigDecimal.ZERO)
+                    .stockQty(new BigDecimal("700.0000"))
+                    .stockValue(new BigDecimal("10500000.00"))
                     .active(true)
                     .taxReductionStatus("Chưa xác định")
                     .build();
-            productRepository.save(p2);
+            p2 = productRepository.save(p2);
         }
+        ProductVariant v2 = seedVariantIfNotFound(p2, "VT00001", "Bánh Bông", new BigDecimal("15000.00"), new BigDecimal("20000.00"));
 
-        if (productRepository.findByProductCode("VT00002").isEmpty()) {
-            Product p3 = Product.builder()
+        Product p3 = productRepository.findByProductCode("VT00002").orElse(null);
+        if (p3 == null) {
+            p3 = Product.builder()
                     .productCode("VT00002")
                     .productName("Máy tính")
                     .productType("Hàng hóa")
@@ -344,11 +365,13 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .taxReductionStatus("Chưa xác định")
                     .imageUrl("https://picsum.photos/id/1/200/120") // Placeholder image
                     .build();
-            productRepository.save(p3);
+            p3 = productRepository.save(p3);
         }
+        ProductVariant v3 = seedVariantIfNotFound(p3, "VT00002", "Máy tính", new BigDecimal("14170040.4858"), new BigDecimal("18000000.00"));
 
-        if (productRepository.findByProductCode("VT00004").isEmpty()) {
-            Product p4 = Product.builder()
+        Product p4 = productRepository.findByProductCode("VT00004").orElse(null);
+        if (p4 == null) {
+            p4 = Product.builder()
                     .productCode("VT00004")
                     .productName("Hiếu")
                     .productType("Thành phẩm")
@@ -360,7 +383,22 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .active(true)
                     .taxReductionStatus("Chưa xác định")
                     .build();
-            productRepository.save(p4);
+            p4 = productRepository.save(p4);
+        }
+        ProductVariant v4 = seedVariantIfNotFound(p4, "VT00004", "Hiếu", new BigDecimal("0.00"), new BigDecimal("0.00"));
+
+        // Seed inventory balances for Kho chính (code K01) and Kho phụ (code K02)
+        Warehouse k1 = warehouseRepository.findByCodeIgnoreCase("K01").orElse(null);
+        Warehouse k2 = warehouseRepository.findByCodeIgnoreCase("K02").orElse(null);
+
+        if (k1 != null && k2 != null) {
+            // Seed for K01 (Kho chính)
+            seedInventoryBalanceIfNotFound(k1.getId(), v3.getId(), new BigDecimal("150.0000"), new BigDecimal("14170040.4858"));
+            seedInventoryBalanceIfNotFound(k1.getId(), v2.getId(), new BigDecimal("500.0000"), new BigDecimal("15000.0000"));
+
+            // Seed for K02 (Kho phụ)
+            seedInventoryBalanceIfNotFound(k2.getId(), v3.getId(), new BigDecimal("97.0000"), new BigDecimal("14170040.4858"));
+            seedInventoryBalanceIfNotFound(k2.getId(), v2.getId(), new BigDecimal("200.0000"), new BigDecimal("15000.0000"));
         }
     }
 
@@ -443,7 +481,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         return unitRepository.save(newUnit);
     }
 
-    private Brand seedBrandIfNotFound(String code, String name) {
+    private Brand seedBrandIfNotFound(String code, String name, String description, String hotline, String email) {
         Optional<Brand> brandOpt = brandRepository.findByCode(code);
         if (brandOpt.isPresent()) {
             return brandOpt.get();
@@ -452,11 +490,14 @@ public class DatabaseSeeder implements CommandLineRunner {
                 .code(code)
                 .name(name)
                 .status("APPROVED")
+                .description(description)
+                .hotline(hotline)
+                .contactEmail(email)
                 .build();
         return brandRepository.save(newBrand);
     }
 
-    private ProductCategory seedCategoryIfNotFound(String code, String name) {
+    private ProductCategory seedCategoryIfNotFound(String code, String name, Long parentId) {
         Optional<ProductCategory> catOpt = categoryRepository.findByCode(code);
         if (catOpt.isPresent()) {
             return catOpt.get();
@@ -464,8 +505,42 @@ public class DatabaseSeeder implements CommandLineRunner {
         ProductCategory newCat = ProductCategory.builder()
                 .code(code)
                 .name(name)
+                .parentId(parentId)
                 .status("APPROVED")
                 .build();
         return categoryRepository.save(newCat);
+    }
+
+    private ProductVariant seedVariantIfNotFound(Product product, String sku, String name, BigDecimal costPrice, BigDecimal salePrice) {
+        Optional<ProductVariant> opt = productVariantRepository.findBySku(sku);
+        if (opt.isPresent()) {
+            return opt.get();
+        }
+        ProductVariant variant = ProductVariant.builder()
+                .product(product)
+                .sku(sku)
+                .barcode(sku)
+                .variantName(name)
+                .costPrice(costPrice)
+                .salePrice(salePrice)
+                .active(true)
+                .build();
+        return productVariantRepository.save(variant);
+    }
+
+    private void seedInventoryBalanceIfNotFound(Long warehouseId, Long variantId, BigDecimal qtyOnHand, BigDecimal avgCost) {
+        Optional<InventoryBalance> opt = inventoryBalanceRepository.findByWarehouseIdAndVariantIdAndStockStatus(warehouseId, variantId, "AVAILABLE");
+        if (opt.isEmpty()) {
+            InventoryBalance balance = InventoryBalance.builder()
+                    .warehouseId(warehouseId)
+                    .variantId(variantId)
+                    .stockStatus("AVAILABLE")
+                    .quantityOnHand(qtyOnHand)
+                    .quantityReserved(BigDecimal.ZERO)
+                    .averageCost(avgCost)
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+            inventoryBalanceRepository.save(balance);
+        }
     }
 }

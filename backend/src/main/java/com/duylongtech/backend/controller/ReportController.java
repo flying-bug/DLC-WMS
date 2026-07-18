@@ -100,4 +100,36 @@ public class ReportController {
                 .data(reportService.getDashboardMetrics())
                 .build());
     }
+
+    @GetMapping("/export/{reportType}")
+    @PreAuthorize("hasAuthority('report:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
+    public ResponseEntity<byte[]> exportReport(
+            @PathVariable String reportType,
+            @RequestParam(required = false) Long warehouseId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String partnerType,
+            @RequestParam(required = false) String status) {
+        
+        // Defaults matching query methods
+        if ("debt".equals(reportType) || "inventory-summary".equals(reportType)) {
+            if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+            if (endDate == null) endDate = LocalDate.now().plusDays(1).atStartOfDay();
+        }
+
+        byte[] excelBytes = reportService.exportReportToExcel(reportType, warehouseId, startDate, endDate, search, partnerType, status);
+        
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        String timestamp = java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String filename = "Bao_Cao_" + reportType + "_" + timestamp + ".xlsx";
+        headers.add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(org.springframework.http.MediaType
+                        .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelBytes);
+    }
 }

@@ -28,7 +28,7 @@ function StepRequestEmail({ onNext }) {
             await import('../../../api/axiosClient').then(m => m.default.post('/auth/forgot-password/request-otp?email=' + encodeURIComponent(email)));
             onNext(email);
         } catch (err) {
-            setError(err.response?.data?.message || 'Có lỗi xảy ra khi gửi email!');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Có lỗi xảy ra khi gửi email!');
         } finally {
             setLoading(false);
         }

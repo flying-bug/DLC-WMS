@@ -49,7 +49,7 @@ function StepResetPassword({ email, otp, onSuccess }) {
             await import('../../../api/axiosClient').then(m => m.default.post('/auth/forgot-password/reset?email=' + encodeURIComponent(email) + '&otp=' + otp + '&newPassword=' + encodeURIComponent(form.newPassword)));
             onSuccess();
         } catch (err) {
-            setErrors({ newPassword: err.response?.data?.message || 'Có lỗi xảy ra khi đổi mật khẩu!' });
+            setErrors({ newPassword: err.response?.data?.userMessage || err.response?.data?.message || 'Có lỗi xảy ra khi đổi mật khẩu!' });
         } finally {
             setLoading(false);
         }

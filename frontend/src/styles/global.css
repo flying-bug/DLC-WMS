@@ -351,3 +351,9 @@ textarea {
   border-color: #dc2626 !important;
 }
 
+/* Hide default browser password reveal/clear eye icons (e.g. Edge, Chrome, Safari) */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+}
+

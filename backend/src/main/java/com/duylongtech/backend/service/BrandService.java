@@ -145,7 +145,7 @@ public class BrandService {
         // Nếu client gửi kèm code khác với code hiện tại → báo lỗi
         String requestedCode = trimToNull(req.getCode());
         if (requestedCode != null && !requestedCode.equalsIgnoreCase(brand.getCode())) {
-            throw new BusinessException(SystemMessage.BRAND_CODE_NOT_MODIFIABLE.getMessage());
+            throw new BusinessException(SystemMessage.BRAND_CODE_NOT_MODIFIABLE);
         }
 
         // Cập nhật tên thương hiệu (bắt buộc)
@@ -225,10 +225,10 @@ public class BrandService {
      */
     private Brand findBrandOrThrow(Long id) {
         if (id == null) {
-            throw new BusinessException(SystemMessage.BRAND_NOT_FOUND.getMessage());
+            throw new BusinessException(SystemMessage.BRAND_NOT_FOUND);
         }
         return brandRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(SystemMessage.BRAND_NOT_FOUND.getMessage()));
+                .orElseThrow(() -> new BusinessException(SystemMessage.BRAND_NOT_FOUND));
     }
 
     /**
@@ -248,7 +248,7 @@ public class BrandService {
         }
         // BR-09: Kiểm tra unique trên toàn hệ thống
         if (brandRepository.existsByCode(code)) {
-            throw new BusinessException(SystemMessage.BRAND_CODE_EXISTS.getMessage());
+            throw new BusinessException(SystemMessage.BRAND_CODE_EXISTS);
         }
         return code;
     }
@@ -268,7 +268,7 @@ public class BrandService {
         }
         String normalized = status.toUpperCase().trim();
         if (!VALID_STATUSES.contains(normalized)) {
-            throw new BusinessException(SystemMessage.BRAND_INVALID_STATUS.getMessage());
+            throw new BusinessException(SystemMessage.BRAND_INVALID_STATUS);
         }
         return normalized;
     }

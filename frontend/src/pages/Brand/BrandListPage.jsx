@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import axiosClient from '../../api/axiosClient';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import BrandDetailDrawer from './components/BrandDetailDrawer';
@@ -8,17 +9,15 @@ import { exportToExcel } from '../../utils/excelExport';
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './BrandListPage.module.css';
 
-const mockBrands = Array.from({ length: 45 }, (_, i) => ({
-    id: i + 1,
-    code: `BR-${String(i + 1).padStart(3, '0')}`,
-    name: ['ASUS', 'Samsung', 'Gigabyte', 'Cisco', 'Logitech', 'Intel', 'AMD', 'Dell', 'HP', 'Lenovo'][i % 10] + (i > 9 ? ` ${Math.floor(i/10)}` : ''),
-    description: ['Linh kiện máy tính', 'Thiết bị lưu trữ', 'Gaming Gear', 'Thiết bị mạng', 'Phụ kiện'][i % 5],
-    status: i % 4 === 0 ? 'INACTIVE' : 'ACTIVE',
-    icon: ['fa-laptop', 'fa-mobile-screen', 'fa-microchip', 'fa-server', 'fa-mouse'][i % 5]
-}));
+const mapBackendToFrontend = (b) => ({
+    ...b,
+    status: b.status === 'APPROVED' ? 'ACTIVE' : 'INACTIVE',
+    email: b.contactEmail || '',
+    icon: b.icon || 'fa-building'
+});
 
 const BrandListPage = () => {
-    const [brands, setBrands] = useState(mockBrands);
+    const [brands, setBrands] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
@@ -35,13 +34,25 @@ const BrandListPage = () => {
         setToast({ isVisible: true, type, message });
     };
 
+    const fetchBrands = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const res = await axiosClient.get('/brands');
+            const mapped = (res.data.data || []).map(mapBackendToFrontend);
+            setBrands(mapped);
+        } catch (error) {
+            console.error('Lỗi tải danh sách thương hiệu:', error);
+            showToast('error', 'Có lỗi xảy ra khi tải danh sách thương hiệu.');
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
     // Initial load
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, []);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        fetchBrands();
+    }, [fetchBrands]);
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -274,12 +285,29 @@ const BrandListPage = () => {
                     setIsAddModalOpen(true);
                     setIsDrawerOpen(false);
                 }}
-                onDeactivate={(brandId) => {
-                    setBrands(brands.map(b => b.id === brandId ? { ...b, status: 'INACTIVE' } : b));
-                    if (selectedBrand && selectedBrand.id === brandId) {
-                        setSelectedBrand({ ...selectedBrand, status: 'INACTIVE' });
+                onDeactivate={async (brandId) => {
+                    try {
+                        const targetBrand = brands.find(b => b.id === brandId);
+                        if (!targetBrand) return;
+                        const payload = {
+                            code: targetBrand.code,
+                            name: targetBrand.name,
+                            status: 'INACTIVE',
+                            hotline: targetBrand.hotline || null,
+                            contactEmail: targetBrand.email || null,
+                            description: targetBrand.description || null
+                        };
+                        const res = await axiosClient.put(`/brands/${brandId}`, payload);
+                        const updated = mapBackendToFrontend(res.data.data);
+                        setBrands(brands.map(b => b.id === brandId ? updated : b));
+                        if (selectedBrand && selectedBrand.id === brandId) {
+                            setSelectedBrand(updated);
+                        }
+                        showToast('success', 'Vô hiệu hóa thương hiệu thành công!');
+                    } catch (err) {
+                        const errMsg = err.response?.data?.userMessage || err.response?.data?.message || 'Có lỗi xảy ra khi vô hiệu hóa thương hiệu.';
+                        showToast('error', errMsg);
                     }
-                    showToast('success', 'Vô hiệu hóa thương hiệu thành công!');
                 }}
             />
 
@@ -287,27 +315,35 @@ const BrandListPage = () => {
                 <BrandModal 
                     initialData={editingBrand}
                     onClose={() => setIsAddModalOpen(false)}
-                    onSave={(formData) => {
-                        let isNew = false;
-                        if (editingBrand) {
-                            // Update existing
-                            setBrands(brands.map(b => b.id === editingBrand.id ? { ...b, ...formData } : b));
-                        } else {
-                            // Mock saving new
-                            isNew = true;
-                            const newId = formData.code || `BR-${String(brands.length + 1).padStart(3, '0')}`;
-                            const newBrand = {
-                                id: brands.length + 1,
-                                code: newId,
-                                name: formData.name,
-                                description: formData.description,
-                                status: formData.status,
-                                icon: 'fa-star'
+                    onSave={async (formData) => {
+                        try {
+                            const payload = {
+                                code: formData.code ? formData.code.trim() : null,
+                                name: formData.name.trim(),
+                                status: formData.status === 'ACTIVE' ? 'APPROVED' : 'INACTIVE',
+                                hotline: formData.hotline ? formData.hotline.trim() : null,
+                                contactEmail: formData.email ? formData.email.trim() : null,
+                                description: formData.description ? formData.description.trim() : null
                             };
-                            setBrands([newBrand, ...brands]);
+                            
+                            if (editingBrand) {
+                                // Update existing
+                                const res = await axiosClient.put(`/brands/${editingBrand.id}`, payload);
+                                const updated = mapBackendToFrontend(res.data.data);
+                                setBrands(brands.map(b => b.id === editingBrand.id ? updated : b));
+                                showToast('success', 'Cập nhật thương hiệu thành công!');
+                            } else {
+                                // Save new
+                                const res = await axiosClient.post('/brands', payload);
+                                const created = mapBackendToFrontend(res.data.data);
+                                setBrands([created, ...brands]);
+                                showToast('success', 'Tạo thương hiệu thành công!');
+                            }
+                            setIsAddModalOpen(false);
+                        } catch (err) {
+                            const errMsg = err.response?.data?.userMessage || err.response?.data?.message || 'Có lỗi xảy ra khi lưu thương hiệu.';
+                            showToast('error', errMsg);
                         }
-                        setIsAddModalOpen(false);
-                        showToast('success', isNew ? 'Tạo thương hiệu thành công!' : 'Cập nhật thương hiệu thành công!');
                     }}
                 />
             )}
@@ -317,10 +353,23 @@ const BrandListPage = () => {
                     isOpen={isDeleteModalOpen}
                     brand={deletingBrand}
                     onClose={() => setIsDeleteModalOpen(false)}
-                    onConfirm={(brandId) => {
-                        setBrands(brands.filter(b => b.id !== brandId));
+                    onConfirm={async (brandId) => {
+                        try {
+                            await axiosClient.delete(`/brands/${brandId}`);
+                            setBrands(brands.filter(b => b.id !== brandId));
+                            showToast('success', 'Xóa thương hiệu thành công!');
+                        } catch (err) {
+                            if (err.response?.status === 409) {
+                                // Business Rule 11: Soft deleted due to product links
+                                showToast('success', 'Thương hiệu có liên kết, tự động chuyển về trạng thái ngừng hợp tác!');
+                            } else {
+                                const errMsg = err.response?.data?.userMessage || err.response?.data?.message || 'Có lỗi xảy ra khi xóa thương hiệu.';
+                                showToast('error', errMsg);
+                            }
+                            // Refresh list to pull final states from database
+                            fetchBrands();
+                        }
                         setIsDeleteModalOpen(false);
-                        showToast('error', 'Xóa thương hiệu thành công!');
                     }}
                 />
             )}

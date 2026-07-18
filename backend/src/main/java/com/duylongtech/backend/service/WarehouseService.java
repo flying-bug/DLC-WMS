@@ -301,4 +301,12 @@ public class WarehouseService {
             throw new BusinessException(SystemMessage.INTERNAL_ERROR);
         }
     }
+
+    @Transactional(readOnly = true)
+    public List<com.duylongtech.backend.dto.response.WarehouseStockAiRow> getWarehouseInventory(Long warehouseId) {
+        if (!warehouseRepository.existsById(warehouseId)) {
+            throw new BusinessException(SystemMessage.WH_NOT_FOUND);
+        }
+        return inventoryBalanceRepository.findStockRowsForAiByWarehouseId(warehouseId);
+    }
 }

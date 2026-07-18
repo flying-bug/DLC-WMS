@@ -19,4 +19,6 @@ public interface ReportService {
     List<InventorySummaryReportResponse> getInventorySummaryReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search);
     
     DashboardResponse getDashboardMetrics();
+
+    byte[] exportReportToExcel(String reportType, Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search, String partnerType, String status);
 }

@@ -22,6 +22,8 @@ import jakarta.validation.Valid;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.List;
+import com.duylongtech.backend.dto.response.WarehouseStockAiRow;
 
 @RestController
 @RequestMapping("/api/v1/warehouses")
@@ -159,6 +161,12 @@ public class WarehouseController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(ApiResponse.success(auditLogService.getLogsForEntity("Warehouse", id, page, size)));
+    }
+
+    @GetMapping("/{id}/inventory")
+    @PreAuthorize("hasAuthority('warehouse_master:view') or hasRole('MANAGER')")
+    public ResponseEntity<ApiResponse<List<WarehouseStockAiRow>>> getWarehouseInventory(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(warehouseService.getWarehouseInventory(id)));
     }
 
     // ──────────────────────────────────────────────────────────
