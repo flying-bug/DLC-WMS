@@ -1,385 +1,446 @@
 import { useState, useEffect, useCallback } from 'react';
-import axiosClient from '../../api/axiosClient';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
-import Pagination from '../../components/ui/Pagination/Pagination';
-import BrandDetailDrawer from './components/BrandDetailDrawer';
 import BrandModal from './components/BrandModal';
-import BrandDeleteModal from './components/BrandDeleteModal';
 import { exportToExcel } from '../../utils/excelExport';
 import Toast from '../../components/ui/Toast/Toast';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './BrandListPage.module.css';
 
-const mapBackendToFrontend = (b) => ({
-    ...b,
-    status: b.status === 'APPROVED' ? 'ACTIVE' : 'INACTIVE',
-    email: b.contactEmail || '',
-    icon: b.icon || 'fa-building'
-});
+import axiosClient from '../../api/axiosClient';
+
+const STATUS_LABELS = {
+    APPROVED: { label: 'Đang hoạt động', code: 'success' },
+    INACTIVE: { label: 'Ngừng hoạt động', code: 'danger' },
+};
 
 const BrandListPage = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    
     const [brands, setBrands] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-    const [selectedBrand, setSelectedBrand] = useState(null);
-    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [editingBrand, setEditingBrand] = useState(null);
-    const [deletingBrand, setDeletingBrand] = useState(null);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
+    const [loading, setLoading] = useState(false);
+    
+    // Filters and Pagination
+    const [filters, setFilters] = useState({ search: '', status: '' });
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    
+    // Selection
+    const [selectedIds, setSelectedIds] = useState([]);
+    
+    // Modals & Toast
+    const [modalConfig, setModalConfig] = useState({ isOpen: false, data: null });
+    const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
+    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, brand: null });
 
-    const showToast = (type, message) => {
-        setToast({ isVisible: true, type, message });
-    };
+    const showToast = (type, message) => setToast({ isVisible: true, type, message });
+    const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
     const fetchBrands = useCallback(async () => {
         try {
-            setIsLoading(true);
+            setLoading(true);
             const res = await axiosClient.get('/brands');
-            const mapped = (res.data.data || []).map(mapBackendToFrontend);
-            setBrands(mapped);
+            let data = [];
+            if (res.data && res.data.data) {
+                data = res.data.data;
+            }
+            if (filters.search) {
+                const term = filters.search.toLowerCase();
+                data = data.filter(b => 
+                    b.name.toLowerCase().includes(term) || 
+                    b.code.toLowerCase().includes(term)
+                );
+            }
+            if (filters.status) {
+                data = data.filter(b => b.status === filters.status);
+            }
+            setBrands(data);
+            setSelectedIds([]);
         } catch (error) {
             console.error('Lỗi tải danh sách thương hiệu:', error);
-            showToast('error', 'Có lỗi xảy ra khi tải danh sách thương hiệu.');
+            showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách thương hiệu');
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
-    }, []);
+    }, [filters.search, filters.status]);
 
-    // Initial load
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchBrands();
     }, [fetchBrands]);
 
     useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedSearchTerm(searchTerm);
-        }, 400);
-        return () => clearTimeout(handler);
-    }, [searchTerm, filterStatus]);
-
-    // Pagination states (mock)
-    const [page, setPage] = useState(0);
-    const [size, setSize] = useState(10);
-
-    const handleExport = () => {
-        const headers = ['Mã thương hiệu', 'Tên thương hiệu', 'Mô tả', 'Trạng thái'];
-        const data = filteredBrands.map(brand => [
-            brand.code,
-            brand.name,
-            brand.description,
-            brand.status === 'ACTIVE' ? 'Đang hợp tác' : 'Ngừng hợp tác'
-        ]);
-        exportToExcel(headers, data, 'Danh_sach_thuong_hieu');
-    };
-
-    const getStatusBadge = (status) => {
-        if (status === 'ACTIVE') {
-            return (
-                <div className={`${styles.statusBadge} ${styles.statusActive}`}>
-                    Đang hợp tác
-                </div>
-            );
+        if (location.state?.toastMessage) {
+            showToast(location.state.toastType || 'success', location.state.toastMessage);
+            navigate(location.pathname, { replace: true, state: {} });
         }
-        return (
-            <div className={`${styles.statusBadge} ${styles.statusStopped}`}>
-                Ngừng hợp tác
-            </div>
-        );
-    };
+    }, [location, navigate]);
 
-    const filteredBrands = brands.filter((brand) => {
-        const matchesSearch = brand.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
-                              brand.code.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-        const matchesStatus = filterStatus ? brand.status === filterStatus : true;
-        return matchesSearch && matchesStatus;
+    // Derived data for table
+    const rows = brands.map(item => {
+        const status = STATUS_LABELS[item.status] || { label: item.status || 'Không rõ', code: 'info' };
+        return {
+            ...item,
+            statusLabel: status.label,
+            statusCode: status.code
+        };
     });
 
-    const totalElements = filteredBrands.length;
-    const totalPages = Math.ceil(totalElements / size);
-    const paginatedBrands = filteredBrands.slice(page * size, (page + 1) * size);
+    const totalItems = rows.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const paginatedRows = rows.slice(startIndex, startIndex + pageSize);
+
+    const handleExport = () => {
+        const headers = ['Mã thương hiệu', 'Tên thương hiệu', 'Điện thoại', 'Email', 'Mô tả', 'Trạng thái'];
+        const data = rows.map(item => [
+            item.code,
+            item.name,
+            item.hotline || '',
+            item.contactEmail || '',
+            item.description || '',
+            item.statusLabel
+        ]);
+        exportToExcel(headers, data, 'Danh_sach_thuong_hieu');
+        showToast('success', 'Xuất Excel thành công!');
+    };
+
+    const handleSelectAll = (e) => {
+        setSelectedIds(e.target.checked ? paginatedRows.map(row => row.id) : []);
+    };
+
+    const handleSelectRow = (e, id) => {
+        e.stopPropagation();
+        setSelectedIds(current => current.includes(id) ? current.filter(selectedId => selectedId !== id) : [...current, id]);
+    };
+
+    const handleDeleteClick = (e, brand) => {
+        e.stopPropagation();
+        setDeleteConfirm({ isOpen: true, brand });
+    };
+
+    const handleEditClick = (e, item) => {
+        e.stopPropagation();
+        setModalConfig({
+            isOpen: true,
+            data: item
+        });
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirm.brand) return;
+        try {
+            await axiosClient.delete(`/brands/${deleteConfirm.brand.id}`);
+            showToast('success', `Đã xóa thương hiệu ${deleteConfirm.brand.name}`);
+            fetchBrands();
+        } catch (error) {
+            showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi xóa thương hiệu');
+            if (error.response?.status === 409) {
+                // Refresh list if it was a soft delete conflict
+                fetchBrands();
+            }
+        } finally {
+            setDeleteConfirm({ isOpen: false, brand: null });
+        }
+    };
+
+    const getPageNumbers = () => {
+        const pages = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            if (currentPage <= 4) {
+                for (let i = 1; i <= 5; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            } else if (currentPage >= totalPages - 3) {
+                pages.push(1);
+                pages.push('...');
+                for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+            } else {
+                pages.push(1);
+                pages.push('...');
+                for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            }
+        }
+        return pages;
+    };
 
     return (
-        <AdminLayout activeTab="brands">
-            <div className={styles.container}>
-                {/* Header Page */}
-                <div className={styles.pageHeader}>
-                    <div className={styles.titleWrapper}>
-                        <h2 className={styles.pageTitle}>Quản lý Thương hiệu</h2>
-                        <p className={styles.pageSubtitle}>Quản lý danh sách các thương hiệu điện tử đối tác.</p>
-                    </div>
-                    <div className={styles.actionButtons}>
-                        <button className={styles.btnExport} type="button" onClick={handleExport}>
-                            <i className="fas fa-download"></i> Xuất file
-                        </button>
-                        <button className={styles.btnAdd} type="button" onClick={() => {
-                            setEditingBrand(null);
-                            setIsAddModalOpen(true);
-                        }}>
-                            <i className="fas fa-plus"></i> Thêm Thương hiệu
-                        </button>
-                    </div>
+        <AdminLayout>
+            <div className={styles.pageBody}>
+                <div className={styles.pageTitleContainer}>
+                    <h1 className={styles.pageTitle}>Danh sách thương hiệu</h1>
+                    <button className={styles.btnPrimary} onClick={() => setModalConfig({ isOpen: true, data: null })}>
+                        <i className="bi bi-plus"></i> Thêm mới
+                    </button>
                 </div>
 
-                {/* Filter Card */}
-                <div className={styles.filterCard}>
-                    <div className={styles.filterGrid}>
-                        <div className={styles.filterGroup}>
-                            <div className={styles.filterSearch}>
-                                <i className={`fas fa-search ${styles.searchIcon}`}></i>
-                                <input 
-                                    type="text" 
-                                    placeholder="Tìm theo mã hoặc tên thương hiệu..." 
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                            <div className={styles.selectWrapper}>
-                                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                                    <option value="">Tất cả trạng thái</option>
-                                    <option value="ACTIVE">Đang hợp tác</option>
-                                    <option value="INACTIVE">Ngừng hợp tác</option>
-                                </select>
-                                <i className={`fas fa-chevron-down ${styles.selectIcon}`}></i>
-                            </div>
+                <div className={styles.filterSection}>
+                    <div className={styles.filterGroup}>
+                        <div className={styles.filterField}>
+                            <span className={styles.filterLabel}>TÌM KIẾM</span>
+                            <input
+                                type="text"
+                                className={styles.filterInput}
+                                placeholder="Tên hoặc mã thương hiệu..."
+                                value={filters.search}
+                                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                                onKeyDown={(e) => e.key === 'Enter' && fetchBrands()}
+                            />
+                        </div>
+                        <div className={styles.filterField}>
+                            <span className={styles.filterLabel}>TÌNH TRẠNG</span>
+                            <select
+                                className={styles.filterSelect}
+                                value={filters.status}
+                                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                            >
+                                <option value="">Tất cả</option>
+                                <option value="APPROVED">Đang hoạt động</option>
+                                <option value="INACTIVE">Ngừng hoạt động</option>
+                            </select>
                         </div>
                     </div>
+                    <div className={styles.filterActions}>
+                        <button className={styles.btnOutline} onClick={() => { setFilters({ search: '', status: '' }); fetchBrands(); }}>
+                            Làm mới
+                        </button>
+                        <button className={styles.btnOutline} onClick={handleExport}>
+                            <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                        </button>
+                        <button className={styles.btnPrimary} onClick={fetchBrands}>
+                            <i className="bi bi-funnel"></i> Lọc dữ liệu
+                        </button>
+                    </div>
                 </div>
 
-                {/* Table Card */}
-                <div className={styles.tableCard}>
-                    <div className={styles.tableResponsive}>
-                        <table className={styles.table}>
-                            <thead>
+                {selectedIds.length > 0 && (
+                    <div className={styles.bulkActionsToolbar}>
+                        <div className={styles.bulkText}>Đã chọn {selectedIds.length} thương hiệu</div>
+                    </div>
+                )}
+
+                <div className={styles.tableContainer}>
+                    <table className={styles.table}>
+                        <thead>
+                            <tr>
+                                <th style={{ width: '40px', textAlign: 'center' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        className={styles.checkbox} 
+                                        checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length} 
+                                        onChange={handleSelectAll} 
+                                    />
+                                </th>
+                                <th style={{ width: '160px' }}>Mã Thương Hiệu</th>
+                                <th style={{ minWidth: '220px' }}>Tên Thương Hiệu</th>
+                                <th style={{ width: '150px' }}>Điện Thoại</th>
+                                <th style={{ width: '250px' }}>Mô Tả</th>
+                                <th style={{ width: '140px' }}>Trạng Thái</th>
+                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading && paginatedRows.length === 0 ? (
                                 <tr>
-                                    <th style={{ width: '15%' }}>MÃ THƯƠNG HIỆU</th>
-                                    <th style={{ width: '25%' }}>TÊN THƯƠNG HIỆU</th>
-                                    <th style={{ width: '35%' }}>MÔ TẢ</th>
-                                    <th style={{ width: '15%' }}>TRẠNG THÁI</th>
-                                    <th style={{ width: '10%' }}>CHỨC NĂNG</th>
+                                    <td colSpan="7" className={styles.textCenter} style={{ padding: '40px' }}>
+                                        <div className={styles.emptyState}>Đang tải dữ liệu...</div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {isLoading ? (
-                                    Array.from({ length: size }).map((_, idx) => (
-                                        <tr key={`skeleton-${idx}`} className={styles.skeletonRow}>
-                                            <td><div className={styles.skeletonCell} style={{ width: '80%' }}></div></td>
-                                            <td>
-                                                <div className={styles.nameCellWrapper}>
-                                                    <div className={`${styles.skeletonCell} ${styles.skeletonIcon}`}></div>
-                                                    <div className={styles.skeletonCell} style={{ width: '120px' }}></div>
-                                                </div>
-                                            </td>
-                                            <td><div className={styles.skeletonCell} style={{ width: '90%' }}></div></td>
-                                            <td><div className={styles.skeletonCell} style={{ width: '80px', height: '24px', borderRadius: '12px' }}></div></td>
-                                            <td><div className={styles.skeletonCell} style={{ width: '60px' }}></div></td>
-                                        </tr>
-                                    ))
-                                ) : filteredBrands.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="5">
-                                            <div className={styles.emptyState}>
-                                                <div className={styles.emptyIcon}>
-                                                    <i className="far fa-folder-open"></i>
-                                                </div>
-                                                <h4>Không tìm thấy thương hiệu nào</h4>
-                                                <p>Vui lòng thử lại với từ khóa hoặc bộ lọc khác.</p>
-                                                {(searchTerm || filterStatus) && (
-                                                    <button 
-                                                        className={styles.btnClearFilter}
-                                                        onClick={() => {
-                                                            setSearchTerm('');
-                                                            setFilterStatus('');
-                                                        }}
-                                                    >
-                                                        Xóa bộ lọc
-                                                    </button>
-                                                )}
+                            ) : paginatedRows.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7">
+                                        <div className={styles.emptyState}>
+                                            <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
+                                            <div className={styles.emptyText}>Không tìm thấy thương hiệu nào</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                paginatedRows.map(item => (
+                                    <tr key={item.id} onClick={() => navigate(`/brands/${item.id}`)}>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                className={styles.checkbox} 
+                                                checked={selectedIds.includes(item.id)} 
+                                                onChange={(e) => handleSelectRow(e, item.id)} 
+                                                onClick={(e) => e.stopPropagation()} 
+                                            />
+                                        </td>
+                                        <td className={styles.textBlue} style={{ whiteSpace: 'nowrap' }}>{item.code}</td>
+                                        <td style={{ fontWeight: 600 }}>{item.name}</td>
+                                        <td>{item.hotline || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>
+                                        <td>
+                                            <div className={styles.tooltipContainer} style={{ display: 'inline-block', maxWidth: '100%' }}>
+                                                <span className={styles.noteText}>{item.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có</span>}</span>
+                                                {item.description && <span className={styles.tooltipText}>{item.description}</span>}
                                             </div>
+                                        </td>
+                                        <td>
+                                            <span className={`${styles.badge} ${item.statusCode === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
+                                                {item.statusLabel}
+                                            </span>
+                                        </td>
+                                        <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
+                                            <i 
+                                                className="bi bi-eye" 
+                                                style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
+                                                title="Xem chi tiết" 
+                                                onClick={(e) => { e.stopPropagation(); navigate(`/brands/${item.id}`); }}
+                                            ></i>
+                                            <i 
+                                                className="bi bi-pencil" 
+                                                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
+                                                title="Chỉnh sửa" 
+                                                onClick={(e) => handleEditClick(e, item)}
+                                            ></i>
+                                            <i 
+                                                className="bi bi-trash" 
+                                                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
+                                                title="Xóa thương hiệu" 
+                                                onClick={(e) => handleDeleteClick(e, item)}
+                                            ></i>
                                         </td>
                                     </tr>
-                                ) : (
-                                    paginatedBrands.map((brand) => (
-                                        <tr key={brand.id}>
-                                        <td className={styles.codeCell}>{brand.code}</td>
-                                        <td>
-                                            <div className={styles.nameCellWrapper}>
-                                                <div className={styles.brandIcon}>
-                                                    <i className={`fas ${brand.icon}`}></i>
-                                                </div>
-                                                <span className={styles.nameCell}>{brand.name}</span>
-                                            </div>
-                                        </td>
-                                        <td>{brand.description}</td>
-                                        <td>{getStatusBadge(brand.status)}</td>
-                                        <td>
-                                            <div className={styles.rowActions}>
-                                                <button 
-                                                    className={`${styles.iconBtn} ${styles.view}`} 
-                                                    title="Xem chi tiết"
-                                                    onClick={() => {
-                                                        setSelectedBrand(brand);
-                                                        setIsDrawerOpen(true);
-                                                    }}
-                                                >
-                                                    <i className="far fa-eye"></i>
-                                                </button>
-                                                <button 
-                                                    className={`${styles.iconBtn} ${styles.edit}`} 
-                                                    title="Sửa"
-                                                    onClick={() => {
-                                                        setEditingBrand(brand);
-                                                        setIsAddModalOpen(true);
-                                                    }}
-                                                >
-                                                    <i className="fas fa-pencil-alt"></i>
-                                                </button>
-                                                <button 
-                                                    className={`${styles.iconBtn} ${styles.delete}`} 
-                                                    title="Xóa"
-                                                    onClick={() => {
-                                                        setDeletingBrand(brand);
-                                                        setIsDeleteModalOpen(true);
-                                                    }}
-                                                >
-                                                    <i className="far fa-trash-alt"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
 
-                    {/* Pagination */}
-                    {filteredBrands.length > 0 && (
-                        <Pagination
-                            page={page}
-                            totalPages={totalPages}
-                            totalElements={totalElements}
-                            size={size}
-                            onPageChange={setPage}
-                            onSizeChange={(s) => {
-                                setSize(s);
-                                setPage(0);
-                            }}
-                        />
-                    )}
+                    <div className={styles.pagination}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span>Hiển thị</span>
+                            <select
+                                className="misa-select"
+                                style={{ width: '70px', height: '32px', padding: '0 8px' }}
+                                value={pageSize}
+                                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                            >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                            <span>trên tổng số {totalItems} bản ghi</span>
+                        </div>
+
+                        {totalPages > 1 && (
+                            <div className={styles.pageControls}>
+                                <button
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    className={styles.pageBtn}
+                                >
+                                    <i className="bi bi-chevron-left"></i>
+                                    <span>Trước</span>
+                                </button>
+
+                                <div className={styles.paginationNumbers}>
+                                    {getPageNumbers().map((num, idx) => (
+                                        num === currentPage ? (
+                                            <input
+                                                key={idx}
+                                                className={`${styles.pageNumber} ${styles.active}`}
+                                                style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
+                                                defaultValue={num}
+                                                title="Nhập số trang và nhấn Enter"
+                                                onBlur={(e) => e.target.value = currentPage}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        let p = parseInt(e.target.value, 10);
+                                                        if (!isNaN(p)) {
+                                                            p = Math.max(1, Math.min(totalPages, p));
+                                                            setCurrentPage(p);
+                                                            e.target.blur();
+                                                        } else {
+                                                            e.target.value = currentPage;
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        ) : (
+                                            <span
+                                                key={idx}
+                                                className={`${styles.pageNumber} ${num === '...' ? styles.dots : ''}`}
+                                                onClick={() => num !== '...' && setCurrentPage(num)}
+                                            >
+                                                {num}
+                                            </span>
+                                        )
+                                    ))}
+                                </div>
+
+                                <button
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    className={styles.pageBtn}
+                                >
+                                    <span>Sau</span>
+                                    <i className="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            <BrandDetailDrawer 
-                isOpen={isDrawerOpen} 
-                onClose={() => {
-                    setIsDrawerOpen(false);
-                    setTimeout(() => setSelectedBrand(null), 300); // delay to allow animation to finish
-                }} 
-                brand={selectedBrand} 
-                onEdit={() => {
-                    setEditingBrand(selectedBrand);
-                    setIsAddModalOpen(true);
-                    setIsDrawerOpen(false);
-                }}
-                onDeactivate={async (brandId) => {
-                    try {
-                        const targetBrand = brands.find(b => b.id === brandId);
-                        if (!targetBrand) return;
-                        const payload = {
-                            code: targetBrand.code,
-                            name: targetBrand.name,
-                            status: 'INACTIVE',
-                            hotline: targetBrand.hotline || null,
-                            contactEmail: targetBrand.email || null,
-                            description: targetBrand.description || null
-                        };
-                        const res = await axiosClient.put(`/brands/${brandId}`, payload);
-                        const updated = mapBackendToFrontend(res.data.data);
-                        setBrands(brands.map(b => b.id === brandId ? updated : b));
-                        if (selectedBrand && selectedBrand.id === brandId) {
-                            setSelectedBrand(updated);
-                        }
-                        showToast('success', 'Vô hiệu hóa thương hiệu thành công!');
-                    } catch (err) {
-                        const errMsg = err.response?.data?.userMessage || err.response?.data?.message || 'Có lỗi xảy ra khi vô hiệu hóa thương hiệu.';
-                        showToast('error', errMsg);
-                    }
-                }}
-            />
-
-            {isAddModalOpen && (
-                <BrandModal 
-                    initialData={editingBrand}
-                    onClose={() => setIsAddModalOpen(false)}
-                    onSave={async (formData) => {
+            {modalConfig.isOpen && (
+                <BrandModal
+                    initialData={modalConfig.data}
+                    onClose={() => setModalConfig({ isOpen: false, data: null })}
+                    onSave={async (data, isContinue = false) => {
                         try {
+                            const cleanString = (str) => (str && str.trim() !== '') ? str.trim() : null;
+
                             const payload = {
-                                code: formData.code ? formData.code.trim() : null,
-                                name: formData.name.trim(),
-                                status: formData.status === 'ACTIVE' ? 'APPROVED' : 'INACTIVE',
-                                hotline: formData.hotline ? formData.hotline.trim() : null,
-                                contactEmail: formData.email ? formData.email.trim() : null,
-                                description: formData.description ? formData.description.trim() : null
+                                code: cleanString(data.code),
+                                name: cleanString(data.name),
+                                status: data.status || 'APPROVED',
+                                hotline: cleanString(data.hotline),
+                                contactEmail: cleanString(data.contactEmail),
+                                description: cleanString(data.description)
                             };
                             
-                            if (editingBrand) {
-                                // Update existing
-                                const res = await axiosClient.put(`/brands/${editingBrand.id}`, payload);
-                                const updated = mapBackendToFrontend(res.data.data);
-                                setBrands(brands.map(b => b.id === editingBrand.id ? updated : b));
+                            if (modalConfig.data && modalConfig.data.id) {
+                                await axiosClient.put(`/brands/${modalConfig.data.id}`, payload);
                                 showToast('success', 'Cập nhật thương hiệu thành công!');
+                                setModalConfig({ isOpen: false, data: null });
                             } else {
-                                // Save new
-                                const res = await axiosClient.post('/brands', payload);
-                                const created = mapBackendToFrontend(res.data.data);
-                                setBrands([created, ...brands]);
-                                showToast('success', 'Tạo thương hiệu thành công!');
+                                await axiosClient.post('/brands', payload);
+                                showToast('success', 'Thêm mới thương hiệu thành công!');
+                                if (!isContinue) {
+                                    setModalConfig({ isOpen: false, data: null });
+                                } else {
+                                    // if isContinue, close and reopen to reset form
+                                    setModalConfig({ isOpen: false, data: null });
+                                    setTimeout(() => setModalConfig({ isOpen: true, data: null }), 100);
+                                }
                             }
-                            setIsAddModalOpen(false);
-                        } catch (err) {
-                            const errMsg = err.response?.data?.userMessage || err.response?.data?.message || 'Có lỗi xảy ra khi lưu thương hiệu.';
-                            showToast('error', errMsg);
-                        }
-                    }}
-                />
-            )}
-
-            {isDeleteModalOpen && (
-                <BrandDeleteModal 
-                    isOpen={isDeleteModalOpen}
-                    brand={deletingBrand}
-                    onClose={() => setIsDeleteModalOpen(false)}
-                    onConfirm={async (brandId) => {
-                        try {
-                            await axiosClient.delete(`/brands/${brandId}`);
-                            setBrands(brands.filter(b => b.id !== brandId));
-                            showToast('success', 'Xóa thương hiệu thành công!');
-                        } catch (err) {
-                            if (err.response?.status === 409) {
-                                // Business Rule 11: Soft deleted due to product links
-                                showToast('success', 'Thương hiệu có liên kết, tự động chuyển về trạng thái ngừng hợp tác!');
-                            } else {
-                                const errMsg = err.response?.data?.userMessage || err.response?.data?.message || 'Có lỗi xảy ra khi xóa thương hiệu.';
-                                showToast('error', errMsg);
-                            }
-                            // Refresh list to pull final states from database
+                            
                             fetchBrands();
+                        } catch (error) {
+                            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra');
                         }
-                        setIsDeleteModalOpen(false);
                     }}
                 />
             )}
 
-            <Toast 
-                isVisible={toast.isVisible} 
-                type={toast.type} 
-                message={toast.message} 
-                onClose={() => setToast({ ...toast, isVisible: false })} 
+            <ConfirmModal
+                isOpen={deleteConfirm.isOpen}
+                title="Xác nhận xóa"
+                message={<span>Bạn có chắc chắn muốn xóa thương hiệu <strong>{deleteConfirm.brand?.name}</strong> {deleteConfirm.brand?.code ? `(${deleteConfirm.brand.code})` : ''} không? Hành động này không thể hoàn tác.</span>}
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteConfirm({ isOpen: false, brand: null })}
+                confirmText="Xóa"
+                cancelText="Hủy"
+                confirmButtonClass="btn-misa-danger"
             />
+
+            <Toast {...toast} onClose={hideToast} />
         </AdminLayout>
     );
 };

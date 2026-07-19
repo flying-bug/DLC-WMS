@@ -1,18 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './BrandModal.module.css';
 
 const BrandModal = ({ onClose, onSave, initialData = null }) => {
     const [formData, setFormData] = useState({
         code: '',
         name: '',
-        status: 'ACTIVE',
-        email: '',
+        status: 'APPROVED',
+        contactEmail: '',
         hotline: '',
-        ...initialData
+        description: ''
     });
 
-    const [isDirty, setIsDirty] = useState(false);
     const [errors, setErrors] = useState({});
+
+    useEffect(() => {
+        if (initialData) {
+            setFormData(prev => ({ ...prev, ...initialData }));
+        }
+    }, [initialData]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -20,21 +25,20 @@ const BrandModal = ({ onClose, onSave, initialData = null }) => {
             ...prev,
             [name]: value
         }));
-        setIsDirty(true);
         if (errors[name]) {
-            setErrors(prev => ({ ...prev, [name]: '' }));
+            setErrors(prev => ({ ...prev, [name]: null }));
         }
     };
 
     const handleSave = () => {
-        let newErrors = {};
+        const newErrors = {};
 
         if (!formData.name.trim()) {
             newErrors.name = 'Vui lòng nhập tên thương hiệu!';
         }
 
-        if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            newErrors.email = 'Email không đúng định dạng!';
+        if (formData.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail)) {
+            newErrors.contactEmail = 'Email không đúng định dạng!';
         }
 
         if (formData.hotline && !/^(0[3|5|7|8|9])+([0-9]{8})$/.test(formData.hotline)) {
@@ -52,137 +56,142 @@ const BrandModal = ({ onClose, onSave, initialData = null }) => {
         }
     };
 
-    const handleClose = () => {
-        if (isDirty) {
-            if (window.confirm('Bạn có thay đổi chưa lưu, bạn có chắc chắn muốn đóng và hủy bỏ?')) {
-                onClose();
-            }
-        } else {
-            onClose();
-        }
-    };
-
     const handleBackdropClick = (e) => {
         if (e.target === e.currentTarget) {
-            handleClose();
+            onClose();
         }
     };
 
     return (
         <div className="misa-modal-overlay" onClick={handleBackdropClick}>
-            <div className="misa-modal">
+            <div className="misa-modal" style={{ width: '600px', maxWidth: '90%' }}>
                 
                 {/* Header */}
                 <div className="misa-modal-header">
-                    <h2>
-                        <i className={initialData ? "fas fa-edit" : "fas fa-plus-circle"}></i>
-                        {initialData ? 'Sửa Thương hiệu' : 'Thêm Thương hiệu Mới'}
-                    </h2>
-                    <button className={styles.iconBtn} onClick={handleClose} title="Đóng">
-                        <i className="fas fa-times"></i>
-                    </button>
+                    <div className={styles.headerTitle}>
+                        {initialData ? 'Chỉnh sửa Thương Hiệu' : 'Thêm Thương Hiệu'}
+                    </div>
+                    <div className={styles.headerActions}>
+                        <button className={styles.iconBtn} onClick={onClose} title="Đóng">
+                            <i className="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Body */}
                 <div className="misa-modal-body">
-                    {/* Mã thương hiệu */}
-                    <div className="misa-form-group">
-                        <label>Mã Thương hiệu</label>
-                        <input 
-                            type="text" 
-                            className="misa-input" 
-                            name="code"
-                            value={formData.code}
-                            onChange={handleChange}
-                            placeholder="Nhập mã thương hiệu (tự động nếu để trống)..." 
-                            disabled={!!initialData}
-                        />
-                    </div>
-
-                    {/* Tên thương hiệu */}
-                    <div className="misa-form-group">
-                        <label>Tên Thương hiệu <span className="required">*</span></label>
-                        <input 
-                            type="text" 
-                            className={`misa-input ${errors.name ? styles.inputError : ''}`} 
-                            name="name"
-                            value={formData.name}
-                            onChange={handleChange}
-                            placeholder="Nhập tên thương hiệu..." 
-                            autoFocus
-                        />
-                        {errors.name && <span className={styles.errorText}>{errors.name}</span>}
-                    </div>
-
-                    {/* Trạng thái & Email Liên hệ */}
-                    <div className="misa-form-row">
-                        <div className="misa-form-group">
-                            <label>Trạng thái</label>
-                            <select 
-                                className="misa-select" 
-                                name="status"
-                                value={formData.status}
-                                onChange={handleChange}
-                            >
-                                <option value="ACTIVE">Đang hoạt động</option>
-                                <option value="INACTIVE">Ngừng hoạt động</option>
-                            </select>
-                        </div>
-                        <div className="misa-form-group">
-                            <label>Email Liên hệ</label>
-                            <input 
-                                type="email" 
-                                className={`misa-input ${errors.email ? styles.inputError : ''}`} 
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                placeholder="contact@brand.com" 
-                            />
-                            {errors.email && <span className={styles.errorText}>{errors.email}</span>}
-                        </div>
-                    </div>
-
-                    {/* Hotline & Trống */}
-                    <div className="misa-form-row">
-                        <div className="misa-form-group">
-                            <label>Hotline</label>
+                    <div className={styles.formGrid}>
+                        <div className={`${styles.formGroup} ${styles.col6}`}>
+                            <label className={styles.formLabel}>Mã thương hiệu</label>
                             <input 
                                 type="text" 
-                                className={`misa-input ${errors.hotline ? styles.inputError : ''}`} 
-                                name="hotline"
-                                value={formData.hotline}
+                                className={styles.input} 
+                                name="code"
+                                value={formData.code}
                                 onChange={handleChange}
-                                placeholder="Nhập số hotline..." 
+                                placeholder="Tự động hoặc nhập tay..." 
+                                disabled={!!initialData}
                             />
-                            {errors.hotline && <span className={styles.errorText}>{errors.hotline}</span>}
                         </div>
-                        <div className="misa-form-group" style={{ visibility: 'hidden' }}>
-                            <label>Spacer</label>
-                            <input className="misa-input" />
-                        </div>
-                    </div>
 
-                    {/* Mô tả chi tiết */}
-                    <div className="misa-form-group">
-                        <label>Mô tả chi tiết</label>
-                        <textarea 
-                            className="misa-textarea" 
-                            name="description"
-                            value={formData.description}
-                            onChange={handleChange}
-                            placeholder="Nhập thông tin mô tả về thương hiệu..." 
-                            rows="3"
-                        ></textarea>
+                        <div className={`${styles.formGroup} ${styles.col6}`}>
+                            {initialData && (
+                                <>
+                                    <label className={styles.formLabel}>Trạng thái</label>
+                                    <div className={styles.inputWrapper}>
+                                        <select 
+                                            className={styles.select} 
+                                            name="status"
+                                            value={formData.status}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="APPROVED">Đang hoạt động</option>
+                                            <option value="INACTIVE">Ngừng hoạt động</option>
+                                        </select>
+                                        <i className={`fas fa-chevron-down ${styles.selectIcon}`}></i>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        <div className={`${styles.formGroup} ${styles.col12}`}>
+                            <label className={styles.formLabel}>Tên thương hiệu <span className={styles.required}>*</span></label>
+                            <input 
+                                type="text" 
+                                className={`${styles.input} ${errors.name ? styles.inputError : ''}`} 
+                                name="name"
+                                value={formData.name}
+                                onChange={handleChange}
+                                placeholder="Ví dụ: Dell, HP..." 
+                            />
+                            {errors.name && <span className={styles.errorMsg}>{errors.name}</span>}
+                        </div>
+
+                        <div className={`${styles.formGroup} ${styles.col6}`}>
+                            <label className={styles.formLabel}>Điện thoại liên hệ</label>
+                            <div className={styles.inputWrapper}>
+                                <input 
+                                    type="text" 
+                                    className={`${styles.input} ${errors.hotline ? styles.inputError : ''}`} 
+                                    name="hotline"
+                                    value={formData.hotline}
+                                    onChange={handleChange}
+                                    placeholder="0912..." 
+                                />
+                                <i className={`fas fa-phone-alt ${styles.inputIcon}`}></i>
+                            </div>
+                            {errors.hotline && <span className={styles.errorMsg}>{errors.hotline}</span>}
+                        </div>
+
+                        <div className={`${styles.formGroup} ${styles.col6}`}>
+                            <label className={styles.formLabel}>Email liên hệ</label>
+                            <div className={styles.inputWrapper}>
+                                <input 
+                                    type="email" 
+                                    className={`${styles.input} ${errors.contactEmail ? styles.inputError : ''}`} 
+                                    name="contactEmail"
+                                    value={formData.contactEmail}
+                                    onChange={handleChange}
+                                    placeholder="contact@brand.com" 
+                                />
+                                <i className={`fas fa-envelope ${styles.inputIcon}`}></i>
+                            </div>
+                            {errors.contactEmail && <span className={styles.errorMsg}>{errors.contactEmail}</span>}
+                        </div>
+
+                        <div className={`${styles.formGroup} ${styles.col12}`}>
+                            <label className={styles.formLabel}>Mô tả chi tiết</label>
+                            <textarea 
+                                className={styles.input} 
+                                style={{ resize: 'vertical', minHeight: '80px' }}
+                                name="description"
+                                value={formData.description}
+                                onChange={handleChange}
+                                placeholder="Nhập thông tin mô tả về thương hiệu..." 
+                                rows="3"
+                            ></textarea>
+                        </div>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="misa-modal-footer">
-                    <button className="btn-misa-cancel" onClick={handleClose}>Hủy</button>
-                    <button className="btn-misa-save" onClick={handleSave}>
-                        <i className="fas fa-save"></i>
-                        {initialData ? 'Cập nhật' : 'Lưu'}
-                    </button>
+                <div className="misa-modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', backgroundColor: '#fff' }}>
+                    <div className={styles.footerLeft}>
+                        <button className="btn-misa-outline" onClick={onClose}>Hủy</button>
+                    </div>
+                    <div className={styles.footerRight} style={{ display: 'flex', gap: '12px' }}>
+                        {!initialData && (
+                            <button className="btn-misa-outline" onClick={() => {
+                                const newErrors = {};
+                                if (!formData.name.trim()) newErrors.name = 'Vui lòng nhập tên thương hiệu!';
+                                if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
+                                onSave(formData, true);
+                            }}>Lưu & Thêm tiếp</button>
+                        )}
+                        <button className="btn-misa-primary" onClick={handleSave}>
+                            {initialData ? 'Cập nhật' : 'Lưu'}
+                        </button>
+                    </div>
                 </div>
 
             </div>

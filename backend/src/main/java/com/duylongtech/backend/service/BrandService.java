@@ -43,8 +43,8 @@ public class BrandService {
     private static final String INACTIVE  = "INACTIVE";
     private static final Set<String> VALID_STATUSES = Set.of(APPROVED, INACTIVE);
 
-    /** Prefix tự động sinh mã NSX nếu client không truyền code. */
-    private static final String CODE_PREFIX = "NSX-";
+    /** Prefix tự động sinh mã Thương hiệu nếu client không truyền code. */
+    private static final String CODE_PREFIX = "TH-";
 
     private final BrandRepository brandRepository;
 
