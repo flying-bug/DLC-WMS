@@ -6,7 +6,6 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
     
     // Form state
     const [formData, setFormData] = useState({
-        type: 'COMPANY',
         code: '',
         tax_code: '',
         name: '',
@@ -14,11 +13,10 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
         email: '',
         address: '',
         group_type: 'RETAIL',
-        credit_limit: '',
-        payment_term_days: '',
         bank_name: '',
         bank_account_number: '',
-        bank_beneficiary_name: ''
+        bank_beneficiary_name: '',
+        status: 'APPROVED'
     });
     const [errors, setErrors] = useState({});
 
@@ -41,8 +39,12 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
     };
 
     const handleSave = () => {
-        if (!formData.name.trim()) {
-            setErrors({ name: 'Vui lòng nhập tên nhà cung cấp!' });
+        const newErrors = {};
+        if (!formData.name.trim()) newErrors.name = 'Vui lòng nhập tên nhà cung cấp!';
+        if (!formData.phone.trim()) newErrors.phone = 'Vui lòng nhập số điện thoại!';
+        
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
             return;
         }
         if (onSave) {
@@ -64,28 +66,6 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
                 <div className="misa-modal-header">
                     <div className={styles.headerTitle}>
                         {initialData ? 'Chỉnh sửa Nhà Cung Cấp' : 'Thêm Nhà Cung Cấp'}
-                        <div className={styles.radioGroup}>
-                            <label className={styles.radioLabel}>
-                                <input 
-                                    type="radio" 
-                                    name="type" 
-                                    value="COMPANY" 
-                                    checked={formData.type === 'COMPANY'}
-                                    onChange={handleChange}
-                                /> 
-                                Tổ chức
-                            </label>
-                            <label className={styles.radioLabel}>
-                                <input 
-                                    type="radio" 
-                                    name="type" 
-                                    value="INDIVIDUAL" 
-                                    checked={formData.type === 'INDIVIDUAL'}
-                                    onChange={handleChange}
-                                /> 
-                                Cá nhân
-                            </label>
-                        </div>
                     </div>
                     <div className={styles.headerActions}>
                         <button className={styles.iconBtn} title="Hướng dẫn">
@@ -137,11 +117,11 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
                         </div>
 
                         <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Điện thoại</label>
+                            <label className={styles.formLabel}>Điện thoại <span className={styles.required}>*</span></label>
                             <div className={styles.inputWrapper}>
                                 <input 
                                     type="text" 
-                                    className={styles.input} 
+                                    className={`${styles.input} ${errors.phone ? styles.inputError : ''}`} 
                                     name="phone"
                                     value={formData.phone}
                                     onChange={handleChange}
@@ -149,6 +129,7 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
                                 />
                                 <i className={`fas fa-phone-alt ${styles.inputIcon}`}></i>
                             </div>
+                            {errors.phone && <span className={styles.errorMsg}>{errors.phone}</span>}
                         </div>
                         <div className={`${styles.formGroup} ${styles.col6}`}>
                             <label className={styles.formLabel}>Email</label>
@@ -165,7 +146,7 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
                             </div>
                         </div>
 
-                        <div className={`${styles.formGroup} ${styles.col8}`}>
+                        <div className={`${styles.formGroup} ${styles.col6}`}>
                             <label className={styles.formLabel}>Địa chỉ</label>
                             <input 
                                 type="text" 
@@ -176,7 +157,7 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
                                 placeholder="Số 82 Duy Tân, Dịch Vọng Hậu, Cầu Giấy, Hà Nội" 
                             />
                         </div>
-                        <div className={`${styles.formGroup} ${styles.col4}`}>
+                        <div className={`${styles.formGroup} ${styles.col6}`}>
                             <label className={styles.formLabel}>Nhóm nhà cung cấp</label>
                             <div className={styles.inputWrapper}>
                                 <select 
@@ -192,6 +173,23 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
                                 <i className={`fas fa-chevron-down ${styles.selectIcon}`}></i>
                             </div>
                         </div>
+                        {initialData && (
+                            <div className={`${styles.formGroup} ${styles.col6}`}>
+                                <label className={styles.formLabel}>Trạng thái</label>
+                                <div className={styles.inputWrapper}>
+                                    <select 
+                                        className={styles.select} 
+                                        name="status"
+                                        value={formData.status}
+                                        onChange={handleChange}
+                                    >
+                                        <option value="APPROVED">Đang hoạt động</option>
+                                        <option value="INACTIVE">Ngừng hoạt động</option>
+                                    </select>
+                                    <i className={`fas fa-chevron-down ${styles.selectIcon}`}></i>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Tabs */}
@@ -201,12 +199,6 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
                             onClick={() => setActiveTab('bankAccount')}
                         >
                             Tài khoản ngân hàng
-                        </button>
-                        <button 
-                            className={`${styles.tab} ${activeTab === 'paymentTerms' ? styles.tabActive : ''}`}
-                            onClick={() => setActiveTab('paymentTerms')}
-                        >
-                            Điều khoản thanh toán
                         </button>
                     </div>
 
@@ -247,46 +239,19 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
                                 </div>
                             </div>
                         )}
-
-                        {activeTab === 'paymentTerms' && (
-                            <div className={styles.formGrid} style={{ marginBottom: 0 }}>
-                                <div className={`${styles.formGroup} ${styles.col6}`}>
-                                    <label className={styles.formLabel}>Hạn mức nợ (VNĐ)</label>
-                                    <input 
-                                        type="number" 
-                                        className={styles.input} 
-                                        name="credit_limit"
-                                        value={formData.credit_limit}
-                                        onChange={handleChange}
-                                        placeholder="0" 
-                                    />
-                                </div>
-                                <div className={`${styles.formGroup} ${styles.col6}`}>
-                                    <label className={styles.formLabel}>Thời hạn thanh toán (Số ngày)</label>
-                                    <input 
-                                        type="number" 
-                                        className={styles.input} 
-                                        name="payment_term_days"
-                                        value={formData.payment_term_days}
-                                        onChange={handleChange}
-                                        placeholder="0" 
-                                    />
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="misa-modal-footer">
+                <div className="misa-modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', backgroundColor: '#fff' }}>
                     <div className={styles.footerLeft}>
-                        <button className="btn-misa-cancel" onClick={onClose}>Hủy</button>
+                        <button className="btn-misa-outline" onClick={onClose}>Hủy</button>
                     </div>
-                    <div className={styles.footerRight}>
+                    <div className={styles.footerRight} style={{ display: 'flex', gap: '12px' }}>
                         {!initialData && (
-                            <button className="btn-misa-draft" onClick={handleSave}>Lưu & Thêm tiếp</button>
+                            <button className="btn-misa-outline" onClick={handleSave}>Lưu & Thêm tiếp</button>
                         )}
-                        <button className="btn-misa-save" onClick={handleSave}>
+                        <button className="btn-misa-primary" onClick={handleSave}>
                             {initialData ? 'Cập nhật' : 'Lưu'}
                         </button>
                     </div>

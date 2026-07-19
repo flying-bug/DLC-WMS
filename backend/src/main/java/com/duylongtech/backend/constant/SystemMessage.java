@@ -70,6 +70,7 @@ public enum SystemMessage {
     CUST_HAS_REPAIRING_WARRANTY("CUST03", "Khách hàng đang có thiết bị sửa chữa tại trung tâm, không thể vô hiệu hóa."),
     CUST_VIEW_SEED_DATA_DENIED("CUST04", "Không được phép xem chi tiết dữ liệu Khách vãng lai."),
     CUST_ALREADY_ACTIVE("CUST05", "Khách hàng đang ở trạng thái hoạt động, không cần kích hoạt lại."),
+    CUST_CODE_EXISTS("CUST06", "Mã khách hàng đã tồn tại trên hệ thống."),
 
     // BOM & Warranty
     BOM_INSUFFICIENT_COMPONENTS("BOM01", "Không đủ số lượng linh kiện thành phần để lắp ráp"),

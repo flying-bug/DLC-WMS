@@ -208,8 +208,9 @@ public class SupplierService {
         boolean hasTransactions = checkHasLinkedTransactions(partner.getId());
 
         if (hasTransactions) {
-            // Hiển thị thông báo lỗi chặn thao tác xóa và yêu cầu giải quyết công nợ theo UC-24
-            throw new BusinessException(SystemMessage.SUPPLIER_HAS_TRANSACTIONS);
+            // Có giao dịch - chuyển trạng thái sang INACTIVE
+            partner.setStatus("INACTIVE");
+            partnerRepository.save(partner);
         } else {
             // Chưa có giao dịch - xóa vật lý an toàn
             partnerRepository.delete(partner);

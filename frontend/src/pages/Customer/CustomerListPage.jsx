@@ -1,124 +1,119 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
-import CustomerQuickCreateDrawer from './components/CustomerQuickCreateDrawer';
+import CustomerModal from './components/CustomerModal';
 import CustomerImportModal from './components/CustomerImportModal';
-import Modal from '../../components/ui/Modal/Modal';
 import Toast from '../../components/ui/Toast/Toast';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import { searchCustomers, deactivateCustomer, activateCustomer, exportCustomersToExcel } from '../../api/customerApi';
 import styles from './CustomerListPage.module.css';
 
+const STATUS_LABELS = {
+    APPROVED: { label: 'Đang hoạt động', code: 'success' },
+    INACTIVE: { label: 'Ngừng hoạt động', code: 'danger' },
+};
+
+const GROUP_LABELS = {
+    RETAIL: 'Khách lẻ',
+    WHOLESALE: 'Khách thợ',
+    DISTRIBUTOR: 'Đại lý'
+};
+
 const CustomerListPage = () => {
     const navigate = useNavigate();
+    
     const [customers, setCustomers] = useState([]);
-    const [keywordSearch, setKeywordSearch] = useState('');
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [filters, setFilters] = useState({ status: '', groupType: '' });
-    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [confirmModal, setConfirmModal] = useState({ isOpen: false, customer: null, action: '' });
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(0);
+    
+    // Filters and Pagination
+    const [filters, setFilters] = useState({ search: '', status: '', groupType: '' });
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
-    const [toast, setToast] = useState({ isVisible: false, type: 'success', title: '', message: '' });
-    const [selectedIds, setSelectedIds] = useState(new Set());
-    const PAGE_SIZE = 10;
+    
+    // Selection
+    const [selectedIds, setSelectedIds] = useState([]);
+    
+    // Modals & Toast
+    const [modalConfig, setModalConfig] = useState({ isOpen: false, data: null });
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, customer: null, action: '' });
 
-    const showToast = (type, title, message) => {
-        setToast({ isVisible: true, type, title, message });
-    };
-    const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
-
-    // Debounce search
     const debounceRef = useRef(null);
 
-    const handleExport = async () => {
+    const showToast = (type, message) => setToast({ isVisible: true, type, message });
+    const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
+
+    const fetchCustomers = useCallback(async (currentFilters = filters, currentPage = page, currentSize = pageSize) => {
         try {
             setLoading(true);
-            await exportCustomersToExcel({ keyword: keywordSearch, ...filters }, Array.from(selectedIds));
-            showToast('success', 'Thành công', 'Đã tải xuống file Excel.');
-        } catch (err) {
-            console.error(err);
-            showToast('error', 'Lỗi', 'Có lỗi xảy ra khi xuất Excel.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSelectRow = (id) => {
-        setSelectedIds(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(id)) {
-                newSet.delete(id);
-            } else {
-                newSet.add(id);
-            }
-            return newSet;
-        });
-    };
-
-    const handleSelectAll = (e) => {
-        if (e.target.checked) {
-            const newSet = new Set(selectedIds);
-            customers.forEach(item => newSet.add(item.id));
-            setSelectedIds(newSet);
-        } else {
-            const newSet = new Set(selectedIds);
-            customers.forEach(item => newSet.delete(item.id));
-            setSelectedIds(newSet);
-        }
-    };
-
-    const isAllCurrentPageSelected = customers.length > 0 && customers.every(item => selectedIds.has(item.id));
-
-    const fetchCustomers = useCallback(async (keyword = keywordSearch, filterParams = filters, currentPage = page) => {
-        try {
-            setLoading(true);
-            const response = await searchCustomers(keyword, filterParams.status, filterParams.groupType, currentPage, PAGE_SIZE);
+            // API expects 0-indexed page
+            const apiPage = Math.max(0, currentPage - 1);
+            const response = await searchCustomers(
+                currentFilters.search, 
+                currentFilters.status, 
+                currentFilters.groupType, 
+                apiPage, 
+                currentSize
+            );
             const payload = response.data?.data ?? response.data;
             if (payload) {
                 setCustomers(payload.content || []);
                 setTotalPages(payload.totalPages || 0);
                 setTotalElements(payload.totalElements || 0);
             }
-        } catch (err) {
-            console.error(err);
+            setSelectedIds([]);
+        } catch (error) {
+            console.error('Lỗi tải danh sách khách hàng:', error);
+            showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách khách hàng');
         } finally {
             setLoading(false);
         }
-    }, [keywordSearch, filters, page]);
+    }, [filters, page, pageSize]);
 
     useEffect(() => {
-        Promise.resolve().then(() => fetchCustomers(keywordSearch, filters, page));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, filters]);
+        fetchCustomers();
+    }, [fetchCustomers]);
 
     const handleSearchChange = (e) => {
         const value = e.target.value;
-        setKeywordSearch(value);
-        setPage(0);
-        clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => {
-            fetchCustomers(value, filters, 0);
-        }, 400);
+        setFilters(prev => ({ ...prev, search: value }));
+        setPage(1);
     };
 
     const handleFilterChange = (key, value) => {
         setFilters(prev => ({ ...prev, [key]: value }));
-        setPage(0);
+        setPage(1);
     };
 
-    const clearFilters = () => {
-        setFilters({ status: '', groupType: '' });
-        setPage(0);
+    const handleExport = async () => {
+        try {
+            setLoading(true);
+            await exportCustomersToExcel(
+                { keyword: filters.search, status: filters.status, groupType: filters.groupType }, 
+                selectedIds
+            );
+            showToast('success', 'Đã xuất Excel thành công.');
+        } catch (err) {
+            showToast('error', 'Có lỗi xảy ra khi xuất Excel.');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handlePageChange = (newPage) => {
-        setPage(newPage);
+    const handleSelectAll = (e) => {
+        setSelectedIds(e.target.checked ? customers.map(row => row.id) : []);
     };
 
-    const handleToggleStatus = (customer) => {
+    const handleSelectRow = (e, id) => {
+        e.stopPropagation();
+        setSelectedIds(current => current.includes(id) ? current.filter(selectedId => selectedId !== id) : [...current, id]);
+    };
+
+    const handleToggleStatus = (e, customer) => {
+        e.stopPropagation();
         const action = customer.status === 'APPROVED' ? 'vô hiệu hóa' : 'kích hoạt';
         setConfirmModal({ isOpen: true, customer, action });
     };
@@ -126,321 +121,326 @@ const CustomerListPage = () => {
     const executeToggleStatus = async () => {
         if (!confirmModal.customer) return;
         try {
-            setLoading(true);
             if (confirmModal.customer.status === 'APPROVED') {
                 await deactivateCustomer(confirmModal.customer.id);
-                showToast('success', 'Thành công', `Đã vô hiệu hóa khách hàng "${confirmModal.customer.name}".`);
+                showToast('success', `Đã vô hiệu hóa khách hàng "${confirmModal.customer.name}".`);
             } else {
                 await activateCustomer(confirmModal.customer.id);
-                showToast('success', 'Thành công', `Đã kích hoạt lại khách hàng "${confirmModal.customer.name}".`);
+                showToast('success', `Đã kích hoạt lại khách hàng "${confirmModal.customer.name}".`);
             }
-            fetchCustomers(keywordSearch, page);
+            fetchCustomers();
         } catch (error) {
             const msg = error.response?.data?.userMessage || 'Có lỗi xảy ra. Vui lòng thử lại.';
-            showToast('error', 'Thao tác thất bại', msg);
+            showToast('error', msg);
         } finally {
             setConfirmModal({ isOpen: false, customer: null, action: '' });
-            setLoading(false);
         }
     };
 
-    const handleSavedSuccess = (isEdit) => {
-        setIsDrawerOpen(false);
-        fetchCustomers(keywordSearch, page);
-        showToast('success', 'Thành công', isEdit ? 'Đã cập nhật thông tin khách hàng.' : 'Đã thêm khách hàng mới thành công.');
+    const getPageNumbers = () => {
+        const pages = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            if (page <= 4) {
+                for (let i = 1; i <= 5; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            } else if (page >= totalPages - 3) {
+                pages.push(1);
+                pages.push('...');
+                for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+            } else {
+                pages.push(1);
+                pages.push('...');
+                for (let i = page - 1; i <= page + 1; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            }
+        }
+        return pages;
     };
-
-    const startItem = page * PAGE_SIZE + 1;
-    const endItem = Math.min((page + 1) * PAGE_SIZE, totalElements);
 
     return (
         <AdminLayout>
-            <div className={styles.container}>
-                {/* Header */}
-                <div className={styles.header}>
-                    <div className={styles.titleArea}>
-                        <h2>Danh sách khách hàng</h2>
+            <div className={styles.pageBody}>
+                <div className={styles.pageTitleContainer}>
+                    <h1 className={styles.pageTitle}>Danh sách khách hàng</h1>
+                    <button className={styles.btnPrimary} onClick={() => setModalConfig({ isOpen: true, data: null })}>
+                        <i className="bi bi-plus"></i> Thêm mới
+                    </button>
+                </div>
+
+                <div className={styles.filterSection}>
+                    <div className={styles.filterGroup}>
+                        <div className={styles.filterField}>
+                            <span className={styles.filterLabel}>TÌM KIẾM</span>
+                            <input
+                                type="text"
+                                className={styles.filterInput}
+                                placeholder="Tên, mã, SĐT khách hàng..."
+                                value={filters.search}
+                                onChange={handleSearchChange}
+                                onKeyDown={(e) => e.key === 'Enter' && fetchCustomers()}
+                            />
+                        </div>
+                        <div className={styles.filterField}>
+                            <span className={styles.filterLabel}>TÌNH TRẠNG</span>
+                            <select
+                                className={styles.filterSelect}
+                                value={filters.status}
+                                onChange={(e) => handleFilterChange('status', e.target.value)}
+                            >
+                                <option value="">Tất cả</option>
+                                <option value="APPROVED">Đang hoạt động</option>
+                                <option value="INACTIVE">Ngừng hoạt động</option>
+                            </select>
+                        </div>
+                        <div className={styles.filterField}>
+                            <span className={styles.filterLabel}>NHÓM KHÁCH</span>
+                            <select
+                                className={styles.filterSelect}
+                                value={filters.groupType}
+                                onChange={(e) => handleFilterChange('groupType', e.target.value)}
+                            >
+                                <option value="">Tất cả</option>
+                                <option value="RETAIL">Khách lẻ</option>
+                                <option value="WHOLESALE">Khách thợ</option>
+                                <option value="DISTRIBUTOR">Đại lý</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className={styles.filterActions}>
+                        <button className={styles.btnOutline} onClick={() => { setFilters({ search: '', status: '', groupType: '' }); setPage(1); }}>
+                            Làm mới
+                        </button>
+                        <button className={styles.btnOutline} onClick={() => setIsImportModalOpen(true)}>
+                            <i className="bi bi-file-earmark-arrow-up"></i> Nhập Excel
+                        </button>
+                        <button className={styles.btnOutline} onClick={handleExport}>
+                            <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                        </button>
+                        <button className={styles.btnPrimary} onClick={() => fetchCustomers()}>
+                            <i className="bi bi-funnel"></i> Lọc dữ liệu
+                        </button>
                     </div>
                 </div>
 
-                {/* Table Section */}
-                <div className={styles.tableCard}>
-                    {/* Toolbar */}
-                    <div className={styles.tableToolbar}>
-                        <div className={styles.toolbarLeft}>
-                            <div
-                                className={`${styles.filterBtn} ${isFilterOpen ? styles.activeFilter : ''}`}
-                                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                            >
-                                <i className="fas fa-filter"></i> Lọc {Object.values(filters).some(x => x) && <span className={styles.filterDot}></span>}
-                            </div>
-                            <div className={styles.searchBox}>
-                                <i className="fas fa-search"></i>
-                                <input
-                                    id="input-search"
-                                    type="text"
-                                    placeholder="Tìm theo tên, SĐT..."
-                                    value={keywordSearch}
-                                    onChange={handleSearchChange}
-                                    autoComplete="off"
-                                />
-                            </div>
-                        </div>
-                        <div className={styles.toolbarRight}>
-                            <button className={styles.iconBtn} title="Tải lại" onClick={() => fetchCustomers(keywordSearch, page)}>
-                                <i className="fas fa-sync-alt"></i>
-                            </button>
-                            <button className={styles.iconBtn} title="In" onClick={() => window.print()}>
-                                <i className="fas fa-print"></i>
-                            </button>
-                            <button className={styles.iconBtn} title="Cài đặt">
-                                <i className="fas fa-cog"></i>
-                            </button>
-                            <button className={styles.iconBtn} title="Xuất Excel" onClick={handleExport}>
-                                <i className="fas fa-file-excel"></i>
-                            </button>
-                            <button className={styles.btnImport} title="Nhập dữ liệu từ Excel" onClick={() => setIsImportModalOpen(true)}>
-                                <i className="fas fa-file-import"></i> Nhập từ Excel
-                            </button>
-                            <button id="btn-add-customer" className={styles.btnAdd} onClick={() => setIsDrawerOpen(true)}>
-                                <i className="fas fa-plus"></i> Thêm
-                            </button>
-                        </div>
+                {selectedIds.length > 0 && (
+                    <div className={styles.bulkActionsToolbar}>
+                        <div className={styles.bulkText}>Đã chọn {selectedIds.length} khách hàng</div>
                     </div>
+                )}
 
-                    {/* Filter Panel (MISA Style) */}
-                    {isFilterOpen && (
-                        <div className={styles.filterPanel}>
-                            <div className={styles.filterGroup}>
-                                <label>Trạng thái</label>
-                                <select
-                                    value={filters.status}
-                                    onChange={(e) => handleFilterChange('status', e.target.value)}
-                                >
-                                    <option value="">Tất cả</option>
-                                    <option value="APPROVED">Đang hoạt động</option>
-                                    <option value="INACTIVE">Ngừng hoạt động</option>
-                                </select>
-                            </div>
-                            <div className={styles.filterGroup}>
-                                <label>Nhóm khách hàng</label>
-                                <select
-                                    value={filters.groupType}
-                                    onChange={(e) => handleFilterChange('groupType', e.target.value)}
-                                >
-                                    <option value="">Tất cả</option>
-                                    <option value="RETAIL">Khách lẻ</option>
-                                    <option value="WHOLESALE">Khách thợ</option>
-                                    <option value="DISTRIBUTOR">Đại lý</option>
-                                </select>
-                            </div>
-                            <div className={styles.filterActions}>
-                                <span className={styles.clearFilter} onClick={clearFilters}>Xóa bộ lọc</span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Data Table */}
-                    <div className={styles.tableWrapper}>
-                        <table className={styles.table}>
-                            <thead>
+                <div className={styles.tableContainer}>
+                    <table className={styles.table}>
+                        <thead>
+                            <tr>
+                                <th style={{ width: '40px', textAlign: 'center' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        className={styles.checkbox} 
+                                        checked={customers.length > 0 && selectedIds.length === customers.length} 
+                                        onChange={handleSelectAll} 
+                                    />
+                                </th>
+                                <th style={{ width: '150px' }}>Mã Khách Hàng</th>
+                                <th style={{ minWidth: '200px' }}>Tên Khách Hàng</th>
+                                <th style={{ width: '130px' }}>Nhóm</th>
+                                <th style={{ width: '130px' }}>Điện Thoại</th>
+                                <th style={{ minWidth: '200px' }}>Địa Chỉ</th>
+                                <th style={{ width: '140px' }}>Trạng Thái</th>
+                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading && customers.length === 0 ? (
                                 <tr>
-                                    <th style={{ width: '40px', textAlign: 'center' }}>
-                                        <input 
-                                            type="checkbox" 
-                                            className={styles.checkbox} 
-                                            checked={isAllCurrentPageSelected}
-                                            onChange={handleSelectAll}
-                                        />
-                                    </th>
-                                    <th>MÃ KHÁCH HÀNG</th>
-                                    <th>TÊN KHÁCH HÀNG</th>
-                                    <th>ĐỊA CHỈ</th>
-                                    <th>SỐ ĐIỆN THOẠI</th>
-                                    <th>TRẠNG THÁI</th>
-                                    <th>ĐƠN HÀNG CUỐI</th>
-                                    <th style={{ textAlign: 'center' }}>CHỨC NĂNG</th>
+                                    <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
+                                        <div className={styles.emptyState}>Đang tải dữ liệu...</div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr><td colSpan="8" className={styles.emptyRow}>Đang tải dữ liệu...</td></tr>
-                                ) : customers.length === 0 ? (
-                                    <tr><td colSpan="8" className={styles.emptyRow}>Chưa có dữ liệu.</td></tr>
-                                ) : customers.map((item) => (
-                                    <tr key={item.id}>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <input 
-                                                type="checkbox" 
-                                                className={styles.checkbox} 
-                                                checked={selectedIds.has(item.id)}
-                                                onChange={() => handleSelectRow(item.id)}
-                                            />
-                                        </td>
-                                        <td className={styles.codeCell}>{item.code}</td>
-                                        <td>
-                                            <span
-                                                className={styles.nameLink}
-                                                onClick={() => navigate(`/customers/${item.id}`)}
-                                                title="Xem chi tiết khách hàng"
-                                            >
-                                                {item.name}
-                                            </span>
-                                        </td>
-                                        <td>{item.address || '---'}</td>
-                                        <td>{item.phone}</td>
-                                        <td>
-                                            {item.status === 'APPROVED' ? (
-                                                <div className={`${styles.statusBadge} ${styles.statusActive}`}>
-                                                    <i className="far fa-check-circle"></i> Active
+                            ) : customers.length === 0 ? (
+                                <tr>
+                                    <td colSpan="8">
+                                        <div className={styles.emptyState}>
+                                            <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
+                                            <div className={styles.emptyText}>Không tìm thấy khách hàng nào</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                customers.map(item => {
+                                    const status = STATUS_LABELS[item.status] || { label: item.status || 'Không rõ', code: 'info' };
+                                    return (
+                                        <tr key={item.id} onClick={() => navigate(`/customers/${item.id}`)}>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    className={styles.checkbox} 
+                                                    checked={selectedIds.includes(item.id)} 
+                                                    onChange={(e) => handleSelectRow(e, item.id)} 
+                                                    onClick={(e) => e.stopPropagation()} 
+                                                />
+                                            </td>
+                                            <td className={styles.textBlue} style={{ whiteSpace: 'nowrap' }}>{item.code}</td>
+                                            <td style={{ fontWeight: 600 }}>{item.name}</td>
+                                            <td>{GROUP_LABELS[item.groupType] || item.groupType}</td>
+                                            <td>{item.phone || '---'}</td>
+                                            <td>
+                                                <div className={styles.tooltipContainer} style={{ display: 'inline-block', maxWidth: '100%' }}>
+                                                    <span className={styles.noteText}>{item.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có</span>}</span>
+                                                    {item.address && <span className={styles.tooltipText}>{item.address}</span>}
                                                 </div>
-                                            ) : (
-                                                <div className={`${styles.statusBadge} ${styles.statusInactive}`}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <circle cx="12" cy="12" r="10"></circle>
-                                                        <line x1="8" y1="12" x2="16" y2="12"></line>
-                                                    </svg> Inactive
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td>{item.lastOrder || '---'}</td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <div className={styles.actionIconGroup}>
-                                                <button
-                                                    className={`${styles.actionIconBtn} ${styles.iconBtnView}`}
-                                                    onClick={() => navigate(`/customers/${item.id}`)}
-                                                    title="Xem chi tiết"
-                                                >
-                                                    <i className="far fa-eye"></i>
-                                                </button>
-                                                <div className={styles.actionDivider}></div>
+                                            </td>
+                                            <td>
+                                                <span className={`${styles.badge} ${status.code === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
+                                                    {status.label}
+                                                </span>
+                                            </td>
+                                            <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
+                                                <i 
+                                                    className="bi bi-eye" 
+                                                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
+                                                    title="Xem chi tiết" 
+                                                    onClick={(e) => { e.stopPropagation(); navigate(`/customers/${item.id}`); }}
+                                                ></i>
+                                                <i 
+                                                    className="bi bi-pencil" 
+                                                    style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
+                                                    title="Chỉnh sửa" 
+                                                    onClick={(e) => { e.stopPropagation(); setModalConfig({ isOpen: true, data: item }); }}
+                                                ></i>
                                                 {item.status === 'APPROVED' ? (
-                                                    <button
-                                                        className={`${styles.actionIconBtn} ${styles.iconBtnDelete}`}
-                                                        onClick={() => handleToggleStatus(item)}
-                                                        title="Vô hiệu hóa"
-                                                    >
-                                                        <i className="far fa-times-circle"></i>
-                                                    </button>
+                                                    <i 
+                                                        className="bi bi-slash-circle" 
+                                                        style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
+                                                        title="Vô hiệu hóa" 
+                                                        onClick={(e) => handleToggleStatus(e, item)}
+                                                    ></i>
                                                 ) : (
-                                                    <button
-                                                        className={`${styles.actionIconBtn} ${styles.iconBtnActivate}`}
-                                                        onClick={() => handleToggleStatus(item)}
-                                                        title="Kích hoạt"
-                                                    >
-                                                        <i className="far fa-check-circle"></i>
-                                                    </button>
+                                                    <i 
+                                                        className="bi bi-check2-circle" 
+                                                        style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} 
+                                                        title="Kích hoạt lại" 
+                                                        onClick={(e) => handleToggleStatus(e, item)}
+                                                    ></i>
                                                 )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </tbody>
+                    </table>
 
-                    {/* Pagination */}
                     <div className={styles.pagination}>
-                        <div className={styles.pageInfo}>
-                            {totalElements > 0 ? `${startItem}-${endItem} của ${totalElements} khách hàng` : '0 khách hàng'}
-                            <span className={styles.pageSize}>
-                                Hiển thị
-                                <select className={styles.pageSizeSelect} defaultValue={10}>
-                                    <option value={10}>10 dòng / trang</option>
-                                    <option value={20}>20 dòng / trang</option>
-                                    <option value={50}>50 dòng / trang</option>
-                                </select>
-                            </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span>Hiển thị</span>
+                            <select
+                                className="misa-select"
+                                style={{ width: '70px', height: '32px', padding: '0 8px' }}
+                                value={pageSize}
+                                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                            >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                            <span>trên tổng số {totalElements} bản ghi</span>
                         </div>
-                        <div className={styles.pageControls}>
-                            <div className={styles.pageNav}>
+
+                        {totalPages > 1 && (
+                            <div className={styles.pageControls}>
                                 <button
-                                    className={styles.pageNavBtn}
-                                    disabled={page === 0}
-                                    onClick={() => handlePageChange(page - 1)}
+                                    disabled={page === 1}
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    className={styles.pageBtn}
                                 >
-                                    <i className="fas fa-chevron-left"></i>
+                                    <i className="bi bi-chevron-left"></i>
+                                    <span>Trước</span>
                                 </button>
-                                {Array.from({ length: totalPages }, (_, i) => (
-                                    <button
-                                        key={i}
-                                        className={`${styles.pageBtn} ${page === i ? styles.active : ''}`}
-                                        onClick={() => handlePageChange(i)}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
+
+                                <div className={styles.paginationNumbers}>
+                                    {getPageNumbers().map((num, idx) => (
+                                        num === page ? (
+                                            <input
+                                                key={idx}
+                                                className={`${styles.pageNumber} ${styles.active}`}
+                                                style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
+                                                defaultValue={num}
+                                                title="Nhập số trang và nhấn Enter"
+                                                onBlur={(e) => e.target.value = page}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        let p = parseInt(e.target.value, 10);
+                                                        if (!isNaN(p)) {
+                                                            p = Math.max(1, Math.min(totalPages, p));
+                                                            setPage(p);
+                                                            e.target.blur();
+                                                        } else {
+                                                            e.target.value = page;
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        ) : (
+                                            <span
+                                                key={idx}
+                                                className={`${styles.pageNumber} ${num === '...' ? styles.dots : ''}`}
+                                                onClick={() => num !== '...' && setPage(num)}
+                                            >
+                                                {num}
+                                            </span>
+                                        )
+                                    ))}
+                                </div>
+
                                 <button
-                                    className={styles.pageNavBtn}
-                                    disabled={page >= totalPages - 1}
-                                    onClick={() => handlePageChange(page + 1)}
+                                    disabled={page === totalPages}
+                                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                    className={styles.pageBtn}
                                 >
-                                    <i className="fas fa-chevron-right"></i>
+                                    <span>Sau</span>
+                                    <i className="bi bi-chevron-right"></i>
                                 </button>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Drawer Tạo nhanh */}
-            <CustomerQuickCreateDrawer
-                isOpen={isDrawerOpen}
-                editData={null}
-                onClose={() => setIsDrawerOpen(false)}
-                onSaved={(isEdit) => handleSavedSuccess(isEdit)}
-                onError={(msg) => showToast('error', 'Lỗi', msg)}
+            <CustomerModal
+                isOpen={modalConfig.isOpen}
+                editData={modalConfig.data}
+                onClose={() => setModalConfig({ isOpen: false, data: null })}
+                onSaved={(isEdit, isContinue) => {
+                    showToast('success', isEdit ? 'Cập nhật khách hàng thành công!' : 'Thêm mới khách hàng thành công!');
+                    fetchCustomers();
+                    if (!isContinue) setModalConfig({ isOpen: false, data: null });
+                }}
             />
 
             <CustomerImportModal 
                 isOpen={isImportModalOpen}
                 onClose={() => setIsImportModalOpen(false)}
-                onSuccess={() => fetchCustomers(keywordSearch, page)}
-                showToast={showToast}
+                onSuccess={() => fetchCustomers()}
+                showToast={(type, title, msg) => showToast(type, msg || title)}
             />
 
-            {/* Toast Notification */}
-            <Toast
-                isVisible={toast.isVisible}
-                type={toast.type}
-                title={toast.title}
-                message={toast.message}
-                onClose={hideToast}
-            />
-
-            {/* Confirm Modal */}
-            <Modal
+            <ConfirmModal
                 isOpen={confirmModal.isOpen}
-                onClose={() => setConfirmModal({ isOpen: false, customer: null, action: '' })}
-            >
-                <div className={styles.confirmModalContent}>
-                    <div className={styles.confirmIcon}>
-                        {confirmModal.action === 'vô hiệu hóa' ? (
-                            <i className="fas fa-exclamation-circle" style={{ color: '#ef4444' }}></i>
-                        ) : (
-                            <i className="fas fa-question-circle" style={{ color: '#3b82f6' }}></i>
-                        )}
-                    </div>
-                    <h3 className={styles.confirmTitle}>Xác nhận {confirmModal.action}</h3>
-                    <p className={styles.confirmMessage}>
-                        Bạn có chắc chắn muốn {confirmModal.action} khách hàng <strong>"{confirmModal.customer?.name}"</strong> không?
-                    </p>
-                    <div className={styles.confirmActions}>
-                        <button
-                            className={styles.btnCancel}
-                            onClick={() => setConfirmModal({ isOpen: false, customer: null, action: '' })}
-                        >
-                            Hủy bỏ
-                        </button>
-                        <button
-                            className={`${styles.btnConfirm} ${confirmModal.action === 'vô hiệu hóa' ? styles.btnConfirmDanger : ''}`}
-                            onClick={executeToggleStatus}
-                        >
-                            Đồng ý
-                        </button>
-                    </div>
-                </div>
-            </Modal>
+                title={`Xác nhận ${confirmModal.action}`}
+                message={<span>Bạn có chắc chắn muốn {confirmModal.action} khách hàng <strong>{confirmModal.customer?.name}</strong> {confirmModal.customer?.code ? `(${confirmModal.customer.code})` : ''} không?</span>}
+                onConfirm={executeToggleStatus}
+                onCancel={() => setConfirmModal({ isOpen: false, customer: null, action: '' })}
+                confirmText="Đồng ý"
+                cancelText="Hủy"
+                confirmButtonClass={confirmModal.action === 'vô hiệu hóa' ? 'btn-misa-danger' : 'btn-misa-primary'}
+            />
+
+            <Toast {...toast} onClose={hideToast} />
         </AdminLayout>
     );
 };

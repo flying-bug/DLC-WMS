@@ -1,222 +1,225 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SupplierModal from './components/SupplierModal';
-import DeleteSupplierModal from './components/DeleteSupplierModal';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import Toast from '../../components/ui/Toast/Toast';
+import axiosClient from '../../api/axiosClient';
 import styles from './SupplierDetailPage.module.css';
+
+const formatCurrency = (val) => {
+    if (!val) return '0 đ';
+    return `${new Intl.NumberFormat('vi-VN').format(val)} đ`;
+};
 
 const SupplierDetailPage = () => {
     const navigate = useNavigate();
+    const { id } = useParams();
+    
+    const [supplier, setSupplier] = useState(null);
+    const [loading, setLoading] = useState(true);
+    
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
 
-    // Dữ liệu mock để test form Edit
-    const mockSupplier = {
-        type: 'COMPANY',
-        code: '0106242834',
-        tax_code: '0106242834',
-        name: 'CÔNG TY TNHH CÔNG NGHIỆP H VIỆT NAM',
-        phone: '024 3367 0218',
-        email: 'contact@h-vietnam.com',
-        address: 'Đội 3, thôn Hoàng Xá, Xã Thạch Thất, TP Hà Nội',
-        group_type: 'RETAIL',
-        credit_limit: '150000000',
-        payment_term_days: '30',
-        bank_name: 'VIETCOMBANK - CHI NHÁNH THẠCH THẤT',
-        bank_account_number: '0451 000 999 888',
-        bank_beneficiary_name: 'CÔNG TY TNHH CONG NGHIEP H VIET NAM'
+    const showToast = (type, message) => setToast({ isVisible: true, type, message });
+    const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
+
+    const fetchSupplier = async () => {
+        try {
+            setLoading(true);
+            const res = await axiosClient.get(`/suppliers/${id}`);
+            if (res.data && res.data.data) {
+                setSupplier(res.data.data);
+            }
+        } catch (error) {
+            console.error('Lỗi tải chi tiết NCC:', error);
+            showToast('error', error.response?.data?.userMessage || 'Không tải được thông tin chi tiết nhà cung cấp');
+        } finally {
+            setLoading(false);
+        }
     };
+
+    useEffect(() => {
+        if (id) {
+            fetchSupplier();
+        }
+    }, [id]);
+
+    const handleDelete = async () => {
+        try {
+            await axiosClient.delete(`/suppliers/${id}`);
+            setIsDeleteModalOpen(false);
+            navigate('/suppliers', { state: { toastMessage: `Đã xóa nhà cung cấp ${supplier.name}`, toastType: 'success' } });
+        } catch (error) {
+            showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi xóa nhà cung cấp');
+            setIsDeleteModalOpen(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <AdminLayout>
+                <div className={styles.pageBody}>
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải thông tin...</div>
+                </div>
+            </AdminLayout>
+        );
+    }
+
+    if (!supplier) {
+        return (
+            <AdminLayout>
+                <div className={styles.pageBody}>
+                    <div className={styles.emptyState}>
+                        <i className={`bi bi-exclamation-circle ${styles.emptyIcon}`}></i>
+                        <div className={styles.emptyText}>Không tìm thấy nhà cung cấp này</div>
+                        <button className={styles.btnPrimary} onClick={() => navigate('/suppliers')}>Quay lại danh sách</button>
+                    </div>
+                </div>
+            </AdminLayout>
+        );
+    }
 
     return (
         <AdminLayout>
-            <div className={styles.container}>
-                
-                {/* Header */}
-                <div className={styles.header}>
-                    <div className={styles.titleArea}>
-                        <div className={styles.backLink} onClick={() => navigate('/suppliers')}>
-                            <i className="fas fa-arrow-left"></i> Tất cả danh mục
-                            <span className={styles.breadcrumbSeparator}>|</span>
-                            <span className={styles.breadcrumbText}>Chi tiết nhà cung cấp</span>
-                        </div>
-                        <h2 className={styles.supplierName}>CÔNG TY TNHH CÔNG NGHIỆP H VIỆT NAM</h2>
-                        <div className={styles.badgeRow}>
-                            <div className={styles.badgeGray}># 0106242834</div>
-                            <div className={styles.badgeStatus}>
-                                <i className="fas fa-check-circle"></i> Đang hoạt động
-                            </div>
-                        </div>
+            <div className={styles.pageBody}>
+                <div className={styles.pageTitleContainer}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <button 
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }} 
+                            onClick={() => navigate('/suppliers')}
+                        >
+                            <i className="bi bi-arrow-left"></i>
+                        </button>
+                        <h1 className={styles.pageTitle}>Chi tiết nhà cung cấp: {supplier.name}</h1>
+                        <span className={`${styles.badge} ${supplier.status === 'APPROVED' ? styles.badgeSuccess : styles.badgeDanger}`}>
+                            {supplier.status === 'APPROVED' ? 'Đang hoạt động' : 'Ngừng hoạt động'}
+                        </span>
                     </div>
-                    <div className={styles.headerActions}>
+                    <div style={{ display: 'flex', gap: '12px' }}>
                         <button className={styles.btnOutline} onClick={() => setIsEditModalOpen(true)}>
-                            <i className="fas fa-pen"></i> Chỉnh sửa
+                            <i className="bi bi-pencil"></i> Chỉnh sửa
                         </button>
-                        <button className={styles.btnDanger} onClick={() => setIsDeleteModalOpen(true)}>
-                            <i className="far fa-trash-alt"></i> Xóa
+                        <button className={styles.btnOutline} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => setIsDeleteModalOpen(true)}>
+                            <i className="bi bi-trash"></i> Xóa
                         </button>
                     </div>
                 </div>
 
-                {/* KPIs */}
-                <div className={styles.kpiContainer}>
-                    <div className={`${styles.kpiCard} ${styles.kpiBorderRed}`}>
-                        <div className={styles.kpiLeft}>
-                            <div className={styles.kpiLabel}>Nợ quá hạn</div>
-                            <div className={styles.kpiNumber}>0 VNĐ</div>
-                        </div>
-                        <div className={styles.kpiRight}>
-                            <i className="fas fa-exclamation-circle"></i>
-                        </div>
-                    </div>
-                    
-                    <div className={`${styles.kpiCard} ${styles.kpiBorderBlue}`}>
-                        <div className={styles.kpiLeft}>
-                            <div className={styles.kpiLabel}>Tổng nợ phải trả</div>
-                            <div className={styles.kpiNumber}>15.500.000 VNĐ</div>
-                        </div>
-                        <div className={styles.kpiRight}>
-                            <i className="fas fa-wallet"></i>
-                        </div>
+                <div className={styles.detailSection}>
+                    <div className={styles.detailHeader}>
+                        <i className={`bi bi-info-circle ${styles.detailIcon}`}></i>
+                        <h2 className={styles.detailTitle}>Thông tin chung</h2>
                     </div>
 
-                    <div className={`${styles.kpiCard} ${styles.kpiBorderTeal}`}>
-                        <div className={styles.kpiLeft}>
-                            <div className={styles.kpiLabel}>Đã thanh toán (30 ngày)</div>
-                            <div className={styles.kpiNumber}>42.200.000 VNĐ</div>
-                        </div>
-                        <div className={styles.kpiRight}>
-                            <i className="fas fa-money-bill-wave"></i>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Tabs */}
-                <div className={styles.tabs}>
-                    <div className={`${styles.tab} ${styles.tabActive}`}>Thông tin chung</div>
-                    <div className={styles.tab}>Lịch sử giao dịch</div>
-                    <div className={styles.tab}>Công nợ chi tiết</div>
-                    <div className={styles.tab}>Tệp đính kèm (0)</div>
-                </div>
-
-                {/* Content Grid */}
-                <div className={styles.contentGrid}>
-                    
-                    {/* Left Column */}
-                    <div className={styles.colLeft}>
-                        {/* Basic Info Card */}
-                        <div className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <i className={`fas fa-info-circle ${styles.cardIcon}`}></i>
-                                <h3 className={styles.cardTitle}>Thông tin cơ bản</h3>
+                    <div className={styles.detailGrid}>
+                        <div className={styles.detailGroup}>
+                            <div className={styles.detailItem}>
+                                <span className={styles.detailLabel}>Mã nhà cung cấp</span>
+                                <span className={styles.detailValue}>{supplier.code}</span>
                             </div>
-                            <div className={styles.infoGrid}>
-                                <div className={styles.infoItem} style={{ gridColumn: '1 / span 1' }}>
-                                    <div className={styles.infoLabel}>Tên nhà cung cấp</div>
-                                    <div className={styles.infoValueBold}>CÔNG TY TNHH CÔNG NGHIỆP H VIỆT NAM</div>
-                                </div>
-                                <div className={styles.infoItem}>
-                                    <div className={styles.infoLabel}>Mã nhà cung cấp</div>
-                                    <div className={styles.infoValue}>0106242834</div>
-                                </div>
-                                
-                                <div className={styles.infoItem}>
-                                    <div className={styles.infoLabel}>Mã số thuế</div>
-                                    <div className={styles.infoValue}>0106242834</div>
-                                </div>
-                                <div className={styles.infoItem}>
-                                    <div className={styles.infoLabel}>Điện thoại</div>
-                                    <div className={styles.infoValue}>024 3367 0218</div>
-                                </div>
+                            <div className={styles.detailItem}>
+                                <span className={styles.detailLabel}>Tên nhà cung cấp</span>
+                                <span className={styles.detailValue} style={{ fontWeight: 600 }}>{supplier.name}</span>
+                            </div>
+                            <div className={styles.detailItem}>
+                                <span className={styles.detailLabel}>Nhóm nhà cung cấp</span>
+                                <span className={styles.detailValue}>{supplier.groupType === 'WHOLESALE' ? 'Bán buôn' : 'Bán lẻ'}</span>
+                            </div>
+                            <div className={styles.detailItem}>
+                                <span className={styles.detailLabel}>Mã số thuế</span>
+                                <span className={styles.detailValue}>{supplier.taxCode || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                            </div>
+                            <div className={styles.detailItem}>
+                                <span className={styles.detailLabel}>Địa chỉ</span>
+                                <span className={styles.detailValue}>{supplier.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                            </div>
+                        </div>
 
-                                <div className={styles.infoItem} style={{ gridColumn: '1 / span 2' }}>
-                                    <div className={styles.infoLabel}>Địa chỉ</div>
-                                    <div className={styles.infoValue}>Đội 3, thôn Hoàng Xá, Xã Thạch Thất, TP Hà Nội</div>
-                                </div>
+                        <div className={styles.detailGroup}>
+                            <div className={styles.detailItem}>
+                                <span className={styles.detailLabel}>Số điện thoại</span>
+                                <span className={styles.detailValue}>{supplier.phone || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                            </div>
+                            <div className={styles.detailItem}>
+                                <span className={styles.detailLabel}>Email</span>
+                                <span className={styles.detailValue}>{supplier.email || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                            </div>
+                        </div>
 
-                                <div className={styles.infoItem}>
-                                    <div className={styles.infoLabel}>Lĩnh vực kinh doanh</div>
-                                    <div className={styles.infoValue}>Sản xuất linh kiện máy tính, phụ kiện ngoại vi</div>
-                                </div>
-                                <div className={styles.infoItem}>
-                                    <div className={styles.infoLabel}>Ngày tạo</div>
-                                    <div className={styles.infoValue}>15/02/2023</div>
-                                </div>
+                        <div className={styles.detailRight}>
+                            <div style={{ marginBottom: '8px', fontWeight: 600, color: 'var(--color-text-strong)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <i className="bi bi-bank"></i> Thông tin ngân hàng
+                            </div>
+                            <div className={styles.detailRightRow}>
+                                <span className={styles.detailRightLabel}>Ngân hàng</span>
+                                <span className={styles.detailRightValue}>{supplier.bankName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                            </div>
+                            <div className={styles.detailRightRow}>
+                                <span className={styles.detailRightLabel}>Số tài khoản</span>
+                                <span className={styles.detailRightValue}>{supplier.bankAccountNumber || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                            </div>
+                            <div className={styles.detailRightRow}>
+                                <span className={styles.detailRightLabel}>Chủ tài khoản</span>
+                                <span className={styles.detailRightValue}>{supplier.bankBeneficiaryName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
                         </div>
                     </div>
-
-                    {/* Right Column */}
-                    <div className={styles.colRight}>
-                        {/* Contacts Card */}
-                        <div className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <i className={`fas fa-address-book ${styles.cardIcon}`}></i>
-                                <h3 className={styles.cardTitle}>Người liên hệ</h3>
-                            </div>
-                            <table className={styles.contactTable}>
-                                <thead>
-                                    <tr>
-                                        <th>Họ và tên</th>
-                                        <th>Chức vụ</th>
-                                        <th>Số điện thoại</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td style={{ fontWeight: 600 }}>Nguyễn Văn An</td>
-                                        <td>Trưởng phòng KD</td>
-                                        <td>0987 654 321</td>
-                                    </tr>
-                                    <tr>
-                                        <td style={{ fontWeight: 600 }}>Trần Thị Bình</td>
-                                        <td>Kế toán trưởng</td>
-                                        <td>0912 345 678</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        {/* Bank Accounts Card */}
-                        <div className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <i className={`fas fa-university ${styles.cardIcon}`}></i>
-                                <h3 className={styles.cardTitle}>Tài khoản ngân hàng</h3>
-                            </div>
-                            
-                            <div className={styles.bankAccount}>
-                                <div className={styles.bankName}>VIETCOMBANK - CHI NHÁNH THẠCH THẤT</div>
-                                <div className={styles.bankNumber}>0451 000 999 888</div>
-                                <div className={styles.bankHolder}>Chủ TK: CÔNG TY TNHH CONG NGHIEP H VIET NAM</div>
-                            </div>
-                        </div>
-                    </div>
-                    
                 </div>
             </div>
 
-            {/* Edit Modal */}
             {isEditModalOpen && (
                 <SupplierModal 
-                    onClose={() => setIsEditModalOpen(false)}
-                    onSave={(data) => {
-                        console.log('Updated data:', data);
-                        setIsEditModalOpen(false);
+                    initialData={{
+                        ...supplier,
+                        tax_code: supplier.taxCode,
+                        group_type: supplier.groupType,
+                        bank_name: supplier.bankName,
+                        bank_account_number: supplier.bankAccountNumber,
+                        bank_beneficiary_name: supplier.bankBeneficiaryName
                     }}
-                    initialData={mockSupplier}
+                    onClose={() => setIsEditModalOpen(false)}
+                    onSave={async (data) => {
+                        try {
+                            const cleanString = (str) => (str && str.trim() !== '') ? str.trim() : null;
+                            const updateData = {
+                                code: cleanString(data.code),
+                                name: cleanString(data.name),
+                                phone: cleanString(data.phone),
+                                email: cleanString(data.email),
+                                address: cleanString(data.address),
+                                taxCode: cleanString(data.tax_code),
+                                groupType: cleanString(data.group_type) || 'RETAIL',
+                                bankName: cleanString(data.bank_name),
+                                bankAccountNumber: cleanString(data.bank_account_number),
+                                bankBeneficiaryName: cleanString(data.bank_beneficiary_name),
+                                status: data.status || supplier.status
+                            };
+                            await axiosClient.put(`/suppliers/${id}`, updateData);
+                            setIsEditModalOpen(false);
+                            showToast('success', 'Cập nhật nhà cung cấp thành công!');
+                            fetchSupplier();
+                        } catch (error) {
+                            showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi cập nhật NCC');
+                        }
+                    }}
                 />
             )}
 
-            {/* Delete Modal */}
-            {isDeleteModalOpen && (
-                <DeleteSupplierModal
-                    supplier={mockSupplier}
-                    onClose={() => setIsDeleteModalOpen(false)}
-                    onDelete={(supplier) => {
-                        console.log('Deleted supplier:', supplier);
-                        setIsDeleteModalOpen(false);
-                        navigate('/suppliers'); // Điều hướng về danh sách sau khi xóa
-                    }}
-                />
-            )}
+            <ConfirmModal
+                isOpen={isDeleteModalOpen}
+                title="Xác nhận xóa"
+                message={<span>Bạn có chắc chắn muốn xóa nhà cung cấp <strong>{supplier?.name}</strong> {supplier?.code ? `(${supplier.code})` : ''} không? Hành động này không thể hoàn tác.</span>}
+                onConfirm={handleDelete}
+                onCancel={() => setIsDeleteModalOpen(false)}
+                confirmText="Xóa"
+                cancelText="Hủy"
+                confirmButtonClass="btn-misa-danger"
+            />
+
+            <Toast {...toast} onClose={hideToast} />
         </AdminLayout>
     );
 };
