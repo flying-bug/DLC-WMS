@@ -55,7 +55,7 @@ function AssemblyOrderFormPage() {
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
     const [orderDetail, setOrderDetail] = useState(null);
-    const [form, setForm] = useState({
+    const [form, setForm] = useState(() => ({
         orderType: searchParams.get('type') === 'DISASSEMBLY' ? 'DISASSEMBLY' : 'ASSEMBLY',
         orderCode: (searchParams.get('type') === 'DISASSEMBLY' ? 'TD-' : 'LR-') + Date.now(),
         bomId: '',
@@ -64,7 +64,7 @@ function AssemblyOrderFormPage() {
         status: 'DRAFT',
         executionDate: today(),
         note: ''
-    });
+    }));
 
     const selectedBom = useMemo(() => boms.find((bom) => String(bom.id) === String(form.bomId)), [boms, form.bomId]);
     const isViewMode = searchParams.get('mode') === 'view';
