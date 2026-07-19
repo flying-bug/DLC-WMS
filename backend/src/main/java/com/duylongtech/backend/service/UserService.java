@@ -47,6 +47,14 @@ public class UserService {
 
     // ======================== View Account Detail (GET /api/v1/users/me) ========================
 
+    public Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl userDetails) {
+            return userDetails.getId();
+        }
+        return 1L; // Fallback to System User if not found in context
+    }
+
     /**
      * Lấy thông tin profile của user hiện tại đang đăng nhập.
      * - Trích xuất userId từ SecurityContext (JWT Token).

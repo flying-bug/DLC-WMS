@@ -86,6 +86,13 @@ public class AuditLogService {
         }
     }
 
+    @Transactional
+    public void logAction(String entityName, Long entityId, String action, String description, Long userId) {
+        User user = userId != null ? userRepository.findById(userId).orElse(null) : null;
+        String username = user != null ? user.getUsername() : "system";
+        logEvent(username, action, entityName, entityId, "SUCCESS", description, null, null);
+    }
+
     public String sanitizeDescription(String description) {
         if (description == null || description.trim().isEmpty()) {
             return "";

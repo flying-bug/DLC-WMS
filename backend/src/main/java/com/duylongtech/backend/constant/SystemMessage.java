@@ -99,6 +99,14 @@ public enum SystemMessage {
     ASM_INSUFFICIENT_INVENTORY("ASM03", "Không đủ tồn kho thành phẩm hoặc linh kiện để thực hiện lệnh."),
     ASM_HAS_POSTED_DOCS("ASM04", "Không thể Hủy lệnh vì đã có chứng từ kho (Phiếu Nhập/Xuất) liên quan."),
 
+    // Repair Management
+    REP_NOT_FOUND("REP01", "Không tìm thấy lệnh sửa chữa."),
+    REP_INVALID_STATUS("REP02", "Trạng thái lệnh sửa chữa không hợp lệ."),
+    REP_CANNOT_UPDATE("REP03", "Không thể cập nhật lệnh sửa chữa ở trạng thái hiện tại."),
+    REP_INSUFFICIENT_INVENTORY("REP04", "Không đủ tồn kho linh kiện để xác nhận lệnh."),
+    REP_STOCKTAKE_ACTIVE("REP05", "Kho đang kiểm kê, không thể thực hiện giao dịch hoàn tất lệnh sửa chữa."),
+    REP_CANNOT_CANCEL("REP06", "Không thể hủy lệnh vì đã có chứng từ kho liên quan."),
+
     // General Errors
     ACCESS_DENIED("SYS403", "Bạn không có quyền thực hiện thao tác này"),
     SESSION_EXPIRED("SYS401", "Phiên đăng nhập đã hết hạn"),
