@@ -14,10 +14,8 @@ const listFrom = (payload) => payload?.content ?? payload ?? [];
 const today = () => new Date().toISOString().slice(0, 10);
 
 const STATUS_META = {
-    DRAFT: { label: 'Nháp', code: 'info' },
-    SUBMITTED: { label: 'Chờ duyệt', code: 'warning' },
-    APPROVED: { label: 'Đã duyệt', code: 'success' },
-    POSTED: { label: 'Đã ghi sổ', code: 'success' },
+    DRAFT: { label: 'Lưu tạm', code: 'info' },
+    SUBMITTED: { label: 'Hoàn thành', code: 'success' },
     CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
 
@@ -34,7 +32,7 @@ const createDefaultBomForm = () => ({
 
 function AssemblyOrderFormPage() {
     const { id } = useParams();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
     const editing = Boolean(id);
     const [boms, setBoms] = useState([]);
@@ -59,7 +57,7 @@ function AssemblyOrderFormPage() {
     const [orderDetail, setOrderDetail] = useState(null);
     const [form, setForm] = useState({
         orderType: searchParams.get('type') === 'DISASSEMBLY' ? 'DISASSEMBLY' : 'ASSEMBLY',
-        orderCode: '',
+        orderCode: (searchParams.get('type') === 'DISASSEMBLY' ? 'TD-' : 'LR-') + Date.now(),
         bomId: '',
         warehouseId: '',
         quantity: '1',
@@ -69,7 +67,8 @@ function AssemblyOrderFormPage() {
     });
 
     const selectedBom = useMemo(() => boms.find((bom) => String(bom.id) === String(form.bomId)), [boms, form.bomId]);
-    const canEdit = !editing || ['DRAFT', 'SUBMITTED'].includes(form.status);
+    const isViewMode = searchParams.get('mode') === 'view';
+    const canEdit = (!editing || ['DRAFT'].includes(form.status)) && !isViewMode;
     const status = STATUS_META[form.status] || { label: form.status || 'Chưa rõ', code: 'info' };
 
     const loadBaseData = useCallback(async () => {
@@ -119,12 +118,17 @@ function AssemblyOrderFormPage() {
                 executionDate: order.executionDate || today(),
                 note: order.note || ''
             });
+            
+            if (searchParams.get('mode') !== 'view' && order.status === 'SUBMITTED') {
+                showToast('error', 'Lệnh đã hoàn thành không được phép chỉnh sửa.');
+                setSearchParams({ mode: 'view' }, { replace: true });
+            }
         } catch (err) {
             showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được chi tiết lệnh.');
         } finally {
             setLoading(false);
         }
-    }, [editing, id]);
+    }, [editing, id, searchParams, setSearchParams]);
 
     useEffect(() => {
         loadBaseData();
@@ -136,16 +140,24 @@ function AssemblyOrderFormPage() {
         setForm((current) => ({ ...current, [field]: value }));
     };
 
-    const buildPayload = () => ({
+    const buildPayload = (overrideStatus = null) => ({
         orderCode: form.orderCode || null,
         bomId: Number(form.bomId),
         warehouseId: Number(form.warehouseId),
         quantity: Number(form.quantity),
-        status: form.status,
+        status: overrideStatus || form.status,
         executionDate: form.executionDate,
         note: form.note || null,
         createdBy: Number(localStorage.getItem('userId') || 1)
     });
+
+    const getPageTitle = () => {
+        const typeText = form.orderType === 'DISASSEMBLY' ? 'tháo dỡ' : 'lắp ráp';
+        const codeText = form.orderCode ? ` ${form.orderCode}` : '';
+        if (!editing) return `Tạo lệnh ${typeText}${codeText}`;
+        if (isViewMode) return `Chi tiết lệnh ${typeText}${codeText}`;
+        return `Cập nhật lệnh ${typeText}${codeText}`;
+    };
 
     const validate = () => {
         if (!form.bomId) return 'Vui lòng chọn BOM.';
@@ -155,8 +167,8 @@ function AssemblyOrderFormPage() {
         return '';
     };
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
+    const handleSubmit = async (event, overrideStatus = null) => {
+        if (event) event.preventDefault();
         const validationMessage = validate();
         if (validationMessage) {
             showToast('error', validationMessage);
@@ -164,7 +176,7 @@ function AssemblyOrderFormPage() {
         }
         setSaving(true);
         try {
-            const payload = buildPayload();
+            const payload = buildPayload(overrideStatus);
             const response = editing
                 ? await assemblyApi.updateAssemblyOrder(id, payload)
                 : form.orderType === 'DISASSEMBLY'
@@ -174,6 +186,8 @@ function AssemblyOrderFormPage() {
             showToast('success', editing ? 'Cập nhật lệnh thành công.' : 'Tạo lệnh thành công.');
             if (!editing && saved?.id) {
                 setTimeout(() => navigate(`/assembly-orders/${saved.id}`), 1500);
+            } else if (editing) {
+                setTimeout(() => navigate('/assembly-orders'), 1500);
             }
         } catch (err) {
             showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không lưu được lệnh lắp ráp/tháo dỡ.');
@@ -309,7 +323,7 @@ function AssemblyOrderFormPage() {
         <AdminLayout>
                 <div className={styles.pageHeader}>
                     <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/assembly-orders'); }}>
-                        <i className="bi bi-arrow-left"></i> {editing ? 'Chi tiết lệnh Lắp ráp / Tháo dỡ' : 'Tạo lệnh Lắp ráp / Tháo dỡ'} {form.orderCode ? form.orderCode : ''}
+                        <i className="bi bi-arrow-left"></i> {getPageTitle()}
                     </a>
                 </div>
             <div className={styles.pageBody}>
@@ -333,10 +347,12 @@ function AssemblyOrderFormPage() {
                                     <div className="misa-form-row" style={{ marginBottom: '12px' }}>
                                         <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                                             <label className="misa-label">Loại lệnh <span className="required">*</span></label>
-                                            <select className="misa-input" value={form.orderType} onChange={(event) => setField('orderType', event.target.value)} disabled={loading}>
-                                                <option value="ASSEMBLY">Lắp ráp</option>
-                                                <option value="DISASSEMBLY">Tháo dỡ</option>
-                                            </select>
+                                            <input 
+                                                className="misa-input" 
+                                                value={form.orderType === 'ASSEMBLY' ? 'Lắp ráp' : 'Tháo dỡ'} 
+                                                disabled 
+                                                style={{ backgroundColor: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }} 
+                                            />
                                         </div>
                                     </div>
                                 )}
@@ -382,8 +398,8 @@ function AssemblyOrderFormPage() {
                                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
                                     <label className="misa-label">Trạng thái lưu</label>
                                     <select className="misa-input" value={form.status} onChange={(event) => setField('status', event.target.value)} disabled={!canEdit} style={{ width: '50%' }}>
-                                        <option value="DRAFT">Nháp</option>
-                                        <option value="SUBMITTED">Chờ duyệt</option>
+                                        <option value="DRAFT">Lưu tạm</option>
+                                        <option value="SUBMITTED">Hoàn thành</option>
                                     </select>
                                 </div>
                                 
@@ -461,22 +477,34 @@ function AssemblyOrderFormPage() {
 
             <div className={styles.bottomBar}>
                 <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-orders')}>
-                    Hủy bỏ
+                    {canEdit ? 'Hủy bỏ' : 'Đóng'}
                 </button>
-                <div className={styles.actionButtons}>
-                    <button className="btn-misa-post" type="button" onClick={handleSubmit} disabled={saving || !canEdit}>
-                        <i className="bi bi-save"></i>
-                        {saving ? 'Đang lưu...' : 'Lưu lệnh'}
-                    </button>
-                </div>
+                {canEdit && (
+                    <div className={styles.actionButtons}>
+                        <button className="btn-misa-draft" type="button" onClick={(e) => handleSubmit(e, 'DRAFT')} disabled={saving}>
+                            <i className="bi bi-save"></i> Lưu tạm
+                        </button>
+                        <button className="btn-misa-post" type="button" onClick={(e) => handleSubmit(e, 'SUBMITTED')} disabled={saving}>
+                            <i className="bi bi-check-circle"></i>
+                            {saving ? 'Đang lưu...' : 'Hoàn thành lệnh'}
+                        </button>
+                    </div>
+                )}
             </div>
 
             <Modal
                 isOpen={showBomModal}
-                title="Tạo nhanh BOM (Định mức)"
                 onClose={() => setShowBomModal(false)}
-                size="large"
+                dialogStyle={{ width: '900px', maxWidth: '95vw', padding: 0 }}
             >
+                {/* Custom Modal Header to match Image 1 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #e5e7eb' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>Tạo nhanh BOM</h2>
+                    <button type="button" onClick={() => setShowBomModal(false)} style={{ background: '#f3f4f6', border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280' }}>
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
                 <div style={{ padding: '24px' }}>
                     {bomError && (
                         <div style={{ padding: '12px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' }}>
@@ -485,66 +513,67 @@ function AssemblyOrderFormPage() {
                         </div>
                     )}
 
-                    <div className={styles.formGrid}>
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Thành phẩm <span className={styles.required}>*</span></label>
-                            <select className={styles.input} value={bomForm.productId} onChange={(event) => setBomField('productId', event.target.value)}>
+                    <div className="misa-form-row">
+                        <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                            <label className="misa-label">Thành phẩm</label>
+                            <select className="misa-input" value={bomForm.productId} onChange={(event) => setBomField('productId', event.target.value)}>
                                 <option value="">Chọn thành phẩm</option>
                                 {products.map((product) => (
                                     <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
                                 ))}
                             </select>
                         </div>
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Mã BOM</label>
-                            <input className={styles.input} value={bomForm.bomCode} onChange={(event) => setBomField('bomCode', event.target.value)} placeholder="Để trống để tự sinh mã" />
+                        <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                            <label className="misa-label">Mã BOM</label>
+                            <input className="misa-input" value={bomForm.bomCode} onChange={(event) => setBomField('bomCode', event.target.value)} placeholder="Để trống để tự sinh mã" />
                         </div>
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Tên BOM <span className={styles.required}>*</span></label>
-                            <input className={styles.input} value={bomForm.bomName} onChange={(event) => setBomField('bomName', event.target.value)} placeholder="Ví dụ: Cấu hình PC văn phòng" />
+                    </div>
+                    <div className="misa-form-row" style={{ marginTop: '16px' }}>
+                        <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                            <label className="misa-label">Tên BOM</label>
+                            <input className="misa-input" value={bomForm.bomName} onChange={(event) => setBomField('bomName', event.target.value)} placeholder="Ví dụ: Cấu hình PC văn phòng" />
                         </div>
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Phiên bản <span className={styles.required}>*</span></label>
-                            <input className={styles.input} inputMode="decimal" type="number" min="0.01" step="0.01" value={bomForm.versionNo} onChange={(event) => setBomField('versionNo', event.target.value)} />
+                        <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                            <label className="misa-label">Phiên bản</label>
+                            <input className="misa-input" inputMode="decimal" type="number" min="0.01" step="0.01" value={bomForm.versionNo} onChange={(event) => setBomField('versionNo', event.target.value)} />
                         </div>
                     </div>
 
-                    <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text)' }}>Danh sách linh kiện</h3>
-                        <button className={styles.btnOutline} type="button" onClick={addBomLine} style={{ padding: '6px 12px', fontSize: '13px' }}>
-                            <i className="bi bi-plus"></i> Thêm dòng
+                    <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                        <button className="btn-misa-cancel" type="button" onClick={addBomLine} style={{ padding: '6px 16px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
+                            <i className="bi bi-plus"></i> Thêm linh kiện
                         </button>
                     </div>
 
-                    <div className={styles.tableContainer}>
-                        <table className={styles.table}>
-                            <thead>
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                            <thead style={{ backgroundColor: '#f9fafb', fontSize: '12px', color: '#6b7280' }}>
                                 <tr>
-                                    <th style={{ width: '40%' }}>SKU linh kiện</th>
-                                    <th style={{ width: '20%', textAlign: 'right' }}>Định mức</th>
-                                    <th style={{ width: '30%' }}>Ghi chú</th>
-                                    <th style={{ width: '10%', textAlign: 'center' }}>Thao tác</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '35%' }}>SKU LINH KIỆN</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '20%' }}>ĐỊNH MỨC</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '35%' }}>GHI CHÚ</th>
+                                    <th style={{ padding: '12px 16px', width: '10%', textAlign: 'center' }}></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {bomForm.lines.map((line, index) => (
-                                    <tr key={index}>
-                                        <td>
-                                            <select className={styles.input} style={{ height: '32px' }} value={line.componentVariantId} onChange={(event) => setBomLineField(index, 'componentVariantId', event.target.value)}>
+                                    <tr key={index} style={{ borderTop: '1px solid #e5e7eb' }}>
+                                        <td style={{ padding: '12px 16px' }}>
+                                            <select className="misa-input" style={{ height: '36px' }} value={line.componentVariantId} onChange={(event) => setBomLineField(index, 'componentVariantId', event.target.value)}>
                                                 <option value="">Chọn SKU</option>
                                                 {variants.map((variant) => (
                                                     <option key={variant.id} value={variant.id}>{variant.sku} - {variant.productName} / {variant.variantName}</option>
                                                 ))}
                                             </select>
                                         </td>
-                                        <td>
-                                            <input className={styles.input} style={{ height: '32px', textAlign: 'right' }} inputMode="numeric" type="number" min="1" step="1" value={line.quantity} onChange={(event) => setBomLineField(index, 'quantity', event.target.value)} />
+                                        <td style={{ padding: '12px 16px' }}>
+                                            <input className="misa-input" style={{ height: '36px' }} inputMode="numeric" type="number" min="1" step="1" value={line.quantity} onChange={(event) => setBomLineField(index, 'quantity', event.target.value)} />
                                         </td>
-                                        <td>
-                                            <input className={styles.input} style={{ height: '32px' }} value={line.note} onChange={(event) => setBomLineField(index, 'note', event.target.value)} placeholder="Ghi chú" />
+                                        <td style={{ padding: '12px 16px' }}>
+                                            <input className="misa-input" style={{ height: '36px' }} value={line.note} onChange={(event) => setBomLineField(index, 'note', event.target.value)} placeholder="Ghi chú dòng" />
                                         </td>
-                                        <td className={styles.textCenter}>
-                                            <button type="button" className={styles.btnIcon} onClick={() => removeBomLine(index)} style={{ color: 'var(--color-danger)' }}>
+                                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                                            <button type="button" onClick={() => removeBomLine(index)} style={{ backgroundColor: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px', width: '32px', height: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                                                 <i className="bi bi-trash"></i>
                                             </button>
                                         </td>
@@ -554,11 +583,11 @@ function AssemblyOrderFormPage() {
                         </table>
                     </div>
 
-                    <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                        <button className={styles.btnOutline} type="button" onClick={() => setShowBomModal(false)}>Hủy bỏ</button>
-                        <button className={styles.btnPrimary} type="button" onClick={saveQuickBom} disabled={savingBom}>
-                            <i className="bi bi-save"></i>
-                            {savingBom ? 'Đang lưu...' : 'Lưu & Chọn BOM'}
+                    <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                        <button className="btn-misa-cancel" type="button" onClick={() => setShowBomModal(false)} style={{ padding: '8px 24px', fontWeight: '600' }}>Hủy</button>
+                        <button className="btn-misa-post" type="button" onClick={saveQuickBom} disabled={savingBom} style={{ padding: '8px 24px', fontWeight: '600', backgroundColor: '#0070cc' }}>
+                            <i className="bi bi-download"></i>
+                            {savingBom ? 'Đang lưu...' : 'Lưu'}
                         </button>
                     </div>
                 </div>

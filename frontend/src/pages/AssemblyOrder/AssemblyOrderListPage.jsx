@@ -7,10 +7,8 @@ import * as warehouseApi from '../../api/warehouseApi';
 import styles from './AssemblyOrderListPage.module.css';
 
 const STATUS_META = {
-    DRAFT: { label: 'Nháp', code: 'info' },
-    SUBMITTED: { label: 'Chờ duyệt', code: 'warning' },
-    APPROVED: { label: 'Đã duyệt', code: 'success' },
-    POSTED: { label: 'Đã ghi sổ', code: 'success' },
+    DRAFT: { label: 'Lưu tạm', code: 'info' },
+    SUBMITTED: { label: 'Hoàn thành', code: 'success' },
     CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
 
@@ -233,31 +231,29 @@ function AssemblyOrderListPage() {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th style={{ width: '130px' }}>Mã lệnh</th>
+                                <th style={{ width: '160px' }}>Mã lệnh</th>
                                 <th style={{ width: '120px' }}>Loại lệnh</th>
-                                <th style={{ minWidth: '150px' }}>BOM</th>
-                                <th style={{ minWidth: '150px' }}>Thành phẩm</th>
-                                <th style={{ width: '150px' }}>Kho thực hiện</th>
-                                <th style={{ width: '100px', textAlign: 'center' }}>Số lượng</th>
-                                <th style={{ width: '100px', textAlign: 'center' }}>Tiến độ</th>
-                                <th style={{ width: '120px', textAlign: 'center' }}>Ngày thực hiện</th>
+                                <th>BOM</th>
+                                <th>Thành phẩm</th>
+                                <th style={{ width: '180px' }}>Kho thực hiện</th>
+                                <th style={{ width: '150px', textAlign: 'center' }}>Ngày thực hiện</th>
                                 <th style={{ width: '130px' }}>Tình trạng</th>
-                                <th style={{ width: '70px', textAlign: 'center' }}>Thao tác</th>
+                                <th style={{ width: '100px', textAlign: 'center' }}>Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading && currentOrders.length === 0 ? (
                                 <tr>
-                                    <td colSpan="10" className={styles.textCenter} style={{ padding: '40px' }}>
+                                    <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
                                         <div className={styles.emptyState}>Đang tải dữ liệu...</div>
                                     </td>
                                 </tr>
                             ) : currentOrders.length === 0 ? (
                                 <tr>
-                                    <td colSpan="10">
+                                    <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
                                         <div className={styles.emptyState}>
-                                            <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                                            <div className={styles.emptyText}>Không tìm thấy lệnh nào</div>
+                                            <i className={`bi bi-inbox ${styles.emptyIcon}`} style={{ fontSize: '32px', color: '#9ca3af', marginBottom: '12px' }}></i>
+                                            <div className={styles.emptyText} style={{ color: '#6b7280', fontSize: '14px' }}>Không tìm thấy lệnh nào</div>
                                         </div>
                                     </td>
                                 </tr>
@@ -265,27 +261,37 @@ function AssemblyOrderListPage() {
                                 currentOrders.map(item => {
                                     const status = STATUS_META[item.status] || { label: item.status || 'Chưa rõ', code: 'info' };
                                     return (
-                                        <tr key={item.id} onClick={() => navigate(`/assembly-orders/${item.id}`)} style={{ cursor: 'pointer' }}>
-                                            <td className={styles.textBlue} style={{ fontWeight: 500 }}>{item.orderCode}</td>
+                                        <tr key={item.id} onClick={() => navigate(`/assembly-orders/${item.id}?mode=view`)} style={{ cursor: 'pointer' }}>
+                                            <td className={styles.textBlue} style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{item.orderCode}</td>
                                             <td>{TYPE_META[item.orderType] || item.orderType}</td>
                                             <td>{item.bomCode || item.bomName || '---'}</td>
                                             <td>{item.targetName || item.targetSku || '---'}</td>
                                             <td>{warehouseName(item.warehouseId)}</td>
-                                            <td style={{ textAlign: 'center' }}>{Number(item.quantity || 0).toLocaleString('vi-VN')}</td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                {Number(item.quantityProduced ?? 0).toLocaleString('vi-VN')} / {Number(item.quantity ?? 0).toLocaleString('vi-VN')}
-                                            </td>
                                             <td style={{ textAlign: 'center' }}>{formatDate(item.executionDate)}</td>
                                             <td>
                                                 <span className={`${styles.badge} ${styles['badge' + status.code.charAt(0).toUpperCase() + status.code.slice(1)]}`}>
                                                     {status.label}
                                                 </span>
                                             </td>
-                                            <td className={styles.textCenter}>
+                                            <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
                                                 <i 
                                                     className="bi bi-eye" 
-                                                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }} 
+                                                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
                                                     title="Xem chi tiết" 
+                                                    onClick={(e) => { e.stopPropagation(); navigate(`/assembly-orders/${item.id}?mode=view`); }}
+                                                ></i>
+                                                <i 
+                                                    className="bi bi-pencil" 
+                                                    style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} 
+                                                    title="Cập nhật lệnh" 
+                                                    onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        if (item.status === 'SUBMITTED') {
+                                                            showToast('error', 'Lệnh đã hoàn thành không được phép chỉnh sửa.');
+                                                        } else {
+                                                            navigate(`/assembly-orders/${item.id}?mode=edit`); 
+                                                        }
+                                                    }}
                                                 ></i>
                                             </td>
                                         </tr>
