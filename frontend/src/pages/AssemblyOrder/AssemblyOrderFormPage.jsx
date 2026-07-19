@@ -307,22 +307,12 @@ function AssemblyOrderFormPage() {
 
     return (
         <AdminLayout>
-            <div className={styles.pageBody}>
                 <div className={styles.pageHeader}>
-                    <div>
-                        <h1 className={styles.pageTitle}>{editing ? 'Chi tiết lệnh Lắp ráp / Tháo dỡ' : 'Tạo lệnh Lắp ráp / Tháo dỡ'}</h1>
-                        <p className={styles.pageSubtitle}>{editing ? 'Cập nhật thông tin lệnh khi còn ở trạng thái nháp hoặc chờ duyệt.' : 'Chọn BOM, kho và số lượng để hệ thống tính danh sách linh kiện.'}</p>
-                    </div>
-                    <div className={styles.headerActions}>
-                        <button className={styles.btnOutline} type="button" onClick={() => navigate('/assembly-orders')}>
-                            Quay lại
-                        </button>
-                        <button className={styles.btnPrimary} type="button" onClick={handleSubmit} disabled={saving || !canEdit}>
-                            <i className="bi bi-save"></i>
-                            {saving ? 'Đang lưu...' : 'Lưu lệnh'}
-                        </button>
-                    </div>
+                    <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/assembly-orders'); }}>
+                        <i className="bi bi-arrow-left"></i> {editing ? 'Chi tiết lệnh Lắp ráp / Tháo dỡ' : 'Tạo lệnh Lắp ráp / Tháo dỡ'} {form.orderCode ? form.orderCode : ''}
+                    </a>
                 </div>
+            <div className={styles.pageBody}>
 
                 <div className={styles.mainContent}>
                     {/* LEFT COLUMN: FORM */}
@@ -338,64 +328,68 @@ function AssemblyOrderFormPage() {
                                 </div>
                             )}
 
-                            <div className={styles.formGrid}>
+                            <div className={styles.cardBody}>
                                 {!editing && (
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label}>Loại lệnh <span className={styles.required}>*</span></label>
-                                        <select className={styles.input} value={form.orderType} onChange={(event) => setField('orderType', event.target.value)} disabled={loading}>
-                                            <option value="ASSEMBLY">Lắp ráp</option>
-                                            <option value="DISASSEMBLY">Tháo dỡ</option>
-                                        </select>
+                                    <div className="misa-form-row" style={{ marginBottom: '12px' }}>
+                                        <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                                            <label className="misa-label">Loại lệnh <span className="required">*</span></label>
+                                            <select className="misa-input" value={form.orderType} onChange={(event) => setField('orderType', event.target.value)} disabled={loading}>
+                                                <option value="ASSEMBLY">Lắp ráp</option>
+                                                <option value="DISASSEMBLY">Tháo dỡ</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 )}
                                 
-                                <div className={styles.formGroup}>
-                                    <label className={styles.label}>Mã lệnh</label>
-                                    <input className={styles.input} value={form.orderCode} onChange={(event) => setField('orderCode', event.target.value)} placeholder="Để trống để tự sinh mã" disabled={!canEdit} />
-                                </div>
-                                
-                                <div className={styles.formGroup}>
-                                    <label className={styles.label}>Ngày thực hiện <span className={styles.required}>*</span></label>
-                                    <input type="date" className={styles.input} value={form.executionDate} onChange={(event) => setField('executionDate', event.target.value)} disabled={!canEdit} />
-                                </div>
-                                
-                                <div className={styles.formGroup}>
-                                    <label className={styles.label}>Chọn Kho <span className={styles.required}>*</span></label>
-                                    <select className={styles.input} value={form.warehouseId} onChange={(event) => setField('warehouseId', event.target.value)} disabled={!canEdit || loading}>
-                                        <option value="">Chọn kho thực hiện</option>
-                                        {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name || warehouse.warehouseName}</option>)}
-                                    </select>
+                                <div className="misa-form-row">
+                                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                                        <label className="misa-label">Mã lệnh</label>
+                                        <input className="misa-input" value={form.orderCode} onChange={(event) => setField('orderCode', event.target.value)} placeholder="Để trống để tự sinh mã" disabled={!canEdit} />
+                                    </div>
+                                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                                        <label className="misa-label">Ngày thực hiện <span className="required">*</span></label>
+                                        <input type="date" className="misa-input" value={form.executionDate} onChange={(event) => setField('executionDate', event.target.value)} disabled={!canEdit} />
+                                    </div>
                                 </div>
 
-                                <div className={styles.formGroup}>
-                                    <label className={styles.label}>BOM (Định mức) <span className={styles.required}>*</span></label>
+                                <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                                        <label className="misa-label">Chọn Kho <span className="required">*</span></label>
+                                        <select className="misa-input" value={form.warehouseId} onChange={(event) => setField('warehouseId', event.target.value)} disabled={!canEdit || loading}>
+                                            <option value="">Chọn kho thực hiện</option>
+                                            {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name || warehouse.warehouseName}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                                        <label className="misa-label">Số lượng <span className="required">*</span></label>
+                                        <input className="misa-input" style={{ textAlign: 'right' }} inputMode="decimal" type="number" min="0.0001" step="0.0001" value={form.quantity} onChange={(event) => setField('quantity', event.target.value)} disabled={!canEdit} />
+                                    </div>
+                                </div>
+
+                                <div className="misa-form-group" style={{ marginTop: '12px' }}>
+                                    <label className="misa-label">BOM (Định mức) <span className="required">*</span></label>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <select className={styles.input} style={{ flex: 1 }} value={form.bomId} onChange={(event) => setField('bomId', event.target.value)} disabled={!canEdit || loading}>
+                                        <select className="misa-input" style={{ flex: 1 }} value={form.bomId} onChange={(event) => setField('bomId', event.target.value)} disabled={!canEdit || loading}>
                                             <option value="">{loading ? 'Đang tải BOM...' : 'Chọn BOM đã duyệt'}</option>
                                             {boms.map((bom) => <option key={bom.id} value={bom.id}>{bom.bomCode} - {bom.bomName}</option>)}
                                         </select>
-                                        <button className={styles.btnOutline} type="button" onClick={openBomModal} disabled={!canEdit} style={{ whiteSpace: 'nowrap' }}>
+                                        <button className={styles.btnOutline} type="button" onClick={openBomModal} disabled={!canEdit} style={{ whiteSpace: 'nowrap', padding: '0 12px', height: '32px' }}>
                                             <i className="bi bi-plus-lg"></i> Tạo BOM
                                         </button>
                                     </div>
                                 </div>
                                 
-                                <div className={styles.formGroup}>
-                                    <label className={styles.label}>Số lượng <span className={styles.required}>*</span></label>
-                                    <input className={styles.input} style={{ textAlign: 'right' }} inputMode="decimal" type="number" min="0.0001" step="0.0001" value={form.quantity} onChange={(event) => setField('quantity', event.target.value)} disabled={!canEdit} />
-                                </div>
-                                
-                                <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
-                                    <label className={styles.label}>Trạng thái lưu</label>
-                                    <select className={styles.input} value={form.status} onChange={(event) => setField('status', event.target.value)} disabled={!canEdit} style={{ width: '50%' }}>
+                                <div className="misa-form-group" style={{ marginTop: '12px' }}>
+                                    <label className="misa-label">Trạng thái lưu</label>
+                                    <select className="misa-input" value={form.status} onChange={(event) => setField('status', event.target.value)} disabled={!canEdit} style={{ width: '50%' }}>
                                         <option value="DRAFT">Nháp</option>
                                         <option value="SUBMITTED">Chờ duyệt</option>
                                     </select>
                                 </div>
                                 
-                                <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
-                                    <label className={styles.label}>Ghi chú</label>
-                                    <textarea className={styles.textarea} value={form.note} onChange={(event) => setField('note', event.target.value)} disabled={!canEdit} placeholder="Ghi chú nội bộ cho lệnh" rows={3} />
+                                <div className="misa-form-group" style={{ marginTop: '12px' }}>
+                                    <label className="misa-label">Ghi chú</label>
+                                    <textarea className="misa-input" style={{ resize: 'vertical' }} value={form.note} onChange={(event) => setField('note', event.target.value)} disabled={!canEdit} placeholder="Ghi chú nội bộ cho lệnh" rows={2} />
                                 </div>
                             </div>
                         </div>
@@ -462,6 +456,18 @@ function AssemblyOrderFormPage() {
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div className={styles.bottomBar}>
+                <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-orders')}>
+                    Hủy bỏ
+                </button>
+                <div className={styles.actionButtons}>
+                    <button className="btn-misa-post" type="button" onClick={handleSubmit} disabled={saving || !canEdit}>
+                        <i className="bi bi-save"></i>
+                        {saving ? 'Đang lưu...' : 'Lưu lệnh'}
+                    </button>
                 </div>
             </div>
 
