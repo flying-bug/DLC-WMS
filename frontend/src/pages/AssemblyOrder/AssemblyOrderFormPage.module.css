@@ -100,12 +100,17 @@
 
 .input {
   flex: 1;
-  border: none;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
   padding: 10px 12px;
   font-size: 14px;
   outline: none;
-  background: transparent;
+  background: #fcfcfc;
   color: #333;
+}
+
+.input:focus {
+  border-color: #0075c0;
 }
 
 .input[disabled] {
@@ -115,13 +120,18 @@
 
 .select {
   flex: 1;
-  border: none;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
   padding: 10px 12px;
   font-size: 14px;
   outline: none;
-  background: transparent;
+  background: #fcfcfc;
   color: #333;
   appearance: auto;
+}
+
+.select:focus {
+  border-color: #0075c0;
 }
 
 .customerInputWrap {
