@@ -29,9 +29,7 @@ import CustomerListPage from '../pages/Customer/CustomerListPage';
 import CustomerDetailPage from '../pages/Customer/CustomerDetailPage';
 import WarrantyListPage from '../pages/Warranty/WarrantyListPage';
 import WarrantyDetailPage from '../pages/Warranty/WarrantyDetailPage';
-import CreateRepairTicketPage from '../pages/RepairTicket/CreateRepairTicketPage';
-import RepairTicketListPage from '../pages/RepairTicket/RepairTicketListPage';
-import UpdateRepairTicketPage from '../pages/RepairTicket/UpdateRepairTicketPage';
+
 import BrandListPage from '../pages/Brand/BrandListPage';
 import AssemblyBomPage from '../pages/AssemblyOrder/AssemblyBomPage';
 import AssemblyOrderListPage from '../pages/AssemblyOrder/AssemblyOrderListPage';
@@ -41,6 +39,8 @@ import StocktakeListPage from '../pages/Stocktake/StocktakeListPage';
 import CreateStocktakePage from '../pages/Stocktake/CreateStocktakePage';
 import StocktakeDetailPage from '../pages/Stocktake/StocktakeDetailPage';
 import ReportListPage from '../pages/Report/ReportListPage';
+import RepairListPage from '../pages/Repair/RepairListPage';
+import RepairDetailPage from '../pages/Repair/RepairDetailPage';
 
 
 // Wrapper for protected routes (requires token)
@@ -104,9 +104,9 @@ function AppRouter() {
                     <Route path="/customers/:id" element={<CustomerDetailPage />} />
                     <Route path="/warranties" element={<WarrantyListPage />} />
                     <Route path="/warranties/:id" element={<WarrantyDetailPage />} />
-                    <Route path="/repair-tickets" element={<RepairTicketListPage />} />
-                    <Route path="/repair-tickets/create" element={<CreateRepairTicketPage />} />
-                    <Route path="/repair-tickets/:id/edit" element={<UpdateRepairTicketPage />} />
+                    <Route path="/repair-tickets" element={<RepairListPage />} />
+                    <Route path="/repair-tickets/create" element={<RepairDetailPage />} />
+                    <Route path="/repair-tickets/:id/edit" element={<RepairDetailPage />} />
                     <Route path="/assembly-boms" element={<AssemblyBomPage />} />
                     <Route path="/assembly-orders" element={<AssemblyOrderListPage />} />
                     <Route path="/assembly-orders/create" element={<AssemblyOrderFormPage />} />
@@ -118,6 +118,7 @@ function AppRouter() {
                     <Route path="/stocktakes/:id/edit" element={<CreateStocktakePage />} />
                     <Route path="/ai-chat" element={<AiChatPage />} />
                     <Route path="/reports" element={<ReportListPage />} />
+
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}
