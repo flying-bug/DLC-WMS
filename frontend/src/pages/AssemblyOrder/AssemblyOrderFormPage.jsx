@@ -2,21 +2,23 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
+import Modal from '../../components/ui/Modal/Modal';
+import Toast from '../../components/ui/Toast/Toast';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import * as warehouseApi from '../../api/warehouseApi';
 import axiosClient from '../../api/axiosClient';
-import styles from './AssemblyOrderPage.module.css';
+import styles from './AssemblyOrderFormPage.module.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
 const today = () => new Date().toISOString().slice(0, 10);
 
 const STATUS_META = {
-    DRAFT: { label: 'Nháp', tone: 'info' },
-    SUBMITTED: { label: 'Chờ duyệt', tone: 'warning' },
-    APPROVED: { label: 'Đã duyệt', tone: 'success' },
-    POSTED: { label: 'Đã ghi sổ', tone: 'success' },
-    CANCELLED: { label: 'Đã hủy', tone: 'danger' }
+    DRAFT: { label: 'Nháp', code: 'info' },
+    SUBMITTED: { label: 'Chờ duyệt', code: 'warning' },
+    APPROVED: { label: 'Đã duyệt', code: 'success' },
+    POSTED: { label: 'Đã ghi sổ', code: 'success' },
+    CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
 
 const defaultBomLine = { componentVariantId: '', quantity: '1', note: '' };
@@ -42,11 +44,18 @@ function AssemblyOrderFormPage() {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [savingBom, setSavingBom] = useState(false);
+    
+    // Modal states
     const [showBomModal, setShowBomModal] = useState(false);
     const [bomForm, setBomForm] = useState(createDefaultBomForm);
     const [bomError, setBomError] = useState('');
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    
+    // Toast state
+    const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
+
+    const showToast = (type, message) => setToast({ isVisible: true, type, message });
+    const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
+
     const [orderDetail, setOrderDetail] = useState(null);
     const [form, setForm] = useState({
         orderType: searchParams.get('type') === 'DISASSEMBLY' ? 'DISASSEMBLY' : 'ASSEMBLY',
@@ -61,11 +70,10 @@ function AssemblyOrderFormPage() {
 
     const selectedBom = useMemo(() => boms.find((bom) => String(bom.id) === String(form.bomId)), [boms, form.bomId]);
     const canEdit = !editing || ['DRAFT', 'SUBMITTED'].includes(form.status);
-    const status = STATUS_META[form.status] || { label: form.status || 'Chưa rõ', tone: 'info' };
+    const status = STATUS_META[form.status] || { label: form.status || 'Chưa rõ', code: 'info' };
 
     const loadBaseData = useCallback(async () => {
         setLoading(true);
-        setError('');
         try {
             const [bomResponse, warehouseResponse] = await Promise.all([
                 assemblyApi.getAssemblyBoms({ status: 'APPROVED' }),
@@ -74,7 +82,7 @@ function AssemblyOrderFormPage() {
             setBoms(listFrom(unwrap(bomResponse)));
             setWarehouses(listFrom(unwrap(warehouseResponse)));
         } catch (err) {
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được dữ liệu BOM/kho.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được dữ liệu BOM/kho.');
         } finally {
             setLoading(false);
         }
@@ -98,7 +106,6 @@ function AssemblyOrderFormPage() {
             return;
         }
         setLoading(true);
-        setError('');
         try {
             const order = unwrap(await assemblyApi.getAssemblyOrderById(id));
             setOrderDetail(order);
@@ -113,36 +120,20 @@ function AssemblyOrderFormPage() {
                 note: order.note || ''
             });
         } catch (err) {
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được chi tiết lệnh.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được chi tiết lệnh.');
         } finally {
             setLoading(false);
         }
     }, [editing, id]);
 
     useEffect(() => {
-        const timeoutId = window.setTimeout(() => {
-            loadBaseData();
-        }, 0);
-        return () => window.clearTimeout(timeoutId);
-    }, [loadBaseData]);
-
-    useEffect(() => {
-        const timeoutId = window.setTimeout(() => {
-            loadBomLookups();
-        }, 0);
-        return () => window.clearTimeout(timeoutId);
-    }, [loadBomLookups]);
-
-    useEffect(() => {
-        const timeoutId = window.setTimeout(() => {
-            loadOrder();
-        }, 0);
-        return () => window.clearTimeout(timeoutId);
-    }, [loadOrder]);
+        loadBaseData();
+        loadBomLookups();
+        loadOrder();
+    }, [loadBaseData, loadBomLookups, loadOrder]);
 
     const setField = (field, value) => {
         setForm((current) => ({ ...current, [field]: value }));
-        setSuccess('');
     };
 
     const buildPayload = () => ({
@@ -168,12 +159,10 @@ function AssemblyOrderFormPage() {
         event.preventDefault();
         const validationMessage = validate();
         if (validationMessage) {
-            setError(validationMessage);
+            showToast('error', validationMessage);
             return;
         }
         setSaving(true);
-        setError('');
-        setSuccess('');
         try {
             const payload = buildPayload();
             const response = editing
@@ -182,12 +171,12 @@ function AssemblyOrderFormPage() {
                     ? await assemblyApi.createDisassemblyOrder(payload)
                     : await assemblyApi.createAssemblyOrder(payload);
             const saved = unwrap(response);
-            setSuccess(editing ? 'Cập nhật lệnh thành công.' : 'Tạo lệnh thành công.');
+            showToast('success', editing ? 'Cập nhật lệnh thành công.' : 'Tạo lệnh thành công.');
             if (!editing && saved?.id) {
-                navigate(`/assembly-orders/${saved.id}`);
+                setTimeout(() => navigate(`/assembly-orders/${saved.id}`), 1500);
             }
         } catch (err) {
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không lưu được lệnh lắp ráp/tháo dỡ.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không lưu được lệnh lắp ráp/tháo dỡ.');
         } finally {
             setSaving(false);
         }
@@ -266,7 +255,7 @@ function AssemblyOrderFormPage() {
             setBoms(refreshed);
             setField('bomId', savedBom.id || '');
             setShowBomModal(false);
-            setSuccess('Đã tạo BOM nhanh và chọn vào lệnh.');
+            showToast('success', 'Đã tạo BOM nhanh và tự động chọn vào lệnh.');
         } catch (err) {
             setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tạo được BOM nhanh.');
         } finally {
@@ -297,6 +286,7 @@ function AssemblyOrderFormPage() {
         quantity: Number(form.quantity || 0),
         unitName: selectedBom.unitName
     } : null;
+    
     const lossItems = form.orderType === 'DISASSEMBLY'
         ? (targetItem ? [targetItem] : [])
         : previewLines.map((line) => ({
@@ -305,6 +295,7 @@ function AssemblyOrderFormPage() {
             quantity: line.required,
             unitName: line.unitName
         }));
+        
     const gainItems = form.orderType === 'DISASSEMBLY'
         ? previewLines.map((line) => ({
             name: line.componentName,
@@ -316,210 +307,258 @@ function AssemblyOrderFormPage() {
 
     return (
         <AdminLayout>
-            <form className={styles.page} onSubmit={handleSubmit}>
+            <div className={styles.pageBody}>
                 <div className={styles.pageHeader}>
                     <div>
-                        <h1 className={styles.pageTitle}>{editing ? 'Chi tiết lệnh lắp ráp / tháo dỡ' : 'Tạo lệnh lắp ráp / tháo dỡ'}</h1>
+                        <h1 className={styles.pageTitle}>{editing ? 'Chi tiết lệnh Lắp ráp / Tháo dỡ' : 'Tạo lệnh Lắp ráp / Tháo dỡ'}</h1>
                         <p className={styles.pageSubtitle}>{editing ? 'Cập nhật thông tin lệnh khi còn ở trạng thái nháp hoặc chờ duyệt.' : 'Chọn BOM, kho và số lượng để hệ thống tính danh sách linh kiện.'}</p>
                     </div>
-                    <div className={styles.actions}>
-                        <button className={styles.secondaryButton} type="button" onClick={() => navigate('/assembly-orders')}>Quay lại</button>
-                        <button className={styles.primaryButton} type="submit" disabled={saving || !canEdit}>
+                    <div className={styles.headerActions}>
+                        <button className={styles.btnOutline} type="button" onClick={() => navigate('/assembly-orders')}>
+                            Quay lại
+                        </button>
+                        <button className={styles.btnPrimary} type="button" onClick={handleSubmit} disabled={saving || !canEdit}>
                             <i className="bi bi-save"></i>
                             {saving ? 'Đang lưu...' : 'Lưu lệnh'}
                         </button>
                     </div>
                 </div>
 
-                {editing && (
-                    <div className={styles.detailGrid}>
-                        <div className={styles.detailItem}><span>Mã lệnh</span><strong>{form.orderCode}</strong></div>
-                        <div className={styles.detailItem}><span>Loại lệnh</span><strong>{form.orderType === 'DISASSEMBLY' ? 'Tháo dỡ' : 'Lắp ráp'}</strong></div>
-                        <div className={styles.detailItem}><span>Trạng thái</span><strong><span className={`${styles.badge} ${styles[status.tone]}`}>{status.label}</span></strong></div>
-                        <div className={styles.detailItem}><span>Quyền cập nhật</span><strong>{canEdit ? 'Cho phép' : 'Đã khóa'}</strong></div>
-                        <div className={styles.detailItem}><span>Ngày tạo</span><strong>{orderDetail?.createdAt ? new Date(orderDetail.createdAt).toLocaleString('vi-VN') : 'Chưa có'}</strong></div>
-                        <div className={styles.detailItem}><span>Người tạo</span><strong>{orderDetail?.createdBy ? `ID: ${orderDetail.createdBy}` : 'Hệ thống'}</strong></div>
-                    </div>
-                )}
+                <div className={styles.mainContent}>
+                    {/* LEFT COLUMN: FORM */}
+                    <div className={styles.leftColumn}>
+                        <div className={styles.card}>
+                            <h2 className={styles.cardTitle}>Thông tin chung</h2>
+                            
+                            {editing && (
+                                <div className={styles.detailGrid} style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                    <div className={styles.detailItem}><span>Trạng thái</span><strong><span className={`${styles.badge} ${styles['badge' + status.code.charAt(0).toUpperCase() + status.code.slice(1)]}`}>{status.label}</span></strong></div>
+                                    <div className={styles.detailItem}><span>Người tạo</span><strong>{orderDetail?.createdBy ? `ID: ${orderDetail.createdBy}` : 'Hệ thống'}</strong></div>
+                                    <div className={styles.detailItem}><span>Ngày tạo</span><strong>{orderDetail?.createdAt ? new Date(orderDetail.createdAt).toLocaleString('vi-VN') : '---'}</strong></div>
+                                </div>
+                            )}
 
-                {error && <div className={styles.errorBox}>{error}</div>}
-                {success && <div className={styles.successBox}>{success}</div>}
-
-                <div className={styles.formPanel}>
-                    <div className={styles.formGrid}>
-                        {!editing && (
-                            <label className={styles.field}>
-                                <span>Loại lệnh</span>
-                                <select value={form.orderType} onChange={(event) => setField('orderType', event.target.value)} disabled={loading}>
-                                    <option value="ASSEMBLY">Lắp ráp</option>
-                                    <option value="DISASSEMBLY">Tháo dỡ</option>
-                                </select>
-                            </label>
-                        )}
-                        <label className={styles.field}>
-                            <span>Mã lệnh</span>
-                            <input value={form.orderCode} onChange={(event) => setField('orderCode', event.target.value)} placeholder="Để trống để tự sinh mã" disabled={!canEdit} />
-                        </label>
-                        <label className={styles.field}>
-                            <span>BOM</span>
-                            <div className={styles.inlineField}>
-                                <select value={form.bomId} onChange={(event) => setField('bomId', event.target.value)} disabled={!canEdit || loading}>
-                                    <option value="">{loading ? 'Đang tải BOM...' : 'Chọn BOM đã duyệt'}</option>
-                                    {boms.map((bom) => <option key={bom.id} value={bom.id}>{bom.bomCode} - {bom.bomName}</option>)}
-                                </select>
-                                <button className={styles.secondaryButton} type="button" onClick={openBomModal} disabled={!canEdit}>
-                                    <i className="bi bi-plus-lg"></i>
-                                    Tạo nhanh
-                                </button>
-                            </div>
-                        </label>
-                        <label className={styles.field}>
-                            <span>Kho</span>
-                            <select value={form.warehouseId} onChange={(event) => setField('warehouseId', event.target.value)} disabled={!canEdit || loading}>
-                                <option value="">Chọn kho</option>
-                                {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name || warehouse.warehouseName}</option>)}
-                            </select>
-                        </label>
-                        <label className={styles.field}>
-                            <span>Số lượng</span>
-                            <input className={styles.numberInput} inputMode="decimal" type="number" min="0.0001" step="0.0001" value={form.quantity} onChange={(event) => setField('quantity', event.target.value)} disabled={!canEdit} />
-                        </label>
-                        <label className={styles.field}>
-                            <span>Ngày thực hiện</span>
-                            <input type="date" value={form.executionDate} onChange={(event) => setField('executionDate', event.target.value)} disabled={!canEdit} />
-                        </label>
-                        <label className={styles.field}>
-                            <span>Trạng thái</span>
-                            <select value={form.status} onChange={(event) => setField('status', event.target.value)} disabled={!canEdit}>
-                                <option value="DRAFT">Nháp</option>
-                                <option value="SUBMITTED">Chờ duyệt</option>
-                            </select>
-                        </label>
-                        <label className={`${styles.field} ${styles.full}`}>
-                            <span>Ghi chú</span>
-                            <textarea value={form.note} onChange={(event) => setField('note', event.target.value)} disabled={!canEdit} placeholder="Ghi chú nội bộ cho lệnh" />
-                        </label>
-                    </div>
-                </div>
-
-                <div className={styles.detailGrid}>
-                    <div className={styles.detailItem}><span>Thành phẩm</span><strong>{selectedBom?.productName || 'Chưa chọn BOM'}</strong></div>
-                    <div className={styles.detailItem}><span>Mã BOM</span><strong>{selectedBom?.bomCode || 'Chưa chọn'}</strong></div>
-                    <div className={styles.detailItem}><span>Phiên bản</span><strong>{selectedBom?.versionNo || 'Chưa có'}</strong></div>
-                    <div className={styles.detailItem}><span>Số linh kiện</span><strong>{previewLines.length}</strong></div>
-                </div>
-
-                <div className={styles.flowGrid}>
-                    <FlowPanel
-                        tone="loss"
-                        title="Bị trừ khỏi kho"
-                        icon="bi-dash-lg"
-                        emptyText={loading ? 'Đang tải BOM...' : 'Chọn BOM để xem hàng bị trừ.'}
-                        items={lossItems}
-                    />
-                    <FlowPanel
-                        tone="gain"
-                        title="Được cộng vào kho"
-                        icon="bi-plus-lg"
-                        emptyText={loading ? 'Đang tải BOM...' : 'Chọn BOM để xem hàng được cộng.'}
-                        items={gainItems}
-                    />
-                </div>
-
-                {showBomModal && (
-                    <div className={styles.modalOverlay}>
-                        <div className={styles.modal}>
-                            <div className={styles.modalHeader}>
-                                <h2>Tạo nhanh BOM</h2>
-                                <button className={styles.iconButton} type="button" title="Đóng" onClick={() => setShowBomModal(false)}>
-                                    <i className="bi bi-x-lg"></i>
-                                </button>
-                            </div>
-
-                            <div className={styles.modalBody}>
-                                {bomError && <div className={styles.errorBox}>{bomError}</div>}
-
-                                <div className={styles.formGrid}>
-                                    <label className={styles.field}>
-                                        <span>Thành phẩm</span>
-                                        <select value={bomForm.productId} onChange={(event) => setBomField('productId', event.target.value)}>
-                                            <option value="">Chọn thành phẩm</option>
-                                            {products.map((product) => (
-                                                <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
-                                            ))}
+                            <div className={styles.formGrid}>
+                                {!editing && (
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>Loại lệnh <span className={styles.required}>*</span></label>
+                                        <select className={styles.input} value={form.orderType} onChange={(event) => setField('orderType', event.target.value)} disabled={loading}>
+                                            <option value="ASSEMBLY">Lắp ráp</option>
+                                            <option value="DISASSEMBLY">Tháo dỡ</option>
                                         </select>
-                                    </label>
-                                    <label className={styles.field}>
-                                        <span>Mã BOM</span>
-                                        <input value={bomForm.bomCode} onChange={(event) => setBomField('bomCode', event.target.value)} placeholder="Để trống để tự sinh mã" />
-                                    </label>
-                                    <label className={styles.field}>
-                                        <span>Tên BOM</span>
-                                        <input value={bomForm.bomName} onChange={(event) => setBomField('bomName', event.target.value)} placeholder="Ví dụ: Cấu hình PC văn phòng" />
-                                    </label>
-                                    <label className={styles.field}>
-                                        <span>Phiên bản</span>
-                                        <input className={styles.numberInput} inputMode="decimal" type="number" min="0.01" step="0.01" value={bomForm.versionNo} onChange={(event) => setBomField('versionNo', event.target.value)} />
-                                    </label>
+                                    </div>
+                                )}
+                                
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Mã lệnh</label>
+                                    <input className={styles.input} value={form.orderCode} onChange={(event) => setField('orderCode', event.target.value)} placeholder="Để trống để tự sinh mã" disabled={!canEdit} />
+                                </div>
+                                
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Ngày thực hiện <span className={styles.required}>*</span></label>
+                                    <input type="date" className={styles.input} value={form.executionDate} onChange={(event) => setField('executionDate', event.target.value)} disabled={!canEdit} />
+                                </div>
+                                
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Chọn Kho <span className={styles.required}>*</span></label>
+                                    <select className={styles.input} value={form.warehouseId} onChange={(event) => setField('warehouseId', event.target.value)} disabled={!canEdit || loading}>
+                                        <option value="">Chọn kho thực hiện</option>
+                                        {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name || warehouse.warehouseName}</option>)}
+                                    </select>
                                 </div>
 
-                                <div className={styles.lineActions}>
-                                    <button className={styles.secondaryButton} type="button" onClick={addBomLine}>
-                                        <i className="bi bi-plus-lg"></i>
-                                        Thêm linh kiện
-                                    </button>
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>BOM (Định mức) <span className={styles.required}>*</span></label>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <select className={styles.input} style={{ flex: 1 }} value={form.bomId} onChange={(event) => setField('bomId', event.target.value)} disabled={!canEdit || loading}>
+                                            <option value="">{loading ? 'Đang tải BOM...' : 'Chọn BOM đã duyệt'}</option>
+                                            {boms.map((bom) => <option key={bom.id} value={bom.id}>{bom.bomCode} - {bom.bomName}</option>)}
+                                        </select>
+                                        <button className={styles.btnOutline} type="button" onClick={openBomModal} disabled={!canEdit} style={{ whiteSpace: 'nowrap' }}>
+                                            <i className="bi bi-plus-lg"></i> Tạo BOM
+                                        </button>
+                                    </div>
                                 </div>
-
-                                <div className={styles.tablePanel}>
-                                    <table className={styles.table}>
-                                        <thead>
-                                            <tr>
-                                                <th>SKU linh kiện</th>
-                                                <th>Định mức</th>
-                                                <th>Ghi chú</th>
-                                                <th></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {bomForm.lines.map((line, index) => (
-                                                <tr key={`${index}-${line.componentVariantId}`}>
-                                                    <td>
-                                                        <select value={line.componentVariantId} onChange={(event) => setBomLineField(index, 'componentVariantId', event.target.value)}>
-                                                            <option value="">Chọn SKU</option>
-                                                            {variants.map((variant) => (
-                                                                <option key={variant.id} value={variant.id}>{variant.sku} - {variant.productName} / {variant.variantName}</option>
-                                                            ))}
-                                                        </select>
-                                                    </td>
-                                                    <td>
-                                                        <input className={styles.numberInput} inputMode="numeric" type="number" min="1" step="1" value={line.quantity} onChange={(event) => setBomLineField(index, 'quantity', event.target.value)} />
-                                                    </td>
-                                                    <td>
-                                                        <input value={line.note} onChange={(event) => setBomLineField(index, 'note', event.target.value)} placeholder="Ghi chú dòng" />
-                                                    </td>
-                                                    <td>
-                                                        <button className={styles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeBomLine(index)}>
-                                                            <i className="bi bi-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                
+                                <div className={styles.formGroup}>
+                                    <label className={styles.label}>Số lượng <span className={styles.required}>*</span></label>
+                                    <input className={styles.input} style={{ textAlign: 'right' }} inputMode="decimal" type="number" min="0.0001" step="0.0001" value={form.quantity} onChange={(event) => setField('quantity', event.target.value)} disabled={!canEdit} />
+                                </div>
+                                
+                                <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                                    <label className={styles.label}>Trạng thái lưu</label>
+                                    <select className={styles.input} value={form.status} onChange={(event) => setField('status', event.target.value)} disabled={!canEdit} style={{ width: '50%' }}>
+                                        <option value="DRAFT">Nháp</option>
+                                        <option value="SUBMITTED">Chờ duyệt</option>
+                                    </select>
+                                </div>
+                                
+                                <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                                    <label className={styles.label}>Ghi chú</label>
+                                    <textarea className={styles.textarea} value={form.note} onChange={(event) => setField('note', event.target.value)} disabled={!canEdit} placeholder="Ghi chú nội bộ cho lệnh" rows={3} />
                                 </div>
                             </div>
-
-                            <div className={styles.modalFooter}>
-                                <button className={styles.secondaryButton} type="button" onClick={() => setShowBomModal(false)}>Hủy</button>
-                                <button className={styles.primaryButton} type="button" onClick={saveQuickBom} disabled={savingBom}>
-                                    <i className="bi bi-save"></i>
-                                    {savingBom ? 'Đang cất...' : 'Cất và chọn'}
-                                </button>
+                        </div>
+                        
+                        <div className={styles.card}>
+                            <h2 className={styles.cardTitle}>Chi tiết dòng nguyên liệu</h2>
+                            <div className={styles.flowGridContainer}>
+                                <FlowPanel
+                                    tone="loss"
+                                    title="Nguyên liệu xuất (Bị trừ)"
+                                    icon="bi-dash-circle-fill"
+                                    emptyText={loading ? 'Đang tính toán...' : 'Chọn BOM để xem hàng bị trừ.'}
+                                    items={lossItems}
+                                />
+                                <FlowPanel
+                                    tone="gain"
+                                    title="Sản phẩm nhập (Được cộng)"
+                                    icon="bi-plus-circle-fill"
+                                    emptyText={loading ? 'Đang tính toán...' : 'Chọn BOM để xem hàng được cộng.'}
+                                    items={gainItems}
+                                />
                             </div>
                         </div>
                     </div>
-                )}
-            </form>
+
+                    {/* RIGHT COLUMN: SUMMARY */}
+                    <div className={styles.rightColumn}>
+                        <div className={styles.card} style={{ position: 'sticky', top: '24px' }}>
+                            <h2 className={styles.cardTitle}>Tóm tắt cấu hình BOM</h2>
+                            
+                            <div className={styles.summaryList}>
+                                <div className={styles.summaryItem}>
+                                    <span className={styles.summaryLabel}>Mã BOM</span>
+                                    <span className={styles.summaryValue} style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{selectedBom?.bomCode || '---'}</span>
+                                </div>
+                                <div className={styles.summaryItem}>
+                                    <span className={styles.summaryLabel}>Phiên bản</span>
+                                    <span className={styles.summaryValue}>{selectedBom?.versionNo || '---'}</span>
+                                </div>
+                                <div className={styles.summaryItem}>
+                                    <span className={styles.summaryLabel}>Thành phẩm</span>
+                                    <span className={styles.summaryValue}>{selectedBom?.productName || 'Chưa chọn'}</span>
+                                </div>
+                                <div className={styles.summaryItem}>
+                                    <span className={styles.summaryLabel}>Số linh kiện (SKU)</span>
+                                    <span className={styles.summaryValue}>{previewLines.length}</span>
+                                </div>
+                                
+                                <hr className={styles.divider} />
+                                
+                                <div className={styles.summaryItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                                    <span className={styles.summaryLabel}>Tiến độ hiện tại:</span>
+                                    <div style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                        <div style={{ 
+                                            height: '100%', 
+                                            backgroundColor: 'var(--color-success)', 
+                                            width: `${orderDetail ? Math.min(100, (Number(orderDetail.quantityProduced || 0) / Number(orderDetail.quantity || 1)) * 100) : 0}%` 
+                                        }}></div>
+                                    </div>
+                                    <span className={styles.summaryValue} style={{ alignSelf: 'flex-end', fontSize: '12px' }}>
+                                        {Number(orderDetail?.quantityProduced || 0).toLocaleString('vi-VN')} / {Number(form.quantity || 0).toLocaleString('vi-VN')}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <Modal
+                isOpen={showBomModal}
+                title="Tạo nhanh BOM (Định mức)"
+                onClose={() => setShowBomModal(false)}
+                size="large"
+            >
+                <div style={{ padding: '24px' }}>
+                    {bomError && (
+                        <div style={{ padding: '12px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' }}>
+                            <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: '8px' }}></i>
+                            {bomError}
+                        </div>
+                    )}
+
+                    <div className={styles.formGrid}>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Thành phẩm <span className={styles.required}>*</span></label>
+                            <select className={styles.input} value={bomForm.productId} onChange={(event) => setBomField('productId', event.target.value)}>
+                                <option value="">Chọn thành phẩm</option>
+                                {products.map((product) => (
+                                    <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Mã BOM</label>
+                            <input className={styles.input} value={bomForm.bomCode} onChange={(event) => setBomField('bomCode', event.target.value)} placeholder="Để trống để tự sinh mã" />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Tên BOM <span className={styles.required}>*</span></label>
+                            <input className={styles.input} value={bomForm.bomName} onChange={(event) => setBomField('bomName', event.target.value)} placeholder="Ví dụ: Cấu hình PC văn phòng" />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Phiên bản <span className={styles.required}>*</span></label>
+                            <input className={styles.input} inputMode="decimal" type="number" min="0.01" step="0.01" value={bomForm.versionNo} onChange={(event) => setBomField('versionNo', event.target.value)} />
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text)' }}>Danh sách linh kiện</h3>
+                        <button className={styles.btnOutline} type="button" onClick={addBomLine} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                            <i className="bi bi-plus"></i> Thêm dòng
+                        </button>
+                    </div>
+
+                    <div className={styles.tableContainer}>
+                        <table className={styles.table}>
+                            <thead>
+                                <tr>
+                                    <th style={{ width: '40%' }}>SKU linh kiện</th>
+                                    <th style={{ width: '20%', textAlign: 'right' }}>Định mức</th>
+                                    <th style={{ width: '30%' }}>Ghi chú</th>
+                                    <th style={{ width: '10%', textAlign: 'center' }}>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {bomForm.lines.map((line, index) => (
+                                    <tr key={index}>
+                                        <td>
+                                            <select className={styles.input} style={{ height: '32px' }} value={line.componentVariantId} onChange={(event) => setBomLineField(index, 'componentVariantId', event.target.value)}>
+                                                <option value="">Chọn SKU</option>
+                                                {variants.map((variant) => (
+                                                    <option key={variant.id} value={variant.id}>{variant.sku} - {variant.productName} / {variant.variantName}</option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input className={styles.input} style={{ height: '32px', textAlign: 'right' }} inputMode="numeric" type="number" min="1" step="1" value={line.quantity} onChange={(event) => setBomLineField(index, 'quantity', event.target.value)} />
+                                        </td>
+                                        <td>
+                                            <input className={styles.input} style={{ height: '32px' }} value={line.note} onChange={(event) => setBomLineField(index, 'note', event.target.value)} placeholder="Ghi chú" />
+                                        </td>
+                                        <td className={styles.textCenter}>
+                                            <button type="button" className={styles.btnIcon} onClick={() => removeBomLine(index)} style={{ color: 'var(--color-danger)' }}>
+                                                <i className="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                        <button className={styles.btnOutline} type="button" onClick={() => setShowBomModal(false)}>Hủy bỏ</button>
+                        <button className={styles.btnPrimary} type="button" onClick={saveQuickBom} disabled={savingBom}>
+                            <i className="bi bi-save"></i>
+                            {savingBom ? 'Đang lưu...' : 'Lưu & Chọn BOM'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Toast {...toast} onClose={hideToast} />
         </AdminLayout>
     );
 }
@@ -527,24 +566,50 @@ function AssemblyOrderFormPage() {
 function FlowPanel({ tone, title, icon, items, emptyText }) {
     const isLoss = tone === 'loss';
     return (
-        <div className={`${styles.flowPanel} ${isLoss ? styles.lossPanel : styles.gainPanel}`}>
-            <div className={`${styles.flowPanelHeader} ${isLoss ? styles.lossHeader : styles.gainHeader}`}>
+        <div style={{ 
+            border: `1px solid ${isLoss ? '#fecaca' : '#bbf7d0'}`, 
+            borderRadius: '8px', 
+            overflow: 'hidden',
+            backgroundColor: '#ffffff'
+        }}>
+            <div style={{ 
+                padding: '12px 16px', 
+                backgroundColor: isLoss ? '#fef2f2' : '#f0fdf4',
+                color: isLoss ? '#991b1b' : '#166534',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 600,
+                borderBottom: `1px solid ${isLoss ? '#fecaca' : '#bbf7d0'}`
+            }}>
                 <i className={`bi ${icon}`}></i>
                 <span>{title}</span>
             </div>
-            <div className={styles.flowList}>
+            <div style={{ padding: '0' }}>
                 {items.length > 0 ? items.map((item, index) => (
-                    <div className={styles.flowRow} key={`${item.sku || item.name}-${index}`}>
-                        <div className={styles.flowName}>
-                            <strong>{item.name || 'Chưa có tên hàng'}</strong>
-                            <span className={styles.flowSku}>{item.sku || 'Chưa có mã'}</span>
+                    <div key={`${item.sku || item.name}-${index}`} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '12px 16px',
+                        borderBottom: index < items.length - 1 ? '1px solid #f1f5f9' : 'none'
+                    }}>
+                        <div>
+                            <div style={{ fontWeight: 500, color: 'var(--color-text)', fontSize: '14px' }}>{item.name || 'Chưa có tên hàng'}</div>
+                            <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginTop: '2px' }}>{item.sku || 'Chưa có mã SKU'}</div>
                         </div>
-                        <div className={`${styles.flowQty} ${isLoss ? styles.lossQty : styles.gainQty}`}>
+                        <div style={{ 
+                            fontWeight: 600, 
+                            fontSize: '15px',
+                            color: isLoss ? '#dc2626' : '#16a34a' 
+                        }}>
                             {isLoss ? '-' : '+'}{Number(item.quantity || 0).toLocaleString('vi-VN')} {item.unitName || ''}
                         </div>
                     </div>
                 )) : (
-                    <div className={styles.emptyCell}>{emptyText}</div>
+                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-muted-2)', fontStyle: 'italic', fontSize: '13px' }}>
+                        {emptyText}
+                    </div>
                 )}
             </div>
         </div>
