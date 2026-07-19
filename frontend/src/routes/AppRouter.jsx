@@ -31,6 +31,7 @@ import WarrantyListPage from '../pages/Warranty/WarrantyListPage';
 import WarrantyDetailPage from '../pages/Warranty/WarrantyDetailPage';
 
 import BrandListPage from '../pages/Brand/BrandListPage';
+import BrandDetailPage from '../pages/Brand/BrandDetailPage';
 import AssemblyBomPage from '../pages/AssemblyOrder/AssemblyBomPage';
 import AssemblyOrderListPage from '../pages/AssemblyOrder/AssemblyOrderListPage';
 import AssemblyOrderFormPage from '../pages/AssemblyOrder/AssemblyOrderFormPage';
@@ -112,6 +113,7 @@ function AppRouter() {
                     <Route path="/assembly-orders/create" element={<AssemblyOrderFormPage />} />
                     <Route path="/assembly-orders/:id" element={<AssemblyOrderFormPage />} />
                     <Route path="/brands" element={<BrandListPage />} />
+                    <Route path="/brands/:id" element={<BrandDetailPage />} />
                     <Route path="/stocktakes" element={<StocktakeListPage />} />
                     <Route path="/stocktakes/create" element={<CreateStocktakePage />} />
                     <Route path="/stocktakes/:id" element={<StocktakeDetailPage />} />

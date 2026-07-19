@@ -26,6 +26,12 @@ import java.util.List;
 public class CustomerRequest {
 
     /**
+     * Mã khách hàng (optional). Nếu không truyền sẽ tự động sinh.
+     */
+    @Size(max = 50, message = "EXCEED_MAX_LENGTH")
+    private String code;
+
+    /**
      * Tên khách hàng (bắt buộc).
      */
     @NotBlank(message = "FIELD_REQUIRED")

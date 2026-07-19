@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
-import CustomerQuickCreateDrawer from '../Customer/components/CustomerQuickCreateDrawer';
+import CustomerModal from '../Customer/components/CustomerModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Select from 'react-select';
@@ -680,8 +680,9 @@ function UpdateExportSlipPage() {
           </button>
         </div>
       </div>
-      <CustomerQuickCreateDrawer
+      <CustomerModal
         isOpen={showPartnerModal}
+        editData={null}
         onClose={() => setShowPartnerModal(false)}
         onSaved={handleSavePartner}
         onError={(msg) => showToast('error', msg)}

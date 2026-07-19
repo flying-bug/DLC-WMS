@@ -257,13 +257,6 @@
   border-color: var(--color-primary);
 }
 
-.filterActions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
 .btnOutline {
   border: 1px solid var(--color-border-strong);
   background: var(--color-white);
@@ -294,7 +287,7 @@
 
 .table {
   width: 100%;
-  min-width: 920px;
+  min-width: 980px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -308,6 +301,7 @@
   color: var(--color-text-muted);
   border-bottom: 1px solid var(--color-border);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .table td {
@@ -387,7 +381,7 @@
   font-size: 13px;
   color: var(--color-text-muted-2);
   gap: 16px;
-  min-width: 920px;
+  min-width: 980px;
 }
 
 .pageControls {
@@ -410,44 +404,6 @@
 
 .pageBtn:hover {
   color: var(--color-primary);
-}
-
-.paginationNumbers {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.pageNumber {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.pageNumber.dots {
-  cursor: default;
-  background-color: transparent;
-}
-
-.pageNumber:not(.dots):not(.active):hover {
-  background-color: var(--color-bg);
-}
-
-.pageNumber.active {
-  background-color: var(--color-primary);
-  color: var(--color-white);
-}
-
-.pageNumber.active:focus {
-  background-color: var(--color-white);
-  color: var(--color-text, #1e293b);
-  border: 1px solid var(--color-primary);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
 }
 
 /* Detail Section */
@@ -625,63 +581,75 @@
   color: var(--color-primary);
 }
 
-/* Checkbox */
-.checkbox {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: #0075c0;
-}
-
-/* Bulk Toolbar */
-.bulkActionsToolbar {
-  background-color: #f0f9ff;
+/* Filter Section */
+.filterSection {
+  background: var(--color-white);
+  padding: 16px 20px;
   border-radius: 8px;
-  padding: 12px 20px;
-  margin-bottom: 24px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  border: 1px solid #bae6fd;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.bulkText {
-  font-weight: 600;
-  color: #0369a1;
-  font-size: 14px;
-}
-
-.bulkButtons {
-  display: flex;
-  gap: 12px;
-}
-
-/* Empty State */
-.emptyState {
-  padding: 80px 20px;
-  text-align: center;
-  color: #64748b;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  border: 1px solid var(--color-border);
   gap: 16px;
 }
 
-.emptyIcon {
-  font-size: 64px;
-  color: #e2e8f0;
+.filterGroup {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
 }
 
-.emptyText {
-  font-size: 15px;
-  font-weight: 500;
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filterLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted-2);
+  text-transform: uppercase;
+}
+
+.filterInput, .filterSelect {
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+  min-width: 200px;
+  color: var(--color-text-strong);
+}
+
+.filterInput:focus, .filterSelect:focus {
+  border-color: var(--color-primary);
+}
+
+.filterActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btnOutline {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-white);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.btnOutline:hover {
+  background-color: var(--color-bg);
 }
 
 /* Modal Styles */
@@ -744,6 +712,44 @@
 .modalBody {
   padding: 24px;
   overflow-y: auto;
+}
+
+.paginationNumbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pageNumber {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pageNumber.dots {
+  cursor: default;
+  background-color: transparent;
+}
+
+.pageNumber:not(.dots):not(.active):hover {
+  background-color: var(--color-bg);
+}
+
+.pageNumber.active {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.pageNumber.active:focus {
+  background-color: var(--color-white);
+  color: var(--color-text, #1e293b);
+  border: 1px solid var(--color-primary);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
 }
 
 /* Tooltip Styles */

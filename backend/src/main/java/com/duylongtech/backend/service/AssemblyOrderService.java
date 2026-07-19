@@ -376,7 +376,7 @@ public class AssemblyOrderService {
     private String resolveCreateOrderCode(String requestedCode, String orderType) {
         String orderCode = trimToNull(requestedCode);
         if (orderCode == null) {
-            orderCode = (ASSEMBLY.equals(orderType) ? "ASM-" : "DIS-") + System.currentTimeMillis();
+            orderCode = (ASSEMBLY.equals(orderType) ? "LR-" : "TD-") + System.currentTimeMillis();
         }
         if (assemblyOrderRepository.existsByOrderCode(orderCode)) {
             throw new BusinessException("Mã lệnh lắp ráp/tháo dỡ đã tồn tại");
