@@ -515,7 +515,15 @@ public class CustomerService {
             throw new BusinessException(SystemMessage.CUST_PHONE_EXISTS);
         }
 
-        String code = generateCustomerCode();
+        String code;
+        if (req.getCode() != null && !req.getCode().trim().isEmpty()) {
+            code = req.getCode().trim();
+            if (partnerRepository.existsByCode(code)) {
+                throw new BusinessException(SystemMessage.CUST_CODE_EXISTS); // Giả sử có mã lỗi này
+            }
+        } else {
+            code = generateCustomerCode();
+        }
 
         Partner partner = Partner.builder()
                 .code(code)

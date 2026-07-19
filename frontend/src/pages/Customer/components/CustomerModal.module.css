@@ -1,0 +1,141 @@
+/* CustomerModal.module.css */
+
+.headerTitle {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.headerActions {
+    display: flex;
+    gap: 8px;
+}
+
+.iconBtn {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.iconBtn:hover {
+    background-color: var(--color-bg-hover);
+    color: var(--color-danger);
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 24px;
+}
+
+.col6 {
+    grid-column: span 1;
+}
+
+.col12 {
+    grid-column: span 2;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.formLabel {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.required {
+    color: var(--color-danger);
+    margin-left: 2px;
+}
+
+.inputWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+    color: var(--color-text);
+    background-color: #fff;
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
+
+.input:disabled {
+    background-color: #f3f4f6;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+.inputWrapper .input {
+    padding-right: 36px;
+}
+
+.inputIcon, .selectIcon {
+    position: absolute;
+    right: 12px;
+    color: var(--color-text-secondary);
+    pointer-events: none;
+    font-size: 0.9rem;
+}
+
+.select {
+    width: 100%;
+    padding: 8px 36px 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    background-color: #fff;
+    cursor: pointer;
+    appearance: none;
+    color: var(--color-text);
+    transition: border-color 0.2s;
+}
+
+.select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
+
+.inputError {
+    border-color: var(--color-danger);
+}
+
+.inputError:focus {
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+}
+
+.errorMsg {
+    font-size: 0.75rem;
+    color: var(--color-danger);
+    margin-top: 2px;
+}
+
+.warningMsg {
+    font-size: 0.75rem;
+    color: #f59e0b; /* Amber 500 */
+    margin-top: 2px;
+}

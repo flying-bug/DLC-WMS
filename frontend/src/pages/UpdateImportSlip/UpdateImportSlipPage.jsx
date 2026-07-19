@@ -6,7 +6,7 @@ import * as customerApi from '../../api/customerApi';
 import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import SupplierModal from '../Supplier/components/SupplierModal';
-import CustomerQuickCreateDrawer from '../Customer/components/CustomerQuickCreateDrawer';
+import CustomerModal from '../Customer/components/CustomerModal';
 import AssemblyOrderSelectionModal from '../CreateImportSlip/components/AssemblyOrderSelectionModal';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import Toast from '../../components/ui/Toast/Toast';
@@ -611,8 +611,9 @@ function UpdateImportSlipPage() {
         targetQuantity={Number(selectedSerialItem?.quantity || 0)}
         initialSerials={selectedSerialItem?.serialNumbers || []}
       />
-      <CustomerQuickCreateDrawer
+      <CustomerModal
         isOpen={showCustomerDrawer}
+        editData={null}
         onClose={() => setShowCustomerDrawer(false)}
         onSaved={handleSaveCustomer}
       />
