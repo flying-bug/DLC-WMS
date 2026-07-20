@@ -3,6 +3,8 @@ package com.duylongtech.backend.dto.response;
 import java.math.BigDecimal;
 
 public interface WarehouseStockAiRow {
+    Long getVariantId();
+
     String getWarehouseCode();
 
     String getWarehouseName();
