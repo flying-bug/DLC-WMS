@@ -19,6 +19,13 @@ import java.util.List;
 public class ReportController {
 
     private final ReportService reportService;
+    private final com.duylongtech.backend.repository.InventoryBalanceRepository inventoryBalanceRepository;
+
+    @GetMapping("/debug-balances")
+    @PreAuthorize("hasAuthority('report:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
+    public ResponseEntity<List<com.duylongtech.backend.entity.InventoryBalance>> debugBalances() {
+        return ResponseEntity.ok(inventoryBalanceRepository.findAll());
+    }
 
     @GetMapping("/inventory-balance")
     @PreAuthorize("hasAuthority('report:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")

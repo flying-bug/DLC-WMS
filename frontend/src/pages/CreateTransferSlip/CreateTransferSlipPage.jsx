@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as transferApi from '../../api/stockTransferApi';
 import * as exportApi from '../../api/inventoryExportApi';
+import * as warehouseApi from '../../api/warehouseApi';
 import styles from './CreateTransferSlipPage.module.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -40,6 +41,31 @@ function CreateTransferSlipPage() {
   });
   
   const [items, setItems] = useState([emptyLine()]);
+  const [sourceInventory, setSourceInventory] = useState(new Map());
+
+  useEffect(() => {
+    if (!form.fromWarehouseId) {
+      setSourceInventory(new Map());
+      return;
+    }
+    const fetchSourceInventory = async () => {
+      try {
+        const res = await warehouseApi.getWarehouseInventory(form.fromWarehouseId);
+        const invList = res?.data?.data || [];
+        const invMap = new Map();
+        invList.forEach(item => {
+          if (item.variantId) {
+            invMap.set(String(item.variantId), item.availableQuantity);
+          }
+        });
+        setSourceInventory(invMap);
+      } catch (err) {
+        console.error('Error fetching source inventory:', err);
+        setSourceInventory(new Map());
+      }
+    };
+    fetchSourceInventory();
+  }, [form.fromWarehouseId]);
 
   useEffect(() => {
     const loadLookups = async () => {
@@ -343,6 +369,7 @@ function CreateTransferSlipPage() {
                     <th>Mã hàng</th>
                     <th>Tên hàng</th>
                     <th>ĐVT</th>
+                    <th style={{ textAlign: 'right' }}>Tồn khả dụng</th>
                     <th style={{ textAlign: 'right' }}>Số lượng</th>
                     <th>Ghi chú</th>
                     <th></th>
@@ -351,6 +378,7 @@ function CreateTransferSlipPage() {
                 <tbody>
                   {items.map((item, index) => {
                     const product = productById.get(String(item.variantId));
+                    const stock = sourceInventory.get(String(item.variantId)) ?? 0;
                     return (
                       <tr key={item.localId}>
                         <td>{index + 1}</td>
@@ -365,6 +393,9 @@ function CreateTransferSlipPage() {
                           {item.serialNumberId && <div style={{ fontSize: '11px', color: '#155e75', backgroundColor: '#cffafe', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '4px', border: '1px solid #a5f3fc' }}>{item.scannedCode}</div>}
                         </td>
                         <td>{product?.unitName || ''}</td>
+                        <td align="right" style={{ fontWeight: '500', color: stock <= 0 ? '#ef4444' : '#475569' }}>
+                          {stock.toLocaleString('vi-VN')}
+                        </td>
                         <td align="right">
                           <input type="number" min="1" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
                         </td>
