@@ -254,10 +254,22 @@ function ExportSlipPage() {
             </thead>
             <tbody>
               {paginatedRows.length > 0 ? paginatedRows.map(slip => (
-                <tr key={slip.id} className={selectedSlip?.id === slip.id ? styles.activeRow : ''}>
+                <tr key={slip.id} className={selectedSlip?.id === slip.id ? styles.activeRow : ''} onClick={() => setSelectedSlip(slip)} style={{ cursor: 'pointer' }}>
                   <td style={{ textAlign: 'center' }}><input type="checkbox" className={styles.checkbox} checked={selectedIds.includes(slip.id)} onChange={(event) => handleSelectRow(event, slip.id)} onClick={(event) => event.stopPropagation()} /></td>
                   <td>{slip.date}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}><a href="#" className={styles.link} onClick={(event) => event.preventDefault()}>{slip.docCode}</a></td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <a
+                      href="#"
+                      className={styles.link}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setSelectedSlip(slip);
+                      }}
+                    >
+                      {slip.docCode}
+                    </a>
+                  </td>
                   <td>{slip.partner}</td>
                   <td>{slip.warehouse}</td>
                   <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>
@@ -413,7 +425,9 @@ function ExportSlipPage() {
                     </div>
                     <div className={styles.detailItem}>
                       <span className={styles.detailLabel}>Nhân viên xuất hàng</span>
-                      <span className={styles.detailValue}>{userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || 'Chưa có thông tin'}</span>
+                      <span className={styles.detailValue}>
+                        {selectedSlip.salespersonName || userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || (selectedSlip.salespersonId ? String(selectedSlip.salespersonId) : 'Chưa có thông tin')}
+                      </span>
                     </div>
                     {(selectedSlip.referenceType && selectedSlip.referenceId) && (
                       <div className={styles.detailItem}>

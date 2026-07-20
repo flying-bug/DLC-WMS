@@ -11,4 +11,5 @@ import java.util.List;
 public interface SerialNumberRepository extends JpaRepository<SerialNumber, Long> {
     Optional<SerialNumber> findBySerialNumber(String serialNumber);
     List<SerialNumber> findBySerialNumberIn(List<String> serialNumbers);
+    boolean existsByVariantIdIn(List<Long> variantIds);
 }

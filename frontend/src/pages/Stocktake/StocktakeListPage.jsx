@@ -224,7 +224,19 @@ function StocktakeListPage() {
                     />
                   </td>
                   <td>{st.date}</td>
-                  <td><a href="#" className={styles.link} onClick={(e) => e.preventDefault()}>{st.stocktakeCode}</a></td>
+                  <td>
+                    <a
+                      href="#"
+                      className={styles.link}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate(`/stocktakes/${st.id}`);
+                      }}
+                    >
+                      {st.stocktakeCode}
+                    </a>
+                  </td>
                   <td>{st.warehouse}</td>
                   <td>{st.note || ''}</td>
                   <td>

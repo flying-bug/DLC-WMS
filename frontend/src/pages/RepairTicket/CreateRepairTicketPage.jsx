@@ -6,7 +6,7 @@ import * as warrantyApi from '../../api/warrantyApi';
 import * as repairTicketApi from '../../api/repairTicketApi';
 import styles from './CreateRepairTicketPage.module.css';
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date().toLocaleDateString('sv-SE');
 const unwrap = (response) => response?.data?.data ?? response?.data;
 
 const readPartner = (warranty) => ({

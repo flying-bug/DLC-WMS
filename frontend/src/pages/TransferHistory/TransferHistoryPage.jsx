@@ -223,7 +223,19 @@ function TransferHistoryPage() {
                     />
                   </td>
                   <td>{slip.date}</td>
-                  <td><a href="#" className={styles.link} onClick={(e) => e.preventDefault()}>{slip.transferCode}</a></td>
+                  <td>
+                    <a
+                      href="#"
+                      className={styles.link}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedSlip(slip);
+                      }}
+                    >
+                      {slip.transferCode}
+                    </a>
+                  </td>
                   <td>{slip.fromWarehouse}</td>
                   <td>{slip.toWarehouse}</td>
                   <td className={styles.textCenter}>{slip.quantity.toLocaleString('vi-VN')}</td>
