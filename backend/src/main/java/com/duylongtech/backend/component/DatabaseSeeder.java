@@ -378,14 +378,14 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .brand(genericBrand)
                     .category(computerCategory)
                     .unit(caiUnit)
-                    .stockQty(BigDecimal.ZERO)
-                    .stockValue(BigDecimal.ZERO)
+                    .stockQty(new BigDecimal("450.0000"))
+                    .stockValue(new BigDecimal("4500000.00"))
                     .active(true)
                     .taxReductionStatus("Chưa xác định")
                     .build();
             p4 = productRepository.save(p4);
         }
-        ProductVariant v4 = seedVariantIfNotFound(p4, "VT00004", "Hiếu", new BigDecimal("0.00"), new BigDecimal("0.00"));
+        ProductVariant v4 = seedVariantIfNotFound(p4, "VT00004", "Hiếu", new BigDecimal("10000.00"), new BigDecimal("15000.00"));
 
         // Seed inventory balances for Kho chính (code K01) and Kho phụ (code K02)
         Warehouse k1 = warehouseRepository.findByCodeIgnoreCase("K01").orElse(null);
@@ -395,10 +395,12 @@ public class DatabaseSeeder implements CommandLineRunner {
             // Seed for K01 (Kho chính)
             seedInventoryBalanceIfNotFound(k1.getId(), v3.getId(), new BigDecimal("150.0000"), new BigDecimal("14170040.4858"));
             seedInventoryBalanceIfNotFound(k1.getId(), v2.getId(), new BigDecimal("500.0000"), new BigDecimal("15000.0000"));
+            seedInventoryBalanceIfNotFound(k1.getId(), v4.getId(), new BigDecimal("300.0000"), new BigDecimal("10000.0000"));
 
             // Seed for K02 (Kho phụ)
             seedInventoryBalanceIfNotFound(k2.getId(), v3.getId(), new BigDecimal("97.0000"), new BigDecimal("14170040.4858"));
             seedInventoryBalanceIfNotFound(k2.getId(), v2.getId(), new BigDecimal("200.0000"), new BigDecimal("15000.0000"));
+            seedInventoryBalanceIfNotFound(k2.getId(), v4.getId(), new BigDecimal("150.0000"), new BigDecimal("10000.0000"));
         }
     }
 
@@ -529,12 +531,12 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void seedInventoryBalanceIfNotFound(Long warehouseId, Long variantId, BigDecimal qtyOnHand, BigDecimal avgCost) {
-        Optional<InventoryBalance> opt = inventoryBalanceRepository.findByWarehouseIdAndVariantIdAndStockStatus(warehouseId, variantId, "AVAILABLE");
+        Optional<InventoryBalance> opt = inventoryBalanceRepository.findByWarehouseIdAndVariantIdAndStockStatus(warehouseId, variantId, "GOOD");
         if (opt.isEmpty()) {
             InventoryBalance balance = InventoryBalance.builder()
                     .warehouseId(warehouseId)
                     .variantId(variantId)
-                    .stockStatus("AVAILABLE")
+                    .stockStatus("GOOD")
                     .quantityOnHand(qtyOnHand)
                     .quantityReserved(BigDecimal.ZERO)
                     .averageCost(avgCost)

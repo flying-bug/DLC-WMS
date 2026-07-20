@@ -196,13 +196,28 @@ public class StockTransferServiceImpl implements StockTransferService {
             // Deduct stock from InventoryBalance
             InventoryBalance balance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
                     stockTransfer.getFromWarehouseId(), serial.getVariantId(), "GOOD"
-            ).orElseThrow(() -> new BusinessException(SystemMessage.INV_NOT_ENOUGH_STOCK));
+            ).orElse(null);
+
+            if (balance == null) {
+                List<InventoryBalance> balances = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
+                        stockTransfer.getFromWarehouseId(), serial.getVariantId()
+                );
+                balance = balances.stream()
+                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
+                        .findFirst()
+                        .orElse(balances.isEmpty() ? null : balances.get(0));
+            }
+
+            if (balance == null) {
+                throw new BusinessException(SystemMessage.INV_NOT_ENOUGH_STOCK);
+            }
 
             if (balance.getQuantityOnHand().compareTo(BigDecimal.ONE) < 0) {
                 throw new BusinessException(SystemMessage.INV_NOT_ENOUGH_STOCK);
             }
 
             balance.setQuantityOnHand(balance.getQuantityOnHand().subtract(BigDecimal.ONE));
+            balance.setUpdatedAt(java.time.LocalDateTime.now());
             inventoryBalanceRepository.save(balance);
         }
 
@@ -241,7 +256,19 @@ public class StockTransferServiceImpl implements StockTransferService {
             // Add stock to destination
             InventoryBalance balance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
                     destWarehouseId, sVarId, "GOOD"
-            ).orElseGet(() -> {
+            ).orElse(null);
+
+            if (balance == null) {
+                List<InventoryBalance> balances = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
+                        destWarehouseId, sVarId
+                );
+                balance = balances.stream()
+                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
+                        .findFirst()
+                        .orElse(balances.isEmpty() ? null : balances.get(0));
+            }
+
+            if (balance == null) {
                 InventoryBalance newBalance = new InventoryBalance();
                 newBalance.setWarehouseId(destWarehouseId);
                 newBalance.setVariantId(sVarId);
@@ -249,10 +276,12 @@ public class StockTransferServiceImpl implements StockTransferService {
                 newBalance.setQuantityOnHand(BigDecimal.ZERO);
                 newBalance.setQuantityReserved(BigDecimal.ZERO);
                 newBalance.setAverageCost(BigDecimal.ZERO);
-                return newBalance;
-            });
+                newBalance.setUpdatedAt(java.time.LocalDateTime.now());
+                balance = newBalance;
+            }
 
             balance.setQuantityOnHand(balance.getQuantityOnHand().add(BigDecimal.ONE));
+            balance.setUpdatedAt(java.time.LocalDateTime.now());
             inventoryBalanceRepository.save(balance);
         }
 
@@ -299,26 +328,51 @@ public class StockTransferServiceImpl implements StockTransferService {
 
             // Deduct from source
             InventoryBalance sourceBalance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(fromWhId, variantId, "GOOD")
-                    .orElseThrow(() -> new BusinessException("Kho xuất không đủ tồn kho mặt hàng này."));
+                    .orElse(null);
+
+            if (sourceBalance == null) {
+                List<InventoryBalance> balances = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(fromWhId, variantId);
+                sourceBalance = balances.stream()
+                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
+                        .findFirst()
+                        .orElse(balances.isEmpty() ? null : balances.get(0));
+            }
+
+            if (sourceBalance == null) {
+                throw new BusinessException("Kho xuất không đủ tồn kho mặt hàng này.");
+            }
             if (sourceBalance.getQuantityOnHand().compareTo(qty) < 0) {
                 throw new BusinessException("Kho xuất không đủ tồn kho mặt hàng này.");
             }
             sourceBalance.setQuantityOnHand(sourceBalance.getQuantityOnHand().subtract(qty));
+            sourceBalance.setUpdatedAt(java.time.LocalDateTime.now());
             inventoryBalanceRepository.save(sourceBalance);
 
             // Add to destination
             InventoryBalance destBalance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(toWhId, variantId, "GOOD")
-                    .orElseGet(() -> {
-                        InventoryBalance newBalance = new InventoryBalance();
-                        newBalance.setWarehouseId(toWhId);
-                        newBalance.setVariantId(variantId);
-                        newBalance.setStockStatus("GOOD");
-                        newBalance.setQuantityOnHand(BigDecimal.ZERO);
-                        newBalance.setQuantityReserved(BigDecimal.ZERO);
-                        newBalance.setAverageCost(BigDecimal.ZERO);
-                        return newBalance;
-                    });
+                    .orElse(null);
+
+            if (destBalance == null) {
+                List<InventoryBalance> balances = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(toWhId, variantId);
+                destBalance = balances.stream()
+                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
+                        .findFirst()
+                        .orElse(balances.isEmpty() ? null : balances.get(0));
+            }
+
+            if (destBalance == null) {
+                InventoryBalance newBalance = new InventoryBalance();
+                newBalance.setWarehouseId(toWhId);
+                newBalance.setVariantId(variantId);
+                newBalance.setStockStatus("GOOD");
+                newBalance.setQuantityOnHand(BigDecimal.ZERO);
+                newBalance.setQuantityReserved(BigDecimal.ZERO);
+                newBalance.setAverageCost(BigDecimal.ZERO);
+                newBalance.setUpdatedAt(java.time.LocalDateTime.now());
+                destBalance = newBalance;
+            }
             destBalance.setQuantityOnHand(destBalance.getQuantityOnHand().add(qty));
+            destBalance.setUpdatedAt(java.time.LocalDateTime.now());
             inventoryBalanceRepository.save(destBalance);
         }
     }
