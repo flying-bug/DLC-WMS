@@ -54,6 +54,22 @@ public class InventoryDocumentService {
     private static final Set<String> VALID_STATUSES = Set.of("DRAFT", "SUBMITTED", "APPROVED", "POSTED", "CANCELLED");
     private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "SUBMITTED");
 
+    // Phân loại phiếu xuất kho thủ công (do người dùng tạo)
+    public static final String ISSUE_PURPOSE_SALES = "SALES";           // Xuất kho bán hàng — tự sinh bảo hành
+    public static final String ISSUE_PURPOSE_USAGE = "USAGE";           // Xuất kho sử dụng nội bộ — không sinh bảo hành
+
+    // Phân loại phiếu xuất/nhập kho tự động từ module Chuyển kho
+    public static final String ISSUE_PURPOSE_TRANSFER_OUT = "TRANSFER_EXPORT"; // Xuất kho chuyển đi
+    public static final String ISSUE_PURPOSE_TRANSFER_IN  = "TRANSFER_IMPORT"; // Nhập kho từ chuyển về
+
+    // Tập hợp các mục đích hợp lệ khi người dùng tạo phiếu xuất thủ công
+    private static final Set<String> VALID_MANUAL_EXPORT_PURPOSES = Set.of(ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE);
+
+    // Tập hợp các mục đích hợp lệ toàn bộ (bắt cả nội bộ và người dùng)
+    private static final Set<String> VALID_ALL_EXPORT_PURPOSES = Set.of(
+            ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE, ISSUE_PURPOSE_TRANSFER_OUT
+    );
+
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final InventoryCostLayerRepository inventoryCostLayerRepository;
@@ -112,7 +128,8 @@ public class InventoryDocumentService {
                 && warehouseId == null;
         List<InventoryDocument> docs = noFilters
                 ? inventoryDocumentRepository.findAllImports()
-                : inventoryDocumentRepository.searchImports(normalizedDocCode, fromDate, toDate, normalizedStatus, warehouseId);
+                : inventoryDocumentRepository.searchImports(normalizedDocCode, fromDate, toDate, normalizedStatus,
+                        warehouseId);
         return docs.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
@@ -186,7 +203,8 @@ public class InventoryDocumentService {
             }
             InventoryBalance balance = inventoryBalanceRepository
                     .findByWarehouseAndVariantForUpdate(doc.getWarehouseId(), line.getVariantId(), "GOOD")
-                    .orElseThrow(() -> new BusinessException("Khong tim thay ton kho GOOD cho san pham " + line.getVariantId()));
+                    .orElseThrow(() -> new BusinessException(
+                            "Khong tim thay ton kho GOOD cho san pham " + line.getVariantId()));
 
             if (balance.getQuantityOnHand().compareTo(qtyToExport) < 0) {
                 throw new BusinessException("Số lượng xuất lớn hơn số lượng tồn kho, vui lòng điều chỉnh");
@@ -218,7 +236,8 @@ public class InventoryDocumentService {
 
             BigDecimal avgUnitCost = totalCost.divide(qtyToExport, 4, RoundingMode.HALF_UP);
             line.setUnitCost(avgUnitCost);
-            inventoryLedgerRepository.save(buildLedger(doc, line, "OUT", ZERO, qtyToExport, avgUnitCost, balance.getQuantityOnHand()));
+            inventoryLedgerRepository
+                    .save(buildLedger(doc, line, "OUT", ZERO, qtyToExport, avgUnitCost, balance.getQuantityOnHand()));
 
             if (serialNumber != null) {
                 updateExportedSerialBalance(doc, line, serialNumber, avgUnitCost);
@@ -279,7 +298,8 @@ public class InventoryDocumentService {
                     .createdAt(LocalDateTime.now())
                     .build());
 
-            inventoryLedgerRepository.save(buildLedger(savedDoc, line, "IN", qtyToImport, ZERO, unitCost, balance.getQuantityOnHand()));
+            inventoryLedgerRepository
+                    .save(buildLedger(savedDoc, line, "IN", qtyToImport, ZERO, unitCost, balance.getQuantityOnHand()));
             createImportedSerialsIfNeeded(savedDoc, line, unitCost);
         }
 
@@ -290,6 +310,15 @@ public class InventoryDocumentService {
     }
 
     private InventoryDocument buildBaseDocument(InventoryDocumentRequest req, String docType, String docCode) {
+        String issuePurpose = normalizeOptionalReference(req.getIssuePurpose());
+        if (issuePurpose != null && EXPORT_DOC_TYPE.equals(docType)) {
+            // Kiểm tra issuePurpose có thuộc danh sách hợp lệ toàn bộ không
+            // (bao gồm cả TRANSFER_EXPORT được dùng nội bộ bởi module Chuyển kho)
+            if (!VALID_ALL_EXPORT_PURPOSES.contains(issuePurpose)) {
+                throw new BusinessException("Mục đích xuất kho không hợp lệ. Chỉ chấp nhận: SALES (Bán hàng) hoặc USAGE (Xuất sử dụng)");
+            }
+        }
+
         InventoryDocument doc = new InventoryDocument();
         doc.setDocCode(docCode);
         doc.setDocType(docType);
@@ -316,8 +345,17 @@ public class InventoryDocumentService {
         return doc;
     }
 
-    private void updateBaseDocument(Long id, InventoryDocument doc, InventoryDocumentRequest req, String duplicateMessage,
+    private void updateBaseDocument(Long id, InventoryDocument doc, InventoryDocumentRequest req,
+            String duplicateMessage,
             boolean importDocument) {
+        String issuePurpose = normalizeOptionalReference(req.getIssuePurpose());
+        if (issuePurpose != null && !importDocument) {
+            // Khi cập nhật phiếu, cũng chỉ cho phép 2 mục đích thủ công
+            if (!VALID_MANUAL_EXPORT_PURPOSES.contains(issuePurpose)) {
+                throw new BusinessException("Mục đích xuất kho không hợp lệ. Chỉ chấp nhận: SALES (Bán hàng) hoặc USAGE (Xuất sử dụng)");
+            }
+        }
+
         String requestedCode = trimToNull(req.getDocCode());
         if (requestedCode != null && !requestedCode.equals(doc.getDocCode())) {
             if (inventoryDocumentRepository.existsByDocCodeAndIdNot(requestedCode, id)) {
@@ -387,7 +425,8 @@ public class InventoryDocumentService {
         return buildScanResponse("BARCODE", code, variant, null);
     }
 
-    private ScanResolveResponse buildScanResponse(String type, String code, ProductVariant variant, SerialNumber serial) {
+    private ScanResolveResponse buildScanResponse(String type, String code, ProductVariant variant,
+            SerialNumber serial) {
         Product product = variant.getProduct();
         return ScanResolveResponse.builder()
                 .type(type)
@@ -425,8 +464,10 @@ public class InventoryDocumentService {
     private void updateExportedSerialBalance(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial,
             BigDecimal unitCost) {
         InventoryBalance serialBalance = inventoryBalanceRepository
-                .findByWarehouseVariantSerialForUpdate(doc.getWarehouseId(), line.getVariantId(), serial.getId(), "GOOD")
-                .orElseThrow(() -> new BusinessException("Khong tim thay ton kho cho serial " + serial.getSerialNumber()));
+                .findByWarehouseVariantSerialForUpdate(doc.getWarehouseId(), line.getVariantId(), serial.getId(),
+                        "GOOD")
+                .orElseThrow(
+                        () -> new BusinessException("Khong tim thay ton kho cho serial " + serial.getSerialNumber()));
         if (serialBalance.getQuantityOnHand().compareTo(BigDecimal.ONE) < 0) {
             throw new BusinessException("Serial " + serial.getSerialNumber() + " không còn tồn kho");
         }
@@ -434,8 +475,12 @@ public class InventoryDocumentService {
         serialBalance.setUpdatedAt(LocalDateTime.now());
         inventoryBalanceRepository.save(serialBalance);
 
-        serial.setStatus("SOLD");
-        serial.setSoldAt(LocalDateTime.now());
+        if (ISSUE_PURPOSE_TRANSFER_OUT.equals(doc.getIssuePurpose())) {
+            serial.setStatus("IN_TRANSIT");
+        } else {
+            serial.setStatus("SOLD");
+            serial.setSoldAt(LocalDateTime.now());
+        }
         serial.setUpdatedAt(LocalDateTime.now());
         serialNumberRepository.save(serial);
     }
@@ -444,12 +489,18 @@ public class InventoryDocumentService {
      * Tự động tạo phiếu bảo hành (WARRANTY) cho serial number vừa được xuất bán,
      * nếu dòng sản phẩm có khai báo warrantyMonths > 0.
      * Điều kiện:
-     *   - line.warrantyMonths phải được lưu trước trong entity (xem InventoryDocumentLine.warrantyMonths)
-     *   - doc phải có partnerId (khách hàng mua)
+     * - line.warrantyMonths phải được lưu trước trong entity (xem
+     * InventoryDocumentLine.warrantyMonths)
+     * - doc phải có partnerId (khách hàng mua)
      * Phiếu bảo hành sẽ không được tạo nếu serial đó đã có warranty tồn tại
      * (tránh duplicate khi gọi lại postExport do lỗi retry).
      */
     private void generateWarrantyIfNeeded(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial) {
+        // Chỉ tự động sinh phiếu bảo hành khi mục đích là SALES (Xuất kho bán hàng)
+        // USAGE (Xuất sử dụng nội bộ) và TRANSFER_EXPORT (Chuyển kho) đều KHÔNG sinh bảo hành
+        if (!ISSUE_PURPOSE_SALES.equals(doc.getIssuePurpose())) {
+            return;
+        }
         Integer warrantyMonths = line.getWarrantyMonths();
         if (warrantyMonths == null || warrantyMonths <= 0) {
             return; // Sản phẩm này không có chính sách bảo hành
@@ -498,8 +549,31 @@ public class InventoryDocumentService {
         }
 
         for (String serialValue : serialValues) {
-            if (serialNumberRepository.findBySerialNumber(serialValue).isPresent()) {
-                throw new BusinessException("Serial đã tồn tại: " + serialValue);
+            Optional<SerialNumber> existingOpt = serialNumberRepository.findBySerialNumber(serialValue);
+            if (existingOpt.isPresent()) {
+                if (ISSUE_PURPOSE_TRANSFER_IN.equals(doc.getIssuePurpose())) {
+                    SerialNumber serial = existingOpt.get();
+                    if (!"IN_TRANSIT".equals(serial.getStatus())) {
+                        throw new BusinessException("Serial " + serialValue + " không ở trạng thái IN_TRANSIT");
+                    }
+                    serial.setStatus("AVAILABLE");
+                    serial.setWarehouseId(doc.getWarehouseId());
+                    serial.setUpdatedAt(LocalDateTime.now());
+                    SerialNumber savedSerial = serialNumberRepository.save(serial);
+                    inventoryBalanceRepository.save(InventoryBalance.builder()
+                            .warehouseId(doc.getWarehouseId())
+                            .variantId(line.getVariantId())
+                            .serialNumberId(savedSerial.getId())
+                            .stockStatus("GOOD")
+                            .quantityOnHand(BigDecimal.ONE)
+                            .quantityReserved(ZERO)
+                            .averageCost(unitCost)
+                            .updatedAt(LocalDateTime.now())
+                            .build());
+                    continue;
+                } else {
+                    throw new BusinessException("Serial đã tồn tại: " + serialValue);
+                }
             }
             SerialNumber serial = SerialNumber.builder()
                     .variantId(line.getVariantId())
@@ -610,10 +684,12 @@ public class InventoryDocumentService {
     }
 
     private void validateExportInventoryBalance(Long warehouseId, List<InventoryDocumentLineRequest> lines) {
-        if (warehouseId == null || lines == null) return;
+        if (warehouseId == null || lines == null)
+            return;
         for (int i = 0; i < lines.size(); i++) {
             InventoryDocumentLineRequest line = lines.get(i);
-            if (line.getVariantId() == null || line.getQuantityOut() == null) continue;
+            if (line.getVariantId() == null || line.getQuantityOut() == null)
+                continue;
 
             BigDecimal qtyToExport = line.getQuantityOut();
             InventoryBalance balance = inventoryBalanceRepository
@@ -629,7 +705,8 @@ public class InventoryDocumentService {
     private String resolveCreateDocCode(String requestedCode) {
         String docCode = trimToNull(requestedCode);
         if (docCode == null) {
-            Optional<InventoryDocument> lastDoc = inventoryDocumentRepository.findTopByDocCodeStartingWithOrderByDocCodeDesc("XK-");
+            Optional<InventoryDocument> lastDoc = inventoryDocumentRepository
+                    .findTopByDocCodeStartingWithOrderByDocCodeDesc("XK-");
             if (lastDoc.isPresent()) {
                 String lastCode = lastDoc.get().getDocCode();
                 try {
@@ -659,7 +736,8 @@ public class InventoryDocumentService {
         return docCode;
     }
 
-    private InventoryDocumentLine toExportLineEntity(InventoryDocument doc, InventoryDocumentLineRequest lr, int index) {
+    private InventoryDocumentLine toExportLineEntity(InventoryDocument doc, InventoryDocumentLineRequest lr,
+            int index) {
         if (lr.getQuantityIn() != null && lr.getQuantityIn().compareTo(ZERO) > 0) {
             throw new BusinessException("Phiếu xuất kho không được có quantityIn");
         }
@@ -682,7 +760,8 @@ public class InventoryDocumentService {
                 .build();
     }
 
-    private InventoryDocumentLine toImportLineEntity(InventoryDocument doc, InventoryDocumentLineRequest lr, int index) {
+    private InventoryDocumentLine toImportLineEntity(InventoryDocument doc, InventoryDocumentLineRequest lr,
+            int index) {
         if (lr.getQuantityOut() != null && lr.getQuantityOut().compareTo(ZERO) > 0) {
             throw new BusinessException("Phiếu nhập kho không được có quantityOut");
         }
@@ -840,9 +919,11 @@ public class InventoryDocumentService {
 
         if (doc.getReferenceType() != null && doc.getReferenceId() != null) {
             if ("ASSEMBLY_ORDER".equals(doc.getReferenceType())) {
-                assemblyOrderRepository.findById(doc.getReferenceId()).ifPresent(order -> r.setReferenceCode(order.getOrderCode()));
+                assemblyOrderRepository.findById(doc.getReferenceId())
+                        .ifPresent(order -> r.setReferenceCode(order.getOrderCode()));
             } else if ("BOM".equals(doc.getReferenceType())) {
-                assemblyBomRepository.findById(doc.getReferenceId()).ifPresent(bom -> r.setReferenceCode(bom.getBomCode()));
+                assemblyBomRepository.findById(doc.getReferenceId())
+                        .ifPresent(bom -> r.setReferenceCode(bom.getBomCode()));
             }
         }
 
