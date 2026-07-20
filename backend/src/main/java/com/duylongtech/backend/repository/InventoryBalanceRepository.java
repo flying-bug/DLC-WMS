@@ -14,6 +14,10 @@ import java.util.Optional;
 
 public interface InventoryBalanceRepository extends JpaRepository<InventoryBalance, Long> {
 
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM InventoryBalance b WHERE b.variantId IN :variantIds")
+    void deleteByVariantIdIn(@Param("variantIds") List<Long> variantIds);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.variantId = :variantId AND b.serialNumberId IS NULL AND b.lotBatchId IS NULL AND b.stockStatus = :stockStatus")
     Optional<InventoryBalance> findByWarehouseAndVariantForUpdate(@Param("warehouseId") Long warehouseId, @Param("variantId") Long variantId, @Param("stockStatus") String stockStatus);

@@ -11,7 +11,7 @@ import styles from './AssemblyOrderFormPage.module.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date().toLocaleDateString('sv-SE');
 
 const STATUS_META = {
     DRAFT: { label: 'Lưu tạm', code: 'info' },

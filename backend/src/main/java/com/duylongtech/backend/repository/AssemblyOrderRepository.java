@@ -12,6 +12,12 @@ import java.util.Optional;
 public interface AssemblyOrderRepository extends JpaRepository<AssemblyOrder, Long> {
     boolean existsByOrderCode(String orderCode);
 
+    @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM AssemblyOrder o WHERE o.targetVariant.id IN :variantIds")
+    boolean existsByTargetVariantIdIn(@Param("variantIds") List<Long> variantIds);
+
+    @Query("SELECT CASE WHEN COUNT(l) > 0 THEN true ELSE false END FROM AssemblyOrderLine l WHERE l.componentVariant.id IN :variantIds")
+    boolean existsByComponentVariantIdIn(@Param("variantIds") List<Long> variantIds);
+
     @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM AssemblyOrder o WHERE o.orderCode = :orderCode AND o.id <> :id")
     boolean existsByOrderCodeAndIdNot(@Param("orderCode") String orderCode, @Param("id") Long id);
 

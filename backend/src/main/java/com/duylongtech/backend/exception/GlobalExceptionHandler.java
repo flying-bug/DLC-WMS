@@ -77,6 +77,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(SystemMessage.ACCESS_DENIED.getCode(), SystemMessage.ACCESS_DENIED.getMessage()));
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolationException(org.springframework.dao.DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("ERR400", "Không thể xóa bản ghi này do dữ liệu đang được liên kết với các bản ghi khác trong hệ thống."));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
         log.error("Unhandled runtime exception caught: ", ex);

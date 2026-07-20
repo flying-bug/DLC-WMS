@@ -22,9 +22,11 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
     const [phoneWarning, setPhoneWarning] = useState('');
+    const [apiError, setApiError] = useState('');
 
     useEffect(() => {
         if (!isOpen) return;
+        setApiError('');
         if (isEditMode) {
             setForm({
                 code: editData.code || '',
@@ -45,6 +47,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
         const { name, value } = e.target;
         setForm(prev => ({ ...prev, [name]: value }));
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+        if (apiError) setApiError('');
         
         if (name === 'phone' && isEditMode && value !== editData.phone && value !== '') {
             setPhoneWarning('⚠ Thay đổi số điện thoại sẽ làm thay đổi thông tin định danh sở hữu thiết bị. Hành động này sẽ được ghi lại vào lịch sử.');
@@ -70,9 +73,11 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
     };
 
     const handleSave = async (isContinue = false) => {
+        setApiError('');
         const validationErrors = validate();
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
+            setApiError('Vui lòng điền đầy đủ các thông tin bắt buộc (*)');
             return;
         }
 
@@ -97,26 +102,25 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
             }
         } catch (error) {
             const responseData = error.response?.data;
+            const msg = responseData?.userMessage || responseData?.devMessage || error.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+            setApiError(msg);
+
             if (responseData?.errorCode === 'CUST02') {
                 setErrors(prev => ({ ...prev, phone: responseData.userMessage }));
             } else if (responseData?.errorCode === 'CUST06') {
                 setErrors(prev => ({ ...prev, code: responseData.userMessage }));
             } else if (responseData?.errorCode === 'VAL400') {
-                const msg = responseData.userMessage || '';
+                const lowerMsg = msg.toLowerCase();
                 const newErrors = {};
-                if (msg.toLowerCase().includes('tên') || msg.toLowerCase().includes('name')) newErrors.name = msg;
-                else if (msg.toLowerCase().includes('điện thoại') || msg.toLowerCase().includes('phone')) newErrors.phone = msg;
-                else if (msg.toLowerCase().includes('email')) newErrors.email = msg;
-                else if (msg.toLowerCase().includes('địa chỉ') || msg.toLowerCase().includes('address')) newErrors.address = msg;
+                if (lowerMsg.includes('tên') || lowerMsg.includes('name')) newErrors.name = msg;
+                else if (lowerMsg.includes('điện thoại') || lowerMsg.includes('phone')) newErrors.phone = msg;
+                else if (lowerMsg.includes('email')) newErrors.email = msg;
+                else if (lowerMsg.includes('địa chỉ') || lowerMsg.includes('address')) newErrors.address = msg;
                 if (Object.keys(newErrors).length > 0) {
                     setErrors(prev => ({ ...prev, ...newErrors }));
-                } else if (onError) {
-                    onError(msg);
                 }
-            } else {
-                const msg = responseData?.userMessage || 'Có lỗi xảy ra. Vui lòng thử lại.';
-                if (onError) onError(msg);
             }
+            if (onError) onError(msg);
         } finally {
             setSubmitting(false);
         }
@@ -148,6 +152,12 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
 
                 {/* Body */}
                 <div className="misa-modal-body">
+                    {apiError && (
+                        <div style={{ padding: '10px 14px', backgroundColor: '#fee2e2', color: '#dc2626', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #fca5a5' }}>
+                            <i className="fas fa-exclamation-triangle" style={{ fontSize: '15px' }}></i>
+                            <span>{apiError}</span>
+                        </div>
+                    )}
                     <div className={styles.formGrid}>
                         <div className={`${styles.formGroup} ${styles.col6}`}>
                             <label className={styles.formLabel}>Mã khách hàng</label>
