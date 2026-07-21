@@ -1,0 +1,263 @@
+/* Odoo 17 Inspired Style System for Forms */
+
+.odooLayout {
+    background-color: #f9f9f9;
+    min-height: calc(100vh - 60px);
+    padding: 20px;
+}
+
+/* Status Bar & Pipeline */
+.odooStatusBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-bottom: none;
+    padding: 8px 16px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+.odooActions {
+    display: flex;
+    gap: 8px;
+}
+
+.odooActions button {
+    font-weight: 500;
+}
+
+.pipeline {
+    display: flex;
+    overflow: hidden;
+    background: #e9ecef;
+    border-radius: 20px;
+    height: 32px;
+}
+
+.pipelineStage {
+    position: relative;
+    padding: 0 16px 0 24px;
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #6c757d;
+    background: #e9ecef;
+    cursor: default;
+    transition: all 0.2s;
+}
+
+/* Add chevron shape */
+.pipelineStage::before, .pipelineStage::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 0;
+    height: 0;
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+}
+
+/* Tail (Left side) */
+.pipelineStage::before {
+    left: 0;
+    border-left: 12px solid white; /* Matches status bar background if it wasn't in a rounded pill, but here we just cut into it */
+}
+
+/* Arrow (Right side) */
+.pipelineStage::after {
+    right: -12px;
+    border-left: 12px solid #e9ecef;
+    z-index: 1;
+}
+
+/* Fix first and last items */
+.pipelineStage:first-child {
+    padding-left: 16px;
+}
+.pipelineStage:first-child::before {
+    display: none;
+}
+.pipelineStage:last-child::after {
+    display: none;
+}
+.pipelineStage:last-child {
+    padding-right: 16px;
+}
+
+/* State coloring */
+.pipelineStage.active {
+    background: #714B67; /* Odoo's primary purple/brand color, or we can use #0d6efd for Bootstrap primary */
+    color: white;
+}
+.pipelineStage.active::after {
+    border-left-color: #714B67;
+}
+
+.pipelineStage.past {
+    background: #f8f9fa;
+    color: #495057;
+}
+.pipelineStage.past::after {
+    border-left-color: #f8f9fa;
+}
+
+
+/* Form Sheet */
+.odooSheet {
+    background: white;
+    border: 1px solid #dee2e6;
+    padding: 32px;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.odooTitle {
+    font-size: 2rem;
+    font-weight: 400;
+    color: #212529;
+    margin-bottom: 24px;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Form Fields */
+.odooFormGroup {
+    display: flex;
+    margin-bottom: 12px;
+    align-items: center;
+}
+
+.odooFormLabel {
+    flex: 0 0 150px;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+.odooFormInput {
+    flex: 1;
+    border: 1px solid transparent;
+    border-bottom: 1px solid #ced4da;
+    border-radius: 0;
+    padding: 4px 8px;
+    background-color: transparent;
+    transition: border-color 0.2s;
+}
+
+.odooFormInput:focus {
+    outline: none;
+    border-bottom: 1px solid #714B67;
+    box-shadow: none;
+    background-color: #f8f9fa;
+}
+
+.odooFormInput[disabled], .odooFormInput:read-only {
+    border-bottom: 1px solid transparent;
+    font-weight: 500;
+    color: #212529;
+    padding-left: 0;
+}
+
+.odooTextarea {
+    flex: 1;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 10px 12px;
+    background-color: #fcfcfc;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    color: #212529;
+    resize: vertical;
+    width: 100%;
+}
+
+.odooTextarea:focus {
+    outline: none;
+    border-color: #714B67;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(113, 75, 103, 0.1);
+}
+
+.odooFormValue {
+    flex: 1;
+    font-weight: 500;
+    color: #212529;
+}
+
+/* Notebook (Tabs) */
+.odooNotebook {
+    margin-top: 32px;
+}
+
+.odooNotebook .nav-tabs {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.odooNotebook .nav-link {
+    color: #6c757d;
+    font-weight: 500;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 8px 16px;
+}
+
+.odooNotebook .nav-link:hover {
+    border-color: transparent;
+    color: #495057;
+}
+
+.odooNotebook .nav-link.active {
+    color: #714B67;
+    border-bottom: 2px solid #714B67;
+    background: transparent;
+}
+
+.odooNotebook .tab-content {
+    padding: 24px 0;
+}
+
+/* Table inside Notebook */
+.odooTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.odooTable th {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+    padding: 8px;
+    text-align: left;
+}
+
+.odooTable td {
+    padding: 8px;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: middle;
+}
+
+.odooTable tr:hover {
+    background-color: #f8f9fa;
+}
+
+.addLineBtn {
+    color: #714B67;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+    padding: 8px 0;
+    cursor: pointer;
+}
+
+.addLineBtn:hover {
+    text-decoration: underline;
+}

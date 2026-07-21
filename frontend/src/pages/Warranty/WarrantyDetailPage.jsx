@@ -95,7 +95,7 @@ function WarrantyDetailPage() {
                         <p className={styles.subtitle}>Hồ sơ serial, khách hàng, sửa chữa và phiếu xuất kho liên quan.</p>
                     </div>
                     <div className={styles.headerActions}>
-                        <button className={styles.outlineButton} type="button" onClick={() => navigate(`/repair-tickets/create?warrantyId=${id}`)}>
+                        <button className={styles.outlineButton} type="button" onClick={() => navigate(`/repairs/create?warrantyId=${id}`)}>
                             <i className="bi bi-tools"></i>
                             Tạo phiếu sửa
                         </button>
@@ -160,7 +160,7 @@ function WarrantyDetailPage() {
                                         <i className="bi bi-tools"></i>
                                         Lịch sử sửa chữa
                                     </div>
-                                    <button className={styles.smallButton} type="button" onClick={() => navigate(`/repair-tickets/create?warrantyId=${id}`)}>
+                                    <button className={styles.smallButton} type="button" onClick={() => navigate(`/repairs/create?warrantyId=${id}`)}>
                                         Tạo phiếu sửa
                                     </button>
                                 </div>
@@ -176,7 +176,7 @@ function WarrantyDetailPage() {
                                         {repairs.length > 0 ? repairs.map((repair) => {
                                             const repairStatus = statusMeta(repair.repairStatus, REPAIR_STATUS_META);
                                             return (
-                                                <tr key={repair.id || repair.repairCode} onClick={() => navigate(`/repair-tickets/${repair.id}/edit`)}>
+                                                <tr key={repair.id || repair.repairCode} onClick={() => navigate(`/repairs/${repair.id}`)}>
                                                     <td>{repair.repairCode || `SC-${repair.id}`}</td>
                                                     <td>{formatDate(repair.receivedDate)}</td>
                                                     <td><span className={`${styles.badge} ${styles[repairStatus.tone]}`}>{repairStatus.label}</span></td>

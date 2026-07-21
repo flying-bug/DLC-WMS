@@ -35,7 +35,7 @@ function ExportSlipPage() {
   const [users, setUsers] = useState([]);
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [filters, setFilters] = useState({ docCode: '', fromDate: '', status: '' });
+  const [filters, setFilters] = useState({ docCode: location.state?.filterDocCode || '', fromDate: '', status: '' });
   const [loading, setLoading] = useState(false);
 
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
