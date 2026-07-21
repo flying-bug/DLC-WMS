@@ -144,7 +144,7 @@ function UpdateImportSlipPage() {
 
   const handleSaveCustomer = async (isEdit, isContinue) => {
     try {
-      const res = await customerApi.getCustomers({ size: 1000 });
+      const res = await customerApi.searchCustomers('', '', '', 0, 1000);
       const data = pageContent(unwrap(res));
       setCustomers(data);
       if (data && data.length > 0) {

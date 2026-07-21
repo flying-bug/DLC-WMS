@@ -71,12 +71,12 @@ function TransferHistoryPage() {
   }, [filters]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadLookups();
   }, [loadLookups]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadSlips();
   }, [loadSlips]);
 

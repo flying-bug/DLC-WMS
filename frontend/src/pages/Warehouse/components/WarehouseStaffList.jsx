@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/set-state-in-effect */
+ 
 import { useState, useEffect } from 'react';
 import warehouseStaffApi from '../../../api/warehouseStaffApi';
 import AssignStaffModal from './AssignStaffModal';
@@ -65,7 +65,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
 
     useEffect(() => {
         fetchStaffs(0);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, [warehouseId, showInactive, roleId, search]);
 
     const handleRevoke = async (userId) => {

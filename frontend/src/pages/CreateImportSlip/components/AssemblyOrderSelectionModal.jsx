@@ -48,7 +48,7 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
 
     useEffect(() => {
         if (isOpen) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+             
             loadOrders();
         } else {
             setSelectedOrderId(null);

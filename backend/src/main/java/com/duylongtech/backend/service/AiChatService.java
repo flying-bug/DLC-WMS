@@ -254,7 +254,7 @@ public class AiChatService {
 
     private AiChatResponse answerRepairSearch(String message) {
         String keyword = extractSearchKeyword(message);
-        Page<Repair> repairs = repairRepository.searchRepairTickets(blankToNull(keyword), null, null, null, PageRequest.of(0, 8));
+        Page<Repair> repairs = repairRepository.searchRepairs(blankToNull(keyword), null, PageRequest.of(0, 8));
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu sửa chữa");
         if (!keyword.isBlank()) answer.append(" theo từ khóa \"").append(keyword).append("\"");
         answer.append(". Tìm thấy ").append(repairs.getTotalElements()).append(" phiếu.");

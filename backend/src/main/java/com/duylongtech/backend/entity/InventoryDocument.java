@@ -38,6 +38,9 @@ public class InventoryDocument {
     @Column(name = "reference_id")
     private Long referenceId;
 
+    @Column(name = "reference_repair_id")
+    private Long referenceRepairId;
+
     @Column(name = "warehouse_id")
     private Long warehouseId;
 
@@ -79,6 +82,7 @@ public class InventoryDocument {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Builder.Default
     @OneToMany(mappedBy = "inventoryDocument", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InventoryDocumentLine> lines = new ArrayList<>();
 

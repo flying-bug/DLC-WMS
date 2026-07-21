@@ -42,7 +42,7 @@ public class RepairTicketService {
     public Page<RepairTicketResponse> getRepairTickets(String keyword, String status, LocalDate fromDate,
                                                        LocalDate toDate, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1));
-        return repairRepository.searchRepairTickets(trimToNull(keyword), normalizeStatus(status), fromDate, toDate, pageable)
+        return repairRepository.searchRepairs(trimToNull(keyword), normalizeStatus(status), pageable)
                 .map(this::toResponse);
     }
 

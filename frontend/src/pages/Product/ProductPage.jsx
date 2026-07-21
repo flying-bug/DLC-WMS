@@ -36,6 +36,8 @@ const getPageContent = (response) => {
     return payload?.content ?? payload ?? [];
 };
 
+let globalSpecIdCounter = 1;
+
 const ProductPage = () => {
     const navigate = useNavigate();
     const [products, setProducts] = useState([]);
@@ -353,21 +355,23 @@ const ProductPage = () => {
     };
 
     const parseSpecsToList = (jsonStr) => {
-        if (!jsonStr) return [{ id: Date.now(), key: '', value: '' }];
+        if (!jsonStr) return [{ id: globalSpecIdCounter++, key: '', value: '' }];
         try {
             const obj = JSON.parse(jsonStr);
             if (typeof obj === 'object' && obj !== null) {
                 const entries = Object.entries(obj);
                 if (entries.length > 0) {
-                    return entries.map(([key, value], index) => ({
-                        id: Date.now() + index,
+                    return entries.map(([key, value]) => ({
+                        id: globalSpecIdCounter++,
                         key,
                         value: String(value)
                     }));
                 }
             }
-        } catch (e) {}
-        return [{ id: Date.now(), key: '', value: '' }];
+        } catch (e) {
+            console.error('Lỗi parse specs:', e);
+        }
+        return [{ id: globalSpecIdCounter++, key: '', value: '' }];
     };
 
     const buildSpecsJsonFromList = (list) => {
@@ -381,13 +385,13 @@ const ProductPage = () => {
     };
 
     const handleAddSpecRow = () => {
-        setSpecList(prev => [...prev, { id: Date.now(), key: '', value: '' }]);
+        setSpecList(prev => [...prev, { id: globalSpecIdCounter++, key: '', value: '' }]);
     };
 
     const handleRemoveSpecRow = (id) => {
         setSpecList(prev => {
             const filtered = prev.filter(item => item.id !== id);
-            return filtered.length > 0 ? filtered : [{ id: Date.now(), key: '', value: '' }];
+            return filtered.length > 0 ? filtered : [{ id: globalSpecIdCounter++, key: '', value: '' }];
         });
     };
 
@@ -403,7 +407,7 @@ const ProductPage = () => {
             variantName: product.productName || '',
             salePrice: Number(product.salePrice || 0)
         });
-        setSpecList([{ id: Date.now(), key: '', value: '' }]);
+        setSpecList([{ id: globalSpecIdCounter++, key: '', value: '' }]);
         setUseRawJson(false);
         setVariantError('');
         setShowVariantModal(true);
@@ -434,7 +438,7 @@ const ProductPage = () => {
             variantName: selectedProduct?.productName || '',
             salePrice: Number(selectedProduct?.salePrice || 0)
         });
-        setSpecList([{ id: Date.now(), key: '', value: '' }]);
+        setSpecList([{ id: globalSpecIdCounter++, key: '', value: '' }]);
         setUseRawJson(false);
         setVariantError('');
     };
