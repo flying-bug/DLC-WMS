@@ -37,20 +37,6 @@ function StocktakeDetailPage() {
     { name: 'Nguyễn Văn A', title: 'Thủ kho', represent: 'Kho chính' }
   ]);
 
-  useEffect(() => {
-    const loadWarehouses = async () => {
-      try {
-        const response = await stocktakeApi.getWarehouses();
-        const data = response?.data?.data?.content || response?.data?.data || response?.data || [];
-        setWarehouses(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error('Failed to load warehouses', err);
-      }
-    };
-    loadWarehouses();
-    fetchStockData(formData.warehouseId);
-  }, []);
-
   const fetchStockData = async (selectedWhId) => {
     setLoadingStock(true);
     try {
@@ -91,6 +77,20 @@ function StocktakeDetailPage() {
       setLoadingStock(false);
     }
   };
+
+  useEffect(() => {
+    const loadWarehouses = async () => {
+      try {
+        const response = await stocktakeApi.getWarehouses();
+        const data = response?.data?.data?.content || response?.data?.data || response?.data || [];
+        setWarehouses(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to load warehouses', err);
+      }
+    };
+    loadWarehouses();
+    fetchStockData(formData.warehouseId);
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
