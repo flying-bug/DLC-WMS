@@ -64,6 +64,8 @@ const ProductPage = () => {
     const [variantForm, setVariantForm] = useState(defaultVariantData);
     const [variantError, setVariantError] = useState('');
     const [loadingVariants, setLoadingVariants] = useState(false);
+    const [specList, setSpecList] = useState([{ id: 1, key: '', value: '' }]);
+    const [useRawJson, setUseRawJson] = useState(false);
 
     const [outOfStockCount, setOutOfStockCount] = useState(0);
     const [lowStockCount, setLowStockCount] = useState(0);
@@ -350,6 +352,49 @@ const ProductPage = () => {
         }
     };
 
+    const parseSpecsToList = (jsonStr) => {
+        if (!jsonStr) return [{ id: Date.now(), key: '', value: '' }];
+        try {
+            const obj = JSON.parse(jsonStr);
+            if (typeof obj === 'object' && obj !== null) {
+                const entries = Object.entries(obj);
+                if (entries.length > 0) {
+                    return entries.map(([key, value], index) => ({
+                        id: Date.now() + index,
+                        key,
+                        value: String(value)
+                    }));
+                }
+            }
+        } catch (e) {}
+        return [{ id: Date.now(), key: '', value: '' }];
+    };
+
+    const buildSpecsJsonFromList = (list) => {
+        const result = {};
+        list.forEach(item => {
+            if (item.key && item.key.trim()) {
+                result[item.key.trim()] = item.value ? item.value.trim() : '';
+            }
+        });
+        return Object.keys(result).length > 0 ? JSON.stringify(result) : '';
+    };
+
+    const handleAddSpecRow = () => {
+        setSpecList(prev => [...prev, { id: Date.now(), key: '', value: '' }]);
+    };
+
+    const handleRemoveSpecRow = (id) => {
+        setSpecList(prev => {
+            const filtered = prev.filter(item => item.id !== id);
+            return filtered.length > 0 ? filtered : [{ id: Date.now(), key: '', value: '' }];
+        });
+    };
+
+    const handleSpecChange = (id, field, value) => {
+        setSpecList(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+    };
+
     const openVariantModal = async (product) => {
         setSelectedProduct(product);
         setVariantForm({
@@ -358,6 +403,8 @@ const ProductPage = () => {
             variantName: product.productName || '',
             salePrice: Number(product.salePrice || 0)
         });
+        setSpecList([{ id: Date.now(), key: '', value: '' }]);
+        setUseRawJson(false);
         setVariantError('');
         setShowVariantModal(true);
         setOpenDropdownId(null);
@@ -375,6 +422,8 @@ const ProductPage = () => {
             specsJson: variant.specsJson || '',
             active: variant.active !== false
         });
+        setSpecList(parseSpecsToList(variant.specsJson));
+        setUseRawJson(false);
         setVariantError('');
     };
 
@@ -385,6 +434,8 @@ const ProductPage = () => {
             variantName: selectedProduct?.productName || '',
             salePrice: Number(selectedProduct?.salePrice || 0)
         });
+        setSpecList([{ id: Date.now(), key: '', value: '' }]);
+        setUseRawJson(false);
         setVariantError('');
     };
 
@@ -404,13 +455,17 @@ const ProductPage = () => {
             return;
         }
         try {
+            const specsJsonPayload = useRawJson
+                ? (variantForm.specsJson?.trim() || '')
+                : buildSpecsJsonFromList(specList);
+
             const payload = {
                 sku: variantForm.sku.trim().toUpperCase(),
                 variantName: variantForm.variantName.trim(),
                 costPrice: Number(variantForm.costPrice || 0),
                 salePrice: Number(variantForm.salePrice || 0),
                 manufacturerPartNumber: variantForm.manufacturerPartNumber?.trim() || '',
-                specsJson: variantForm.specsJson?.trim() || '',
+                specsJson: specsJsonPayload,
                 active: variantForm.active
             };
             if (variantForm.id) {
@@ -955,15 +1010,70 @@ const ProductPage = () => {
                                 </div>
 
                                 <div className="misa-form-group">
-                                    <label>Thông số JSON</label>
-                                    <textarea
-                                        value={variantForm.specsJson}
-                                        onChange={(event) => setVariantForm({ ...variantForm, specsJson: event.target.value })}
-                                        rows="3"
-                                        className="misa-input"
-                                        placeholder='{"cpu":"i5","ram":"8GB","ssd":"256GB"}'
-                                        style={{ fontFamily: 'inherit', resize: 'vertical' }}
-                                    />
+                                    <div className={styles.specHeader}>
+                                        <label style={{ margin: 0 }}>Thông số kỹ thuật sản phẩm</label>
+                                        <button
+                                            type="button"
+                                            className={styles.toggleJsonBtn}
+                                            onClick={() => {
+                                                if (!useRawJson) {
+                                                    setVariantForm(prev => ({ ...prev, specsJson: buildSpecsJsonFromList(specList) }));
+                                                } else {
+                                                    setSpecList(parseSpecsToList(variantForm.specsJson));
+                                                }
+                                                setUseRawJson(!useRawJson);
+                                            }}
+                                        >
+                                            {useRawJson ? 'Chuyển sang dạng Bảng nhập' : 'Chuyển sang nhập JSON trực tiếp'}
+                                        </button>
+                                    </div>
+
+                                    {useRawJson ? (
+                                        <textarea
+                                            value={variantForm.specsJson}
+                                            onChange={(event) => setVariantForm({ ...variantForm, specsJson: event.target.value })}
+                                            rows="3"
+                                            className="misa-input"
+                                            placeholder='{"cpu":"i5","ram":"8GB","ssd":"256GB"}'
+                                            style={{ fontFamily: 'inherit', resize: 'vertical' }}
+                                        />
+                                    ) : (
+                                        <div className={styles.specRowContainer}>
+                                            {specList.map((item) => (
+                                                <div key={item.id} className={styles.specRow}>
+                                                    <input
+                                                        type="text"
+                                                        className={`misa-input ${styles.specKeyInput}`}
+                                                        placeholder="Tên thông số (Ví dụ: RAM, CPU, DPI...)"
+                                                        value={item.key}
+                                                        onChange={(e) => handleSpecChange(item.id, 'key', e.target.value)}
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        className={`misa-input ${styles.specValueInput}`}
+                                                        placeholder="Giá trị (Ví dụ: 16GB, Core i7, 16000 DPI...)"
+                                                        value={item.value}
+                                                        onChange={(e) => handleSpecChange(item.id, 'value', e.target.value)}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className={styles.removeSpecBtn}
+                                                        onClick={() => handleRemoveSpecRow(item.id)}
+                                                        title="Xóa dòng"
+                                                    >
+                                                        <i className="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <button
+                                                type="button"
+                                                className={styles.addSpecBtn}
+                                                onClick={handleAddSpecRow}
+                                            >
+                                                <i className="fas fa-plus" style={{ marginRight: 6 }}></i> Thêm dòng thông số
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginBottom: 16 }}>

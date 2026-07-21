@@ -8,7 +8,7 @@ import styles from './CreateTransferSlipPage.module.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date().toLocaleDateString('sv-SE');
 const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
   ? `${item.productName} - ${item.variantName}`
   : item?.productName || '';

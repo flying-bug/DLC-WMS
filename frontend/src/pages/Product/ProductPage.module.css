@@ -734,3 +734,68 @@
         width: 100%;
     }
 }
+
+.specHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.specRow {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.specKeyInput {
+    flex: 1;
+}
+
+.specValueInput {
+    flex: 1.5;
+}
+
+.removeSpecBtn {
+    background: none;
+    border: none;
+    color: var(--color-danger-strong, #ef4444);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.removeSpecBtn:hover {
+    background: var(--color-danger-bg-soft, #fee2e2);
+}
+
+.addSpecBtn {
+    background: none;
+    border: 1px dashed var(--color-primary, #2563eb);
+    color: var(--color-primary, #2563eb);
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+.addSpecBtn:hover {
+    background: var(--color-bg-hover, #f1f5f9);
+}
+
+.toggleJsonBtn {
+    background: none;
+    border: none;
+    color: var(--color-primary, #2563eb);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+}
+

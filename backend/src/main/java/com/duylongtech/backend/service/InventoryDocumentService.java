@@ -226,7 +226,12 @@ public class InventoryDocumentService {
             }
 
             if (remainingQty.compareTo(ZERO) > 0) {
-                throw new BusinessException("Không đủ cost layer FIFO cho sản phẩm " + line.getVariantId());
+                ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
+                BigDecimal fallbackCost = (balance != null && balance.getAverageCost() != null && balance.getAverageCost().compareTo(ZERO) > 0)
+                        ? balance.getAverageCost()
+                        : (variant != null && variant.getCostPrice() != null ? variant.getCostPrice() : ZERO);
+                totalCost = totalCost.add(remainingQty.multiply(fallbackCost));
+                remainingQty = ZERO;
             }
 
             BigDecimal avgUnitCost = totalCost.divide(qtyToExport, 4, RoundingMode.HALF_UP);

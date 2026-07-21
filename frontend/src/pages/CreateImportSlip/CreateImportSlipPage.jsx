@@ -13,11 +13,12 @@ import Toast from '../../components/ui/Toast/Toast';
 import ManageSerialModal from './ManageSerialModal';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Select from 'react-select';
+import axiosClient from '../../api/axiosClient';
 import styles from './CreateImportSlipPage.module.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date().toLocaleDateString('sv-SE');
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
   ? `${item.productName} - ${item.variantName}`
@@ -159,6 +160,16 @@ function CreateImportSlipPage() {
         const data = pageContent(unwrap(userRes.value));
         setUsers(data);
       }
+      try {
+        const meRes = await axiosClient.get('/users/me');
+        const me = meRes.data?.data || meRes.data;
+        if (me) {
+          const defaultName = me.fullName || me.username || '';
+          setForm(prev => ({ ...prev, purchaser: prev.purchaser || defaultName }));
+        }
+      } catch (err) {
+        console.error('Failed to load me profile', err);
+      }
     };
     loadLookups();
   }, []);
@@ -236,7 +247,7 @@ function CreateImportSlipPage() {
     })),
     issuePurpose: importType,
     recipientName: form.deliverer,
-    salespersonId: form.purchaser ? Number(form.purchaser) : null,
+    salespersonId: (!isNaN(Number(form.purchaser)) && String(form.purchaser).trim() !== '') ? Number(form.purchaser) : null,
     referenceType: importType === 'PRODUCTION' && form.assemblyOrderId ? 'ASSEMBLY_ORDER' : (form.referenceType || undefined),
     referenceId: importType === 'PRODUCTION' && form.assemblyOrderId ? Number(form.assemblyOrderId) : (form.referenceId || undefined),
   });
@@ -247,9 +258,16 @@ function CreateImportSlipPage() {
   const handleSavePartner = async (formData) => {
     try {
       const res = await importApi.createSupplier(formData);
-      const newSupplier = res.data?.data || res.data;
-      setSuppliers(prev => [...prev, newSupplier]);
-      setForm(prev => ({ ...prev, partnerId: newSupplier.id }));
+      const newSupplier = unwrap(res);
+      if (newSupplier?.id) {
+        setSuppliers(prev => [...prev, newSupplier]);
+        handleFormChange('partnerId', newSupplier.id);
+      } else {
+        const supRes = await importApi.getSuppliers({ size: 1000 });
+        const list = pageContent(unwrap(supRes));
+        setSuppliers(list);
+        if (list.length > 0) handleFormChange('partnerId', list[list.length - 1].id);
+      }
       setShowPartnerModal(false);
       showToast('success', 'Thêm mới nhà cung cấp thành công!');
     } catch (err) {
@@ -257,16 +275,24 @@ function CreateImportSlipPage() {
     }
   };
 
-  const handleSaveCustomer = async (formData) => {
+  const handleSaveCustomer = async (isEdit, isContinue) => {
     try {
-      const res = await customerApi.createCustomer(formData);
-      const newCustomer = res.data?.data || res.data;
-      setCustomers(prev => [...prev, newCustomer]);
-      setForm(prev => ({ ...prev, customerId: newCustomer.id }));
-      setShowCustomerDrawer(false);
+      const res = await customerApi.getCustomers({ size: 1000 });
+      const data = pageContent(unwrap(res));
+      setCustomers(data);
+      if (data && data.length > 0) {
+        const newlyAdded = data[data.length - 1];
+        if (newlyAdded) {
+          handleFormChange('customerId', newlyAdded.id);
+        }
+      }
       showToast('success', 'Thêm mới khách hàng thành công!');
     } catch (err) {
-      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Có lỗi xảy ra khi tạo khách hàng');
+      console.error(err);
+    } finally {
+      if (!isContinue) {
+        setShowCustomerDrawer(false);
+      }
     }
   };
 
@@ -349,15 +375,15 @@ function CreateImportSlipPage() {
 
               {importType === 'PURCHASE' && (
                 <div className="misa-form-row">
-                  <div className="misa-form-group" style={{ flex: '0 0 35%' }}>
+                  <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
                     <label className="misa-label">Mã NCC <span className="required">*</span></label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <div style={{ flex: 1 }}>
                         <Select
-                          options={suppliers.map(s => ({ value: s.id, label: s.code }))}
-                          value={suppliers.find(s => String(s.id) === String(form.partnerId)) ? { value: form.partnerId, label: suppliers.find(s => String(s.id) === String(form.partnerId)).code } : null}
+                          options={suppliers.map(s => ({ value: s.id, label: s.code || `NCC#${s.id}` }))}
+                          value={suppliers.find(s => String(s.id) === String(form.partnerId)) ? { value: form.partnerId, label: suppliers.find(s => String(s.id) === String(form.partnerId)).code || `NCC#${form.partnerId}` } : null}
                           onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
-                          placeholder="Chọn NCC"
+                          placeholder="Chọn Mã NCC..."
                           isClearable
                           styles={customSelectStyles}
                         />
@@ -367,9 +393,16 @@ function CreateImportSlipPage() {
                       </button>
                     </div>
                   </div>
-                  <div className="misa-form-group" style={{ flex: '0 0 65%' }}>
+                  <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
                     <label className="misa-label">Tên NCC</label>
-                    <input type="text" className="misa-input" readOnly value={suppliers.find(s => String(s.id) === String(form.partnerId))?.name || ''} style={{ backgroundColor: '#f3f4f6' }} />
+                    <Select
+                      options={suppliers.map(s => ({ value: s.id, label: s.name || '' }))}
+                      value={suppliers.find(s => String(s.id) === String(form.partnerId)) ? { value: form.partnerId, label: suppliers.find(s => String(s.id) === String(form.partnerId)).name || '' } : null}
+                      onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
+                      placeholder="Chọn Tên NCC..."
+                      isClearable
+                      styles={customSelectStyles}
+                    />
                   </div>
                 </div>
               )}
@@ -403,15 +436,15 @@ function CreateImportSlipPage() {
               {importType === 'RETURN' && (
                 <>
                   <div className="misa-form-row">
-                    <div className="misa-form-group" style={{ flex: '0 0 35%' }}>
+                    <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
                       <label className="misa-label">Mã KH <span className="required">*</span></label>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <div style={{ flex: 1 }}>
                           <Select
-                            options={customers.map(c => ({ value: c.id, label: c.code || c.phone }))}
-                            value={customers.find(c => String(c.id) === String(form.customerId)) ? { value: form.customerId, label: customers.find(c => String(c.id) === String(form.customerId)).code || customers.find(c => String(c.id) === String(form.customerId)).phone } : null}
+                            options={customers.map(c => ({ value: c.id, label: c.code || `KH#${c.id}` }))}
+                            value={customers.find(c => String(c.id) === String(form.customerId)) ? { value: form.customerId, label: customers.find(c => String(c.id) === String(form.customerId)).code || `KH#${form.customerId}` } : null}
                             onChange={(selected) => handleFormChange('customerId', selected ? selected.value : '')}
-                            placeholder="Chọn KH"
+                            placeholder="Chọn Mã KH..."
                             isClearable
                             styles={customSelectStyles}
                           />
@@ -421,9 +454,16 @@ function CreateImportSlipPage() {
                         </button>
                       </div>
                     </div>
-                    <div className="misa-form-group" style={{ flex: '0 0 65%' }}>
+                    <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
                       <label className="misa-label">Tên Khách hàng</label>
-                      <input type="text" className="misa-input" readOnly value={customers.find(c => String(c.id) === String(form.customerId))?.name || ''} style={{ backgroundColor: '#f3f4f6' }} />
+                      <Select
+                        options={customers.map(c => ({ value: c.id, label: c.name || '' }))}
+                        value={customers.find(c => String(c.id) === String(form.customerId)) ? { value: form.customerId, label: customers.find(c => String(c.id) === String(form.customerId)).name || '' } : null}
+                        onChange={(selected) => handleFormChange('customerId', selected ? selected.value : '')}
+                        placeholder="Chọn Tên KH..."
+                        isClearable
+                        styles={customSelectStyles}
+                      />
                     </div>
                   </div>
                   <div className="misa-form-row" style={{ marginTop: '12px' }}>
@@ -455,15 +495,28 @@ function CreateImportSlipPage() {
                 {(importType === 'PURCHASE' || importType === 'PRODUCTION') && (
                   <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                     <label className="misa-label">Người giao hàng</label>
-                    <input type="text" className="misa-input" value={form.deliverer} onChange={(e) => handleFormChange('deliverer', e.target.value)} />
+                    <input 
+                      type="text" 
+                      className="misa-input" 
+                      value={form.deliverer || ''} 
+                      onChange={(e) => handleFormChange('deliverer', e.target.value)} 
+                      placeholder="Nhập người giao hàng..."
+                    />
                   </div>
                 )}
                 <div className="misa-form-group" style={{ flex: importType === 'RETURN' ? '1' : '0 0 50%' }}>
-                  <label className="misa-label">Nhân viên mua hàng</label>
-                  <select className="misa-input" value={form.purchaser || ''} onChange={(e) => handleFormChange('purchaser', e.target.value)}>
-                    <option value="">Chọn nhân viên</option>
-                    {users.map(user => <option key={user.id} value={user.id}>{user.fullName || user.username}</option>)}
-                  </select>
+                  <label className="misa-label">
+                    {importType === 'PURCHASE' && 'Nhân viên mua hàng'}
+                    {importType === 'PRODUCTION' && 'Nhân viên phụ trách'}
+                    {importType === 'RETURN' && 'Nhân viên nhận hàng'}
+                  </label>
+                  <input 
+                    type="text" 
+                    className="misa-input" 
+                    value={form.purchaser || ''} 
+                    onChange={(e) => handleFormChange('purchaser', e.target.value)} 
+                    placeholder="Nhập tên nhân viên..."
+                  />
                 </div>
               </div>
 
