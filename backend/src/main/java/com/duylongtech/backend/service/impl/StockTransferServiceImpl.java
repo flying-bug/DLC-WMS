@@ -6,6 +6,10 @@ import com.duylongtech.backend.entity.* ;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.* ;
 import com.duylongtech.backend.service.StockTransferService;
+import com.duylongtech.backend.service.InventoryDocumentService;
+import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
+import com.duylongtech.backend.dto.request.InventoryDocumentLineRequest;
+import com.duylongtech.backend.dto.response.InventoryDocumentResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +36,9 @@ public class StockTransferServiceImpl implements StockTransferService {
 
     @Autowired
     private InventoryBalanceRepository inventoryBalanceRepository;
+
+    @Autowired
+    private InventoryDocumentService inventoryDocumentService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -105,7 +112,7 @@ public class StockTransferServiceImpl implements StockTransferService {
         stockTransfer = stockTransferRepository.save(stockTransfer);
 
         if ("POSTED".equals(stockTransfer.getStatus())) {
-            processInventoryForTransfer(stockTransfer);
+            processInventoryForTransfer(stockTransfer, userId);
         }
 
         return mapToResponseDTO(stockTransfer);
@@ -160,7 +167,7 @@ public class StockTransferServiceImpl implements StockTransferService {
         stockTransfer = stockTransferRepository.save(stockTransfer);
 
         if ("POSTED".equals(stockTransfer.getStatus())) {
-            processInventoryForTransfer(stockTransfer);
+            processInventoryForTransfer(stockTransfer, userId);
         }
 
         return mapToResponseDTO(stockTransfer);
@@ -172,54 +179,7 @@ public class StockTransferServiceImpl implements StockTransferService {
         StockTransfer stockTransfer = stockTransferRepository.findById(transferId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.INV_DOC_NOT_FOUND));
 
-        // INV11 active stocktake check would be here if there was a Stocktake entity.
-        // Assuming we check it via some logic, omitted for simplicity if not provided.
-
-        List<SerialNumber> serials = serialNumberRepository.findBySerialNumberIn(dispatchDTO.getSerialNumbers());
-
-        if (serials.size() != dispatchDTO.getSerialNumbers().size()) {
-             throw new BusinessException(SystemMessage.INV_SERIAL_MISSING);
-        }
-
-        for (SerialNumber serial : serials) {
-            if (!serial.getWarehouseId().equals(stockTransfer.getFromWarehouseId())) {
-                throw new BusinessException(SystemMessage.INV_SERIAL_NOT_FOUND);
-            }
-            if (!"AVAILABLE".equals(serial.getStatus())) {
-                throw new BusinessException(SystemMessage.INV_INVALID_STATE);
-            }
-
-            // Mark as IN_TRANSIT
-            serial.setStatus("IN_TRANSIT");
-            serialNumberRepository.save(serial);
-
-            // Deduct stock from InventoryBalance
-            InventoryBalance balance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
-                    stockTransfer.getFromWarehouseId(), serial.getVariantId(), "GOOD"
-            ).orElse(null);
-
-            if (balance == null) {
-                List<InventoryBalance> balances = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
-                        stockTransfer.getFromWarehouseId(), serial.getVariantId()
-                );
-                balance = balances.stream()
-                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
-                        .findFirst()
-                        .orElse(balances.isEmpty() ? null : balances.get(0));
-            }
-
-            if (balance == null) {
-                throw new BusinessException(SystemMessage.INV_NOT_ENOUGH_STOCK);
-            }
-
-            if (balance.getQuantityOnHand().compareTo(BigDecimal.ONE) < 0) {
-                throw new BusinessException(SystemMessage.INV_NOT_ENOUGH_STOCK);
-            }
-
-            balance.setQuantityOnHand(balance.getQuantityOnHand().subtract(BigDecimal.ONE));
-            balance.setUpdatedAt(java.time.LocalDateTime.now());
-            inventoryBalanceRepository.save(balance);
-        }
+        createAndPostExport(stockTransfer, userId);
 
         stockTransfer.setStatus("IN_TRANSIT");
         stockTransfer = stockTransferRepository.save(stockTransfer);
@@ -237,53 +197,7 @@ public class StockTransferServiceImpl implements StockTransferService {
             throw new BusinessException(SystemMessage.INV_INVALID_STATE);
         }
 
-        List<SerialNumber> serials = serialNumberRepository.findBySerialNumberIn(receiptDTO.getSerialNumbers());
-
-        final Long destWarehouseId = stockTransfer.getToWarehouseId();
-
-        for (SerialNumber serial : serials) {
-            if (!"IN_TRANSIT".equals(serial.getStatus())) {
-                // Wrong item
-                throw new BusinessException(SystemMessage.INV_SERIAL_NOT_FOUND);
-            }
-
-            serial.setStatus("AVAILABLE");
-            serial.setWarehouseId(destWarehouseId);
-            serialNumberRepository.save(serial);
-
-            final Long sVarId = serial.getVariantId();
-
-            // Add stock to destination
-            InventoryBalance balance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
-                    destWarehouseId, sVarId, "GOOD"
-            ).orElse(null);
-
-            if (balance == null) {
-                List<InventoryBalance> balances = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
-                        destWarehouseId, sVarId
-                );
-                balance = balances.stream()
-                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
-                        .findFirst()
-                        .orElse(balances.isEmpty() ? null : balances.get(0));
-            }
-
-            if (balance == null) {
-                InventoryBalance newBalance = new InventoryBalance();
-                newBalance.setWarehouseId(destWarehouseId);
-                newBalance.setVariantId(sVarId);
-                newBalance.setStockStatus("GOOD");
-                newBalance.setQuantityOnHand(BigDecimal.ZERO);
-                newBalance.setQuantityReserved(BigDecimal.ZERO);
-                newBalance.setAverageCost(BigDecimal.ZERO);
-                newBalance.setUpdatedAt(java.time.LocalDateTime.now());
-                balance = newBalance;
-            }
-
-            balance.setQuantityOnHand(balance.getQuantityOnHand().add(BigDecimal.ONE));
-            balance.setUpdatedAt(java.time.LocalDateTime.now());
-            inventoryBalanceRepository.save(balance);
-        }
+        createAndPostImport(stockTransfer, userId);
 
         stockTransfer.setStatus("POSTED");
         stockTransfer = stockTransferRepository.save(stockTransfer);
@@ -291,16 +205,26 @@ public class StockTransferServiceImpl implements StockTransferService {
         return mapToResponseDTO(stockTransfer);
     }
 
-    private void processInventoryForTransfer(StockTransfer stockTransfer) {
-        Long fromWhId = stockTransfer.getFromWarehouseId();
-        Long toWhId = stockTransfer.getToWarehouseId();
+    private void processInventoryForTransfer(StockTransfer stockTransfer, Long userId) {
+        createAndPostExport(stockTransfer, userId);
+        createAndPostImport(stockTransfer, userId);
+    }
+
+    private void createAndPostExport(StockTransfer stockTransfer, Long userId) {
+        InventoryDocumentRequest exportReq = new InventoryDocumentRequest();
+        exportReq.setWarehouseId(stockTransfer.getFromWarehouseId());
+        exportReq.setDocDate(java.time.LocalDate.now());
+        exportReq.setIssuePurpose(InventoryDocumentService.ISSUE_PURPOSE_TRANSFER_OUT);
+        exportReq.setReferenceType("STOCK_TRANSFER");
+        exportReq.setReferenceId(stockTransfer.getId());
+        exportReq.setCreatedBy(userId);
+        exportReq.setNote("Tự động xuất kho cho phiếu chuyển kho " + stockTransfer.getTransferCode());
+        exportReq.setLines(new ArrayList<>());
 
         for (StockTransferLine line : stockTransfer.getLines()) {
             BigDecimal qty = line.getQuantity();
             if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-            Long variantId = line.getVariantId();
-            
             List<String> serials = new ArrayList<>();
             if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isEmpty()) {
                 try {
@@ -309,72 +233,64 @@ public class StockTransferServiceImpl implements StockTransferService {
             }
 
             if (!serials.isEmpty()) {
-                if (serials.size() != qty.intValue()) {
-                    throw new BusinessException("Số lượng serial không khớp với số lượng hàng cần chuyển.");
-                }
                 for (String sCode : serials) {
                     SerialNumber serial = serialNumberRepository.findBySerialNumber(sCode)
                             .orElseThrow(() -> new BusinessException("Không tìm thấy Serial: " + sCode));
-                    if (!serial.getWarehouseId().equals(fromWhId)) {
-                        throw new BusinessException("Serial " + sCode + " không nằm trong kho xuất.");
-                    }
-                    if (!"AVAILABLE".equals(serial.getStatus())) {
-                        throw new BusinessException("Serial " + sCode + " không ở trạng thái AVAILABLE.");
-                    }
-                    serial.setWarehouseId(toWhId);
-                    serialNumberRepository.save(serial);
+                    
+                    InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
+                    lineReq.setVariantId(line.getVariantId());
+                    lineReq.setQuantityOut(BigDecimal.ONE);
+                    lineReq.setSerialNumberId(serial.getId());
+                    lineReq.setUnitCost(line.getUnitCost());
+                    exportReq.getLines().add(lineReq);
                 }
+            } else {
+                InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
+                lineReq.setVariantId(line.getVariantId());
+                lineReq.setQuantityOut(qty);
+                lineReq.setUnitCost(line.getUnitCost());
+                exportReq.getLines().add(lineReq);
             }
-
-            // Deduct from source
-            InventoryBalance sourceBalance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(fromWhId, variantId, "GOOD")
-                    .orElse(null);
-
-            if (sourceBalance == null) {
-                List<InventoryBalance> balances = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(fromWhId, variantId);
-                sourceBalance = balances.stream()
-                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
-                        .findFirst()
-                        .orElse(balances.isEmpty() ? null : balances.get(0));
-            }
-
-            if (sourceBalance == null) {
-                throw new BusinessException("Kho xuất không đủ tồn kho mặt hàng này.");
-            }
-            if (sourceBalance.getQuantityOnHand().compareTo(qty) < 0) {
-                throw new BusinessException("Kho xuất không đủ tồn kho mặt hàng này.");
-            }
-            sourceBalance.setQuantityOnHand(sourceBalance.getQuantityOnHand().subtract(qty));
-            sourceBalance.setUpdatedAt(java.time.LocalDateTime.now());
-            inventoryBalanceRepository.save(sourceBalance);
-
-            // Add to destination
-            InventoryBalance destBalance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(toWhId, variantId, "GOOD")
-                    .orElse(null);
-
-            if (destBalance == null) {
-                List<InventoryBalance> balances = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(toWhId, variantId);
-                destBalance = balances.stream()
-                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
-                        .findFirst()
-                        .orElse(balances.isEmpty() ? null : balances.get(0));
-            }
-
-            if (destBalance == null) {
-                InventoryBalance newBalance = new InventoryBalance();
-                newBalance.setWarehouseId(toWhId);
-                newBalance.setVariantId(variantId);
-                newBalance.setStockStatus("GOOD");
-                newBalance.setQuantityOnHand(BigDecimal.ZERO);
-                newBalance.setQuantityReserved(BigDecimal.ZERO);
-                newBalance.setAverageCost(BigDecimal.ZERO);
-                newBalance.setUpdatedAt(java.time.LocalDateTime.now());
-                destBalance = newBalance;
-            }
-            destBalance.setQuantityOnHand(destBalance.getQuantityOnHand().add(qty));
-            destBalance.setUpdatedAt(java.time.LocalDateTime.now());
-            inventoryBalanceRepository.save(destBalance);
         }
+        
+        InventoryDocumentResponse created = inventoryDocumentService.createExport(exportReq);
+        inventoryDocumentService.postExport(created.getId());
+    }
+
+    private void createAndPostImport(StockTransfer stockTransfer, Long userId) {
+        InventoryDocumentRequest importReq = new InventoryDocumentRequest();
+        importReq.setWarehouseId(stockTransfer.getToWarehouseId());
+        importReq.setDocDate(java.time.LocalDate.now());
+        importReq.setIssuePurpose(InventoryDocumentService.ISSUE_PURPOSE_TRANSFER_IN);
+        importReq.setReferenceType("STOCK_TRANSFER");
+        importReq.setReferenceId(stockTransfer.getId());
+        importReq.setCreatedBy(userId);
+        importReq.setNote("Tự động nhập kho cho phiếu chuyển kho " + stockTransfer.getTransferCode());
+        importReq.setLines(new ArrayList<>());
+
+        for (StockTransferLine line : stockTransfer.getLines()) {
+            BigDecimal qty = line.getQuantity();
+            if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            List<String> serials = new ArrayList<>();
+            if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isEmpty()) {
+                try {
+                    serials = objectMapper.readValue(line.getSerialNumbersText(), new TypeReference<List<String>>(){});
+                } catch (Exception e) {}
+            }
+
+            InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
+            lineReq.setVariantId(line.getVariantId());
+            lineReq.setQuantityIn(qty);
+            lineReq.setUnitCost(line.getUnitCost());
+            if (!serials.isEmpty()) {
+                lineReq.setSerialNumbers(serials);
+            }
+            importReq.getLines().add(lineReq);
+        }
+        
+        InventoryDocumentResponse created = inventoryDocumentService.createImport(importReq);
+        inventoryDocumentService.postImport(created.getId());
     }
 
     @Override
