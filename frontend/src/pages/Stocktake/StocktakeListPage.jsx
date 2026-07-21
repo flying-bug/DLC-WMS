@@ -79,12 +79,12 @@ function StocktakeListPage() {
   }, [filters]);
 
   useEffect(() => {
-    // eslint-disable-next-line
+     
     loadLookups();
   }, [loadLookups]);
 
   useEffect(() => {
-    // eslint-disable-next-line
+     
     loadStocktakes();
   }, [loadStocktakes]);
 

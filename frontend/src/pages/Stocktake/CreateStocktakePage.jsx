@@ -94,48 +94,6 @@ function CreateStocktakePage() {
     fetchStockData(formData.warehouseId);
   }, []);
 
-  const fetchStockData = async (selectedWhId) => {
-    setLoadingStock(true);
-    try {
-      const response = await stocktakeApi.getProducts({ size: 1000 });
-      const data = response?.data?.data?.content || response?.data?.data || response?.data || [];
-      const productList = Array.isArray(data) ? data : [];
-
-      if (productList.length > 0) {
-        const formattedLines = productList.map((item, idx) => {
-          const bookQty = Number(item.stockQty || item.quantityOnHand || item.quantity || 10);
-          return {
-            id: item.id || idx + 1,
-            variantId: item.id,
-            itemCode: item.productCode || `VT00${idx + 1}`,
-            sku: item.sku || `SKU-${idx + 1}`,
-            itemName: item.productName ? `${item.productName} ${item.variantName ? `(${item.variantName})` : ''}` : item.name || `Sản phẩm ${idx + 1}`,
-            unit: item.unitName || 'Cái',
-            bookQty: bookQty,
-            countQty: bookQty,
-            diffQty: 0,
-            good100: bookQty,
-            bad: 0,
-            lost: 0,
-            action: 'Không xử lý'
-          };
-        });
-        setLines(formattedLines);
-      } else {
-        // Mock fallback if product list is empty
-        setLines([
-          { id: 1, itemCode: 'VT001', sku: 'SKU-BP-001', itemName: 'Bàn phím cơ Logitech K845', unit: 'Cái', bookQty: 15, countQty: 15, diffQty: 0, good100: 15, bad: 0, lost: 0, action: 'Không xử lý' },
-          { id: 2, itemCode: 'VT002', sku: 'SKU-CHUOT-002', itemName: 'Chuột máy tính Kingston', unit: 'Cái', bookQty: 20, countQty: 18, diffQty: -2, good100: 18, bad: 0, lost: 0, action: 'Xử lý chênh lệch' },
-          { id: 3, itemCode: 'VT003', sku: 'SKU-CPU-003', itemName: 'CPU Intel Core i7-12700K', unit: 'Cái', bookQty: 5, countQty: 6, diffQty: 1, good100: 6, bad: 0, lost: 0, action: 'Xử lý chênh lệch' }
-        ]);
-      }
-    } catch (err) {
-      console.error('Failed to load stock data', err);
-      showToast('error', 'Có lỗi khi tải danh sách hàng hóa.');
-    } finally {
-      setLoadingStock(false);
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

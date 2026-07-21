@@ -183,10 +183,10 @@ const ReportListPage = () => {
     // Auto-fetch data on switching to a report or changing filters
     useEffect(() => {
         if (viewMode === 'detail' && activeReport) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+             
             handleViewReport();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, [viewMode, activeReport, filters.warehouseId, filters.startDate, filters.endDate, filters.partnerType, filters.status, debouncedSearch]);
 
     // Format utility functions

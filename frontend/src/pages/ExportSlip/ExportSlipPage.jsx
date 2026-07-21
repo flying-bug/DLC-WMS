@@ -94,18 +94,18 @@ function ExportSlipPage() {
   }, [filters]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadLookups();
   }, [loadLookups]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadSlips();
   }, [loadSlips]);
 
   useEffect(() => {
     if (location.state?.toastMessage) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       showToast(location.state.toastType || 'success', location.state.toastMessage);
       navigate(location.pathname, { replace: true, state: {} });
     }

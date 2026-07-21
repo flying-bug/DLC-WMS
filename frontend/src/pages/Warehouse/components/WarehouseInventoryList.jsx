@@ -32,9 +32,9 @@ const WarehouseInventoryList = ({ warehouseId }) => {
     };
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         fetchInventory();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, [warehouseId]);
 
     // Lọc dữ liệu theo search query
@@ -60,7 +60,7 @@ const WarehouseInventoryList = ({ warehouseId }) => {
 
     // Reset trang hiện tại khi tìm kiếm thay đổi
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         setCurrentPage(1);
     }, [search]);
 
