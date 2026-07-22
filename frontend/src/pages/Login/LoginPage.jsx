@@ -28,12 +28,12 @@ function LoginPage() {
             }
         } catch (error) {
             console.error('Google Login failed:', error);
-            setErrorMsg(error.response?.data?.message || 'Đăng nhập bằng Google thất bại. Vui lòng thử lại!');
+            setErrorMsg(error.response?.data?.message || 'ÄÄƒng nháº­p báº±ng Google tháº¥t báº¡i. Vui lÃ²ng thá»­ láº¡i!');
         }
     };
 
     const handleGoogleError = () => {
-        setErrorMsg('Đăng nhập bằng Google thất bại!');
+        setErrorMsg('ÄÄƒng nháº­p báº±ng Google tháº¥t báº¡i!');
     };
 
     return (
@@ -45,7 +45,7 @@ function LoginPage() {
 
             <div className={styles.container}>
 
-                {/* ── Logo / brand mark ── */}
+                {/* â”€â”€ Logo / brand mark â”€â”€ */}
                 <div className={styles.brand}>
                     <div className={styles.logoBox} aria-hidden="true">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
@@ -60,12 +60,12 @@ function LoginPage() {
                     </div>
                 </div>
 
-                {/* ── Card ── */}
+                {/* â”€â”€ Card â”€â”€ */}
                 <div className={styles.card}>
                     {/* Card header */}
                     <div className={styles.cardHeader}>
-                        <h1 className={styles.title}>Đăng nhập</h1>
-                        <p className={styles.subtitle}>Chào mừng trở lại! Vui lòng nhập thông tin của bạn.</p>
+                        <h1 className={styles.title}>ÄÄƒng nháº­p</h1>
+                        <p className={styles.subtitle}>ChÃ o má»«ng trá»Ÿ láº¡i! Vui lÃ²ng nháº­p thÃ´ng tin cá»§a báº¡n.</p>
                     </div>
 
                     {errorMsg && (
@@ -79,7 +79,7 @@ function LoginPage() {
 
                     {/* Divider */}
                     <div className={styles.divider}>
-                        <span className={styles.dividerText}>hoặc tiếp tục với</span>
+                        <span className={styles.dividerText}>hoáº·c tiáº¿p tá»¥c vá»›i</span>
                     </div>
 
                     {/* Google button */}
@@ -95,17 +95,17 @@ function LoginPage() {
 
                     {/* Footer links */}
                     <div className={styles.cardFooter}>
-                        <a href="#" className={styles.footerLink}>Hỗ trợ</a>
-                        <span className={styles.footerDot} aria-hidden="true">·</span>
-                        <a href="#" className={styles.footerLink}>Bảo mật</a>
-                        <span className={styles.footerDot} aria-hidden="true">·</span>
-                        <a href="#" className={styles.footerLink}>Điều khoản</a>
+                        <a href="#" className={styles.footerLink}>Há»— trá»£</a>
+                        <span className={styles.footerDot} aria-hidden="true">Â·</span>
+                        <a href="#" className={styles.footerLink}>Báº£o máº­t</a>
+                        <span className={styles.footerDot} aria-hidden="true">Â·</span>
+                        <a href="#" className={styles.footerLink}>Äiá»u khoáº£n</a>
                     </div>
                 </div>
 
                 {/* Copyright */}
                 <p className={styles.copyright}>
-                    © {COPYRIGHT_YEAR} {COMPANY_NAME.toUpperCase()}. ALL RIGHTS RESERVED.
+                    Â© {COPYRIGHT_YEAR} {COMPANY_NAME.toUpperCase()}. ALL RIGHTS RESERVED.
                 </p>
             </div>
         </div>

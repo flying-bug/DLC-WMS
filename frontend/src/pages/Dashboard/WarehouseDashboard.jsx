@@ -6,28 +6,28 @@ function WarehouseDashboard() {
     const navigate = useNavigate();
 
     const processItems = [
-        { label: 'Lắp ráp, tháo dỡ', icon: 'fas fa-tools' },
-        { label: 'Xuất kho', icon: 'fas fa-truck-loading', action: () => navigate('/export-slips') },
-        { label: 'Nhập kho', icon: 'fas fa-boxes', action: () => navigate('/import-history') },
-        { label: 'Chuyển kho', icon: 'fas fa-exchange-alt', action: () => navigate('/transfer-history') },
-        { label: 'Quản lý kho', icon: 'fas fa-warehouse', action: () => navigate('/warehouses') },
-        { label: 'Kiểm kê', icon: 'fas fa-clipboard-check' },
+        { label: 'Láº¯p rÃ¡p, thÃ¡o dá»¡', icon: 'fas fa-tools' },
+        { label: 'Xuáº¥t kho', icon: 'fas fa-truck-loading', action: () => navigate('/export-slips') },
+        { label: 'Nháº­p kho', icon: 'fas fa-boxes', action: () => navigate('/import-history') },
+        { label: 'Chuyá»ƒn kho', icon: 'fas fa-exchange-alt', action: () => navigate('/transfer-history') },
+        { label: 'Quáº£n lÃ½ kho', icon: 'fas fa-warehouse', action: () => navigate('/warehouses') },
+        { label: 'Kiá»ƒm kÃª', icon: 'fas fa-clipboard-check' },
     ];
 
     const toolbarItems = [
         { label: 'Kho', icon: 'fas fa-warehouse', action: () => navigate('/warehouses') },
-        { label: 'Vật tư hàng hóa', icon: 'fas fa-box', action: () => navigate('/products') },
-        { label: 'Đơn vị tính', icon: 'fas fa-balance-scale', action: () => navigate('/units') },
-        { label: 'Tiện ích', icon: 'fas fa-cog' },
-        { label: 'Tùy chọn', icon: 'fas fa-sliders-h' },
+        { label: 'Váº­t tÆ° hÃ ng hÃ³a', icon: 'fas fa-box', action: () => navigate('/products') },
+        { label: 'ÄÆ¡n vá»‹ tÃ­nh', icon: 'fas fa-balance-scale', action: () => navigate('/units') },
+        { label: 'Tiá»‡n Ã­ch', icon: 'fas fa-cog' },
+        { label: 'TÃ¹y chá»n', icon: 'fas fa-sliders-h' },
     ];
 
     const reportItems = [
-        'Sổ chi tiết vật tư hàng hóa',
-        'Tổng hợp tồn kho',
-        'Báo cáo đối chiếu giá thành và giá trị nhập kho',
-        'Báo cáo đối chiếu kho và sổ cái',
-        'Báo cáo tiến độ sản xuất',
+        'Sá»• chi tiáº¿t váº­t tÆ° hÃ ng hÃ³a',
+        'Tá»•ng há»£p tá»“n kho',
+        'BÃ¡o cÃ¡o Ä‘á»‘i chiáº¿u giÃ¡ thÃ nh vÃ  giÃ¡ trá»‹ nháº­p kho',
+        'BÃ¡o cÃ¡o Ä‘á»‘i chiáº¿u kho vÃ  sá»• cÃ¡i',
+        'BÃ¡o cÃ¡o tiáº¿n Ä‘á»™ sáº£n xuáº¥t',
     ];
 
     return (
@@ -36,8 +36,8 @@ function WarehouseDashboard() {
                 <section className={styles.mainProcess}>
                     <div className={styles.panelHeader}>
                         <div>
-                            <p className={styles.eyebrow}>Quy trình vận hành</p>
-                            <h3 className={styles.sectionTitle}>Nghiệp vụ kho</h3>
+                            <p className={styles.eyebrow}>Quy trÃ¬nh váº­n hÃ nh</p>
+                            <h3 className={styles.sectionTitle}>Nghiá»‡p vá»¥ kho</h3>
                         </div>
 
                     </div>
@@ -72,8 +72,8 @@ function WarehouseDashboard() {
 
                 <aside className={styles.reportsArea}>
                     <div className={styles.reportHeader}>
-                        <p className={styles.eyebrow}>Theo dõi nhanh</p>
-                        <h3 className={styles.sectionTitle}>Báo cáo</h3>
+                        <p className={styles.eyebrow}>Theo dÃµi nhanh</p>
+                        <h3 className={styles.sectionTitle}>BÃ¡o cÃ¡o</h3>
                     </div>
                     <ul className={styles.reportList}>
                         {reportItems.map((report) => (
@@ -85,7 +85,7 @@ function WarehouseDashboard() {
                     </ul>
                     <div className={styles.allReports}>
                         <a href="#" onClick={(e) => { e.preventDefault(); navigate('/reports'); }}>
-                            Tất cả báo cáo
+                            Táº¥t cáº£ bÃ¡o cÃ¡o
                             <i className="fas fa-arrow-right"></i>
                         </a>
                     </div>

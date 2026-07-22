@@ -7,18 +7,18 @@ const SalesHistoryTab = ({ data, loading, page, setPage, formatDate, styles }) =
             <table className={styles.table}>
                 <thead>
                     <tr>
-                        <th>MÃ ĐƠN HÀNG</th>
-                        <th>NGÀY MUA</th>
-                        <th>SẢN PHẨM</th>
-                        <th style={{ textAlign: 'center' }}>SỐ LƯỢNG</th>
+                        <th>MÃƒ ÄÆ N HÃ€NG</th>
+                        <th>NGÃ€Y MUA</th>
+                        <th>Sáº¢N PHáº¨M</th>
+                        <th style={{ textAlign: 'center' }}>Sá» LÆ¯á»¢NG</th>
                         <th>SERIAL / IMEI</th>
                     </tr>
                 </thead>
                 <tbody>
                     {loading ? (
-                        <tr><td colSpan="5" className={styles.loadingState}>Đang tải...</td></tr>
+                        <tr><td colSpan="5" className={styles.loadingState}>Äang táº£i...</td></tr>
                     ) : data.content.length === 0 ? (
-                        <tr><td colSpan="5" className={styles.emptyState}>Chưa có lịch sử mua hàng</td></tr>
+                        <tr><td colSpan="5" className={styles.emptyState}>ChÆ°a cÃ³ lá»‹ch sá»­ mua hÃ ng</td></tr>
                     ) : data.content.map((item, idx) => (
                         <tr key={idx}>
                             <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{item.orderCode}</td>

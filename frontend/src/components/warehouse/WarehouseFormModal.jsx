@@ -3,7 +3,7 @@ import Modal from '../ui/Modal';
 import styles from './WarehouseFormModal.module.css';
 
 /**
- * Modal tạo mới / chỉnh sửa kho.
+ * Modal táº¡o má»›i / chá»‰nh sá»­a kho.
  * Props:
  *   isOpen, onClose, onSave(data),
  *   isEdit (bool), initialData (object | null)
@@ -56,7 +56,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
         const timeoutId = window.setTimeout(async () => {
             setAddressLoading(true);
             try {
-                // Sử dụng API Nominatim của OpenStreetMap để hỗ trợ tiếng Việt
+                // Sá»­ dá»¥ng API Nominatim cá»§a OpenStreetMap Ä‘á»ƒ há»— trá»£ tiáº¿ng Viá»‡t
                 const params = new URLSearchParams({ 
                     q: query, 
                     format: 'json', 
@@ -96,11 +96,11 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
     const handleSubmit = async (closeAfterSave = true) => {
         // Validation
         if (!isEdit && !formData.code.trim()) {
-            setErrorMsg('Mã kho là bắt buộc.');
+            setErrorMsg('MÃ£ kho lÃ  báº¯t buá»™c.');
             return;
         }
         if (!formData.name.trim()) {
-            setErrorMsg('Tên kho là bắt buộc.');
+            setErrorMsg('TÃªn kho lÃ  báº¯t buá»™c.');
             return;
         }
 
@@ -110,14 +110,14 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
             if (closeAfterSave) {
                 onClose();
             } else {
-                // Reset form để thêm tiếp
+                // Reset form Ä‘á»ƒ thÃªm tiáº¿p
                 setFormData({ code: '', name: '', address: '', status: 'APPROVED' });
             }
         } catch (err) {
             const msg =
                 err.response?.data?.userMessage ||
                 err.response?.data?.message ||
-                'Có lỗi xảy ra khi lưu.';
+                'CÃ³ lá»—i xáº£y ra khi lÆ°u.';
             setErrorMsg(msg);
         } finally {
             setSaving(false);
@@ -128,11 +128,11 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
         <Modal 
             isOpen={isOpen} 
             onClose={onClose} 
-            ariaLabel={isEdit ? 'Sửa thông tin kho' : 'Thêm kho mới'}
+            ariaLabel={isEdit ? 'Sá»­a thÃ´ng tin kho' : 'ThÃªm kho má»›i'}
             dialogStyle={{ maxWidth: '650px', width: '100%' }}
         >
             <div className={styles.modalHeader}>
-                <h3>{isEdit ? 'Sửa thông tin kho' : 'Thêm kho mới'}</h3>
+                <h3>{isEdit ? 'Sá»­a thÃ´ng tin kho' : 'ThÃªm kho má»›i'}</h3>
                 <div className={styles.modalIcons}>
                     <i className="fas fa-times" onClick={onClose}></i>
                 </div>
@@ -142,25 +142,25 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                 {errorMsg && <div className={styles.errorAlert}>{errorMsg}</div>}
 
                 <div className={styles.formRow}>
-                    {/* Mã kho */}
+                    {/* MÃ£ kho */}
                     <div className={styles.formGroup}>
-                        <label>Mã kho <span className={styles.required}>*</span></label>
+                        <label>MÃ£ kho <span className={styles.required}>*</span></label>
                         <input
                             id="warehouse-code"
                             type="text"
                             className={styles.inputField}
                             value={formData.code}
                             onChange={(e) => handleChange('code', e.target.value)}
-                            disabled={isEdit} // Read-only khi chỉnh sửa
+                            disabled={isEdit} // Read-only khi chá»‰nh sá»­a
                             autoFocus={!isEdit}
                             maxLength={50}
                         />
-                        {isEdit && <small className={styles.hint}>Mã kho không thể thay đổi sau khi tạo.</small>}
+                        {isEdit && <small className={styles.hint}>MÃ£ kho khÃ´ng thá»ƒ thay Ä‘á»•i sau khi táº¡o.</small>}
                     </div>
 
-                    {/* Tên kho */}
+                    {/* TÃªn kho */}
                     <div className={styles.formGroup}>
-                        <label>Tên kho <span className={styles.required}>*</span></label>
+                        <label>TÃªn kho <span className={styles.required}>*</span></label>
                         <input
                             id="warehouse-name"
                             type="text"
@@ -173,9 +173,9 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                     </div>
                 </div>
 
-                {/* Địa chỉ */}
+                {/* Äá»‹a chá»‰ */}
                 <div className={styles.formGroup}>
-                    <label>Địa chỉ</label>
+                    <label>Äá»‹a chá»‰</label>
                     <div className={styles.addressField}>
                         <textarea
                             id="warehouse-address"
@@ -188,7 +188,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                         {(addressLoading || addressSuggestions.length > 0) && (
                             <div className={styles.suggestionList}>
                                 {addressLoading && (
-                                    <div className={styles.suggestionMeta}>Đang tìm địa chỉ...</div>
+                                    <div className={styles.suggestionMeta}>Äang tÃ¬m Ä‘á»‹a chá»‰...</div>
                                 )}
                                 {addressSuggestions.map((suggestion) => (
                                     <button
@@ -210,29 +210,29 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                 </div>
 
                 <div className={styles.formGroup}>
-                    <label>Trạng thái</label>
+                    <label>Tráº¡ng thÃ¡i</label>
                     <select
                         id="warehouse-status"
                         className={styles.inputField}
                         value={formData.status}
                         onChange={(e) => handleChange('status', e.target.value)}
                     >
-                        <option value="APPROVED">Đang hoạt động</option>
-                        <option value="INACTIVE">Ngừng sử dụng</option>
+                        <option value="APPROVED">Äang hoáº¡t Ä‘á»™ng</option>
+                        <option value="INACTIVE">Ngá»«ng sá»­ dá»¥ng</option>
                     </select>
                 </div>
             </div>
 
             <div className={styles.modalFooter}>
-                <button className={styles.btnCancel} onClick={onClose} disabled={saving}>Hủy bỏ</button>
+                <button className={styles.btnCancel} onClick={onClose} disabled={saving}>Há»§y bá»</button>
                 <div className={styles.rightButtons}>
                     {!isEdit && (
                         <button className={styles.btnSaveAndAdd} onClick={() => handleSubmit(false)} disabled={saving}>
-                            Lưu & Thêm tiếp
+                            LÆ°u & ThÃªm tiáº¿p
                         </button>
                     )}
                     <button className={styles.btnSave} onClick={() => handleSubmit(true)} disabled={saving}>
-                        {saving ? 'Đang lưu...' : 'Lưu kho'}
+                        {saving ? 'Äang lÆ°u...' : 'LÆ°u kho'}
                     </button>
                 </div>
             </div>

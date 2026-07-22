@@ -12,14 +12,14 @@ function PermissionDetailPage() {
 
     // Initial state matching the UC list
     const [permissions, setPermissions] = useState({
-        // Quản lý kho
+        // Quáº£n lÃ½ kho
         import: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         export: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         transfer: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         stocktake: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         assembly: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
 
-        // Danh mục
+        // Danh má»¥c
         product: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         product_category: { full: false, view: false, add: false, edit: false, delete: false },
         brand: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
@@ -28,12 +28,12 @@ function PermissionDetailPage() {
         supplier: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         warehouse_master: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
 
-        // Báo cáo
+        // BÃ¡o cÃ¡o
         report_balance: { full: false, view: false, export: false },
         report_ledger: { full: false, view: false, export: false },
         report_summary: { full: false, view: false, export: false },
 
-        // Quản trị hệ thống
+        // Quáº£n trá»‹ há»‡ thá»‘ng
         account: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         auth: { full: false, view: false, edit: false },
         audit: { full: false, view: false, export: false }
@@ -51,7 +51,7 @@ function PermissionDetailPage() {
                 if (userData) {
                     const hasStaff = userData.roles && userData.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF');
                     if (!hasStaff) {
-                        alert("Chỉ tài khoản Nhân viên (STAFF) mới được phép phân quyền động.");
+                        alert("Chá»‰ tÃ i khoáº£n NhÃ¢n viÃªn (STAFF) má»›i Ä‘Æ°á»£c phÃ©p phÃ¢n quyá»n Ä‘á»™ng.");
                         navigate('/users');
                         return;
                     }
@@ -107,7 +107,7 @@ function PermissionDetailPage() {
                     });
                 }
             } catch (error) {
-                console.error("Lỗi lấy thông tin phân quyền:", error);
+                console.error("Lá»—i láº¥y thÃ´ng tin phÃ¢n quyá»n:", error);
             }
         };
 
@@ -156,11 +156,11 @@ function PermissionDetailPage() {
             });
 
             await axiosClient.put(`/users/${id}/permissions`, tickedCodes);
-            alert('Cập nhật phân quyền thành công!');
+            alert('Cáº­p nháº­t phÃ¢n quyá»n thÃ nh cÃ´ng!');
             navigate('/users');
         } catch (error) {
-            console.error('Lỗi lưu phân quyền:', error);
-            alert('Có lỗi xảy ra khi lưu phân quyền.');
+            console.error('Lá»—i lÆ°u phÃ¢n quyá»n:', error);
+            alert('CÃ³ lá»—i xáº£y ra khi lÆ°u phÃ¢n quyá»n.');
         }
     };
 
@@ -201,39 +201,39 @@ function PermissionDetailPage() {
             case 'warehouse':
                 return (
                     <>
-                        {renderRow('warehouse_master', 'Danh mục kho bãi', 'bi-houses')}
-                        {renderRow('import', 'Nhập kho', 'bi-box-arrow-in-right')}
-                        {renderRow('export', 'Xuất kho', 'bi-box-arrow-right')}
-                        {renderRow('transfer', 'Chuyển kho', 'bi-arrow-left-right')}
-                        {renderRow('stocktake', 'Kiểm kê kho', 'bi-clipboard2-check')}
-                        {renderRow('assembly', 'Đóng gói / Tháo dỡ', 'bi-box-seam')}
+                        {renderRow('warehouse_master', 'Danh má»¥c kho bÃ£i', 'bi-houses')}
+                        {renderRow('import', 'Nháº­p kho', 'bi-box-arrow-in-right')}
+                        {renderRow('export', 'Xuáº¥t kho', 'bi-box-arrow-right')}
+                        {renderRow('transfer', 'Chuyá»ƒn kho', 'bi-arrow-left-right')}
+                        {renderRow('stocktake', 'Kiá»ƒm kÃª kho', 'bi-clipboard2-check')}
+                        {renderRow('assembly', 'ÄÃ³ng gÃ³i / ThÃ¡o dá»¡', 'bi-box-seam')}
                     </>
                 );
             case 'master_data':
                 return (
                     <>
-                        {renderRow('product', 'Sản phẩm', 'bi-tags')}
-                        {renderRow('product_category', 'Danh mục sản phẩm', 'bi-folder')}
-                        {renderRow('brand', 'Thương hiệu', 'bi-bookmark-star')}
-                        {renderRow('unit', 'Đơn vị tính', 'bi-rulers')}
-                        {renderRow('customer', 'Khách hàng', 'bi-person-vcard')}
-                        {renderRow('supplier', 'Nhà cung cấp', 'bi-truck')}
+                        {renderRow('product', 'Sáº£n pháº©m', 'bi-tags')}
+                        {renderRow('product_category', 'Danh má»¥c sáº£n pháº©m', 'bi-folder')}
+                        {renderRow('brand', 'ThÆ°Æ¡ng hiá»‡u', 'bi-bookmark-star')}
+                        {renderRow('unit', 'ÄÆ¡n vá»‹ tÃ­nh', 'bi-rulers')}
+                        {renderRow('customer', 'KhÃ¡ch hÃ ng', 'bi-person-vcard')}
+                        {renderRow('supplier', 'NhÃ  cung cáº¥p', 'bi-truck')}
                     </>
                 );
             case 'reports':
                 return (
                     <>
-                        {renderRow('report_balance', 'Tồn kho hiện tại', 'bi-bar-chart')}
-                        {renderRow('report_ledger', 'Sổ kho', 'bi-journal-text')}
-                        {renderRow('report_summary', 'Báo cáo tổng hợp', 'bi-file-earmark-bar-graph')}
+                        {renderRow('report_balance', 'Tá»“n kho hiá»‡n táº¡i', 'bi-bar-chart')}
+                        {renderRow('report_ledger', 'Sá»• kho', 'bi-journal-text')}
+                        {renderRow('report_summary', 'BÃ¡o cÃ¡o tá»•ng há»£p', 'bi-file-earmark-bar-graph')}
                     </>
                 );
             case 'system':
                 return (
                     <>
-                        {renderRow('account', 'Quản lý tài khoản', 'bi-people')}
-                        {renderRow('auth', 'Phân quyền', 'bi-shield-lock')}
-                        {renderRow('audit', 'Nhật ký hệ thống', 'bi-journal-medical')}
+                        {renderRow('account', 'Quáº£n lÃ½ tÃ i khoáº£n', 'bi-people')}
+                        {renderRow('auth', 'PhÃ¢n quyá»n', 'bi-shield-lock')}
+                        {renderRow('audit', 'Nháº­t kÃ½ há»‡ thá»‘ng', 'bi-journal-medical')}
                     </>
                 );
             default:
@@ -241,8 +241,8 @@ function PermissionDetailPage() {
         }
     };
 
-    const userName = user ? user.fullName : "Đang tải...";
-    const userRolesDisplay = user && user.roles ? user.roles.join(', ') : 'Chưa có vai trò';
+    const userName = user ? user.fullName : "Äang táº£i...";
+    const userRolesDisplay = user && user.roles ? user.roles.join(', ') : 'ChÆ°a cÃ³ vai trÃ²';
 
     return (
         <div className={styles.page}>
@@ -251,17 +251,17 @@ function PermissionDetailPage() {
                 <div className={styles.headerLeft}>
                     <div className={styles.brandName}>DUY LONG COMPUTER</div>
                     <div className={styles.breadcrumb}>
-                        <span className={styles.breadcrumbItem} onClick={() => navigate('/users')}>Quản lý người dùng</span>
+                        <span className={styles.breadcrumbItem} onClick={() => navigate('/users')}>Quáº£n lÃ½ ngÆ°á»i dÃ¹ng</span>
                         <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right"></i></span>
                         <span className={styles.breadcrumbItem}>{userName}</span>
                         <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right"></i></span>
-                        <span className={styles.breadcrumbActive}>Phân quyền chi tiết</span>
+                        <span className={styles.breadcrumbActive}>PhÃ¢n quyá»n chi tiáº¿t</span>
                     </div>
                 </div>
                 <div className={styles.headerRight}>
                     <div className={styles.searchBar}>
                         <i className="bi bi-search" />
-                        <input type="text" placeholder="Tìm kiếm chức năng..." />
+                        <input type="text" placeholder="TÃ¬m kiáº¿m chá»©c nÄƒng..." />
                     </div>
                     <button className={styles.headerRightBtn}><i className="bi bi-bell"></i></button>
                     <button className={styles.headerRightBtn}><i className="bi bi-question-circle"></i></button>
@@ -271,27 +271,27 @@ function PermissionDetailPage() {
 
             {/* Main */}
             <main className={styles.main}>
-                <h1 className={styles.pageTitle}>Phân quyền chức năng cho nhân viên: {userName}</h1>
-                <p className={styles.pageSubtitle}>Vai trò hiện tại: {userRolesDisplay}</p>
+                <h1 className={styles.pageTitle}>PhÃ¢n quyá»n chá»©c nÄƒng cho nhÃ¢n viÃªn: {userName}</h1>
+                <p className={styles.pageSubtitle}>Vai trÃ² hiá»‡n táº¡i: {userRolesDisplay}</p>
 
                 <div className={styles.layout}>
                     {/* Sidebar */}
                     <div className={styles.sidebar}>
-                        <div className={styles.sidebarHeader}>DANH MỤC MODULE</div>
+                        <div className={styles.sidebarHeader}>DANH Má»¤C MODULE</div>
                         <div className={`${styles.menuItem} ${activeCategory === 'warehouse' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('warehouse')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-box-seam"></i> Quản lý kho</div>
+                            <div className={styles.menuItemLeft}><i className="bi bi-box-seam"></i> Quáº£n lÃ½ kho</div>
                             <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
                         </div>
                         <div className={`${styles.menuItem} ${activeCategory === 'master_data' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('master_data')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-database"></i> Danh mục</div>
+                            <div className={styles.menuItemLeft}><i className="bi bi-database"></i> Danh má»¥c</div>
                             {activeCategory === 'master_data' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
                         </div>
                         <div className={`${styles.menuItem} ${activeCategory === 'reports' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('reports')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-bar-chart"></i> Báo cáo</div>
+                            <div className={styles.menuItemLeft}><i className="bi bi-bar-chart"></i> BÃ¡o cÃ¡o</div>
                             {activeCategory === 'reports' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
                         </div>
                         <div className={`${styles.menuItem} ${activeCategory === 'system' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('system')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-gear"></i> Quản trị hệ thống</div>
+                            <div className={styles.menuItemLeft}><i className="bi bi-gear"></i> Quáº£n trá»‹ há»‡ thá»‘ng</div>
                             {activeCategory === 'system' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
                         </div>
                     </div>
@@ -301,13 +301,13 @@ function PermissionDetailPage() {
                         <table className={styles.table}>
                             <thead>
                                 <tr>
-                                    <th>CHỨC NĂNG CHI TIẾT</th>
-                                    <th>Toàn quyền</th>
+                                    <th>CHá»¨C NÄ‚NG CHI TIáº¾T</th>
+                                    <th>ToÃ n quyá»n</th>
                                     <th>Xem</th>
-                                    <th>Thêm</th>
-                                    <th>Sửa</th>
-                                    <th>Xóa</th>
-                                    <th>Xuất Excel</th>
+                                    <th>ThÃªm</th>
+                                    <th>Sá»­a</th>
+                                    <th>XÃ³a</th>
+                                    <th>Xuáº¥t Excel</th>
                                     <th>In</th>
                                 </tr>
                             </thead>
@@ -320,15 +320,15 @@ function PermissionDetailPage() {
                             <div className={styles.legendLeft}>
                                 <div className={styles.legendItem}>
                                     <div className={`${styles.legendIcon} ${styles.legendIconSelected}`}></div>
-                                    <span>Đã chọn</span>
+                                    <span>ÄÃ£ chá»n</span>
                                 </div>
                                 <div className={styles.legendItem}>
                                     <div className={`${styles.legendIcon} ${styles.legendIconUnselected}`}></div>
-                                    <span>Chưa chọn</span>
+                                    <span>ChÆ°a chá»n</span>
                                 </div>
                             </div>
                             <div className={styles.legendRight}>
-                                <i className="bi bi-info-circle"></i> Đối với nghiệp vụ nào không cho sử dụng sẽ làm mờ và không thể tick
+                                <i className="bi bi-info-circle"></i> Äá»‘i vá»›i nghiá»‡p vá»¥ nÃ o khÃ´ng cho sá»­ dá»¥ng sáº½ lÃ m má» vÃ  khÃ´ng thá»ƒ tick
                             </div>
                         </div>
                     </div>
@@ -337,9 +337,9 @@ function PermissionDetailPage() {
 
             {/* Footer Actions */}
             <div className={styles.footer}>
-                <button className={styles.btnCancel} onClick={() => navigate('/users')}>Hủy</button>
+                <button className={styles.btnCancel} onClick={() => navigate('/users')}>Há»§y</button>
                 <button className={styles.btnSave} onClick={handleSave}>
-                    <i className="bi bi-save"></i> Lưu thay đổi
+                    <i className="bi bi-save"></i> LÆ°u thay Ä‘á»•i
                 </button>
             </div>
         </div>

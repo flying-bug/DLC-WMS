@@ -151,7 +151,7 @@ function CreateTransferSlipPage() {
     setItems(prev => {
       if (scanResult.type === 'SERIAL') {
         if (prev.some(item => Number(item.serialNumberId) === Number(scanResult.serialNumberId))) {
-          setError('Serial này đã được quét trong phiếu.');
+          setError('Serial nÃ y Ä‘Ã£ Ä‘Æ°á»£c quÃ©t trong phiáº¿u.');
           return prev;
         }
         const serialLine = {
@@ -193,7 +193,7 @@ function CreateTransferSlipPage() {
     const code = scanCode.trim();
     if (!code) return;
     if (!form.fromWarehouseId) {
-      setError('Vui lòng chọn kho xuất trước khi quét mã.');
+      setError('Vui lÃ²ng chá»n kho xuáº¥t trÆ°á»›c khi quÃ©t mÃ£.');
       return;
     }
 
@@ -207,7 +207,7 @@ function CreateTransferSlipPage() {
       addScannedItem(unwrap(response));
       setScanCode('');
     } catch (err) {
-      setError(err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không tìm thấy mã vừa quét trong kho xuất');
+      setError(err.response?.data?.userMessage || err.response?.data?.devMessage || 'KhÃ´ng tÃ¬m tháº¥y mÃ£ vá»«a quÃ©t trong kho xuáº¥t');
     } finally {
       setScanLoading(false);
     }
@@ -249,9 +249,9 @@ function CreateTransferSlipPage() {
   const submit = async (status) => {
     if (!isFormValid) {
       if (form.fromWarehouseId === form.toWarehouseId) {
-         setError('Kho xuất và kho nhập phải khác nhau.');
+         setError('Kho xuáº¥t vÃ  kho nháº­p pháº£i khÃ¡c nhau.');
       } else {
-         setError('Vui lòng điền đầy đủ thông tin kho, ngày chuyển và ít nhất một mặt hàng.');
+         setError('Vui lÃ²ng Ä‘iá»n Ä‘áº§y Ä‘á»§ thÃ´ng tin kho, ngÃ y chuyá»ƒn vÃ  Ã­t nháº¥t má»™t máº·t hÃ ng.');
       }
       return;
     }
@@ -261,7 +261,7 @@ function CreateTransferSlipPage() {
     for (const line of payload.lines) {
       const product = productById.get(String(line.variantId));
       if (product?.trackSerial && line.serialNumbers.length !== line.quantity) {
-        setError(`Mặt hàng ${product.sku || product.productName} có theo dõi Serial. Số lượng quét (${line.serialNumbers.length}) chưa khớp với số lượng chuyển (${line.quantity}).`);
+        setError(`Máº·t hÃ ng ${product.sku || product.productName} cÃ³ theo dÃµi Serial. Sá»‘ lÆ°á»£ng quÃ©t (${line.serialNumbers.length}) chÆ°a khá»›p vá»›i sá»‘ lÆ°á»£ng chuyá»ƒn (${line.quantity}).`);
         return;
       }
     }
@@ -273,7 +273,7 @@ function CreateTransferSlipPage() {
       await transferApi.createTransferSlip(payload);
       navigate('/transfer-history');
     } catch (err) {
-      setError(err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không lưu được phiếu chuyển kho');
+      setError(err.response?.data?.userMessage || err.response?.data?.devMessage || 'KhÃ´ng lÆ°u Ä‘Æ°á»£c phiáº¿u chuyá»ƒn kho');
     } finally {
       setSaving(false);
     }
@@ -285,7 +285,7 @@ function CreateTransferSlipPage() {
         <div className={styles.scrollableContent}>
           <div className={styles.pageHeader}>
             <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/transfer-history'); }}>
-              <i className="bi bi-arrow-left"></i> Tạo phiếu chuyển kho
+              <i className="bi bi-arrow-left"></i> Táº¡o phiáº¿u chuyá»ƒn kho
             </a>
           </div>
 
@@ -295,28 +295,28 @@ function CreateTransferSlipPage() {
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <i className="bi bi-info-circle text-gray-500"></i>
-                <h3 className={styles.cardTitle}>Thông tin chung</h3>
+                <h3 className={styles.cardTitle}>ThÃ´ng tin chung</h3>
               </div>
 
               <div className="misa-form-row">
                 <div className="misa-form-group">
-                  <label className="misa-label">Từ kho (Xuất) <span className="required">*</span></label>
+                  <label className="misa-label">Tá»« kho (Xuáº¥t) <span className="required">*</span></label>
                   <select className="misa-select" value={form.fromWarehouseId} onChange={(e) => handleFormChange('fromWarehouseId', e.target.value)}>
-                    <option value="">Chọn kho xuất</option>
+                    <option value="">Chá»n kho xuáº¥t</option>
                     {warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} - {warehouse.name}</option>)}
                   </select>
                 </div>
                 <div className="misa-form-group">
-                  <label className="misa-label">Đến kho (Nhập) <span className="required">*</span></label>
+                  <label className="misa-label">Äáº¿n kho (Nháº­p) <span className="required">*</span></label>
                   <select className="misa-select" value={form.toWarehouseId} onChange={(e) => handleFormChange('toWarehouseId', e.target.value)}>
-                    <option value="">Chọn kho nhập</option>
+                    <option value="">Chá»n kho nháº­p</option>
                     {warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} - {warehouse.name}</option>)}
                   </select>
                 </div>
               </div>
 
               <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                <label className="misa-label">Lý do chuyển</label>
+                <label className="misa-label">LÃ½ do chuyá»ƒn</label>
                 <textarea className="misa-textarea" value={form.note} onChange={(e) => handleFormChange('note', e.target.value)} style={{ minHeight: '60px' }} />
               </div>
             </div>
@@ -324,17 +324,17 @@ function CreateTransferSlipPage() {
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <i className="bi bi-file-earmark-text text-gray-500"></i>
-                <h3 className={styles.cardTitle}>Thông tin chứng từ</h3>
+                <h3 className={styles.cardTitle}>ThÃ´ng tin chá»©ng tá»«</h3>
               </div>
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
-                <label className="misa-label">Ngày chuyển <span className="required">*</span></label>
+                <label className="misa-label">NgÃ y chuyá»ƒn <span className="required">*</span></label>
                 <input type="date" className="misa-input" value={form.transferDate} onChange={(e) => handleFormChange('transferDate', e.target.value)} />
               </div>
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
-                <label className="misa-label">Số phiếu</label>
-                <input className="misa-input" placeholder="Để trống để hệ thống tự sinh" value={form.transferCode} onChange={(e) => handleFormChange('transferCode', e.target.value)} />
+                <label className="misa-label">Sá»‘ phiáº¿u</label>
+                <input className="misa-input" placeholder="Äá»ƒ trá»‘ng Ä‘á»ƒ há»‡ thá»‘ng tá»± sinh" value={form.transferCode} onChange={(e) => handleFormChange('transferCode', e.target.value)} />
               </div>
             </div>
           </div>
@@ -342,7 +342,7 @@ function CreateTransferSlipPage() {
           <div className={styles.card}>
             <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)', backgroundColor: '#fdfdfd', borderTopLeftRadius: '8px', borderTopRightRadius: '8px' }}>
               <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--color-text)', marginBottom: '4px' }}>Scan Product / Serial</div>
-              <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '12px' }}>Quét serial cho hàng có serial, hoặc barcode/SKU cho hàng thường.</div>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '12px' }}>QuÃ©t serial cho hÃ ng cÃ³ serial, hoáº·c barcode/SKU cho hÃ ng thÆ°á»ng.</div>
               <form style={{ display: 'flex', gap: '8px' }} onSubmit={handleScanSubmit}>
                 <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
                   <i className="bi bi-upc-scan" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted-2)' }}></i>
@@ -351,12 +351,12 @@ function CreateTransferSlipPage() {
                     style={{ paddingLeft: '32px', height: '34px' }}
                     value={scanCode}
                     onChange={(e) => setScanCode(e.target.value)}
-                    placeholder="Đặt con trỏ vào đây rồi quét mã"
+                    placeholder="Äáº·t con trá» vÃ o Ä‘Ã¢y rá»“i quÃ©t mÃ£"
                     disabled={scanLoading}
                   />
                 </div>
                 <button type="submit" disabled={scanLoading} style={{ display: 'none' }}>
-                  {scanLoading ? 'Đang quét...' : 'Thêm mã'}
+                  {scanLoading ? 'Äang quÃ©t...' : 'ThÃªm mÃ£'}
                 </button>
               </form>
             </div>
@@ -366,12 +366,12 @@ function CreateTransferSlipPage() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Mã hàng</th>
-                    <th>Tên hàng</th>
-                    <th>ĐVT</th>
-                    <th style={{ textAlign: 'right' }}>Tồn khả dụng</th>
-                    <th style={{ textAlign: 'right' }}>Số lượng</th>
-                    <th>Ghi chú</th>
+                    <th>MÃ£ hÃ ng</th>
+                    <th>TÃªn hÃ ng</th>
+                    <th>ÄVT</th>
+                    <th style={{ textAlign: 'right' }}>Tá»“n kháº£ dá»¥ng</th>
+                    <th style={{ textAlign: 'right' }}>Sá»‘ lÆ°á»£ng</th>
+                    <th>Ghi chÃº</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -384,7 +384,7 @@ function CreateTransferSlipPage() {
                         <td>{index + 1}</td>
                         <td>
                           <select className="misa-select" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={item.variantId} onChange={(e) => handleItemChange(item.localId, 'variantId', e.target.value)}>
-                            <option value="">Chọn hàng</option>
+                            <option value="">Chá»n hÃ ng</option>
                             {products.map(productItem => <option key={productItem.id} value={productItem.id}>{productItem.sku || productItem.productCode}</option>)}
                           </select>
                         </td>
@@ -413,11 +413,11 @@ function CreateTransferSlipPage() {
                 </tbody>
               </table>
               <div className={styles.tableFooter}>
-                <span>Tổng cộng hàng chuyển:</span>
+                <span>Tá»•ng cá»™ng hÃ ng chuyá»ƒn:</span>
                 <span className={styles.textBlue}>{totalQuantity.toLocaleString('vi-VN')}</span>
               </div>
               <div className={styles.tableActions}>
-                <button className={styles.actionLink} onClick={addItem}><i className="bi bi-plus-circle"></i> Thêm dòng mới</button>
+                <button className={styles.actionLink} onClick={addItem}><i className="bi bi-plus-circle"></i> ThÃªm dÃ²ng má»›i</button>
               </div>
             </div>
           </div>
@@ -425,14 +425,14 @@ function CreateTransferSlipPage() {
 
         <div className={styles.fixedFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>Hủy bỏ</button>
+            <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>Há»§y bá»</button>
           </div>
           <div className={styles.footerRight}>
             <button className="btn-misa-save-draft" disabled={!isFormValid || saving} onClick={() => submit('DRAFT')} style={{ marginRight: '8px' }}>
-              <i className="bi bi-file-earmark"></i> Lưu tạm
+              <i className="bi bi-file-earmark"></i> LÆ°u táº¡m
             </button>
             <button className="btn-misa-save" disabled={!isFormValid || saving} onClick={() => submit('POSTED')}>
-              <i className="bi bi-save"></i> Lưu (Hoàn thành)
+              <i className="bi bi-save"></i> LÆ°u (HoÃ n thÃ nh)
             </button>
           </div>
         </div>

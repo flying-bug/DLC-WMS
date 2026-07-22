@@ -45,11 +45,11 @@ const CustomerDetailPage = () => {
         } catch (err) {
             const errCode = err.response?.data?.errorCode || '';
             const errMsg = err.response?.data?.userMessage || '';
-            if (errCode === 'CUST04' || errMsg.includes('vãng lai')) {
-                showToast('error', 'Không có quyền', 'Không thể xem chi tiết Khách vãng lai.');
+            if (errCode === 'CUST04' || errMsg.includes('vÃ£ng lai')) {
+                showToast('error', 'KhÃ´ng cÃ³ quyá»n', 'KhÃ´ng thá»ƒ xem chi tiáº¿t KhÃ¡ch vÃ£ng lai.');
                 setTimeout(() => navigate('/customers'), 1500);
             } else {
-                setError(errMsg || 'Không thể tải thông tin khách hàng.');
+                setError(errMsg || 'KhÃ´ng thá»ƒ táº£i thÃ´ng tin khÃ¡ch hÃ ng.');
             }
         }
     }, [id, navigate]);
@@ -89,7 +89,7 @@ const CustomerDetailPage = () => {
                 });
             }
         } catch (err) {
-            console.error('Lỗi tải dữ liệu tab:', err);
+            console.error('Lá»—i táº£i dá»¯ liá»‡u tab:', err);
         } finally {
             setLoading(false);
         }
@@ -105,7 +105,7 @@ const CustomerDetailPage = () => {
     };
 
     const handleToggleStatus = () => {
-        const action = customer.status === 'APPROVED' ? 'vô hiệu hóa' : 'kích hoạt';
+        const action = customer.status === 'APPROVED' ? 'vÃ´ hiá»‡u hÃ³a' : 'kÃ­ch hoáº¡t';
         setConfirmModal({ isOpen: true, action });
     };
 
@@ -114,28 +114,28 @@ const CustomerDetailPage = () => {
         try {
             if (customer.status === 'APPROVED') {
                 await deactivateCustomer(id);
-                showToast('success', 'Thành công', `Đã vô hiệu hóa khách hàng "${customer.name}".`);
+                showToast('success', 'ThÃ nh cÃ´ng', `ÄÃ£ vÃ´ hiá»‡u hÃ³a khÃ¡ch hÃ ng "${customer.name}".`);
             } else {
                 await activateCustomer(id);
-                showToast('success', 'Thành công', `Đã kích hoạt lại khách hàng "${customer.name}".`);
+                showToast('success', 'ThÃ nh cÃ´ng', `ÄÃ£ kÃ­ch hoáº¡t láº¡i khÃ¡ch hÃ ng "${customer.name}".`);
             }
             fetchCustomerInfo();
         } catch (err) {
-            const msg = err.response?.data?.userMessage || 'Thao tác thất bại. Vui lòng thử lại.';
-            showToast('error', 'Lỗi', msg);
+            const msg = err.response?.data?.userMessage || 'Thao tÃ¡c tháº¥t báº¡i. Vui lÃ²ng thá»­ láº¡i.';
+            showToast('error', 'Lá»—i', msg);
         }
     };
 
     const handleSavedSuccess = () => {
         setIsEditModalOpen(false);
-        showToast('success', 'Thành công', 'Đã cập nhật thông tin khách hàng.');
+        showToast('success', 'ThÃ nh cÃ´ng', 'ÄÃ£ cáº­p nháº­t thÃ´ng tin khÃ¡ch hÃ ng.');
         fetchCustomerInfo();
     };
 
     const formatCurrency = (val) => new Intl.NumberFormat('vi-VN').format(val || 0);
 
     const getGroupLabel = (type) => {
-        const map = { RETAIL: 'Khách lẻ', WHOLESALE: 'Khách thợ', DISTRIBUTOR: 'Đại lý' };
+        const map = { RETAIL: 'KhÃ¡ch láº»', WHOLESALE: 'KhÃ¡ch thá»£', DISTRIBUTOR: 'Äáº¡i lÃ½' };
         return map[type] || type;
     };
 
@@ -152,7 +152,7 @@ const CustomerDetailPage = () => {
                     <div className={styles.emptyState}>
                         <i className={`bi bi-exclamation-circle ${styles.emptyIcon}`}></i>
                         <div className={styles.emptyText}>{error}</div>
-                        <button className={styles.btnPrimary} onClick={() => navigate('/customers')}>Quay lại danh sách</button>
+                        <button className={styles.btnPrimary} onClick={() => navigate('/customers')}>Quay láº¡i danh sÃ¡ch</button>
                     </div>
                 </div>
             </AdminLayout>
@@ -163,7 +163,7 @@ const CustomerDetailPage = () => {
         return (
             <AdminLayout>
                 <div className={styles.pageBody}>
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải thông tin...</div>
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Äang táº£i thÃ´ng tin...</div>
                 </div>
             </AdminLayout>
         );
@@ -181,22 +181,22 @@ const CustomerDetailPage = () => {
                         >
                             <i className="bi bi-arrow-left"></i>
                         </button>
-                        <h1 className={styles.pageTitle}>Chi tiết khách hàng: {customer.name}</h1>
+                        <h1 className={styles.pageTitle}>Chi tiáº¿t khÃ¡ch hÃ ng: {customer.name}</h1>
                         <span className={`${styles.badge} ${customer.status === 'APPROVED' ? styles.badgeSuccess : styles.badgeDanger}`}>
-                            {customer.status === 'APPROVED' ? 'Đang hoạt động' : 'Ngừng hoạt động'}
+                            {customer.status === 'APPROVED' ? 'Äang hoáº¡t Ä‘á»™ng' : 'Ngá»«ng hoáº¡t Ä‘á»™ng'}
                         </span>
                     </div>
                     <div style={{ display: 'flex', gap: '12px' }}>
                         <button className={styles.btnOutline} onClick={() => setIsEditModalOpen(true)}>
-                            <i className="bi bi-pencil"></i> Chỉnh sửa
+                            <i className="bi bi-pencil"></i> Chá»‰nh sá»­a
                         </button>
                         {customer.status === 'APPROVED' ? (
                             <button className={styles.btnOutline} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={handleToggleStatus}>
-                                <i className="bi bi-slash-circle"></i> Vô hiệu hóa
+                                <i className="bi bi-slash-circle"></i> VÃ´ hiá»‡u hÃ³a
                             </button>
                         ) : (
                             <button className={styles.btnOutline} style={{ color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }} onClick={handleToggleStatus}>
-                                <i className="bi bi-check2-circle"></i> Kích hoạt
+                                <i className="bi bi-check2-circle"></i> KÃ­ch hoáº¡t
                             </button>
                         )}
                     </div>
@@ -208,35 +208,35 @@ const CustomerDetailPage = () => {
                     <div className={styles.detailSection} style={{ margin: 0 }}>
                         <div className={styles.detailHeader}>
                             <i className={`bi bi-info-circle ${styles.detailIcon}`}></i>
-                            <h2 className={styles.detailTitle}>Thông tin chung</h2>
+                            <h2 className={styles.detailTitle}>ThÃ´ng tin chung</h2>
                         </div>
                         <div className={styles.detailGrid}>
                             <div className={styles.detailGroup}>
                                 <div className={styles.detailItem}>
-                                    <span className={styles.detailLabel}>Mã khách hàng</span>
+                                    <span className={styles.detailLabel}>MÃ£ khÃ¡ch hÃ ng</span>
                                     <span className={styles.detailValue} style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>{customer.code}</span>
                                 </div>
                                 <div className={styles.detailItem}>
-                                    <span className={styles.detailLabel}>Nhóm khách hàng</span>
+                                    <span className={styles.detailLabel}>NhÃ³m khÃ¡ch hÃ ng</span>
                                     <span className={styles.detailValue}>{getGroupLabel(customer.groupType)}</span>
                                 </div>
                                 <div className={styles.detailItem}>
-                                    <span className={styles.detailLabel}>Tên khách hàng</span>
+                                    <span className={styles.detailLabel}>TÃªn khÃ¡ch hÃ ng</span>
                                     <span className={styles.detailValue} style={{ fontWeight: 600 }}>{customer.name}</span>
                                 </div>
                             </div>
                             <div className={styles.detailGroup}>
                                 <div className={styles.detailItem}>
-                                    <span className={styles.detailLabel}>Số điện thoại</span>
-                                    <span className={styles.detailValue}>{customer.phone || '—'}</span>
+                                    <span className={styles.detailLabel}>Sá»‘ Ä‘iá»‡n thoáº¡i</span>
+                                    <span className={styles.detailValue}>{customer.phone || 'â€”'}</span>
                                 </div>
                                 <div className={styles.detailItem}>
-                                    <span className={styles.detailLabel}>Email liên hệ</span>
-                                    <span className={styles.detailValue}>{customer.email || '—'}</span>
+                                    <span className={styles.detailLabel}>Email liÃªn há»‡</span>
+                                    <span className={styles.detailValue}>{customer.email || 'â€”'}</span>
                                 </div>
                                 <div className={styles.detailItem}>
-                                    <span className={styles.detailLabel}>Địa chỉ</span>
-                                    <span className={styles.detailValue}>{customer.address || '—'}</span>
+                                    <span className={styles.detailLabel}>Äá»‹a chá»‰</span>
+                                    <span className={styles.detailValue}>{customer.address || 'â€”'}</span>
                                 </div>
                             </div>
                         </div>
@@ -245,17 +245,17 @@ const CustomerDetailPage = () => {
                     <div className={styles.detailSection} style={{ margin: 0 }}>
                         <div className={styles.detailHeader}>
                             <i className={`bi bi-wallet2 ${styles.detailIcon}`}></i>
-                            <h2 className={styles.detailTitle}>Tổng quan tài chính</h2>
+                            <h2 className={styles.detailTitle}>Tá»•ng quan tÃ i chÃ­nh</h2>
                         </div>
                         <div style={{ padding: '24px' }}>
                             <div style={{ marginBottom: '16px' }}>
-                                <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>Tổng tiền khách đã trả</div>
-                                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-primary)' }}>{formatCurrency(receiptData.totalPaid)} ₫</h2>
+                                <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>Tá»•ng tiá»n khÃ¡ch Ä‘Ã£ tráº£</div>
+                                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-primary)' }}>{formatCurrency(receiptData.totalPaid)} â‚«</h2>
                             </div>
                             <div style={{ borderTop: '1px solid var(--color-border)', margin: '16px 0' }}></div>
                             <div>
-                                <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>Dư nợ hiện tại</div>
-                                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-danger)' }}>{formatCurrency(receiptData.currentDebt || 0)} ₫</h2>
+                                <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>DÆ° ná»£ hiá»‡n táº¡i</div>
+                                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-danger)' }}>{formatCurrency(receiptData.currentDebt || 0)} â‚«</h2>
                             </div>
                         </div>
                     </div>
@@ -268,19 +268,19 @@ const CustomerDetailPage = () => {
                             className={`${styles.tabBtn} ${activeTab === TABS.SALES ? styles.tabBtnActive : ''}`}
                             onClick={() => handleTabChange(TABS.SALES)}
                         >
-                            <i className="bi bi-cart3"></i> Lịch sử mua hàng
+                            <i className="bi bi-cart3"></i> Lá»‹ch sá»­ mua hÃ ng
                         </button>
                         <button
                             className={`${styles.tabBtn} ${activeTab === TABS.WARRANTY ? styles.tabBtnActive : ''}`}
                             onClick={() => handleTabChange(TABS.WARRANTY)}
                         >
-                            <i className="bi bi-shield-check"></i> Bảo hành
+                            <i className="bi bi-shield-check"></i> Báº£o hÃ nh
                         </button>
                         <button
                             className={`${styles.tabBtn} ${activeTab === TABS.RECEIPT ? styles.tabBtnActive : ''}`}
                             onClick={() => handleTabChange(TABS.RECEIPT)}
                         >
-                            <i className="bi bi-receipt"></i> Lịch sử thu chi
+                            <i className="bi bi-receipt"></i> Lá»‹ch sá»­ thu chi
                         </button>
                     </div>
 
@@ -303,7 +303,7 @@ const CustomerDetailPage = () => {
                 editData={customer}
                 onClose={() => setIsEditModalOpen(false)}
                 onSaved={handleSavedSuccess}
-                onError={(msg) => showToast('error', 'Lỗi', msg)}
+                onError={(msg) => showToast('error', 'Lá»—i', msg)}
             />
 
             <Toast
@@ -316,13 +316,13 @@ const CustomerDetailPage = () => {
 
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
-                title={`Xác nhận ${confirmModal.action}`}
-                message={<span>Bạn có chắc chắn muốn {confirmModal.action} khách hàng <strong>"{customer?.name}"</strong> không?</span>}
+                title={`XÃ¡c nháº­n ${confirmModal.action}`}
+                message={<span>Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n {confirmModal.action} khÃ¡ch hÃ ng <strong>"{customer?.name}"</strong> khÃ´ng?</span>}
                 onConfirm={executeToggleStatus}
                 onCancel={() => setConfirmModal({ isOpen: false, action: '' })}
-                confirmText="Đồng ý"
-                cancelText="Hủy"
-                confirmButtonClass={confirmModal.action === 'vô hiệu hóa' ? 'btn-misa-danger' : 'btn-misa-primary'}
+                confirmText="Äá»“ng Ã½"
+                cancelText="Há»§y"
+                confirmButtonClass={confirmModal.action === 'vÃ´ hiá»‡u hÃ³a' ? 'btn-misa-danger' : 'btn-misa-primary'}
             />
         </AdminLayout>
     );

@@ -16,8 +16,8 @@ function SuperAdminDashboard() {
             iconClass: 'bi bi-person-gear',
             iconWrapperClass: styles.cardIconBlue,
             iconColorStyle: { color: 'var(--color-primary)' },
-            title: 'Quản lý tài khoản & Phân quyền',
-            description: 'Quản lý hồ sơ nhân viên, thiết lập vai trò hệ thống và gán quyền truy cập bảo mật.',
+            title: 'Quáº£n lÃ½ tÃ i khoáº£n & PhÃ¢n quyá»n',
+            description: 'Quáº£n lÃ½ há»“ sÆ¡ nhÃ¢n viÃªn, thiáº¿t láº­p vai trÃ² há»‡ thá»‘ng vÃ  gÃ¡n quyá»n truy cáº­p báº£o máº­t.',
             route: '/users',
         },
         {
@@ -31,15 +31,15 @@ function SuperAdminDashboard() {
             ),
             iconWrapperClass: styles.cardIconOrange,
             iconColorStyle: { color: 'var(--color-warning)' },
-            title: 'Xem nhật ký hệ thống',
-            description: 'Kiểm tra lịch sử thao tác, nhật ký đăng nhập và các thay đổi dữ liệu quan trọng trong kho.',
+            title: 'Xem nháº­t kÃ½ há»‡ thá»‘ng',
+            description: 'Kiá»ƒm tra lá»‹ch sá»­ thao tÃ¡c, nháº­t kÃ½ Ä‘Äƒng nháº­p vÃ  cÃ¡c thay Ä‘á»•i dá»¯ liá»‡u quan trá»ng trong kho.',
             route: '/audit-log',
         },
     ];
 
     return (
         <div className={styles.page}>
-            {/* ── HEADER ── */}
+            {/* â”€â”€ HEADER â”€â”€ */}
             <header className={styles.header}>
                 {/* Brand */}
                 <div className={styles.headerBrand} onClick={() => navigate('/')}>
@@ -67,13 +67,13 @@ function SuperAdminDashboard() {
                         <input
                             type="text"
                             className={styles.searchInput}
-                            placeholder="Tìm kiếm nhanh..."
-                            aria-label="Tìm kiếm"
+                            placeholder="TÃ¬m kiáº¿m nhanh..."
+                            aria-label="TÃ¬m kiáº¿m"
                         />
                     </div>
 
                     {/* Bell */}
-                    <button className={styles.bellBtn} aria-label="Thông báo">
+                    <button className={styles.bellBtn} aria-label="ThÃ´ng bÃ¡o">
                         <i className="bi bi-bell" style={{ fontSize: '17px' }} />
                     </button>
 
@@ -82,16 +82,16 @@ function SuperAdminDashboard() {
                 </div>
             </header>
 
-            {/* ── MAIN CONTENT ── */}
+            {/* â”€â”€ MAIN CONTENT â”€â”€ */}
             <main className={styles.main}>
                 {/* Welcome section */}
                 <section className={styles.welcomeSection} aria-labelledby="welcome-heading">
                     <h1 className={styles.welcomeTitle} id="welcome-heading">
-                        Chào mừng Super Admin
+                        ChÃ o má»«ng Super Admin
                     </h1>
                     <p className={styles.welcomeSubtitle}>
-                        Hệ thống quản trị kho Duy Long Computer. Vui lòng chọn một trong các tác vụ
-                        quản trị trọng tâm dưới đây để tiếp tục.
+                        Há»‡ thá»‘ng quáº£n trá»‹ kho Duy Long Computer. Vui lÃ²ng chá»n má»™t trong cÃ¡c tÃ¡c vá»¥
+                        quáº£n trá»‹ trá»ng tÃ¢m dÆ°á»›i Ä‘Ã¢y Ä‘á»ƒ tiáº¿p tá»¥c.
                     </p>
                 </section>
 
@@ -117,12 +117,12 @@ function SuperAdminDashboard() {
                 </div>
             </main>
 
-            {/* ── FOOTER ── */}
+            {/* â”€â”€ FOOTER â”€â”€ */}
             <footer className={styles.footer}>
                 <div className={styles.footerLeft}>
                     <span className={styles.footerItem}>
                         <i className={`bi bi-clock ${styles.footerItemIcon}`} aria-hidden="true" />
-                        Phiên đăng nhập: {SESSION_INFO.loginTime}
+                        PhiÃªn Ä‘Äƒng nháº­p: {SESSION_INFO.loginTime}
                     </span>
                     <span className={styles.footerItem}>
                         <i className={`bi bi-server ${styles.footerItemIcon}`} aria-hidden="true" />
@@ -130,7 +130,7 @@ function SuperAdminDashboard() {
                     </span>
                 </div>
                 <div className={styles.footerRight}>
-                    © 2026 Duy Long Computer &nbsp;·&nbsp; Warehouse Management System v2.4
+                    Â© 2026 Duy Long Computer &nbsp;Â·&nbsp; Warehouse Management System v2.4
                 </div>
             </footer>
         </div>

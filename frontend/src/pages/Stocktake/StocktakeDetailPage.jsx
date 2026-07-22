@@ -14,7 +14,7 @@ function StocktakeDetailPage() {
   const [loadingStock, setLoadingStock] = useState(false);
 
   const [formData, setFormData] = useState({
-    purpose: 'Kiểm kê vật tư hàng hóa định kỳ',
+    purpose: 'Kiá»ƒm kÃª váº­t tÆ° hÃ ng hÃ³a Ä‘á»‹nh ká»³',
     code: id ? `KKK-000${id}` : 'KKK00002',
     warehouseId: searchParams.get('warehouseId') || 'all',
     toDate: searchParams.get('toDate') || new Date().toISOString().split('T')[0],
@@ -34,7 +34,7 @@ function StocktakeDetailPage() {
   const [lines, setLines] = useState([]);
   const [isParticipantsExpanded, setIsParticipantsExpanded] = useState(false);
   const [participants, setParticipants] = useState([
-    { name: 'Nguyễn Văn A', title: 'Thủ kho', represent: 'Kho chính' }
+    { name: 'Nguyá»…n VÄƒn A', title: 'Thá»§ kho', represent: 'Kho chÃ­nh' }
   ]);
 
   const fetchStockData = async (selectedWhId) => {
@@ -52,23 +52,23 @@ function StocktakeDetailPage() {
             variantId: item.id,
             itemCode: item.productCode || `VT00${idx + 1}`,
             sku: item.sku || `SKU-${idx + 1}`,
-            itemName: item.productName ? `${item.productName} ${item.variantName ? `(${item.variantName})` : ''}` : item.name || `Sản phẩm ${idx + 1}`,
-            unit: item.unitName || 'Cái',
+            itemName: item.productName ? `${item.productName} ${item.variantName ? `(${item.variantName})` : ''}` : item.name || `Sáº£n pháº©m ${idx + 1}`,
+            unit: item.unitName || 'CÃ¡i',
             bookQty: bookQty,
             countQty: bookQty,
             diffQty: 0,
             good100: bookQty,
             bad: 0,
             lost: 0,
-            action: 'Không xử lý'
+            action: 'KhÃ´ng xá»­ lÃ½'
           };
         });
         setLines(formattedLines);
       } else {
         setLines([
-          { id: 1, itemCode: 'VT001', sku: 'SKU-BP-001', itemName: 'Bàn phím cơ Logitech K845', unit: 'Cái', bookQty: 15, countQty: 15, diffQty: 0, good100: 15, bad: 0, lost: 0, action: 'Không xử lý' },
-          { id: 2, itemCode: 'VT002', sku: 'SKU-CHUOT-002', itemName: 'Chuột máy tính Kingston', unit: 'Cái', bookQty: 20, countQty: 18, diffQty: -2, good100: 18, bad: 0, lost: 0, action: 'Xử lý chênh lệch' },
-          { id: 3, itemCode: 'VT003', sku: 'SKU-CPU-003', itemName: 'CPU Intel Core i7-12700K', unit: 'Cái', bookQty: 5, countQty: 6, diffQty: 1, good100: 6, bad: 0, lost: 0, action: 'Xử lý chênh lệch' }
+          { id: 1, itemCode: 'VT001', sku: 'SKU-BP-001', itemName: 'BÃ n phÃ­m cÆ¡ Logitech K845', unit: 'CÃ¡i', bookQty: 15, countQty: 15, diffQty: 0, good100: 15, bad: 0, lost: 0, action: 'KhÃ´ng xá»­ lÃ½' },
+          { id: 2, itemCode: 'VT002', sku: 'SKU-CHUOT-002', itemName: 'Chuá»™t mÃ¡y tÃ­nh Kingston', unit: 'CÃ¡i', bookQty: 20, countQty: 18, diffQty: -2, good100: 18, bad: 0, lost: 0, action: 'Xá»­ lÃ½ chÃªnh lá»‡ch' },
+          { id: 3, itemCode: 'VT003', sku: 'SKU-CPU-003', itemName: 'CPU Intel Core i7-12700K', unit: 'CÃ¡i', bookQty: 5, countQty: 6, diffQty: 1, good100: 6, bad: 0, lost: 0, action: 'Xá»­ lÃ½ chÃªnh lá»‡ch' }
         ]);
       }
     } catch (err) {
@@ -115,7 +115,7 @@ function StocktakeDetailPage() {
         good100: countNum,
         bad: 0,
         lost: 0,
-        action: diff !== 0 ? 'Xử lý chênh lệch' : 'Không xử lý'
+        action: diff !== 0 ? 'Xá»­ lÃ½ chÃªnh lá»‡ch' : 'KhÃ´ng xá»­ lÃ½'
       };
     }));
   };
@@ -141,18 +141,18 @@ function StocktakeDetailPage() {
   };
 
   const handleSaveAndClose = () => {
-    navigate('/stocktakes', { state: { toastMessage: 'Cập nhật bảng kiểm kê thành công!', toastType: 'success' } });
+    navigate('/stocktakes', { state: { toastMessage: 'Cáº­p nháº­t báº£ng kiá»ƒm kÃª thÃ nh cÃ´ng!', toastType: 'success' } });
   };
 
   const handleCreateExportSlip = () => {
     const diffLackLines = lines.filter(l => Number(l.diffQty || 0) < 0);
     if (diffLackLines.length === 0) {
-      showToast('warning', 'Không có sản phẩm nào bị thiếu/hỏng để lập phiếu xuất kho xử lý!');
+      showToast('warning', 'KhÃ´ng cÃ³ sáº£n pháº©m nÃ o bá»‹ thiáº¿u/há»ng Ä‘á»ƒ láº­p phiáº¿u xuáº¥t kho xá»­ lÃ½!');
       return;
     }
     navigate('/inventory/export/create', {
       state: {
-        reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
+        reason: `Phiáº¿u xuáº¥t kho xá»­ lÃ½ chÃªnh lá»‡ch kiá»ƒm kÃª ${formData.code}`,
         items: diffLackLines.map(l => ({
           variantId: l.variantId,
           sku: l.sku,
@@ -166,12 +166,12 @@ function StocktakeDetailPage() {
   const handleCreateImportSlip = () => {
     const diffSurplusLines = lines.filter(l => Number(l.diffQty || 0) > 0);
     if (diffSurplusLines.length === 0) {
-      showToast('warning', 'Không có sản phẩm nào bị thừa để lập phiếu nhập kho điều chỉnh!');
+      showToast('warning', 'KhÃ´ng cÃ³ sáº£n pháº©m nÃ o bá»‹ thá»«a Ä‘á»ƒ láº­p phiáº¿u nháº­p kho Ä‘iá»u chá»‰nh!');
       return;
     }
     navigate('/inventory/import/create', {
       state: {
-        reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
+        reason: `Phiáº¿u nháº­p kho Ä‘iá»u chá»‰nh tÄƒng tá»“n kho theo kiá»ƒm kÃª ${formData.code}`,
         items: diffSurplusLines.map(l => ({
           variantId: l.variantId,
           sku: l.sku,
@@ -195,14 +195,14 @@ function StocktakeDetailPage() {
 
         {/* Page Header */}
         <div className={styles.pageHeader}>
-          <button className={styles.backBtn} onClick={handleCancel} title="Quay lại">
+          <button className={styles.backBtn} onClick={handleCancel} title="Quay láº¡i">
             <i className="bi bi-arrow-left"></i>
             <h1 className={styles.pageTitle}>
-              Chi tiết Bảng kiểm kê {formData.code}
+              Chi tiáº¿t Báº£ng kiá»ƒm kÃª {formData.code}
             </h1>
           </button>
           {formData.isProcessed && (
-            <div className={styles.processedStamp}>Đã xử lý chênh lệch</div>
+            <div className={styles.processedStamp}>ÄÃ£ xá»­ lÃ½ chÃªnh lá»‡ch</div>
           )}
         </div>
 
@@ -210,21 +210,21 @@ function StocktakeDetailPage() {
         <div className={styles.masterForm}>
           <div className={styles.formGridLeft}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Mục đích</label>
+              <label className={styles.formLabel}>Má»¥c Ä‘Ã­ch</label>
               <input type="text" className={styles.formInput} name="purpose" value={formData.purpose} onChange={handleChange} disabled={isSaved} />
             </div>
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Kiểm kê kho</label>
+                <label className={styles.formLabel}>Kiá»ƒm kÃª kho</label>
                 <select className={styles.formSelect} name="warehouseId" value={formData.warehouseId} onChange={handleChange} disabled={isSaved}>
-                  <option value="all">Tất cả kho</option>
+                  <option value="all">Táº¥t cáº£ kho</option>
                   {warehouses.map(wh => (
                     <option key={wh.id} value={wh.id}>{wh.name}</option>
                   ))}
                 </select>
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Đến ngày</label>
+                <label className={styles.formLabel}>Äáº¿n ngÃ y</label>
                 <input type="date" className={styles.formInput} name="toDate" value={formData.toDate} onChange={handleChange} disabled={isSaved} />
               </div>
             </div>
@@ -232,11 +232,11 @@ function StocktakeDetailPage() {
 
           <div className={styles.formGridRight}>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Số phiếu kiểm kê</label>
+              <label className={styles.formLabel}>Sá»‘ phiáº¿u kiá»ƒm kÃª</label>
               <input type="text" className={styles.formInput} value={formData.code} disabled />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Ngày kiểm kê</label>
+              <label className={styles.formLabel}>NgÃ y kiá»ƒm kÃª</label>
               <input type="datetime-local" className={styles.formInput} name="createdDate" value={formData.createdDate} onChange={handleChange} disabled={isSaved} />
             </div>
           </div>
@@ -247,7 +247,7 @@ function StocktakeDetailPage() {
           className={styles.sectionHeader}
           onClick={() => setIsParticipantsExpanded(!isParticipantsExpanded)}
         >
-          <i className={isParticipantsExpanded ? "bi bi-caret-down-fill" : "bi bi-caret-right-fill"}></i> Thành viên tham gia kiểm kê ({participants.length})
+          <i className={isParticipantsExpanded ? "bi bi-caret-down-fill" : "bi bi-caret-right-fill"}></i> ThÃ nh viÃªn tham gia kiá»ƒm kÃª ({participants.length})
         </div>
 
         {isParticipantsExpanded && (
@@ -257,10 +257,10 @@ function StocktakeDetailPage() {
                 <thead>
                   <tr>
                     <th style={{ width: '5%', textAlign: 'center' }}>STT</th>
-                    <th style={{ width: '30%' }}>HỌ VÀ TÊN</th>
-                    <th style={{ width: '30%' }}>CHỨC DANH</th>
-                    <th style={{ width: '30%' }}>ĐẠI DIỆN</th>
-                    {!isSaved && <th style={{ width: '5%', textAlign: 'center' }}>XÓA</th>}
+                    <th style={{ width: '30%' }}>Há»Œ VÃ€ TÃŠN</th>
+                    <th style={{ width: '30%' }}>CHá»¨C DANH</th>
+                    <th style={{ width: '30%' }}>Äáº I DIá»†N</th>
+                    {!isSaved && <th style={{ width: '5%', textAlign: 'center' }}>XÃ“A</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -326,7 +326,7 @@ function StocktakeDetailPage() {
         <div className={styles.detailSection}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <div style={{ fontWeight: 600, color: '#334155', fontSize: '15px' }}>
-              Chi tiết Vật tư, hàng hóa kiểm kê
+              Chi tiáº¿t Váº­t tÆ°, hÃ ng hÃ³a kiá»ƒm kÃª
             </div>
           </div>
 
@@ -334,22 +334,22 @@ function StocktakeDetailPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th rowSpan={2} style={{ width: '8%' }}>MÃ HÀNG</th>
+                  <th rowSpan={2} style={{ width: '8%' }}>MÃƒ HÃ€NG</th>
                   <th rowSpan={2} style={{ width: '10%' }}>SKU</th>
-                  <th rowSpan={2} style={{ width: '20%' }}>TÊN HÀNG HÓA</th>
-                  <th rowSpan={2} style={{ width: '6%' }}>ĐVT</th>
-                  <th colSpan={3}>SỐ LƯỢNG KHO</th>
-                  <th colSpan={3}>PHẨM CHẤT THỰC TẾ</th>
-                  <th rowSpan={2} style={{ width: '12%' }}>XỬ LÝ</th>
-                  {!isSaved && <th rowSpan={2} style={{ width: '4%', textAlign: 'center' }}>XÓA</th>}
+                  <th rowSpan={2} style={{ width: '20%' }}>TÃŠN HÃ€NG HÃ“A</th>
+                  <th rowSpan={2} style={{ width: '6%' }}>ÄVT</th>
+                  <th colSpan={3}>Sá» LÆ¯á»¢NG KHO</th>
+                  <th colSpan={3}>PHáº¨M CHáº¤T THá»°C Táº¾</th>
+                  <th rowSpan={2} style={{ width: '12%' }}>Xá»¬ LÃ</th>
+                  {!isSaved && <th rowSpan={2} style={{ width: '4%', textAlign: 'center' }}>XÃ“A</th>}
                 </tr>
                 <tr>
-                  <th>SỔ SÁCH</th>
-                  <th>KIỂM KÊ THỰC TẾ</th>
-                  <th>CHÊNH LỆCH</th>
-                  <th>TỐT 100%</th>
-                  <th>KÉM CẤP</th>
-                  <th>HỎNG/MẤT</th>
+                  <th>Sá»” SÃCH</th>
+                  <th>KIá»‚M KÃŠ THá»°C Táº¾</th>
+                  <th>CHÃŠNH Lá»†CH</th>
+                  <th>Tá»T 100%</th>
+                  <th>KÃ‰M Cáº¤P</th>
+                  <th>Há»ŽNG/Máº¤T</th>
                 </tr>
               </thead>
               <tbody>
@@ -419,8 +419,8 @@ function StocktakeDetailPage() {
                           onChange={(e) => handleActionChange(idx, e.target.value)}
                           style={{ border: '1px solid #cbd5e1', borderRadius: '3px', padding: '2px 4px' }}
                         >
-                          <option value="Không xử lý">Không xử lý</option>
-                          <option value="Xử lý chênh lệch">Xử lý chênh lệch</option>
+                          <option value="KhÃ´ng xá»­ lÃ½">KhÃ´ng xá»­ lÃ½</option>
+                          <option value="Xá»­ lÃ½ chÃªnh lá»‡ch">Xá»­ lÃ½ chÃªnh lá»‡ch</option>
                         </select>
                       )}
                     </td>
@@ -430,7 +430,7 @@ function StocktakeDetailPage() {
                           type="button"
                           style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}
                           onClick={() => handleRemoveLine(idx)}
-                          title="Xóa dòng"
+                          title="XÃ³a dÃ²ng"
                         >
                           <i className="bi bi-trash"></i>
                         </button>
@@ -440,7 +440,7 @@ function StocktakeDetailPage() {
                 ))}
                 {/* Summary Row */}
                 <tr style={{ fontWeight: 700, backgroundColor: '#f1f5f9', borderTop: '2px solid #cbd5e1' }}>
-                  <td colSpan={4} style={{ textAlign: 'right' }}>TỔNG CỘNG:</td>
+                  <td colSpan={4} style={{ textAlign: 'right' }}>Tá»”NG Cá»˜NG:</td>
                   <td className={styles.numberCol}>{totalBookQty}</td>
                   <td className={styles.numberCol}>{totalCountQty}</td>
                   <td className={styles.numberCol} style={{ color: totalDiffQty > 0 ? '#16a34a' : totalDiffQty < 0 ? '#dc2626' : 'inherit' }}>
@@ -459,7 +459,7 @@ function StocktakeDetailPage() {
         {/* Conclusion Section */}
         <div className={styles.conclusionSection}>
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Kết luận kiểm kê</label>
+            <label className={styles.formLabel}>Káº¿t luáº­n kiá»ƒm kÃª</label>
             <textarea
               className={styles.textareaControl}
               name="conclusion"
@@ -476,37 +476,37 @@ function StocktakeDetailPage() {
       {isSaved ? (
         <div className={styles.pageFooterView}>
           <div className={styles.footerViewLeft}>
-            <button className={styles.btnViewIcon} onClick={handleCancel} title="Quay lại danh sách"><i className="bi bi-arrow-left"></i></button>
-            <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Tạo phiếu xuất kho cho hàng thiếu/hỏng">
-              <i className="bi bi-box-arrow-up"></i> Lập phiếu xuất
+            <button className={styles.btnViewIcon} onClick={handleCancel} title="Quay láº¡i danh sÃ¡ch"><i className="bi bi-arrow-left"></i></button>
+            <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Táº¡o phiáº¿u xuáº¥t kho cho hÃ ng thiáº¿u/há»ng">
+              <i className="bi bi-box-arrow-up"></i> Láº­p phiáº¿u xuáº¥t
             </button>
-            <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Tạo phiếu nhập kho cho hàng thừa">
-              <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
+            <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Táº¡o phiáº¿u nháº­p kho cho hÃ ng thá»«a">
+              <i className="bi bi-box-arrow-in-down"></i> Láº­p phiáº¿u nháº­p
             </button>
             <button className={styles.btnViewPrimary} onClick={() => setIsSaved(false)}>
-              <i className="bi bi-pencil"></i> Sửa lại
+              <i className="bi bi-pencil"></i> Sá»­a láº¡i
             </button>
           </div>
           <div className={styles.footerViewRight}>
             <button className={styles.btnViewText} onClick={() => window.print()}>
-              <i className="bi bi-printer"></i> In bảng kiểm kê
+              <i className="bi bi-printer"></i> In báº£ng kiá»ƒm kÃª
             </button>
           </div>
         </div>
       ) : (
         <div className={styles.pageFooter}>
           <div className={styles.footerLeft}>
-            <button className={`${styles.btnFooter} ${styles.btnFooterCancel}`} onClick={handleCancel}>Hủy bỏ</button>
+            <button className={`${styles.btnFooter} ${styles.btnFooterCancel}`} onClick={handleCancel}>Há»§y bá»</button>
           </div>
           <div className={styles.footerRight}>
             <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} onClick={() => {
               setIsSaved(true);
-              showToast('success', 'Lưu bảng kiểm kê thành công!');
+              showToast('success', 'LÆ°u báº£ng kiá»ƒm kÃª thÃ nh cÃ´ng!');
             }}>
-              <i className="bi bi-check-circle"></i> Lưu lại
+              <i className="bi bi-check-circle"></i> LÆ°u láº¡i
             </button>
             <button className={`${styles.btnFooter} ${styles.btnFooterPost}`} onClick={handleSaveAndClose}>
-              <i className="bi bi-printer"></i> Lưu và Đóng
+              <i className="bi bi-printer"></i> LÆ°u vÃ  ÄÃ³ng
             </button>
           </div>
         </div>

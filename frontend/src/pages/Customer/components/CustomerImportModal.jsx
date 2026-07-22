@@ -21,13 +21,13 @@ const CustomerImportModal = ({ isOpen, onClose, onSuccess, showToast }) => {
             await downloadCustomerTemplate();
         } catch (err) {
             console.error(err);
-            showToast('error', 'Lỗi', 'Không tải được file mẫu. Vui lòng thử lại sau.');
+            showToast('error', 'Lá»—i', 'KhÃ´ng táº£i Ä‘Æ°á»£c file máº«u. Vui lÃ²ng thá»­ láº¡i sau.');
         }
     };
 
     const handlePreview = async () => {
         if (!file) {
-            showToast('error', 'Lỗi', 'Vui lòng chọn file Excel.');
+            showToast('error', 'Lá»—i', 'Vui lÃ²ng chá»n file Excel.');
             return;
         }
         try {
@@ -38,7 +38,7 @@ const CustomerImportModal = ({ isOpen, onClose, onSuccess, showToast }) => {
             setStep(2);
         } catch (err) {
             console.error(err);
-            showToast('error', 'Lỗi', 'Không thể đọc file. Vui lòng kiểm tra lại định dạng.');
+            showToast('error', 'Lá»—i', 'KhÃ´ng thá»ƒ Ä‘á»c file. Vui lÃ²ng kiá»ƒm tra láº¡i Ä‘á»‹nh dáº¡ng.');
         } finally {
             setLoading(false);
         }
@@ -52,12 +52,12 @@ const CustomerImportModal = ({ isOpen, onClose, onSuccess, showToast }) => {
                 duplicateRowsToMerge: previewData.duplicateRows // We overwrite these
             };
             await confirmImportExcel(payload);
-            showToast('success', 'Thành công', 'Đã import dữ liệu khách hàng.');
+            showToast('success', 'ThÃ nh cÃ´ng', 'ÄÃ£ import dá»¯ liá»‡u khÃ¡ch hÃ ng.');
             onSuccess();
             resetAndClose();
         } catch (err) {
             console.error(err);
-            showToast('error', 'Lỗi', 'Có lỗi xảy ra khi lưu dữ liệu.');
+            showToast('error', 'Lá»—i', 'CÃ³ lá»—i xáº£y ra khi lÆ°u dá»¯ liá»‡u.');
         } finally {
             setLoading(false);
         }
@@ -75,7 +75,7 @@ const CustomerImportModal = ({ isOpen, onClose, onSuccess, showToast }) => {
         <Modal
             isOpen={isOpen}
             onClose={resetAndClose}
-            title={step === 1 ? "Nhập khẩu Khách hàng" : "Kết quả kiểm tra dữ liệu"}
+            title={step === 1 ? "Nháº­p kháº©u KhÃ¡ch hÃ ng" : "Káº¿t quáº£ kiá»ƒm tra dá»¯ liá»‡u"}
             size={step === 1 ? "md" : "xl"}
         >
             <div className={styles.container}>
@@ -83,8 +83,8 @@ const CustomerImportModal = ({ isOpen, onClose, onSuccess, showToast }) => {
                     <div className={styles.uploadSection}>
                         <div className={styles.uploadBox} onClick={() => fileInputRef.current.click()}>
                             <i className="fas fa-cloud-upload-alt fa-3x"></i>
-                            <p>Kéo thả file vào đây hoặc <b>Bấm để chọn file</b></p>
-                            <span>Hỗ trợ định dạng .xlsx, tối đa 5MB</span>
+                            <p>KÃ©o tháº£ file vÃ o Ä‘Ã¢y hoáº·c <b>Báº¥m Ä‘á»ƒ chá»n file</b></p>
+                            <span>Há»— trá»£ Ä‘á»‹nh dáº¡ng .xlsx, tá»‘i Ä‘a 5MB</span>
                             <input 
                                 type="file" 
                                 accept=".xlsx" 
@@ -93,19 +93,19 @@ const CustomerImportModal = ({ isOpen, onClose, onSuccess, showToast }) => {
                                 onChange={handleFileChange}
                             />
                         </div>
-                        {file && <p className={styles.fileName}>Đã chọn: {file.name}</p>}
+                        {file && <p className={styles.fileName}>ÄÃ£ chá»n: {file.name}</p>}
 
                         <div className={styles.downloadTemplateBox}>
                             <button className={styles.btnTemplate} onClick={handleDownloadTemplate}>
-                                <i className="fas fa-file-download"></i> Tải file mẫu
+                                <i className="fas fa-file-download"></i> Táº£i file máº«u
                             </button>
-                            <span className={styles.templateNote}>Vui lòng nhập dữ liệu theo đúng định dạng file mẫu.</span>
+                            <span className={styles.templateNote}>Vui lÃ²ng nháº­p dá»¯ liá»‡u theo Ä‘Ãºng Ä‘á»‹nh dáº¡ng file máº«u.</span>
                         </div>
 
                         <div className={styles.actions}>
-                            <button className={styles.btnCancel} onClick={resetAndClose} disabled={loading}>Hủy</button>
+                            <button className={styles.btnCancel} onClick={resetAndClose} disabled={loading}>Há»§y</button>
                             <button className={styles.btnPrimary} onClick={handlePreview} disabled={!file || loading}>
-                                {loading ? 'Đang đọc file...' : 'Tiếp tục'}
+                                {loading ? 'Äang Ä‘á»c file...' : 'Tiáº¿p tá»¥c'}
                             </button>
                         </div>
                     </div>
@@ -115,26 +115,26 @@ const CustomerImportModal = ({ isOpen, onClose, onSuccess, showToast }) => {
                     <div className={styles.previewSection}>
                         <div className={styles.summary}>
                             <div className={styles.statBox}>
-                                <span>Tổng số dòng</span>
+                                <span>Tá»•ng sá»‘ dÃ²ng</span>
                                 <b>{previewData.totalRows}</b>
                             </div>
                             <div className={`${styles.statBox} ${styles.statSuccess}`}>
-                                <span>Hợp lệ</span>
+                                <span>Há»£p lá»‡</span>
                                 <b>{previewData.validCount}</b>
                             </div>
                             <div className={`${styles.statBox} ${styles.statWarning}`}>
-                                <span>Trùng lặp (Sẽ ghi đè)</span>
+                                <span>TrÃ¹ng láº·p (Sáº½ ghi Ä‘Ã¨)</span>
                                 <b>{previewData.duplicateCount}</b>
                             </div>
                             <div className={`${styles.statBox} ${styles.statError}`}>
-                                <span>Lỗi (Bỏ qua)</span>
+                                <span>Lá»—i (Bá» qua)</span>
                                 <b>{previewData.errorCount}</b>
                             </div>
                         </div>
 
                         {previewData.errorCount > 0 && (
                             <div className={styles.errorAlert}>
-                                Có {previewData.errorCount} dòng bị lỗi dữ liệu (Tên trống hoặc SĐT không đúng định dạng). Các dòng này sẽ bị bỏ qua.
+                                CÃ³ {previewData.errorCount} dÃ²ng bá»‹ lá»—i dá»¯ liá»‡u (TÃªn trá»‘ng hoáº·c SÄT khÃ´ng Ä‘Ãºng Ä‘á»‹nh dáº¡ng). CÃ¡c dÃ²ng nÃ y sáº½ bá»‹ bá» qua.
                             </div>
                         )}
 
@@ -142,26 +142,26 @@ const CustomerImportModal = ({ isOpen, onClose, onSuccess, showToast }) => {
                             <table className={styles.previewTable}>
                                 <thead>
                                     <tr>
-                                        <th>Trạng thái</th>
-                                        <th>Tên khách hàng</th>
-                                        <th>Số điện thoại</th>
-                                        <th>Nhóm KH</th>
-                                        <th>Ghi chú</th>
+                                        <th>Tráº¡ng thÃ¡i</th>
+                                        <th>TÃªn khÃ¡ch hÃ ng</th>
+                                        <th>Sá»‘ Ä‘iá»‡n thoáº¡i</th>
+                                        <th>NhÃ³m KH</th>
+                                        <th>Ghi chÃº</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {previewData.validRows.map((row, idx) => (
                                         <tr key={`valid-${idx}`}>
-                                            <td><span className={styles.badgeSuccess}>Hợp lệ</span></td>
+                                            <td><span className={styles.badgeSuccess}>Há»£p lá»‡</span></td>
                                             <td>{row.name}</td>
                                             <td>{row.phone}</td>
                                             <td>{row.groupType}</td>
-                                            <td>Thêm mới</td>
+                                            <td>ThÃªm má»›i</td>
                                         </tr>
                                     ))}
                                     {previewData.duplicateRows.map((row, idx) => (
                                         <tr key={`dup-${idx}`} className={styles.rowWarning}>
-                                            <td><span className={styles.badgeWarning}>Trùng lặp</span></td>
+                                            <td><span className={styles.badgeWarning}>TrÃ¹ng láº·p</span></td>
                                             <td>{row.name}</td>
                                             <td>{row.phone}</td>
                                             <td>{row.groupType}</td>
@@ -170,7 +170,7 @@ const CustomerImportModal = ({ isOpen, onClose, onSuccess, showToast }) => {
                                     ))}
                                     {previewData.errorRows.map((row, idx) => (
                                         <tr key={`err-${idx}`} className={styles.rowError}>
-                                            <td><span className={styles.badgeError}>Lỗi</span></td>
+                                            <td><span className={styles.badgeError}>Lá»—i</span></td>
                                             <td>{row.name}</td>
                                             <td>{row.phone}</td>
                                             <td>{row.groupType}</td>
@@ -182,13 +182,13 @@ const CustomerImportModal = ({ isOpen, onClose, onSuccess, showToast }) => {
                         </div>
 
                         <div className={styles.actions}>
-                            <button className={styles.btnCancel} onClick={() => setStep(1)} disabled={loading}>Quay lại</button>
+                            <button className={styles.btnCancel} onClick={() => setStep(1)} disabled={loading}>Quay láº¡i</button>
                             <button 
                                 className={styles.btnPrimary} 
                                 onClick={handleConfirm} 
                                 disabled={loading || (previewData.validCount === 0 && previewData.duplicateCount === 0)}
                             >
-                                {loading ? 'Đang xử lý...' : 'Thực hiện Import'}
+                                {loading ? 'Äang xá»­ lÃ½...' : 'Thá»±c hiá»‡n Import'}
                             </button>
                         </div>
                     </div>

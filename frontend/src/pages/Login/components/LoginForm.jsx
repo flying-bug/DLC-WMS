@@ -19,7 +19,7 @@ function LoginForm() {
             ...prev,
             [name]: type === 'checkbox' ? checked : value,
         }));
-        // Xóa lỗi khi người dùng bắt đầu nhập lại
+        // XÃ³a lá»—i khi ngÆ°á»i dÃ¹ng báº¯t Ä‘áº§u nháº­p láº¡i
         if (errors[name]) {
             setErrors((prev) => ({ ...prev, [name]: '' }));
         }
@@ -28,12 +28,12 @@ function LoginForm() {
     const validate = () => {
         const newErrors = {};
         if (!formData.usernameOrEmail.trim()) {
-            newErrors.usernameOrEmail = 'Vui lòng nhập email hoặc tên đăng nhập.';
+            newErrors.usernameOrEmail = 'Vui lÃ²ng nháº­p email hoáº·c tÃªn Ä‘Äƒng nháº­p.';
         }
         if (!formData.password) {
-            newErrors.password = 'Vui lòng nhập mật khẩu.';
+            newErrors.password = 'Vui lÃ²ng nháº­p máº­t kháº©u.';
         } else if (formData.password.length < 6) {
-            newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự.';
+            newErrors.password = 'Máº­t kháº©u pháº£i cÃ³ Ã­t nháº¥t 6 kÃ½ tá»±.';
         }
         return newErrors;
     };
@@ -73,7 +73,7 @@ function LoginForm() {
                 usernameOrEmail:
                     error.response?.data?.userMessage ||
                     error.response?.data?.message ||
-                    'Tài khoản hoặc mật khẩu không chính xác.'
+                    'TÃ i khoáº£n hoáº·c máº­t kháº©u khÃ´ng chÃ­nh xÃ¡c.'
             });
         } finally {
             setLoading(false);
@@ -85,7 +85,7 @@ function LoginForm() {
             {/* Email / Username */}
             <div className={styles.fieldGroup}>
                 <label htmlFor="usernameOrEmail" className={styles.label}>
-                    Email hoặc Tên đăng nhập
+                    Email hoáº·c TÃªn Ä‘Äƒng nháº­p
                 </label>
                 <div className={`${styles.inputWrapper} ${errors.usernameOrEmail ? styles.inputError : ''}`}>
                     {/* Person icon */}
@@ -123,7 +123,7 @@ function LoginForm() {
             {/* Password */}
             <div className={styles.fieldGroup}>
                 <label htmlFor="password" className={styles.label}>
-                    Mật khẩu
+                    Máº­t kháº©u
                 </label>
                 <div className={`${styles.inputWrapper} ${errors.password ? styles.inputError : ''}`}>
                     {/* Lock icon */}
@@ -155,7 +155,7 @@ function LoginForm() {
                         type="button"
                         className={styles.togglePassword}
                         onClick={() => setShowPassword((prev) => !prev)}
-                        aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                        aria-label={showPassword ? 'áº¨n máº­t kháº©u' : 'Hiá»‡n máº­t kháº©u'}
                     >
                         {showPassword ? (
                             // Eye-slash icon
@@ -190,10 +190,10 @@ function LoginForm() {
                         checked={formData.rememberMe}
                         onChange={handleChange}
                     />
-                    <span>Ghi nhớ đăng nhập</span>
+                    <span>Ghi nhá»› Ä‘Äƒng nháº­p</span>
                 </label>
                 <Link to={ROUTES.FORGOT_PASSWORD} className={styles.forgotLink}>
-                    Quên mật khẩu?
+                    QuÃªn máº­t kháº©u?
                 </Link>
             </div>
 
@@ -203,7 +203,7 @@ function LoginForm() {
                     <span className={styles.spinner} aria-hidden="true" />
                 ) : (
                     <>
-                        Đăng nhập
+                        ÄÄƒng nháº­p
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="16"

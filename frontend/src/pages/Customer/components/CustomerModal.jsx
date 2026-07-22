@@ -3,9 +3,9 @@ import { createCustomer, updateCustomer } from '../../../api/customerApi';
 import styles from './CustomerModal.module.css';
 
 const GROUP_OPTIONS = [
-    { value: 'RETAIL', label: 'Khách lẻ' },
-    { value: 'WHOLESALE', label: 'Khách thợ' },
-    { value: 'DISTRIBUTOR', label: 'Đại lý' },
+    { value: 'RETAIL', label: 'KhÃ¡ch láº»' },
+    { value: 'WHOLESALE', label: 'KhÃ¡ch thá»£' },
+    { value: 'DISTRIBUTOR', label: 'Äáº¡i lÃ½' },
 ];
 
 const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) => {
@@ -50,7 +50,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
         if (apiError) setApiError('');
         
         if (name === 'phone' && isEditMode && value !== editData.phone && value !== '') {
-            setPhoneWarning('⚠ Thay đổi số điện thoại sẽ làm thay đổi thông tin định danh sở hữu thiết bị. Hành động này sẽ được ghi lại vào lịch sử.');
+            setPhoneWarning('âš  Thay Ä‘á»•i sá»‘ Ä‘iá»‡n thoáº¡i sáº½ lÃ m thay Ä‘á»•i thÃ´ng tin Ä‘á»‹nh danh sá»Ÿ há»¯u thiáº¿t bá»‹. HÃ nh Ä‘á»™ng nÃ y sáº½ Ä‘Æ°á»£c ghi láº¡i vÃ o lá»‹ch sá»­.');
         } else if (name === 'phone') {
             setPhoneWarning('');
         }
@@ -58,16 +58,16 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
 
     const validate = () => {
         const newErrors = {};
-        if (!form.name.trim()) newErrors.name = 'Vui lòng nhập tên khách hàng!';
-        else if (form.name.trim().length > 150) newErrors.name = 'Tên không được vượt quá 150 ký tự.';
+        if (!form.name.trim()) newErrors.name = 'Vui lÃ²ng nháº­p tÃªn khÃ¡ch hÃ ng!';
+        else if (form.name.trim().length > 150) newErrors.name = 'TÃªn khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 150 kÃ½ tá»±.';
 
-        if (!form.phone.trim()) newErrors.phone = 'Vui lòng nhập số điện thoại!';
+        if (!form.phone.trim()) newErrors.phone = 'Vui lÃ²ng nháº­p sá»‘ Ä‘iá»‡n thoáº¡i!';
 
         if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-            newErrors.email = 'Email không đúng định dạng!';
+            newErrors.email = 'Email khÃ´ng Ä‘Ãºng Ä‘á»‹nh dáº¡ng!';
         }
-        if (form.email && form.email.length > 100) newErrors.email = 'Email không được vượt quá 100 ký tự.';
-        if (form.address && form.address.length > 1000) newErrors.address = 'Địa chỉ không được vượt quá 1000 ký tự.';
+        if (form.email && form.email.length > 100) newErrors.email = 'Email khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 100 kÃ½ tá»±.';
+        if (form.address && form.address.length > 1000) newErrors.address = 'Äá»‹a chá»‰ khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 1000 kÃ½ tá»±.';
 
         return newErrors;
     };
@@ -77,7 +77,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
         const validationErrors = validate();
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
-            setApiError('Vui lòng điền đầy đủ các thông tin bắt buộc (*)');
+            setApiError('Vui lÃ²ng Ä‘iá»n Ä‘áº§y Ä‘á»§ cÃ¡c thÃ´ng tin báº¯t buá»™c (*)');
             return;
         }
 
@@ -102,7 +102,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
             }
         } catch (error) {
             const responseData = error.response?.data;
-            const msg = responseData?.userMessage || responseData?.devMessage || error.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+            const msg = responseData?.userMessage || responseData?.devMessage || error.message || 'CÃ³ lá»—i xáº£y ra. Vui lÃ²ng thá»­ láº¡i.';
             setApiError(msg);
 
             if (responseData?.errorCode === 'CUST02') {
@@ -112,10 +112,10 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
             } else if (responseData?.errorCode === 'VAL400') {
                 const lowerMsg = msg.toLowerCase();
                 const newErrors = {};
-                if (lowerMsg.includes('tên') || lowerMsg.includes('name')) newErrors.name = msg;
-                else if (lowerMsg.includes('điện thoại') || lowerMsg.includes('phone')) newErrors.phone = msg;
+                if (lowerMsg.includes('tÃªn') || lowerMsg.includes('name')) newErrors.name = msg;
+                else if (lowerMsg.includes('Ä‘iá»‡n thoáº¡i') || lowerMsg.includes('phone')) newErrors.phone = msg;
                 else if (lowerMsg.includes('email')) newErrors.email = msg;
-                else if (lowerMsg.includes('địa chỉ') || lowerMsg.includes('address')) newErrors.address = msg;
+                else if (lowerMsg.includes('Ä‘á»‹a chá»‰') || lowerMsg.includes('address')) newErrors.address = msg;
                 if (Object.keys(newErrors).length > 0) {
                     setErrors(prev => ({ ...prev, ...newErrors }));
                 }
@@ -141,10 +141,10 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
                 {/* Header */}
                 <div className="misa-modal-header">
                     <div className={styles.headerTitle}>
-                        {isEditMode ? 'Chỉnh sửa Khách Hàng' : 'Thêm Khách Hàng'}
+                        {isEditMode ? 'Chá»‰nh sá»­a KhÃ¡ch HÃ ng' : 'ThÃªm KhÃ¡ch HÃ ng'}
                     </div>
                     <div className={styles.headerActions}>
-                        <button className={styles.iconBtn} onClick={onClose} title="Đóng">
+                        <button className={styles.iconBtn} onClick={onClose} title="ÄÃ³ng">
                             <i className="fas fa-times"></i>
                         </button>
                     </div>
@@ -160,21 +160,21 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
                     )}
                     <div className={styles.formGrid}>
                         <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Mã khách hàng</label>
+                            <label className={styles.formLabel}>MÃ£ khÃ¡ch hÃ ng</label>
                             <input 
                                 type="text" 
                                 className={`${styles.input} ${errors.code ? styles.inputError : ''}`} 
                                 name="code"
                                 value={form.code}
                                 onChange={handleChange}
-                                placeholder="Tự động hoặc nhập tay..." 
+                                placeholder="Tá»± Ä‘á»™ng hoáº·c nháº­p tay..." 
                                 disabled={isEditMode}
                             />
                             {errors.code && <span className={styles.errorMsg}>{errors.code}</span>}
                         </div>
 
                         <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Nhóm khách hàng</label>
+                            <label className={styles.formLabel}>NhÃ³m khÃ¡ch hÃ ng</label>
                             <div className={styles.inputWrapper}>
                                 <select 
                                     className={styles.select} 
@@ -191,21 +191,21 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
                         </div>
 
                         <div className={`${styles.formGroup} ${styles.col12}`}>
-                            <label className={styles.formLabel}>Tên khách hàng <span className={styles.required}>*</span></label>
+                            <label className={styles.formLabel}>TÃªn khÃ¡ch hÃ ng <span className={styles.required}>*</span></label>
                             <input 
                                 type="text" 
                                 className={`${styles.input} ${errors.name ? styles.inputError : ''}`} 
                                 name="name"
                                 value={form.name}
                                 onChange={handleChange}
-                                placeholder="Ví dụ: Nguyễn Văn A..." 
+                                placeholder="VÃ­ dá»¥: Nguyá»…n VÄƒn A..." 
                                 maxLength={150}
                             />
                             {errors.name && <span className={styles.errorMsg}>{errors.name}</span>}
                         </div>
 
                         <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Điện thoại liên hệ <span className={styles.required}>*</span></label>
+                            <label className={styles.formLabel}>Äiá»‡n thoáº¡i liÃªn há»‡ <span className={styles.required}>*</span></label>
                             <div className={styles.inputWrapper}>
                                 <input 
                                     type="tel" 
@@ -239,14 +239,14 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
                         </div>
 
                         <div className={`${styles.formGroup} ${styles.col12}`}>
-                            <label className={styles.formLabel}>Địa chỉ</label>
+                            <label className={styles.formLabel}>Äá»‹a chá»‰</label>
                             <textarea 
                                 className={`${styles.input} ${errors.address ? styles.inputError : ''}`} 
                                 style={{ resize: 'vertical', minHeight: '80px' }}
                                 name="address"
                                 value={form.address}
                                 onChange={handleChange}
-                                placeholder="Nhập địa chỉ chi tiết..." 
+                                placeholder="Nháº­p Ä‘á»‹a chá»‰ chi tiáº¿t..." 
                                 rows="3"
                                 maxLength={1000}
                             ></textarea>
@@ -258,19 +258,19 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
                 {/* Footer */}
                 <div className="misa-modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', backgroundColor: '#fff' }}>
                     <div className={styles.footerLeft}>
-                        <button className="btn-misa-outline" onClick={onClose} disabled={submitting}>Hủy</button>
+                        <button className="btn-misa-outline" onClick={onClose} disabled={submitting}>Há»§y</button>
                     </div>
                     <div className={styles.footerRight} style={{ display: 'flex', gap: '12px' }}>
                         {!isEditMode && (
                             <button className="btn-misa-outline" onClick={() => handleSave(true)} disabled={submitting}>
-                                {submitting ? 'Đang lưu...' : 'Lưu & Thêm tiếp'}
+                                {submitting ? 'Äang lÆ°u...' : 'LÆ°u & ThÃªm tiáº¿p'}
                             </button>
                         )}
                         <button className="btn-misa-primary" onClick={() => handleSave(false)} disabled={submitting}>
                             {submitting ? (
-                                <><i className="fas fa-spinner fa-spin"></i> Đang lưu...</>
+                                <><i className="fas fa-spinner fa-spin"></i> Äang lÆ°u...</>
                             ) : (
-                                isEditMode ? 'Cập nhật' : 'Lưu'
+                                isEditMode ? 'Cáº­p nháº­t' : 'LÆ°u'
                             )}
                         </button>
                     </div>

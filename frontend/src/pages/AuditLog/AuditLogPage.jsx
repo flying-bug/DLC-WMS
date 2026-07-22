@@ -39,66 +39,66 @@ const parseDateInput = (value, endOfDay = false) => {
 const getActionBadgeClass = (action) => {
     if (!action) return styles.badgeLogin;
     const lowerAction = action.toLowerCase();
-    if (lowerAction.includes('thêm') || lowerAction.includes('tạo') || lowerAction.includes('add') || lowerAction.includes('create')) return styles.badgeAdd;
-    if (lowerAction.includes('sửa') || lowerAction.includes('cập nhật') || lowerAction.includes('edit') || lowerAction.includes('update')) return styles.badgeEdit;
-    if (lowerAction.includes('xóa') || lowerAction.includes('hủy') || lowerAction.includes('delete') || lowerAction.includes('remove')) return styles.badgeDelete;
+    if (lowerAction.includes('thÃªm') || lowerAction.includes('táº¡o') || lowerAction.includes('add') || lowerAction.includes('create')) return styles.badgeAdd;
+    if (lowerAction.includes('sá»­a') || lowerAction.includes('cáº­p nháº­t') || lowerAction.includes('edit') || lowerAction.includes('update')) return styles.badgeEdit;
+    if (lowerAction.includes('xÃ³a') || lowerAction.includes('há»§y') || lowerAction.includes('delete') || lowerAction.includes('remove')) return styles.badgeDelete;
     return styles.badgeLogin;
 };
 
 const getModuleLabel = (module) => {
     const moduleLabels = {
-        Account: 'Tài khoản',
-        Auth: 'Xác thực',
-        Product: 'Sản phẩm',
-        Unit: 'Đơn vị tính',
-        Permission: 'Phân quyền',
-        ExportSlip: 'Phiếu xuất kho',
-        ImportSlip: 'Phiếu nhập kho',
-        InventoryDocument: 'Chứng từ kho',
-        User: 'Người dùng',
-        Role: 'Vai trò',
-        Warehouse: 'Kho hàng',
+        Account: 'TÃ i khoáº£n',
+        Auth: 'XÃ¡c thá»±c',
+        Product: 'Sáº£n pháº©m',
+        Unit: 'ÄÆ¡n vá»‹ tÃ­nh',
+        Permission: 'PhÃ¢n quyá»n',
+        ExportSlip: 'Phiáº¿u xuáº¥t kho',
+        ImportSlip: 'Phiáº¿u nháº­p kho',
+        InventoryDocument: 'Chá»©ng tá»« kho',
+        User: 'NgÆ°á»i dÃ¹ng',
+        Role: 'Vai trÃ²',
+        Warehouse: 'Kho hÃ ng',
     };
 
-    return moduleLabels[module] || module || 'Hệ thống';
+    return moduleLabels[module] || module || 'Há»‡ thá»‘ng';
 };
 
 const fieldLabels = {
     id: 'ID',
-    username: 'Tên đăng nhập',
-    fullName: 'Họ tên',
+    username: 'TÃªn Ä‘Äƒng nháº­p',
+    fullName: 'Há» tÃªn',
     email: 'Email',
-    phone: 'Số điện thoại',
-    status: 'Trạng thái',
-    roles: 'Vai trò',
-    permissions: 'Quyền',
-    name: 'Tên',
-    description: 'Mô tả',
-    productCode: 'Mã sản phẩm',
-    productName: 'Tên sản phẩm',
-    productType: 'Loại sản phẩm',
-    brandId: 'ID thương hiệu',
-    brandName: 'Thương hiệu',
-    categoryId: 'ID danh mục',
-    categoryName: 'Danh mục',
-    unitId: 'ID đơn vị',
-    unitName: 'Đơn vị tính',
-    trackSerial: 'Theo dõi serial',
-    trackLot: 'Theo dõi lô',
-    isAssembly: 'Lắp ráp',
-    active: 'Hoạt động',
-    taxReductionStatus: 'Giảm thuế',
-    stockQty: 'Tồn kho',
-    stockValue: 'Giá trị tồn',
-    imageUrl: 'Ảnh',
+    phone: 'Sá»‘ Ä‘iá»‡n thoáº¡i',
+    status: 'Tráº¡ng thÃ¡i',
+    roles: 'Vai trÃ²',
+    permissions: 'Quyá»n',
+    name: 'TÃªn',
+    description: 'MÃ´ táº£',
+    productCode: 'MÃ£ sáº£n pháº©m',
+    productName: 'TÃªn sáº£n pháº©m',
+    productType: 'Loáº¡i sáº£n pháº©m',
+    brandId: 'ID thÆ°Æ¡ng hiá»‡u',
+    brandName: 'ThÆ°Æ¡ng hiá»‡u',
+    categoryId: 'ID danh má»¥c',
+    categoryName: 'Danh má»¥c',
+    unitId: 'ID Ä‘Æ¡n vá»‹',
+    unitName: 'ÄÆ¡n vá»‹ tÃ­nh',
+    trackSerial: 'Theo dÃµi serial',
+    trackLot: 'Theo dÃµi lÃ´',
+    isAssembly: 'Láº¯p rÃ¡p',
+    active: 'Hoáº¡t Ä‘á»™ng',
+    taxReductionStatus: 'Giáº£m thuáº¿',
+    stockQty: 'Tá»“n kho',
+    stockValue: 'GiÃ¡ trá»‹ tá»“n',
+    imageUrl: 'áº¢nh',
 };
 
 const getFieldLabel = (field) => fieldLabels[field] || field;
 
 const formatDetailValue = (value) => {
-    if (value === null || value === undefined || value === '') return '—';
-    if (typeof value === 'boolean') return value ? 'Có' : 'Không';
-    if (Array.isArray(value)) return value.length ? value.join(', ') : '—';
+    if (value === null || value === undefined || value === '') return 'â€”';
+    if (typeof value === 'boolean') return value ? 'CÃ³' : 'KhÃ´ng';
+    if (Array.isArray(value)) return value.length ? value.join(', ') : 'â€”';
     if (typeof value === 'object') return JSON.stringify(value);
     return String(value);
 };
@@ -166,7 +166,7 @@ function AuditLogPage() {
     }, [fetchLogs]);
 
     const handleExport = () => {
-        const headers = ['Thời gian', 'Người dùng', 'Thao tác', 'Phân hệ', 'Địa chỉ IP'];
+        const headers = ['Thá»i gian', 'NgÆ°á»i dÃ¹ng', 'Thao tÃ¡c', 'PhÃ¢n há»‡', 'Äá»‹a chá»‰ IP'];
         const data = logs.map(log => [
             formatDateTime(log.timestamp),
             log.user,
@@ -193,7 +193,7 @@ function AuditLogPage() {
             }
         } catch (error) {
             console.error('Error fetching audit log detail:', error);
-            setDetailError('Không tải được chi tiết nhật ký.');
+            setDetailError('KhÃ´ng táº£i Ä‘Æ°á»£c chi tiáº¿t nháº­t kÃ½.');
         } finally {
             setDetailLoading(false);
         }
@@ -215,8 +215,8 @@ function AuditLogPage() {
                 <div className={styles.headerLeft}>
                     <div className={styles.brandName}>Duy Long Computer</div>
                     <nav className={styles.navLinks}>
-                        <a onClick={() => navigate('/users')} className={styles.navLink}>Quản lý người dùng</a>
-                        <a onClick={() => navigate('/audit-log')} className={styles.navLinkActive}>Nhật ký hệ thống</a>
+                        <a onClick={() => navigate('/users')} className={styles.navLink}>Quáº£n lÃ½ ngÆ°á»i dÃ¹ng</a>
+                        <a onClick={() => navigate('/audit-log')} className={styles.navLinkActive}>Nháº­t kÃ½ há»‡ thá»‘ng</a>
                     </nav>
                 </div>
                 <div className={styles.headerRight}>
@@ -233,17 +233,17 @@ function AuditLogPage() {
             <main className={styles.main}>
                 <div className={styles.pageHeader}>
                     <div>
-                        <h1 className={styles.pageTitle}>Nhật ký hệ thống</h1>
-                        <p className={styles.pageSubtitle}>Theo dõi và truy xuất các hoạt động của người dùng trên toàn hệ thống.</p>
+                        <h1 className={styles.pageTitle}>Nháº­t kÃ½ há»‡ thá»‘ng</h1>
+                        <p className={styles.pageSubtitle}>Theo dÃµi vÃ  truy xuáº¥t cÃ¡c hoáº¡t Ä‘á»™ng cá»§a ngÆ°á»i dÃ¹ng trÃªn toÃ n há»‡ thá»‘ng.</p>
                     </div>
                 </div>
 
                 <div className={styles.filterContainer}>
                     <div className={styles.filterGroup}>
-                        <label>Khoảng thời gian</label>
+                        <label>Khoáº£ng thá»i gian</label>
                         <div className={styles.dateRangeFields}>
                             <div className={styles.dateField}>
-                                <span>Từ ngày</span>
+                                <span>Tá»« ngÃ y</span>
                                 <input
                                     type="date"
                                     value={fromDateInput}
@@ -251,7 +251,7 @@ function AuditLogPage() {
                                 />
                             </div>
                             <div className={styles.dateField}>
-                                <span>Đến ngày</span>
+                                <span>Äáº¿n ngÃ y</span>
                                 <input
                                     type="date"
                                     value={toDateInput}
@@ -261,29 +261,29 @@ function AuditLogPage() {
                         </div>
                     </div>
                     <div className={styles.filterGroup}>
-                        <label>Phân hệ</label>
+                        <label>PhÃ¢n há»‡</label>
                         <div className={styles.inputWrapper}>
                             <select
                                 value={selectedModule}
                                 onChange={(e) => { setSelectedModule(e.target.value); setPage(0); }}
                             >
-                                <option value="">Tất cả</option>
-                                <option value="Auth">Xác thực</option>
-                                <option value="Account">Tài khoản</option>
-                                <option value="Permission">Phân quyền</option>
-                                <option value="Product">Sản phẩm</option>
-                                <option value="Unit">Đơn vị tính</option>
-                                <option value="ExportSlip">Phiếu xuất kho</option>
+                                <option value="">Táº¥t cáº£</option>
+                                <option value="Auth">XÃ¡c thá»±c</option>
+                                <option value="Account">TÃ i khoáº£n</option>
+                                <option value="Permission">PhÃ¢n quyá»n</option>
+                                <option value="Product">Sáº£n pháº©m</option>
+                                <option value="Unit">ÄÆ¡n vá»‹ tÃ­nh</option>
+                                <option value="ExportSlip">Phiáº¿u xuáº¥t kho</option>
                             </select>
                         </div>
                     </div>
                     <div className={styles.filterGroup}>
-                        <label>Người dùng / Tìm kiếm</label>
+                        <label>NgÆ°á»i dÃ¹ng / TÃ¬m kiáº¿m</label>
                         <div className={styles.inputWrapper}>
                             <i className="bi bi-person-bounding-box"></i>
                             <input
                                 type="text"
-                                placeholder="Tìm tên, nội dung hoặc ID..."
+                                placeholder="TÃ¬m tÃªn, ná»™i dung hoáº·c ID..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -291,10 +291,10 @@ function AuditLogPage() {
                     </div>
                     <div className={styles.filterAction}>
                         <button className={styles.btnSearch} onClick={() => { setDebouncedSearch(searchTerm); setPage(0); }}>
-                            <i className="bi bi-search"></i> Tra cứu
+                            <i className="bi bi-search"></i> Tra cá»©u
                         </button>
                         <button className={styles.btnSearch} onClick={handleExport} style={{ marginLeft: '10px', backgroundColor: '#10b981' }}>
-                            <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                            <i className="bi bi-file-earmark-excel"></i> Xuáº¥t Excel
                         </button>
                     </div>
                 </div>
@@ -303,23 +303,23 @@ function AuditLogPage() {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th>THỜI GIAN</th>
-                                <th>NGƯỜI DÙNG</th>
-                                <th>THAO TÁC</th>
-                                <th>PHÂN HỆ</th>
-                                <th>ĐỊA CHỈ IP</th>
-                                <th>CHI TIẾT</th>
+                                <th>THá»œI GIAN</th>
+                                <th>NGÆ¯á»œI DÃ™NG</th>
+                                <th>THAO TÃC</th>
+                                <th>PHÃ‚N Há»†</th>
+                                <th>Äá»ŠA CHá»ˆ IP</th>
+                                <th>CHI TIáº¾T</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="6" style={{ textAlign: 'center', padding: '30px' }}>Đang tải dữ liệu...</td>
+                                    <td colSpan="6" style={{ textAlign: 'center', padding: '30px' }}>Äang táº£i dá»¯ liá»‡u...</td>
                                 </tr>
                             ) : logs.length === 0 ? (
                                 <tr>
                                     <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-subtle)' }}>
-                                        Không tìm thấy nhật ký nào.
+                                        KhÃ´ng tÃ¬m tháº¥y nháº­t kÃ½ nÃ o.
                                     </td>
                                 </tr>
                             ) : (
@@ -333,7 +333,7 @@ function AuditLogPage() {
                                         </td>
                                         <td>
                                             <span className={`${styles.actionBadge} ${getActionBadgeClass(log.action)}`}>
-                                                {log.action?.toUpperCase() || 'HỆ THỐNG'}
+                                                {log.action?.toUpperCase() || 'Há»† THá»NG'}
                                             </span>
                                         </td>
                                         <td>{getModuleLabel(log.module)}</td>
@@ -342,7 +342,7 @@ function AuditLogPage() {
                                             <button
                                                 className={styles.btnView}
                                                 onClick={() => handleViewDetail(log.id)}
-                                                title="Xem chi tiết"
+                                                title="Xem chi tiáº¿t"
                                             >
                                                 <i className="bi bi-eye"></i>
                                             </button>
@@ -354,19 +354,19 @@ function AuditLogPage() {
                     </table>
 
                     <div className={styles.pagination}>
-                        <div className={styles.totalInfo}>Tổng số: <b>{totalElements}</b> bản ghi</div>
+                        <div className={styles.totalInfo}>Tá»•ng sá»‘: <b>{totalElements}</b> báº£n ghi</div>
                         <div className={styles.pageControls}>
                             <select value={size} onChange={(e) => { setSize(Number(e.target.value)); setPage(0); }}>
-                                <option value={10}>10 bản ghi trên 1 trang</option>
-                                <option value={20}>20 bản ghi trên 1 trang</option>
-                                <option value={30}>30 bản ghi trên 1 trang</option>
-                                <option value={50}>50 bản ghi trên 1 trang</option>
+                                <option value={10}>10 báº£n ghi trÃªn 1 trang</option>
+                                <option value={20}>20 báº£n ghi trÃªn 1 trang</option>
+                                <option value={30}>30 báº£n ghi trÃªn 1 trang</option>
+                                <option value={50}>50 báº£n ghi trÃªn 1 trang</option>
                             </select>
                             <span
                                 className={`${styles.pageBtn} ${page === 0 ? styles.disabled : ''}`}
                                 onClick={() => page > 0 && handlePageChange(page - 1)}
                             >
-                                Trước
+                                TrÆ°á»›c
                             </span>
                             <span className={styles.currentPage}>{page + 1}</span>
                             <span
@@ -385,49 +385,49 @@ function AuditLogPage() {
                     <div className="misa-modal" onClick={(e) => e.stopPropagation()} style={{ width: '900px', maxWidth: '95vw', height: '80vh' }}>
                         <div className="misa-modal-header">
                             <div>
-                                <h2>Chi tiết nhật ký thao tác</h2>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--color-text-light, #64748b)' }}>{selectedLog?.description || 'Đang tải chi tiết nhật ký'}</p>
+                                <h2>Chi tiáº¿t nháº­t kÃ½ thao tÃ¡c</h2>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--color-text-light, #64748b)' }}>{selectedLog?.description || 'Äang táº£i chi tiáº¿t nháº­t kÃ½'}</p>
                             </div>
                             <i className="fas fa-times" onClick={closeDetail} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
                         </div>
 
                         {detailLoading ? (
-                            <div className={styles.detailEmpty}>Đang tải dữ liệu...</div>
+                            <div className={styles.detailEmpty}>Äang táº£i dá»¯ liá»‡u...</div>
                         ) : detailError ? (
                             <div className={styles.detailEmpty}>{detailError}</div>
                         ) : (
                             <div className="misa-modal-body">
                                 <section className={styles.detailPanel}>
-                                    <h3>Thông tin chung</h3>
+                                    <h3>ThÃ´ng tin chung</h3>
                                     <dl className={styles.infoList}>
-                                        <dt>Thời gian</dt>
+                                        <dt>Thá»i gian</dt>
                                         <dd>{formatDateTime(selectedLog.timestamp)}</dd>
-                                        <dt>Người thực hiện</dt>
+                                        <dt>NgÆ°á»i thá»±c hiá»‡n</dt>
                                         <dd>{selectedLog.user}</dd>
-                                        <dt>Phân hệ</dt>
+                                        <dt>PhÃ¢n há»‡</dt>
                                         <dd>{getModuleLabel(selectedLog.module)}</dd>
-                                        <dt>Thao tác</dt>
+                                        <dt>Thao tÃ¡c</dt>
                                         <dd>{selectedLog.actionType || selectedLog.action}</dd>
-                                        <dt>Trạng thái</dt>
+                                        <dt>Tráº¡ng thÃ¡i</dt>
                                         <dd>{selectedLog.status}</dd>
-                                        <dt>Địa chỉ IP</dt>
+                                        <dt>Äá»‹a chá»‰ IP</dt>
                                         <dd>{selectedLog.ip || 'N/A'}</dd>
                                     </dl>
                                 </section>
 
                                 <section className={styles.comparePanel}>
                                     <div className={styles.compareTitle}>
-                                        <h3>So sánh dữ liệu thay đổi</h3>
-                                        <span>{selectedLog.detail?.changeCount || detailChanges.length || 0} thay đổi</span>
+                                        <h3>So sÃ¡nh dá»¯ liá»‡u thay Ä‘á»•i</h3>
+                                        <span>{selectedLog.detail?.changeCount || detailChanges.length || 0} thay Ä‘á»•i</span>
                                     </div>
 
                                     {detailChanges.length > 0 ? (
                                         <table className={styles.diffTable}>
                                             <thead>
                                                 <tr>
-                                                    <th>Trường</th>
-                                                    <th>Trước khi thay đổi</th>
-                                                    <th>Sau khi thay đổi</th>
+                                                    <th>TrÆ°á»ng</th>
+                                                    <th>TrÆ°á»›c khi thay Ä‘á»•i</th>
+                                                    <th>Sau khi thay Ä‘á»•i</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -444,9 +444,9 @@ function AuditLogPage() {
                                         <table className={styles.diffTable}>
                                             <thead>
                                                 <tr>
-                                                    <th>Trường</th>
-                                                    <th>Trước khi thay đổi</th>
-                                                    <th>Sau khi thay đổi</th>
+                                                    <th>TrÆ°á»ng</th>
+                                                    <th>TrÆ°á»›c khi thay Ä‘á»•i</th>
+                                                    <th>Sau khi thay Ä‘á»•i</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -460,12 +460,12 @@ function AuditLogPage() {
                                             </tbody>
                                         </table>
                                     ) : (
-                                        <div className={styles.detailEmpty}>Nhật ký này chưa có dữ liệu trước/sau.</div>
+                                        <div className={styles.detailEmpty}>Nháº­t kÃ½ nÃ y chÆ°a cÃ³ dá»¯ liá»‡u trÆ°á»›c/sau.</div>
                                     )}
 
                                     {selectedLog.detail?.note && (
                                         <div className={styles.noteBox}>
-                                            <strong>Ghi chú hệ thống</strong>
+                                            <strong>Ghi chÃº há»‡ thá»‘ng</strong>
                                             <span>{selectedLog.detail.note}</span>
                                         </div>
                                     )}

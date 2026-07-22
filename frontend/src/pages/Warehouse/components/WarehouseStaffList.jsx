@@ -32,7 +32,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
             const res = await warehouseStaffApi.getWarehouseRoles();
             setRoles(res.data.data || []);
         } catch (error) {
-            console.error('Lỗi tải danh sách vai trò:', error);
+            console.error('Lá»—i táº£i danh sÃ¡ch vai trÃ²:', error);
         }
     };
 
@@ -52,8 +52,8 @@ const WarehouseStaffList = ({ warehouseId }) => {
             setTotalPages(res.data.data.totalPages || 0);
             setPage(pageIndex);
         } catch (error) {
-            console.error('Lỗi tải danh sách nhân sự:', error);
-            showToast('error', 'Không thể tải danh sách nhân sự.');
+            console.error('Lá»—i táº£i danh sÃ¡ch nhÃ¢n sá»±:', error);
+            showToast('error', 'KhÃ´ng thá»ƒ táº£i danh sÃ¡ch nhÃ¢n sá»±.');
         } finally {
             setLoading(false);
         }
@@ -69,15 +69,15 @@ const WarehouseStaffList = ({ warehouseId }) => {
     }, [warehouseId, showInactive, roleId, search]);
 
     const handleRevoke = async (userId) => {
-        if (!window.confirm('Bạn có chắc chắn muốn thu hồi quyền của nhân viên này tại kho?')) return;
+        if (!window.confirm('Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n thu há»“i quyá»n cá»§a nhÃ¢n viÃªn nÃ y táº¡i kho?')) return;
         
         try {
             await warehouseStaffApi.revokeAccess(warehouseId, userId);
-            showToast('success', 'Thu hồi quyền thành công!');
+            showToast('success', 'Thu há»“i quyá»n thÃ nh cÃ´ng!');
             fetchStaffs(page);
         } catch (error) {
             console.error(error);
-            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra!');
+            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'CÃ³ lá»—i xáº£y ra!');
         }
     };
 
@@ -87,7 +87,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                 <div className={styles.filters}>
                     <input 
                         type="text" 
-                        placeholder="Tìm theo tên hoặc email..." 
+                        placeholder="TÃ¬m theo tÃªn hoáº·c email..." 
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className={styles.searchInput}
@@ -97,7 +97,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                         onChange={(e) => setRoleId(e.target.value)}
                         className={styles.roleSelect}
                     >
-                        <option value="">-- Tất cả vai trò --</option>
+                        <option value="">-- Táº¥t cáº£ vai trÃ² --</option>
                         {roles.map(r => (
                             <option key={r.id} value={r.id}>{r.name}</option>
                         ))}
@@ -108,28 +108,28 @@ const WarehouseStaffList = ({ warehouseId }) => {
                             checked={showInactive}
                             onChange={(e) => setShowInactive(e.target.checked)}
                         />
-                        Hiển thị cả nhân sự ngừng hoạt động
+                        Hiá»ƒn thá»‹ cáº£ nhÃ¢n sá»± ngá»«ng hoáº¡t Ä‘á»™ng
                     </label>
                 </div>
                 <button className={styles.btnAssign} onClick={() => setIsAssignModalOpen(true)}>
-                    <i className="fas fa-user-plus"></i> Gán quyền nhân sự
+                    <i className="fas fa-user-plus"></i> GÃ¡n quyá»n nhÃ¢n sá»±
                 </button>
             </div>
 
             <div className={styles.tableContainer}>
                 {loading ? (
-                    <div className={styles.loading}>Đang tải dữ liệu...</div>
+                    <div className={styles.loading}>Äang táº£i dá»¯ liá»‡u...</div>
                 ) : staffs.length === 0 ? (
-                    <div className={styles.empty}>Không có nhân sự nào trong kho.</div>
+                    <div className={styles.empty}>KhÃ´ng cÃ³ nhÃ¢n sá»± nÃ o trong kho.</div>
                 ) : (
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th>Nhân viên</th>
+                                <th>NhÃ¢n viÃªn</th>
                                 <th>Email</th>
-                                <th>Vai trò</th>
-                                <th>Trạng thái</th>
-                                <th>Thao tác</th>
+                                <th>Vai trÃ²</th>
+                                <th>Tráº¡ng thÃ¡i</th>
+                                <th>Thao tÃ¡c</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -146,7 +146,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                                     </td>
                                     <td>
                                         <span className={`${styles.statusBadge} ${staff.isActive ? styles.active : styles.inactive}`}>
-                                            {staff.isActive ? 'Đang hoạt động' : 'Đã thu hồi'}
+                                            {staff.isActive ? 'Äang hoáº¡t Ä‘á»™ng' : 'ÄÃ£ thu há»“i'}
                                         </span>
                                     </td>
                                     <td>
@@ -154,7 +154,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                                             <button 
                                                 className={styles.btnRevoke}
                                                 onClick={() => handleRevoke(staff.userId)}
-                                                title="Thu hồi quyền"
+                                                title="Thu há»“i quyá»n"
                                             >
                                                 <i className="fas fa-user-times"></i>
                                             </button>
@@ -174,7 +174,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                         onClick={() => fetchStaffs(page - 1)}
                         className={styles.pageBtn}
                     >
-                        Trước
+                        TrÆ°á»›c
                     </button>
                     <span className={styles.pageInfo}>Trang {page + 1} / {totalPages}</span>
                     <button 
@@ -194,7 +194,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                     onClose={() => setIsAssignModalOpen(false)}
                     onSuccess={() => {
                         setIsAssignModalOpen(false);
-                        showToast('success', 'Gán quyền thành công!');
+                        showToast('success', 'GÃ¡n quyá»n thÃ nh cÃ´ng!');
                         fetchStaffs(page);
                     }}
                 />

@@ -5,12 +5,12 @@ import * as repairApi from '../../api/repairApi';
 import styles from './RepairListPage.module.css';
 
 const STATUS_LABELS = {
-    DRAFT: 'Nháp',
-    QUOTATION: 'Báo giá',
-    CONFIRMED: 'Đã xác nhận',
-    UNDER_REPAIR: 'Đang sửa chữa',
-    DONE: 'Hoàn tất',
-    CANCELLED: 'Đã hủy'
+    DRAFT: 'NhÃ¡p',
+    QUOTATION: 'BÃ¡o giÃ¡',
+    CONFIRMED: 'ÄÃ£ xÃ¡c nháº­n',
+    UNDER_REPAIR: 'Äang sá»­a chá»¯a',
+    DONE: 'HoÃ n táº¥t',
+    CANCELLED: 'ÄÃ£ há»§y'
 };
 
 const STATUS_COLORS = {
@@ -57,8 +57,8 @@ function RepairListPage() {
     }, [loadRepairs]);
 
     const formatMoney = (val) => {
-        if (!val && val !== 0) return '0 ₫';
-        return Number(val).toLocaleString('vi-VN') + ' ₫';
+        if (!val && val !== 0) return '0 â‚«';
+        return Number(val).toLocaleString('vi-VN') + ' â‚«';
     };
 
     const formatDate = (dateStr) => {
@@ -75,42 +75,42 @@ function RepairListPage() {
             <div className={styles.page}>
                 <div className={styles.pageHeader}>
                     <div>
-                        <h1 className={styles.pageTitle}>Lệnh Sửa Chữa</h1>
-                        <p className={styles.pageSubtitle}>Quản lý vòng đời tiếp nhận, báo giá và sửa chữa thiết bị.</p>
+                        <h1 className={styles.pageTitle}>Lá»‡nh Sá»­a Chá»¯a</h1>
+                        <p className={styles.pageSubtitle}>Quáº£n lÃ½ vÃ²ng Ä‘á»i tiáº¿p nháº­n, bÃ¡o giÃ¡ vÃ  sá»­a chá»¯a thiáº¿t bá»‹.</p>
                     </div>
                     <button className={styles.primaryButton} onClick={() => navigate('/repairs/create')}>
-                        <i className="bi bi-plus-lg"></i> Tạo lệnh mới
+                        <i className="bi bi-plus-lg"></i> Táº¡o lá»‡nh má»›i
                     </button>
                 </div>
 
                 <div className={styles.filterPanel}>
                     <label className={styles.filterField}>
-                        <span>Tìm kiếm</span>
+                        <span>TÃ¬m kiáº¿m</span>
                         <input
-                            placeholder="Mã lệnh, tên khách hàng..."
+                            placeholder="MÃ£ lá»‡nh, tÃªn khÃ¡ch hÃ ng..."
                             value={filters.keyword}
                             onChange={e => setFilters({ ...filters, keyword: e.target.value })}
                             onKeyDown={handleKeyDown}
                         />
                     </label>
                     <label className={styles.filterField}>
-                        <span>Trạng thái</span>
+                        <span>Tráº¡ng thÃ¡i</span>
                         <select
                             value={filters.status}
                             onChange={e => setFilters({ ...filters, status: e.target.value })}
                         >
-                            <option value="">Tất cả</option>
+                            <option value="">Táº¥t cáº£</option>
                             {Object.entries(STATUS_LABELS).map(([key, label]) => (
                                 <option key={key} value={key}>{label}</option>
                             ))}
                         </select>
                     </label>
                     <button className={styles.searchBtn} onClick={() => loadRepairs(0)}>
-                        <i className="bi bi-search"></i> Lọc
+                        <i className="bi bi-search"></i> Lá»c
                     </button>
                     <button className={styles.searchBtn} style={{ background: '#f3f4f6', color: '#374151' }}
                         onClick={() => { setFilters({ keyword: '', status: '' }); }}>
-                        <i className="bi bi-arrow-clockwise"></i> Làm mới
+                        <i className="bi bi-arrow-clockwise"></i> LÃ m má»›i
                     </button>
                 </div>
 
@@ -118,25 +118,25 @@ function RepairListPage() {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th>Mã Lệnh</th>
-                                <th>Ngày tiếp nhận</th>
-                                <th>Ngày dự kiến</th>
-                                <th>Sản phẩm / Thiết bị</th>
-                                <th>Khách hàng</th>
-                                <th>Bảo hành</th>
-                                <th>Tổng tiền</th>
-                                <th>Trạng thái</th>
+                                <th>MÃ£ Lá»‡nh</th>
+                                <th>NgÃ y tiáº¿p nháº­n</th>
+                                <th>NgÃ y dá»± kiáº¿n</th>
+                                <th>Sáº£n pháº©m / Thiáº¿t bá»‹</th>
+                                <th>KhÃ¡ch hÃ ng</th>
+                                <th>Báº£o hÃ nh</th>
+                                <th>Tá»•ng tiá»n</th>
+                                <th>Tráº¡ng thÃ¡i</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr><td colSpan="8" className="text-center py-4">
-                                    <i className="bi bi-arrow-repeat me-2" style={{ animation: 'spin 1s linear infinite' }}></i>Đang tải...
+                                    <i className="bi bi-arrow-repeat me-2" style={{ animation: 'spin 1s linear infinite' }}></i>Äang táº£i...
                                 </td></tr>
                             ) : repairs.length === 0 ? (
                                 <tr><td colSpan="8" className="text-center py-4" style={{ color: '#9ca3af' }}>
                                     <i className="bi bi-inbox" style={{ fontSize: '1.5rem', display: 'block', marginBottom: '8px' }}></i>
-                                    Không có dữ liệu.
+                                    KhÃ´ng cÃ³ dá»¯ liá»‡u.
                                 </td></tr>
                             ) : (
                                 repairs.map(repair => {
@@ -162,8 +162,8 @@ function RepairListPage() {
                                             </td>
                                             <td>
                                                 {repair.underWarranty
-                                                    ? <span style={{ color: '#16a34a', fontWeight: '500' }}><i className="bi bi-shield-check me-1"></i>Có</span>
-                                                    : <span style={{ color: '#9ca3af' }}>Không</span>}
+                                                    ? <span style={{ color: '#16a34a', fontWeight: '500' }}><i className="bi bi-shield-check me-1"></i>CÃ³</span>
+                                                    : <span style={{ color: '#9ca3af' }}>KhÃ´ng</span>}
                                             </td>
                                             <td style={{ fontWeight: '500' }}>{formatMoney(repair.totalAmount)}</td>
                                             <td>
@@ -203,7 +203,7 @@ function RepairListPage() {
                 )}
 
                 <div style={{ marginTop: '12px', color: '#6b7280', fontSize: '13px', textAlign: 'right' }}>
-                    Tổng: <strong>{pagination.totalElements}</strong> lệnh
+                    Tá»•ng: <strong>{pagination.totalElements}</strong> lá»‡nh
                 </div>
             </div>
         </AdminLayout>

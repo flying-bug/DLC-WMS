@@ -11,7 +11,7 @@ const WarehouseListPage = () => {
     const navigate = useNavigate();
     const [warehouses, setWarehouses] = useState([]);
     
-    // Các state bộ lọc
+    // CÃ¡c state bá»™ lá»c
     const [searchCode, setSearchCode] = useState('');
     const [searchName, setSearchName] = useState('');
     const [searchAddress, setSearchAddress] = useState('');
@@ -39,7 +39,7 @@ const WarehouseListPage = () => {
         setToast({ isVisible: true, type, message });
     };
 
-    // State sắp xếp
+    // State sáº¯p xáº¿p
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
     const fetchWarehouses = async () => {
@@ -56,8 +56,8 @@ const WarehouseListPage = () => {
             setTotalPages(res.data.data.totalPages || 0);
             setTotalElements(res.data.data.totalElements || 0);
         } catch (error) {
-            console.error("Lỗi fetch kho:", error);
-            showToast('error', 'Không thể tải dữ liệu kho!');
+            console.error("Lá»—i fetch kho:", error);
+            showToast('error', 'KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u kho!');
         }
     };
 
@@ -108,16 +108,16 @@ const WarehouseListPage = () => {
         try {
             if (isEdit) {
                 await warehouseApi.updateWarehouse(selectedData.id, formData);
-                showToast('success', 'Cập nhật kho thành công!');
+                showToast('success', 'Cáº­p nháº­t kho thÃ nh cÃ´ng!');
             } else {
                 await warehouseApi.createWarehouse(formData);
-                showToast('success', 'Thêm mới kho thành công!');
+                showToast('success', 'ThÃªm má»›i kho thÃ nh cÃ´ng!');
             }
             fetchWarehouses();
         } catch (error) {
             console.error(error);
-            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra!');
-            throw error; // Re-throw để WarehouseFormModal không tự động clear form nếu lỗi
+            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'CÃ³ lá»—i xáº£y ra!');
+            throw error; // Re-throw Ä‘á»ƒ WarehouseFormModal khÃ´ng tá»± Ä‘á»™ng clear form náº¿u lá»—i
         }
     };
 
@@ -130,10 +130,10 @@ const WarehouseListPage = () => {
         try {
             await warehouseApi.deleteWarehouse(id);
             fetchWarehouses();
-            showToast('success', 'Xóa kho thành công!');
+            showToast('success', 'XÃ³a kho thÃ nh cÃ´ng!');
         } catch (error) {
-            console.error("Lỗi xóa kho:", error);
-            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
+            console.error("Lá»—i xÃ³a kho:", error);
+            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'CÃ³ lá»—i xáº£y ra khi xÃ³a!');
             fetchWarehouses();
         } finally {
             setShowDeleteModal(false);
@@ -154,14 +154,14 @@ const WarehouseListPage = () => {
                 return (
                     <div className={`${styles.statusBadge} ${styles.statusActive}`}>
                         <span className={styles.statusDot}></span>
-                        Đang hoạt động
+                        Äang hoáº¡t Ä‘á»™ng
                     </div>
                 );
             case 'PAUSED':
                 return (
                     <div className={`${styles.statusBadge} ${styles.statusPaused}`}>
                         <span className={styles.statusDot}></span>
-                        Tạm ngưng
+                        Táº¡m ngÆ°ng
                     </div>
                 );
             case 'STOPPED':
@@ -169,7 +169,7 @@ const WarehouseListPage = () => {
                 return (
                     <div className={`${styles.statusBadge} ${styles.statusStopped}`}>
                         <span className={styles.statusDot}></span>
-                        Ngừng sử dụng
+                        Ngá»«ng sá»­ dá»¥ng
                     </div>
                 );
             default:
@@ -204,10 +204,10 @@ const WarehouseListPage = () => {
             link.click();
             link.remove();
             
-            showToast('success', 'Xuất Excel thành công!');
+            showToast('success', 'Xuáº¥t Excel thÃ nh cÃ´ng!');
         } catch (error) {
-            console.error("Lỗi xuất Excel:", error);
-            showToast('error', 'Có lỗi xảy ra khi xuất Excel!');
+            console.error("Lá»—i xuáº¥t Excel:", error);
+            showToast('error', 'CÃ³ lá»—i xáº£y ra khi xuáº¥t Excel!');
         }
     };
 
@@ -217,8 +217,8 @@ const WarehouseListPage = () => {
                 {/* Header Page */}
                 <div className={styles.pageHeader}>
                     <div className={styles.titleWrapper}>
-                        <h2 className={styles.pageTitle}>Quản lý kho</h2>
-                        <p className={styles.pageSubtitle}>Danh sách và cấu hình các kho hàng thuộc hệ thống Duy Long Computer</p>
+                        <h2 className={styles.pageTitle}>Quáº£n lÃ½ kho</h2>
+                        <p className={styles.pageSubtitle}>Danh sÃ¡ch vÃ  cáº¥u hÃ¬nh cÃ¡c kho hÃ ng thuá»™c há»‡ thá»‘ng Duy Long Computer</p>
                     </div>
                     <div className={styles.actionButtons}>
                         <button className={styles.btnAdd} type="button" onClick={() => {
@@ -226,10 +226,10 @@ const WarehouseListPage = () => {
                             setSelectedData(null);
                             setShowModal(true);
                         }}>
-                            <i className="fas fa-plus"></i> Thêm kho
+                            <i className="fas fa-plus"></i> ThÃªm kho
                         </button>
                         <button className={styles.btnExport} type="button" onClick={handleExportExcel}>
-                            <i className="fas fa-file-excel"></i> Xuất Excel
+                            <i className="fas fa-file-excel"></i> Xuáº¥t Excel
                         </button>
                     </div>
                 </div>
@@ -238,46 +238,46 @@ const WarehouseListPage = () => {
                 <div className={styles.filterCard}>
                     <div className={styles.filterGrid}>
                         <div className={styles.filterGroup}>
-                            <label>Tìm theo mã kho</label>
+                            <label>TÃ¬m theo mÃ£ kho</label>
                             <input 
                                 type="text" 
-                                placeholder="Ví dụ: K01, MK01..." 
+                                placeholder="VÃ­ dá»¥: K01, MK01..." 
                                 value={searchCode}
                                 onChange={(e) => setSearchCode(e.target.value)}
                             />
                         </div>
                         <div className={styles.filterGroup}>
-                            <label>Tìm theo tên kho</label>
+                            <label>TÃ¬m theo tÃªn kho</label>
                             <input 
                                 type="text" 
-                                placeholder="Nhập tên kho hàng" 
+                                placeholder="Nháº­p tÃªn kho hÃ ng" 
                                 value={searchName}
                                 onChange={(e) => setSearchName(e.target.value)}
                             />
                         </div>
                         <div className={styles.filterGroup}>
-                            <label>Địa chỉ</label>
+                            <label>Äá»‹a chá»‰</label>
                             <input 
                                 type="text" 
-                                placeholder="Nhập địa chỉ" 
+                                placeholder="Nháº­p Ä‘á»‹a chá»‰" 
                                 value={searchAddress}
                                 onChange={(e) => setSearchAddress(e.target.value)}
                             />
                         </div>
                         <div className={styles.filterGroup}>
-                            <label>Trạng thái</label>
+                            <label>Tráº¡ng thÃ¡i</label>
                             <div className={styles.selectWrapper}>
                                 <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                                    <option value="">Tất cả</option>
-                                    <option value="APPROVED">Đang hoạt động</option>
-                                    <option value="INACTIVE">Ngừng sử dụng</option>
+                                    <option value="">Táº¥t cáº£</option>
+                                    <option value="APPROVED">Äang hoáº¡t Ä‘á»™ng</option>
+                                    <option value="INACTIVE">Ngá»«ng sá»­ dá»¥ng</option>
                                 </select>
                                 <i className={`fas fa-chevron-down ${styles.selectIcon}`}></i>
                             </div>
                         </div>
                         <div className={styles.filterAction}>
                             <button className={styles.btnFilter} onClick={handleFilter} type="button">
-                                <i className="fas fa-filter"></i> Lọc dữ liệu
+                                <i className="fas fa-filter"></i> Lá»c dá»¯ liá»‡u
                             </button>
                         </div>
                     </div>
@@ -290,18 +290,18 @@ const WarehouseListPage = () => {
                             <thead>
                                 <tr>
                                     <th style={{ width: '15%' }} onClick={() => handleSort('code')} className={styles.sortableHeader}>
-                                        MÃ KHO {getSortIcon('code')}
+                                        MÃƒ KHO {getSortIcon('code')}
                                     </th>
                                     <th style={{ width: '20%' }} onClick={() => handleSort('name')} className={styles.sortableHeader}>
-                                        TÊN KHO {getSortIcon('name')}
+                                        TÃŠN KHO {getSortIcon('name')}
                                     </th>
                                     <th style={{ width: '25%' }} onClick={() => handleSort('address')} className={styles.sortableHeader}>
-                                        ĐỊA CHỈ {getSortIcon('address')}
+                                        Äá»ŠA CHá»ˆ {getSortIcon('address')}
                                     </th>
                                     <th style={{ width: '15%' }} onClick={() => handleSort('status')} className={styles.sortableHeader}>
-                                        TRẠNG THÁI {getSortIcon('status')}
+                                        TRáº NG THÃI {getSortIcon('status')}
                                     </th>
-                                    <th style={{ width: '10%', textAlign: 'center' }}>THAO TÁC</th>
+                                    <th style={{ width: '10%', textAlign: 'center' }}>THAO TÃC</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -312,10 +312,10 @@ const WarehouseListPage = () => {
                                                 <div className={styles.emptyIcon}>
                                                     <i className="fas fa-box-open"></i>
                                                 </div>
-                                                <p className={styles.emptyTitle}>Không tìm thấy kho hàng</p>
-                                                <p className={styles.emptySubtitle}>Không có dữ liệu nào khớp với điều kiện tìm kiếm hiện tại của bạn.</p>
+                                                <p className={styles.emptyTitle}>KhÃ´ng tÃ¬m tháº¥y kho hÃ ng</p>
+                                                <p className={styles.emptySubtitle}>KhÃ´ng cÃ³ dá»¯ liá»‡u nÃ o khá»›p vá»›i Ä‘iá»u kiá»‡n tÃ¬m kiáº¿m hiá»‡n táº¡i cá»§a báº¡n.</p>
                                                 <button className={styles.btnClearFilter} onClick={handleReload} type="button">
-                                                    Xóa bộ lọc
+                                                    XÃ³a bá»™ lá»c
                                                 </button>
                                             </div>
                                         </td>
@@ -329,10 +329,10 @@ const WarehouseListPage = () => {
                                             <td>{getStatusBadge(warehouse.status)}</td>
                                             <td>
                                                 <div className={styles.rowActions}>
-                                                    <button className={styles.iconBtn} title="Xem chi tiết" onClick={() => navigate(`/warehouses/${warehouse.id}`)}>
+                                                    <button className={styles.iconBtn} title="Xem chi tiáº¿t" onClick={() => navigate(`/warehouses/${warehouse.id}`)}>
                                                         <i className="far fa-eye"></i>
                                                     </button>
-                                                    <button className={styles.iconBtn} title="Sửa" onClick={() => {
+                                                    <button className={styles.iconBtn} title="Sá»­a" onClick={() => {
                                                         setIsEdit(true);
                                                         setSelectedData(warehouse);
                                                         setShowModal(true);
@@ -341,7 +341,7 @@ const WarehouseListPage = () => {
                                                     </button>
                                                     <button 
                                                         className={styles.iconBtn} 
-                                                        title="Xóa" 
+                                                        title="XÃ³a" 
                                                         onClick={() => handleDelete(warehouse)}
                                                         disabled={warehouse.status === 'INACTIVE' || warehouse.status === 'STOPPED'}
                                                     >
@@ -360,7 +360,7 @@ const WarehouseListPage = () => {
                     {warehouses.length > 0 && (
                         <div className={styles.pagination}>
                             <div className={styles.pageInfo}>
-                                Hiển thị {page * size + 1} - {Math.min((page + 1) * size, totalElements)} trong tổng số {totalElements} bản ghi
+                                Hiá»ƒn thá»‹ {page * size + 1} - {Math.min((page + 1) * size, totalElements)} trong tá»•ng sá»‘ {totalElements} báº£n ghi
                             </div>
                             <div className={styles.pageControls}>
                                 <button className={styles.pageNavBtn} disabled={page === 0} onClick={() => setPage(page - 1)}>
@@ -386,9 +386,9 @@ const WarehouseListPage = () => {
                                         setSize(Number(e.target.value));
                                         setPage(0);
                                     }}>
-                                        <option value={10}>10 bản ghi / trang</option>
-                                        <option value={20}>20 bản ghi / trang</option>
-                                        <option value={50}>50 bản ghi / trang</option>
+                                        <option value={10}>10 báº£n ghi / trang</option>
+                                        <option value={20}>20 báº£n ghi / trang</option>
+                                        <option value={50}>50 báº£n ghi / trang</option>
                                     </select>
                                 </div>
                             </div>

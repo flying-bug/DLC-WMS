@@ -10,7 +10,7 @@ import WarehouseInventoryList from './components/WarehouseInventoryList';
 import styles from './WarehouseDetailPage.module.css';
 
 const formatCurrency = (value) => {
-    if (value === undefined || value === null) return '0 ₫';
+    if (value === undefined || value === null) return '0 â‚«';
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 };
 
@@ -27,12 +27,12 @@ const getStatusLabel = (status) => {
     switch (status) {
         case 'ACTIVE':
         case 'APPROVED':
-            return 'Đang hoạt động';
+            return 'Äang hoáº¡t Ä‘á»™ng';
         case 'PAUSED':
-            return 'Tạm ngưng';
+            return 'Táº¡m ngÆ°ng';
         case 'STOPPED':
         case 'INACTIVE':
-            return 'Ngừng sử dụng';
+            return 'Ngá»«ng sá»­ dá»¥ng';
         default:
             return status;
     }
@@ -51,18 +51,18 @@ const parseLogDetail = (detail) => {
 };
 
 const formatDetailValue = (value) => {
-    if (value === null || value === undefined || value === '') return 'Trống';
+    if (value === null || value === undefined || value === '') return 'Trá»‘ng';
     if (typeof value === 'object') return JSON.stringify(value);
     return String(value);
 };
 
 const getFieldLabel = (field) => {
     const labels = {
-        code: 'Mã kho',
-        name: 'Tên kho',
-        address: 'Địa chỉ',
-        type: 'Loại kho',
-        status: 'Trạng thái',
+        code: 'MÃ£ kho',
+        name: 'TÃªn kho',
+        address: 'Äá»‹a chá»‰',
+        type: 'Loáº¡i kho',
+        status: 'Tráº¡ng thÃ¡i',
     };
     return labels[field] || field;
 };
@@ -77,7 +77,7 @@ const renderLogChanges = (log) => {
                 <div key={`${change.field}-${index}`} className={styles.changeItem}>
                     <span className={styles.changeField}>{getFieldLabel(change.field)}</span>
                     <span className={styles.changeValue}>{formatDetailValue(change.before)}</span>
-                    <span className={styles.changeArrow}>→</span>
+                    <span className={styles.changeArrow}>â†’</span>
                     <span className={styles.changeValue}>{formatDetailValue(change.after)}</span>
                 </div>
             ))}
@@ -114,8 +114,8 @@ const WarehouseDetailPage = () => {
             const res = await warehouseApi.getWarehouseDetail(id);
             setWarehouse(res.data.data);
         } catch (error) {
-            console.error('Lỗi tải chi tiết kho:', error);
-            showToast('error', 'Không thể tải dữ liệu kho.');
+            console.error('Lá»—i táº£i chi tiáº¿t kho:', error);
+            showToast('error', 'KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u kho.');
         } finally {
             setLoading(false);
         }
@@ -129,7 +129,7 @@ const WarehouseDetailPage = () => {
             setLogsTotalPages(res.data.data.totalPages || 0);
             setLogsPage(page);
         } catch (error) {
-            console.error('Lỗi tải lịch sử:', error);
+            console.error('Lá»—i táº£i lá»‹ch sá»­:', error);
         } finally {
             setLoadingLogs(false);
         }
@@ -151,11 +151,11 @@ const WarehouseDetailPage = () => {
     const handleSaveModal = async (formData) => {
         try {
             await warehouseApi.updateWarehouse(id, formData);
-            showToast('success', 'Cập nhật kho thành công!');
+            showToast('success', 'Cáº­p nháº­t kho thÃ nh cÃ´ng!');
             fetchDetail();
         } catch (error) {
             console.error(error);
-            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra!');
+            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'CÃ³ lá»—i xáº£y ra!');
             throw error;
         }
     };
@@ -167,11 +167,11 @@ const WarehouseDetailPage = () => {
     const handleDeleteConfirm = async () => {
         try {
             await warehouseApi.deleteWarehouse(id);
-            showToast('success', 'Xóa kho thành công!');
+            showToast('success', 'XÃ³a kho thÃ nh cÃ´ng!');
             setTimeout(() => navigate('/warehouses'), 1500);
         } catch (error) {
-            console.error("Lỗi xóa kho:", error);
-            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
+            console.error("Lá»—i xÃ³a kho:", error);
+            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'CÃ³ lá»—i xáº£y ra khi xÃ³a!');
             fetchDetail(); // Reload to reflect INACTIVE status if 409 Soft delete occurred
         } finally {
             setShowDeleteModal(false);
@@ -181,7 +181,7 @@ const WarehouseDetailPage = () => {
     if (loading) {
         return (
             <AdminLayout activeTab="warehouses">
-                <div className={styles.container}>Đang tải dữ liệu...</div>
+                <div className={styles.container}>Äang táº£i dá»¯ liá»‡u...</div>
             </AdminLayout>
         );
     }
@@ -189,7 +189,7 @@ const WarehouseDetailPage = () => {
     if (!warehouse) {
         return (
             <AdminLayout activeTab="warehouses">
-                <div className={styles.container}>Kho không tồn tại hoặc đã bị xóa.</div>
+                <div className={styles.container}>Kho khÃ´ng tá»“n táº¡i hoáº·c Ä‘Ã£ bá»‹ xÃ³a.</div>
             </AdminLayout>
         );
     }
@@ -200,7 +200,7 @@ const WarehouseDetailPage = () => {
                 {/* 1. Page Header */}
                 <div className={styles.pageHeader}>
                     <div className={styles.headerLeft}>
-                        <button className={styles.btnBack} onClick={handleBack} title="Quay lại">
+                        <button className={styles.btnBack} onClick={handleBack} title="Quay láº¡i">
                             <i className="fas fa-arrow-left"></i>
                         </button>
                         <h2 className={styles.pageTitle}>{warehouse.name} ({warehouse.code})</h2>
@@ -211,10 +211,10 @@ const WarehouseDetailPage = () => {
                     </div>
                     <div className={styles.headerRight}>
                         <button className={styles.btnEdit} onClick={() => setShowModal(true)}>
-                            <i className="fas fa-pencil-alt"></i> Chỉnh sửa
+                            <i className="fas fa-pencil-alt"></i> Chá»‰nh sá»­a
                         </button>
                         <button className={styles.btnDelete} onClick={handleDelete} disabled={!isActiveStatus(warehouse.status)}>
-                            <i className="far fa-trash-alt"></i> Xóa
+                            <i className="far fa-trash-alt"></i> XÃ³a
                         </button>
                     </div>
                 </div>
@@ -225,25 +225,25 @@ const WarehouseDetailPage = () => {
                         className={`${styles.tabItem} ${activeTab === 'info' ? styles.active : ''}`}
                         onClick={() => setActiveTab('info')}
                     >
-                        Thông tin chung
+                        ThÃ´ng tin chung
                     </button>
                     <button 
                         className={`${styles.tabItem} ${activeTab === 'inventory' ? styles.active : ''}`}
                         onClick={() => setActiveTab('inventory')}
                     >
-                        Tồn kho
+                        Tá»“n kho
                     </button>
                     <button 
                         className={`${styles.tabItem} ${activeTab === 'staff' ? styles.active : ''}`}
                         onClick={() => setActiveTab('staff')}
                     >
-                        Nhân sự
+                        NhÃ¢n sá»±
                     </button>
                     <button 
                         className={`${styles.tabItem} ${activeTab === 'history' ? styles.active : ''}`}
                         onClick={() => setActiveTab('history')}
                     >
-                        Lịch sử hoạt động
+                        Lá»‹ch sá»­ hoáº¡t Ä‘á»™ng
                     </button>
                 </div>
 
@@ -257,9 +257,9 @@ const WarehouseDetailPage = () => {
                                     <div className={styles.kpiIconWrapper} style={{ backgroundColor: '#eef2ff', color: '#4f46e5' }}>
                                         <i className="fas fa-boxes"></i>
                                     </div>
-                                    <span className={styles.kpiTrend} style={{ color: '#16a34a' }}>Tổng quan</span>
+                                    <span className={styles.kpiTrend} style={{ color: '#16a34a' }}>Tá»•ng quan</span>
                                 </div>
-                                <div className={styles.kpiLabel}>Tổng số mặt hàng (SKU)</div>
+                                <div className={styles.kpiLabel}>Tá»•ng sá»‘ máº·t hÃ ng (SKU)</div>
                                 <div className={styles.kpiValue}>
                                     {new Intl.NumberFormat('vi-VN').format(warehouse.totalSkus || 0)}
                                 </div>
@@ -269,9 +269,9 @@ const WarehouseDetailPage = () => {
                                     <div className={styles.kpiIconWrapper} style={{ backgroundColor: '#fff7ed', color: '#ea580c' }}>
                                         <i className="fas fa-clipboard-list"></i>
                                     </div>
-                                    <span className={styles.kpiTrend} style={{ color: '#64748b' }}>Thực tế</span>
+                                    <span className={styles.kpiTrend} style={{ color: '#64748b' }}>Thá»±c táº¿</span>
                                 </div>
-                                <div className={styles.kpiLabel}>Tổng tồn kho</div>
+                                <div className={styles.kpiLabel}>Tá»•ng tá»“n kho</div>
                                 <div className={styles.kpiValue}>
                                     {new Intl.NumberFormat('vi-VN').format(warehouse.totalQuantity || 0)}
                                 </div>
@@ -281,9 +281,9 @@ const WarehouseDetailPage = () => {
                                     <div className={styles.kpiIconWrapper} style={{ backgroundColor: '#f0fdf4', color: '#16a34a' }}>
                                         <i className="fas fa-money-bill-wave"></i>
                                     </div>
-                                    <span className={styles.kpiTrend} style={{ color: '#16a34a' }}>Ước tính</span>
+                                    <span className={styles.kpiTrend} style={{ color: '#16a34a' }}>Æ¯á»›c tÃ­nh</span>
                                 </div>
-                                <div className={styles.kpiLabel}>Giá trị tồn kho</div>
+                                <div className={styles.kpiLabel}>GiÃ¡ trá»‹ tá»“n kho</div>
                                 <div className={styles.kpiValue}>
                                     {formatCurrency(warehouse.totalValue)}
                                 </div>
@@ -294,39 +294,39 @@ const WarehouseDetailPage = () => {
                         <div className={styles.card}>
                             <div className={styles.cardHeader}>
                                 <i className="fas fa-info-circle"></i>
-                                <h3>Thông tin cơ bản</h3>
+                                <h3>ThÃ´ng tin cÆ¡ báº£n</h3>
                                     </div>
                                     <div className={styles.cardBody}>
                                         <div className={styles.infoGrid}>
                                             <div className={styles.infoItem}>
-                                                <label>MÃ KHO</label>
+                                                <label>MÃƒ KHO</label>
                                                 <p>{warehouse.code}</p>
                                             </div>
                                             <div className={styles.infoItem}>
-                                                <label>TÊN KHO</label>
+                                                <label>TÃŠN KHO</label>
                                                 <p>{warehouse.name}</p>
                                             </div>
                                             <div className={`${styles.infoItem} ${styles.fullWidth}`}>
-                                                <label>ĐỊA CHỈ</label>
+                                                <label>Äá»ŠA CHá»ˆ</label>
                                                 <p>{warehouse.address}</p>
                                             </div>
                                         </div>
                                         
                                         <div className={styles.metaInfoBox}>
                                             <div className={styles.infoItem}>
-                                                <label>NGƯỜI TẠO</label>
-                                                <p>{warehouse.creatorName || 'Chưa cập nhật'}</p>
+                                                <label>NGÆ¯á»œI Táº O</label>
+                                                <p>{warehouse.creatorName || 'ChÆ°a cáº­p nháº­t'}</p>
                                             </div>
                                             <div className={styles.infoItem}>
-                                                <label>NGÀY TẠO</label>
+                                                <label>NGÃ€Y Táº O</label>
                                                 <p>{formatDate(warehouse.createdAt)}</p>
                                             </div>
                                             <div className={styles.infoItem}>
-                                                <label>NGƯỜI CẬP NHẬT</label>
-                                                <p>{warehouse.updaterName || 'Chưa cập nhật'}</p>
+                                                <label>NGÆ¯á»œI Cáº¬P NHáº¬T</label>
+                                                <p>{warehouse.updaterName || 'ChÆ°a cáº­p nháº­t'}</p>
                                             </div>
                                             <div className={styles.infoItem}>
-                                                <label>CẬP NHẬT LẦN CUỐI</label>
+                                                <label>Cáº¬P NHáº¬T Láº¦N CUá»I</label>
                                                 <p>{formatDate(warehouse.updatedAt)}</p>
                                             </div>
                                         </div>
@@ -355,13 +355,13 @@ const WarehouseDetailPage = () => {
                         <div className={styles.card}>
                             <div className={styles.cardHeader}>
                                 <i className="fas fa-history"></i>
-                                <h3>Lịch sử hoạt động</h3>
+                                <h3>Lá»‹ch sá»­ hoáº¡t Ä‘á»™ng</h3>
                             </div>
                             <div className={styles.cardBody}>
                                 {loadingLogs ? (
-                                    <p>Đang tải nhật ký...</p>
+                                    <p>Äang táº£i nháº­t kÃ½...</p>
                                 ) : logs.length === 0 ? (
-                                    <p>Chưa có lịch sử hoạt động nào.</p>
+                                    <p>ChÆ°a cÃ³ lá»‹ch sá»­ hoáº¡t Ä‘á»™ng nÃ o.</p>
                                 ) : (
                                     <div className={styles.timeline}>
                                         {logs.map(log => (
@@ -371,9 +371,9 @@ const WarehouseDetailPage = () => {
                                                 </div>
                                                 <div className={styles.timelineContent}>
                                                     <div className={styles.timelineHeader}>
-                                                        <strong>{log.user?.fullName || log.user?.username || 'Hệ thống'}</strong>
+                                                        <strong>{log.user?.fullName || log.user?.username || 'Há»‡ thá»‘ng'}</strong>
                                                         <span className={styles.timelineAction}>
-                                                            {log.action === 'CREATE' ? 'tạo mới' : log.action === 'UPDATE' ? 'cập nhật' : 'đã vô hiệu hóa'}
+                                                            {log.action === 'CREATE' ? 'táº¡o má»›i' : log.action === 'UPDATE' ? 'cáº­p nháº­t' : 'Ä‘Ã£ vÃ´ hiá»‡u hÃ³a'}
                                                         </span>
                                                         <span className={styles.timelineDate}>{formatDate(log.createdAt)}</span>
                                                     </div>
@@ -385,7 +385,7 @@ const WarehouseDetailPage = () => {
                                     </div>
                                 )}
                                 
-                                {/* Phân trang */}
+                                {/* PhÃ¢n trang */}
                                 {logsTotalPages > 1 && (
                                     <div className={styles.pagination}>
                                         <button 
@@ -393,7 +393,7 @@ const WarehouseDetailPage = () => {
                                             onClick={() => fetchLogs(logsPage - 1)}
                                             className={styles.pageBtn}
                                         >
-                                            Trước
+                                            TrÆ°á»›c
                                         </button>
                                         <span className={styles.pageInfo}>Trang {logsPage + 1} / {logsTotalPages}</span>
                                         <button 
@@ -412,7 +412,7 @@ const WarehouseDetailPage = () => {
 
                 {/* Footer */}
                 <div className={styles.pageFooter}>
-                    © 2026 Duy Long Computer - Hệ thống quản lý kho v2.4.1
+                    Â© 2026 Duy Long Computer - Há»‡ thá»‘ng quáº£n lÃ½ kho v2.4.1
                 </div>
 
                 <WarehouseFormModal

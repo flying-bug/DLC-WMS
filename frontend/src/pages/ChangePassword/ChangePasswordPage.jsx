@@ -31,17 +31,17 @@ function ChangePasswordPage() {
         setError('');
 
         if (!currentPassword) {
-            setError('Vui lòng nhập mật khẩu hiện tại.');
+            setError('Vui lÃ²ng nháº­p máº­t kháº©u hiá»‡n táº¡i.');
             return;
         }
 
         if (!newPassword) {
-            setError('Vui lòng nhập mật khẩu mới.');
+            setError('Vui lÃ²ng nháº­p máº­t kháº©u má»›i.');
             return;
         }
 
         if (newPassword.length < 8) {
-            setError('Mật khẩu mới phải có ít nhất 8 ký tự.');
+            setError('Máº­t kháº©u má»›i pháº£i cÃ³ Ã­t nháº¥t 8 kÃ½ tá»±.');
             return;
         }
 
@@ -49,17 +49,17 @@ function ChangePasswordPage() {
         const hasLetter = /[a-zA-Z]/.test(newPassword);
         const hasNumber = /[0-9]/.test(newPassword);
         if (!hasLetter || !hasNumber) {
-            setError('Mật khẩu mới phải chứa cả chữ cái và chữ số.');
+            setError('Máº­t kháº©u má»›i pháº£i chá»©a cáº£ chá»¯ cÃ¡i vÃ  chá»¯ sá»‘.');
             return;
         }
 
         if (newPassword === currentPassword) {
-            setError('Mật khẩu mới không được trùng với mật khẩu hiện tại.');
+            setError('Máº­t kháº©u má»›i khÃ´ng Ä‘Æ°á»£c trÃ¹ng vá»›i máº­t kháº©u hiá»‡n táº¡i.');
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            setError('Xác nhận mật khẩu mới không khớp.');
+            setError('XÃ¡c nháº­n máº­t kháº©u má»›i khÃ´ng khá»›p.');
             return;
         }
 
@@ -71,10 +71,10 @@ function ChangePasswordPage() {
             });
             
             // Logout immediately with a success message
-            forceLogout('Mật khẩu của bạn đã được thay đổi thành công. Vui lòng đăng nhập lại.');
+            forceLogout('Máº­t kháº©u cá»§a báº¡n Ä‘Ã£ Ä‘Æ°á»£c thay Ä‘á»•i thÃ nh cÃ´ng. Vui lÃ²ng Ä‘Äƒng nháº­p láº¡i.');
         } catch (err) {
             console.error('Failed to change password:', err);
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Có lỗi xảy ra khi đổi mật khẩu.');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'CÃ³ lá»—i xáº£y ra khi Ä‘á»•i máº­t kháº©u.');
         } finally {
             setLoading(false);
         }
@@ -88,16 +88,16 @@ function ChangePasswordPage() {
                     <div className={styles.breadcrumb}>
                         <i className="bi bi-house-door" />
                         <i className="bi bi-chevron-right" />
-                        <span className={styles.breadcrumbItem}>Tài khoản</span>
+                        <span className={styles.breadcrumbItem}>TÃ i khoáº£n</span>
                         <i className="bi bi-chevron-right" />
-                        <span className={styles.breadcrumbActive}>Đổi mật khẩu</span>
+                        <span className={styles.breadcrumbActive}>Äá»•i máº­t kháº©u</span>
                     </div>
 
                     {/* Card */}
                     <div className={styles.card}>
-                        <h1 className={styles.cardTitle}>Đổi mật khẩu</h1>
+                        <h1 className={styles.cardTitle}>Äá»•i máº­t kháº©u</h1>
                         <p className={styles.cardSubtitle}>
-                            Vui lòng nhập mật khẩu hiện tại và mật khẩu mới để bảo mật tài khoản.
+                            Vui lÃ²ng nháº­p máº­t kháº©u hiá»‡n táº¡i vÃ  máº­t kháº©u má»›i Ä‘á»ƒ báº£o máº­t tÃ i khoáº£n.
                         </p>
 
                         {error && (
@@ -109,13 +109,13 @@ function ChangePasswordPage() {
                         <form onSubmit={handleSubmit} className={styles.form}>
                             {/* Current Password */}
                             <div className={styles.formGroup}>
-                                <label>Mật khẩu hiện tại</label>
+                                <label>Máº­t kháº©u hiá»‡n táº¡i</label>
                                 <div className={styles.inputWrapper}>
                                     <input
                                         type={showCurrent ? "text" : "password"}
                                         value={currentPassword}
                                         onChange={(e) => setCurrentPassword(e.target.value)}
-                                        placeholder="••••••••"
+                                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                                         disabled={loading}
                                     />
                                     <i
@@ -127,13 +127,13 @@ function ChangePasswordPage() {
 
                             {/* New Password */}
                             <div className={styles.formGroup}>
-                                <label>Mật khẩu mới</label>
+                                <label>Máº­t kháº©u má»›i</label>
                                 <div className={styles.inputWrapper}>
                                     <input
                                         type={showNew ? "text" : "password"}
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
-                                        placeholder="••••••••"
+                                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                                         disabled={loading}
                                     />
                                     <i
@@ -145,13 +145,13 @@ function ChangePasswordPage() {
 
                             {/* Confirm Password */}
                             <div className={styles.formGroup}>
-                                <label>Xác nhận mật khẩu mới</label>
+                                <label>XÃ¡c nháº­n máº­t kháº©u má»›i</label>
                                 <div className={styles.inputWrapper}>
                                     <input
                                         type={showConfirm ? "text" : "password"}
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
-                                        placeholder="••••••••"
+                                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                                         disabled={loading}
                                     />
                                     <i
@@ -164,7 +164,7 @@ function ChangePasswordPage() {
                             {/* Info Alert */}
                             <div className={styles.infoAlert}>
                                 <i className="bi bi-info-circle" />
-                                <span>Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ cái và chữ số.</span>
+                                <span>Máº­t kháº©u pháº£i cÃ³ Ã­t nháº¥t 8 kÃ½ tá»±, bao gá»“m chá»¯ cÃ¡i vÃ  chá»¯ sá»‘.</span>
                             </div>
 
                             {/* Actions */}
@@ -175,10 +175,10 @@ function ChangePasswordPage() {
                                     ) : (
                                         <i className="bi bi-floppy" />
                                     )}
-                                    {loading ? ' Đang cập nhật...' : ' Cập nhật mật khẩu'}
+                                    {loading ? ' Äang cáº­p nháº­t...' : ' Cáº­p nháº­t máº­t kháº©u'}
                                 </button>
                                 <button type="button" className={styles.btnSecondary} onClick={() => navigate('/dashboard')} disabled={loading}>
-                                    Hủy bỏ
+                                    Há»§y bá»
                                 </button>
                             </div>
                         </form>
@@ -187,7 +187,7 @@ function ChangePasswordPage() {
                     {/* Security Badge */}
                     <div className={styles.securityBadge}>
                         <i className="bi bi-shield-check" />
-                        <span>Hệ thống bảo mật Duy Long v2.0 - Đã được mã hóa 256-bit</span>
+                        <span>Há»‡ thá»‘ng báº£o máº­t Duy Long v2.0 - ÄÃ£ Ä‘Æ°á»£c mÃ£ hÃ³a 256-bit</span>
                     </div>
                 </div>
             </div>

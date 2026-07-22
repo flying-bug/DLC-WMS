@@ -38,20 +38,20 @@ function StocktakeInitModal({ onClose, warehouses = [] }) {
       <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
 
         <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitle}>Kiểm kê vật tư hàng hóa <i className="bi bi-question-circle" style={{ fontSize: '15px', color: '#94a3b8' }}></i></h3>
+          <h3 className={styles.modalTitle}>Kiá»ƒm kÃª váº­t tÆ° hÃ ng hÃ³a <i className="bi bi-question-circle" style={{ fontSize: '15px', color: '#94a3b8' }}></i></h3>
           <i className={`bi bi-x-lg ${styles.closeIcon}`} onClick={onClose}></i>
         </div>
 
         <div className={styles.modalBody}>
           <div className={styles.fieldGroup}>
-            <label className={styles.fieldLabel}>Kiểm kê kho</label>
+            <label className={styles.fieldLabel}>Kiá»ƒm kÃª kho</label>
             <select
               className={styles.selectControl}
               name="warehouseId"
               value={formData.warehouseId}
               onChange={handleChange}
             >
-              <option value="all">Tất cả</option>
+              <option value="all">Táº¥t cáº£</option>
               {warehouses.map(wh => (
                 <option key={wh.id} value={wh.id}>{wh.name}</option>
               ))}
@@ -59,7 +59,7 @@ function StocktakeInitModal({ onClose, warehouses = [] }) {
           </div>
 
           <div className={styles.fieldGroup}>
-            <label className={styles.fieldLabel}>Đến ngày</label>
+            <label className={styles.fieldLabel}>Äáº¿n ngÃ y</label>
             <input
               type="date"
               className={styles.inputControl}
@@ -78,7 +78,7 @@ function StocktakeInitModal({ onClose, warehouses = [] }) {
                 checked={formData.isDetailBy}
                 onChange={handleChange}
               />
-              Chi tiết theo
+              Chi tiáº¿t theo
             </label>
           </div>
 
@@ -91,15 +91,15 @@ function StocktakeInitModal({ onClose, warehouses = [] }) {
               disabled={!formData.isDetailBy}
             >
               <option value="serial">Serial Number (S/N)</option>
-              <option value="supplier">Nhà cung cấp</option>
-              <option value="slot">Số Lô</option>
+              <option value="supplier">NhÃ  cung cáº¥p</option>
+              <option value="slot">Sá»‘ LÃ´</option>
             </select>
           </div>
         </div>
 
         <div className={styles.modalFooter}>
-          <button className={styles.btnCancel} onClick={onClose}>Hủy</button>
-          <button className={styles.btnSubmit} onClick={handleSubmit}>Đồng ý</button>
+          <button className={styles.btnCancel} onClick={onClose}>Há»§y</button>
+          <button className={styles.btnSubmit} onClick={handleSubmit}>Äá»“ng Ã½</button>
         </div>
 
       </div>

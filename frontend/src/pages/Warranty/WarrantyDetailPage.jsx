@@ -6,44 +6,44 @@ import * as warrantyApi from '../../api/warrantyApi';
 import styles from './WarrantyDetailPage.module.css';
 
 const STATUS_META = {
-    DRAFT: { label: 'Nháp', tone: 'info' },
-    APPROVED: { label: 'Còn hiệu lực', tone: 'success' },
-    POSTED: { label: 'Đã ghi nhận', tone: 'success' },
-    CANCELLED: { label: 'Đã hủy', tone: 'danger' },
-    EXPIRED: { label: 'Hết hạn', tone: 'warning' },
-    VOIDED: { label: 'Không hợp lệ', tone: 'danger' }
+    DRAFT: { label: 'NhÃ¡p', tone: 'info' },
+    APPROVED: { label: 'CÃ²n hiá»‡u lá»±c', tone: 'success' },
+    POSTED: { label: 'ÄÃ£ ghi nháº­n', tone: 'success' },
+    CANCELLED: { label: 'ÄÃ£ há»§y', tone: 'danger' },
+    EXPIRED: { label: 'Háº¿t háº¡n', tone: 'warning' },
+    VOIDED: { label: 'KhÃ´ng há»£p lá»‡', tone: 'danger' }
 };
 
 const REPAIR_STATUS_META = {
-    DRAFT: { label: 'Nháp', tone: 'info' },
-    SUBMITTED: { label: 'Chờ duyệt', tone: 'warning' },
-    APPROVED: { label: 'Đã duyệt', tone: 'success' },
-    POSTED: { label: 'Hoàn tất', tone: 'success' },
-    CANCELLED: { label: 'Đã hủy', tone: 'danger' },
-    RECEIVED: { label: 'Đã tiếp nhận', tone: 'info' },
-    REPAIRING: { label: 'Đang sửa', tone: 'warning' }
+    DRAFT: { label: 'NhÃ¡p', tone: 'info' },
+    SUBMITTED: { label: 'Chá» duyá»‡t', tone: 'warning' },
+    APPROVED: { label: 'ÄÃ£ duyá»‡t', tone: 'success' },
+    POSTED: { label: 'HoÃ n táº¥t', tone: 'success' },
+    CANCELLED: { label: 'ÄÃ£ há»§y', tone: 'danger' },
+    RECEIVED: { label: 'ÄÃ£ tiáº¿p nháº­n', tone: 'info' },
+    REPAIRING: { label: 'Äang sá»­a', tone: 'warning' }
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString('vi-VN') : 'Chưa có');
+const formatDate = (value) => (value ? new Date(value).toLocaleDateString('vi-VN') : 'ChÆ°a cÃ³');
 
 const readPartner = (warranty) => ({
     id: warranty.partnerId || warranty.partner?.id,
-    name: warranty.partnerName || warranty.customerName || warranty.partner?.name || 'Khách lẻ',
-    phone: warranty.partnerPhone || warranty.customerPhone || warranty.partner?.phone || 'Chưa có',
-    email: warranty.partnerEmail || warranty.partner?.email || 'Chưa có',
-    address: warranty.partnerAddress || warranty.partner?.address || 'Chưa có'
+    name: warranty.partnerName || warranty.customerName || warranty.partner?.name || 'KhÃ¡ch láº»',
+    phone: warranty.partnerPhone || warranty.customerPhone || warranty.partner?.phone || 'ChÆ°a cÃ³',
+    email: warranty.partnerEmail || warranty.partner?.email || 'ChÆ°a cÃ³',
+    address: warranty.partnerAddress || warranty.partner?.address || 'ChÆ°a cÃ³'
 });
 
 const readSerial = (warranty) => ({
     id: warranty.serialNumberId || warranty.serialNumber?.id,
-    code: warranty.serialCode || warranty.serialNumber || warranty.serialNumberValue || warranty.serialNumber?.serialNo || warranty.serialNumber?.serialNumber || 'Chưa có',
-    status: warranty.serialStatus || warranty.serialNumber?.status || 'Chưa rõ',
-    productName: warranty.productName || warranty.variantName || warranty.serialNumber?.productName || warranty.serialNumber?.variant?.variantName || 'Chưa rõ sản phẩm',
-    sku: warranty.sku || warranty.serialNumber?.sku || warranty.serialNumber?.variant?.sku || 'Chưa có'
+    code: warranty.serialCode || warranty.serialNumber || warranty.serialNumberValue || warranty.serialNumber?.serialNo || warranty.serialNumber?.serialNumber || 'ChÆ°a cÃ³',
+    status: warranty.serialStatus || warranty.serialNumber?.status || 'ChÆ°a rÃµ',
+    productName: warranty.productName || warranty.variantName || warranty.serialNumber?.productName || warranty.serialNumber?.variant?.variantName || 'ChÆ°a rÃµ sáº£n pháº©m',
+    sku: warranty.sku || warranty.serialNumber?.sku || warranty.serialNumber?.variant?.sku || 'ChÆ°a cÃ³'
 });
 
-const statusMeta = (status, map) => map[status] || { label: status || 'Chưa rõ', tone: 'info' };
+const statusMeta = (status, map) => map[status] || { label: status || 'ChÆ°a rÃµ', tone: 'info' };
 
 function WarrantyDetailPage() {
     const { id } = useParams();
@@ -60,7 +60,7 @@ function WarrantyDetailPage() {
             setWarranty(unwrap(response));
         } catch (err) {
             setWarranty(null);
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được chi tiết bảo hành.');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº£i Ä‘Æ°á»£c chi tiáº¿t báº£o hÃ nh.');
         } finally {
             setLoading(false);
         }
@@ -86,22 +86,22 @@ function WarrantyDetailPage() {
                     <div>
                         <button className={styles.backButton} type="button" onClick={() => navigate('/warranties')}>
                             <i className="bi bi-arrow-left"></i>
-                            Danh sách bảo hành
+                            Danh sÃ¡ch báº£o hÃ nh
                         </button>
                         <div className={styles.titleRow}>
-                            <h1 className={styles.title}>{warranty?.warrantyCode || `Bảo hành #${id}`}</h1>
+                            <h1 className={styles.title}>{warranty?.warrantyCode || `Báº£o hÃ nh #${id}`}</h1>
                             {warranty && <span className={`${styles.badge} ${styles[warrantyStatus.tone]}`}>{warrantyStatus.label}</span>}
                         </div>
-                        <p className={styles.subtitle}>Hồ sơ serial, khách hàng, sửa chữa và phiếu xuất kho liên quan.</p>
+                        <p className={styles.subtitle}>Há»“ sÆ¡ serial, khÃ¡ch hÃ ng, sá»­a chá»¯a vÃ  phiáº¿u xuáº¥t kho liÃªn quan.</p>
                     </div>
                     <div className={styles.headerActions}>
                         <button className={styles.outlineButton} type="button" onClick={() => navigate(`/repairs/create?warrantyId=${id}`)}>
                             <i className="bi bi-tools"></i>
-                            Tạo phiếu sửa
+                            Táº¡o phiáº¿u sá»­a
                         </button>
                         <button className={styles.primaryButton} type="button" onClick={() => navigate(`/export-slips/create?type=WARRANTY&warrantyId=${id}`)}>
                             <i className="bi bi-box-arrow-up-right"></i>
-                            Tạo phiếu xuất
+                            Táº¡o phiáº¿u xuáº¥t
                         </button>
                     </div>
                 </div>
@@ -109,33 +109,33 @@ function WarrantyDetailPage() {
                 {error && <div className={styles.errorBox}>{error}</div>}
 
                 {loading && !warranty ? (
-                    <div className={styles.emptyState}>Đang tải chi tiết bảo hành...</div>
+                    <div className={styles.emptyState}>Äang táº£i chi tiáº¿t báº£o hÃ nh...</div>
                 ) : warranty ? (
                     <>
                         <div className={styles.summaryGrid}>
                             <section className={styles.card}>
                                 <div className={styles.cardTitle}>
                                     <i className="bi bi-shield-check"></i>
-                                    Thông tin bảo hành
+                                    ThÃ´ng tin báº£o hÃ nh
                                 </div>
                                 <div className={styles.infoGrid}>
-                                    <InfoItem label="Mã bảo hành" value={warranty.warrantyCode} />
-                                    <InfoItem label="Ngày bắt đầu" value={formatDate(warranty.startDate)} />
-                                    <InfoItem label="Ngày hết hạn" value={formatDate(warranty.endDate)} />
-                                    <InfoItem label="Đơn bán hàng" value={warranty.salesOrderCode || (warranty.salesOrderId ? `SO #${warranty.salesOrderId}` : 'Chưa liên kết')} />
+                                    <InfoItem label="MÃ£ báº£o hÃ nh" value={warranty.warrantyCode} />
+                                    <InfoItem label="NgÃ y báº¯t Ä‘áº§u" value={formatDate(warranty.startDate)} />
+                                    <InfoItem label="NgÃ y háº¿t háº¡n" value={formatDate(warranty.endDate)} />
+                                    <InfoItem label="ÄÆ¡n bÃ¡n hÃ ng" value={warranty.salesOrderCode || (warranty.salesOrderId ? `SO #${warranty.salesOrderId}` : 'ChÆ°a liÃªn káº¿t')} />
                                 </div>
                             </section>
 
                             <section className={styles.card}>
                                 <div className={styles.cardTitle}>
                                     <i className="bi bi-person-vcard"></i>
-                                    Khách hàng
+                                    KhÃ¡ch hÃ ng
                                 </div>
                                 <div className={styles.infoGrid}>
-                                    <InfoItem label="Tên khách hàng" value={partner.name} />
-                                    <InfoItem label="Số điện thoại" value={partner.phone} />
+                                    <InfoItem label="TÃªn khÃ¡ch hÃ ng" value={partner.name} />
+                                    <InfoItem label="Sá»‘ Ä‘iá»‡n thoáº¡i" value={partner.phone} />
                                     <InfoItem label="Email" value={partner.email} />
-                                    <InfoItem label="Địa chỉ" value={partner.address} />
+                                    <InfoItem label="Äá»‹a chá»‰" value={partner.address} />
                                 </div>
                             </section>
                         </div>
@@ -143,13 +143,13 @@ function WarrantyDetailPage() {
                         <section className={styles.card}>
                             <div className={styles.cardTitle}>
                                 <i className="bi bi-upc-scan"></i>
-                                Thiết bị và serial
+                                Thiáº¿t bá»‹ vÃ  serial
                             </div>
                             <div className={styles.deviceGrid}>
                                 <InfoItem label="Serial" value={serial.code} />
                                 <InfoItem label="SKU" value={serial.sku} />
-                                <InfoItem label="Sản phẩm" value={serial.productName} />
-                                <InfoItem label="Trạng thái serial" value={serial.status} />
+                                <InfoItem label="Sáº£n pháº©m" value={serial.productName} />
+                                <InfoItem label="Tráº¡ng thÃ¡i serial" value={serial.status} />
                             </div>
                         </section>
 
@@ -158,18 +158,18 @@ function WarrantyDetailPage() {
                                 <div className={styles.sectionHeader}>
                                     <div className={styles.cardTitle}>
                                         <i className="bi bi-tools"></i>
-                                        Lịch sử sửa chữa
+                                        Lá»‹ch sá»­ sá»­a chá»¯a
                                     </div>
                                     <button className={styles.smallButton} type="button" onClick={() => navigate(`/repairs/create?warrantyId=${id}`)}>
-                                        Tạo phiếu sửa
+                                        Táº¡o phiáº¿u sá»­a
                                     </button>
                                 </div>
                                 <table className={styles.table}>
                                     <thead>
                                         <tr>
-                                            <th>Mã phiếu</th>
-                                            <th>Ngày nhận</th>
-                                            <th>Trạng thái</th>
+                                            <th>MÃ£ phiáº¿u</th>
+                                            <th>NgÃ y nháº­n</th>
+                                            <th>Tráº¡ng thÃ¡i</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -183,7 +183,7 @@ function WarrantyDetailPage() {
                                                 </tr>
                                             );
                                         }) : (
-                                            <tr><td colSpan="3" className={styles.emptyCell}>Chưa có phiếu sửa chữa.</td></tr>
+                                            <tr><td colSpan="3" className={styles.emptyCell}>ChÆ°a cÃ³ phiáº¿u sá»­a chá»¯a.</td></tr>
                                         )}
                                     </tbody>
                                 </table>
@@ -193,18 +193,18 @@ function WarrantyDetailPage() {
                                 <div className={styles.sectionHeader}>
                                     <div className={styles.cardTitle}>
                                         <i className="bi bi-box-arrow-up-right"></i>
-                                        Phiếu xuất liên quan
+                                        Phiáº¿u xuáº¥t liÃªn quan
                                     </div>
                                     <button className={styles.smallButton} type="button" onClick={() => navigate(`/export-slips/create?type=WARRANTY&warrantyId=${id}`)}>
-                                        Tạo phiếu xuất
+                                        Táº¡o phiáº¿u xuáº¥t
                                     </button>
                                 </div>
                                 <table className={styles.table}>
                                     <thead>
                                         <tr>
-                                            <th>Số phiếu</th>
-                                            <th>Ngày xuất</th>
-                                            <th>Trạng thái</th>
+                                            <th>Sá»‘ phiáº¿u</th>
+                                            <th>NgÃ y xuáº¥t</th>
+                                            <th>Tráº¡ng thÃ¡i</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -218,7 +218,7 @@ function WarrantyDetailPage() {
                                                 </tr>
                                             );
                                         }) : (
-                                            <tr><td colSpan="3" className={styles.emptyCell}>Chưa có phiếu xuất kho bảo hành.</td></tr>
+                                            <tr><td colSpan="3" className={styles.emptyCell}>ChÆ°a cÃ³ phiáº¿u xuáº¥t kho báº£o hÃ nh.</td></tr>
                                         )}
                                     </tbody>
                                 </table>
@@ -226,7 +226,7 @@ function WarrantyDetailPage() {
                         </div>
                     </>
                 ) : (
-                    <div className={styles.emptyState}>Không tìm thấy hồ sơ bảo hành.</div>
+                    <div className={styles.emptyState}>KhÃ´ng tÃ¬m tháº¥y há»“ sÆ¡ báº£o hÃ nh.</div>
                 )}
             </div>
         </AdminLayout>
@@ -237,7 +237,7 @@ function InfoItem({ label, value }) {
     return (
         <div className={styles.infoItem}>
             <span className={styles.infoLabel}>{label}</span>
-            <strong className={styles.infoValue}>{value || 'Chưa có'}</strong>
+            <strong className={styles.infoValue}>{value || 'ChÆ°a cÃ³'}</strong>
         </div>
     );
 }

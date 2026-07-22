@@ -6,8 +6,8 @@ const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 
 const TYPE_META = {
-    'ASSEMBLY': 'Lắp ráp',
-    'DISASSEMBLY': 'Tháo dỡ'
+    'ASSEMBLY': 'Láº¯p rÃ¡p',
+    'DISASSEMBLY': 'ThÃ¡o dá»¡'
 };
 
 const formatDate = (dateString) => {
@@ -40,7 +40,7 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
             const res = await assemblyOrderApi.getAssemblyOrders(payload);
             setOrders(pageContent(unwrap(res)));
         } catch (error) {
-            console.error('Lỗi khi tải lệnh sản xuất:', error);
+            console.error('Lá»—i khi táº£i lá»‡nh sáº£n xuáº¥t:', error);
         } finally {
             setLoading(false);
         }
@@ -70,7 +70,7 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
         <div className={styles.backdrop} onClick={onClose}>
             <div className={styles.modal} onClick={e => e.stopPropagation()}>
                 <div className={styles.header}>
-                    <h2 className={styles.headerTitle}>Chọn Lệnh sản xuất</h2>
+                    <h2 className={styles.headerTitle}>Chá»n Lá»‡nh sáº£n xuáº¥t</h2>
                     <button className={styles.closeBtn} onClick={onClose}>
                         <i className="bi bi-x-lg"></i>
                     </button>
@@ -79,17 +79,17 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
                 <div className={styles.body}>
                     <div className={styles.filterBar}>
                         <div className={styles.filterGroup}>
-                            <label>Từ khóa</label>
+                            <label>Tá»« khÃ³a</label>
                             <input 
                                 type="text" 
                                 className={styles.filterInput} 
-                                placeholder="Nhập mã lệnh..."
+                                placeholder="Nháº­p mÃ£ lá»‡nh..."
                                 value={filters.keyword}
                                 onChange={e => setFilters(prev => ({ ...prev, keyword: e.target.value }))}
                             />
                         </div>
                         <div className={styles.filterGroup}>
-                            <label>Từ ngày</label>
+                            <label>Tá»« ngÃ y</label>
                             <input 
                                 type="date" 
                                 className={styles.filterInput}
@@ -98,7 +98,7 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
                             />
                         </div>
                         <div className={styles.filterGroup}>
-                            <label>Đến ngày</label>
+                            <label>Äáº¿n ngÃ y</label>
                             <input 
                                 type="date" 
                                 className={styles.filterInput}
@@ -107,7 +107,7 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
                             />
                         </div>
                         <button className={styles.btnFetch} onClick={loadOrders}>
-                            Lấy dữ liệu
+                            Láº¥y dá»¯ liá»‡u
                         </button>
                     </div>
 
@@ -116,22 +116,22 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
                             <thead>
                                 <tr>
                                     <th className={styles.radioCell}></th>
-                                    <th>Mã lệnh</th>
-                                    <th>Loại</th>
+                                    <th>MÃ£ lá»‡nh</th>
+                                    <th>Loáº¡i</th>
                                     <th>BOM</th>
-                                    <th>Thành phẩm</th>
-                                    <th>Ngày thực hiện</th>
-                                    <th>Tiến độ</th>
+                                    <th>ThÃ nh pháº©m</th>
+                                    <th>NgÃ y thá»±c hiá»‡n</th>
+                                    <th>Tiáº¿n Ä‘á»™</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="7" className={styles.emptyState}>Đang tải dữ liệu...</td>
+                                        <td colSpan="7" className={styles.emptyState}>Äang táº£i dá»¯ liá»‡u...</td>
                                     </tr>
                                 ) : orders.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className={styles.emptyState}>Không tìm thấy lệnh sản xuất nào</td>
+                                        <td colSpan="7" className={styles.emptyState}>KhÃ´ng tÃ¬m tháº¥y lá»‡nh sáº£n xuáº¥t nÃ o</td>
                                     </tr>
                                 ) : (
                                     orders.map(order => (
@@ -150,11 +150,11 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
                                             </td>
                                             <td style={{ color: '#2563eb', fontWeight: 500 }}>{order.orderCode}</td>
                                             <td>{TYPE_META[order.orderType] || order.orderType}</td>
-                                            <td>{order.bomCode || order.bomName || 'Chưa có'}</td>
-                                            <td>{order.targetName || order.targetSku || 'Chưa có'}</td>
+                                            <td>{order.bomCode || order.bomName || 'ChÆ°a cÃ³'}</td>
+                                            <td>{order.targetName || order.targetSku || 'ChÆ°a cÃ³'}</td>
                                             <td>{formatDate(order.executionDate)}</td>
                                             <td>
-                                                <span title={`Đã thực hiện: ${order.quantityProduced ?? 0} / ${order.quantity ?? 0}`}>
+                                                <span title={`ÄÃ£ thá»±c hiá»‡n: ${order.quantityProduced ?? 0} / ${order.quantity ?? 0}`}>
                                                     {Number(order.quantityProduced ?? 0).toLocaleString('vi-VN')} / {Number(order.quantity ?? 0).toLocaleString('vi-VN')}
                                                 </span>
                                             </td>
@@ -168,11 +168,11 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
 
                 <div className={styles.footer}>
                     <div className={styles.recordCount}>
-                        Tổng số: <strong>{orders.length}</strong> bản ghi
+                        Tá»•ng sá»‘: <strong>{orders.length}</strong> báº£n ghi
                     </div>
                     <div className={styles.footerActions}>
-                        <button className={styles.btnCancel} onClick={onClose}>Hủy</button>
-                        <button className={styles.btnConfirm} onClick={handleConfirm} disabled={!selectedOrderId}>Đồng ý</button>
+                        <button className={styles.btnCancel} onClick={onClose}>Há»§y</button>
+                        <button className={styles.btnConfirm} onClick={handleConfirm} disabled={!selectedOrderId}>Äá»“ng Ã½</button>
                     </div>
                 </div>
             </div>

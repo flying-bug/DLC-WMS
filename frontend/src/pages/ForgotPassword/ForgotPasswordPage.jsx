@@ -8,17 +8,17 @@ import styles from './ForgotPasswordPage.module.css';
 import { ROUTES, APP_NAME, COPYRIGHT_YEAR, COMPANY_NAME } from '../../constants';
 
 /**
- * Flow quên mật khẩu — 3 bước:
- *   STEP 1 — Nhập email
- *   STEP 2 — Xác thực OTP
- *   STEP 3 — Đặt mật khẩu mới
+ * Flow quÃªn máº­t kháº©u â€” 3 bÆ°á»›c:
+ *   STEP 1 â€” Nháº­p email
+ *   STEP 2 â€” XÃ¡c thá»±c OTP
+ *   STEP 3 â€” Äáº·t máº­t kháº©u má»›i
  */
 const STEPS = { REQUEST_EMAIL: 1, VERIFY_OTP: 2, RESET_PASSWORD: 3 };
 
 const STEP_META = [
-    { label: 'Xác nhận email' },
-    { label: 'Nhập mã OTP' },
-    { label: 'Đặt mật khẩu' },
+    { label: 'XÃ¡c nháº­n email' },
+    { label: 'Nháº­p mÃ£ OTP' },
+    { label: 'Äáº·t máº­t kháº©u' },
 ];
 
 function ForgotPasswordPage() {
@@ -46,8 +46,8 @@ function ForgotPasswordPage() {
     const handleResetSuccess = () => {
         showToast(
             'success',
-            'Đổi mật khẩu thành công!',
-            'Mật khẩu đã được cập nhật. Đang chuyển về trang đăng nhập...'
+            'Äá»•i máº­t kháº©u thÃ nh cÃ´ng!',
+            'Máº­t kháº©u Ä‘Ã£ Ä‘Æ°á»£c cáº­p nháº­t. Äang chuyá»ƒn vá» trang Ä‘Äƒng nháº­p...'
         );
         setTimeout(() => navigate(ROUTES.LOGIN), 3000);
     };
@@ -60,7 +60,7 @@ function ForgotPasswordPage() {
 
             <div className={styles.container}>
                 {/* Logo */}
-                <Link to={ROUTES.LOGIN} className={styles.logoLink} aria-label={`${APP_NAME} – về trang đăng nhập`}>
+                <Link to={ROUTES.LOGIN} className={styles.logoLink} aria-label={`${APP_NAME} â€“ vá» trang Ä‘Äƒng nháº­p`}>
                     <div className={styles.logoBox}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
                             fill="none" viewBox="0 0 24 24" stroke="var(--color-white)" strokeWidth={1.8}
@@ -80,7 +80,7 @@ function ForgotPasswordPage() {
                     {/* Step indicator */}
                     <StepIndicator current={step} meta={STEP_META} />
 
-                    {/* Step content — animated slide */}
+                    {/* Step content â€” animated slide */}
                     <div className={styles.stepContent}>
                         {step === STEPS.REQUEST_EMAIL && (
                             <StepRequestEmail onNext={handleEmailSubmit} />
@@ -100,7 +100,7 @@ function ForgotPasswordPage() {
 
                 {/* Footer */}
                 <p className={styles.footer}>
-                    © {COPYRIGHT_YEAR} {COMPANY_NAME.toUpperCase()}. ALL RIGHTS RESERVED.
+                    Â© {COPYRIGHT_YEAR} {COMPANY_NAME.toUpperCase()}. ALL RIGHTS RESERVED.
                 </p>
             </div>
 
@@ -115,10 +115,10 @@ function ForgotPasswordPage() {
     );
 }
 
-/* ── Step Indicator ─────────────────────────────────────────── */
+/* â”€â”€ Step Indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function StepIndicator({ current, meta }) {
     return (
-        <div className={styles.stepIndicator} role="list" aria-label="Các bước thực hiện">
+        <div className={styles.stepIndicator} role="list" aria-label="CÃ¡c bÆ°á»›c thá»±c hiá»‡n">
             {meta.map((item, i) => {
                 const n = i + 1;
                 const isDone = n < current;
@@ -126,7 +126,7 @@ function StepIndicator({ current, meta }) {
 
                 return (
                     <div key={n} className={styles.stepItem} role="listitem">
-                        {/* Connector trước */}
+                        {/* Connector trÆ°á»›c */}
                         {i > 0 && (
                             <div className={`${styles.connector} ${isDone ? styles.connectorDone : ''}`}
                                 aria-hidden="true" />

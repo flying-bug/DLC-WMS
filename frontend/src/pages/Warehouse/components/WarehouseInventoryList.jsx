@@ -3,7 +3,7 @@ import * as warehouseApi from '../../../api/warehouseApi';
 import styles from './WarehouseInventoryList.module.css';
 
 const formatCurrency = (value) => {
-    if (value === undefined || value === null) return '0 ₫';
+    if (value === undefined || value === null) return '0 â‚«';
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 };
 
@@ -25,7 +25,7 @@ const WarehouseInventoryList = ({ warehouseId }) => {
             const res = await warehouseApi.getWarehouseInventory(warehouseId);
             setInventory(res.data.data || []);
         } catch (error) {
-            console.error('Lỗi tải dữ liệu tồn kho:', error);
+            console.error('Lá»—i táº£i dá»¯ liá»‡u tá»“n kho:', error);
         } finally {
             setLoading(false);
         }
@@ -37,7 +37,7 @@ const WarehouseInventoryList = ({ warehouseId }) => {
          
     }, [warehouseId]);
 
-    // Lọc dữ liệu theo search query
+    // Lá»c dá»¯ liá»‡u theo search query
     const filteredInventory = inventory.filter(item => {
         const query = search.toLowerCase();
         return (
@@ -48,7 +48,7 @@ const WarehouseInventoryList = ({ warehouseId }) => {
         );
     });
 
-    // Tính toán phân trang
+    // TÃ­nh toÃ¡n phÃ¢n trang
     const totalPages = Math.ceil(filteredInventory.length / itemsPerPage);
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -58,7 +58,7 @@ const WarehouseInventoryList = ({ warehouseId }) => {
         setCurrentPage(pageNumber);
     };
 
-    // Reset trang hiện tại khi tìm kiếm thay đổi
+    // Reset trang hiá»‡n táº¡i khi tÃ¬m kiáº¿m thay Ä‘á»•i
     useEffect(() => {
          
         setCurrentPage(1);
@@ -72,36 +72,36 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                         <i className="fas fa-search"></i>
                         <input 
                             type="text" 
-                            placeholder="Tìm theo mã hàng, tên, SKU..." 
+                            placeholder="TÃ¬m theo mÃ£ hÃ ng, tÃªn, SKU..." 
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className={styles.searchInput}
                         />
                     </div>
                 </div>
-                <button className={styles.btnRefresh} onClick={fetchInventory} title="Làm mới">
-                    <i className="fas fa-sync-alt"></i> Tải lại
+                <button className={styles.btnRefresh} onClick={fetchInventory} title="LÃ m má»›i">
+                    <i className="fas fa-sync-alt"></i> Táº£i láº¡i
                 </button>
             </div>
 
             <div className={styles.tableContainer}>
                 {loading ? (
-                    <div className={styles.loading}>Đang tải dữ liệu tồn kho...</div>
+                    <div className={styles.loading}>Äang táº£i dá»¯ liá»‡u tá»“n kho...</div>
                 ) : filteredInventory.length === 0 ? (
-                    <div className={styles.empty}>Không tìm thấy sản phẩm nào trong kho.</div>
+                    <div className={styles.empty}>KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m nÃ o trong kho.</div>
                 ) : (
                     <table className={styles.table}>
                         <thead>
                             <tr>
                                 <th style={{ width: '60px' }}>STT</th>
-                                <th>Mã sản phẩm</th>
-                                <th>Tên sản phẩm</th>
-                                <th>Mã SKU</th>
-                                <th>Phiên bản</th>
-                                <th style={{ textAlign: 'right' }}>Tồn kho thực tế</th>
-                                <th style={{ textAlign: 'right' }}>Đang giữ hàng</th>
-                                <th style={{ textAlign: 'right' }}>Khả dụng</th>
-                                <th style={{ textAlign: 'right' }}>Giá trị tồn</th>
+                                <th>MÃ£ sáº£n pháº©m</th>
+                                <th>TÃªn sáº£n pháº©m</th>
+                                <th>MÃ£ SKU</th>
+                                <th>PhiÃªn báº£n</th>
+                                <th style={{ textAlign: 'right' }}>Tá»“n kho thá»±c táº¿</th>
+                                <th style={{ textAlign: 'right' }}>Äang giá»¯ hÃ ng</th>
+                                <th style={{ textAlign: 'right' }}>Kháº£ dá»¥ng</th>
+                                <th style={{ textAlign: 'right' }}>GiÃ¡ trá»‹ tá»“n</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -144,7 +144,7 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                         onClick={() => handlePageChange(currentPage - 1)}
                         className={styles.pageBtn}
                     >
-                        Trước
+                        TrÆ°á»›c
                     </button>
                     <span className={styles.pageInfo}>Trang {currentPage} / {totalPages}</span>
                     <button 

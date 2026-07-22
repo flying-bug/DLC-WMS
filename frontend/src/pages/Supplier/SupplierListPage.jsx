@@ -10,13 +10,13 @@ import styles from './SupplierListPage.module.css';
 import axiosClient from '../../api/axiosClient';
 
 const STATUS_LABELS = {
-    APPROVED: { label: 'Đang hoạt động', code: 'success' },
-    INACTIVE: { label: 'Ngừng hoạt động', code: 'danger' },
+    APPROVED: { label: 'Äang hoáº¡t Ä‘á»™ng', code: 'success' },
+    INACTIVE: { label: 'Ngá»«ng hoáº¡t Ä‘á»™ng', code: 'danger' },
 };
 
 const formatCurrency = (val) => {
-    if (!val) return '0 đ';
-    return `${new Intl.NumberFormat('vi-VN').format(val)} đ`;
+    if (!val) return '0 Ä‘';
+    return `${new Intl.NumberFormat('vi-VN').format(val)} Ä‘`;
 };
 
 const SupplierListPage = () => {
@@ -58,8 +58,8 @@ const SupplierListPage = () => {
             setSuppliers(data);
             setSelectedIds([]);
         } catch (error) {
-            console.error('Lỗi tải danh sách NCC:', error);
-            showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách nhà cung cấp');
+            console.error('Lá»—i táº£i danh sÃ¡ch NCC:', error);
+            showToast('error', error.response?.data?.userMessage || 'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch nhÃ  cung cáº¥p');
         } finally {
             setLoading(false);
         }
@@ -80,7 +80,7 @@ const SupplierListPage = () => {
 
     // Derived data for table
     const rows = suppliers.map(item => {
-        const status = STATUS_LABELS[item.status] || { label: item.status || 'Không rõ', code: 'info' };
+        const status = STATUS_LABELS[item.status] || { label: item.status || 'KhÃ´ng rÃµ', code: 'info' };
         return {
             ...item,
             statusLabel: status.label,
@@ -94,7 +94,7 @@ const SupplierListPage = () => {
     const paginatedRows = rows.slice(startIndex, startIndex + pageSize);
 
     const handleExport = () => {
-        const headers = ['Mã nhà cung cấp', 'Tên nhà cung cấp', 'Địa chỉ', 'Mã số thuế', 'Trạng thái'];
+        const headers = ['MÃ£ nhÃ  cung cáº¥p', 'TÃªn nhÃ  cung cáº¥p', 'Äá»‹a chá»‰', 'MÃ£ sá»‘ thuáº¿', 'Tráº¡ng thÃ¡i'];
         const data = rows.map(item => [
             item.code,
             item.name,
@@ -103,7 +103,7 @@ const SupplierListPage = () => {
             item.statusLabel
         ]);
         exportToExcel(headers, data, 'Danh_sach_nha_cung_cap');
-        showToast('success', 'Xuất Excel thành công!');
+        showToast('success', 'Xuáº¥t Excel thÃ nh cÃ´ng!');
     };
 
     const handleSelectAll = (e) => {
@@ -139,10 +139,10 @@ const SupplierListPage = () => {
         if (!deleteConfirm.supplier) return;
         try {
             await axiosClient.delete(`/suppliers/${deleteConfirm.supplier.id}`);
-            showToast('success', `Đã xóa nhà cung cấp ${deleteConfirm.supplier.name}`);
+            showToast('success', `ÄÃ£ xÃ³a nhÃ  cung cáº¥p ${deleteConfirm.supplier.name}`);
             fetchSuppliers();
         } catch (error) {
-            showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi xóa nhà cung cấp');
+            showToast('error', error.response?.data?.userMessage || 'CÃ³ lá»—i xáº£y ra khi xÃ³a nhÃ  cung cáº¥p');
         } finally {
             setDeleteConfirm({ isOpen: false, supplier: null });
         }
@@ -176,54 +176,54 @@ const SupplierListPage = () => {
         <AdminLayout>
             <div className={styles.pageBody}>
                 <div className={styles.pageTitleContainer}>
-                    <h1 className={styles.pageTitle}>Danh sách nhà cung cấp</h1>
+                    <h1 className={styles.pageTitle}>Danh sÃ¡ch nhÃ  cung cáº¥p</h1>
                     <button className={styles.btnPrimary} onClick={() => setModalConfig({ isOpen: true, data: null })}>
-                        <i className="bi bi-plus"></i> Thêm mới
+                        <i className="bi bi-plus"></i> ThÃªm má»›i
                     </button>
                 </div>
 
                 <div className={styles.filterSection}>
                     <div className={styles.filterGroup}>
                         <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>TÌM KIẾM</span>
+                            <span className={styles.filterLabel}>TÃŒM KIáº¾M</span>
                             <input
                                 type="text"
                                 className={styles.filterInput}
-                                placeholder="Tên hoặc mã NCC..."
+                                placeholder="TÃªn hoáº·c mÃ£ NCC..."
                                 value={filters.search}
                                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                                 onKeyDown={(e) => e.key === 'Enter' && fetchSuppliers()}
                             />
                         </div>
                         <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>TÌNH TRẠNG</span>
+                            <span className={styles.filterLabel}>TÃŒNH TRáº NG</span>
                             <select
                                 className={styles.filterSelect}
                                 value={filters.status}
                                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
                             >
-                                <option value="">Tất cả</option>
-                                <option value="APPROVED">Đang hoạt động</option>
-                                <option value="INACTIVE">Ngừng hoạt động</option>
+                                <option value="">Táº¥t cáº£</option>
+                                <option value="APPROVED">Äang hoáº¡t Ä‘á»™ng</option>
+                                <option value="INACTIVE">Ngá»«ng hoáº¡t Ä‘á»™ng</option>
                             </select>
                         </div>
                     </div>
                     <div className={styles.filterActions}>
                         <button className={styles.btnOutline} onClick={() => { setFilters({ search: '', status: '' }); fetchSuppliers(); }}>
-                            Làm mới
+                            LÃ m má»›i
                         </button>
                         <button className={styles.btnOutline} onClick={handleExport}>
-                            <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                            <i className="bi bi-file-earmark-excel"></i> Xuáº¥t Excel
                         </button>
                         <button className={styles.btnPrimary} onClick={fetchSuppliers}>
-                            <i className="bi bi-funnel"></i> Lọc dữ liệu
+                            <i className="bi bi-funnel"></i> Lá»c dá»¯ liá»‡u
                         </button>
                     </div>
                 </div>
 
                 {selectedIds.length > 0 && (
                     <div className={styles.bulkActionsToolbar}>
-                        <div className={styles.bulkText}>Đã chọn {selectedIds.length} nhà cung cấp</div>
+                        <div className={styles.bulkText}>ÄÃ£ chá»n {selectedIds.length} nhÃ  cung cáº¥p</div>
                     </div>
                 )}
 
@@ -239,19 +239,19 @@ const SupplierListPage = () => {
                                         onChange={handleSelectAll} 
                                     />
                                 </th>
-                                <th style={{ width: '160px' }}>Mã NCC</th>
-                                <th style={{ minWidth: '220px' }}>Tên Nhà Cung Cấp</th>
-                                <th style={{ width: '140px' }}>Mã Số Thuế</th>
-                                <th style={{ width: '250px' }}>Địa Chỉ</th>
-                                <th style={{ width: '140px' }}>Trạng Thái</th>
-                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
+                                <th style={{ width: '160px' }}>MÃ£ NCC</th>
+                                <th style={{ minWidth: '220px' }}>TÃªn NhÃ  Cung Cáº¥p</th>
+                                <th style={{ width: '140px' }}>MÃ£ Sá»‘ Thuáº¿</th>
+                                <th style={{ width: '250px' }}>Äá»‹a Chá»‰</th>
+                                <th style={{ width: '140px' }}>Tráº¡ng ThÃ¡i</th>
+                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao TÃ¡c</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading && paginatedRows.length === 0 ? (
                                 <tr>
                                     <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
-                                        <div className={styles.emptyState}>Đang tải dữ liệu...</div>
+                                        <div className={styles.emptyState}>Äang táº£i dá»¯ liá»‡u...</div>
                                     </td>
                                 </tr>
                             ) : paginatedRows.length === 0 ? (
@@ -259,7 +259,7 @@ const SupplierListPage = () => {
                                     <td colSpan="8">
                                         <div className={styles.emptyState}>
                                             <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                                            <div className={styles.emptyText}>Không tìm thấy nhà cung cấp nào</div>
+                                            <div className={styles.emptyText}>KhÃ´ng tÃ¬m tháº¥y nhÃ  cung cáº¥p nÃ o</div>
                                         </div>
                                     </td>
                                 </tr>
@@ -277,10 +277,10 @@ const SupplierListPage = () => {
                                         </td>
                                         <td className={styles.textBlue} style={{ whiteSpace: 'nowrap' }}>{item.code}</td>
                                         <td style={{ fontWeight: 600 }}>{item.name}</td>
-                                        <td>{item.taxCode || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>
+                                        <td>{item.taxCode || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ChÆ°a cáº­p nháº­t</span>}</td>
                                         <td>
                                             <div className={styles.tooltipContainer} style={{ display: 'inline-block', maxWidth: '100%' }}>
-                                                <span className={styles.noteText}>{item.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                                <span className={styles.noteText}>{item.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ChÆ°a cáº­p nháº­t</span>}</span>
                                                 {item.address && <span className={styles.tooltipText}>{item.address}</span>}
                                             </div>
                                         </td>
@@ -293,19 +293,19 @@ const SupplierListPage = () => {
                                             <i 
                                                 className="bi bi-eye" 
                                                 style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
-                                                title="Xem chi tiết" 
+                                                title="Xem chi tiáº¿t" 
                                                 onClick={(e) => { e.stopPropagation(); navigate(`/suppliers/${item.id}`); }}
                                             ></i>
                                             <i 
                                                 className="bi bi-pencil" 
                                                 style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
-                                                title="Chỉnh sửa" 
+                                                title="Chá»‰nh sá»­a" 
                                                 onClick={(e) => handleEditClick(e, item)}
                                             ></i>
                                             <i 
                                                 className="bi bi-trash" 
                                                 style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
-                                                title="Xóa nhà cung cấp" 
+                                                title="XÃ³a nhÃ  cung cáº¥p" 
                                                 onClick={(e) => handleDeleteClick(e, item)}
                                             ></i>
                                         </td>
@@ -317,7 +317,7 @@ const SupplierListPage = () => {
 
                     <div className={styles.pagination}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span>Hiển thị</span>
+                            <span>Hiá»ƒn thá»‹</span>
                             <select
                                 className="misa-select"
                                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
@@ -329,7 +329,7 @@ const SupplierListPage = () => {
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
                             </select>
-                            <span>trên tổng số {totalItems} bản ghi</span>
+                            <span>trÃªn tá»•ng sá»‘ {totalItems} báº£n ghi</span>
                         </div>
 
                         {totalPages > 1 && (
@@ -340,7 +340,7 @@ const SupplierListPage = () => {
                                     className={styles.pageBtn}
                                 >
                                     <i className="bi bi-chevron-left"></i>
-                                    <span>Trước</span>
+                                    <span>TrÆ°á»›c</span>
                                 </button>
 
                                 <div className={styles.paginationNumbers}>
@@ -351,7 +351,7 @@ const SupplierListPage = () => {
                                                 className={`${styles.pageNumber} ${styles.active}`}
                                                 style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
                                                 defaultValue={num}
-                                                title="Nhập số trang và nhấn Enter"
+                                                title="Nháº­p sá»‘ trang vÃ  nháº¥n Enter"
                                                 onBlur={(e) => e.target.value = currentPage}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
@@ -416,16 +416,16 @@ const SupplierListPage = () => {
                             
                             if (modalConfig.data && modalConfig.data.id) {
                                 await axiosClient.put(`/suppliers/${modalConfig.data.id}`, payload);
-                                showToast('success', 'Cập nhật nhà cung cấp thành công!');
+                                showToast('success', 'Cáº­p nháº­t nhÃ  cung cáº¥p thÃ nh cÃ´ng!');
                             } else {
                                 await axiosClient.post('/suppliers', payload);
-                                showToast('success', 'Thêm mới nhà cung cấp thành công!');
+                                showToast('success', 'ThÃªm má»›i nhÃ  cung cáº¥p thÃ nh cÃ´ng!');
                             }
                             
                             setModalConfig({ isOpen: false, data: null });
                             fetchSuppliers();
                         } catch (error) {
-                            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra');
+                            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'CÃ³ lá»—i xáº£y ra');
                         }
                     }}
                 />
@@ -433,12 +433,12 @@ const SupplierListPage = () => {
 
             <ConfirmModal
                 isOpen={deleteConfirm.isOpen}
-                title="Xác nhận xóa"
-                message={<span>Bạn có chắc chắn muốn xóa nhà cung cấp <strong>{deleteConfirm.supplier?.name}</strong> {deleteConfirm.supplier?.code ? `(${deleteConfirm.supplier.code})` : ''} không? Hành động này không thể hoàn tác.</span>}
+                title="XÃ¡c nháº­n xÃ³a"
+                message={<span>Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a nhÃ  cung cáº¥p <strong>{deleteConfirm.supplier?.name}</strong> {deleteConfirm.supplier?.code ? `(${deleteConfirm.supplier.code})` : ''} khÃ´ng? HÃ nh Ä‘á»™ng nÃ y khÃ´ng thá»ƒ hoÃ n tÃ¡c.</span>}
                 onConfirm={confirmDelete}
                 onCancel={() => setDeleteConfirm({ isOpen: false, supplier: null })}
-                confirmText="Xóa"
-                cancelText="Hủy"
+                confirmText="XÃ³a"
+                cancelText="Há»§y"
                 confirmButtonClass="btn-misa-danger"
             />
 

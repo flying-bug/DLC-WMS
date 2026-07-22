@@ -29,8 +29,8 @@ const BrandDetailPage = () => {
                 setBrand(res.data.data);
             }
         } catch (error) {
-            console.error('Lỗi tải chi tiết thương hiệu:', error);
-            showToast('error', error.response?.data?.userMessage || 'Không tải được thông tin chi tiết thương hiệu');
+            console.error('Lá»—i táº£i chi tiáº¿t thÆ°Æ¡ng hiá»‡u:', error);
+            showToast('error', error.response?.data?.userMessage || 'KhÃ´ng táº£i Ä‘Æ°á»£c thÃ´ng tin chi tiáº¿t thÆ°Æ¡ng hiá»‡u');
         } finally {
             setLoading(false);
         }
@@ -46,9 +46,9 @@ const BrandDetailPage = () => {
         try {
             await axiosClient.delete(`/brands/${id}`);
             setIsDeleteModalOpen(false);
-            navigate('/brands', { state: { toastMessage: `Đã xóa thương hiệu ${brand.name}`, toastType: 'success' } });
+            navigate('/brands', { state: { toastMessage: `ÄÃ£ xÃ³a thÆ°Æ¡ng hiá»‡u ${brand.name}`, toastType: 'success' } });
         } catch (error) {
-            showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi xóa thương hiệu');
+            showToast('error', error.response?.data?.userMessage || 'CÃ³ lá»—i xáº£y ra khi xÃ³a thÆ°Æ¡ng hiá»‡u');
             if (error.response?.status === 409) {
                 fetchBrand();
             }
@@ -60,7 +60,7 @@ const BrandDetailPage = () => {
         return (
             <AdminLayout>
                 <div className={styles.pageBody}>
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải thông tin...</div>
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Äang táº£i thÃ´ng tin...</div>
                 </div>
             </AdminLayout>
         );
@@ -72,8 +72,8 @@ const BrandDetailPage = () => {
                 <div className={styles.pageBody}>
                     <div className={styles.emptyState}>
                         <i className={`bi bi-exclamation-circle ${styles.emptyIcon}`}></i>
-                        <div className={styles.emptyText}>Không tìm thấy thương hiệu này</div>
-                        <button className={styles.btnPrimary} onClick={() => navigate('/brands')}>Quay lại danh sách</button>
+                        <div className={styles.emptyText}>KhÃ´ng tÃ¬m tháº¥y thÆ°Æ¡ng hiá»‡u nÃ y</div>
+                        <button className={styles.btnPrimary} onClick={() => navigate('/brands')}>Quay láº¡i danh sÃ¡ch</button>
                     </div>
                 </div>
             </AdminLayout>
@@ -91,17 +91,17 @@ const BrandDetailPage = () => {
                         >
                             <i className="bi bi-arrow-left"></i>
                         </button>
-                        <h1 className={styles.pageTitle}>Chi tiết thương hiệu: {brand.name}</h1>
+                        <h1 className={styles.pageTitle}>Chi tiáº¿t thÆ°Æ¡ng hiá»‡u: {brand.name}</h1>
                         <span className={`${styles.badge} ${brand.status === 'APPROVED' ? styles.badgeSuccess : styles.badgeDanger}`}>
-                            {brand.status === 'APPROVED' ? 'Đang hoạt động' : 'Ngừng hoạt động'}
+                            {brand.status === 'APPROVED' ? 'Äang hoáº¡t Ä‘á»™ng' : 'Ngá»«ng hoáº¡t Ä‘á»™ng'}
                         </span>
                     </div>
                     <div style={{ display: 'flex', gap: '12px' }}>
                         <button className={styles.btnOutline} onClick={() => setIsEditModalOpen(true)}>
-                            <i className="bi bi-pencil"></i> Chỉnh sửa
+                            <i className="bi bi-pencil"></i> Chá»‰nh sá»­a
                         </button>
                         <button className={styles.btnOutline} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => setIsDeleteModalOpen(true)}>
-                            <i className="bi bi-trash"></i> Xóa
+                            <i className="bi bi-trash"></i> XÃ³a
                         </button>
                     </div>
                 </div>
@@ -109,33 +109,33 @@ const BrandDetailPage = () => {
                 <div className={styles.detailSection}>
                     <div className={styles.detailHeader}>
                         <i className={`bi bi-info-circle ${styles.detailIcon}`}></i>
-                        <h2 className={styles.detailTitle}>Thông tin chung</h2>
+                        <h2 className={styles.detailTitle}>ThÃ´ng tin chung</h2>
                     </div>
 
                     <div className={styles.detailGrid}>
                         <div className={styles.detailGroup}>
                             <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Mã thương hiệu</span>
+                                <span className={styles.detailLabel}>MÃ£ thÆ°Æ¡ng hiá»‡u</span>
                                 <span className={styles.detailValue}>{brand.code}</span>
                             </div>
                             <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Tên thương hiệu</span>
+                                <span className={styles.detailLabel}>TÃªn thÆ°Æ¡ng hiá»‡u</span>
                                 <span className={styles.detailValue} style={{ fontWeight: 600 }}>{brand.name}</span>
                             </div>
                             <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Mô tả</span>
-                                <span className={styles.detailValue}>{brand.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có</span>}</span>
+                                <span className={styles.detailLabel}>MÃ´ táº£</span>
+                                <span className={styles.detailValue}>{brand.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>KhÃ´ng cÃ³</span>}</span>
                             </div>
                         </div>
 
                         <div className={styles.detailGroup}>
                             <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Số điện thoại liên hệ</span>
-                                <span className={styles.detailValue}>{brand.hotline || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailLabel}>Sá»‘ Ä‘iá»‡n thoáº¡i liÃªn há»‡</span>
+                                <span className={styles.detailValue}>{brand.hotline || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ChÆ°a cáº­p nháº­t</span>}</span>
                             </div>
                             <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Email liên hệ</span>
-                                <span className={styles.detailValue}>{brand.contactEmail || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailLabel}>Email liÃªn há»‡</span>
+                                <span className={styles.detailValue}>{brand.contactEmail || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ChÆ°a cáº­p nháº­t</span>}</span>
                             </div>
                         </div>
                     </div>
@@ -159,10 +159,10 @@ const BrandDetailPage = () => {
                             };
                             await axiosClient.put(`/brands/${id}`, updateData);
                             setIsEditModalOpen(false);
-                            showToast('success', 'Cập nhật thương hiệu thành công!');
+                            showToast('success', 'Cáº­p nháº­t thÆ°Æ¡ng hiá»‡u thÃ nh cÃ´ng!');
                             fetchBrand();
                         } catch (error) {
-                            showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi cập nhật thương hiệu');
+                            showToast('error', error.response?.data?.userMessage || 'CÃ³ lá»—i xáº£y ra khi cáº­p nháº­t thÆ°Æ¡ng hiá»‡u');
                         }
                     }}
                 />
@@ -170,12 +170,12 @@ const BrandDetailPage = () => {
 
             <ConfirmModal
                 isOpen={isDeleteModalOpen}
-                title="Xác nhận xóa"
-                message={<span>Bạn có chắc chắn muốn xóa thương hiệu <strong>{brand?.name}</strong> {brand?.code ? `(${brand.code})` : ''} không? Hành động này không thể hoàn tác.</span>}
+                title="XÃ¡c nháº­n xÃ³a"
+                message={<span>Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a thÆ°Æ¡ng hiá»‡u <strong>{brand?.name}</strong> {brand?.code ? `(${brand.code})` : ''} khÃ´ng? HÃ nh Ä‘á»™ng nÃ y khÃ´ng thá»ƒ hoÃ n tÃ¡c.</span>}
                 onConfirm={handleDelete}
                 onCancel={() => setIsDeleteModalOpen(false)}
-                confirmText="Xóa"
-                cancelText="Hủy"
+                confirmText="XÃ³a"
+                cancelText="Há»§y"
                 confirmButtonClass="btn-misa-danger"
             />
 

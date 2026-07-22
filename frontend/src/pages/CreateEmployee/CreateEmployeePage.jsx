@@ -36,23 +36,23 @@ function CreateEmployeePage() {
         setSubmitError('');
         
         if (!formData.username.trim()) {
-            setSubmitError('Vui lòng nhập Tên đăng nhập (Username).');
+            setSubmitError('Vui lÃ²ng nháº­p TÃªn Ä‘Äƒng nháº­p (Username).');
             return;
         }
         if (!formData.fullName.trim()) {
-            setSubmitError('Vui lòng nhập Họ và tên.');
+            setSubmitError('Vui lÃ²ng nháº­p Há» vÃ  tÃªn.');
             return;
         }
         if (!formData.phone.trim()) {
-            setSubmitError('Vui lòng nhập Số điện thoại.');
+            setSubmitError('Vui lÃ²ng nháº­p Sá»‘ Ä‘iá»‡n thoáº¡i.');
             return;
         }
         if (!formData.email.trim()) {
-            setSubmitError('Vui lòng nhập Địa chỉ Email.');
+            setSubmitError('Vui lÃ²ng nháº­p Äá»‹a chá»‰ Email.');
             return;
         }
         if (!formData.idCard.trim()) {
-            setSubmitError('Vui lòng nhập Số CCCD.');
+            setSubmitError('Vui lÃ²ng nháº­p Sá»‘ CCCD.');
             return;
         }
 
@@ -78,12 +78,12 @@ function CreateEmployeePage() {
             await axiosClient.post('/users', payload);
             navigate('/users');
         } catch (error) {
-            console.error('Lỗi khi lưu nhân viên:', error);
+            console.error('Lá»—i khi lÆ°u nhÃ¢n viÃªn:', error);
             setSubmitError(
                 error.response?.data?.userMessage ||
                 error.response?.data?.message ||
                 error.response?.data?.devMessage ||
-                'Có lỗi xảy ra khi tạo tài khoản nhân viên.'
+                'CÃ³ lá»—i xáº£y ra khi táº¡o tÃ i khoáº£n nhÃ¢n viÃªn.'
             );
         } finally {
             setIsSaving(false);
@@ -97,14 +97,14 @@ function CreateEmployeePage() {
                 <div className={styles.headerLeft}>
                     <div className={styles.brandName}>Duy Long Computer</div>
                     <nav className={styles.navLinks}>
-                        <a href="/dashboard" className={styles.navLink} onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}>Tổng quan</a>
-                        <a href="/users" className={styles.navLinkActive} onClick={(e) => { e.preventDefault(); navigate('/users'); }}>Người dùng</a>
+                        <a href="/dashboard" className={styles.navLink} onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}>Tá»•ng quan</a>
+                        <a href="/users" className={styles.navLinkActive} onClick={(e) => { e.preventDefault(); navigate('/users'); }}>NgÆ°á»i dÃ¹ng</a>
                     </nav>
                 </div>
                 <div className={styles.headerRight}>
                     <div className={styles.searchBar}>
                         <i className="bi bi-search" />
-                        <input type="text" placeholder="Tìm kiếm tài nguyên..." />
+                        <input type="text" placeholder="TÃ¬m kiáº¿m tÃ i nguyÃªn..." />
                     </div>
                     <button className={styles.bellBtn}>
                         <i className="bi bi-bell" />
@@ -121,16 +121,16 @@ function CreateEmployeePage() {
             {/* Main Content */}
             <main className={styles.main}>
                 <div className={styles.breadcrumb}>
-                    <span onClick={() => navigate('/dashboard')}>Bảng điều khiển</span>
+                    <span onClick={() => navigate('/dashboard')}>Báº£ng Ä‘iá»u khiá»ƒn</span>
                     <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right"></i></span>
-                    <span onClick={() => navigate('/users')}>Quản lý người dùng</span>
+                    <span onClick={() => navigate('/users')}>Quáº£n lÃ½ ngÆ°á»i dÃ¹ng</span>
                     <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right"></i></span>
-                    <span className={styles.active}>Thêm người dùng mới</span>
+                    <span className={styles.active}>ThÃªm ngÆ°á»i dÃ¹ng má»›i</span>
                 </div>
 
                 <div className={styles.pageHeader}>
-                    <h1 className={styles.pageTitle}>Thêm Nhân Viên Mới</h1>
-                    <p className={styles.pageSubtitle}>Vui lòng hoàn thành biểu mẫu dưới đây để tạo hồ sơ nhân viên mới trong hệ thống.</p>
+                    <h1 className={styles.pageTitle}>ThÃªm NhÃ¢n ViÃªn Má»›i</h1>
+                    <p className={styles.pageSubtitle}>Vui lÃ²ng hoÃ n thÃ nh biá»ƒu máº«u dÆ°á»›i Ä‘Ã¢y Ä‘á»ƒ táº¡o há»“ sÆ¡ nhÃ¢n viÃªn má»›i trong há»‡ thá»‘ng.</p>
                 </div>
 
                 {submitError && (
@@ -144,17 +144,17 @@ function CreateEmployeePage() {
                     {/* Card 1: Personal Info */}
                     <div className={styles.card}>
                         <h2 className={styles.cardTitle}>
-                            <i className="bi bi-person-lines-fill"></i> Thông tin cá nhân
+                            <i className="bi bi-person-lines-fill"></i> ThÃ´ng tin cÃ¡ nhÃ¢n
                         </h2>
                         
                         <div className={styles.grid2}>
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Họ và tên <span className={styles.required}>*</span></label>
+                                <label className={styles.label}>Há» vÃ  tÃªn <span className={styles.required}>*</span></label>
                                 <div className={styles.inputWrapper}>
                                     <input 
                                         type="text" 
                                         className={styles.input} 
-                                        placeholder="Ví dụ: Nguyễn Văn A"
+                                        placeholder="VÃ­ dá»¥: Nguyá»…n VÄƒn A"
                                         name="fullName"
                                         value={formData.fullName}
                                         onChange={handleChange}
@@ -163,12 +163,12 @@ function CreateEmployeePage() {
                                 </div>
                             </div>
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Tên đăng nhập (Username) <span className={styles.required}>*</span></label>
+                                <label className={styles.label}>TÃªn Ä‘Äƒng nháº­p (Username) <span className={styles.required}>*</span></label>
                                 <div className={styles.inputWrapper}>
                                     <input 
                                         type="text" 
                                         className={styles.input} 
-                                        placeholder="Ví dụ: nva_staff"
+                                        placeholder="VÃ­ dá»¥: nva_staff"
                                         name="username"
                                         value={formData.username}
                                         onChange={handleChange}
@@ -178,7 +178,7 @@ function CreateEmployeePage() {
                             </div>
                             
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Số điện thoại <span className={styles.required}>*</span></label>
+                                <label className={styles.label}>Sá»‘ Ä‘iá»‡n thoáº¡i <span className={styles.required}>*</span></label>
                                 <div className={styles.inputWrapper}>
                                     <i className={`bi bi-telephone ${styles.inputIcon}`}></i>
                                     <input 
@@ -192,7 +192,7 @@ function CreateEmployeePage() {
                                 </div>
                             </div>
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Địa chỉ Email <span className={styles.required}>*</span></label>
+                                <label className={styles.label}>Äá»‹a chá»‰ Email <span className={styles.required}>*</span></label>
                                 <div className={styles.inputWrapper}>
                                     <i className={`bi bi-envelope ${styles.inputIcon}`}></i>
                                     <input 
@@ -207,7 +207,7 @@ function CreateEmployeePage() {
                             </div>
 
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Ngày sinh</label>
+                                <label className={styles.label}>NgÃ y sinh</label>
                                 <div className={styles.inputWrapper}>
                                     <input 
                                         type="date" 
@@ -219,7 +219,7 @@ function CreateEmployeePage() {
                                 </div>
                             </div>
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Ngày vào làm việc chính thức</label>
+                                <label className={styles.label}>NgÃ y vÃ o lÃ m viá»‡c chÃ­nh thá»©c</label>
                                 <div className={styles.inputWrapper}>
                                     <input 
                                         type="date" 
@@ -232,12 +232,12 @@ function CreateEmployeePage() {
                             </div>
 
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Số CCCD <span className={styles.required}>*</span></label>
+                                <label className={styles.label}>Sá»‘ CCCD <span className={styles.required}>*</span></label>
                                 <div className={styles.inputWrapper}>
                                     <input 
                                         type="text" 
                                         className={styles.input} 
-                                        placeholder="Ví dụ: 001xxxxxxxx"
+                                        placeholder="VÃ­ dá»¥: 001xxxxxxxx"
                                         name="idCard"
                                         value={formData.idCard}
                                         onChange={handleChange}
@@ -246,7 +246,7 @@ function CreateEmployeePage() {
                                 </div>
                             </div>
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Giới tính</label>
+                                <label className={styles.label}>Giá»›i tÃ­nh</label>
                                 <div className={styles.radioGroup}>
                                     <label className={styles.radioLabel}>
                                         <input type="radio" name="gender" value="male" className={styles.radioInput} checked={formData.gender === 'male'} onChange={handleChange} />
@@ -254,11 +254,11 @@ function CreateEmployeePage() {
                                     </label>
                                     <label className={styles.radioLabel}>
                                         <input type="radio" name="gender" value="female" className={styles.radioInput} checked={formData.gender === 'female'} onChange={handleChange} />
-                                        Nữ
+                                        Ná»¯
                                     </label>
                                     <label className={styles.radioLabel}>
                                         <input type="radio" name="gender" value="other" className={styles.radioInput} checked={formData.gender === 'other'} onChange={handleChange} />
-                                        Khác
+                                        KhÃ¡c
                                     </label>
                                 </div>
                             </div>
@@ -268,31 +268,31 @@ function CreateEmployeePage() {
                     {/* Card 2: Job Info */}
                     <div className={styles.card}>
                         <h2 className={styles.cardTitle}>
-                            <i className="bi bi-briefcase"></i> Thông tin công việc
+                            <i className="bi bi-briefcase"></i> ThÃ´ng tin cÃ´ng viá»‡c
                         </h2>
                         <div className={styles.grid2}>
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Chức danh nhân sự</label>
+                                <label className={styles.label}>Chá»©c danh nhÃ¢n sá»±</label>
                                 <div className={styles.inputWrapper}>
                                     <select className={`${styles.input} ${styles.select}`} name="position" value={formData.position} onChange={handleChange}>
-                                        <option value="">Chọn chức danh</option>
-                                        <option value="manager">Quản lý kho</option>
-                                        <option value="staff">Nhân viên kho</option>
-                                        <option value="technician">Kỹ thuật viên</option>
-                                        <option value="accountant">Kế toán</option>
-                                        <option value="sales">Bán hàng</option>
+                                        <option value="">Chá»n chá»©c danh</option>
+                                        <option value="manager">Quáº£n lÃ½ kho</option>
+                                        <option value="staff">NhÃ¢n viÃªn kho</option>
+                                        <option value="technician">Ká»¹ thuáº­t viÃªn</option>
+                                        <option value="accountant">Káº¿ toÃ¡n</option>
+                                        <option value="sales">BÃ¡n hÃ ng</option>
                                     </select>
                                 </div>
                             </div>
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Phòng ban</label>
+                                <label className={styles.label}>PhÃ²ng ban</label>
                                 <div className={styles.inputWrapper}>
                                     <select className={`${styles.input} ${styles.select}`} name="department" value={formData.department} onChange={handleChange}>
-                                        <option value="">Chọn phòng ban</option>
-                                        <option value="store">Cửa hàng / Bán hàng</option>
-                                        <option value="warehouse">Kho bãi</option>
-                                        <option value="technical">Kỹ thuật - Bảo hành</option>
-                                        <option value="admin">Kế toán - Hành chính</option>
+                                        <option value="">Chá»n phÃ²ng ban</option>
+                                        <option value="store">Cá»­a hÃ ng / BÃ¡n hÃ ng</option>
+                                        <option value="warehouse">Kho bÃ£i</option>
+                                        <option value="technical">Ká»¹ thuáº­t - Báº£o hÃ nh</option>
+                                        <option value="admin">Káº¿ toÃ¡n - HÃ nh chÃ­nh</option>
                                     </select>
                                 </div>
                             </div>
@@ -302,17 +302,17 @@ function CreateEmployeePage() {
                     {/* Card 3: Address */}
                     <div className={styles.card}>
                         <h2 className={styles.cardTitle}>
-                            <i className="bi bi-geo-alt"></i> Địa chỉ
+                            <i className="bi bi-geo-alt"></i> Äá»‹a chá»‰
                         </h2>
                         <div className={styles.grid1}>
                             <div className={styles.formGroup}>
-                                <label className={styles.label}>Địa chỉ thường trú</label>
+                                <label className={styles.label}>Äá»‹a chá»‰ thÆ°á»ng trÃº</label>
                                 <div className={styles.inputWrapper}>
                                     <i className={`bi bi-house ${styles.inputIcon}`}></i>
                                     <input 
                                         type="text" 
                                         className={`${styles.input} ${styles.inputWithIcon}`} 
-                                        placeholder="Nhập địa chỉ đầy đủ (Số nhà, đường, phường/xã...)"
+                                        placeholder="Nháº­p Ä‘á»‹a chá»‰ Ä‘áº§y Ä‘á»§ (Sá»‘ nhÃ , Ä‘Æ°á»ng, phÆ°á»ng/xÃ£...)"
                                         name="address"
                                         value={formData.address}
                                         onChange={handleChange}
@@ -332,13 +332,13 @@ function CreateEmployeePage() {
                             onChange={handleChange}
                         />
                         <div className={styles.checkboxContent}>
-                            <span className={styles.checkboxTitle}>Thiết lập tài khoản quản lý hệ thống (Super Admin)</span>
-                            <span className={styles.checkboxDesc}>Cho phép nhân viên này có toàn quyền quản trị hệ thống Duy Long Computer.</span>
+                            <span className={styles.checkboxTitle}>Thiáº¿t láº­p tÃ i khoáº£n quáº£n lÃ½ há»‡ thá»‘ng (Super Admin)</span>
+                            <span className={styles.checkboxDesc}>Cho phÃ©p nhÃ¢n viÃªn nÃ y cÃ³ toÃ n quyá»n quáº£n trá»‹ há»‡ thá»‘ng Duy Long Computer.</span>
                         </div>
                     </label>
                     
                     <div className={styles.securityNote}>
-                        <i className="bi bi-lock"></i> Mọi dữ liệu cá nhân được lưu trữ theo giao thức bảo mật và quy định hiện hành của Duy Long Computer.
+                        <i className="bi bi-lock"></i> Má»i dá»¯ liá»‡u cÃ¡ nhÃ¢n Ä‘Æ°á»£c lÆ°u trá»¯ theo giao thá»©c báº£o máº­t vÃ  quy Ä‘á»‹nh hiá»‡n hÃ nh cá»§a Duy Long Computer.
                     </div>
                 </form>
             </main>
@@ -347,10 +347,10 @@ function CreateEmployeePage() {
             <div className={styles.actionsBar}>
                 <div className={styles.actionsContainer}>
                     <button type="button" className={styles.btnCancel} onClick={() => navigate('/users')}>
-                        Hủy bỏ
+                        Há»§y bá»
                     </button>
                     <button type="button" className={styles.btnSave} onClick={handleSave} disabled={isSaving}>
-                        <i className="bi bi-save"></i> {isSaving ? 'Đang lưu...' : 'Lưu người dùng'}
+                        <i className="bi bi-save"></i> {isSaving ? 'Äang lÆ°u...' : 'LÆ°u ngÆ°á»i dÃ¹ng'}
                     </button>
                 </div>
             </div>

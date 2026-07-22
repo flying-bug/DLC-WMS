@@ -14,9 +14,9 @@ const listFrom = (payload) => payload?.content ?? payload ?? [];
 const today = () => new Date().toLocaleDateString('sv-SE');
 
 const STATUS_META = {
-    DRAFT: { label: 'LÆ°u táº¡m', code: 'info' },
-    SUBMITTED: { label: 'HoÃ n thÃ nh', code: 'success' },
-    CANCELLED: { label: 'ÄÃ£ há»§y', code: 'danger' }
+    DRAFT: { label: 'LÃ†Â°u tÃ¡ÂºÂ¡m', code: 'info' },
+    SUBMITTED: { label: 'HoÃƒÂ n thÃƒÂ nh', code: 'success' },
+    CANCELLED: { label: 'Ã„ÂÃƒÂ£ hÃ¡Â»Â§y', code: 'danger' }
 };
 
 const defaultBomLine = { componentVariantId: '', quantity: '1', note: '' };
@@ -69,7 +69,7 @@ function AssemblyOrderFormPage() {
     const selectedBom = useMemo(() => boms.find((bom) => String(bom.id) === String(form.bomId)), [boms, form.bomId]);
     const isViewMode = searchParams.get('mode') === 'view';
     const canEdit = (!editing || ['DRAFT'].includes(form.status)) && !isViewMode;
-    const status = STATUS_META[form.status] || { label: form.status || 'ChÆ°a rÃµ', code: 'info' };
+    const status = STATUS_META[form.status] || { label: form.status || 'ChÃ†Â°a rÃƒÂµ', code: 'info' };
 
     const loadBaseData = useCallback(async () => {
         setLoading(true);
@@ -81,7 +81,7 @@ function AssemblyOrderFormPage() {
             setBoms(listFrom(unwrap(bomResponse)));
             setWarehouses(listFrom(unwrap(warehouseResponse)));
         } catch (err) {
-            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº£i Ä‘Æ°á»£c dá»¯ liá»‡u BOM/kho.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'KhÃƒÂ´ng tÃ¡ÂºÂ£i Ã„â€˜Ã†Â°Ã¡Â»Â£c dÃ¡Â»Â¯ liÃ¡Â»â€¡u BOM/kho.');
         } finally {
             setLoading(false);
         }
@@ -96,7 +96,7 @@ function AssemblyOrderFormPage() {
             setProducts(listFrom(unwrap(productResponse)).filter((item) => item.active !== false));
             setVariants(listFrom(unwrap(variantResponse)).filter((item) => item.active !== false));
         } catch (err) {
-            setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch thÃ nh pháº©m/SKU.');
+            setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'KhÃƒÂ´ng tÃ¡ÂºÂ£i Ã„â€˜Ã†Â°Ã¡Â»Â£c danh sÃƒÂ¡ch thÃƒÂ nh phÃ¡ÂºÂ©m/SKU.');
         }
     }, []);
 
@@ -120,11 +120,11 @@ function AssemblyOrderFormPage() {
             });
             
             if (searchParams.get('mode') !== 'view' && order.status === 'SUBMITTED') {
-                showToast('error', 'Lá»‡nh Ä‘Ã£ hoÃ n thÃ nh khÃ´ng Ä‘Æ°á»£c phÃ©p chá»‰nh sá»­a.');
+                showToast('error', 'LÃ¡Â»â€¡nh Ã„â€˜ÃƒÂ£ hoÃƒÂ n thÃƒÂ nh khÃƒÂ´ng Ã„â€˜Ã†Â°Ã¡Â»Â£c phÃƒÂ©p chÃ¡Â»â€°nh sÃ¡Â»Â­a.');
                 setSearchParams({ mode: 'view' }, { replace: true });
             }
         } catch (err) {
-            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº£i Ä‘Æ°á»£c chi tiáº¿t lá»‡nh.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'KhÃƒÂ´ng tÃ¡ÂºÂ£i Ã„â€˜Ã†Â°Ã¡Â»Â£c chi tiÃ¡ÂºÂ¿t lÃ¡Â»â€¡nh.');
         } finally {
             setLoading(false);
         }
@@ -152,18 +152,18 @@ function AssemblyOrderFormPage() {
     });
 
     const getPageTitle = () => {
-        const typeText = form.orderType === 'DISASSEMBLY' ? 'thÃ¡o dá»¡' : 'láº¯p rÃ¡p';
+        const typeText = form.orderType === 'DISASSEMBLY' ? 'thÃƒÂ¡o dÃ¡Â»Â¡' : 'lÃ¡ÂºÂ¯p rÃƒÂ¡p';
         const codeText = form.orderCode ? ` ${form.orderCode}` : '';
-        if (!editing) return `Táº¡o lá»‡nh ${typeText}${codeText}`;
-        if (isViewMode) return `Chi tiáº¿t lá»‡nh ${typeText}${codeText}`;
-        return `Cáº­p nháº­t lá»‡nh ${typeText}${codeText}`;
+        if (!editing) return `TÃ¡ÂºÂ¡o lÃ¡Â»â€¡nh ${typeText}${codeText}`;
+        if (isViewMode) return `Chi tiÃ¡ÂºÂ¿t lÃ¡Â»â€¡nh ${typeText}${codeText}`;
+        return `CÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t lÃ¡Â»â€¡nh ${typeText}${codeText}`;
     };
 
     const validate = () => {
-        if (!form.bomId) return 'Vui lÃ²ng chá»n BOM.';
-        if (!form.warehouseId) return 'Vui lÃ²ng chá»n kho thá»±c hiá»‡n.';
-        if (!form.quantity || Number(form.quantity) <= 0) return 'Sá»‘ lÆ°á»£ng pháº£i lá»›n hÆ¡n 0.';
-        if (!form.executionDate) return 'Vui lÃ²ng chá»n ngÃ y thá»±c hiá»‡n.';
+        if (!form.bomId) return 'Vui lÃƒÂ²ng chÃ¡Â»Ân BOM.';
+        if (!form.warehouseId) return 'Vui lÃƒÂ²ng chÃ¡Â»Ân kho thÃ¡Â»Â±c hiÃ¡Â»â€¡n.';
+        if (!form.quantity || Number(form.quantity) <= 0) return 'SÃ¡Â»â€˜ lÃ†Â°Ã¡Â»Â£ng phÃ¡ÂºÂ£i lÃ¡Â»â€ºn hÃ†Â¡n 0.';
+        if (!form.executionDate) return 'Vui lÃƒÂ²ng chÃ¡Â»Ân ngÃƒÂ y thÃ¡Â»Â±c hiÃ¡Â»â€¡n.';
         return '';
     };
 
@@ -183,14 +183,14 @@ function AssemblyOrderFormPage() {
                     ? await assemblyApi.createDisassemblyOrder(payload)
                     : await assemblyApi.createAssemblyOrder(payload);
             const saved = unwrap(response);
-            showToast('success', editing ? 'Cáº­p nháº­t lá»‡nh thÃ nh cÃ´ng.' : 'Táº¡o lá»‡nh thÃ nh cÃ´ng.');
+            showToast('success', editing ? 'CÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t lÃ¡Â»â€¡nh thÃƒÂ nh cÃƒÂ´ng.' : 'TÃ¡ÂºÂ¡o lÃ¡Â»â€¡nh thÃƒÂ nh cÃƒÂ´ng.');
             if (!editing && saved?.id) {
                 setTimeout(() => navigate(`/assembly-orders/${saved.id}`), 1500);
             } else if (editing) {
                 setTimeout(() => navigate('/assembly-orders'), 1500);
             }
         } catch (err) {
-            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng lÆ°u Ä‘Æ°á»£c lá»‡nh láº¯p rÃ¡p/thÃ¡o dá»¡.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'KhÃƒÂ´ng lÃ†Â°u Ã„â€˜Ã†Â°Ã¡Â»Â£c lÃ¡Â»â€¡nh lÃ¡ÂºÂ¯p rÃƒÂ¡p/thÃƒÂ¡o dÃ¡Â»Â¡.');
         } finally {
             setSaving(false);
         }
@@ -230,15 +230,15 @@ function AssemblyOrderFormPage() {
     };
 
     const validateBomForm = () => {
-        if (!bomForm.productId) return 'Vui lÃ²ng chá»n thÃ nh pháº©m.';
-        if (!bomForm.bomName.trim()) return 'Vui lÃ²ng nháº­p tÃªn BOM.';
-        if (!bomForm.versionNo || Number(bomForm.versionNo) <= 0) return 'PhiÃªn báº£n BOM pháº£i lá»›n hÆ¡n 0.';
-        if (!bomForm.lines.length) return 'BOM pháº£i cÃ³ Ã­t nháº¥t má»™t linh kiá»‡n.';
+        if (!bomForm.productId) return 'Vui lÃƒÂ²ng chÃ¡Â»Ân thÃƒÂ nh phÃ¡ÂºÂ©m.';
+        if (!bomForm.bomName.trim()) return 'Vui lÃƒÂ²ng nhÃ¡ÂºÂ­p tÃƒÂªn BOM.';
+        if (!bomForm.versionNo || Number(bomForm.versionNo) <= 0) return 'PhiÃƒÂªn bÃ¡ÂºÂ£n BOM phÃ¡ÂºÂ£i lÃ¡Â»â€ºn hÃ†Â¡n 0.';
+        if (!bomForm.lines.length) return 'BOM phÃ¡ÂºÂ£i cÃƒÂ³ ÃƒÂ­t nhÃ¡ÂºÂ¥t mÃ¡Â»â„¢t linh kiÃ¡Â»â€¡n.';
         for (let index = 0; index < bomForm.lines.length; index += 1) {
             const line = bomForm.lines[index];
-            if (!line.componentVariantId) return `Vui lÃ²ng chá»n SKU linh kiá»‡n dÃ²ng ${index + 1}.`;
-            if (!line.quantity || Number(line.quantity) <= 0) return `Äá»‹nh má»©c dÃ²ng ${index + 1} pháº£i lá»›n hÆ¡n 0.`;
-            if (!Number.isInteger(Number(line.quantity))) return `Äá»‹nh má»©c dÃ²ng ${index + 1} pháº£i lÃ  sá»‘ nguyÃªn.`;
+            if (!line.componentVariantId) return `Vui lÃƒÂ²ng chÃ¡Â»Ân SKU linh kiÃ¡Â»â€¡n dÃƒÂ²ng ${index + 1}.`;
+            if (!line.quantity || Number(line.quantity) <= 0) return `Ã„ÂÃ¡Â»â€¹nh mÃ¡Â»Â©c dÃƒÂ²ng ${index + 1} phÃ¡ÂºÂ£i lÃ¡Â»â€ºn hÃ†Â¡n 0.`;
+            if (!Number.isInteger(Number(line.quantity))) return `Ã„ÂÃ¡Â»â€¹nh mÃ¡Â»Â©c dÃƒÂ²ng ${index + 1} phÃ¡ÂºÂ£i lÃƒÂ  sÃ¡Â»â€˜ nguyÃƒÂªn.`;
         }
         return '';
     };
@@ -269,9 +269,9 @@ function AssemblyOrderFormPage() {
             setBoms(refreshed);
             setField('bomId', savedBom.id || '');
             setShowBomModal(false);
-            showToast('success', 'ÄÃ£ táº¡o BOM nhanh vÃ  tá»± Ä‘á»™ng chá»n vÃ o lá»‡nh.');
+            showToast('success', 'Ã„ÂÃƒÂ£ tÃ¡ÂºÂ¡o BOM nhanh vÃƒÂ  tÃ¡Â»Â± Ã„â€˜Ã¡Â»â„¢ng chÃ¡Â»Ân vÃƒÂ o lÃ¡Â»â€¡nh.');
         } catch (err) {
-            setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº¡o Ä‘Æ°á»£c BOM nhanh.');
+            setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'KhÃƒÂ´ng tÃ¡ÂºÂ¡o Ã„â€˜Ã†Â°Ã¡Â»Â£c BOM nhanh.');
         } finally {
             setSavingBom(false);
         }
@@ -332,13 +332,13 @@ function AssemblyOrderFormPage() {
                     {/* LEFT COLUMN: FORM */}
                     <div className={styles.leftColumn}>
                         <div className={styles.card}>
-                            <h2 className={styles.cardTitle}>ThÃ´ng tin chung</h2>
+                            <h2 className={styles.cardTitle}>ThÃƒÂ´ng tin chung</h2>
                             
                             {editing && (
                                 <div className={styles.detailGrid} style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                    <div className={styles.detailItem}><span>Tráº¡ng thÃ¡i</span><strong><span className={`${styles.badge} ${styles['badge' + status.code.charAt(0).toUpperCase() + status.code.slice(1)]}`}>{status.label}</span></strong></div>
-                                    <div className={styles.detailItem}><span>NgÆ°á»i táº¡o</span><strong>{orderDetail?.createdBy ? `ID: ${orderDetail.createdBy}` : 'Há»‡ thá»‘ng'}</strong></div>
-                                    <div className={styles.detailItem}><span>NgÃ y táº¡o</span><strong>{orderDetail?.createdAt ? new Date(orderDetail.createdAt).toLocaleString('vi-VN') : '---'}</strong></div>
+                                    <div className={styles.detailItem}><span>TrÃ¡ÂºÂ¡ng thÃƒÂ¡i</span><strong><span className={`${styles.badge} ${styles['badge' + status.code.charAt(0).toUpperCase() + status.code.slice(1)]}`}>{status.label}</span></strong></div>
+                                    <div className={styles.detailItem}><span>NgÃ†Â°Ã¡Â»Âi tÃ¡ÂºÂ¡o</span><strong>{orderDetail?.createdBy ? `ID: ${orderDetail.createdBy}` : 'HÃ¡Â»â€¡ thÃ¡Â»â€˜ng'}</strong></div>
+                                    <div className={styles.detailItem}><span>NgÃƒÂ y tÃ¡ÂºÂ¡o</span><strong>{orderDetail?.createdAt ? new Date(orderDetail.createdAt).toLocaleString('vi-VN') : '---'}</strong></div>
                                 </div>
                             )}
 
@@ -346,10 +346,10 @@ function AssemblyOrderFormPage() {
                                 {!editing && (
                                     <div className="misa-form-row" style={{ marginBottom: '12px' }}>
                                         <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                                            <label className="misa-label">Loáº¡i lá»‡nh <span className="required">*</span></label>
+                                            <label className="misa-label">LoÃ¡ÂºÂ¡i lÃ¡Â»â€¡nh <span className="required">*</span></label>
                                             <input 
                                                 className="misa-input" 
-                                                value={form.orderType === 'ASSEMBLY' ? 'Láº¯p rÃ¡p' : 'ThÃ¡o dá»¡'} 
+                                                value={form.orderType === 'ASSEMBLY' ? 'LÃ¡ÂºÂ¯p rÃƒÂ¡p' : 'ThÃƒÂ¡o dÃ¡Â»Â¡'} 
                                                 disabled 
                                                 style={{ backgroundColor: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }} 
                                             />
@@ -359,72 +359,72 @@ function AssemblyOrderFormPage() {
                                 
                                 <div className="misa-form-row">
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                                        <label className="misa-label">MÃ£ lá»‡nh</label>
-                                        <input className="misa-input" value={form.orderCode} onChange={(event) => setField('orderCode', event.target.value)} placeholder="Äá»ƒ trá»‘ng Ä‘á»ƒ tá»± sinh mÃ£" disabled={!canEdit} />
+                                        <label className="misa-label">MÃƒÂ£ lÃ¡Â»â€¡nh</label>
+                                        <input className="misa-input" value={form.orderCode} onChange={(event) => setField('orderCode', event.target.value)} placeholder="Ã„ÂÃ¡Â»Æ’ trÃ¡Â»â€˜ng Ã„â€˜Ã¡Â»Æ’ tÃ¡Â»Â± sinh mÃƒÂ£" disabled={!canEdit} />
                                     </div>
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                                        <label className="misa-label">NgÃ y thá»±c hiá»‡n <span className="required">*</span></label>
+                                        <label className="misa-label">NgÃƒÂ y thÃ¡Â»Â±c hiÃ¡Â»â€¡n <span className="required">*</span></label>
                                         <input type="date" className="misa-input" value={form.executionDate} onChange={(event) => setField('executionDate', event.target.value)} disabled={!canEdit} />
                                     </div>
                                 </div>
 
                                 <div className="misa-form-row" style={{ marginTop: '12px' }}>
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                                        <label className="misa-label">Chá»n Kho <span className="required">*</span></label>
+                                        <label className="misa-label">ChÃ¡Â»Ân Kho <span className="required">*</span></label>
                                         <select className="misa-input" value={form.warehouseId} onChange={(event) => setField('warehouseId', event.target.value)} disabled={!canEdit || loading}>
-                                            <option value="">Chá»n kho thá»±c hiá»‡n</option>
+                                            <option value="">ChÃ¡Â»Ân kho thÃ¡Â»Â±c hiÃ¡Â»â€¡n</option>
                                             {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name || warehouse.warehouseName}</option>)}
                                         </select>
                                     </div>
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                                        <label className="misa-label">Sá»‘ lÆ°á»£ng <span className="required">*</span></label>
+                                        <label className="misa-label">SÃ¡Â»â€˜ lÃ†Â°Ã¡Â»Â£ng <span className="required">*</span></label>
                                         <input className="misa-input" style={{ textAlign: 'right' }} inputMode="decimal" type="number" min="0.0001" step="0.0001" value={form.quantity} onChange={(event) => setField('quantity', event.target.value)} disabled={!canEdit} />
                                     </div>
                                 </div>
 
                                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                                    <label className="misa-label">BOM (Äá»‹nh má»©c) <span className="required">*</span></label>
+                                    <label className="misa-label">BOM (Ã„ÂÃ¡Â»â€¹nh mÃ¡Â»Â©c) <span className="required">*</span></label>
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                         <select className="misa-input" style={{ flex: 1 }} value={form.bomId} onChange={(event) => setField('bomId', event.target.value)} disabled={!canEdit || loading}>
-                                            <option value="">{loading ? 'Äang táº£i BOM...' : 'Chá»n BOM Ä‘Ã£ duyá»‡t'}</option>
+                                            <option value="">{loading ? 'Ã„Âang tÃ¡ÂºÂ£i BOM...' : 'ChÃ¡Â»Ân BOM Ã„â€˜ÃƒÂ£ duyÃ¡Â»â€¡t'}</option>
                                             {boms.map((bom) => <option key={bom.id} value={bom.id}>{bom.bomCode} - {bom.bomName}</option>)}
                                         </select>
                                         <button className={styles.btnOutline} type="button" onClick={openBomModal} disabled={!canEdit} style={{ whiteSpace: 'nowrap', padding: '0 12px', height: '32px' }}>
-                                            <i className="bi bi-plus-lg"></i> Táº¡o BOM
+                                            <i className="bi bi-plus-lg"></i> TÃ¡ÂºÂ¡o BOM
                                         </button>
                                     </div>
                                 </div>
                                 
                                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                                    <label className="misa-label">Tráº¡ng thÃ¡i lÆ°u</label>
+                                    <label className="misa-label">TrÃ¡ÂºÂ¡ng thÃƒÂ¡i lÃ†Â°u</label>
                                     <select className="misa-input" value={form.status} onChange={(event) => setField('status', event.target.value)} disabled={!canEdit} style={{ width: '50%' }}>
-                                        <option value="DRAFT">LÆ°u táº¡m</option>
-                                        <option value="SUBMITTED">HoÃ n thÃ nh</option>
+                                        <option value="DRAFT">LÃ†Â°u tÃ¡ÂºÂ¡m</option>
+                                        <option value="SUBMITTED">HoÃƒÂ n thÃƒÂ nh</option>
                                     </select>
                                 </div>
                                 
                                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                                    <label className="misa-label">Ghi chÃº</label>
-                                    <textarea className="misa-input" style={{ resize: 'vertical' }} value={form.note} onChange={(event) => setField('note', event.target.value)} disabled={!canEdit} placeholder="Ghi chÃº ná»™i bá»™ cho lá»‡nh" rows={2} />
+                                    <label className="misa-label">Ghi chÃƒÂº</label>
+                                    <textarea className="misa-input" style={{ resize: 'vertical' }} value={form.note} onChange={(event) => setField('note', event.target.value)} disabled={!canEdit} placeholder="Ghi chÃƒÂº nÃ¡Â»â„¢i bÃ¡Â»â„¢ cho lÃ¡Â»â€¡nh" rows={2} />
                                 </div>
                             </div>
                         </div>
                         
                         <div className={styles.card}>
-                            <h2 className={styles.cardTitle}>Chi tiáº¿t dÃ²ng nguyÃªn liá»‡u</h2>
+                            <h2 className={styles.cardTitle}>Chi tiÃ¡ÂºÂ¿t dÃƒÂ²ng nguyÃƒÂªn liÃ¡Â»â€¡u</h2>
                             <div className={styles.flowGridContainer}>
                                 <FlowPanel
                                     tone="loss"
-                                    title="NguyÃªn liá»‡u xuáº¥t (Bá»‹ trá»«)"
+                                    title="NguyÃƒÂªn liÃ¡Â»â€¡u xuÃ¡ÂºÂ¥t (BÃ¡Â»â€¹ trÃ¡Â»Â«)"
                                     icon="bi-dash-circle-fill"
-                                    emptyText={loading ? 'Äang tÃ­nh toÃ¡n...' : 'Chá»n BOM Ä‘á»ƒ xem hÃ ng bá»‹ trá»«.'}
+                                    emptyText={loading ? 'Ã„Âang tÃƒÂ­nh toÃƒÂ¡n...' : 'ChÃ¡Â»Ân BOM Ã„â€˜Ã¡Â»Æ’ xem hÃƒÂ ng bÃ¡Â»â€¹ trÃ¡Â»Â«.'}
                                     items={lossItems}
                                 />
                                 <FlowPanel
                                     tone="gain"
-                                    title="Sáº£n pháº©m nháº­p (ÄÆ°á»£c cá»™ng)"
+                                    title="SÃ¡ÂºÂ£n phÃ¡ÂºÂ©m nhÃ¡ÂºÂ­p (Ã„ÂÃ†Â°Ã¡Â»Â£c cÃ¡Â»â„¢ng)"
                                     icon="bi-plus-circle-fill"
-                                    emptyText={loading ? 'Äang tÃ­nh toÃ¡n...' : 'Chá»n BOM Ä‘á»ƒ xem hÃ ng Ä‘Æ°á»£c cá»™ng.'}
+                                    emptyText={loading ? 'Ã„Âang tÃƒÂ­nh toÃƒÂ¡n...' : 'ChÃ¡Â»Ân BOM Ã„â€˜Ã¡Â»Æ’ xem hÃƒÂ ng Ã„â€˜Ã†Â°Ã¡Â»Â£c cÃ¡Â»â„¢ng.'}
                                     items={gainItems}
                                 />
                             </div>
@@ -434,30 +434,30 @@ function AssemblyOrderFormPage() {
                     {/* RIGHT COLUMN: SUMMARY */}
                     <div className={styles.rightColumn}>
                         <div className={styles.card} style={{ position: 'sticky', top: '24px' }}>
-                            <h2 className={styles.cardTitle}>TÃ³m táº¯t cáº¥u hÃ¬nh BOM</h2>
+                            <h2 className={styles.cardTitle}>TÃƒÂ³m tÃ¡ÂºÂ¯t cÃ¡ÂºÂ¥u hÃƒÂ¬nh BOM</h2>
                             
                             <div className={styles.summaryList}>
                                 <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel}>MÃ£ BOM</span>
+                                    <span className={styles.summaryLabel}>MÃƒÂ£ BOM</span>
                                     <span className={styles.summaryValue} style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{selectedBom?.bomCode || '---'}</span>
                                 </div>
                                 <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel}>PhiÃªn báº£n</span>
+                                    <span className={styles.summaryLabel}>PhiÃƒÂªn bÃ¡ÂºÂ£n</span>
                                     <span className={styles.summaryValue}>{selectedBom?.versionNo || '---'}</span>
                                 </div>
                                 <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel}>ThÃ nh pháº©m</span>
-                                    <span className={styles.summaryValue}>{selectedBom?.productName || 'ChÆ°a chá»n'}</span>
+                                    <span className={styles.summaryLabel}>ThÃƒÂ nh phÃ¡ÂºÂ©m</span>
+                                    <span className={styles.summaryValue}>{selectedBom?.productName || 'ChÃ†Â°a chÃ¡Â»Ân'}</span>
                                 </div>
                                 <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel}>Sá»‘ linh kiá»‡n (SKU)</span>
+                                    <span className={styles.summaryLabel}>SÃ¡Â»â€˜ linh kiÃ¡Â»â€¡n (SKU)</span>
                                     <span className={styles.summaryValue}>{previewLines.length}</span>
                                 </div>
                                 
                                 <hr className={styles.divider} />
                                 
                                 <div className={styles.summaryItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                                    <span className={styles.summaryLabel}>Tiáº¿n Ä‘á»™ hiá»‡n táº¡i:</span>
+                                    <span className={styles.summaryLabel}>TiÃ¡ÂºÂ¿n Ã„â€˜Ã¡Â»â„¢ hiÃ¡Â»â€¡n tÃ¡ÂºÂ¡i:</span>
                                     <div style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
                                         <div style={{ 
                                             height: '100%', 
@@ -477,16 +477,16 @@ function AssemblyOrderFormPage() {
 
             <div className={styles.bottomBar}>
                 <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-orders')}>
-                    {canEdit ? 'Há»§y bá»' : 'ÄÃ³ng'}
+                    {canEdit ? 'HÃ¡Â»Â§y bÃ¡Â»Â' : 'Ã„ÂÃƒÂ³ng'}
                 </button>
                 {canEdit && (
                     <div className={styles.actionButtons}>
                         <button className="btn-misa-draft" type="button" onClick={(e) => handleSubmit(e, 'DRAFT')} disabled={saving}>
-                            <i className="bi bi-save"></i> LÆ°u táº¡m
+                            <i className="bi bi-save"></i> LÃ†Â°u tÃ¡ÂºÂ¡m
                         </button>
                         <button className="btn-misa-post" type="button" onClick={(e) => handleSubmit(e, 'SUBMITTED')} disabled={saving}>
                             <i className="bi bi-check-circle"></i>
-                            {saving ? 'Äang lÆ°u...' : 'HoÃ n thÃ nh lá»‡nh'}
+                            {saving ? 'Ã„Âang lÃ†Â°u...' : 'HoÃƒÂ n thÃƒÂ nh lÃ¡Â»â€¡nh'}
                         </button>
                     </div>
                 )}
@@ -499,7 +499,7 @@ function AssemblyOrderFormPage() {
             >
                 {/* Custom Modal Header to match Image 1 */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #e5e7eb' }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>Táº¡o nhanh BOM</h2>
+                    <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>TÃ¡ÂºÂ¡o nhanh BOM</h2>
                     <button type="button" onClick={() => setShowBomModal(false)} style={{ background: '#f3f4f6', border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280' }}>
                         <i className="bi bi-x-lg"></i>
                     </button>
@@ -515,33 +515,33 @@ function AssemblyOrderFormPage() {
 
                     <div className="misa-form-row">
                         <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                            <label className="misa-label">ThÃ nh pháº©m</label>
+                            <label className="misa-label">ThÃƒÂ nh phÃ¡ÂºÂ©m</label>
                             <select className="misa-input" value={bomForm.productId} onChange={(event) => setBomField('productId', event.target.value)}>
-                                <option value="">Chá»n thÃ nh pháº©m</option>
+                                <option value="">ChÃ¡Â»Ân thÃƒÂ nh phÃ¡ÂºÂ©m</option>
                                 {products.map((product) => (
                                     <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
                                 ))}
                             </select>
                         </div>
                         <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                            <label className="misa-label">MÃ£ BOM</label>
-                            <input className="misa-input" value={bomForm.bomCode} onChange={(event) => setBomField('bomCode', event.target.value)} placeholder="Äá»ƒ trá»‘ng Ä‘á»ƒ tá»± sinh mÃ£" />
+                            <label className="misa-label">MÃƒÂ£ BOM</label>
+                            <input className="misa-input" value={bomForm.bomCode} onChange={(event) => setBomField('bomCode', event.target.value)} placeholder="Ã„ÂÃ¡Â»Æ’ trÃ¡Â»â€˜ng Ã„â€˜Ã¡Â»Æ’ tÃ¡Â»Â± sinh mÃƒÂ£" />
                         </div>
                     </div>
                     <div className="misa-form-row" style={{ marginTop: '16px' }}>
                         <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                            <label className="misa-label">TÃªn BOM</label>
-                            <input className="misa-input" value={bomForm.bomName} onChange={(event) => setBomField('bomName', event.target.value)} placeholder="VÃ­ dá»¥: Cáº¥u hÃ¬nh PC vÄƒn phÃ²ng" />
+                            <label className="misa-label">TÃƒÂªn BOM</label>
+                            <input className="misa-input" value={bomForm.bomName} onChange={(event) => setBomField('bomName', event.target.value)} placeholder="VÃƒÂ­ dÃ¡Â»Â¥: CÃ¡ÂºÂ¥u hÃƒÂ¬nh PC vÃ„Æ’n phÃƒÂ²ng" />
                         </div>
                         <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                            <label className="misa-label">PhiÃªn báº£n</label>
+                            <label className="misa-label">PhiÃƒÂªn bÃ¡ÂºÂ£n</label>
                             <input className="misa-input" inputMode="decimal" type="number" min="0.01" step="0.01" value={bomForm.versionNo} onChange={(event) => setBomField('versionNo', event.target.value)} />
                         </div>
                     </div>
 
                     <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
                         <button className="btn-misa-cancel" type="button" onClick={addBomLine} style={{ padding: '6px 16px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
-                            <i className="bi bi-plus"></i> ThÃªm linh kiá»‡n
+                            <i className="bi bi-plus"></i> ThÃƒÂªm linh kiÃ¡Â»â€¡n
                         </button>
                     </div>
 
@@ -549,9 +549,9 @@ function AssemblyOrderFormPage() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                             <thead style={{ backgroundColor: '#f9fafb', fontSize: '12px', color: '#6b7280' }}>
                                 <tr>
-                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '35%' }}>SKU LINH KIá»†N</th>
-                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '20%' }}>Äá»ŠNH Má»¨C</th>
-                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '35%' }}>GHI CHÃš</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '35%' }}>SKU LINH KIÃ¡Â»â€ N</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '20%' }}>Ã„ÂÃ¡Â»Å NH MÃ¡Â»Â¨C</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '35%' }}>GHI CHÃƒÅ¡</th>
                                     <th style={{ padding: '12px 16px', width: '10%', textAlign: 'center' }}></th>
                                 </tr>
                             </thead>
@@ -560,7 +560,7 @@ function AssemblyOrderFormPage() {
                                     <tr key={index} style={{ borderTop: '1px solid #e5e7eb' }}>
                                         <td style={{ padding: '12px 16px' }}>
                                             <select className="misa-input" style={{ height: '36px' }} value={line.componentVariantId} onChange={(event) => setBomLineField(index, 'componentVariantId', event.target.value)}>
-                                                <option value="">Chá»n SKU</option>
+                                                <option value="">ChÃ¡Â»Ân SKU</option>
                                                 {variants.map((variant) => (
                                                     <option key={variant.id} value={variant.id}>{variant.sku} - {variant.productName} / {variant.variantName}</option>
                                                 ))}
@@ -570,7 +570,7 @@ function AssemblyOrderFormPage() {
                                             <input className="misa-input" style={{ height: '36px' }} inputMode="numeric" type="number" min="1" step="1" value={line.quantity} onChange={(event) => setBomLineField(index, 'quantity', event.target.value)} />
                                         </td>
                                         <td style={{ padding: '12px 16px' }}>
-                                            <input className="misa-input" style={{ height: '36px' }} value={line.note} onChange={(event) => setBomLineField(index, 'note', event.target.value)} placeholder="Ghi chÃº dÃ²ng" />
+                                            <input className="misa-input" style={{ height: '36px' }} value={line.note} onChange={(event) => setBomLineField(index, 'note', event.target.value)} placeholder="Ghi chÃƒÂº dÃƒÂ²ng" />
                                         </td>
                                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                                             <button type="button" onClick={() => removeBomLine(index)} style={{ backgroundColor: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px', width: '32px', height: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -584,10 +584,10 @@ function AssemblyOrderFormPage() {
                     </div>
 
                     <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                        <button className="btn-misa-cancel" type="button" onClick={() => setShowBomModal(false)} style={{ padding: '8px 24px', fontWeight: '600' }}>Há»§y</button>
+                        <button className="btn-misa-cancel" type="button" onClick={() => setShowBomModal(false)} style={{ padding: '8px 24px', fontWeight: '600' }}>HÃ¡Â»Â§y</button>
                         <button className="btn-misa-post" type="button" onClick={saveQuickBom} disabled={savingBom} style={{ padding: '8px 24px', fontWeight: '600', backgroundColor: '#0070cc' }}>
                             <i className="bi bi-download"></i>
-                            {savingBom ? 'Äang lÆ°u...' : 'LÆ°u'}
+                            {savingBom ? 'Ã„Âang lÃ†Â°u...' : 'LÃ†Â°u'}
                         </button>
                     </div>
                 </div>
@@ -630,8 +630,8 @@ function FlowPanel({ tone, title, icon, items, emptyText }) {
                         borderBottom: index < items.length - 1 ? '1px solid #f1f5f9' : 'none'
                     }}>
                         <div>
-                            <div style={{ fontWeight: 500, color: 'var(--color-text)', fontSize: '14px' }}>{item.name || 'ChÆ°a cÃ³ tÃªn hÃ ng'}</div>
-                            <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginTop: '2px' }}>{item.sku || 'ChÆ°a cÃ³ mÃ£ SKU'}</div>
+                            <div style={{ fontWeight: 500, color: 'var(--color-text)', fontSize: '14px' }}>{item.name || 'ChÃ†Â°a cÃƒÂ³ tÃƒÂªn hÃƒÂ ng'}</div>
+                            <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginTop: '2px' }}>{item.sku || 'ChÃ†Â°a cÃƒÂ³ mÃƒÂ£ SKU'}</div>
                         </div>
                         <div style={{ 
                             fontWeight: 600, 

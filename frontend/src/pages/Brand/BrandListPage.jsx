@@ -10,8 +10,8 @@ import styles from './BrandListPage.module.css';
 import axiosClient from '../../api/axiosClient';
 
 const STATUS_LABELS = {
-    APPROVED: { label: 'Đang hoạt động', code: 'success' },
-    INACTIVE: { label: 'Ngừng hoạt động', code: 'danger' },
+    APPROVED: { label: 'Äang hoáº¡t Ä‘á»™ng', code: 'success' },
+    INACTIVE: { label: 'Ngá»«ng hoáº¡t Ä‘á»™ng', code: 'danger' },
 };
 
 const BrandListPage = () => {
@@ -58,8 +58,8 @@ const BrandListPage = () => {
             setBrands(data);
             setSelectedIds([]);
         } catch (error) {
-            console.error('Lỗi tải danh sách thương hiệu:', error);
-            showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách thương hiệu');
+            console.error('Lá»—i táº£i danh sÃ¡ch thÆ°Æ¡ng hiá»‡u:', error);
+            showToast('error', error.response?.data?.userMessage || 'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch thÆ°Æ¡ng hiá»‡u');
         } finally {
             setLoading(false);
         }
@@ -78,7 +78,7 @@ const BrandListPage = () => {
 
     // Derived data for table
     const rows = brands.map(item => {
-        const status = STATUS_LABELS[item.status] || { label: item.status || 'Không rõ', code: 'info' };
+        const status = STATUS_LABELS[item.status] || { label: item.status || 'KhÃ´ng rÃµ', code: 'info' };
         return {
             ...item,
             statusLabel: status.label,
@@ -92,7 +92,7 @@ const BrandListPage = () => {
     const paginatedRows = rows.slice(startIndex, startIndex + pageSize);
 
     const handleExport = () => {
-        const headers = ['Mã thương hiệu', 'Tên thương hiệu', 'Điện thoại', 'Email', 'Mô tả', 'Trạng thái'];
+        const headers = ['MÃ£ thÆ°Æ¡ng hiá»‡u', 'TÃªn thÆ°Æ¡ng hiá»‡u', 'Äiá»‡n thoáº¡i', 'Email', 'MÃ´ táº£', 'Tráº¡ng thÃ¡i'];
         const data = rows.map(item => [
             item.code,
             item.name,
@@ -102,7 +102,7 @@ const BrandListPage = () => {
             item.statusLabel
         ]);
         exportToExcel(headers, data, 'Danh_sach_thuong_hieu');
-        showToast('success', 'Xuất Excel thành công!');
+        showToast('success', 'Xuáº¥t Excel thÃ nh cÃ´ng!');
     };
 
     const handleSelectAll = (e) => {
@@ -131,10 +131,10 @@ const BrandListPage = () => {
         if (!deleteConfirm.brand) return;
         try {
             await axiosClient.delete(`/brands/${deleteConfirm.brand.id}`);
-            showToast('success', `Đã xóa thương hiệu ${deleteConfirm.brand.name}`);
+            showToast('success', `ÄÃ£ xÃ³a thÆ°Æ¡ng hiá»‡u ${deleteConfirm.brand.name}`);
             fetchBrands();
         } catch (error) {
-            showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi xóa thương hiệu');
+            showToast('error', error.response?.data?.userMessage || 'CÃ³ lá»—i xáº£y ra khi xÃ³a thÆ°Æ¡ng hiá»‡u');
             if (error.response?.status === 409) {
                 // Refresh list if it was a soft delete conflict
                 fetchBrands();
@@ -172,54 +172,54 @@ const BrandListPage = () => {
         <AdminLayout>
             <div className={styles.pageBody}>
                 <div className={styles.pageTitleContainer}>
-                    <h1 className={styles.pageTitle}>Danh sách thương hiệu</h1>
+                    <h1 className={styles.pageTitle}>Danh sÃ¡ch thÆ°Æ¡ng hiá»‡u</h1>
                     <button className={styles.btnPrimary} onClick={() => setModalConfig({ isOpen: true, data: null })}>
-                        <i className="bi bi-plus"></i> Thêm mới
+                        <i className="bi bi-plus"></i> ThÃªm má»›i
                     </button>
                 </div>
 
                 <div className={styles.filterSection}>
                     <div className={styles.filterGroup}>
                         <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>TÌM KIẾM</span>
+                            <span className={styles.filterLabel}>TÃŒM KIáº¾M</span>
                             <input
                                 type="text"
                                 className={styles.filterInput}
-                                placeholder="Tên hoặc mã thương hiệu..."
+                                placeholder="TÃªn hoáº·c mÃ£ thÆ°Æ¡ng hiá»‡u..."
                                 value={filters.search}
                                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                                 onKeyDown={(e) => e.key === 'Enter' && fetchBrands()}
                             />
                         </div>
                         <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>TÌNH TRẠNG</span>
+                            <span className={styles.filterLabel}>TÃŒNH TRáº NG</span>
                             <select
                                 className={styles.filterSelect}
                                 value={filters.status}
                                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
                             >
-                                <option value="">Tất cả</option>
-                                <option value="APPROVED">Đang hoạt động</option>
-                                <option value="INACTIVE">Ngừng hoạt động</option>
+                                <option value="">Táº¥t cáº£</option>
+                                <option value="APPROVED">Äang hoáº¡t Ä‘á»™ng</option>
+                                <option value="INACTIVE">Ngá»«ng hoáº¡t Ä‘á»™ng</option>
                             </select>
                         </div>
                     </div>
                     <div className={styles.filterActions}>
                         <button className={styles.btnOutline} onClick={() => { setFilters({ search: '', status: '' }); fetchBrands(); }}>
-                            Làm mới
+                            LÃ m má»›i
                         </button>
                         <button className={styles.btnOutline} onClick={handleExport}>
-                            <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                            <i className="bi bi-file-earmark-excel"></i> Xuáº¥t Excel
                         </button>
                         <button className={styles.btnPrimary} onClick={fetchBrands}>
-                            <i className="bi bi-funnel"></i> Lọc dữ liệu
+                            <i className="bi bi-funnel"></i> Lá»c dá»¯ liá»‡u
                         </button>
                     </div>
                 </div>
 
                 {selectedIds.length > 0 && (
                     <div className={styles.bulkActionsToolbar}>
-                        <div className={styles.bulkText}>Đã chọn {selectedIds.length} thương hiệu</div>
+                        <div className={styles.bulkText}>ÄÃ£ chá»n {selectedIds.length} thÆ°Æ¡ng hiá»‡u</div>
                     </div>
                 )}
 
@@ -235,19 +235,19 @@ const BrandListPage = () => {
                                         onChange={handleSelectAll} 
                                     />
                                 </th>
-                                <th style={{ width: '160px' }}>Mã Thương Hiệu</th>
-                                <th style={{ minWidth: '220px' }}>Tên Thương Hiệu</th>
-                                <th style={{ width: '150px' }}>Điện Thoại</th>
-                                <th style={{ width: '250px' }}>Mô Tả</th>
-                                <th style={{ width: '140px' }}>Trạng Thái</th>
-                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
+                                <th style={{ width: '160px' }}>MÃ£ ThÆ°Æ¡ng Hiá»‡u</th>
+                                <th style={{ minWidth: '220px' }}>TÃªn ThÆ°Æ¡ng Hiá»‡u</th>
+                                <th style={{ width: '150px' }}>Äiá»‡n Thoáº¡i</th>
+                                <th style={{ width: '250px' }}>MÃ´ Táº£</th>
+                                <th style={{ width: '140px' }}>Tráº¡ng ThÃ¡i</th>
+                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao TÃ¡c</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading && paginatedRows.length === 0 ? (
                                 <tr>
                                     <td colSpan="7" className={styles.textCenter} style={{ padding: '40px' }}>
-                                        <div className={styles.emptyState}>Đang tải dữ liệu...</div>
+                                        <div className={styles.emptyState}>Äang táº£i dá»¯ liá»‡u...</div>
                                     </td>
                                 </tr>
                             ) : paginatedRows.length === 0 ? (
@@ -255,7 +255,7 @@ const BrandListPage = () => {
                                     <td colSpan="7">
                                         <div className={styles.emptyState}>
                                             <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                                            <div className={styles.emptyText}>Không tìm thấy thương hiệu nào</div>
+                                            <div className={styles.emptyText}>KhÃ´ng tÃ¬m tháº¥y thÆ°Æ¡ng hiá»‡u nÃ o</div>
                                         </div>
                                     </td>
                                 </tr>
@@ -273,10 +273,10 @@ const BrandListPage = () => {
                                         </td>
                                         <td className={styles.textBlue} style={{ whiteSpace: 'nowrap' }}>{item.code}</td>
                                         <td style={{ fontWeight: 600 }}>{item.name}</td>
-                                        <td>{item.hotline || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>
+                                        <td>{item.hotline || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ChÆ°a cáº­p nháº­t</span>}</td>
                                         <td>
                                             <div className={styles.tooltipContainer} style={{ display: 'inline-block', maxWidth: '100%' }}>
-                                                <span className={styles.noteText}>{item.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có</span>}</span>
+                                                <span className={styles.noteText}>{item.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>KhÃ´ng cÃ³</span>}</span>
                                                 {item.description && <span className={styles.tooltipText}>{item.description}</span>}
                                             </div>
                                         </td>
@@ -289,19 +289,19 @@ const BrandListPage = () => {
                                             <i 
                                                 className="bi bi-eye" 
                                                 style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
-                                                title="Xem chi tiết" 
+                                                title="Xem chi tiáº¿t" 
                                                 onClick={(e) => { e.stopPropagation(); navigate(`/brands/${item.id}`); }}
                                             ></i>
                                             <i 
                                                 className="bi bi-pencil" 
                                                 style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
-                                                title="Chỉnh sửa" 
+                                                title="Chá»‰nh sá»­a" 
                                                 onClick={(e) => handleEditClick(e, item)}
                                             ></i>
                                             <i 
                                                 className="bi bi-trash" 
                                                 style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
-                                                title="Xóa thương hiệu" 
+                                                title="XÃ³a thÆ°Æ¡ng hiá»‡u" 
                                                 onClick={(e) => handleDeleteClick(e, item)}
                                             ></i>
                                         </td>
@@ -313,7 +313,7 @@ const BrandListPage = () => {
 
                     <div className={styles.pagination}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span>Hiển thị</span>
+                            <span>Hiá»ƒn thá»‹</span>
                             <select
                                 className="misa-select"
                                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
@@ -325,7 +325,7 @@ const BrandListPage = () => {
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
                             </select>
-                            <span>trên tổng số {totalItems} bản ghi</span>
+                            <span>trÃªn tá»•ng sá»‘ {totalItems} báº£n ghi</span>
                         </div>
 
                         {totalPages > 1 && (
@@ -336,7 +336,7 @@ const BrandListPage = () => {
                                     className={styles.pageBtn}
                                 >
                                     <i className="bi bi-chevron-left"></i>
-                                    <span>Trước</span>
+                                    <span>TrÆ°á»›c</span>
                                 </button>
 
                                 <div className={styles.paginationNumbers}>
@@ -347,7 +347,7 @@ const BrandListPage = () => {
                                                 className={`${styles.pageNumber} ${styles.active}`}
                                                 style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
                                                 defaultValue={num}
-                                                title="Nhập số trang và nhấn Enter"
+                                                title="Nháº­p sá»‘ trang vÃ  nháº¥n Enter"
                                                 onBlur={(e) => e.target.value = currentPage}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
@@ -407,11 +407,11 @@ const BrandListPage = () => {
                             
                             if (modalConfig.data && modalConfig.data.id) {
                                 await axiosClient.put(`/brands/${modalConfig.data.id}`, payload);
-                                showToast('success', 'Cập nhật thương hiệu thành công!');
+                                showToast('success', 'Cáº­p nháº­t thÆ°Æ¡ng hiá»‡u thÃ nh cÃ´ng!');
                                 setModalConfig({ isOpen: false, data: null });
                             } else {
                                 await axiosClient.post('/brands', payload);
-                                showToast('success', 'Thêm mới thương hiệu thành công!');
+                                showToast('success', 'ThÃªm má»›i thÆ°Æ¡ng hiá»‡u thÃ nh cÃ´ng!');
                                 if (!isContinue) {
                                     setModalConfig({ isOpen: false, data: null });
                                 } else {
@@ -423,7 +423,7 @@ const BrandListPage = () => {
                             
                             fetchBrands();
                         } catch (error) {
-                            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra');
+                            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'CÃ³ lá»—i xáº£y ra');
                         }
                     }}
                 />
@@ -431,12 +431,12 @@ const BrandListPage = () => {
 
             <ConfirmModal
                 isOpen={deleteConfirm.isOpen}
-                title="Xác nhận xóa"
-                message={<span>Bạn có chắc chắn muốn xóa thương hiệu <strong>{deleteConfirm.brand?.name}</strong> {deleteConfirm.brand?.code ? `(${deleteConfirm.brand.code})` : ''} không? Hành động này không thể hoàn tác.</span>}
+                title="XÃ¡c nháº­n xÃ³a"
+                message={<span>Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a thÆ°Æ¡ng hiá»‡u <strong>{deleteConfirm.brand?.name}</strong> {deleteConfirm.brand?.code ? `(${deleteConfirm.brand.code})` : ''} khÃ´ng? HÃ nh Ä‘á»™ng nÃ y khÃ´ng thá»ƒ hoÃ n tÃ¡c.</span>}
                 onConfirm={confirmDelete}
                 onCancel={() => setDeleteConfirm({ isOpen: false, brand: null })}
-                confirmText="Xóa"
-                cancelText="Hủy"
+                confirmText="XÃ³a"
+                cancelText="Há»§y"
                 confirmButtonClass="btn-misa-danger"
             />
 

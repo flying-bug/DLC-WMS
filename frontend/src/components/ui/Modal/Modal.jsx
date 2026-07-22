@@ -3,7 +3,7 @@ import styles from './Modal.module.css';
 
 /**
  * Generic Modal component.
- * Traps focus, hỗ trợ đóng bằng Escape và click overlay.
+ * Traps focus, há»— trá»£ Ä‘Ã³ng báº±ng Escape vÃ  click overlay.
  */
 function Modal({ isOpen, onClose, children, ariaLabel, dialogClassName, dialogStyle }) {
     const handleKeyDown = useCallback(

@@ -7,18 +7,18 @@ const WarrantyTab = ({ data, loading, page, setPage, formatDate, styles }) => {
             <table className={styles.table}>
                 <thead>
                     <tr>
-                        <th>MÃ BẢO HÀNH</th>
-                        <th>SERIAL SẢN PHẨM</th>
-                        <th>THỜI GIAN BH</th>
-                        <th>TRẠNG THÁI</th>
-                        <th>LỊCH SỬ SỬA CHỮA</th>
+                        <th>MÃƒ Báº¢O HÃ€NH</th>
+                        <th>SERIAL Sáº¢N PHáº¨M</th>
+                        <th>THá»œI GIAN BH</th>
+                        <th>TRáº NG THÃI</th>
+                        <th>Lá»ŠCH Sá»¬ Sá»¬A CHá»®A</th>
                     </tr>
                 </thead>
                 <tbody>
                     {loading ? (
-                        <tr><td colSpan="5" className={styles.loadingState}>Đang tải...</td></tr>
+                        <tr><td colSpan="5" className={styles.loadingState}>Äang táº£i...</td></tr>
                     ) : data.content.length === 0 ? (
-                        <tr><td colSpan="5" className={styles.emptyState}>Chưa có lịch sử bảo hành</td></tr>
+                        <tr><td colSpan="5" className={styles.emptyState}>ChÆ°a cÃ³ lá»‹ch sá»­ báº£o hÃ nh</td></tr>
                     ) : data.content.map((item, idx) => (
                         <tr key={idx}>
                             <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{item.warrantyCode}</td>

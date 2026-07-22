@@ -12,16 +12,16 @@ import { exportToExcel } from '../../utils/excelExport';
 import styles from './ImportHistoryPage.module.css';
 
 const STATUS_LABELS = {
-  DRAFT: { label: 'Lưu tạm', code: 'info' },
-  SUBMITTED: { label: 'Chờ duyệt', code: 'warning' },
-  APPROVED: { label: 'Đã duyệt', code: 'success' },
-  POSTED: { label: 'Hoàn thành', code: 'success' },
-  CANCELLED: { label: 'Đã hủy', code: 'danger' },
+  DRAFT: { label: 'LÆ°u táº¡m', code: 'info' },
+  SUBMITTED: { label: 'Chá» duyá»‡t', code: 'warning' },
+  APPROVED: { label: 'ÄÃ£ duyá»‡t', code: 'success' },
+  POSTED: { label: 'HoÃ n thÃ nh', code: 'success' },
+  CANCELLED: { label: 'ÄÃ£ há»§y', code: 'danger' },
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
-const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')} đ`;
+const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')} Ä‘`;
 const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN') : '';
 const sumAmount = (lines = []) => lines.reduce((sum, line) => sum + Number(line.lineAmount || 0), 0);
 const sumQuantity = (lines = []) => lines.reduce((sum, line) => sum + Number(line.quantityIn || 0), 0);
@@ -90,7 +90,7 @@ function ImportHistoryPage() {
       setSelectedSlip(current => data.find(item => item.id === current?.id) || null);
       setSelectedIds([]);
     } catch (err) {
-      setError(err.response?.data?.userMessage || 'Không tải được danh sách phiếu nhập kho');
+      setError(err.response?.data?.userMessage || 'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch phiáº¿u nháº­p kho');
     } finally {
       setLoading(false);
     }
@@ -115,21 +115,21 @@ function ImportHistoryPage() {
   }, [location, navigate]);
 
   const rows = slips.map(slip => {
-    const status = STATUS_LABELS[slip.status] || { label: slip.status || 'Không rõ', code: 'info' };
-    let partnerLabel = 'Chưa chọn';
+    const status = STATUS_LABELS[slip.status] || { label: slip.status || 'KhÃ´ng rÃµ', code: 'info' };
+    let partnerLabel = 'ChÆ°a chá»n';
     if (!slip.issuePurpose || slip.issuePurpose === 'PURCHASE') {
-      partnerLabel = supplierById.get(slip.partnerId)?.name || (slip.partnerId ? `NCC #${slip.partnerId}` : 'Chưa chọn');
+      partnerLabel = supplierById.get(slip.partnerId)?.name || (slip.partnerId ? `NCC #${slip.partnerId}` : 'ChÆ°a chá»n');
     } else if (slip.issuePurpose === 'RETURN') {
-      partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `KH #${slip.partnerId}` : 'Chưa chọn');
+      partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `KH #${slip.partnerId}` : 'ChÆ°a chá»n');
     } else if (slip.issuePurpose === 'PRODUCTION') {
-      partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');
+      partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'ChÆ°a chá»n');
     }
 
     return {
       ...slip,
       date: formatDate(slip.docDate),
       partner: partnerLabel,
-      warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa chọn'),
+      warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'ChÆ°a chá»n'),
       total: money(sumAmount(slip.lines)),
       quantity: sumQuantity(slip.lines),
       statusLabel: status.label,
@@ -138,7 +138,7 @@ function ImportHistoryPage() {
   });
 
   const handleExport = () => {
-    const headers = ['Ngày ghi nhận', 'Số chứng từ', 'Đối tác / Tham chiếu', 'Kho nhập', 'Tổng tiền', 'Trạng thái'];
+    const headers = ['NgÃ y ghi nháº­n', 'Sá»‘ chá»©ng tá»«', 'Äá»‘i tÃ¡c / Tham chiáº¿u', 'Kho nháº­p', 'Tá»•ng tiá»n', 'Tráº¡ng thÃ¡i'];
     const data = rows.map(item => [
       item.date,
       item.docCode,
@@ -148,7 +148,7 @@ function ImportHistoryPage() {
       item.statusLabel
     ]);
     exportToExcel(headers, data, 'Danh_sach_phieu_nhap_kho');
-    showToast('success', 'Xuất Excel thành công!');
+    showToast('success', 'Xuáº¥t Excel thÃ nh cÃ´ng!');
   };
 
   const handleSelectAll = (e) => {
@@ -195,26 +195,26 @@ function ImportHistoryPage() {
     <AdminLayout>
       <div className={styles.pageBody}>
         <div className={styles.pageTitleContainer}>
-          <h1 className={styles.pageTitle}>Danh sách phiếu nhập kho</h1>
+          <h1 className={styles.pageTitle}>Danh sÃ¡ch phiáº¿u nháº­p kho</h1>
           <button className={styles.btnPrimary} onClick={() => navigate('/import-history/create')}>
-            <i className="bi bi-plus"></i> Thêm mới
+            <i className="bi bi-plus"></i> ThÃªm má»›i
           </button>
         </div>
 
         <div className={styles.filterSection}>
           <div className={styles.filterGroup}>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌM KIẾM</span>
+              <span className={styles.filterLabel}>TÃŒM KIáº¾M</span>
               <input
                 type="text"
                 className={styles.filterInput}
-                placeholder="Mã phiếu..."
+                placeholder="MÃ£ phiáº¿u..."
                 value={filters.docCode}
                 onChange={(e) => setFilters(prev => ({ ...prev, docCode: e.target.value }))}
               />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TỪ NGÀY</span>
+              <span className={styles.filterLabel}>Tá»ª NGÃ€Y</span>
               <input
                 type="date"
                 className={styles.filterInput}
@@ -223,29 +223,29 @@ function ImportHistoryPage() {
               />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌNH TRẠNG</span>
+              <span className={styles.filterLabel}>TÃŒNH TRáº NG</span>
               <select
                 className={styles.filterSelect}
                 value={filters.status}
                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
               >
-                <option value="">Tất cả</option>
-                <option value="DRAFT">Lưu tạm</option>
-                <option value="SUBMITTED">Chờ duyệt</option>
-                <option value="POSTED">Hoàn thành</option>
-                <option value="CANCELLED">Đã hủy</option>
+                <option value="">Táº¥t cáº£</option>
+                <option value="DRAFT">LÆ°u táº¡m</option>
+                <option value="SUBMITTED">Chá» duyá»‡t</option>
+                <option value="POSTED">HoÃ n thÃ nh</option>
+                <option value="CANCELLED">ÄÃ£ há»§y</option>
               </select>
             </div>
           </div>
           <div className={styles.filterActions}>
             <button className={styles.btnOutline} onClick={() => setFilters({ docCode: '', fromDate: '', status: '' })}>
-              Làm mới
+              LÃ m má»›i
             </button>
             <button className={styles.btnOutline} onClick={handleExport}>
-              <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+              <i className="bi bi-file-earmark-excel"></i> Xuáº¥t Excel
             </button>
             <button className={styles.btnPrimary} onClick={loadSlips}>
-              <i className="bi bi-funnel"></i> Lọc dữ liệu
+              <i className="bi bi-funnel"></i> Lá»c dá»¯ liá»‡u
             </button>
           </div>
         </div>
@@ -254,7 +254,7 @@ function ImportHistoryPage() {
 
         {selectedIds.length > 0 && (
           <div className={styles.bulkActionsToolbar}>
-            <div className={styles.bulkText}>Đã chọn {selectedIds.length} phiếu nhập</div>
+            <div className={styles.bulkText}>ÄÃ£ chá»n {selectedIds.length} phiáº¿u nháº­p</div>
           </div>
         )}
 
@@ -270,14 +270,14 @@ function ImportHistoryPage() {
                     onChange={handleSelectAll}
                   />
                 </th>
-                <th style={{ width: '120px' }}>Ngày Nhập</th>
-                <th style={{ width: '180px' }}>Số Phiếu</th>
-                <th style={{ width: '200px' }}>Đối tác / Tham chiếu</th>
-                <th style={{ width: '120px' }}>Kho Nhập</th>
-                <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>
-                <th style={{ minWidth: '150px' }}>Ghi Chú</th>
-                <th style={{ width: '120px' }}>Trạng Thái</th>
-                <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
+                <th style={{ width: '120px' }}>NgÃ y Nháº­p</th>
+                <th style={{ width: '180px' }}>Sá»‘ Phiáº¿u</th>
+                <th style={{ width: '200px' }}>Äá»‘i tÃ¡c / Tham chiáº¿u</th>
+                <th style={{ width: '120px' }}>Kho Nháº­p</th>
+                <th className={styles.textRight} style={{ width: '110px' }}>Tá»•ng Tiá»n</th>
+                <th style={{ minWidth: '150px' }}>Ghi ChÃº</th>
+                <th style={{ width: '120px' }}>Tráº¡ng ThÃ¡i</th>
+                <th className={styles.textCenter} style={{ width: '100px' }}>Thao TÃ¡c</th>
               </tr>
             </thead>
             <tbody>
@@ -311,7 +311,7 @@ function ImportHistoryPage() {
                   <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>
                   <td style={{ maxWidth: '180px' }}>
                     <div className={styles.tooltipContainer}>
-                      <span className={styles.noteText}>{slip.note || 'Không có ghi chú'}</span>
+                      <span className={styles.noteText}>{slip.note || 'KhÃ´ng cÃ³ ghi chÃº'}</span>
                       {slip.note && <span className={styles.tooltipText}>{slip.note}</span>}
                     </div>
                   </td>
@@ -325,11 +325,11 @@ function ImportHistoryPage() {
                     </span>
                   </td>
                   <td className={styles.textCenter}>
-                    <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}></i>
-                    <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu nhập kho" onClick={(e) => {
+                    <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiáº¿t" onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}></i>
+                    <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sá»­a phiáº¿u nháº­p kho" onClick={(e) => {
                       e.stopPropagation();
                       if (slip.status !== 'DRAFT') {
-                        showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm.');
+                        showToast('error', 'Chá»‰ cÃ³ thá»ƒ cáº­p nháº­t phiáº¿u lÆ°u táº¡m.');
                       } else {
                         navigate(`/import-slips/${slip.id}/edit`);
                       }
@@ -341,7 +341,7 @@ function ImportHistoryPage() {
                   <td colSpan="8">
                     <div className={styles.emptyState}>
                       <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                      <div className={styles.emptyText}>{loading ? 'Đang tải dữ liệu...' : 'Không tìm thấy phiếu nhập nào'}</div>
+                      <div className={styles.emptyText}>{loading ? 'Äang táº£i dá»¯ liá»‡u...' : 'KhÃ´ng tÃ¬m tháº¥y phiáº¿u nháº­p nÃ o'}</div>
                     </div>
                   </td>
                 </tr>
@@ -351,7 +351,7 @@ function ImportHistoryPage() {
 
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>Hiển thị</span>
+              <span>Hiá»ƒn thá»‹</span>
               <select 
                 className="misa-select" 
                 style={{ width: '70px', height: '32px', padding: '0 8px' }} 
@@ -363,7 +363,7 @@ function ImportHistoryPage() {
                 <option value={50}>50</option>
                 <option value={100}>100</option>
               </select>
-              <span>trên tổng số {totalItems} bản ghi</span>
+              <span>trÃªn tá»•ng sá»‘ {totalItems} báº£n ghi</span>
             </div>
             
             {totalPages > 1 && (
@@ -374,7 +374,7 @@ function ImportHistoryPage() {
                   className={styles.pageBtn}
                 >
                   <i className="bi bi-chevron-left"></i>
-                  <span>Trước</span>
+                  <span>TrÆ°á»›c</span>
                 </button>
 
                 <div className={styles.paginationNumbers}>
@@ -385,7 +385,7 @@ function ImportHistoryPage() {
                         className={`${styles.pageNumber} ${styles.active}`}
                         style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
                         defaultValue={num}
-                        title="Nhập số trang và nhấn Enter"
+                        title="Nháº­p sá»‘ trang vÃ  nháº¥n Enter"
                         onBlur={(e) => e.target.value = currentPage}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -440,7 +440,7 @@ function ImportHistoryPage() {
                       className={styles.btnPrimary}
                       style={{ padding: '6px 12px', fontSize: '13px' }}
                     >
-                      <i className="bi bi-printer" style={{ marginRight: '6px' }}></i> Ghi sổ
+                      <i className="bi bi-printer" style={{ marginRight: '6px' }}></i> Ghi sá»•
                     </button>
                   )}
                   <button className={styles.modalClose} onClick={() => setSelectedSlip(null)}>&times;</button>
@@ -452,53 +452,53 @@ function ImportHistoryPage() {
                   <div className={styles.detailGroup} style={{ gridColumn: 'span 2' }}>
                     <div className={styles.detailItem}>
                       <span className={styles.detailLabel}>
-                        {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && 'Nhà cung cấp'}
-                        {selectedSlip.issuePurpose === 'PRODUCTION' && 'Lệnh sản xuất'}
-                        {selectedSlip.issuePurpose === 'RETURN' && 'Khách hàng'}
+                        {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && 'NhÃ  cung cáº¥p'}
+                        {selectedSlip.issuePurpose === 'PRODUCTION' && 'Lá»‡nh sáº£n xuáº¥t'}
+                        {selectedSlip.issuePurpose === 'RETURN' && 'KhÃ¡ch hÃ ng'}
                       </span>
                       <span className={styles.detailValue}>
-                        {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && (supplierById.get(selectedSlip.partnerId)?.name || 'Chưa chọn')}
-                        {selectedSlip.issuePurpose === 'PRODUCTION' && (assemblyOrderById.get(selectedSlip.referenceId)?.orderCode || 'Chưa chọn')}
-                        {selectedSlip.issuePurpose === 'RETURN' && (customerById.get(selectedSlip.partnerId)?.name || 'Chưa chọn')}
+                        {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && (supplierById.get(selectedSlip.partnerId)?.name || 'ChÆ°a chá»n')}
+                        {selectedSlip.issuePurpose === 'PRODUCTION' && (assemblyOrderById.get(selectedSlip.referenceId)?.orderCode || 'ChÆ°a chá»n')}
+                        {selectedSlip.issuePurpose === 'RETURN' && (customerById.get(selectedSlip.partnerId)?.name || 'ChÆ°a chá»n')}
                       </span>
                     </div>
                     {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE' || selectedSlip.issuePurpose === 'PRODUCTION') && (
                       <div className={styles.detailItem}>
-                        <span className={styles.detailLabel}>Người giao hàng</span>
-                        <span className={styles.detailValue}>{selectedSlip.recipientName || 'Chưa có thông tin'}</span>
+                        <span className={styles.detailLabel}>NgÆ°á»i giao hÃ ng</span>
+                        <span className={styles.detailValue}>{selectedSlip.recipientName || 'ChÆ°a cÃ³ thÃ´ng tin'}</span>
                       </div>
                     )}
                     <div className={styles.detailItem}>
                       <span className={styles.detailLabel}>
-                        {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && 'Nhân viên mua hàng'}
-                        {selectedSlip.issuePurpose === 'PRODUCTION' && 'Nhân viên phụ trách'}
-                        {selectedSlip.issuePurpose === 'RETURN' && 'Nhân viên bán hàng'}
+                        {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && 'NhÃ¢n viÃªn mua hÃ ng'}
+                        {selectedSlip.issuePurpose === 'PRODUCTION' && 'NhÃ¢n viÃªn phá»¥ trÃ¡ch'}
+                        {selectedSlip.issuePurpose === 'RETURN' && 'NhÃ¢n viÃªn bÃ¡n hÃ ng'}
                       </span>
                       <span className={styles.detailValue}>
-                        {selectedSlip.salespersonName || userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || (selectedSlip.salespersonId ? String(selectedSlip.salespersonId) : 'Chưa có thông tin')}
+                        {selectedSlip.salespersonName || userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || (selectedSlip.salespersonId ? String(selectedSlip.salespersonId) : 'ChÆ°a cÃ³ thÃ´ng tin')}
                       </span>
                     </div>
                     {(selectedSlip.referenceType && selectedSlip.referenceId) && (
                       <div className={styles.detailItem}>
-                        <span className={styles.detailLabel}>Kèm chứng từ</span>
+                        <span className={styles.detailLabel}>KÃ¨m chá»©ng tá»«</span>
                         <span className={styles.detailValue} style={{ color: 'var(--color-primary)', cursor: 'pointer' }}>
                            <i className="bi bi-link-45deg"></i> {selectedSlip.referenceCode || selectedSlip.referenceId}
                         </span>
                       </div>
                     )}
                     <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Ghi chú</span>
-                      <span className={styles.detailValue}>{selectedSlip.note || 'Không có ghi chú'}</span>
+                      <span className={styles.detailLabel}>Ghi chÃº</span>
+                      <span className={styles.detailValue}>{selectedSlip.note || 'KhÃ´ng cÃ³ ghi chÃº'}</span>
                     </div>
                   </div>
 
                   <div className={styles.detailRight}>
                     <div className={styles.detailRightRow}>
-                      <span className={styles.detailRightLabel}>Ngày nhận hàng</span>
+                      <span className={styles.detailRightLabel}>NgÃ y nháº­n hÃ ng</span>
                       <span className={styles.detailRightValue}>{formatDate(selectedSlip.docDate)}</span>
                     </div>
                     <div className={styles.detailRightRow}>
-                      <span className={styles.detailRightLabel}>Kho nhập</span>
+                      <span className={styles.detailRightLabel}>Kho nháº­p</span>
                       <span className={`${styles.detailRightValue} ${styles.textBlue}`}>{warehouseById.get(selectedSlip.warehouseId)?.name || `Kho #${selectedSlip.warehouseId}`}</span>
                     </div>
                   </div>
@@ -508,13 +508,13 @@ function ImportHistoryPage() {
                   <thead>
                     <tr>
                       <th>STT</th>
-                      <th>Mã sản phẩm</th>
-                      <th>Tên sản phẩm</th>
-                      <th>ĐVT</th>
-                      <th className={styles.textCenter}>Số lượng</th>
-                      <th className={styles.textRight}>Giá nhập</th>
-                      <th className={styles.textRight}>Thành tiền</th>
-                      <th>Số Serial</th>
+                      <th>MÃ£ sáº£n pháº©m</th>
+                      <th>TÃªn sáº£n pháº©m</th>
+                      <th>ÄVT</th>
+                      <th className={styles.textCenter}>Sá»‘ lÆ°á»£ng</th>
+                      <th className={styles.textRight}>GiÃ¡ nháº­p</th>
+                      <th className={styles.textRight}>ThÃ nh tiá»n</th>
+                      <th>Sá»‘ Serial</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -524,7 +524,7 @@ function ImportHistoryPage() {
                         <tr key={line.id || index}>
                           <td>{index + 1}</td>
                           <td className={styles.textBlue}>{product?.sku || `SKU #${line.variantId}`}</td>
-                          <td>{variantLabel(product) || 'Chưa có tên sản phẩm'}</td>
+                          <td>{variantLabel(product) || 'ChÆ°a cÃ³ tÃªn sáº£n pháº©m'}</td>
                           <td>{product?.unitName || ''}</td>
                           <td className={styles.textCenter}>{Number(line.quantityIn || 0).toLocaleString('vi-VN')}</td>
                           <td className={styles.textRight}>{money(line.unitCost)}</td>
@@ -532,7 +532,7 @@ function ImportHistoryPage() {
                           <td style={{ maxWidth: '200px', wordWrap: 'break-word', whiteSpace: 'normal' }}>
                             {line.serialNumbers && line.serialNumbers.length > 0 
                               ? line.serialNumbers.join(', ') 
-                              : <span style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '13px' }}>Không có</span>}
+                              : <span style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '13px' }}>KhÃ´ng cÃ³</span>}
                           </td>
                         </tr>
                       );
@@ -541,9 +541,9 @@ function ImportHistoryPage() {
                 </table>
 
                 <div className={styles.detailFooter}>
-                  <div className={styles.footerTotalLabel}>Tổng cộng hàng nhập:</div>
+                  <div className={styles.footerTotalLabel}>Tá»•ng cá»™ng hÃ ng nháº­p:</div>
                   <div className={styles.footerQty}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</div>
-                  <div className={styles.footerTotalLabel} style={{ flex: 0, whiteSpace: 'nowrap', paddingRight: '16px' }}>Tổng tiền:</div>
+                  <div className={styles.footerTotalLabel} style={{ flex: 0, whiteSpace: 'nowrap', paddingRight: '16px' }}>Tá»•ng tiá»n:</div>
                   <div className={styles.footerMoney}>{money(sumAmount(selectedSlip.lines))}</div>
                 </div>
               </div>
@@ -552,17 +552,17 @@ function ImportHistoryPage() {
         )}
         <ConfirmModal
           isOpen={confirmPost}
-          title="Xác nhận ghi sổ"
-          message="Bạn có chắc chắn muốn ghi sổ phiếu nhập này không? Thao tác này không thể hoàn tác và sẽ cập nhật lại số lượng hàng hóa trong kho."
+          title="XÃ¡c nháº­n ghi sá»•"
+          message="Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n ghi sá»• phiáº¿u nháº­p nÃ y khÃ´ng? Thao tÃ¡c nÃ y khÃ´ng thá»ƒ hoÃ n tÃ¡c vÃ  sáº½ cáº­p nháº­t láº¡i sá»‘ lÆ°á»£ng hÃ ng hÃ³a trong kho."
           onConfirm={async () => {
             setConfirmPost(false);
             try {
               await importApi.postImportSlip(selectedSlip.id);
               loadSlips();
               setSelectedSlip(prev => ({ ...prev, status: 'POSTED', statusLabel: STATUS_LABELS['POSTED'].label, statusCode: STATUS_LABELS['POSTED'].code }));
-              showToast('success', 'Ghi sổ phiếu nhập thành công!');
+              showToast('success', 'Ghi sá»• phiáº¿u nháº­p thÃ nh cÃ´ng!');
             } catch (err) {
-              showToast('error', err.response?.data?.userMessage || 'Không thể ghi sổ phiếu nhập kho');
+              showToast('error', err.response?.data?.userMessage || 'KhÃ´ng thá»ƒ ghi sá»• phiáº¿u nháº­p kho');
             }
           }}
           onCancel={() => setConfirmPost(false)}

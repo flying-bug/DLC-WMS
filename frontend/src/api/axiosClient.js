@@ -26,7 +26,7 @@ const axiosClient = axios.create({
     }
 });
 
-// Interceptor cho Request: Gáº¯n token vÃ o header náº¿u cÃ³
+// Interceptor cho Request: GÃ¡ÂºÂ¯n token vÃƒÂ o header nÃ¡ÂºÂ¿u cÃƒÂ³
 axiosClient.interceptors.request.use(
     (config) => {
         const token = sessionStorage.getItem('token');
@@ -40,19 +40,19 @@ axiosClient.interceptors.request.use(
     }
 );
 
-// Interceptor cho Response: Xá»­ lÃ½ lá»—i chung (VD: háº¿t háº¡n token)
+// Interceptor cho Response: XÃ¡Â»Â­ lÃƒÂ½ lÃ¡Â»â€”i chung (VD: hÃ¡ÂºÂ¿t hÃ¡ÂºÂ¡n token)
 const ERROR_MAP = {
-    "Chi phieu xuat kho DRAFT hoac SUBMITTED moi co the ghi so": "Chá»‰ phiáº¿u xuáº¥t kho lÆ°u táº¡m má»›i cÃ³ thá»ƒ ghi sá»•.",
-    "Chi phieu nhap kho DRAFT hoac SUBMITTED moi co the ghi so": "Chá»‰ phiáº¿u nháº­p kho lÆ°u táº¡m má»›i cÃ³ thá»ƒ ghi sá»•.",
-    "Chi co the cap nhat phieu DRAFT hoac SUBMITTED": "Chá»‰ cÃ³ thá»ƒ cáº­p nháº­t phiáº¿u lÆ°u táº¡m.",
-    "Trang thai phieu xuat kho phai la DRAFT hoac SUBMITTED": "Tráº¡ng thÃ¡i phiáº¿u xuáº¥t kho pháº£i lÃ  lÆ°u táº¡m.",
-    "Trang thai phieu nhap kho phai la DRAFT hoac SUBMITTED": "Tráº¡ng thÃ¡i phiáº¿u nháº­p kho pháº£i lÃ  lÆ°u táº¡m.",
-    // Dá»± phÃ²ng trÆ°á»ng há»£p dev Ä‘Ã£ xÃ³a chá»¯ SUBMITTED á»Ÿ backend
-    "Chi phieu xuat kho DRAFT moi co the ghi so": "Chá»‰ phiáº¿u xuáº¥t kho lÆ°u táº¡m má»›i cÃ³ thá»ƒ ghi sá»•.",
-    "Chi phieu nhap kho DRAFT moi co the ghi so": "Chá»‰ phiáº¿u nháº­p kho lÆ°u táº¡m má»›i cÃ³ thá»ƒ ghi sá»•.",
-    "Chi co the cap nhat phieu DRAFT": "Chá»‰ cÃ³ thá»ƒ cáº­p nháº­t phiáº¿u lÆ°u táº¡m.",
-    "Trang thai phieu xuat kho phai la DRAFT": "Tráº¡ng thÃ¡i phiáº¿u xuáº¥t kho pháº£i lÃ  lÆ°u táº¡m.",
-    "Trang thai phieu nhap kho phai la DRAFT": "Tráº¡ng thÃ¡i phiáº¿u nháº­p kho pháº£i lÃ  lÆ°u táº¡m."
+    "Chi phieu xuat kho DRAFT hoac SUBMITTED moi co the ghi so": "ChÃ¡Â»â€° phiÃ¡ÂºÂ¿u xuÃ¡ÂºÂ¥t kho lÃ†Â°u tÃ¡ÂºÂ¡m mÃ¡Â»â€ºi cÃƒÂ³ thÃ¡Â»Æ’ ghi sÃ¡Â»â€¢.",
+    "Chi phieu nhap kho DRAFT hoac SUBMITTED moi co the ghi so": "ChÃ¡Â»â€° phiÃ¡ÂºÂ¿u nhÃ¡ÂºÂ­p kho lÃ†Â°u tÃ¡ÂºÂ¡m mÃ¡Â»â€ºi cÃƒÂ³ thÃ¡Â»Æ’ ghi sÃ¡Â»â€¢.",
+    "Chi co the cap nhat phieu DRAFT hoac SUBMITTED": "ChÃ¡Â»â€° cÃƒÂ³ thÃ¡Â»Æ’ cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t phiÃ¡ÂºÂ¿u lÃ†Â°u tÃ¡ÂºÂ¡m.",
+    "Trang thai phieu xuat kho phai la DRAFT hoac SUBMITTED": "TrÃ¡ÂºÂ¡ng thÃƒÂ¡i phiÃ¡ÂºÂ¿u xuÃ¡ÂºÂ¥t kho phÃ¡ÂºÂ£i lÃƒÂ  lÃ†Â°u tÃ¡ÂºÂ¡m.",
+    "Trang thai phieu nhap kho phai la DRAFT hoac SUBMITTED": "TrÃ¡ÂºÂ¡ng thÃƒÂ¡i phiÃ¡ÂºÂ¿u nhÃ¡ÂºÂ­p kho phÃ¡ÂºÂ£i lÃƒÂ  lÃ†Â°u tÃ¡ÂºÂ¡m.",
+    // DÃ¡Â»Â± phÃƒÂ²ng trÃ†Â°Ã¡Â»Âng hÃ¡Â»Â£p dev Ã„â€˜ÃƒÂ£ xÃƒÂ³a chÃ¡Â»Â¯ SUBMITTED Ã¡Â»Å¸ backend
+    "Chi phieu xuat kho DRAFT moi co the ghi so": "ChÃ¡Â»â€° phiÃ¡ÂºÂ¿u xuÃ¡ÂºÂ¥t kho lÃ†Â°u tÃ¡ÂºÂ¡m mÃ¡Â»â€ºi cÃƒÂ³ thÃ¡Â»Æ’ ghi sÃ¡Â»â€¢.",
+    "Chi phieu nhap kho DRAFT moi co the ghi so": "ChÃ¡Â»â€° phiÃ¡ÂºÂ¿u nhÃ¡ÂºÂ­p kho lÃ†Â°u tÃ¡ÂºÂ¡m mÃ¡Â»â€ºi cÃƒÂ³ thÃ¡Â»Æ’ ghi sÃ¡Â»â€¢.",
+    "Chi co the cap nhat phieu DRAFT": "ChÃ¡Â»â€° cÃƒÂ³ thÃ¡Â»Æ’ cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t phiÃ¡ÂºÂ¿u lÃ†Â°u tÃ¡ÂºÂ¡m.",
+    "Trang thai phieu xuat kho phai la DRAFT": "TrÃ¡ÂºÂ¡ng thÃƒÂ¡i phiÃ¡ÂºÂ¿u xuÃ¡ÂºÂ¥t kho phÃ¡ÂºÂ£i lÃƒÂ  lÃ†Â°u tÃ¡ÂºÂ¡m.",
+    "Trang thai phieu nhap kho phai la DRAFT": "TrÃ¡ÂºÂ¡ng thÃƒÂ¡i phiÃ¡ÂºÂ¿u nhÃ¡ÂºÂ­p kho phÃ¡ÂºÂ£i lÃƒÂ  lÃ†Â°u tÃ¡ÂºÂ¡m."
 };
 
 axiosClient.interceptors.response.use(
@@ -62,7 +62,7 @@ axiosClient.interceptors.response.use(
     (error) => {
         const isLoginRequest = error.config?.url?.includes('/auth/login');
         if (error.response && error.response.status === 401 && !isLoginRequest) {
-            forceLogout(error.response?.data?.userMessage || 'PhiÃªn Ä‘Äƒng nháº­p cá»§a báº¡n Ä‘Ã£ háº¿t háº¡n hoáº·c tÃ i khoáº£n Ä‘Ã£ bá»‹ khÃ³a.');
+            forceLogout(error.response?.data?.userMessage || 'PhiÃƒÂªn Ã„â€˜Ã„Æ’ng nhÃ¡ÂºÂ­p cÃ¡Â»Â§a bÃ¡ÂºÂ¡n Ã„â€˜ÃƒÂ£ hÃ¡ÂºÂ¿t hÃ¡ÂºÂ¡n hoÃ¡ÂºÂ·c tÃƒÂ i khoÃ¡ÂºÂ£n Ã„â€˜ÃƒÂ£ bÃ¡Â»â€¹ khÃƒÂ³a.');
         }
 
         // Translate specific backend errors to nice Vietnamese

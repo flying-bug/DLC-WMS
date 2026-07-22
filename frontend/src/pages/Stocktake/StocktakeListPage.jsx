@@ -9,10 +9,10 @@ import Toast from '../../components/ui/Toast/Toast';
 import styles from './StocktakeListPage.module.css';
 
 const STATUS_LABELS = {
-  DRAFT: { label: 'Lưu tạm', code: 'info' },
-  SUBMITTED: { label: 'Chờ xử lý', code: 'warning' },
-  POSTED: { label: 'Đã xử lý chênh lệch', code: 'success' },
-  CANCELLED: { label: 'Đã hủy', code: 'danger' },
+  DRAFT: { label: 'LÆ°u táº¡m', code: 'info' },
+  SUBMITTED: { label: 'Chá» xá»­ lÃ½', code: 'warning' },
+  POSTED: { label: 'ÄÃ£ xá»­ lÃ½ chÃªnh lá»‡ch', code: 'success' },
+  CANCELLED: { label: 'ÄÃ£ há»§y', code: 'danger' },
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -72,7 +72,7 @@ function StocktakeListPage() {
       setStocktakes(data);
       setSelectedIds([]);
     } catch (err) {
-      console.error(err.response?.data?.userMessage || 'Không tải được danh sách bảng kiểm kê');
+      console.error(err.response?.data?.userMessage || 'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch báº£ng kiá»ƒm kÃª');
     } finally {
       setLoading(false);
     }
@@ -89,11 +89,11 @@ function StocktakeListPage() {
   }, [loadStocktakes]);
 
   const rows = stocktakes.map(st => {
-    const status = STATUS_LABELS[st.status] || { label: st.status || 'Không rõ', code: 'info' };
+    const status = STATUS_LABELS[st.status] || { label: st.status || 'KhÃ´ng rÃµ', code: 'info' };
     return {
       ...st,
       date: formatDate(st.stocktakeDate),
-      warehouse: warehouseById.get(st.warehouseId)?.name || (st.warehouseId ? `Kho #${st.warehouseId}` : 'Chưa chọn'),
+      warehouse: warehouseById.get(st.warehouseId)?.name || (st.warehouseId ? `Kho #${st.warehouseId}` : 'ChÆ°a chá»n'),
       statusLabel: status.label,
       statusCode: status.code,
       isProcessed: st.status === 'POSTED'
@@ -101,14 +101,14 @@ function StocktakeListPage() {
   });
 
   const handleExport = () => {
-    const headers = ['Ngày', 'Số', 'Kiểm kê kho', 'Mục đích', 'Kết luận', 'Đã xử lý'];
+    const headers = ['NgÃ y', 'Sá»‘', 'Kiá»ƒm kÃª kho', 'Má»¥c Ä‘Ã­ch', 'Káº¿t luáº­n', 'ÄÃ£ xá»­ lÃ½'];
     const data = rows.map(item => [
       item.date,
       item.stocktakeCode,
       item.warehouse,
       item.note,
       item.statusLabel,
-      item.isProcessed ? 'Có' : 'Không'
+      item.isProcessed ? 'CÃ³' : 'KhÃ´ng'
     ]);
     exportToExcel(headers, data, 'Danh_sach_kiem_ke');
   };
@@ -126,26 +126,26 @@ function StocktakeListPage() {
     <AdminLayout>
       <div className={styles.pageBody}>
         <div className={styles.pageTitleContainer}>
-          <h1 className={styles.pageTitle}>Kiểm kê vật tư hàng hóa</h1>
+          <h1 className={styles.pageTitle}>Kiá»ƒm kÃª váº­t tÆ° hÃ ng hÃ³a</h1>
           <button className={styles.btnPrimary} style={{ backgroundColor: '#2e7d32' }} onClick={() => setShowInitModal(true)}>
-            Thêm bảng kiểm kê
+            ThÃªm báº£ng kiá»ƒm kÃª
           </button>
         </div>
 
         <div className={styles.filterSection}>
           <div className={styles.filterGroup}>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌM KIẾM SỐ PHIẾU</span>
+              <span className={styles.filterLabel}>TÃŒM KIáº¾M Sá» PHIáº¾U</span>
               <input
                 type="text"
                 className={styles.filterInput}
-                placeholder="Nhập từ khóa tìm kiếm..."
+                placeholder="Nháº­p tá»« khÃ³a tÃ¬m kiáº¿m..."
                 value={filters.stocktakeCode}
                 onChange={(e) => setFilters(prev => ({ ...prev, stocktakeCode: e.target.value }))}
               />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>NGÀY KIỂM KÊ</span>
+              <span className={styles.filterLabel}>NGÃ€Y KIá»‚M KÃŠ</span>
               <input
                 type="date"
                 className={styles.filterInput}
@@ -154,38 +154,38 @@ function StocktakeListPage() {
               />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TRẠNG THÁI</span>
+              <span className={styles.filterLabel}>TRáº NG THÃI</span>
               <select
                 className={styles.filterSelect}
                 value={filters.status}
                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
               >
-                <option value="">Tất cả</option>
-                <option value="DRAFT">Lưu tạm</option>
-                <option value="SUBMITTED">Chờ xử lý</option>
-                <option value="POSTED">Đã xử lý</option>
-                <option value="CANCELLED">Đã hủy</option>
+                <option value="">Táº¥t cáº£</option>
+                <option value="DRAFT">LÆ°u táº¡m</option>
+                <option value="SUBMITTED">Chá» xá»­ lÃ½</option>
+                <option value="POSTED">ÄÃ£ xá»­ lÃ½</option>
+                <option value="CANCELLED">ÄÃ£ há»§y</option>
               </select>
             </div>
           </div>
           <div className={styles.filterActions}>
-            <button className={`${styles.iconBtnAction} ${styles.reload}`} onClick={() => setFilters({ stocktakeCode: '', fromDate: '', status: '' })} title="Tải lại">
-              <i className="bi bi-arrow-clockwise"></i> Tải lại
+            <button className={`${styles.iconBtnAction} ${styles.reload}`} onClick={() => setFilters({ stocktakeCode: '', fromDate: '', status: '' })} title="Táº£i láº¡i">
+              <i className="bi bi-arrow-clockwise"></i> Táº£i láº¡i
             </button>
-            <button className={`${styles.iconBtnAction} ${styles.excel}`} onClick={handleExport} title="Xuất ra file excel">
-              <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+            <button className={`${styles.iconBtnAction} ${styles.excel}`} onClick={handleExport} title="Xuáº¥t ra file excel">
+              <i className="bi bi-file-earmark-excel"></i> Xuáº¥t Excel
             </button>
             <button className={styles.btnPrimary} onClick={loadStocktakes}>
-              <i className="bi bi-funnel"></i> Lọc
+              <i className="bi bi-funnel"></i> Lá»c
             </button>
           </div>
         </div>
 
         {selectedIds.length > 0 && (
           <div className={styles.bulkActionsToolbar}>
-            <div className={styles.bulkText}>Đã chọn {selectedIds.length} bảng kiểm kê</div>
+            <div className={styles.bulkText}>ÄÃ£ chá»n {selectedIds.length} báº£ng kiá»ƒm kÃª</div>
             <div className={styles.bulkButtons}>
-               <button className={styles.btnOutline} style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}>Xóa hàng loạt</button>
+               <button className={styles.btnOutline} style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}>XÃ³a hÃ ng loáº¡t</button>
             </div>
           </div>
         )}
@@ -202,13 +202,13 @@ function StocktakeListPage() {
                     onChange={handleSelectAll}
                   />
                 </th>
-                <th>NGÀY</th>
-                <th>SỐ</th>
-                <th>KIỂM KÊ KHO</th>
-                <th>MỤC ĐÍCH</th>
-                <th>KẾT LUẬN</th>
-                <th className={styles.textCenter}>ĐÃ XỬ LÝ</th>
-                <th className={styles.textCenter}>CHỨC NĂNG</th>
+                <th>NGÃ€Y</th>
+                <th>Sá»</th>
+                <th>KIá»‚M KÃŠ KHO</th>
+                <th>Má»¤C ÄÃCH</th>
+                <th>Káº¾T LUáº¬N</th>
+                <th className={styles.textCenter}>ÄÃƒ Xá»¬ LÃ</th>
+                <th className={styles.textCenter}>CHá»¨C NÄ‚NG</th>
               </tr>
             </thead>
             <tbody>
@@ -259,7 +259,7 @@ function StocktakeListPage() {
                         styles.badgeDanger
                       }`}
                       style={{ cursor: 'pointer' }}
-                      title="Nhấn để đổi trạng thái"
+                      title="Nháº¥n Ä‘á»ƒ Ä‘á»•i tráº¡ng thÃ¡i"
                       onClick={(e) => { 
                         e.stopPropagation(); 
                         setEditingRowId(st.id);
@@ -276,7 +276,7 @@ function StocktakeListPage() {
                   <td className={styles.textCenter}>
                     {editingRowId === st.id ? (
                       <>
-                        <i className="bi bi-check-lg" style={{ cursor: 'pointer', color: 'var(--color-success-strong)', fontSize: '18px', marginRight: '12px' }} title="Lưu" onClick={(e) => { 
+                        <i className="bi bi-check-lg" style={{ cursor: 'pointer', color: 'var(--color-success-strong)', fontSize: '18px', marginRight: '12px' }} title="LÆ°u" onClick={(e) => { 
                           e.stopPropagation(); 
                           // Update mock data logic here
                           const updated = stocktakes.map(item => item.id === st.id ? { 
@@ -287,13 +287,13 @@ function StocktakeListPage() {
                           } : item);
                           setStocktakes(updated);
                           setEditingRowId(null);
-                          showToast('success', 'Đã cập nhật trạng thái phiếu kiểm kê!');
+                          showToast('success', 'ÄÃ£ cáº­p nháº­t tráº¡ng thÃ¡i phiáº¿u kiá»ƒm kÃª!');
                         }}></i>
-                        <i className="bi bi-x-lg" style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '18px' }} title="Hủy" onClick={(e) => { e.stopPropagation(); setEditingRowId(null); }}></i>
+                        <i className="bi bi-x-lg" style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '18px' }} title="Há»§y" onClick={(e) => { e.stopPropagation(); setEditingRowId(null); }}></i>
                       </>
                     ) : (
                       <>
-                        <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); navigate(`/stocktakes/${st.id}`); }}></i>
+                        <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }} title="Xem chi tiáº¿t" onClick={(e) => { e.stopPropagation(); navigate(`/stocktakes/${st.id}`); }}></i>
                       </>
                     )}
                   </td>
@@ -303,7 +303,7 @@ function StocktakeListPage() {
                   <td colSpan="8">
                     <div className={styles.emptyState}>
                       <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                      <div className={styles.emptyText}>{loading ? 'Đang tải dữ liệu...' : 'Không có dữ liệu'}</div>
+                      <div className={styles.emptyText}>{loading ? 'Äang táº£i dá»¯ liá»‡u...' : 'KhÃ´ng cÃ³ dá»¯ liá»‡u'}</div>
                     </div>
                   </td>
                 </tr>
@@ -312,7 +312,7 @@ function StocktakeListPage() {
           </table>
 
           <div className={styles.pagination}>
-            <span>Hiển thị {rows.length} bản ghi</span>
+            <span>Hiá»ƒn thá»‹ {rows.length} báº£n ghi</span>
           </div>
         </div>
 

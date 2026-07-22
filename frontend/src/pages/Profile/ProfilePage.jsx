@@ -19,7 +19,7 @@ function ProfilePage() {
 
     const roles = profile?.roles?.length ? profile.roles : [{ code: userRole, name: userRole }];
     const displayRole = roles.map((role) => role.name || role.code).join(', ');
-    const fullName = profile?.fullName || profile?.username || 'NgÆ°á»i dÃ¹ng';
+    const fullName = profile?.fullName || profile?.username || 'NgÃ†Â°Ã¡Â»Âi dÃƒÂ¹ng';
     const initials = useMemo(() => {
         return fullName
             .split(' ')
@@ -37,7 +37,7 @@ function ProfilePage() {
                 const response = await axiosClient.get('/users/me');
                 setProfile(response.data?.data || null);
             } catch (err) {
-                setError(err.response?.data?.userMessage || 'KhÃ´ng thá»ƒ táº£i thÃ´ng tin cÃ¡ nhÃ¢n.');
+                setError(err.response?.data?.userMessage || 'KhÃƒÂ´ng thÃ¡Â»Æ’ tÃ¡ÂºÂ£i thÃƒÂ´ng tin cÃƒÂ¡ nhÃƒÂ¢n.');
             } finally {
                 setLoading(false);
             }
@@ -66,7 +66,7 @@ function ProfilePage() {
             setProfile(updatedProfile);
             emitUserUpdated({ type: 'avatar-updated', user: updatedProfile });
         } catch (err) {
-            setError(err.response?.data?.userMessage || 'KhÃ´ng thá»ƒ táº£i áº£nh Ä‘áº¡i diá»‡n.');
+            setError(err.response?.data?.userMessage || 'KhÃƒÂ´ng thÃ¡Â»Æ’ tÃ¡ÂºÂ£i Ã¡ÂºÂ£nh Ã„â€˜Ã¡ÂºÂ¡i diÃ¡Â»â€¡n.');
         } finally {
             setUploading(false);
         }
@@ -76,17 +76,17 @@ function ProfilePage() {
         <Layout>
             <div className={styles.container}>
                 <div className={styles.header}>
-                    <h2>ThÃ´ng tin cÃ¡ nhÃ¢n</h2>
+                    <h2>ThÃƒÂ´ng tin cÃƒÂ¡ nhÃƒÂ¢n</h2>
                     <div className={styles.breadcrumb}>
                         <span className={styles.breadcrumbLink} onClick={() => navigate('/dashboard')}>Dashboard</span>
                         <i className="fas fa-chevron-right"></i>
-                        <span>ThÃ´ng tin cÃ¡ nhÃ¢n</span>
+                        <span>ThÃƒÂ´ng tin cÃƒÂ¡ nhÃƒÂ¢n</span>
                     </div>
                 </div>
 
                 <div className={styles.profileCard}>
                     {loading ? (
-                        <div className={styles.loadingState}>Äang táº£i thÃ´ng tin...</div>
+                        <div className={styles.loadingState}>Ã„Âang tÃ¡ÂºÂ£i thÃƒÂ´ng tin...</div>
                     ) : (
                         <>
                             {error && <div className={styles.errorState}>{error}</div>}
@@ -106,7 +106,7 @@ function ProfilePage() {
                                     />
                                     <span className={styles.avatarAction}>
                                         <i className={uploading ? 'fas fa-spinner fa-spin' : 'fas fa-camera'}></i>
-                                        {uploading ? 'Äang táº£i...' : 'Äá»•i áº£nh'}
+                                        {uploading ? 'Ã„Âang tÃ¡ÂºÂ£i...' : 'Ã„ÂÃ¡Â»â€¢i Ã¡ÂºÂ£nh'}
                                     </span>
                                 </label>
                                 <h3 className={styles.profileName}>{fullName}</h3>
@@ -115,7 +115,7 @@ function ProfilePage() {
 
                             <div className={styles.detailsSection}>
                                 <div className={styles.detailGroup}>
-                                    <label className={styles.detailLabel}>Há» vÃ  tÃªn</label>
+                                    <label className={styles.detailLabel}>HÃ¡Â»Â vÃƒÂ  tÃƒÂªn</label>
                                     <div className={styles.detailValue}>{fullName}</div>
                                 </div>
 
@@ -125,22 +125,22 @@ function ProfilePage() {
                                 </div>
 
                                 <div className={styles.detailGroup}>
-                                    <label className={styles.detailLabel}>Sá»‘ Ä‘iá»‡n thoáº¡i</label>
+                                    <label className={styles.detailLabel}>SÃ¡Â»â€˜ Ã„â€˜iÃ¡Â»â€¡n thoÃ¡ÂºÂ¡i</label>
                                     <div className={styles.detailValue}>{profile?.phone || '-'}</div>
                                 </div>
 
                                 <div className={styles.detailGroup}>
-                                    <label className={styles.detailLabel}>Vai trÃ² há»‡ thá»‘ng</label>
+                                    <label className={styles.detailLabel}>Vai trÃƒÂ² hÃ¡Â»â€¡ thÃ¡Â»â€˜ng</label>
                                     <div className={styles.detailValue}>{displayRole}</div>
                                 </div>
                             </div>
 
                             <div className={styles.actionsSection}>
                                 <button className={styles.btnPrimary} onClick={() => navigate('/change-password')}>
-                                    <i className="fas fa-key"></i> Äá»•i máº­t kháº©u
+                                    <i className="fas fa-key"></i> Ã„ÂÃ¡Â»â€¢i mÃ¡ÂºÂ­t khÃ¡ÂºÂ©u
                                 </button>
                                 <button className={styles.btnSecondary} onClick={() => navigate('/dashboard')}>
-                                    Quay láº¡i Dashboard
+                                    Quay lÃ¡ÂºÂ¡i Dashboard
                                 </button>
                             </div>
                         </>

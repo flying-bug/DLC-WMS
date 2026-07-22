@@ -9,7 +9,7 @@ const defaultFormData = {
     id: null,
     productCode: '',
     productName: '',
-    productType: 'Hàng hóa',
+    productType: 'HÃ ng hÃ³a',
     categoryId: '',
     brandId: '',
     unitId: '',
@@ -90,9 +90,9 @@ const ProductPage = () => {
 
     const fetchLookups = useCallback(async () => {
         const lookupRequests = [
-            { key: 'units', label: 'đơn vị tính', request: axiosClient.get('/units?size=1000') },
-            { key: 'categories', label: 'danh mục', request: axiosClient.get('/product-categories?size=1000') },
-            { key: 'brands', label: 'thương hiệu', request: axiosClient.get('/brands?size=1000') }
+            { key: 'units', label: 'Ä‘Æ¡n vá»‹ tÃ­nh', request: axiosClient.get('/units?size=1000') },
+            { key: 'categories', label: 'danh má»¥c', request: axiosClient.get('/product-categories?size=1000') },
+            { key: 'brands', label: 'thÆ°Æ¡ng hiá»‡u', request: axiosClient.get('/brands?size=1000') }
         ];
 
         try {
@@ -105,10 +105,10 @@ const ProductPage = () => {
             const failedLabels = results
                 .map((result, index) => result.status === 'rejected' ? lookupRequests[index].label : null)
                 .filter(Boolean);
-            console.error('Lỗi lấy dữ liệu danh mục sản phẩm:', error);
+            console.error('Lá»—i láº¥y dá»¯ liá»‡u danh má»¥c sáº£n pháº©m:', error);
             showToast('error', failedLabels.length
-                ? `Không thể tải ${failedLabels.join(', ')}. Vui lòng kiểm tra quyền xem.`
-                : 'Không thể tải danh mục, thương hiệu hoặc đơn vị tính.');
+                ? `KhÃ´ng thá»ƒ táº£i ${failedLabels.join(', ')}. Vui lÃ²ng kiá»ƒm tra quyá»n xem.`
+                : 'KhÃ´ng thá»ƒ táº£i danh má»¥c, thÆ°Æ¡ng hiá»‡u hoáº·c Ä‘Æ¡n vá»‹ tÃ­nh.');
         }
     }, []);
 
@@ -135,8 +135,8 @@ const ProductPage = () => {
             setOutOfStockCount(outOfStock);
             setLowStockCount(lowStock);
         } catch (error) {
-            console.error('Lỗi lấy danh sách hàng hóa:', error);
-            showToast('error', 'Không thể tải danh sách sản phẩm.');
+            console.error('Lá»—i láº¥y danh sÃ¡ch hÃ ng hÃ³a:', error);
+            showToast('error', 'KhÃ´ng thá»ƒ táº£i danh sÃ¡ch sáº£n pháº©m.');
         } finally {
             setLoading(false);
         }
@@ -189,7 +189,7 @@ const ProductPage = () => {
             id: product.id,
             productCode: product.productCode || '',
             productName: product.productName || '',
-            productType: product.productType || 'Hàng hóa',
+            productType: product.productType || 'HÃ ng hÃ³a',
             categoryId: product.categoryId || '',
             brandId: product.brandId || '',
             unitId: product.unitId || '',
@@ -209,7 +209,7 @@ const ProductPage = () => {
         setFormData(buildInitialFormData({
             productCode: `${product.productCode}-CP`,
             productName: `${product.productName} - Copy`,
-            productType: product.productType || 'Hàng hóa',
+            productType: product.productType || 'HÃ ng hÃ³a',
             categoryId: product.categoryId || '',
             brandId: product.brandId || '',
             unitId: product.unitId || '',
@@ -227,7 +227,7 @@ const ProductPage = () => {
     const buildPayload = (data) => ({
         productCode: data.productCode.trim().toUpperCase(),
         productName: data.productName.trim(),
-        productType: data.productType || 'Hàng hóa',
+        productType: data.productType || 'HÃ ng hÃ³a',
         categoryId: Number(data.categoryId),
         brandId: Number(data.brandId),
         unitId: Number(data.unitId),
@@ -267,13 +267,13 @@ const ProductPage = () => {
     };
 
     const validateForm = () => {
-        if (!formData.productCode.trim()) return 'Mã sản phẩm không được để trống.';
-        if (!formData.productName.trim()) return 'Tên sản phẩm không được để trống.';
-        if (!formData.categoryId) return 'Vui lòng chọn danh mục.';
-        if (!formData.brandId) return 'Vui lòng chọn thương hiệu.';
-        if (!formData.unitId) return 'Vui lòng chọn đơn vị tính.';
-        if (formData.salePrice === '' || Number.isNaN(Number(formData.salePrice))) return 'Giá bán không hợp lệ.';
-        if (Number(formData.salePrice) < 0) return 'Giá bán không được âm.';
+        if (!formData.productCode.trim()) return 'MÃ£ sáº£n pháº©m khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.';
+        if (!formData.productName.trim()) return 'TÃªn sáº£n pháº©m khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.';
+        if (!formData.categoryId) return 'Vui lÃ²ng chá»n danh má»¥c.';
+        if (!formData.brandId) return 'Vui lÃ²ng chá»n thÆ°Æ¡ng hiá»‡u.';
+        if (!formData.unitId) return 'Vui lÃ²ng chá»n Ä‘Æ¡n vá»‹ tÃ­nh.';
+        if (formData.salePrice === '' || Number.isNaN(Number(formData.salePrice))) return 'GiÃ¡ bÃ¡n khÃ´ng há»£p lá»‡.';
+        if (Number(formData.salePrice) < 0) return 'GiÃ¡ bÃ¡n khÃ´ng Ä‘Æ°á»£c Ã¢m.';
         return '';
     };
 
@@ -293,10 +293,10 @@ const ProductPage = () => {
             const payload = buildPayload(formData);
             if (isEdit) {
                 await axiosClient.put(`/products/${formData.id}`, payload);
-                showToast('success', 'Cập nhật sản phẩm thành công.');
+                showToast('success', 'Cáº­p nháº­t sáº£n pháº©m thÃ nh cÃ´ng.');
             } else {
                 await axiosClient.post('/products', payload);
-                showToast('success', 'Thêm sản phẩm thành công.');
+                showToast('success', 'ThÃªm sáº£n pháº©m thÃ nh cÃ´ng.');
             }
             await fetchProducts();
             if (closeAfterSave) {
@@ -305,7 +305,7 @@ const ProductPage = () => {
                 resetAddForm();
             }
         } catch (error) {
-            const message = getErrorMessage(error, 'Có lỗi xảy ra khi lưu sản phẩm.');
+            const message = getErrorMessage(error, 'CÃ³ lá»—i xáº£y ra khi lÆ°u sáº£n pháº©m.');
             setErrorMsg(message);
             showToast('error', message);
         }
@@ -320,23 +320,23 @@ const ProductPage = () => {
             });
             await axiosClient.put(`/products/${product.id}`, payload);
             fetchProducts();
-            showToast('success', product.active ? 'Đã ngừng sử dụng sản phẩm.' : 'Đã kích hoạt sản phẩm.');
+            showToast('success', product.active ? 'ÄÃ£ ngá»«ng sá»­ dá»¥ng sáº£n pháº©m.' : 'ÄÃ£ kÃ­ch hoáº¡t sáº£n pháº©m.');
         } catch (error) {
-            console.error('Lỗi cập nhật trạng thái sản phẩm:', error);
-            showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi cập nhật trạng thái sản phẩm.'));
+            console.error('Lá»—i cáº­p nháº­t tráº¡ng thÃ¡i sáº£n pháº©m:', error);
+            showToast('error', getErrorMessage(error, 'CÃ³ lá»—i xáº£y ra khi cáº­p nháº­t tráº¡ng thÃ¡i sáº£n pháº©m.'));
         }
         setOpenDropdownId(null);
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này không?')) {
+        if (window.confirm('Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a sáº£n pháº©m nÃ y khÃ´ng?')) {
             try {
                 await axiosClient.delete(`/products/${id}`);
                 fetchProducts();
-                showToast('success', 'Xóa sản phẩm thành công.');
+                showToast('success', 'XÃ³a sáº£n pháº©m thÃ nh cÃ´ng.');
             } catch (error) {
-                console.error('Lỗi xóa sản phẩm:', error);
-                showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xóa sản phẩm.'));
+                console.error('Lá»—i xÃ³a sáº£n pháº©m:', error);
+                showToast('error', getErrorMessage(error, 'CÃ³ lá»—i xáº£y ra khi xÃ³a sáº£n pháº©m.'));
             }
         }
         setOpenDropdownId(null);
@@ -348,7 +348,7 @@ const ProductPage = () => {
             const res = await axiosClient.get(`/products/${productId}/variants`);
             setVariants(res.data || []);
         } catch (error) {
-            showToast('error', getErrorMessage(error, 'Không thể tải danh sách SKU.'));
+            showToast('error', getErrorMessage(error, 'KhÃ´ng thá»ƒ táº£i danh sÃ¡ch SKU.'));
         } finally {
             setLoadingVariants(false);
         }
@@ -369,7 +369,7 @@ const ProductPage = () => {
                 }
             }
         } catch (e) {
-            console.error('Lỗi parse specs:', e);
+            console.error('Lá»—i parse specs:', e);
         }
         return [{ id: globalSpecIdCounter++, key: '', value: '' }];
     };
@@ -444,11 +444,11 @@ const ProductPage = () => {
     };
 
     const validateVariantForm = () => {
-        if (!variantForm.sku.trim()) return 'SKU không được để trống.';
-        if (!variantForm.variantName.trim()) return 'Tên SKU không được để trống.';
-        if (variantForm.salePrice === '' || Number.isNaN(Number(variantForm.salePrice))) return 'Giá bán không hợp lệ.';
-        if (Number(variantForm.salePrice) < 0) return 'Giá bán không được âm.';
-        if (Number(variantForm.costPrice || 0) < 0) return 'Giá vốn không được âm.';
+        if (!variantForm.sku.trim()) return 'SKU khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.';
+        if (!variantForm.variantName.trim()) return 'TÃªn SKU khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.';
+        if (variantForm.salePrice === '' || Number.isNaN(Number(variantForm.salePrice))) return 'GiÃ¡ bÃ¡n khÃ´ng há»£p lá»‡.';
+        if (Number(variantForm.salePrice) < 0) return 'GiÃ¡ bÃ¡n khÃ´ng Ä‘Æ°á»£c Ã¢m.';
+        if (Number(variantForm.costPrice || 0) < 0) return 'GiÃ¡ vá»‘n khÃ´ng Ä‘Æ°á»£c Ã¢m.';
         return '';
     };
 
@@ -474,28 +474,28 @@ const ProductPage = () => {
             };
             if (variantForm.id) {
                 await axiosClient.put(`/products/${selectedProduct.id}/variants/${variantForm.id}`, payload);
-                showToast('success', 'Cập nhật SKU thành công.');
+                showToast('success', 'Cáº­p nháº­t SKU thÃ nh cÃ´ng.');
             } else {
                 await axiosClient.post(`/products/${selectedProduct.id}/variants`, payload);
-                showToast('success', 'Thêm SKU thành công.');
+                showToast('success', 'ThÃªm SKU thÃ nh cÃ´ng.');
             }
             resetVariantForm();
             await fetchVariants(selectedProduct.id);
         } catch (error) {
-            const message = getErrorMessage(error, 'Có lỗi xảy ra khi lưu SKU.');
+            const message = getErrorMessage(error, 'CÃ³ lá»—i xáº£y ra khi lÆ°u SKU.');
             setVariantError(message);
             showToast('error', message);
         }
     };
 
     const deleteVariant = async (variantId) => {
-        if (!window.confirm('Bạn có chắc chắn muốn xóa SKU này không?')) return;
+        if (!window.confirm('Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a SKU nÃ y khÃ´ng?')) return;
         try {
             await axiosClient.delete(`/products/${selectedProduct.id}/variants/${variantId}`);
-            showToast('success', 'Xóa SKU thành công.');
+            showToast('success', 'XÃ³a SKU thÃ nh cÃ´ng.');
             await fetchVariants(selectedProduct.id);
         } catch (error) {
-            showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xóa SKU.'));
+            showToast('error', getErrorMessage(error, 'CÃ³ lá»—i xáº£y ra khi xÃ³a SKU.'));
         }
     };
 
@@ -523,10 +523,10 @@ const ProductPage = () => {
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
-            showToast('success', 'Xuất Excel sản phẩm thành công.');
+            showToast('success', 'Xuáº¥t Excel sáº£n pháº©m thÃ nh cÃ´ng.');
         } catch (error) {
-            console.error('Lỗi xuất Excel sản phẩm:', error);
-            showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xuất Excel sản phẩm.'));
+            console.error('Lá»—i xuáº¥t Excel sáº£n pháº©m:', error);
+            showToast('error', getErrorMessage(error, 'CÃ³ lá»—i xáº£y ra khi xuáº¥t Excel sáº£n pháº©m.'));
         }
     };
 
@@ -558,9 +558,9 @@ const ProductPage = () => {
             <div className={styles.container}>
                 <div className={styles.header}>
                     <div className={styles.titleArea}>
-                        <h2>Hàng hóa</h2>
+                        <h2>HÃ ng hÃ³a</h2>
                         <span className={styles.backLink} onClick={() => navigate('/dashboard')}>
-                            <i className="fas fa-chevron-left"></i> Tất cả danh mục
+                            <i className="fas fa-chevron-left"></i> Táº¥t cáº£ danh má»¥c
                         </span>
                     </div>
                 </div>
@@ -572,7 +572,7 @@ const ProductPage = () => {
                         </div>
                         <div className={styles.kpiInfo}>
                             <div className={styles.kpiNumber}>{lowStockCount}</div>
-                            <div className={styles.kpiLabel}>Sản phẩm sắp hết hàng</div>
+                            <div className={styles.kpiLabel}>Sáº£n pháº©m sáº¯p háº¿t hÃ ng</div>
                         </div>
                     </div>
                     <div className={`${styles.kpiCard} ${styles.kpiDanger}`}>
@@ -581,7 +581,7 @@ const ProductPage = () => {
                         </div>
                         <div className={styles.kpiInfo}>
                             <div className={styles.kpiNumber}>{outOfStockCount}</div>
-                            <div className={styles.kpiLabel}>Sản phẩm hết hàng</div>
+                            <div className={styles.kpiLabel}>Sáº£n pháº©m háº¿t hÃ ng</div>
                         </div>
                     </div>
                 </div>
@@ -589,10 +589,10 @@ const ProductPage = () => {
                 <div className={styles.toolbar}>
                     <div className={styles.toolbarLeft}>
                         <div className={styles.bulkDropdown}>
-                            Thực hiện hàng loạt <i className="fas fa-chevron-down"></i>
+                            Thá»±c hiá»‡n hÃ ng loáº¡t <i className="fas fa-chevron-down"></i>
                         </div>
                         <button className={styles.filterBtn}>
-                            <i className="fas fa-filter"></i> Lọc
+                            <i className="fas fa-filter"></i> Lá»c
                         </button>
                     </div>
 
@@ -600,26 +600,26 @@ const ProductPage = () => {
                         <div className={styles.searchBox}>
                             <input
                                 type="text"
-                                placeholder="Tìm theo mã, tên sản phẩm"
+                                placeholder="TÃ¬m theo mÃ£, tÃªn sáº£n pháº©m"
                                 value={tempSearch}
                                 onChange={(event) => setTempSearch(event.target.value)}
                                 onKeyDown={handleSearch}
                             />
                             <i className="fas fa-search" onClick={handleSearchBtnClick}></i>
                         </div>
-                        <button className={styles.iconBtn} onClick={fetchProducts} title="Tải lại">
+                        <button className={styles.iconBtn} onClick={fetchProducts} title="Táº£i láº¡i">
                             <i className="fas fa-sync-alt"></i>
                         </button>
-                        <button className={styles.iconBtn} title="Xuất Excel" onClick={handleExportExcel}>
+                        <button className={styles.iconBtn} title="Xuáº¥t Excel" onClick={handleExportExcel}>
                             <i className="fas fa-file-excel"></i>
                         </button>
-                        <button className={styles.iconBtn} title="Thiết lập cột">
+                        <button className={styles.iconBtn} title="Thiáº¿t láº­p cá»™t">
                             <i className="fas fa-cog"></i>
                         </button>
 
                         <div className={styles.actionBtnGroup}>
                             <button className={styles.addBtn} onClick={handleOpenAdd}>
-                                Thêm
+                                ThÃªm
                             </button>
                             <button className={styles.addMoreDropdownBtn}>
                                 <i className="fas fa-chevron-down"></i>
@@ -635,28 +635,28 @@ const ProductPage = () => {
                                 <th style={{ width: '40px', textAlign: 'center' }}>
                                     <input type="checkbox" />
                                 </th>
-                                <th style={{ width: '100px' }}>Hình ảnh</th>
-                                <th>Mã sản phẩm</th>
-                                <th>Tên sản phẩm</th>
-                                <th style={{ width: '150px' }}>Danh mục</th>
-                                <th style={{ width: '140px' }}>Thương hiệu</th>
-                                <th style={{ width: '120px' }}>Đơn vị tính</th>
-                                <th style={{ textAlign: 'right', width: '140px' }}>Giá bán</th>
-                                <th style={{ textAlign: 'right', width: '120px' }}>Tồn kho</th>
-                                <th style={{ width: '120px', textAlign: 'center' }}>Chức năng</th>
+                                <th style={{ width: '100px' }}>HÃ¬nh áº£nh</th>
+                                <th>MÃ£ sáº£n pháº©m</th>
+                                <th>TÃªn sáº£n pháº©m</th>
+                                <th style={{ width: '150px' }}>Danh má»¥c</th>
+                                <th style={{ width: '140px' }}>ThÆ°Æ¡ng hiá»‡u</th>
+                                <th style={{ width: '120px' }}>ÄÆ¡n vá»‹ tÃ­nh</th>
+                                <th style={{ textAlign: 'right', width: '140px' }}>GiÃ¡ bÃ¡n</th>
+                                <th style={{ textAlign: 'right', width: '120px' }}>Tá»“n kho</th>
+                                <th style={{ width: '120px', textAlign: 'center' }}>Chá»©c nÄƒng</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr>
                                     <td colSpan="10" style={{ textAlign: 'center', padding: '40px' }}>
-                                        <div className={styles.spinner}></div> Đang tải danh sách sản phẩm...
+                                        <div className={styles.spinner}></div> Äang táº£i danh sÃ¡ch sáº£n pháº©m...
                                     </td>
                                 </tr>
                             ) : products.length === 0 ? (
                                 <tr>
                                     <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted-2)' }}>
-                                        Không tìm thấy sản phẩm phù hợp.
+                                        KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m phÃ¹ há»£p.
                                     </td>
                                 </tr>
                             ) : (
@@ -685,7 +685,7 @@ const ProductPage = () => {
                                         <td style={{ textAlign: 'right' }}>{formatQuantity(item.stockQty)}</td>
                                         <td style={{ textAlign: 'center' }}>
                                             <div className={styles.actionCell}>
-                                                <span className={styles.editLink} onClick={() => handleOpenEdit(item)}>Sửa</span>
+                                                <span className={styles.editLink} onClick={() => handleOpenEdit(item)}>Sá»­a</span>
                                                 <button
                                                     className={styles.dropdownBtn}
                                                     onClick={(event) => {
@@ -699,16 +699,16 @@ const ProductPage = () => {
                                                 {openDropdownId === item.id && (
                                                     <div className={styles.dropdownMenu}>
                                                         <div className={styles.dropdownItem} onClick={() => openVariantModal(item)}>
-                                                            Quản lý SKU
+                                                            Quáº£n lÃ½ SKU
                                                         </div>
                                                         <div className={styles.dropdownItem} onClick={() => handleDuplicate(item)}>
-                                                            Nhân bản
+                                                            NhÃ¢n báº£n
                                                         </div>
                                                         <div className={styles.dropdownItem} onClick={() => handleDelete(item.id)}>
-                                                            Xóa
+                                                            XÃ³a
                                                         </div>
                                                         <div className={styles.dropdownItem} onClick={() => handleToggleStatus(item)}>
-                                                            {item.active ? 'Ngừng sử dụng' : 'Sử dụng'}
+                                                            {item.active ? 'Ngá»«ng sá»­ dá»¥ng' : 'Sá»­ dá»¥ng'}
                                                         </div>
                                                     </div>
                                                 )}
@@ -766,7 +766,7 @@ const ProductPage = () => {
                     <div className="misa-modal-overlay">
                         <div className="misa-modal" style={{ width: '800px', maxWidth: '90%' }}>
                             <div className="misa-modal-header">
-                                <h3>{isEdit ? 'Sửa sản phẩm' : 'Thêm sản phẩm'}</h3>
+                                <h3>{isEdit ? 'Sá»­a sáº£n pháº©m' : 'ThÃªm sáº£n pháº©m'}</h3>
                                 <i className="fas fa-times" onClick={() => setShowModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
                             </div>
 
@@ -775,22 +775,22 @@ const ProductPage = () => {
 
                                 <div className="misa-form-row">
                                     <div className="misa-form-group">
-                                        <label>Mã sản phẩm <span className="required">*</span></label>
+                                        <label>MÃ£ sáº£n pháº©m <span className="required">*</span></label>
                                         <input
                                             type="text"
                                             value={formData.productCode}
                                             onChange={(event) => setFormData({ ...formData, productCode: event.target.value })}
-                                            placeholder="Ví dụ: VT00001"
+                                            placeholder="VÃ­ dá»¥: VT00001"
                                             className="misa-input"
                                         />
                                     </div>
                                     <div className="misa-form-group">
-                                        <label>Tên sản phẩm <span className="required">*</span></label>
+                                        <label>TÃªn sáº£n pháº©m <span className="required">*</span></label>
                                         <input
                                             type="text"
                                             value={formData.productName}
                                             onChange={(event) => setFormData({ ...formData, productName: event.target.value })}
-                                            placeholder="Tên đầy đủ của sản phẩm"
+                                            placeholder="TÃªn Ä‘áº§y Ä‘á»§ cá»§a sáº£n pháº©m"
                                             className="misa-input"
                                         />
                                     </div>
@@ -798,13 +798,13 @@ const ProductPage = () => {
 
                                 <div className="misa-form-row">
                                     <div className="misa-form-group">
-                                        <label>Danh mục <span className="required">*</span></label>
+                                        <label>Danh má»¥c <span className="required">*</span></label>
                                         <select
                                             value={formData.categoryId}
                                             onChange={(event) => setFormData({ ...formData, categoryId: event.target.value })}
                                             className="misa-select"
                                         >
-                                            <option value="">-- Chọn danh mục --</option>
+                                            <option value="">-- Chá»n danh má»¥c --</option>
                                             {categories.map((category) => (
                                                 <option key={category.id} value={category.id}>
                                                     {category.code} - {category.name}
@@ -813,13 +813,13 @@ const ProductPage = () => {
                                         </select>
                                     </div>
                                     <div className="misa-form-group">
-                                        <label>Thương hiệu <span className="required">*</span></label>
+                                        <label>ThÆ°Æ¡ng hiá»‡u <span className="required">*</span></label>
                                         <select
                                             value={formData.brandId}
                                             onChange={(event) => setFormData({ ...formData, brandId: event.target.value })}
                                             className="misa-select"
                                         >
-                                            <option value="">-- Chọn thương hiệu --</option>
+                                            <option value="">-- Chá»n thÆ°Æ¡ng hiá»‡u --</option>
                                             {brands.map((brand) => (
                                                 <option key={brand.id} value={brand.id}>
                                                     {brand.code} - {brand.name}
@@ -831,20 +831,20 @@ const ProductPage = () => {
 
                                 <div className="misa-form-row">
                                     <div className="misa-form-group">
-                                        <label>Đơn vị tính <span className="required">*</span></label>
+                                        <label>ÄÆ¡n vá»‹ tÃ­nh <span className="required">*</span></label>
                                         <select
                                             value={formData.unitId}
                                             onChange={(event) => setFormData({ ...formData, unitId: event.target.value })}
                                             className="misa-select"
                                         >
-                                            <option value="">-- Chọn đơn vị tính --</option>
+                                            <option value="">-- Chá»n Ä‘Æ¡n vá»‹ tÃ­nh --</option>
                                             {units.map((unit) => (
                                                 <option key={unit.id} value={unit.id}>{unit.name}</option>
                                             ))}
                                         </select>
                                     </div>
                                     <div className="misa-form-group">
-                                        <label>Giá bán <span className="required">*</span></label>
+                                        <label>GiÃ¡ bÃ¡n <span className="required">*</span></label>
                                         <input
                                             type="number"
                                             min="0"
@@ -889,11 +889,11 @@ const ProductPage = () => {
                                 </div>
 
                                 <div className="misa-form-group">
-                                    <label>Mô tả</label>
+                                    <label>MÃ´ táº£</label>
                                     <textarea
                                         value={formData.description}
                                         onChange={(event) => setFormData({ ...formData, description: event.target.value })}
-                                        placeholder="Mô tả thông số kỹ thuật, quy cách hoặc ghi chú sản phẩm..."
+                                        placeholder="MÃ´ táº£ thÃ´ng sá»‘ ká»¹ thuáº­t, quy cÃ¡ch hoáº·c ghi chÃº sáº£n pháº©m..."
                                         rows="4"
                                         className="misa-input"
                                         style={{ minHeight: '80px', fontFamily: 'inherit', resize: 'vertical' }}
@@ -907,7 +907,7 @@ const ProductPage = () => {
                                             checked={formData.trackSerial}
                                             onChange={(event) => setFormData({ ...formData, trackSerial: event.target.checked })}
                                         />
-                                        <span>Quản lý theo Serial</span>
+                                        <span>Quáº£n lÃ½ theo Serial</span>
                                     </label>
                                     <label className={styles.checkboxLabel}>
                                         <input
@@ -915,16 +915,16 @@ const ProductPage = () => {
                                             checked={formData.active}
                                             onChange={(event) => setFormData({ ...formData, active: event.target.checked })}
                                         />
-                                        <span>Đang sử dụng</span>
+                                        <span>Äang sá»­ dá»¥ng</span>
                                     </label>
                                 </div>
                             </div>
 
                             <div className="misa-modal-footer">
-                                <button className="btn-misa-cancel" onClick={() => setShowModal(false)}>Hủy</button>
+                                <button className="btn-misa-cancel" onClick={() => setShowModal(false)}>Há»§y</button>
                                 <div style={{ display: 'flex', gap: '12px' }}>
-                                    <button className="btn-misa-draft" onClick={() => handleSave(false)}>Cất và Thêm</button>
-                                    <button className="btn-misa-save" onClick={() => handleSave(true)}>Cất</button>
+                                    <button className="btn-misa-draft" onClick={() => handleSave(false)}>Cáº¥t vÃ  ThÃªm</button>
+                                    <button className="btn-misa-save" onClick={() => handleSave(true)}>Cáº¥t</button>
                                 </div>
                             </div>
                         </div>
@@ -935,7 +935,7 @@ const ProductPage = () => {
                     <div className="misa-modal-overlay">
                         <div className="misa-modal" style={{ width: '900px', maxWidth: '95vw', maxHeight: '90vh' }}>
                             <div className="misa-modal-header">
-                                <h3>Quản lý SKU - {selectedProduct.productCode}</h3>
+                                <h3>Quáº£n lÃ½ SKU - {selectedProduct.productCode}</h3>
                                 <i className="fas fa-times" onClick={() => setShowVariantModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
                             </div>
 
@@ -950,24 +950,24 @@ const ProductPage = () => {
                                             value={variantForm.sku}
                                             onChange={(event) => setVariantForm({ ...variantForm, sku: event.target.value })}
                                             className="misa-input"
-                                            placeholder="Ví dụ: DELL-5420-I5-8G"
+                                            placeholder="VÃ­ dá»¥: DELL-5420-I5-8G"
                                         />
                                     </div>
                                     <div className="misa-form-group">
-                                        <label>Tên SKU <span className="required">*</span></label>
+                                        <label>TÃªn SKU <span className="required">*</span></label>
                                         <input
                                             type="text"
                                             value={variantForm.variantName}
                                             onChange={(event) => setVariantForm({ ...variantForm, variantName: event.target.value })}
                                             className="misa-input"
-                                            placeholder="Ví dụ: i5 / 8GB / 256GB"
+                                            placeholder="VÃ­ dá»¥: i5 / 8GB / 256GB"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="misa-form-row">
                                     <div className="misa-form-group">
-                                        <label>Giá vốn</label>
+                                        <label>GiÃ¡ vá»‘n</label>
                                         <input
                                             type="number"
                                             min="0"
@@ -978,7 +978,7 @@ const ProductPage = () => {
                                         />
                                     </div>
                                     <div className="misa-form-group">
-                                        <label>Giá bán <span className="required">*</span></label>
+                                        <label>GiÃ¡ bÃ¡n <span className="required">*</span></label>
                                         <input
                                             type="number"
                                             min="0"
@@ -992,7 +992,7 @@ const ProductPage = () => {
 
                                 <div className="misa-form-row">
                                     <div className="misa-form-group">
-                                        <label>Mã nhà sản xuất / Part number</label>
+                                        <label>MÃ£ nhÃ  sáº£n xuáº¥t / Part number</label>
                                         <input
                                             type="text"
                                             value={variantForm.manufacturerPartNumber}
@@ -1001,21 +1001,21 @@ const ProductPage = () => {
                                         />
                                     </div>
                                     <div className="misa-form-group">
-                                        <label>Trạng thái</label>
+                                        <label>Tráº¡ng thÃ¡i</label>
                                         <label className={styles.checkboxLabel} style={{ minHeight: 34 }}>
                                             <input
                                                 type="checkbox"
                                                 checked={variantForm.active}
                                                 onChange={(event) => setVariantForm({ ...variantForm, active: event.target.checked })}
                                             />
-                                            <span>Đang sử dụng</span>
+                                            <span>Äang sá»­ dá»¥ng</span>
                                         </label>
                                     </div>
                                 </div>
 
                                 <div className="misa-form-group">
                                     <div className={styles.specHeader}>
-                                        <label style={{ margin: 0 }}>Thông số kỹ thuật sản phẩm</label>
+                                        <label style={{ margin: 0 }}>ThÃ´ng sá»‘ ká»¹ thuáº­t sáº£n pháº©m</label>
                                         <button
                                             type="button"
                                             className={styles.toggleJsonBtn}
@@ -1028,7 +1028,7 @@ const ProductPage = () => {
                                                 setUseRawJson(!useRawJson);
                                             }}
                                         >
-                                            {useRawJson ? 'Chuyển sang dạng Bảng nhập' : 'Chuyển sang nhập JSON trực tiếp'}
+                                            {useRawJson ? 'Chuyá»ƒn sang dáº¡ng Báº£ng nháº­p' : 'Chuyá»ƒn sang nháº­p JSON trá»±c tiáº¿p'}
                                         </button>
                                     </div>
 
@@ -1048,14 +1048,14 @@ const ProductPage = () => {
                                                     <input
                                                         type="text"
                                                         className={`misa-input ${styles.specKeyInput}`}
-                                                        placeholder="Tên thông số (Ví dụ: RAM, CPU, DPI...)"
+                                                        placeholder="TÃªn thÃ´ng sá»‘ (VÃ­ dá»¥: RAM, CPU, DPI...)"
                                                         value={item.key}
                                                         onChange={(e) => handleSpecChange(item.id, 'key', e.target.value)}
                                                     />
                                                     <input
                                                         type="text"
                                                         className={`misa-input ${styles.specValueInput}`}
-                                                        placeholder="Giá trị (Ví dụ: 16GB, Core i7, 16000 DPI...)"
+                                                        placeholder="GiÃ¡ trá»‹ (VÃ­ dá»¥: 16GB, Core i7, 16000 DPI...)"
                                                         value={item.value}
                                                         onChange={(e) => handleSpecChange(item.id, 'value', e.target.value)}
                                                     />
@@ -1063,7 +1063,7 @@ const ProductPage = () => {
                                                         type="button"
                                                         className={styles.removeSpecBtn}
                                                         onClick={() => handleRemoveSpecRow(item.id)}
-                                                        title="Xóa dòng"
+                                                        title="XÃ³a dÃ²ng"
                                                     >
                                                         <i className="fas fa-trash-alt"></i>
                                                     </button>
@@ -1074,16 +1074,16 @@ const ProductPage = () => {
                                                 className={styles.addSpecBtn}
                                                 onClick={handleAddSpecRow}
                                             >
-                                                <i className="fas fa-plus" style={{ marginRight: 6 }}></i> Thêm dòng thông số
+                                                <i className="fas fa-plus" style={{ marginRight: 6 }}></i> ThÃªm dÃ²ng thÃ´ng sá»‘
                                             </button>
                                         </div>
                                     )}
                                 </div>
 
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginBottom: 16 }}>
-                                    <button className="btn-misa-cancel" type="button" onClick={resetVariantForm}>Nhập lại</button>
+                                    <button className="btn-misa-cancel" type="button" onClick={resetVariantForm}>Nháº­p láº¡i</button>
                                     <button className="btn-misa-save" type="button" onClick={saveVariant}>
-                                        {variantForm.id ? 'Cập nhật SKU' : 'Thêm SKU'}
+                                        {variantForm.id ? 'Cáº­p nháº­t SKU' : 'ThÃªm SKU'}
                                     </button>
                                 </div>
 
@@ -1092,21 +1092,21 @@ const ProductPage = () => {
                                         <thead>
                                             <tr>
                                                 <th>SKU</th>
-                                                <th>Tên SKU</th>
-                                                <th style={{ textAlign: 'right' }}>Giá vốn</th>
-                                                <th style={{ textAlign: 'right' }}>Giá bán</th>
-                                                <th>Trạng thái</th>
-                                                <th style={{ textAlign: 'center' }}>Chức năng</th>
+                                                <th>TÃªn SKU</th>
+                                                <th style={{ textAlign: 'right' }}>GiÃ¡ vá»‘n</th>
+                                                <th style={{ textAlign: 'right' }}>GiÃ¡ bÃ¡n</th>
+                                                <th>Tráº¡ng thÃ¡i</th>
+                                                <th style={{ textAlign: 'center' }}>Chá»©c nÄƒng</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {loadingVariants ? (
                                                 <tr>
-                                                    <td colSpan="6" style={{ textAlign: 'center', padding: 24 }}>Đang tải SKU...</td>
+                                                    <td colSpan="6" style={{ textAlign: 'center', padding: 24 }}>Äang táº£i SKU...</td>
                                                 </tr>
                                             ) : variants.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan="6" style={{ textAlign: 'center', padding: 24 }}>Chưa có SKU.</td>
+                                                    <td colSpan="6" style={{ textAlign: 'center', padding: 24 }}>ChÆ°a cÃ³ SKU.</td>
                                                 </tr>
                                             ) : (
                                                 variants.map((variant) => (
@@ -1115,11 +1115,11 @@ const ProductPage = () => {
                                                         <td>{variant.variantName}</td>
                                                         <td style={{ textAlign: 'right' }}>{formatCurrency(variant.costPrice)}</td>
                                                         <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(variant.salePrice)}</td>
-                                                        <td>{variant.active === false ? 'Ngừng sử dụng' : 'Đang sử dụng'}</td>
+                                                        <td>{variant.active === false ? 'Ngá»«ng sá»­ dá»¥ng' : 'Äang sá»­ dá»¥ng'}</td>
                                                         <td style={{ textAlign: 'center' }}>
-                                                            <span className={styles.editLink} onClick={() => editVariant(variant)}>Sửa</span>
+                                                            <span className={styles.editLink} onClick={() => editVariant(variant)}>Sá»­a</span>
                                                             <span style={{ margin: '0 8px', color: 'var(--color-border-field)' }}>|</span>
-                                                            <span className={styles.editLink} onClick={() => deleteVariant(variant.id)}>Xóa</span>
+                                                            <span className={styles.editLink} onClick={() => deleteVariant(variant.id)}>XÃ³a</span>
                                                         </td>
                                                     </tr>
                                                 ))
@@ -1130,7 +1130,7 @@ const ProductPage = () => {
                             </div>
 
                             <div className="misa-modal-footer">
-                                <button className="btn-misa-cancel" onClick={() => setShowVariantModal(false)}>Đóng</button>
+                                <button className="btn-misa-cancel" onClick={() => setShowVariantModal(false)}>ÄÃ³ng</button>
                             </div>
                         </div>
                     </div>

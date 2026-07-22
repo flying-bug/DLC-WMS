@@ -11,14 +11,14 @@ const unwrap = (response) => response?.data?.data ?? response?.data;
 
 const readPartner = (warranty) => ({
     id: warranty.partnerId || warranty.partner?.id,
-    name: warranty.partnerName || warranty.customerName || warranty.partner?.name || 'Khách lẻ',
-    phone: warranty.partnerPhone || warranty.customerPhone || warranty.partner?.phone || 'Chưa có'
+    name: warranty.partnerName || warranty.customerName || warranty.partner?.name || 'KhÃ¡ch láº»',
+    phone: warranty.partnerPhone || warranty.customerPhone || warranty.partner?.phone || 'ChÆ°a cÃ³'
 });
 
 const readSerial = (warranty) => ({
     id: warranty.serialNumberId || warranty.serialNumber?.id,
-    code: warranty.serialCode || warranty.serialNumber || warranty.serialNumberValue || warranty.serialNumber?.serialNo || warranty.serialNumber?.serialNumber || 'Chưa có',
-    productName: warranty.productName || warranty.variantName || warranty.serialNumber?.productName || warranty.serialNumber?.variant?.variantName || 'Chưa rõ sản phẩm'
+    code: warranty.serialCode || warranty.serialNumber || warranty.serialNumberValue || warranty.serialNumber?.serialNo || warranty.serialNumber?.serialNumber || 'ChÆ°a cÃ³',
+    productName: warranty.productName || warranty.variantName || warranty.serialNumber?.productName || warranty.serialNumber?.variant?.variantName || 'ChÆ°a rÃµ sáº£n pháº©m'
 });
 
 function CreateRepairTicketPage() {
@@ -52,7 +52,7 @@ function CreateRepairTicketPage() {
             setWarranty(unwrap(response));
         } catch (err) {
             setWarranty(null);
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được thông tin bảo hành.');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº£i Ä‘Æ°á»£c thÃ´ng tin báº£o hÃ nh.');
         } finally {
             setLoadingWarranty(false);
         }
@@ -108,7 +108,7 @@ function CreateRepairTicketPage() {
 
     const submit = async () => {
         if (!canSubmit) {
-            setError('Vui lòng chọn bảo hành và nhập mô tả lỗi.');
+            setError('Vui lÃ²ng chá»n báº£o hÃ nh vÃ  nháº­p mÃ´ táº£ lá»—i.');
             return;
         }
         setSaving(true);
@@ -118,7 +118,7 @@ function CreateRepairTicketPage() {
             const created = unwrap(response);
             navigate(created?.id ? `/repair-tickets/${created.id}/edit` : `/warranties/${warrantyId}`);
         } catch (err) {
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tạo được phiếu sửa chữa.');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº¡o Ä‘Æ°á»£c phiáº¿u sá»­a chá»¯a.');
         } finally {
             setSaving(false);
         }
@@ -131,16 +131,16 @@ function CreateRepairTicketPage() {
                     <div>
                         <button className={styles.backButton} type="button" onClick={() => navigate(warrantyId ? `/warranties/${warrantyId}` : '/warranties')}>
                             <i className="bi bi-arrow-left"></i>
-                            Quay lại bảo hành
+                            Quay láº¡i báº£o hÃ nh
                         </button>
-                        <h1 className={styles.title}>Tạo phiếu sửa chữa</h1>
-                        <p className={styles.subtitle}>Ghi nhận lỗi, chẩn đoán ban đầu và linh kiện dự kiến cho hồ sơ bảo hành.</p>
+                        <h1 className={styles.title}>Táº¡o phiáº¿u sá»­a chá»¯a</h1>
+                        <p className={styles.subtitle}>Ghi nháº­n lá»—i, cháº©n Ä‘oÃ¡n ban Ä‘áº§u vÃ  linh kiá»‡n dá»± kiáº¿n cho há»“ sÆ¡ báº£o hÃ nh.</p>
                     </div>
                     <div className={styles.headerActions}>
-                        <button className="btn-misa-cancel" type="button" onClick={() => navigate(warrantyId ? `/warranties/${warrantyId}` : '/warranties')}>Hủy</button>
+                        <button className="btn-misa-cancel" type="button" onClick={() => navigate(warrantyId ? `/warranties/${warrantyId}` : '/warranties')}>Há»§y</button>
                         <button className="btn-misa-save" type="button" onClick={submit} disabled={saving || !canSubmit}>
                             <i className="bi bi-check2"></i>
-                            {saving ? 'Đang lưu...' : 'Lưu phiếu sửa'}
+                            {saving ? 'Äang lÆ°u...' : 'LÆ°u phiáº¿u sá»­a'}
                         </button>
                     </div>
                 </div>
@@ -151,49 +151,49 @@ function CreateRepairTicketPage() {
                     <section className={styles.card}>
                         <div className={styles.cardTitle}>
                             <i className="bi bi-shield-check"></i>
-                            Bảo hành liên kết
+                            Báº£o hÃ nh liÃªn káº¿t
                         </div>
                         {loadingWarranty ? (
-                            <div className={styles.emptyBox}>Đang tải bảo hành...</div>
+                            <div className={styles.emptyBox}>Äang táº£i báº£o hÃ nh...</div>
                         ) : warranty ? (
                             <div className={styles.infoGrid}>
-                                <InfoItem label="Mã bảo hành" value={warranty.warrantyCode} />
-                                <InfoItem label="Khách hàng" value={partner.name} />
-                                <InfoItem label="Điện thoại" value={partner.phone} />
+                                <InfoItem label="MÃ£ báº£o hÃ nh" value={warranty.warrantyCode} />
+                                <InfoItem label="KhÃ¡ch hÃ ng" value={partner.name} />
+                                <InfoItem label="Äiá»‡n thoáº¡i" value={partner.phone} />
                                 <InfoItem label="Serial" value={serial.code} />
-                                <InfoItem label="Sản phẩm" value={serial.productName} wide />
+                                <InfoItem label="Sáº£n pháº©m" value={serial.productName} wide />
                             </div>
                         ) : (
-                            <div className={styles.emptyBox}>Mở màn hình từ chi tiết bảo hành để tự động liên kết warrantyId.</div>
+                            <div className={styles.emptyBox}>Má»Ÿ mÃ n hÃ¬nh tá»« chi tiáº¿t báº£o hÃ nh Ä‘á»ƒ tá»± Ä‘á»™ng liÃªn káº¿t warrantyId.</div>
                         )}
                     </section>
 
                     <section className={styles.card}>
                         <div className={styles.cardTitle}>
                             <i className="bi bi-file-earmark-medical"></i>
-                            Thông tin phiếu
+                            ThÃ´ng tin phiáº¿u
                         </div>
                         <div className="misa-form-row">
                             <div className="misa-form-group">
-                                <label className="misa-label">Mã phiếu sửa</label>
-                                <input className="misa-input" value={form.repairCode} onChange={(event) => updateForm('repairCode', event.target.value)} placeholder="Để trống để tự sinh" />
+                                <label className="misa-label">MÃ£ phiáº¿u sá»­a</label>
+                                <input className="misa-input" value={form.repairCode} onChange={(event) => updateForm('repairCode', event.target.value)} placeholder="Äá»ƒ trá»‘ng Ä‘á»ƒ tá»± sinh" />
                             </div>
                             <div className="misa-form-group">
-                                <label className="misa-label">Ngày tiếp nhận <span className="required">*</span></label>
+                                <label className="misa-label">NgÃ y tiáº¿p nháº­n <span className="required">*</span></label>
                                 <input type="date" className="misa-input" value={form.receivedDate} onChange={(event) => updateForm('receivedDate', event.target.value)} />
                             </div>
                         </div>
                         <div className="misa-form-row" style={{ marginTop: '12px' }}>
                             <div className="misa-form-group">
-                                <label className="misa-label">Trạng thái</label>
+                                <label className="misa-label">Tráº¡ng thÃ¡i</label>
                                 <select className="misa-select" value={form.repairStatus} onChange={(event) => updateForm('repairStatus', event.target.value)}>
-                                    <option value="RECEIVED">Đã tiếp nhận</option>
-                                    <option value="REPAIRING">Đang sửa</option>
-                                    <option value="DRAFT">Nháp</option>
+                                    <option value="RECEIVED">ÄÃ£ tiáº¿p nháº­n</option>
+                                    <option value="REPAIRING">Äang sá»­a</option>
+                                    <option value="DRAFT">NhÃ¡p</option>
                                 </select>
                             </div>
                             <div className="misa-form-group">
-                                <label className="misa-label">Ngày dự kiến xong</label>
+                                <label className="misa-label">NgÃ y dá»± kiáº¿n xong</label>
                                 <input type="date" className="misa-input" value={form.expectedDate} onChange={(event) => updateForm('expectedDate', event.target.value)} />
                             </div>
                         </div>
@@ -203,25 +203,25 @@ function CreateRepairTicketPage() {
                 <section className={styles.card} style={{ marginTop: '20px' }}>
                     <div className={styles.cardTitle}>
                         <i className="bi bi-clipboard2-pulse"></i>
-                        Nội dung sửa chữa
+                        Ná»™i dung sá»­a chá»¯a
                     </div>
                     <div className="misa-form-row">
                         <div className="misa-form-group">
-                            <label className="misa-label">Mô tả lỗi khách báo <span className="required">*</span></label>
-                            <textarea className="misa-textarea" value={form.issueDescription} onChange={(event) => updateForm('issueDescription', event.target.value)} rows="3" placeholder="Nhập hiện tượng lỗi, thời điểm phát sinh..." />
+                            <label className="misa-label">MÃ´ táº£ lá»—i khÃ¡ch bÃ¡o <span className="required">*</span></label>
+                            <textarea className="misa-textarea" value={form.issueDescription} onChange={(event) => updateForm('issueDescription', event.target.value)} rows="3" placeholder="Nháº­p hiá»‡n tÆ°á»£ng lá»—i, thá»i Ä‘iá»ƒm phÃ¡t sinh..." />
                         </div>
                         <div className="misa-form-group">
-                            <label className="misa-label">Chẩn đoán ban đầu</label>
-                            <textarea className="misa-textarea" value={form.diagnosisNote} onChange={(event) => updateForm('diagnosisNote', event.target.value)} rows="3" placeholder="Nhập kết quả kiểm tra ban đầu..." />
+                            <label className="misa-label">Cháº©n Ä‘oÃ¡n ban Ä‘áº§u</label>
+                            <textarea className="misa-textarea" value={form.diagnosisNote} onChange={(event) => updateForm('diagnosisNote', event.target.value)} rows="3" placeholder="Nháº­p káº¿t quáº£ kiá»ƒm tra ban Ä‘áº§u..." />
                         </div>
                     </div>
                     <div className="misa-form-row" style={{ marginTop: '12px' }}>
                         <div className="misa-form-group">
-                            <label className="misa-label">Ghi chú nội bộ</label>
-                            <textarea className="misa-textarea" value={form.note} onChange={(event) => updateForm('note', event.target.value)} rows="2" placeholder="Ghi chú cho kỹ thuật/kho..." />
+                            <label className="misa-label">Ghi chÃº ná»™i bá»™</label>
+                            <textarea className="misa-textarea" value={form.note} onChange={(event) => updateForm('note', event.target.value)} rows="2" placeholder="Ghi chÃº cho ká»¹ thuáº­t/kho..." />
                         </div>
                         <div className="misa-form-group">
-                            <label className="misa-label">Chi phí dự kiến</label>
+                            <label className="misa-label">Chi phÃ­ dá»± kiáº¿n</label>
                             <input type="number" min="0" className="misa-input" value={form.repairCost} onChange={(event) => updateForm('repairCost', event.target.value)} />
                         </div>
                     </div>
@@ -231,20 +231,20 @@ function CreateRepairTicketPage() {
                     <div className={styles.sectionHeader}>
                         <div className={styles.cardTitle}>
                             <i className="bi bi-cpu"></i>
-                            Linh kiện dự kiến
+                            Linh kiá»‡n dá»± kiáº¿n
                         </div>
                         <button className={styles.outlineButton} type="button" onClick={addPart}>
                             <i className="bi bi-plus-lg"></i>
-                            Thêm dòng
+                            ThÃªm dÃ²ng
                         </button>
                     </div>
                     <div className={styles.tableWrap}>
                         <table className={styles.table}>
                             <thead>
                                 <tr>
-                                    <th>SKU linh kiện</th>
-                                    <th style={{ width: '120px' }}>Số lượng</th>
-                                    <th>Ghi chú</th>
+                                    <th>SKU linh kiá»‡n</th>
+                                    <th style={{ width: '120px' }}>Sá»‘ lÆ°á»£ng</th>
+                                    <th>Ghi chÃº</th>
                                     <th style={{ width: '50px' }}></th>
                                 </tr>
                             </thead>
@@ -258,10 +258,10 @@ function CreateRepairTicketPage() {
                                             <input type="number" min="1" className="misa-input" style={{ height: '32px', padding: '0 8px', textAlign: 'center', fontSize: '13px' }} value={part.quantity} onChange={(event) => updatePart(part.localId, 'quantity', event.target.value)} />
                                         </td>
                                         <td>
-                                            <input className="misa-input" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={part.note} onChange={(event) => updatePart(part.localId, 'note', event.target.value)} placeholder="Lý do thay/thêm linh kiện" />
+                                            <input className="misa-input" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={part.note} onChange={(event) => updatePart(part.localId, 'note', event.target.value)} placeholder="LÃ½ do thay/thÃªm linh kiá»‡n" />
                                         </td>
                                         <td className={styles.actionCell}>
-                                            <button className={styles.iconButton} type="button" onClick={() => removePart(part.localId)} title="Xóa dòng">
+                                            <button className={styles.iconButton} type="button" onClick={() => removePart(part.localId)} title="XÃ³a dÃ²ng">
                                                 <i className="bi bi-trash"></i>
                                             </button>
                                         </td>
@@ -280,7 +280,7 @@ function InfoItem({ label, value, wide = false }) {
     return (
         <div className={wide ? styles.infoItemWide : styles.infoItem}>
             <span className={styles.infoLabel}>{label}</span>
-            <strong className={styles.infoValue}>{value || 'Chưa có'}</strong>
+            <strong className={styles.infoValue}>{value || 'ChÆ°a cÃ³'}</strong>
         </div>
     );
 }

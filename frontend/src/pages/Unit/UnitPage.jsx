@@ -25,11 +25,11 @@ const UnitPage = () => {
     const [openDropdownId, setOpenDropdownId] = useState(null);
 
     const handleExport = () => {
-        const headers = ['Đơn vị tính', 'Mô tả', 'Trạng thái'];
+        const headers = ['ÄÆ¡n vá»‹ tÃ­nh', 'MÃ´ táº£', 'Tráº¡ng thÃ¡i'];
         const data = units.map(unit => [
             unit.name,
             unit.description || '',
-            unit.status === 'ACTIVE' ? 'Đang sử dụng' : 'Ngừng sử dụng'
+            unit.status === 'ACTIVE' ? 'Äang sá»­ dá»¥ng' : 'Ngá»«ng sá»­ dá»¥ng'
         ]);
         exportToExcel(headers, data, 'Danh_sach_don_vi_tinh');
     };
@@ -97,15 +97,15 @@ const UnitPage = () => {
             await axiosClient.put(`/units/${unit.id}`, { ...unit, status: newStatus });
             fetchUnits();
         } catch (error) {
-            console.error("Lỗi thay đổi trạng thái:", error);
-            alert(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái!');
+            console.error("Lá»—i thay Ä‘á»•i tráº¡ng thÃ¡i:", error);
+            alert(error.response?.data?.userMessage || error.response?.data?.message || 'CÃ³ lá»—i xáº£y ra khi cáº­p nháº­t tráº¡ng thÃ¡i!');
         }
         setOpenDropdownId(null);
     };
 
     const handleSave = async (closeAfterSave = true) => {
         if (!formData.name.trim()) {
-            setErrorMsg('Đơn vị tính không được để trống.');
+            setErrorMsg('ÄÆ¡n vá»‹ tÃ­nh khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.');
             return;
         }
 
@@ -119,23 +119,23 @@ const UnitPage = () => {
             if (closeAfterSave) {
                 setShowModal(false);
             } else {
-                // Giữ modal mở để thêm tiếp
+                // Giá»¯ modal má»Ÿ Ä‘á»ƒ thÃªm tiáº¿p
                 setFormData({ id: null, name: '', description: '', status: 'ACTIVE' });
                 setIsEdit(false);
             }
         } catch (error) {
-            setErrorMsg(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi lưu.');
+            setErrorMsg(error.response?.data?.userMessage || error.response?.data?.message || 'CÃ³ lá»—i xáº£y ra khi lÆ°u.');
         }
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa đơn vị tính này không?')) {
+        if (window.confirm('Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a Ä‘Æ¡n vá»‹ tÃ­nh nÃ y khÃ´ng?')) {
             try {
                 await axiosClient.delete(`/units/${id}`);
                 fetchUnits();
             } catch (error) {
-                console.error("Lỗi xóa đơn vị:", error);
-                alert(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
+                console.error("Lá»—i xÃ³a Ä‘Æ¡n vá»‹:", error);
+                alert(error.response?.data?.userMessage || error.response?.data?.message || 'CÃ³ lá»—i xáº£y ra khi xÃ³a!');
             }
         }
         setOpenDropdownId(null);
@@ -145,9 +145,9 @@ const UnitPage = () => {
         <AdminLayout activeTab="dashboard">
             <div className={styles.container}>
                 <div className={styles.header}>
-                    <h2>Đơn vị tính</h2>
+                    <h2>ÄÆ¡n vá»‹ tÃ­nh</h2>
                     <div className={styles.breadcrumb}>
-                        <i className="fas fa-chevron-left"></i> Tất cả danh mục
+                        <i className="fas fa-chevron-left"></i> Táº¥t cáº£ danh má»¥c
                     </div>
                 </div>
 
@@ -155,7 +155,7 @@ const UnitPage = () => {
                     <div className={styles.searchBox}>
                         <input
                             type="text"
-                            placeholder="Tìm kiếm theo đơn vị tính"
+                            placeholder="TÃ¬m kiáº¿m theo Ä‘Æ¡n vá»‹ tÃ­nh"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             onKeyDown={handleSearch}
@@ -163,9 +163,9 @@ const UnitPage = () => {
                         <i className="fas fa-search" onClick={() => { setPage(0); fetchUnits(); }}></i>
                     </div>
                     <div className={styles.actions}>
-                        <button className={styles.iconBtn} onClick={fetchUnits} title="Tải lại"><i className="fas fa-sync-alt"></i></button>
-                        <button className={styles.iconBtn} onClick={handleExport} title="Xuất Excel"><i className="fas fa-file-excel" style={{color: 'var(--color-excel)'}}></i></button>
-                        <button className={styles.primaryBtn} onClick={openAddModal}>Thêm</button>
+                        <button className={styles.iconBtn} onClick={fetchUnits} title="Táº£i láº¡i"><i className="fas fa-sync-alt"></i></button>
+                        <button className={styles.iconBtn} onClick={handleExport} title="Xuáº¥t Excel"><i className="fas fa-file-excel" style={{color: 'var(--color-excel)'}}></i></button>
+                        <button className={styles.primaryBtn} onClick={openAddModal}>ThÃªm</button>
                     </div>
                 </div>
 
@@ -173,25 +173,25 @@ const UnitPage = () => {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th>Đơn vị tính</th>
-                                <th>Mô tả</th>
-                                <th>Trạng thái</th>
-                                <th style={{ textAlign: 'center', width: '100px' }}>Chức năng</th>
+                                <th>ÄÆ¡n vá»‹ tÃ­nh</th>
+                                <th>MÃ´ táº£</th>
+                                <th>Tráº¡ng thÃ¡i</th>
+                                <th style={{ textAlign: 'center', width: '100px' }}>Chá»©c nÄƒng</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>Đang tải dữ liệu...</td></tr>
+                                <tr><td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>Äang táº£i dá»¯ liá»‡u...</td></tr>
                             ) : units.length === 0 ? (
-                                <tr><td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>Không có dữ liệu.</td></tr>
+                                <tr><td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>KhÃ´ng cÃ³ dá»¯ liá»‡u.</td></tr>
                             ) : (
                                 units.map((unit) => (
                                     <tr key={unit.id}>
                                         <td>{unit.name}</td>
                                         <td>{unit.description}</td>
-                                        <td>{unit.status === 'ACTIVE' ? 'Đang sử dụng' : 'Ngừng sử dụng'}</td>
+                                        <td>{unit.status === 'ACTIVE' ? 'Äang sá»­ dá»¥ng' : 'Ngá»«ng sá»­ dá»¥ng'}</td>
                                         <td className={styles.actionCell}>
-                                            <span className={styles.editText} onClick={() => openEditModal(unit)}>Sửa</span>
+                                            <span className={styles.editText} onClick={() => openEditModal(unit)}>Sá»­a</span>
 
                                             <div className={styles.dropdownContainer}>
                                                 <div
@@ -206,10 +206,10 @@ const UnitPage = () => {
 
                                                 {openDropdownId === unit.id && (
                                                     <div className={styles.dropdownMenu}>
-                                                        <div className={styles.dropdownItem} onClick={() => handleDuplicate(unit)}>Nhân bản</div>
-                                                        <div className={styles.dropdownItem} onClick={() => handleDelete(unit.id)}>Xóa</div>
+                                                        <div className={styles.dropdownItem} onClick={() => handleDuplicate(unit)}>NhÃ¢n báº£n</div>
+                                                        <div className={styles.dropdownItem} onClick={() => handleDelete(unit.id)}>XÃ³a</div>
                                                         <div className={styles.dropdownItem} onClick={() => handleToggleStatus(unit)}>
-                                                            {unit.status === 'ACTIVE' ? 'Ngừng sử dụng' : 'Sử dụng'}
+                                                            {unit.status === 'ACTIVE' ? 'Ngá»«ng sá»­ dá»¥ng' : 'Sá»­ dá»¥ng'}
                                                         </div>
                                                     </div>
                                                 )}
@@ -224,19 +224,19 @@ const UnitPage = () => {
 
                 {/* Pagination */}
                 <div className={styles.pagination}>
-                    <div className={styles.totalInfo}>Tổng số: <b>{totalElements}</b> bản ghi</div>
+                    <div className={styles.totalInfo}>Tá»•ng sá»‘: <b>{totalElements}</b> báº£n ghi</div>
                     <div className={styles.pageControls}>
                         <select value={size} onChange={(e) => { setSize(Number(e.target.value)); setPage(0); }}>
-                            <option value={10}>10 bản ghi trên 1 trang</option>
-                            <option value={20}>20 bản ghi trên 1 trang</option>
-                            <option value={30}>30 bản ghi trên 1 trang</option>
-                            <option value={50}>50 bản ghi trên 1 trang</option>
+                            <option value={10}>10 báº£n ghi trÃªn 1 trang</option>
+                            <option value={20}>20 báº£n ghi trÃªn 1 trang</option>
+                            <option value={30}>30 báº£n ghi trÃªn 1 trang</option>
+                            <option value={50}>50 báº£n ghi trÃªn 1 trang</option>
                         </select>
                         <span
                             className={`${styles.pageBtn} ${page === 0 ? styles.disabled : ''}`}
                             onClick={() => page > 0 && setPage(page - 1)}
                         >
-                            Trước
+                            TrÆ°á»›c
                         </span>
                         <span className={styles.currentPage}>{page + 1}</span>
                         <span
@@ -248,19 +248,19 @@ const UnitPage = () => {
                     </div>
                 </div>
 
-                {/* Modal Thêm / Sửa */}
+                {/* Modal ThÃªm / Sá»­a */}
                 {showModal && (
                     <div className="misa-modal-overlay">
                         <div className="misa-modal">
                             <div className="misa-modal-header">
-                                <h3>{isEdit ? 'Sửa Đơn vị tính' : 'Thêm Đơn vị tính'}</h3>
+                                <h3>{isEdit ? 'Sá»­a ÄÆ¡n vá»‹ tÃ­nh' : 'ThÃªm ÄÆ¡n vá»‹ tÃ­nh'}</h3>
                                 <i className="fas fa-times" onClick={() => setShowModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
                             </div>
                             <div className="misa-modal-body">
                                 {errorMsg && <div className={styles.errorAlert}>{errorMsg}</div>}
 
                                 <div className="misa-form-group">
-                                    <label>Đơn vị tính <span className="required">*</span></label>
+                                    <label>ÄÆ¡n vá»‹ tÃ­nh <span className="required">*</span></label>
                                     <input
                                         type="text"
                                         className="misa-input"
@@ -271,7 +271,7 @@ const UnitPage = () => {
                                 </div>
 
                                 <div className="misa-form-group">
-                                    <label>Mô tả</label>
+                                    <label>MÃ´ táº£</label>
                                     <textarea
                                         className="misa-textarea"
                                         rows="3"
@@ -281,12 +281,12 @@ const UnitPage = () => {
                                 </div>
                             </div>
                             <div className="misa-modal-footer">
-                                <button className="btn-misa-cancel" onClick={() => setShowModal(false)}>Hủy</button>
+                                <button className="btn-misa-cancel" onClick={() => setShowModal(false)}>Há»§y</button>
                                 <div className={styles.rightButtons} style={{ display: 'flex', gap: '12px' }}>
                                     {!isEdit && (
-                                        <button className="btn-misa-draft" onClick={() => handleSave(false)}>Cất và Thêm</button>
+                                        <button className="btn-misa-draft" onClick={() => handleSave(false)}>Cáº¥t vÃ  ThÃªm</button>
                                     )}
-                                    <button className="btn-misa-save" onClick={() => handleSave(true)}>Cất</button>
+                                    <button className="btn-misa-save" onClick={() => handleSave(true)}>Cáº¥t</button>
                                 </div>
                             </div>
                         </div>

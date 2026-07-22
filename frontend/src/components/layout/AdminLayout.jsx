@@ -32,7 +32,7 @@ const AdminLayout = ({ children }) => {
                         type="button"
                     >
                         <i className="fas fa-truck-loading"></i>
-                        <span>Nhà cung cấp</span>
+                        <span>NhÃ  cung cáº¥p</span>
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/customers') ? styles.active : ''}`}
@@ -40,7 +40,7 @@ const AdminLayout = ({ children }) => {
                         type="button"
                     >
                         <i className="fas fa-users"></i>
-                        <span>Khách hàng</span>
+                        <span>KhÃ¡ch hÃ ng</span>
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/warranties') ? styles.active : ''}`}
@@ -48,7 +48,7 @@ const AdminLayout = ({ children }) => {
                         type="button"
                     >
                         <i className="fas fa-shield-alt"></i>
-                        <span>Bảo hành</span>
+                        <span>Báº£o hÃ nh</span>
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/repairs') ? styles.active : ''}`}
@@ -56,7 +56,7 @@ const AdminLayout = ({ children }) => {
                         type="button"
                     >
                         <i className="fas fa-tools"></i>
-                        <span>Sửa chữa</span>
+                        <span>Sá»­a chá»¯a</span>
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/brands') ? styles.active : ''}`}
@@ -64,7 +64,7 @@ const AdminLayout = ({ children }) => {
                         type="button"
                     >
                         <i className="fas fa-tags"></i>
-                        <span>Thương hiệu</span>
+                        <span>ThÆ°Æ¡ng hiá»‡u</span>
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/assembly-orders') ? styles.active : ''}`}
@@ -72,7 +72,7 @@ const AdminLayout = ({ children }) => {
                         type="button"
                     >
                         <i className="fas fa-boxes-stacked"></i>
-                        <span>Lắp ráp / Tháo dỡ</span>
+                        <span>Láº¯p rÃ¡p / ThÃ¡o dá»¡</span>
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/assembly-boms') ? styles.active : ''}`}
@@ -80,7 +80,7 @@ const AdminLayout = ({ children }) => {
                         type="button"
                     >
                         <i className="fas fa-sitemap"></i>
-                        <span>Quản lý BOM</span>
+                        <span>Quáº£n lÃ½ BOM</span>
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/units') ? styles.active : ''}`}
@@ -88,7 +88,7 @@ const AdminLayout = ({ children }) => {
                         type="button"
                     >
                         <i className="fas fa-ruler-combined"></i>
-                        <span>Đơn vị tính</span>
+                        <span>ÄÆ¡n vá»‹ tÃ­nh</span>
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/product-categories') ? styles.active : ''}`}
@@ -96,7 +96,7 @@ const AdminLayout = ({ children }) => {
                         type="button"
                     >
                         <i className="fas fa-layer-group"></i>
-                        <span>Danh mục sản phẩm</span>
+                        <span>Danh má»¥c sáº£n pháº©m</span>
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/ai-chat') ? styles.active : ''}`}
@@ -117,42 +117,42 @@ const AdminLayout = ({ children }) => {
                             onClick={() => navigate('/dashboard')}
                             type="button"
                         >
-                            Quy trình
+                            Quy trÃ¬nh
                         </button>
                         <button
                             className={`${styles.tab} ${(currentPath.startsWith('/import-history') || currentPath.startsWith('/import-slips/')) ? styles.activeTab : ''}`}
                             onClick={() => navigate('/import-history')}
                             type="button"
                         >
-                            Nhập kho
+                            Nháº­p kho
                         </button>
                         <button
                             className={`${styles.tab} ${currentPath.startsWith('/export-slips') ? styles.activeTab : ''}`}
                             onClick={() => navigate('/export-slips')}
                             type="button"
                         >
-                            Xuất kho
+                            Xuáº¥t kho
                         </button>
                         <button
                             className={`${styles.tab} ${currentPath.startsWith('/transfer-history') ? styles.activeTab : ''}`}
                             onClick={() => navigate('/transfer-history')}
                             type="button"
                         >
-                            Chuyển kho
+                            Chuyá»ƒn kho
                         </button>
                         <button
                             className={`${styles.tab} ${currentPath.startsWith('/stocktakes') ? styles.activeTab : ''}`}
                             onClick={() => navigate('/stocktakes')}
                             type="button"
                         >
-                            Kiểm kê
+                            Kiá»ƒm kÃª
                         </button>
                         <button
                             className={`${styles.tab} ${currentPath.startsWith('/assembly-orders') ? styles.activeTab : ''}`}
                             onClick={() => navigate('/assembly-orders')}
                             type="button"
                         >
-                            Lắp ráp / Tháo dỡ
+                            Láº¯p rÃ¡p / ThÃ¡o dá»¡
                         </button>
                         <button
                             className={`${styles.tab} ${currentPath.startsWith('/assembly-boms') ? styles.activeTab : ''}`}
@@ -166,21 +166,21 @@ const AdminLayout = ({ children }) => {
                             onClick={() => navigate('/reports')}
                             type="button"
                         >
-                            Báo cáo
+                            BÃ¡o cÃ¡o
                         </button>
                         <button
                             className={`${styles.tab} ${currentPath === '/warehouses' ? styles.activeTab : ''}`}
                             onClick={() => navigate('/warehouses')}
                             type="button"
                         >
-                            Quản lý kho
+                            Quáº£n lÃ½ kho
                         </button>
                         <button
                             className={`${styles.tab} ${currentPath === '/products' ? styles.activeTab : ''}`}
                             onClick={() => navigate('/products')}
                             type="button"
                         >
-                            Hàng hóa, dịch vụ
+                            HÃ ng hÃ³a, dá»‹ch vá»¥
                         </button>
                         <button
                             className={`${styles.tab} ${currentPath.startsWith('/ai-chat') ? styles.activeTab : ''}`}

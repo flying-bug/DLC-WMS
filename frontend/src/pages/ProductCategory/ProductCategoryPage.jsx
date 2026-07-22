@@ -14,8 +14,8 @@ const emptyForm = {
 };
 
 const statusOptions = [
-    { value: 'APPROVED', label: 'Đang sử dụng' },
-    { value: 'INACTIVE', label: 'Ngừng sử dụng' },
+    { value: 'APPROVED', label: 'Äang sá»­ dá»¥ng' },
+    { value: 'INACTIVE', label: 'Ngá»«ng sá»­ dá»¥ng' },
 ];
 
 const getErrorMessage = (error, fallback) => (
@@ -60,7 +60,7 @@ const ProductCategoryPage = () => {
             const res = await axiosClient.get('/product-categories?page=0&size=1000');
             setParentOptions(res.data.content || []);
         } catch (error) {
-            console.error('Lỗi tải danh sách danh mục cha:', error);
+            console.error('Lá»—i táº£i danh sÃ¡ch danh má»¥c cha:', error);
         }
     }, []);
 
@@ -80,7 +80,7 @@ const ProductCategoryPage = () => {
             setTotalPages(res.data.totalPages || 0);
             setTotalElements(res.data.totalElements || 0);
         } catch (error) {
-            console.error('Lỗi tải danh mục sản phẩm:', error);
+            console.error('Lá»—i táº£i danh má»¥c sáº£n pháº©m:', error);
         } finally {
             setLoading(false);
         }
@@ -151,11 +151,11 @@ const ProductCategoryPage = () => {
 
     const handleSave = async (closeAfterSave = true) => {
         if (!formData.code.trim()) {
-            setErrorMsg('Mã danh mục không được để trống.');
+            setErrorMsg('MÃ£ danh má»¥c khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.');
             return;
         }
         if (!formData.name.trim()) {
-            setErrorMsg('Tên danh mục không được để trống.');
+            setErrorMsg('TÃªn danh má»¥c khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.');
             return;
         }
 
@@ -175,12 +175,12 @@ const ProductCategoryPage = () => {
                 setIsEdit(false);
             }
         } catch (error) {
-            setErrorMsg(getErrorMessage(error, 'Có lỗi xảy ra khi lưu danh mục.'));
+            setErrorMsg(getErrorMessage(error, 'CÃ³ lá»—i xáº£y ra khi lÆ°u danh má»¥c.'));
         }
     };
 
     const handleDelete = async (category) => {
-        const confirmed = window.confirm(`Bạn có chắc chắn muốn xóa danh mục "${category.name}" không?`);
+        const confirmed = window.confirm(`Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a danh má»¥c "${category.name}" khÃ´ng?`);
         if (!confirmed) {
             setOpenDropdownId(null);
             return;
@@ -190,7 +190,7 @@ const ProductCategoryPage = () => {
             await axiosClient.delete(`/product-categories/${category.id}`);
             await Promise.all([fetchCategories(), fetchParentOptions()]);
         } catch (error) {
-            alert(getErrorMessage(error, 'Có lỗi xảy ra khi xóa danh mục.'));
+            alert(getErrorMessage(error, 'CÃ³ lá»—i xáº£y ra khi xÃ³a danh má»¥c.'));
         }
         setOpenDropdownId(null);
     };
@@ -206,7 +206,7 @@ const ProductCategoryPage = () => {
             });
             await Promise.all([fetchCategories(), fetchParentOptions()]);
         } catch (error) {
-            alert(getErrorMessage(error, 'Có lỗi xảy ra khi cập nhật trạng thái.'));
+            alert(getErrorMessage(error, 'CÃ³ lá»—i xáº£y ra khi cáº­p nháº­t tráº¡ng thÃ¡i.'));
         }
         setOpenDropdownId(null);
     };
@@ -224,23 +224,23 @@ const ProductCategoryPage = () => {
             const res = await axiosClient.get(`/product-categories?${query.toString()}`);
             const exportData = res.data.content || [];
             if (exportData.length === 0) {
-                alert('Không có dữ liệu để xuất.');
+                alert('KhÃ´ng cÃ³ dá»¯ liá»‡u Ä‘á»ƒ xuáº¥t.');
                 return;
             }
 
-            const headers = ['Mã danh mục', 'Tên danh mục', 'Danh mục cha', 'Trạng thái', 'Ngày tạo', 'Ngày cập nhật'];
+            const headers = ['MÃ£ danh má»¥c', 'TÃªn danh má»¥c', 'Danh má»¥c cha', 'Tráº¡ng thÃ¡i', 'NgÃ y táº¡o', 'NgÃ y cáº­p nháº­t'];
             const data = exportData.map((item) => [
                 item.code,
                 item.name,
                 item.parentName || '',
-                item.status === 'APPROVED' ? 'Đang sử dụng' : 'Ngừng sử dụng',
+                item.status === 'APPROVED' ? 'Äang sá»­ dá»¥ng' : 'Ngá»«ng sá»­ dá»¥ng',
                 item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '',
                 item.updatedAt ? new Date(item.updatedAt).toLocaleString('vi-VN') : '',
             ]);
 
             exportToExcel(headers, data, 'Danh_sach_danh_muc_san_pham');
         } catch (error) {
-            alert(getErrorMessage(error, 'Có lỗi xảy ra khi xuất Excel.'));
+            alert(getErrorMessage(error, 'CÃ³ lá»—i xáº£y ra khi xuáº¥t Excel.'));
         }
     };
 
@@ -251,14 +251,14 @@ const ProductCategoryPage = () => {
             <div className={styles.container}>
                 <div className={styles.header}>
                     <div>
-                        <h2>Danh mục sản phẩm</h2>
+                        <h2>Danh má»¥c sáº£n pháº©m</h2>
                         <button className={styles.backLink} onClick={() => navigate('/dashboard')} type="button">
-                            <i className="fas fa-chevron-left"></i> Tất cả danh mục
+                            <i className="fas fa-chevron-left"></i> Táº¥t cáº£ danh má»¥c
                         </button>
                     </div>
                     <div className={styles.summary}>
-                        <span><strong>{totalElements}</strong> danh mục</span>
-                        <span><strong>{activeCount}</strong> đang sử dụng</span>
+                        <span><strong>{totalElements}</strong> danh má»¥c</span>
+                        <span><strong>{activeCount}</strong> Ä‘ang sá»­ dá»¥ng</span>
                     </div>
                 </div>
 
@@ -266,7 +266,7 @@ const ProductCategoryPage = () => {
                     <div className={styles.searchBox}>
                         <input
                             type="text"
-                            placeholder="Tìm theo mã hoặc tên danh mục"
+                            placeholder="TÃ¬m theo mÃ£ hoáº·c tÃªn danh má»¥c"
                             value={tempSearch}
                             onChange={(event) => setTempSearch(event.target.value)}
                             onKeyDown={handleSearch}
@@ -275,14 +275,14 @@ const ProductCategoryPage = () => {
                     </div>
 
                     <div className={styles.actions}>
-                        <button className={styles.iconBtn} onClick={fetchCategories} title="Tải lại" type="button">
+                        <button className={styles.iconBtn} onClick={fetchCategories} title="Táº£i láº¡i" type="button">
                             <i className="fas fa-sync-alt"></i>
                         </button>
-                        <button className={styles.iconBtn} onClick={handleExportExcel} title="Xuất Excel" type="button">
+                        <button className={styles.iconBtn} onClick={handleExportExcel} title="Xuáº¥t Excel" type="button">
                             <i className="fas fa-file-excel"></i>
                         </button>
                         <button className={styles.primaryBtn} onClick={openAddModal} type="button">
-                            Thêm
+                            ThÃªm
                         </button>
                     </div>
                 </div>
@@ -291,22 +291,22 @@ const ProductCategoryPage = () => {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th>Mã danh mục</th>
-                                <th>Tên danh mục</th>
-                                <th>Danh mục cha</th>
-                                <th>Trạng thái</th>
-                                <th>Ngày cập nhật</th>
-                                <th>Chức năng</th>
+                                <th>MÃ£ danh má»¥c</th>
+                                <th>TÃªn danh má»¥c</th>
+                                <th>Danh má»¥c cha</th>
+                                <th>Tráº¡ng thÃ¡i</th>
+                                <th>NgÃ y cáº­p nháº­t</th>
+                                <th>Chá»©c nÄƒng</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="6" className={styles.emptyCell}>Đang tải dữ liệu...</td>
+                                    <td colSpan="6" className={styles.emptyCell}>Äang táº£i dá»¯ liá»‡u...</td>
                                 </tr>
                             ) : categories.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className={styles.emptyCell}>Không có danh mục phù hợp.</td>
+                                    <td colSpan="6" className={styles.emptyCell}>KhÃ´ng cÃ³ danh má»¥c phÃ¹ há»£p.</td>
                                 </tr>
                             ) : (
                                 categories.map((category) => (
@@ -316,12 +316,12 @@ const ProductCategoryPage = () => {
                                         <td>{category.parentName || '-'}</td>
                                         <td>
                                             <span className={`${styles.statusBadge} ${category.status === 'APPROVED' ? styles.active : styles.inactive}`}>
-                                                {category.status === 'APPROVED' ? 'Đang sử dụng' : 'Ngừng sử dụng'}
+                                                {category.status === 'APPROVED' ? 'Äang sá»­ dá»¥ng' : 'Ngá»«ng sá»­ dá»¥ng'}
                                             </span>
                                         </td>
                                         <td>{category.updatedAt ? new Date(category.updatedAt).toLocaleDateString('vi-VN') : '-'}</td>
                                         <td className={styles.actionCell}>
-                                            <span className={styles.editText} onClick={() => openEditModal(category)}>Sửa</span>
+                                            <span className={styles.editText} onClick={() => openEditModal(category)}>Sá»­a</span>
                                             <div className={styles.dropdownContainer}>
                                                 <button
                                                     className={styles.dropdownToggle}
@@ -335,10 +335,10 @@ const ProductCategoryPage = () => {
                                                 </button>
                                                 {openDropdownId === category.id && (
                                                     <div className={styles.dropdownMenu}>
-                                                        <div className={styles.dropdownItem} onClick={() => handleDuplicate(category)}>Nhân bản</div>
-                                                        <div className={styles.dropdownItem} onClick={() => handleDelete(category)}>Xóa</div>
+                                                        <div className={styles.dropdownItem} onClick={() => handleDuplicate(category)}>NhÃ¢n báº£n</div>
+                                                        <div className={styles.dropdownItem} onClick={() => handleDelete(category)}>XÃ³a</div>
                                                         <div className={styles.dropdownItem} onClick={() => handleToggleStatus(category)}>
-                                                            {category.status === 'APPROVED' ? 'Ngừng sử dụng' : 'Sử dụng'}
+                                                            {category.status === 'APPROVED' ? 'Ngá»«ng sá»­ dá»¥ng' : 'Sá»­ dá»¥ng'}
                                                         </div>
                                                     </div>
                                                 )}
@@ -352,16 +352,16 @@ const ProductCategoryPage = () => {
                 </div>
 
                 <div className={styles.pagination}>
-                    <div className={styles.totalInfo}>Tổng số: <b>{totalElements}</b> bản ghi</div>
+                    <div className={styles.totalInfo}>Tá»•ng sá»‘: <b>{totalElements}</b> báº£n ghi</div>
                     <div className={styles.pageControls}>
                         <select value={size} onChange={(event) => { setSize(Number(event.target.value)); setPage(0); }}>
-                            <option value={10}>10 bản ghi trên 1 trang</option>
-                            <option value={20}>20 bản ghi trên 1 trang</option>
-                            <option value={50}>50 bản ghi trên 1 trang</option>
-                            <option value={100}>100 bản ghi trên 1 trang</option>
+                            <option value={10}>10 báº£n ghi trÃªn 1 trang</option>
+                            <option value={20}>20 báº£n ghi trÃªn 1 trang</option>
+                            <option value={50}>50 báº£n ghi trÃªn 1 trang</option>
+                            <option value={100}>100 báº£n ghi trÃªn 1 trang</option>
                         </select>
                         <button className={styles.pageBtn} disabled={page === 0} onClick={() => setPage(page - 1)} type="button">
-                            Trước
+                            TrÆ°á»›c
                         </button>
                         <span className={styles.currentPage}>Trang {page + 1} / {totalPages || 1}</span>
                         <button className={styles.pageBtn} disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} type="button">
@@ -375,7 +375,7 @@ const ProductCategoryPage = () => {
                 <div className="misa-modal-overlay">
                     <div className="misa-modal">
                         <div className="misa-modal-header">
-                            <h3>{isEdit ? 'Sửa danh mục sản phẩm' : 'Thêm danh mục sản phẩm'}</h3>
+                            <h3>{isEdit ? 'Sá»­a danh má»¥c sáº£n pháº©m' : 'ThÃªm danh má»¥c sáº£n pháº©m'}</h3>
                             <i className="fas fa-times" onClick={() => setShowModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
                         </div>
                         <div className="misa-modal-body">
@@ -383,35 +383,35 @@ const ProductCategoryPage = () => {
 
                             <div className="misa-form-row">
                                 <div className="misa-form-group">
-                                    <label>Mã danh mục <span className="required">*</span></label>
+                                    <label>MÃ£ danh má»¥c <span className="required">*</span></label>
                                     <input
                                         className="misa-input"
                                         value={formData.code}
                                         onChange={(event) => setFormData({ ...formData, code: event.target.value.toUpperCase() })}
-                                        placeholder="Ví dụ: CPU"
+                                        placeholder="VÃ­ dá»¥: CPU"
                                         autoFocus
                                     />
                                 </div>
                                 <div className="misa-form-group">
-                                    <label>Tên danh mục <span className="required">*</span></label>
+                                    <label>TÃªn danh má»¥c <span className="required">*</span></label>
                                     <input
                                         className="misa-input"
                                         value={formData.name}
                                         onChange={(event) => setFormData({ ...formData, name: event.target.value })}
-                                        placeholder="Ví dụ: Bộ vi xử lý"
+                                        placeholder="VÃ­ dá»¥: Bá»™ vi xá»­ lÃ½"
                                     />
                                 </div>
                             </div>
 
                             <div className="misa-form-row">
                                 <div className="misa-form-group">
-                                    <label>Danh mục cha</label>
+                                    <label>Danh má»¥c cha</label>
                                     <select
                                         className="misa-select"
                                         value={formData.parentId}
                                         onChange={(event) => setFormData({ ...formData, parentId: event.target.value })}
                                     >
-                                        <option value="">Không có</option>
+                                        <option value="">KhÃ´ng cÃ³</option>
                                         {filteredParentOptions.map((item) => (
                                             <option key={item.id} value={item.id}>
                                                 {item.code} - {item.name}
@@ -420,7 +420,7 @@ const ProductCategoryPage = () => {
                                     </select>
                                 </div>
                                 <div className="misa-form-group">
-                                    <label>Trạng thái</label>
+                                    <label>Tráº¡ng thÃ¡i</label>
                                     <select
                                         className="misa-select"
                                         value={formData.status}
@@ -434,14 +434,14 @@ const ProductCategoryPage = () => {
                             </div>
                         </div>
                         <div className="misa-modal-footer">
-                            <button className="btn-misa-cancel" onClick={() => setShowModal(false)} type="button">Hủy</button>
+                            <button className="btn-misa-cancel" onClick={() => setShowModal(false)} type="button">Há»§y</button>
                             <div className={styles.rightButtons} style={{ display: 'flex', gap: '12px' }}>
                                 {!isEdit && (
                                     <button className="btn-misa-draft" onClick={() => handleSave(false)} type="button">
-                                        Cất và Thêm
+                                        Cáº¥t vÃ  ThÃªm
                                     </button>
                                 )}
-                                <button className="btn-misa-save" onClick={() => handleSave(true)} type="button">Cất</button>
+                                <button className="btn-misa-save" onClick={() => handleSave(true)} type="button">Cáº¥t</button>
                             </div>
                         </div>
                     </div>

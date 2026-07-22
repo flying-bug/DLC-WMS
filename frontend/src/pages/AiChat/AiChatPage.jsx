@@ -4,36 +4,36 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import styles from './AiChatPage.module.css';
 
 const suggestedPrompts = [
-    'Tồn kho hiện tại của sản phẩm nào đang thấp?',
-    'Tóm tắt phiếu sửa chữa đang chờ xử lý',
-    'Hướng dẫn tạo phiếu chuyển kho',
-    'Tìm đơn bảo hành theo số serial'
+    'Tá»“n kho hiá»‡n táº¡i cá»§a sáº£n pháº©m nÃ o Ä‘ang tháº¥p?',
+    'TÃ³m táº¯t phiáº¿u sá»­a chá»¯a Ä‘ang chá» xá»­ lÃ½',
+    'HÆ°á»›ng dáº«n táº¡o phiáº¿u chuyá»ƒn kho',
+    'TÃ¬m Ä‘Æ¡n báº£o hÃ nh theo sá»‘ serial'
 ];
 
 const initialMessages = [
     {
         id: 1,
         role: 'assistant',
-        content: 'Xin chào, tôi là trợ lý AI của DLC WMS. Bạn có thể hỏi về tồn kho, phiếu nhập xuất, bảo hành, sửa chữa hoặc quy trình vận hành.',
+        content: 'Xin chÃ o, tÃ´i lÃ  trá»£ lÃ½ AI cá»§a DLC WMS. Báº¡n cÃ³ thá»ƒ há»i vá» tá»“n kho, phiáº¿u nháº­p xuáº¥t, báº£o hÃ nh, sá»­a chá»¯a hoáº·c quy trÃ¬nh váº­n hÃ nh.',
         time: '09:00'
     }
 ];
 
 function buildErrorReply(error) {
     if (!error.response) {
-        return 'Chưa kết nối được backend. Hãy kiểm tra backend Spring Boot đã chạy ở port 8080 chưa, rồi thử lại.';
+        return 'ChÆ°a káº¿t ná»‘i Ä‘Æ°á»£c backend. HÃ£y kiá»ƒm tra backend Spring Boot Ä‘Ã£ cháº¡y á»Ÿ port 8080 chÆ°a, rá»“i thá»­ láº¡i.';
     }
 
     if (error.response.status === 401) {
-        return 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Hãy đăng nhập lại rồi hỏi tiếp.';
+        return 'PhiÃªn Ä‘Äƒng nháº­p khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ háº¿t háº¡n. HÃ£y Ä‘Äƒng nháº­p láº¡i rá»“i há»i tiáº¿p.';
     }
 
     const userMessage = error.response.data?.userMessage || error.response.data?.message;
     if (userMessage) {
-        return `Backend trả về lỗi: ${userMessage}`;
+        return `Backend tráº£ vá» lá»—i: ${userMessage}`;
     }
 
-    return `Backend đang lỗi ${error.response.status}. Hãy xem log Spring Boot để biết chi tiết.`;
+    return `Backend Ä‘ang lá»—i ${error.response.status}. HÃ£y xem log Spring Boot Ä‘á»ƒ biáº¿t chi tiáº¿t.`;
 }
 
 function formatSource(source) {
@@ -83,7 +83,7 @@ function AiChatPage() {
                 const sources = Array.isArray(data?.sources) ? data.sources : [];
                 const sourceNames = sources.map(formatSource).filter(Boolean);
                 const sourceText = sourceNames.length > 0
-                    ? `\n\nNguồn dữ liệu: ${sourceNames.join(', ')}`
+                    ? `\n\nNguá»“n dá»¯ liá»‡u: ${sourceNames.join(', ')}`
                     : '';
 
                 setMessages((prev) => [
@@ -91,7 +91,7 @@ function AiChatPage() {
                     {
                         id: Date.now() + 1,
                         role: 'assistant',
-                        content: `${data?.answer || 'Backend đã phản hồi nhưng không có nội dung trả lời.'}${sourceText}`,
+                        content: `${data?.answer || 'Backend Ä‘Ã£ pháº£n há»“i nhÆ°ng khÃ´ng cÃ³ ná»™i dung tráº£ lá»i.'}${sourceText}`,
                         time: new Intl.DateTimeFormat('vi-VN', {
                             hour: '2-digit',
                             minute: '2-digit'
@@ -149,13 +149,13 @@ function AiChatPage() {
                         <div className={styles.statusBox}>
                             <span className={styles.statusDot} />
                             <div>
-                                <strong>Đã nối backend</strong>
-                                <p>Đọc dữ liệu hệ thống và gọi model khi được bật</p>
+                                <strong>ÄÃ£ ná»‘i backend</strong>
+                                <p>Äá»c dá»¯ liá»‡u há»‡ thá»‘ng vÃ  gá»i model khi Ä‘Æ°á»£c báº­t</p>
                             </div>
                         </div>
 
                         <div className={styles.promptGroup}>
-                            <h3>Gợi ý câu hỏi</h3>
+                            <h3>Gá»£i Ã½ cÃ¢u há»i</h3>
                             {suggestedPrompts.map((prompt) => (
                                 <button
                                     key={prompt}
@@ -174,8 +174,8 @@ function AiChatPage() {
                     <main className={styles.chatArea}>
                         <div className={styles.chatHeader}>
                             <div>
-                                <h1>Trợ lý hỏi đáp AI</h1>
-                                <p>Hỏi nhanh về nghiệp vụ kho, sản phẩm, bảo hành và sửa chữa.</p>
+                                <h1>Trá»£ lÃ½ há»i Ä‘Ã¡p AI</h1>
+                                <p>Há»i nhanh vá» nghiá»‡p vá»¥ kho, sáº£n pháº©m, báº£o hÃ nh vÃ  sá»­a chá»¯a.</p>
                             </div>
                             <span className={styles.badge}>RAG ready</span>
                         </div>
@@ -191,7 +191,7 @@ function AiChatPage() {
                                     </div>
                                     <div className={styles.messageBubble}>
                                         <div className={styles.messageMeta}>
-                                            <strong>{message.role === 'user' ? 'Bạn' : 'AI Assistant'}</strong>
+                                            <strong>{message.role === 'user' ? 'Báº¡n' : 'AI Assistant'}</strong>
                                             <span>{message.time}</span>
                                         </div>
                                         <p>{message.content}</p>
@@ -219,10 +219,10 @@ function AiChatPage() {
                                 value={input}
                                 onChange={(event) => setInput(event.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder="Nhập câu hỏi cho AI..."
+                                placeholder="Nháº­p cÃ¢u há»i cho AI..."
                                 rows={2}
                             />
-                            <button type="submit" disabled={!canSend} title="Gửi câu hỏi">
+                            <button type="submit" disabled={!canSend} title="Gá»­i cÃ¢u há»i">
                                 <i className="fas fa-paper-plane" aria-hidden="true" />
                             </button>
                         </form>

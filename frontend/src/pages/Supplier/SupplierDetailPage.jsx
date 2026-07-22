@@ -8,8 +8,8 @@ import axiosClient from '../../api/axiosClient';
 import styles from './SupplierDetailPage.module.css';
 
 const formatCurrency = (val) => {
-    if (!val) return '0 đ';
-    return `${new Intl.NumberFormat('vi-VN').format(val)} đ`;
+    if (!val) return '0 Ä‘';
+    return `${new Intl.NumberFormat('vi-VN').format(val)} Ä‘`;
 };
 
 const SupplierDetailPage = () => {
@@ -34,8 +34,8 @@ const SupplierDetailPage = () => {
                 setSupplier(res.data.data);
             }
         } catch (error) {
-            console.error('Lỗi tải chi tiết NCC:', error);
-            showToast('error', error.response?.data?.userMessage || 'Không tải được thông tin chi tiết nhà cung cấp');
+            console.error('Lá»—i táº£i chi tiáº¿t NCC:', error);
+            showToast('error', error.response?.data?.userMessage || 'KhÃ´ng táº£i Ä‘Æ°á»£c thÃ´ng tin chi tiáº¿t nhÃ  cung cáº¥p');
         } finally {
             setLoading(false);
         }
@@ -51,9 +51,9 @@ const SupplierDetailPage = () => {
         try {
             await axiosClient.delete(`/suppliers/${id}`);
             setIsDeleteModalOpen(false);
-            navigate('/suppliers', { state: { toastMessage: `Đã xóa nhà cung cấp ${supplier.name}`, toastType: 'success' } });
+            navigate('/suppliers', { state: { toastMessage: `ÄÃ£ xÃ³a nhÃ  cung cáº¥p ${supplier.name}`, toastType: 'success' } });
         } catch (error) {
-            showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi xóa nhà cung cấp');
+            showToast('error', error.response?.data?.userMessage || 'CÃ³ lá»—i xáº£y ra khi xÃ³a nhÃ  cung cáº¥p');
             setIsDeleteModalOpen(false);
         }
     };
@@ -62,7 +62,7 @@ const SupplierDetailPage = () => {
         return (
             <AdminLayout>
                 <div className={styles.pageBody}>
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải thông tin...</div>
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Äang táº£i thÃ´ng tin...</div>
                 </div>
             </AdminLayout>
         );
@@ -74,8 +74,8 @@ const SupplierDetailPage = () => {
                 <div className={styles.pageBody}>
                     <div className={styles.emptyState}>
                         <i className={`bi bi-exclamation-circle ${styles.emptyIcon}`}></i>
-                        <div className={styles.emptyText}>Không tìm thấy nhà cung cấp này</div>
-                        <button className={styles.btnPrimary} onClick={() => navigate('/suppliers')}>Quay lại danh sách</button>
+                        <div className={styles.emptyText}>KhÃ´ng tÃ¬m tháº¥y nhÃ  cung cáº¥p nÃ y</div>
+                        <button className={styles.btnPrimary} onClick={() => navigate('/suppliers')}>Quay láº¡i danh sÃ¡ch</button>
                     </div>
                 </div>
             </AdminLayout>
@@ -93,17 +93,17 @@ const SupplierDetailPage = () => {
                         >
                             <i className="bi bi-arrow-left"></i>
                         </button>
-                        <h1 className={styles.pageTitle}>Chi tiết nhà cung cấp: {supplier.name}</h1>
+                        <h1 className={styles.pageTitle}>Chi tiáº¿t nhÃ  cung cáº¥p: {supplier.name}</h1>
                         <span className={`${styles.badge} ${supplier.status === 'APPROVED' ? styles.badgeSuccess : styles.badgeDanger}`}>
-                            {supplier.status === 'APPROVED' ? 'Đang hoạt động' : 'Ngừng hoạt động'}
+                            {supplier.status === 'APPROVED' ? 'Äang hoáº¡t Ä‘á»™ng' : 'Ngá»«ng hoáº¡t Ä‘á»™ng'}
                         </span>
                     </div>
                     <div style={{ display: 'flex', gap: '12px' }}>
                         <button className={styles.btnOutline} onClick={() => setIsEditModalOpen(true)}>
-                            <i className="bi bi-pencil"></i> Chỉnh sửa
+                            <i className="bi bi-pencil"></i> Chá»‰nh sá»­a
                         </button>
                         <button className={styles.btnOutline} style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }} onClick={() => setIsDeleteModalOpen(true)}>
-                            <i className="bi bi-trash"></i> Xóa
+                            <i className="bi bi-trash"></i> XÃ³a
                         </button>
                     </div>
                 </div>
@@ -111,59 +111,59 @@ const SupplierDetailPage = () => {
                 <div className={styles.detailSection}>
                     <div className={styles.detailHeader}>
                         <i className={`bi bi-info-circle ${styles.detailIcon}`}></i>
-                        <h2 className={styles.detailTitle}>Thông tin chung</h2>
+                        <h2 className={styles.detailTitle}>ThÃ´ng tin chung</h2>
                     </div>
 
                     <div className={styles.detailGrid}>
                         <div className={styles.detailGroup}>
                             <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Mã nhà cung cấp</span>
+                                <span className={styles.detailLabel}>MÃ£ nhÃ  cung cáº¥p</span>
                                 <span className={styles.detailValue}>{supplier.code}</span>
                             </div>
                             <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Tên nhà cung cấp</span>
+                                <span className={styles.detailLabel}>TÃªn nhÃ  cung cáº¥p</span>
                                 <span className={styles.detailValue} style={{ fontWeight: 600 }}>{supplier.name}</span>
                             </div>
                             <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Nhóm nhà cung cấp</span>
-                                <span className={styles.detailValue}>{supplier.groupType === 'WHOLESALE' ? 'Bán buôn' : 'Bán lẻ'}</span>
+                                <span className={styles.detailLabel}>NhÃ³m nhÃ  cung cáº¥p</span>
+                                <span className={styles.detailValue}>{supplier.groupType === 'WHOLESALE' ? 'BÃ¡n buÃ´n' : 'BÃ¡n láº»'}</span>
                             </div>
                             <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Mã số thuế</span>
-                                <span className={styles.detailValue}>{supplier.taxCode || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailLabel}>MÃ£ sá»‘ thuáº¿</span>
+                                <span className={styles.detailValue}>{supplier.taxCode || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ChÆ°a cáº­p nháº­t</span>}</span>
                             </div>
                             <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Địa chỉ</span>
-                                <span className={styles.detailValue}>{supplier.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailLabel}>Äá»‹a chá»‰</span>
+                                <span className={styles.detailValue}>{supplier.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ChÆ°a cáº­p nháº­t</span>}</span>
                             </div>
                         </div>
 
                         <div className={styles.detailGroup}>
                             <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Số điện thoại</span>
-                                <span className={styles.detailValue}>{supplier.phone || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailLabel}>Sá»‘ Ä‘iá»‡n thoáº¡i</span>
+                                <span className={styles.detailValue}>{supplier.phone || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ChÆ°a cáº­p nháº­t</span>}</span>
                             </div>
                             <div className={styles.detailItem}>
                                 <span className={styles.detailLabel}>Email</span>
-                                <span className={styles.detailValue}>{supplier.email || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailValue}>{supplier.email || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ChÆ°a cáº­p nháº­t</span>}</span>
                             </div>
                         </div>
 
                         <div className={styles.detailRight}>
                             <div style={{ marginBottom: '8px', fontWeight: 600, color: 'var(--color-text-strong)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <i className="bi bi-bank"></i> Thông tin ngân hàng
+                                <i className="bi bi-bank"></i> ThÃ´ng tin ngÃ¢n hÃ ng
                             </div>
                             <div className={styles.detailRightRow}>
-                                <span className={styles.detailRightLabel}>Ngân hàng</span>
-                                <span className={styles.detailRightValue}>{supplier.bankName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailRightLabel}>NgÃ¢n hÃ ng</span>
+                                <span className={styles.detailRightValue}>{supplier.bankName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ChÆ°a cáº­p nháº­t</span>}</span>
                             </div>
                             <div className={styles.detailRightRow}>
-                                <span className={styles.detailRightLabel}>Số tài khoản</span>
-                                <span className={styles.detailRightValue}>{supplier.bankAccountNumber || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailRightLabel}>Sá»‘ tÃ i khoáº£n</span>
+                                <span className={styles.detailRightValue}>{supplier.bankAccountNumber || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ChÆ°a cáº­p nháº­t</span>}</span>
                             </div>
                             <div className={styles.detailRightRow}>
-                                <span className={styles.detailRightLabel}>Chủ tài khoản</span>
-                                <span className={styles.detailRightValue}>{supplier.bankBeneficiaryName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                <span className={styles.detailRightLabel}>Chá»§ tÃ i khoáº£n</span>
+                                <span className={styles.detailRightValue}>{supplier.bankBeneficiaryName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>ChÆ°a cáº­p nháº­t</span>}</span>
                             </div>
                         </div>
                     </div>
@@ -199,10 +199,10 @@ const SupplierDetailPage = () => {
                             };
                             await axiosClient.put(`/suppliers/${id}`, updateData);
                             setIsEditModalOpen(false);
-                            showToast('success', 'Cập nhật nhà cung cấp thành công!');
+                            showToast('success', 'Cáº­p nháº­t nhÃ  cung cáº¥p thÃ nh cÃ´ng!');
                             fetchSupplier();
                         } catch (error) {
-                            showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi cập nhật NCC');
+                            showToast('error', error.response?.data?.userMessage || 'CÃ³ lá»—i xáº£y ra khi cáº­p nháº­t NCC');
                         }
                     }}
                 />
@@ -210,12 +210,12 @@ const SupplierDetailPage = () => {
 
             <ConfirmModal
                 isOpen={isDeleteModalOpen}
-                title="Xác nhận xóa"
-                message={<span>Bạn có chắc chắn muốn xóa nhà cung cấp <strong>{supplier?.name}</strong> {supplier?.code ? `(${supplier.code})` : ''} không? Hành động này không thể hoàn tác.</span>}
+                title="XÃ¡c nháº­n xÃ³a"
+                message={<span>Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a nhÃ  cung cáº¥p <strong>{supplier?.name}</strong> {supplier?.code ? `(${supplier.code})` : ''} khÃ´ng? HÃ nh Ä‘á»™ng nÃ y khÃ´ng thá»ƒ hoÃ n tÃ¡c.</span>}
                 onConfirm={handleDelete}
                 onCancel={() => setIsDeleteModalOpen(false)}
-                confirmText="Xóa"
-                cancelText="Hủy"
+                confirmText="XÃ³a"
+                cancelText="Há»§y"
                 confirmButtonClass="btn-misa-danger"
             />
 

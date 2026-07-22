@@ -3,12 +3,12 @@ import axiosClient from './axiosClient';
 const CUSTOMER_BASE = '/customers';
 
 /**
- * Tìm kiếm khách hàng.
- * @param {string} keyword   - Từ khóa SĐT / Tên
+ * TÃ¬m kiáº¿m khÃ¡ch hÃ ng.
+ * @param {string} keyword   - Tá»« khÃ³a SÄT / TÃªn
  * @param {string} status    - APPROVED | INACTIVE
  * @param {string} groupType - RETAIL | WHOLESALE | DISTRIBUTOR
- * @param {number} page      - Trang hiện tại
- * @param {number} size      - Số bản ghi mỗi trang
+ * @param {number} page      - Trang hiá»‡n táº¡i
+ * @param {number} size      - Sá»‘ báº£n ghi má»—i trang
  */
 export const searchCustomers = (keyword = '', status = '', groupType = '', page = 0, size = 10) => {
     return axiosClient.get(CUSTOMER_BASE, { 
@@ -22,7 +22,7 @@ export const searchCustomers = (keyword = '', status = '', groupType = '', page 
     });
 };
 
-// Tải file Excel mẫu
+// Táº£i file Excel máº«u
 export const downloadCustomerTemplate = async () => {
     try {
         const response = await axiosClient.get('/customers/import/template', {
@@ -53,14 +53,14 @@ export const previewImportExcel = async (file) => {
     return response.data;
 };
 
-// Xác nhận Import
+// XÃ¡c nháº­n Import
 export const confirmImportExcel = async (payload) => {
     const response = await axiosClient.post('/customers/import/confirm', payload);
     return response.data;
 };
 
 /**
- * Lấy chi tiết khách hàng theo ID.
+ * Láº¥y chi tiáº¿t khÃ¡ch hÃ ng theo ID.
  * @param {number} id
  */
 export const getCustomerById = (id) => {
@@ -68,7 +68,7 @@ export const getCustomerById = (id) => {
 };
 
 /**
- * Tạo mới khách hàng (Quick Create hoặc form đầy đủ).
+ * Táº¡o má»›i khÃ¡ch hÃ ng (Quick Create hoáº·c form Ä‘áº§y Ä‘á»§).
  * @param {object} data - { name, phone, email, address, groupType }
  */
 export const createCustomer = (data) => {
@@ -76,8 +76,8 @@ export const createCustomer = (data) => {
 };
 
 /**
- * Cập nhật thông tin khách hàng.
- * Ghi Audit Log phía Backend nếu SĐT thay đổi.
+ * Cáº­p nháº­t thÃ´ng tin khÃ¡ch hÃ ng.
+ * Ghi Audit Log phÃ­a Backend náº¿u SÄT thay Ä‘á»•i.
  * @param {number} id
  * @param {object} data
  */
@@ -86,7 +86,7 @@ export const updateCustomer = (id, data) => {
 };
 
 /**
- * Vô hiệu hóa khách hàng (Soft Delete → status: INACTIVE).
+ * VÃ´ hiá»‡u hÃ³a khÃ¡ch hÃ ng (Soft Delete â†’ status: INACTIVE).
  * @param {number} id
  */
 export const deactivateCustomer = (id) => {
@@ -94,14 +94,14 @@ export const deactivateCustomer = (id) => {
 };
 
 /**
- * Kích hoạt lại khách hàng đã vô hiệu hóa (Re-activate → status: APPROVED).
+ * KÃ­ch hoáº¡t láº¡i khÃ¡ch hÃ ng Ä‘Ã£ vÃ´ hiá»‡u hÃ³a (Re-activate â†’ status: APPROVED).
  * @param {number} id
  */
 export const activateCustomer = (id) => {
     return axiosClient.patch(`${CUSTOMER_BASE}/${id}/activate`);
 };
 
-// Xuất Excel danh sách khách hàng
+// Xuáº¥t Excel danh sÃ¡ch khÃ¡ch hÃ ng
 export const exportCustomersToExcel = async (filters = {}, ids = []) => {
     try {
         const params = new URLSearchParams();
@@ -139,7 +139,7 @@ export const exportCustomersToExcel = async (filters = {}, ids = []) => {
 };
 
 /**
- * Lấy lịch sử mua hàng của khách hàng (3 Tab - Tab 1).
+ * Láº¥y lá»‹ch sá»­ mua hÃ ng cá»§a khÃ¡ch hÃ ng (3 Tab - Tab 1).
  * @param {number} id
  * @param {number} page
  * @param {number} size
@@ -149,7 +149,7 @@ export const getCustomerSalesHistory = (id, page = 0, size = 10) => {
 };
 
 /**
- * Lấy lịch sử bảo hành của khách hàng (3 Tab - Tab 2).
+ * Láº¥y lá»‹ch sá»­ báº£o hÃ nh cá»§a khÃ¡ch hÃ ng (3 Tab - Tab 2).
  * @param {number} id
  * @param {number} page
  * @param {number} size
@@ -159,7 +159,7 @@ export const getCustomerWarranties = (id, page = 0, size = 10) => {
 };
 
 /**
- * Lấy lịch sử thu chi và Summary Tổng tiền đã thu (3 Tab - Tab 3).
+ * Láº¥y lá»‹ch sá»­ thu chi vÃ  Summary Tá»•ng tiá»n Ä‘Ã£ thu (3 Tab - Tab 3).
  * @param {number} id
  * @param {number} page
  * @param {number} size

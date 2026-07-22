@@ -9,14 +9,14 @@ import { searchCustomers, deactivateCustomer, activateCustomer, exportCustomersT
 import styles from './CustomerListPage.module.css';
 
 const STATUS_LABELS = {
-    APPROVED: { label: 'Đang hoạt động', code: 'success' },
-    INACTIVE: { label: 'Ngừng hoạt động', code: 'danger' },
+    APPROVED: { label: 'Äang hoáº¡t Ä‘á»™ng', code: 'success' },
+    INACTIVE: { label: 'Ngá»«ng hoáº¡t Ä‘á»™ng', code: 'danger' },
 };
 
 const GROUP_LABELS = {
-    RETAIL: 'Khách lẻ',
-    WHOLESALE: 'Khách thợ',
-    DISTRIBUTOR: 'Đại lý'
+    RETAIL: 'KhÃ¡ch láº»',
+    WHOLESALE: 'KhÃ¡ch thá»£',
+    DISTRIBUTOR: 'Äáº¡i lÃ½'
 };
 
 const CustomerListPage = () => {
@@ -66,8 +66,8 @@ const CustomerListPage = () => {
             }
             setSelectedIds([]);
         } catch (error) {
-            console.error('Lỗi tải danh sách khách hàng:', error);
-            showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách khách hàng');
+            console.error('Lá»—i táº£i danh sÃ¡ch khÃ¡ch hÃ ng:', error);
+            showToast('error', error.response?.data?.userMessage || 'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch khÃ¡ch hÃ ng');
         } finally {
             setLoading(false);
         }
@@ -95,9 +95,9 @@ const CustomerListPage = () => {
                 { keyword: filters.search, status: filters.status, groupType: filters.groupType }, 
                 selectedIds
             );
-            showToast('success', 'Đã xuất Excel thành công.');
+            showToast('success', 'ÄÃ£ xuáº¥t Excel thÃ nh cÃ´ng.');
         } catch (err) {
-            showToast('error', 'Có lỗi xảy ra khi xuất Excel.');
+            showToast('error', 'CÃ³ lá»—i xáº£y ra khi xuáº¥t Excel.');
         } finally {
             setLoading(false);
         }
@@ -114,7 +114,7 @@ const CustomerListPage = () => {
 
     const handleToggleStatus = (e, customer) => {
         e.stopPropagation();
-        const action = customer.status === 'APPROVED' ? 'vô hiệu hóa' : 'kích hoạt';
+        const action = customer.status === 'APPROVED' ? 'vÃ´ hiá»‡u hÃ³a' : 'kÃ­ch hoáº¡t';
         setConfirmModal({ isOpen: true, customer, action });
     };
 
@@ -123,14 +123,14 @@ const CustomerListPage = () => {
         try {
             if (confirmModal.customer.status === 'APPROVED') {
                 await deactivateCustomer(confirmModal.customer.id);
-                showToast('success', `Đã vô hiệu hóa khách hàng "${confirmModal.customer.name}".`);
+                showToast('success', `ÄÃ£ vÃ´ hiá»‡u hÃ³a khÃ¡ch hÃ ng "${confirmModal.customer.name}".`);
             } else {
                 await activateCustomer(confirmModal.customer.id);
-                showToast('success', `Đã kích hoạt lại khách hàng "${confirmModal.customer.name}".`);
+                showToast('success', `ÄÃ£ kÃ­ch hoáº¡t láº¡i khÃ¡ch hÃ ng "${confirmModal.customer.name}".`);
             }
             fetchCustomers();
         } catch (error) {
-            const msg = error.response?.data?.userMessage || 'Có lỗi xảy ra. Vui lòng thử lại.';
+            const msg = error.response?.data?.userMessage || 'CÃ³ lá»—i xáº£y ra. Vui lÃ²ng thá»­ láº¡i.';
             showToast('error', msg);
         } finally {
             setConfirmModal({ isOpen: false, customer: null, action: '' });
@@ -165,70 +165,70 @@ const CustomerListPage = () => {
         <AdminLayout>
             <div className={styles.pageBody}>
                 <div className={styles.pageTitleContainer}>
-                    <h1 className={styles.pageTitle}>Danh sách khách hàng</h1>
+                    <h1 className={styles.pageTitle}>Danh sÃ¡ch khÃ¡ch hÃ ng</h1>
                     <button className={styles.btnPrimary} onClick={() => setModalConfig({ isOpen: true, data: null })}>
-                        <i className="bi bi-plus"></i> Thêm mới
+                        <i className="bi bi-plus"></i> ThÃªm má»›i
                     </button>
                 </div>
 
                 <div className={styles.filterSection}>
                     <div className={styles.filterGroup}>
                         <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>TÌM KIẾM</span>
+                            <span className={styles.filterLabel}>TÃŒM KIáº¾M</span>
                             <input
                                 type="text"
                                 className={styles.filterInput}
-                                placeholder="Tên, mã, SĐT khách hàng..."
+                                placeholder="TÃªn, mÃ£, SÄT khÃ¡ch hÃ ng..."
                                 value={filters.search}
                                 onChange={handleSearchChange}
                                 onKeyDown={(e) => e.key === 'Enter' && fetchCustomers()}
                             />
                         </div>
                         <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>TÌNH TRẠNG</span>
+                            <span className={styles.filterLabel}>TÃŒNH TRáº NG</span>
                             <select
                                 className={styles.filterSelect}
                                 value={filters.status}
                                 onChange={(e) => handleFilterChange('status', e.target.value)}
                             >
-                                <option value="">Tất cả</option>
-                                <option value="APPROVED">Đang hoạt động</option>
-                                <option value="INACTIVE">Ngừng hoạt động</option>
+                                <option value="">Táº¥t cáº£</option>
+                                <option value="APPROVED">Äang hoáº¡t Ä‘á»™ng</option>
+                                <option value="INACTIVE">Ngá»«ng hoáº¡t Ä‘á»™ng</option>
                             </select>
                         </div>
                         <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>NHÓM KHÁCH</span>
+                            <span className={styles.filterLabel}>NHÃ“M KHÃCH</span>
                             <select
                                 className={styles.filterSelect}
                                 value={filters.groupType}
                                 onChange={(e) => handleFilterChange('groupType', e.target.value)}
                             >
-                                <option value="">Tất cả</option>
-                                <option value="RETAIL">Khách lẻ</option>
-                                <option value="WHOLESALE">Khách thợ</option>
-                                <option value="DISTRIBUTOR">Đại lý</option>
+                                <option value="">Táº¥t cáº£</option>
+                                <option value="RETAIL">KhÃ¡ch láº»</option>
+                                <option value="WHOLESALE">KhÃ¡ch thá»£</option>
+                                <option value="DISTRIBUTOR">Äáº¡i lÃ½</option>
                             </select>
                         </div>
                     </div>
                     <div className={styles.filterActions}>
                         <button className={styles.btnOutline} onClick={() => { setFilters({ search: '', status: '', groupType: '' }); setPage(1); }}>
-                            Làm mới
+                            LÃ m má»›i
                         </button>
                         <button className={styles.btnOutline} onClick={() => setIsImportModalOpen(true)}>
-                            <i className="bi bi-file-earmark-arrow-up"></i> Nhập Excel
+                            <i className="bi bi-file-earmark-arrow-up"></i> Nháº­p Excel
                         </button>
                         <button className={styles.btnOutline} onClick={handleExport}>
-                            <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                            <i className="bi bi-file-earmark-excel"></i> Xuáº¥t Excel
                         </button>
                         <button className={styles.btnPrimary} onClick={() => fetchCustomers()}>
-                            <i className="bi bi-funnel"></i> Lọc dữ liệu
+                            <i className="bi bi-funnel"></i> Lá»c dá»¯ liá»‡u
                         </button>
                     </div>
                 </div>
 
                 {selectedIds.length > 0 && (
                     <div className={styles.bulkActionsToolbar}>
-                        <div className={styles.bulkText}>Đã chọn {selectedIds.length} khách hàng</div>
+                        <div className={styles.bulkText}>ÄÃ£ chá»n {selectedIds.length} khÃ¡ch hÃ ng</div>
                     </div>
                 )}
 
@@ -244,20 +244,20 @@ const CustomerListPage = () => {
                                         onChange={handleSelectAll} 
                                     />
                                 </th>
-                                <th style={{ width: '150px' }}>Mã Khách Hàng</th>
-                                <th style={{ minWidth: '200px' }}>Tên Khách Hàng</th>
-                                <th style={{ width: '130px' }}>Nhóm</th>
-                                <th style={{ width: '130px' }}>Điện Thoại</th>
-                                <th style={{ minWidth: '200px' }}>Địa Chỉ</th>
-                                <th style={{ width: '140px' }}>Trạng Thái</th>
-                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
+                                <th style={{ width: '150px' }}>MÃ£ KhÃ¡ch HÃ ng</th>
+                                <th style={{ minWidth: '200px' }}>TÃªn KhÃ¡ch HÃ ng</th>
+                                <th style={{ width: '130px' }}>NhÃ³m</th>
+                                <th style={{ width: '130px' }}>Äiá»‡n Thoáº¡i</th>
+                                <th style={{ minWidth: '200px' }}>Äá»‹a Chá»‰</th>
+                                <th style={{ width: '140px' }}>Tráº¡ng ThÃ¡i</th>
+                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao TÃ¡c</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading && customers.length === 0 ? (
                                 <tr>
                                     <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
-                                        <div className={styles.emptyState}>Đang tải dữ liệu...</div>
+                                        <div className={styles.emptyState}>Äang táº£i dá»¯ liá»‡u...</div>
                                     </td>
                                 </tr>
                             ) : customers.length === 0 ? (
@@ -265,13 +265,13 @@ const CustomerListPage = () => {
                                     <td colSpan="8">
                                         <div className={styles.emptyState}>
                                             <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                                            <div className={styles.emptyText}>Không tìm thấy khách hàng nào</div>
+                                            <div className={styles.emptyText}>KhÃ´ng tÃ¬m tháº¥y khÃ¡ch hÃ ng nÃ o</div>
                                         </div>
                                     </td>
                                 </tr>
                             ) : (
                                 customers.map(item => {
-                                    const status = STATUS_LABELS[item.status] || { label: item.status || 'Không rõ', code: 'info' };
+                                    const status = STATUS_LABELS[item.status] || { label: item.status || 'KhÃ´ng rÃµ', code: 'info' };
                                     return (
                                         <tr key={item.id} onClick={() => navigate(`/customers/${item.id}`)}>
                                             <td style={{ textAlign: 'center' }}>
@@ -289,7 +289,7 @@ const CustomerListPage = () => {
                                             <td>{item.phone || '---'}</td>
                                             <td>
                                                 <div className={styles.tooltipContainer} style={{ display: 'inline-block', maxWidth: '100%' }}>
-                                                    <span className={styles.noteText}>{item.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có</span>}</span>
+                                                    <span className={styles.noteText}>{item.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>KhÃ´ng cÃ³</span>}</span>
                                                     {item.address && <span className={styles.tooltipText}>{item.address}</span>}
                                                 </div>
                                             </td>
@@ -302,27 +302,27 @@ const CustomerListPage = () => {
                                                 <i 
                                                     className="bi bi-eye" 
                                                     style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
-                                                    title="Xem chi tiết" 
+                                                    title="Xem chi tiáº¿t" 
                                                     onClick={(e) => { e.stopPropagation(); navigate(`/customers/${item.id}`); }}
                                                 ></i>
                                                 <i 
                                                     className="bi bi-pencil" 
                                                     style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
-                                                    title="Chỉnh sửa" 
+                                                    title="Chá»‰nh sá»­a" 
                                                     onClick={(e) => { e.stopPropagation(); setModalConfig({ isOpen: true, data: item }); }}
                                                 ></i>
                                                 {item.status === 'APPROVED' ? (
                                                     <i 
                                                         className="bi bi-slash-circle" 
                                                         style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
-                                                        title="Vô hiệu hóa" 
+                                                        title="VÃ´ hiá»‡u hÃ³a" 
                                                         onClick={(e) => handleToggleStatus(e, item)}
                                                     ></i>
                                                 ) : (
                                                     <i 
                                                         className="bi bi-check2-circle" 
                                                         style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} 
-                                                        title="Kích hoạt lại" 
+                                                        title="KÃ­ch hoáº¡t láº¡i" 
                                                         onClick={(e) => handleToggleStatus(e, item)}
                                                     ></i>
                                                 )}
@@ -336,7 +336,7 @@ const CustomerListPage = () => {
 
                     <div className={styles.pagination}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span>Hiển thị</span>
+                            <span>Hiá»ƒn thá»‹</span>
                             <select
                                 className="misa-select"
                                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
@@ -348,7 +348,7 @@ const CustomerListPage = () => {
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
                             </select>
-                            <span>trên tổng số {totalElements} bản ghi</span>
+                            <span>trÃªn tá»•ng sá»‘ {totalElements} báº£n ghi</span>
                         </div>
 
                         {totalPages > 1 && (
@@ -359,7 +359,7 @@ const CustomerListPage = () => {
                                     className={styles.pageBtn}
                                 >
                                     <i className="bi bi-chevron-left"></i>
-                                    <span>Trước</span>
+                                    <span>TrÆ°á»›c</span>
                                 </button>
 
                                 <div className={styles.paginationNumbers}>
@@ -370,7 +370,7 @@ const CustomerListPage = () => {
                                                 className={`${styles.pageNumber} ${styles.active}`}
                                                 style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
                                                 defaultValue={num}
-                                                title="Nhập số trang và nhấn Enter"
+                                                title="Nháº­p sá»‘ trang vÃ  nháº¥n Enter"
                                                 onBlur={(e) => e.target.value = page}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
@@ -416,7 +416,7 @@ const CustomerListPage = () => {
                 editData={modalConfig.data}
                 onClose={() => setModalConfig({ isOpen: false, data: null })}
                 onSaved={(isEdit, isContinue) => {
-                    showToast('success', isEdit ? 'Cập nhật khách hàng thành công!' : 'Thêm mới khách hàng thành công!');
+                    showToast('success', isEdit ? 'Cáº­p nháº­t khÃ¡ch hÃ ng thÃ nh cÃ´ng!' : 'ThÃªm má»›i khÃ¡ch hÃ ng thÃ nh cÃ´ng!');
                     fetchCustomers();
                     if (!isContinue) setModalConfig({ isOpen: false, data: null });
                 }}
@@ -431,13 +431,13 @@ const CustomerListPage = () => {
 
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
-                title={`Xác nhận ${confirmModal.action}`}
-                message={<span>Bạn có chắc chắn muốn {confirmModal.action} khách hàng <strong>{confirmModal.customer?.name}</strong> {confirmModal.customer?.code ? `(${confirmModal.customer.code})` : ''} không?</span>}
+                title={`XÃ¡c nháº­n ${confirmModal.action}`}
+                message={<span>Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n {confirmModal.action} khÃ¡ch hÃ ng <strong>{confirmModal.customer?.name}</strong> {confirmModal.customer?.code ? `(${confirmModal.customer.code})` : ''} khÃ´ng?</span>}
                 onConfirm={executeToggleStatus}
                 onCancel={() => setConfirmModal({ isOpen: false, customer: null, action: '' })}
-                confirmText="Đồng ý"
-                cancelText="Hủy"
-                confirmButtonClass={confirmModal.action === 'vô hiệu hóa' ? 'btn-misa-danger' : 'btn-misa-primary'}
+                confirmText="Äá»“ng Ã½"
+                cancelText="Há»§y"
+                confirmButtonClass={confirmModal.action === 'vÃ´ hiá»‡u hÃ³a' ? 'btn-misa-danger' : 'btn-misa-primary'}
             />
 
             <Toast {...toast} onClose={hideToast} />

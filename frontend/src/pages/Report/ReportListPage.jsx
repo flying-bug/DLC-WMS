@@ -15,37 +15,37 @@ import styles from './ReportListPage.module.css';
 const MOCK_CATEGORIES = [
     {
         id: 'favorites',
-        title: 'Báo cáo yêu thích',
+        title: 'BÃ¡o cÃ¡o yÃªu thÃ­ch',
         icon: 'fas fa-star',
         reports: [
-            { id: 'inventory-summary', name: 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)', desc: 'Theo dõi chi tiết lượng nhập, xuất và tồn của vật tư hàng hóa trong kỳ.' },
-            { id: 'stock-ledger', name: 'Sổ chi tiết vật tư hàng hóa', desc: 'Xem chi tiết các chứng từ nhập xuất phát sinh của từng hàng hóa.' }
+            { id: 'inventory-summary', name: 'Tá»•ng há»£p tá»“n kho (Nháº­p - Xuáº¥t - Tá»“n)', desc: 'Theo dÃµi chi tiáº¿t lÆ°á»£ng nháº­p, xuáº¥t vÃ  tá»“n cá»§a váº­t tÆ° hÃ ng hÃ³a trong ká»³.' },
+            { id: 'stock-ledger', name: 'Sá»• chi tiáº¿t váº­t tÆ° hÃ ng hÃ³a', desc: 'Xem chi tiáº¿t cÃ¡c chá»©ng tá»« nháº­p xuáº¥t phÃ¡t sinh cá»§a tá»«ng hÃ ng hÃ³a.' }
         ]
     },
     {
         id: 'inventory-reports',
-        title: 'Báo cáo tổng hợp tồn kho',
+        title: 'BÃ¡o cÃ¡o tá»•ng há»£p tá»“n kho',
         icon: 'fas fa-boxes-stacked',
         reports: [
-            { id: 'inventory-summary', name: 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)', desc: 'Theo dõi lượng nhập, xuất và số dư cuối kỳ theo kho hoặc toàn hệ thống.' },
-            { id: 'inventory-balance', name: 'Báo cáo tồn kho hiện tại', desc: 'Báo cáo số lượng và giá trị tồn kho hiện thời của vật tư.' }
+            { id: 'inventory-summary', name: 'Tá»•ng há»£p tá»“n kho (Nháº­p - Xuáº¥t - Tá»“n)', desc: 'Theo dÃµi lÆ°á»£ng nháº­p, xuáº¥t vÃ  sá»‘ dÆ° cuá»‘i ká»³ theo kho hoáº·c toÃ n há»‡ thá»‘ng.' },
+            { id: 'inventory-balance', name: 'BÃ¡o cÃ¡o tá»“n kho hiá»‡n táº¡i', desc: 'BÃ¡o cÃ¡o sá»‘ lÆ°á»£ng vÃ  giÃ¡ trá»‹ tá»“n kho hiá»‡n thá»i cá»§a váº­t tÆ°.' }
         ]
     },
     {
         id: 'detailed-reports',
-        title: 'Báo cáo chi tiết kho',
+        title: 'BÃ¡o cÃ¡o chi tiáº¿t kho',
         icon: 'fas fa-list-ul',
         reports: [
-            { id: 'stock-ledger', name: 'Sổ chi tiết vật tư hàng hóa', desc: 'Theo dõi lịch sử nhập xuất, số dư của từng mã hàng theo ngày.' },
-            { id: 'stock-transfers', name: 'Báo cáo chuyển kho nội bộ', desc: 'Tổng hợp danh sách các lần luân chuyển hàng hóa giữa các kho.' }
+            { id: 'stock-ledger', name: 'Sá»• chi tiáº¿t váº­t tÆ° hÃ ng hÃ³a', desc: 'Theo dÃµi lá»‹ch sá»­ nháº­p xuáº¥t, sá»‘ dÆ° cá»§a tá»«ng mÃ£ hÃ ng theo ngÃ y.' },
+            { id: 'stock-transfers', name: 'BÃ¡o cÃ¡o chuyá»ƒn kho ná»™i bá»™', desc: 'Tá»•ng há»£p danh sÃ¡ch cÃ¡c láº§n luÃ¢n chuyá»ƒn hÃ ng hÃ³a giá»¯a cÃ¡c kho.' }
         ]
     },
     {
         id: 'debt-reports',
-        title: 'Báo cáo đối chiếu & công nợ',
+        title: 'BÃ¡o cÃ¡o Ä‘á»‘i chiáº¿u & cÃ´ng ná»£',
         icon: 'fas fa-file-invoice-dollar',
         reports: [
-            { id: 'debt', name: 'Báo cáo công nợ đối tác (Khách hàng / Nhà cung cấp)', desc: 'Xem số dư nợ đầu kỳ, phát sinh tăng/giảm và nợ cuối kỳ của đối tác.' }
+            { id: 'debt', name: 'BÃ¡o cÃ¡o cÃ´ng ná»£ Ä‘á»‘i tÃ¡c (KhÃ¡ch hÃ ng / NhÃ  cung cáº¥p)', desc: 'Xem sá»‘ dÆ° ná»£ Ä‘áº§u ká»³, phÃ¡t sinh tÄƒng/giáº£m vÃ  ná»£ cuá»‘i ká»³ cá»§a Ä‘á»‘i tÃ¡c.' }
         ]
     }
 ];
@@ -99,7 +99,7 @@ const ReportListPage = () => {
                 const content = res.data?.data?.content || res.data?.content || [];
                 setWarehouses(content);
             } catch (err) {
-                console.error('Lỗi tải danh sách kho:', err);
+                console.error('Lá»—i táº£i danh sÃ¡ch kho:', err);
             }
         };
         fetchWarehouses();
@@ -115,7 +115,7 @@ const ReportListPage = () => {
             localStorage.setItem('favorite_reports', JSON.stringify(updated));
             return updated;
         });
-        showToast('success', 'Đã cập nhật báo cáo yêu thích.');
+        showToast('success', 'ÄÃ£ cáº­p nháº­t bÃ¡o cÃ¡o yÃªu thÃ­ch.');
     };
 
     // Open report view page
@@ -166,14 +166,14 @@ const ReportListPage = () => {
                     response = await getDebtReport(params);
                     break;
                 default:
-                    throw new Error('Loại báo cáo không hợp lệ');
+                    throw new Error('Loáº¡i bÃ¡o cÃ¡o khÃ´ng há»£p lá»‡');
             }
 
             const data = response.data?.data || response.data || [];
             setReportData(data);
         } catch (err) {
-            console.error('Lỗi khi lấy dữ liệu báo cáo:', err);
-            showToast('error', err.response?.data?.userMessage || 'Không thể tải dữ liệu báo cáo.');
+            console.error('Lá»—i khi láº¥y dá»¯ liá»‡u bÃ¡o cÃ¡o:', err);
+            showToast('error', err.response?.data?.userMessage || 'KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u bÃ¡o cÃ¡o.');
             setReportData([]);
         } finally {
             setLoading(false);
@@ -221,7 +221,7 @@ const ReportListPage = () => {
     // Export to Excel
     const handleExport = async () => {
         if (!reportData || reportData.length === 0) {
-            showToast('warning', 'Không có dữ liệu để xuất.');
+            showToast('warning', 'KhÃ´ng cÃ³ dá»¯ liá»‡u Ä‘á»ƒ xuáº¥t.');
             return;
         }
         
@@ -245,10 +245,10 @@ const ReportListPage = () => {
             }
 
             await exportReportExcel(activeReport.id, params);
-            showToast('success', 'Xuất Excel báo cáo thành công.');
+            showToast('success', 'Xuáº¥t Excel bÃ¡o cÃ¡o thÃ nh cÃ´ng.');
         } catch (error) {
-            console.error('Lỗi xuất Excel:', error);
-            showToast('error', 'Có lỗi xảy ra khi xuất Excel báo cáo!');
+            console.error('Lá»—i xuáº¥t Excel:', error);
+            showToast('error', 'CÃ³ lá»—i xáº£y ra khi xuáº¥t Excel bÃ¡o cÃ¡o!');
         }
     };
 
@@ -286,15 +286,15 @@ const ReportListPage = () => {
                         {/* Header bar */}
                         <div className={styles.header}>
                             <div className={styles.titleArea}>
-                                <h2>Báo cáo</h2>
-                                <span className={styles.subtitle}>Tổng hợp dữ liệu tồn kho, xuất nhập và đối chiếu công nợ của hệ thống.</span>
+                                <h2>BÃ¡o cÃ¡o</h2>
+                                <span className={styles.subtitle}>Tá»•ng há»£p dá»¯ liá»‡u tá»“n kho, xuáº¥t nháº­p vÃ  Ä‘á»‘i chiáº¿u cÃ´ng ná»£ cá»§a há»‡ thá»‘ng.</span>
                             </div>
 
                             <div className={styles.headerRight}>
                                 <div className={styles.languageSelect}>
-                                    <label>Ngôn ngữ báo cáo</label>
+                                    <label>NgÃ´n ngá»¯ bÃ¡o cÃ¡o</label>
                                     <select value={selectedLanguage} onChange={(e) => setSelectedLanguage(e.target.value)}>
-                                        <option value="vi">Tiếng Việt</option>
+                                        <option value="vi">Tiáº¿ng Viá»‡t</option>
                                         <option value="en">English</option>
                                     </select>
                                 </div>
@@ -307,7 +307,7 @@ const ReportListPage = () => {
                                 <i className="fas fa-search"></i>
                                 <input
                                     type="text"
-                                    placeholder="Tìm kiếm theo tên hoặc mô tả báo cáo..."
+                                    placeholder="TÃ¬m kiáº¿m theo tÃªn hoáº·c mÃ´ táº£ bÃ¡o cÃ¡o..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -322,7 +322,7 @@ const ReportListPage = () => {
                             {filteredCategories.length === 0 ? (
                                 <div className={styles.noResults}>
                                     <i className="fas fa-search-minus"></i>
-                                    <p>Không tìm thấy báo cáo nào phù hợp với tìm kiếm của bạn.</p>
+                                    <p>KhÃ´ng tÃ¬m tháº¥y bÃ¡o cÃ¡o nÃ o phÃ¹ há»£p vá»›i tÃ¬m kiáº¿m cá»§a báº¡n.</p>
                                 </div>
                             ) : (
                                 filteredCategories.map((category) => (
@@ -346,7 +346,7 @@ const ReportListPage = () => {
                                                         <button
                                                             className={styles.starBtn}
                                                             onClick={(e) => toggleFavorite(report.id, e)}
-                                                            title={favorites.includes(report.id) ? 'Bỏ yêu thích' : 'Yêu thích'}
+                                                            title={favorites.includes(report.id) ? 'Bá» yÃªu thÃ­ch' : 'YÃªu thÃ­ch'}
                                                         >
                                                             <i className={`${favorites.includes(report.id) ? 'fas' : 'far'} fa-star ${styles.starIcon}`}></i>
                                                         </button>
@@ -366,7 +366,7 @@ const ReportListPage = () => {
                             {/* Back Header */}
                             <div className={styles.backHeader}>
                                 <button className={styles.backBtn} onClick={() => { setViewMode('list'); setReportData([]); }}>
-                                    <i className="fas fa-arrow-left"></i> Quay lại danh sách báo cáo
+                                    <i className="fas fa-arrow-left"></i> Quay láº¡i danh sÃ¡ch bÃ¡o cÃ¡o
                                 </button>
                             </div>
 
@@ -383,13 +383,13 @@ const ReportListPage = () => {
                                 {/* Warehouse Filter */}
                                 {activeReport.id !== 'debt' && (
                                     <div className={styles.filterGroup}>
-                                        <label>Kho chứa</label>
+                                        <label>Kho chá»©a</label>
                                         <select
                                             className={styles.filterSelect}
                                             value={filters.warehouseId}
                                             onChange={(e) => setFilters({ ...filters, warehouseId: e.target.value })}
                                         >
-                                            <option value="">Tất cả kho</option>
+                                            <option value="">Táº¥t cáº£ kho</option>
                                             {warehouses.map((w) => (
                                                 <option key={w.id} value={w.id}>{w.warehouseCode} - {w.name}</option>
                                             ))}
@@ -401,7 +401,7 @@ const ReportListPage = () => {
                                 {activeReport.id !== 'inventory-balance' && (
                                     <>
                                         <div className={styles.filterGroup}>
-                                            <label>Từ ngày</label>
+                                            <label>Tá»« ngÃ y</label>
                                             <input
                                                 type="date"
                                                 className={styles.filterInput}
@@ -410,7 +410,7 @@ const ReportListPage = () => {
                                             />
                                         </div>
                                         <div className={styles.filterGroup}>
-                                            <label>Đến ngày</label>
+                                            <label>Äáº¿n ngÃ y</label>
                                             <input
                                                 type="date"
                                                 className={styles.filterInput}
@@ -424,15 +424,15 @@ const ReportListPage = () => {
                                 {/* Partner Type Filter */}
                                 {activeReport.id === 'debt' && (
                                     <div className={styles.filterGroup}>
-                                        <label>Loại đối tác</label>
+                                        <label>Loáº¡i Ä‘á»‘i tÃ¡c</label>
                                         <select
                                             className={styles.filterSelect}
                                             value={filters.partnerType}
                                             onChange={(e) => setFilters({ ...filters, partnerType: e.target.value })}
                                         >
-                                            <option value="ALL">Tất cả đối tác</option>
-                                            <option value="CUSTOMER">Khách hàng</option>
-                                            <option value="SUPPLIER">Nhà cung cấp</option>
+                                            <option value="ALL">Táº¥t cáº£ Ä‘á»‘i tÃ¡c</option>
+                                            <option value="CUSTOMER">KhÃ¡ch hÃ ng</option>
+                                            <option value="SUPPLIER">NhÃ  cung cáº¥p</option>
                                         </select>
                                     </div>
                                 )}
@@ -440,27 +440,27 @@ const ReportListPage = () => {
                                 {/* Status Filter */}
                                 {activeReport.id === 'stock-transfers' && (
                                     <div className={styles.filterGroup}>
-                                        <label>Trạng thái</label>
+                                        <label>Tráº¡ng thÃ¡i</label>
                                         <select
                                             className={styles.filterSelect}
                                             value={filters.status}
                                             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                                         >
-                                            <option value="">Tất cả</option>
-                                            <option value="COMPLETED">Hoàn thành</option>
-                                            <option value="PENDING">Chờ duyệt</option>
-                                            <option value="CANCELLED">Đã hủy</option>
+                                            <option value="">Táº¥t cáº£</option>
+                                            <option value="COMPLETED">HoÃ n thÃ nh</option>
+                                            <option value="PENDING">Chá» duyá»‡t</option>
+                                            <option value="CANCELLED">ÄÃ£ há»§y</option>
                                         </select>
                                     </div>
                                 )}
 
                                 {/* Search keyword filter */}
                                 <div className={styles.filterGroup}>
-                                    <label>Tìm mặt hàng</label>
+                                    <label>TÃ¬m máº·t hÃ ng</label>
                                     <input
                                         type="text"
                                         className={styles.filterInput}
-                                        placeholder="Nhập tên, mã..."
+                                        placeholder="Nháº­p tÃªn, mÃ£..."
                                         onKeyDown={(e) => { if (e.key === 'Enter') handleViewReport(); }}
                                         value={filters.search}
                                         onChange={(e) => setFilters({ ...filters, search: e.target.value })}
@@ -469,15 +469,15 @@ const ReportListPage = () => {
 
                                 {/* Actions */}
                                 <button className={styles.btnView} onClick={handleViewReport}>
-                                    <i className="fas fa-sync-alt"></i> Xem báo cáo
+                                    <i className="fas fa-sync-alt"></i> Xem bÃ¡o cÃ¡o
                                 </button>
 
                                 <button className={styles.btnExport} onClick={handleExport}>
-                                    <i className="fas fa-file-excel" style={{ color: 'var(--color-excel)' }}></i> Xuất Excel
+                                    <i className="fas fa-file-excel" style={{ color: 'var(--color-excel)' }}></i> Xuáº¥t Excel
                                 </button>
 
                                 <button className={styles.btnPrint} onClick={() => window.print()}>
-                                    <i className="fas fa-print"></i> In ấn
+                                    <i className="fas fa-print"></i> In áº¥n
                                 </button>
                             </div>
 
@@ -485,19 +485,19 @@ const ReportListPage = () => {
                             <div className="report-results-view" style={{ background: 'var(--color-surface)', padding: '24px', borderRadius: 'var(--radius-card)', border: '1px solid var(--color-border-soft)' }}>
                                 <div className={styles.reportMetadataHeader}>
                                     <h4>Duy Long Computer Warehouse</h4>
-                                    <p><strong>Kỳ báo cáo:</strong> {activeReport.id !== 'inventory-balance' ? `Từ ${formatDate(filters.startDate)} đến ${formatDate(filters.endDate)}` : 'Tính đến thời điểm hiện tại'}</p>
+                                    <p><strong>Ká»³ bÃ¡o cÃ¡o:</strong> {activeReport.id !== 'inventory-balance' ? `Tá»« ${formatDate(filters.startDate)} Ä‘áº¿n ${formatDate(filters.endDate)}` : 'TÃ­nh Ä‘áº¿n thá»i Ä‘iá»ƒm hiá»‡n táº¡i'}</p>
                                     {filters.warehouseId && <p><strong>Kho:</strong> {warehouses.find(w => w.id === Number(filters.warehouseId))?.name}</p>}
                                 </div>
 
                                 {loading ? (
                                     <div className={styles.loadingSpinnerContainer}>
                                         <div className={styles.spinner}></div>
-                                        <p>Đang lập báo cáo. Vui lòng chờ trong giây lát...</p>
+                                        <p>Äang láº­p bÃ¡o cÃ¡o. Vui lÃ²ng chá» trong giÃ¢y lÃ¡t...</p>
                                     </div>
                                 ) : reportData.length === 0 ? (
                                     <div className={styles.noDataContainer}>
                                         <i className="fas fa-folder-open"></i>
-                                        <p>Không có dữ liệu phù hợp với bộ lọc đã chọn.</p>
+                                        <p>KhÃ´ng cÃ³ dá»¯ liá»‡u phÃ¹ há»£p vá»›i bá»™ lá»c Ä‘Ã£ chá»n.</p>
                                     </div>
                                 ) : (
                                     <div className={styles.reportTableContainer}>
@@ -507,23 +507,23 @@ const ReportListPage = () => {
                                                 <thead>
                                                     <tr>
                                                         <th rowSpan="2">Kho</th>
-                                                        <th rowSpan="2">Mã hàng</th>
-                                                        <th rowSpan="2">Tên hàng</th>
-                                                        <th rowSpan="2">ĐVT</th>
-                                                        <th colSpan="2" className={styles.textCenter}>Tồn đầu kỳ</th>
-                                                        <th colSpan="2" className={styles.textCenter}>Nhập trong kỳ</th>
-                                                        <th colSpan="2" className={styles.textCenter}>Xuất trong kỳ</th>
-                                                        <th colSpan="2" className={styles.textCenter}>Tồn cuối kỳ</th>
+                                                        <th rowSpan="2">MÃ£ hÃ ng</th>
+                                                        <th rowSpan="2">TÃªn hÃ ng</th>
+                                                        <th rowSpan="2">ÄVT</th>
+                                                        <th colSpan="2" className={styles.textCenter}>Tá»“n Ä‘áº§u ká»³</th>
+                                                        <th colSpan="2" className={styles.textCenter}>Nháº­p trong ká»³</th>
+                                                        <th colSpan="2" className={styles.textCenter}>Xuáº¥t trong ká»³</th>
+                                                        <th colSpan="2" className={styles.textCenter}>Tá»“n cuá»‘i ká»³</th>
                                                     </tr>
                                                     <tr>
-                                                        <th className={styles.textRight}>Số lượng</th>
-                                                        <th className={styles.textRight}>Giá trị</th>
-                                                        <th className={styles.textRight}>Số lượng</th>
-                                                        <th className={styles.textRight}>Giá trị</th>
-                                                        <th className={styles.textRight}>Số lượng</th>
-                                                        <th className={styles.textRight}>Giá trị</th>
-                                                        <th className={styles.textRight}>Số lượng</th>
-                                                        <th className={styles.textRight}>Giá trị</th>
+                                                        <th className={styles.textRight}>Sá»‘ lÆ°á»£ng</th>
+                                                        <th className={styles.textRight}>GiÃ¡ trá»‹</th>
+                                                        <th className={styles.textRight}>Sá»‘ lÆ°á»£ng</th>
+                                                        <th className={styles.textRight}>GiÃ¡ trá»‹</th>
+                                                        <th className={styles.textRight}>Sá»‘ lÆ°á»£ng</th>
+                                                        <th className={styles.textRight}>GiÃ¡ trá»‹</th>
+                                                        <th className={styles.textRight}>Sá»‘ lÆ°á»£ng</th>
+                                                        <th className={styles.textRight}>GiÃ¡ trá»‹</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -552,12 +552,12 @@ const ReportListPage = () => {
                                             <table className={styles.reportTable}>
                                                 <thead>
                                                     <tr>
-                                                        <th>Mã hàng</th>
-                                                        <th>Tên hàng</th>
-                                                        <th>Đơn vị tính</th>
-                                                        <th>Kho chứa</th>
-                                                        <th className={styles.textRight}>Số lượng tồn</th>
-                                                        <th className={styles.textRight}>Giá trị tồn</th>
+                                                        <th>MÃ£ hÃ ng</th>
+                                                        <th>TÃªn hÃ ng</th>
+                                                        <th>ÄÆ¡n vá»‹ tÃ­nh</th>
+                                                        <th>Kho chá»©a</th>
+                                                        <th className={styles.textRight}>Sá»‘ lÆ°á»£ng tá»“n</th>
+                                                        <th className={styles.textRight}>GiÃ¡ trá»‹ tá»“n</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -580,17 +580,17 @@ const ReportListPage = () => {
                                             <table className={styles.reportTable}>
                                                 <thead>
                                                     <tr>
-                                                        <th>Ngày CT</th>
-                                                        <th>Số chứng từ</th>
-                                                        <th>Loại CT</th>
-                                                        <th>Mã hàng</th>
-                                                        <th>Tên hàng</th>
+                                                        <th>NgÃ y CT</th>
+                                                        <th>Sá»‘ chá»©ng tá»«</th>
+                                                        <th>Loáº¡i CT</th>
+                                                        <th>MÃ£ hÃ ng</th>
+                                                        <th>TÃªn hÃ ng</th>
                                                         <th>Kho</th>
-                                                        <th>ĐVT</th>
-                                                        <th className={styles.textRight}>Đơn giá</th>
-                                                        <th className={styles.textRight}>Số lượng nhập</th>
-                                                        <th className={styles.textRight}>Số lượng xuất</th>
-                                                        <th className={styles.textRight}>Tồn sau CT</th>
+                                                        <th>ÄVT</th>
+                                                        <th className={styles.textRight}>ÄÆ¡n giÃ¡</th>
+                                                        <th className={styles.textRight}>Sá»‘ lÆ°á»£ng nháº­p</th>
+                                                        <th className={styles.textRight}>Sá»‘ lÆ°á»£ng xuáº¥t</th>
+                                                        <th className={styles.textRight}>Tá»“n sau CT</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -622,17 +622,17 @@ const ReportListPage = () => {
                                             <table className={styles.reportTable}>
                                                 <thead>
                                                     <tr>
-                                                        <th>Ngày CT</th>
-                                                        <th>Số chứng từ</th>
-                                                        <th>Mã hàng</th>
-                                                        <th>Tên hàng</th>
-                                                        <th>Kho chuyển</th>
-                                                        <th>Kho nhận</th>
-                                                        <th>ĐVT</th>
-                                                        <th className={styles.textRight}>Số lượng</th>
-                                                        <th className={styles.textRight}>Đơn giá</th>
-                                                        <th className={styles.textRight}>Thành tiền</th>
-                                                        <th>Trạng thái</th>
+                                                        <th>NgÃ y CT</th>
+                                                        <th>Sá»‘ chá»©ng tá»«</th>
+                                                        <th>MÃ£ hÃ ng</th>
+                                                        <th>TÃªn hÃ ng</th>
+                                                        <th>Kho chuyá»ƒn</th>
+                                                        <th>Kho nháº­n</th>
+                                                        <th>ÄVT</th>
+                                                        <th className={styles.textRight}>Sá»‘ lÆ°á»£ng</th>
+                                                        <th className={styles.textRight}>ÄÆ¡n giÃ¡</th>
+                                                        <th className={styles.textRight}>ThÃ nh tiá»n</th>
+                                                        <th>Tráº¡ng thÃ¡i</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -650,7 +650,7 @@ const ReportListPage = () => {
                                                             <td className={styles.textRight}>{formatCurrency(item.amount)}</td>
                                                             <td>
                                                                 <span className={`${styles.badge} ${item.status === 'COMPLETED' ? styles.badgeSuccess : styles.badgeWarning}`}>
-                                                                    {item.status === 'COMPLETED' ? 'Hoàn thành' : item.status}
+                                                                    {item.status === 'COMPLETED' ? 'HoÃ n thÃ nh' : item.status}
                                                                 </span>
                                                             </td>
                                                         </tr>
@@ -664,13 +664,13 @@ const ReportListPage = () => {
                                             <table className={styles.reportTable}>
                                                 <thead>
                                                     <tr>
-                                                        <th>Mã đối tác</th>
-                                                        <th>Tên đối tác</th>
-                                                        <th>Phân loại</th>
-                                                        <th className={styles.textRight}>Dư đầu kỳ</th>
-                                                        <th className={styles.textRight}>Phát sinh tăng (Nợ)</th>
-                                                        <th className={styles.textRight}>Phát sinh giảm (Có)</th>
-                                                        <th className={styles.textRight}>Dư cuối kỳ (Nợ cuối)</th>
+                                                        <th>MÃ£ Ä‘á»‘i tÃ¡c</th>
+                                                        <th>TÃªn Ä‘á»‘i tÃ¡c</th>
+                                                        <th>PhÃ¢n loáº¡i</th>
+                                                        <th className={styles.textRight}>DÆ° Ä‘áº§u ká»³</th>
+                                                        <th className={styles.textRight}>PhÃ¡t sinh tÄƒng (Ná»£)</th>
+                                                        <th className={styles.textRight}>PhÃ¡t sinh giáº£m (CÃ³)</th>
+                                                        <th className={styles.textRight}>DÆ° cuá»‘i ká»³ (Ná»£ cuá»‘i)</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -680,7 +680,7 @@ const ReportListPage = () => {
                                                             <td>{item.partnerName}</td>
                                                             <td>
                                                                 <span className={`${styles.badge} ${item.partnerType === 'SUPPLIER' ? styles.badgeSupplier : styles.badgeCustomer}`}>
-                                                                    {item.partnerType === 'SUPPLIER' ? 'Nhà cung cấp' : 'Khách hàng'}
+                                                                    {item.partnerType === 'SUPPLIER' ? 'NhÃ  cung cáº¥p' : 'KhÃ¡ch hÃ ng'}
                                                                 </span>
                                                             </td>
                                                             <td className={styles.textRight}>{formatCurrency(item.openingBalance)}</td>

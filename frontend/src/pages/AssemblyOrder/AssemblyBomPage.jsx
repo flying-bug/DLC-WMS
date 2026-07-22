@@ -9,9 +9,9 @@ const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
 
 const STATUS_META = {
-    DRAFT: { label: 'Nháp', tone: 'info' },
-    APPROVED: { label: 'Đã duyệt', tone: 'success' },
-    INACTIVE: { label: 'Ngừng dùng', tone: 'danger' }
+    DRAFT: { label: 'NhÃ¡p', tone: 'info' },
+    APPROVED: { label: 'ÄÃ£ duyá»‡t', tone: 'success' },
+    INACTIVE: { label: 'Ngá»«ng dÃ¹ng', tone: 'danger' }
 };
 
 const defaultBomLine = { componentVariantId: '', quantity: '1', costAllocationPct: '0', note: '' };
@@ -46,7 +46,7 @@ function AssemblyBomPage() {
             setBoms(listFrom(unwrap(response)));
         } catch (err) {
             setBoms([]);
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách BOM.');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch BOM.');
         } finally {
             setLoading(false);
         }
@@ -61,7 +61,7 @@ function AssemblyBomPage() {
             setProducts(listFrom(unwrap(productResponse)).filter((item) => item.active !== false));
             setVariants(listFrom(unwrap(variantResponse)).filter((item) => item.active !== false));
         } catch (err) {
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách thành phẩm/SKU.');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch thÃ nh pháº©m/SKU.');
         }
     }, []);
 
@@ -139,19 +139,19 @@ function AssemblyBomPage() {
     };
 
     const validateForm = () => {
-        if (!form.productId) return 'Vui lòng chọn thành phẩm.';
-        if (!form.bomName.trim()) return 'Vui lòng nhập tên BOM.';
-        if (!form.versionNo || Number(form.versionNo) <= 0) return 'Phiên bản BOM phải lớn hơn 0.';
-        if (!form.lines.length) return 'BOM phải có ít nhất một linh kiện.';
+        if (!form.productId) return 'Vui lÃ²ng chá»n thÃ nh pháº©m.';
+        if (!form.bomName.trim()) return 'Vui lÃ²ng nháº­p tÃªn BOM.';
+        if (!form.versionNo || Number(form.versionNo) <= 0) return 'PhiÃªn báº£n BOM pháº£i lá»›n hÆ¡n 0.';
+        if (!form.lines.length) return 'BOM pháº£i cÃ³ Ã­t nháº¥t má»™t linh kiá»‡n.';
         for (let index = 0; index < form.lines.length; index += 1) {
             const line = form.lines[index];
-            if (!line.componentVariantId) return `Vui lòng chọn SKU linh kiện dòng ${index + 1}.`;
-            if (!line.quantity || Number(line.quantity) <= 0) return `Định mức dòng ${index + 1} phải lớn hơn 0.`;
-            if (!Number.isInteger(Number(line.quantity))) return `Định mức dòng ${index + 1} phải là số nguyên.`;
-            if (line.costAllocationPct === '' || Number(line.costAllocationPct) < 0) return `Tỷ lệ phân bổ dòng ${index + 1} không được âm.`;
+            if (!line.componentVariantId) return `Vui lÃ²ng chá»n SKU linh kiá»‡n dÃ²ng ${index + 1}.`;
+            if (!line.quantity || Number(line.quantity) <= 0) return `Äá»‹nh má»©c dÃ²ng ${index + 1} pháº£i lá»›n hÆ¡n 0.`;
+            if (!Number.isInteger(Number(line.quantity))) return `Äá»‹nh má»©c dÃ²ng ${index + 1} pháº£i lÃ  sá»‘ nguyÃªn.`;
+            if (line.costAllocationPct === '' || Number(line.costAllocationPct) < 0) return `Tá»· lá»‡ phÃ¢n bá»• dÃ²ng ${index + 1} khÃ´ng Ä‘Æ°á»£c Ã¢m.`;
         }
         const totalPct = form.lines.reduce((sum, l) => sum + Number(l.costAllocationPct || 0), 0);
-        if (Math.abs(totalPct - 100) > 0.01) return `Tổng tỷ lệ phân bổ giá vốn phải bằng 100% (hiện tại: ${totalPct.toFixed(2)}%).`;
+        if (Math.abs(totalPct - 100) > 0.01) return `Tá»•ng tá»· lá»‡ phÃ¢n bá»• giÃ¡ vá»‘n pháº£i báº±ng 100% (hiá»‡n táº¡i: ${totalPct.toFixed(2)}%).`;
         return '';
     };
 
@@ -181,15 +181,15 @@ function AssemblyBomPage() {
         try {
             if (form.id) {
                 await assemblyApi.updateAssemblyBom(form.id, buildPayload());
-                setSuccess('Cập nhật BOM thành công.');
+                setSuccess('Cáº­p nháº­t BOM thÃ nh cÃ´ng.');
             } else {
                 await assemblyApi.createAssemblyBom(buildPayload());
-                setSuccess('Tạo BOM thành công.');
+                setSuccess('Táº¡o BOM thÃ nh cÃ´ng.');
             }
             setShowModal(false);
             await loadBoms();
         } catch (err) {
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không lưu được BOM.');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng lÆ°u Ä‘Æ°á»£c BOM.');
         } finally {
             setSaving(false);
         }
@@ -200,41 +200,41 @@ function AssemblyBomPage() {
             <div className={styles.page}>
                 <div className={styles.pageHeader}>
                     <div>
-                        <h1 className={styles.pageTitle}>Quản lý BOM</h1>
-                        <p className={styles.pageSubtitle}>Thiết lập định mức linh kiện cho thành phẩm trước khi lập lệnh lắp ráp hoặc tháo dỡ.</p>
+                        <h1 className={styles.pageTitle}>Quáº£n lÃ½ BOM</h1>
+                        <p className={styles.pageSubtitle}>Thiáº¿t láº­p Ä‘á»‹nh má»©c linh kiá»‡n cho thÃ nh pháº©m trÆ°á»›c khi láº­p lá»‡nh láº¯p rÃ¡p hoáº·c thÃ¡o dá»¡.</p>
                     </div>
                     <div className={styles.actions}>
                         <button className={styles.primaryButton} type="button" onClick={openCreate}>
                             <i className="bi bi-plus-lg"></i>
-                            Tạo BOM
+                            Táº¡o BOM
                         </button>
                     </div>
                 </div>
 
                 <div className={styles.detailGrid}>
-                    <div className={styles.detailItem}><span>Tổng BOM</span><strong>{stats.total}</strong></div>
-                    <div className={styles.detailItem}><span>Đã duyệt</span><strong>{stats.approved}</strong></div>
-                    <div className={styles.detailItem}><span>Nháp</span><strong>{stats.draft}</strong></div>
-                    <div className={styles.detailItem}><span>Ngừng dùng</span><strong>{stats.inactive}</strong></div>
+                    <div className={styles.detailItem}><span>Tá»•ng BOM</span><strong>{stats.total}</strong></div>
+                    <div className={styles.detailItem}><span>ÄÃ£ duyá»‡t</span><strong>{stats.approved}</strong></div>
+                    <div className={styles.detailItem}><span>NhÃ¡p</span><strong>{stats.draft}</strong></div>
+                    <div className={styles.detailItem}><span>Ngá»«ng dÃ¹ng</span><strong>{stats.inactive}</strong></div>
                 </div>
 
                 <div className={styles.toolbar}>
                     <div className={styles.filterGrid}>
                         <label className={styles.field}>
-                            <span>Trạng thái</span>
+                            <span>Tráº¡ng thÃ¡i</span>
                             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                                <option value="">Tất cả</option>
-                                <option value="APPROVED">Đã duyệt</option>
-                                <option value="DRAFT">Nháp</option>
-                                <option value="INACTIVE">Ngừng dùng</option>
+                                <option value="">Táº¥t cáº£</option>
+                                <option value="APPROVED">ÄÃ£ duyá»‡t</option>
+                                <option value="DRAFT">NhÃ¡p</option>
+                                <option value="INACTIVE">Ngá»«ng dÃ¹ng</option>
                             </select>
                         </label>
                     </div>
                     <div className={styles.actions}>
-                        <button className={styles.secondaryButton} type="button" onClick={() => setStatusFilter('')}>Làm mới</button>
+                        <button className={styles.secondaryButton} type="button" onClick={() => setStatusFilter('')}>LÃ m má»›i</button>
                         <button className={styles.primaryButton} type="button" onClick={loadBoms}>
                             <i className="bi bi-funnel"></i>
-                            Lọc dữ liệu
+                            Lá»c dá»¯ liá»‡u
                         </button>
                     </div>
                 </div>
@@ -246,18 +246,18 @@ function AssemblyBomPage() {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th>Mã BOM</th>
-                                <th>Tên BOM</th>
-                                <th>Thành phẩm</th>
-                                <th>Phiên bản</th>
-                                <th>Số linh kiện</th>
-                                <th>Trạng thái</th>
+                                <th>MÃ£ BOM</th>
+                                <th>TÃªn BOM</th>
+                                <th>ThÃ nh pháº©m</th>
+                                <th>PhiÃªn báº£n</th>
+                                <th>Sá»‘ linh kiá»‡n</th>
+                                <th>Tráº¡ng thÃ¡i</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
                             {boms.length > 0 ? boms.map((bom) => {
-                                const status = STATUS_META[bom.status] || { label: bom.status || 'Chưa rõ', tone: 'info' };
+                                const status = STATUS_META[bom.status] || { label: bom.status || 'ChÆ°a rÃµ', tone: 'info' };
                                 return (
                                     <tr key={bom.id} onClick={() => openEdit(bom)}>
                                         <td><span className={styles.linkText}>{bom.bomCode}</span></td>
@@ -267,7 +267,7 @@ function AssemblyBomPage() {
                                         <td>{bom.lines?.length || 0}</td>
                                         <td><span className={`${styles.badge} ${styles[status.tone]}`}>{status.label}</span></td>
                                         <td>
-                                            <button className={styles.iconButton} type="button" title="Sửa BOM" onClick={(event) => { event.stopPropagation(); openEdit(bom); }}>
+                                            <button className={styles.iconButton} type="button" title="Sá»­a BOM" onClick={(event) => { event.stopPropagation(); openEdit(bom); }}>
                                                 <i className="bi bi-pencil"></i>
                                             </button>
                                         </td>
@@ -275,7 +275,7 @@ function AssemblyBomPage() {
                                 );
                             }) : (
                                 <tr>
-                                    <td className={styles.emptyCell} colSpan="7">{loading ? 'Đang tải danh sách BOM...' : 'Chưa có BOM phù hợp.'}</td>
+                                    <td className={styles.emptyCell} colSpan="7">{loading ? 'Äang táº£i danh sÃ¡ch BOM...' : 'ChÆ°a cÃ³ BOM phÃ¹ há»£p.'}</td>
                                 </tr>
                             )}
                         </tbody>
@@ -286,8 +286,8 @@ function AssemblyBomPage() {
                     <div className={styles.modalOverlay}>
                         <div className={styles.modal}>
                             <div className={styles.modalHeader}>
-                                <h2>{form.id ? 'Cập nhật BOM' : 'Tạo BOM'}</h2>
-                                <button className={styles.iconButton} type="button" title="Đóng" onClick={() => setShowModal(false)}>
+                                <h2>{form.id ? 'Cáº­p nháº­t BOM' : 'Táº¡o BOM'}</h2>
+                                <button className={styles.iconButton} type="button" title="ÄÃ³ng" onClick={() => setShowModal(false)}>
                                     <i className="bi bi-x-lg"></i>
                                 </button>
                             </div>
@@ -296,32 +296,32 @@ function AssemblyBomPage() {
                                 {error && <div className={styles.errorBox}>{error}</div>}
                                 <div className={styles.formGrid}>
                                     <label className={styles.field}>
-                                        <span>Thành phẩm</span>
+                                        <span>ThÃ nh pháº©m</span>
                                         <select value={form.productId} onChange={(event) => setField('productId', event.target.value)}>
-                                            <option value="">Chọn thành phẩm</option>
+                                            <option value="">Chá»n thÃ nh pháº©m</option>
                                             {products.map((product) => (
                                                 <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
                                             ))}
                                         </select>
                                     </label>
                                     <label className={styles.field}>
-                                        <span>Mã BOM</span>
-                                        <input value={form.bomCode} onChange={(event) => setField('bomCode', event.target.value)} placeholder="Để trống để tự sinh mã" />
+                                        <span>MÃ£ BOM</span>
+                                        <input value={form.bomCode} onChange={(event) => setField('bomCode', event.target.value)} placeholder="Äá»ƒ trá»‘ng Ä‘á»ƒ tá»± sinh mÃ£" />
                                     </label>
                                     <label className={styles.field}>
-                                        <span>Tên BOM</span>
-                                        <input value={form.bomName} onChange={(event) => setField('bomName', event.target.value)} placeholder="Ví dụ: Cấu hình PC văn phòng" />
+                                        <span>TÃªn BOM</span>
+                                        <input value={form.bomName} onChange={(event) => setField('bomName', event.target.value)} placeholder="VÃ­ dá»¥: Cáº¥u hÃ¬nh PC vÄƒn phÃ²ng" />
                                     </label>
                                     <label className={styles.field}>
-                                        <span>Phiên bản</span>
+                                        <span>PhiÃªn báº£n</span>
                                         <input className={styles.numberInput} inputMode="decimal" type="number" min="0.01" step="0.01" value={form.versionNo} onChange={(event) => setField('versionNo', event.target.value)} />
                                     </label>
                                     <label className={styles.field}>
-                                        <span>Trạng thái</span>
+                                        <span>Tráº¡ng thÃ¡i</span>
                                         <select value={form.status} onChange={(event) => setField('status', event.target.value)}>
-                                            <option value="DRAFT">Nháp</option>
-                                            <option value="APPROVED">Đã duyệt</option>
-                                            <option value="INACTIVE">Ngừng dùng</option>
+                                            <option value="DRAFT">NhÃ¡p</option>
+                                            <option value="APPROVED">ÄÃ£ duyá»‡t</option>
+                                            <option value="INACTIVE">Ngá»«ng dÃ¹ng</option>
                                         </select>
                                     </label>
                                 </div>
@@ -329,16 +329,16 @@ function AssemblyBomPage() {
                                 <div className={styles.lineActions}>
                                     <button className={styles.secondaryButton} type="button" onClick={addLine}>
                                         <i className="bi bi-plus-lg"></i>
-                                        Thêm linh kiện
+                                        ThÃªm linh kiá»‡n
                                     </button>
                                 </div>
 
-                                {/* Cảnh báo tổng phân bổ */}
+                                {/* Cáº£nh bÃ¡o tá»•ng phÃ¢n bá»• */}
                                 {(() => {
                                     const total = form.lines.reduce((sum, l) => sum + Number(l.costAllocationPct || 0), 0);
                                     return Math.abs(total - 100) > 0.01 ? (
                                         <div className={styles.errorBox} style={{ marginBottom: 8 }}>
-                                            ⚠️ Tổng tỷ lệ phân bổ giá vốn: <strong>{total.toFixed(2)}%</strong> — phải bằng đúng <strong>100%</strong>.
+                                            âš ï¸ Tá»•ng tá»· lá»‡ phÃ¢n bá»• giÃ¡ vá»‘n: <strong>{total.toFixed(2)}%</strong> â€” pháº£i báº±ng Ä‘Ãºng <strong>100%</strong>.
                                         </div>
                                     ) : null;
                                 })()}
@@ -347,10 +347,10 @@ function AssemblyBomPage() {
                                     <table className={styles.table}>
                                         <thead>
                                             <tr>
-                                                <th>SKU linh kiện</th>
-                                                <th>Định mức</th>
-                                                <th>% Phân bổ giá vốn</th>
-                                                <th>Ghi chú</th>
+                                                <th>SKU linh kiá»‡n</th>
+                                                <th>Äá»‹nh má»©c</th>
+                                                <th>% PhÃ¢n bá»• giÃ¡ vá»‘n</th>
+                                                <th>Ghi chÃº</th>
                                                 <th></th>
                                             </tr>
                                         </thead>
@@ -359,7 +359,7 @@ function AssemblyBomPage() {
                                                 <tr key={index}>
                                                     <td>
                                                         <select value={line.componentVariantId} onChange={(event) => setLineField(index, 'componentVariantId', event.target.value)}>
-                                                            <option value="">Chọn SKU</option>
+                                                            <option value="">Chá»n SKU</option>
                                                             {variants.map((variant) => (
                                                                 <option key={variant.id} value={variant.id}>{variant.sku} - {variant.productName} / {variant.variantName}</option>
                                                             ))}
@@ -372,10 +372,10 @@ function AssemblyBomPage() {
                                                         <input className={styles.numberInput} inputMode="decimal" type="number" min="0" max="100" step="0.01" value={line.costAllocationPct} onChange={(event) => setLineField(index, 'costAllocationPct', event.target.value)} placeholder="0.00" />
                                                     </td>
                                                     <td>
-                                                        <input value={line.note} onChange={(event) => setLineField(index, 'note', event.target.value)} placeholder="Ghi chú dòng" />
+                                                        <input value={line.note} onChange={(event) => setLineField(index, 'note', event.target.value)} placeholder="Ghi chÃº dÃ²ng" />
                                                     </td>
                                                     <td>
-                                                        <button className={styles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeLine(index)}>
+                                                        <button className={styles.deleteButton} type="button" title="XÃ³a dÃ²ng" onClick={() => removeLine(index)}>
                                                             <i className="bi bi-trash"></i>
                                                         </button>
                                                     </td>
@@ -387,10 +387,10 @@ function AssemblyBomPage() {
                             </div>
 
                             <div className={styles.modalFooter}>
-                                <button className={styles.secondaryButton} type="button" onClick={() => setShowModal(false)}>Hủy</button>
+                                <button className={styles.secondaryButton} type="button" onClick={() => setShowModal(false)}>Há»§y</button>
                                 <button className={styles.primaryButton} type="button" onClick={saveBom} disabled={saving}>
                                     <i className="bi bi-save"></i>
-                                    {saving ? 'Đang cất...' : 'Cất'}
+                                    {saving ? 'Äang cáº¥t...' : 'Cáº¥t'}
                                 </button>
                             </div>
                         </div>

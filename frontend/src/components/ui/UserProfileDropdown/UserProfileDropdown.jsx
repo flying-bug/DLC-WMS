@@ -15,7 +15,7 @@ function UserProfileDropdown() {
     const userRole = getAuthRole() || 'STAFF';
     const isSA = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN';
     const isMN = userRole === 'MANAGER' || userRole === 'ROLE_MANAGER';
-    const fallbackName = isSA ? 'Quản trị viên' : isMN ? 'Quản lý' : 'Nhân viên';
+    const fallbackName = isSA ? 'Quáº£n trá»‹ viÃªn' : isMN ? 'Quáº£n lÃ½' : 'NhÃ¢n viÃªn';
     const displayName = profile?.fullName || fallbackName;
     const initials = displayName
         .split(' ')
@@ -65,7 +65,7 @@ function UserProfileDropdown() {
             className={styles.userInfo}
             role="button"
             tabIndex={0}
-            aria-label="Tài khoản người dùng"
+            aria-label="TÃ i khoáº£n ngÆ°á»i dÃ¹ng"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             onMouseEnter={() => setIsDropdownOpen(true)}
             onMouseLeave={() => setIsDropdownOpen(false)}
@@ -82,15 +82,15 @@ function UserProfileDropdown() {
             {isDropdownOpen && (
                 <div className={`${styles.userDropdown} ${isDropdownOpen ? styles.showDropdown : ''}`}>
                     <div className={styles.dropdownItem} onClick={(e) => { e.stopPropagation(); navigate('/profile'); setIsDropdownOpen(false); }}>
-                        <i className="bi bi-person" /> Xem thông tin cá nhân
+                        <i className="bi bi-person" /> Xem thÃ´ng tin cÃ¡ nhÃ¢n
                     </div>
                     <div className={styles.dropdownItem} onClick={(e) => { e.stopPropagation(); navigate('/change-password'); setIsDropdownOpen(false); }}>
-                        <i className="bi bi-shield-lock" /> Đổi mật khẩu
+                        <i className="bi bi-shield-lock" /> Äá»•i máº­t kháº©u
                     </div>
                     <div className={styles.dropdownDivider} />
                     <div className={styles.themeSection} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.themeTitle}>
-                            <i className="bi bi-palette" /> Giao diện
+                            <i className="bi bi-palette" /> Giao diá»‡n
                         </div>
                         <div className={styles.themeOptions}>
                             {themes.map((item) => (
@@ -114,7 +114,7 @@ function UserProfileDropdown() {
                     </div>
                     <div className={styles.dropdownDivider} />
                     <div className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`} onClick={(e) => { e.stopPropagation(); setIsDropdownOpen(false); forceLogout(); }}>
-                        <i className="bi bi-box-arrow-right" /> Đăng xuất
+                        <i className="bi bi-box-arrow-right" /> ÄÄƒng xuáº¥t
                     </div>
                 </div>
             )}

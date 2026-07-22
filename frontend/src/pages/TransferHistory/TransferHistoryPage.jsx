@@ -7,9 +7,9 @@ import { exportToExcel } from '../../utils/excelExport';
 import styles from './TransferHistoryPage.module.css';
 
 const STATUS_LABELS = {
-  DRAFT: { label: 'Lưu tạm', code: 'info' },
-  SUBMITTED: { label: 'Lưu tạm', code: 'info' },
-  POSTED: { label: 'Hoàn thành', code: 'success' },
+  DRAFT: { label: 'LÆ°u táº¡m', code: 'info' },
+  SUBMITTED: { label: 'LÆ°u táº¡m', code: 'info' },
+  POSTED: { label: 'HoÃ n thÃ nh', code: 'success' },
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -64,7 +64,7 @@ function TransferHistoryPage() {
       setSelectedSlip(current => data.find(item => item.id === current?.id) || data[0] || null);
       setSelectedIds([]);
     } catch (err) {
-      setError(err.response?.data?.userMessage || 'Không tải được danh sách phiếu chuyển kho');
+      setError(err.response?.data?.userMessage || 'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch phiáº¿u chuyá»ƒn kho');
     } finally {
       setLoading(false);
     }
@@ -81,12 +81,12 @@ function TransferHistoryPage() {
   }, [loadSlips]);
 
   const rows = slips.map(slip => {
-    const status = STATUS_LABELS[slip.status] || { label: slip.status || 'Không rõ', code: 'info' };
+    const status = STATUS_LABELS[slip.status] || { label: slip.status || 'KhÃ´ng rÃµ', code: 'info' };
     return {
       ...slip,
       date: formatDate(slip.transferDate),
-      fromWarehouse: warehouseById.get(slip.fromWarehouseId)?.name || (slip.fromWarehouseId ? `Kho #${slip.fromWarehouseId}` : 'Chưa chọn'),
-      toWarehouse: warehouseById.get(slip.toWarehouseId)?.name || (slip.toWarehouseId ? `Kho #${slip.toWarehouseId}` : 'Chưa chọn'),
+      fromWarehouse: warehouseById.get(slip.fromWarehouseId)?.name || (slip.fromWarehouseId ? `Kho #${slip.fromWarehouseId}` : 'ChÆ°a chá»n'),
+      toWarehouse: warehouseById.get(slip.toWarehouseId)?.name || (slip.toWarehouseId ? `Kho #${slip.toWarehouseId}` : 'ChÆ°a chá»n'),
       quantity: sumQuantity(slip.lines),
       statusLabel: status.label,
       statusCode: status.code,
@@ -94,7 +94,7 @@ function TransferHistoryPage() {
   });
 
   const handleExport = () => {
-    const headers = ['Ngày ghi nhận', 'Số phiếu', 'Từ kho', 'Đến kho', 'Số lượng', 'Trạng thái'];
+    const headers = ['NgÃ y ghi nháº­n', 'Sá»‘ phiáº¿u', 'Tá»« kho', 'Äáº¿n kho', 'Sá»‘ lÆ°á»£ng', 'Tráº¡ng thÃ¡i'];
     const data = rows.map(item => [
       item.date,
       item.transferCode,
@@ -119,26 +119,26 @@ function TransferHistoryPage() {
     <AdminLayout>
       <div className={styles.pageBody}>
         <div className={styles.pageTitleContainer}>
-          <h1 className={styles.pageTitle}>Danh sách phiếu chuyển kho</h1>
+          <h1 className={styles.pageTitle}>Danh sÃ¡ch phiáº¿u chuyá»ƒn kho</h1>
           <button className={styles.btnPrimary} onClick={() => navigate('/transfer-history/create')}>
-            <i className="bi bi-plus"></i> Thêm mới
+            <i className="bi bi-plus"></i> ThÃªm má»›i
           </button>
         </div>
 
         <div className={styles.filterSection}>
           <div className={styles.filterGroup}>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌM KIẾM</span>
+              <span className={styles.filterLabel}>TÃŒM KIáº¾M</span>
               <input
                 type="text"
                 className={styles.filterInput}
-                placeholder="Mã phiếu..."
+                placeholder="MÃ£ phiáº¿u..."
                 value={filters.transferCode}
                 onChange={(e) => setFilters(prev => ({ ...prev, transferCode: e.target.value }))}
               />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TỪ NGÀY</span>
+              <span className={styles.filterLabel}>Tá»ª NGÃ€Y</span>
               <input
                 type="date"
                 className={styles.filterInput}
@@ -147,7 +147,7 @@ function TransferHistoryPage() {
               />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>ĐẾN NGÀY</span>
+              <span className={styles.filterLabel}>Äáº¾N NGÃ€Y</span>
               <input
                 type="date"
                 className={styles.filterInput}
@@ -156,27 +156,27 @@ function TransferHistoryPage() {
               />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌNH TRẠNG</span>
+              <span className={styles.filterLabel}>TÃŒNH TRáº NG</span>
               <select
                 className={styles.filterSelect}
                 value={filters.status}
                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
               >
-                <option value="">Tất cả</option>
-                <option value="DRAFT">Lưu tạm</option>
-                <option value="POSTED">Hoàn thành</option>
+                <option value="">Táº¥t cáº£</option>
+                <option value="DRAFT">LÆ°u táº¡m</option>
+                <option value="POSTED">HoÃ n thÃ nh</option>
               </select>
             </div>
           </div>
           <div className={styles.filterActions}>
             <button className={styles.btnOutline} onClick={() => setFilters({ transferCode: '', fromDate: '', toDate: '', status: '' })}>
-              Làm mới
+              LÃ m má»›i
             </button>
             <button className={styles.btnOutline} onClick={handleExport}>
-              <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+              <i className="bi bi-file-earmark-excel"></i> Xuáº¥t Excel
             </button>
             <button className={styles.btnPrimary} onClick={loadSlips}>
-              <i className="bi bi-funnel"></i> Lọc dữ liệu
+              <i className="bi bi-funnel"></i> Lá»c dá»¯ liá»‡u
             </button>
           </div>
         </div>
@@ -185,7 +185,7 @@ function TransferHistoryPage() {
 
         {selectedIds.length > 0 && (
           <div className={styles.bulkActionsToolbar}>
-            <div className={styles.bulkText}>Đã chọn {selectedIds.length} phiếu chuyển</div>
+            <div className={styles.bulkText}>ÄÃ£ chá»n {selectedIds.length} phiáº¿u chuyá»ƒn</div>
           </div>
         )}
 
@@ -201,13 +201,13 @@ function TransferHistoryPage() {
                     onChange={handleSelectAll}
                   />
                 </th>
-                <th>Ngày ghi nhận</th>
-                <th>Số phiếu</th>
-                <th>Từ kho</th>
-                <th>Đến kho</th>
-                <th className={styles.textCenter}>Số lượng</th>
-                <th>Trạng thái</th>
-                <th className={styles.textCenter}>Thao tác</th>
+                <th>NgÃ y ghi nháº­n</th>
+                <th>Sá»‘ phiáº¿u</th>
+                <th>Tá»« kho</th>
+                <th>Äáº¿n kho</th>
+                <th className={styles.textCenter}>Sá»‘ lÆ°á»£ng</th>
+                <th>Tráº¡ng thÃ¡i</th>
+                <th className={styles.textCenter}>Thao tÃ¡c</th>
               </tr>
             </thead>
             <tbody>
@@ -251,9 +251,9 @@ function TransferHistoryPage() {
                   </td>
                   <td className={styles.textCenter}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-start', width: '44px' }}>
-                      <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}></i>
+                      <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiáº¿t" onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}></i>
                       {(slip.status === 'DRAFT' || slip.status === 'SUBMITTED') && (
-                        <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu chuyển kho" onClick={(e) => { e.stopPropagation(); navigate(`/transfer-history/${slip.id}/edit`); }}></i>
+                        <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sá»­a phiáº¿u chuyá»ƒn kho" onClick={(e) => { e.stopPropagation(); navigate(`/transfer-history/${slip.id}/edit`); }}></i>
                       )}
                     </div>
                   </td>
@@ -263,7 +263,7 @@ function TransferHistoryPage() {
                   <td colSpan="8">
                     <div className={styles.emptyState}>
                       <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                      <div className={styles.emptyText}>{loading ? 'Đang tải dữ liệu...' : 'Không tìm thấy phiếu chuyển nào'}</div>
+                      <div className={styles.emptyText}>{loading ? 'Äang táº£i dá»¯ liá»‡u...' : 'KhÃ´ng tÃ¬m tháº¥y phiáº¿u chuyá»ƒn nÃ o'}</div>
                     </div>
                   </td>
                 </tr>
@@ -272,7 +272,7 @@ function TransferHistoryPage() {
           </table>
 
           <div className={styles.pagination}>
-            <span>Hiển thị {rows.length} bản ghi</span>
+            <span>Hiá»ƒn thá»‹ {rows.length} báº£n ghi</span>
           </div>
         </div>
 
@@ -287,22 +287,22 @@ function TransferHistoryPage() {
             <div className={styles.detailGrid}>
               <div className={styles.detailGroup} style={{ gridColumn: 'span 2' }}>
                 <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>Ghi chú</span>
-                  <span className={styles.detailValue}>{selectedSlip.note || 'Không có ghi chú'}</span>
+                  <span className={styles.detailLabel}>Ghi chÃº</span>
+                  <span className={styles.detailValue}>{selectedSlip.note || 'KhÃ´ng cÃ³ ghi chÃº'}</span>
                 </div>
               </div>
 
               <div className={styles.detailRight}>
                 <div className={styles.detailRightRow}>
-                  <span className={styles.detailRightLabel}>Ngày chuyển</span>
+                  <span className={styles.detailRightLabel}>NgÃ y chuyá»ƒn</span>
                   <span className={styles.detailRightValue}>{formatDate(selectedSlip.transferDate)}</span>
                 </div>
                 <div className={styles.detailRightRow}>
-                  <span className={styles.detailRightLabel}>Từ kho</span>
+                  <span className={styles.detailRightLabel}>Tá»« kho</span>
                   <span className={`${styles.detailRightValue} ${styles.textBlue}`}>{warehouseById.get(selectedSlip.fromWarehouseId)?.name || `Kho #${selectedSlip.fromWarehouseId}`}</span>
                 </div>
                 <div className={styles.detailRightRow}>
-                  <span className={styles.detailRightLabel}>Đến kho</span>
+                  <span className={styles.detailRightLabel}>Äáº¿n kho</span>
                   <span className={`${styles.detailRightValue} ${styles.textBlue}`}>{warehouseById.get(selectedSlip.toWarehouseId)?.name || `Kho #${selectedSlip.toWarehouseId}`}</span>
                 </div>
               </div>
@@ -312,11 +312,11 @@ function TransferHistoryPage() {
               <thead>
                 <tr>
                   <th>STT</th>
-                  <th>Mã sản phẩm</th>
-                  <th>Tên sản phẩm</th>
-                  <th>ĐVT</th>
-                  <th className={styles.textCenter}>Số lượng chuyển</th>
-                  <th>Ghi chú</th>
+                  <th>MÃ£ sáº£n pháº©m</th>
+                  <th>TÃªn sáº£n pháº©m</th>
+                  <th>ÄVT</th>
+                  <th className={styles.textCenter}>Sá»‘ lÆ°á»£ng chuyá»ƒn</th>
+                  <th>Ghi chÃº</th>
                 </tr>
               </thead>
               <tbody>
@@ -326,7 +326,7 @@ function TransferHistoryPage() {
                     <tr key={index}>
                       <td>{index + 1}</td>
                       <td className={styles.textBlue}>{product?.sku || `SKU #${line.variantId}`}</td>
-                      <td>{variantLabel(product) || 'Chưa có tên sản phẩm'}</td>
+                      <td>{variantLabel(product) || 'ChÆ°a cÃ³ tÃªn sáº£n pháº©m'}</td>
                       <td>{product?.unitName || ''}</td>
                       <td className={styles.textCenter}>{Number(line.quantity || 0).toLocaleString('vi-VN')}</td>
                       <td>{line.note || ''}</td>
@@ -337,7 +337,7 @@ function TransferHistoryPage() {
             </table>
 
             <div className={styles.detailFooter}>
-              <div className={styles.footerTotalLabel}>Tổng cộng số lượng chuyển:</div>
+              <div className={styles.footerTotalLabel}>Tá»•ng cá»™ng sá»‘ lÆ°á»£ng chuyá»ƒn:</div>
               <div className={styles.footerQty}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</div>
             </div>
           </div>
