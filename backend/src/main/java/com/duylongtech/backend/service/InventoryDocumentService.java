@@ -744,7 +744,19 @@ public class InventoryDocumentService {
         BigDecimal quantityOut = requirePositive(lr.getQuantityOut(), "lines[" + index + "].quantityOut");
         BigDecimal unitCost = nonNegativeOrZero(lr.getUnitCost(), "lines[" + index + "].unitCost");
         BigDecimal unitPrice = nonNegativeOrZero(lr.getUnitPrice(), "lines[" + index + "].unitPrice");
-        BigDecimal lineAmount = quantityOut.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal vatRate = nonNegativeOrZero(lr.getVatRate(), "lines[" + index + "].vatRate");
+        BigDecimal subtotal = quantityOut.multiply(unitPrice);
+        BigDecimal vatAmount = subtotal.multiply(vatRate).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+        BigDecimal lineAmount = subtotal.add(vatAmount).setScale(2, RoundingMode.HALF_UP);
+        
+        Integer warrantyMonths = lr.getWarrantyMonths();
+        if (warrantyMonths == null) {
+            ProductVariant variant = productVariantRepository.findById(lr.getVariantId()).orElse(null);
+            if (variant != null) {
+                warrantyMonths = variant.getWarrantyMonths();
+            }
+        }
+
         return InventoryDocumentLine.builder()
                 .inventoryDocument(doc)
                 .variantId(lr.getVariantId())
@@ -752,10 +764,11 @@ public class InventoryDocumentService {
                 .quantityOut(quantityOut)
                 .unitCost(unitCost)
                 .unitPrice(unitPrice)
+                .vatRate(vatRate)
                 .lineAmount(lineAmount)
                 .lotBatchId(lr.getLotBatchId())
                 .serialNumberId(lr.getSerialNumberId())
-                .warrantyMonths(lr.getWarrantyMonths())
+                .warrantyMonths(warrantyMonths)
                 .note(lr.getNote())
                 .build();
     }
@@ -767,7 +780,10 @@ public class InventoryDocumentService {
         }
         BigDecimal quantityIn = requirePositive(lr.getQuantityIn(), "lines[" + index + "].quantityIn");
         BigDecimal unitCost = nonNegativeOrZero(lr.getUnitCost(), "lines[" + index + "].unitCost");
-        BigDecimal lineAmount = quantityIn.multiply(unitCost).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal vatRate = nonNegativeOrZero(lr.getVatRate(), "lines[" + index + "].vatRate");
+        BigDecimal subtotal = quantityIn.multiply(unitCost);
+        BigDecimal vatAmount = subtotal.multiply(vatRate).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+        BigDecimal lineAmount = subtotal.add(vatAmount).setScale(2, RoundingMode.HALF_UP);
         return InventoryDocumentLine.builder()
                 .inventoryDocument(doc)
                 .variantId(lr.getVariantId())
@@ -775,6 +791,7 @@ public class InventoryDocumentService {
                 .quantityOut(ZERO)
                 .unitCost(unitCost)
                 .unitPrice(unitCost)
+                .vatRate(vatRate)
                 .lineAmount(lineAmount)
                 .lotBatchId(lr.getLotBatchId())
                 .serialNumberId(lr.getSerialNumberId())
@@ -936,10 +953,12 @@ public class InventoryDocumentService {
                 lr.setQuantityOut(l.getQuantityOut());
                 lr.setUnitCost(l.getUnitCost());
                 lr.setUnitPrice(l.getUnitPrice());
+                lr.setVatRate(l.getVatRate());
                 lr.setLineAmount(l.getLineAmount());
                 lr.setLotBatchId(l.getLotBatchId());
                 lr.setSerialNumberId(l.getSerialNumberId());
                 lr.setSerialNumbers(parseSerialNumbers(l.getSerialNumbersText()));
+                lr.setWarrantyMonths(l.getWarrantyMonths());
                 lr.setNote(l.getNote());
                 return lr;
             }).collect(Collectors.toList());

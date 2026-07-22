@@ -36,6 +36,9 @@ public class InventoryDocumentLine {
     @Column(name = "unit_price", precision = 15, scale = 4)
     private BigDecimal unitPrice;
 
+    @Column(name = "vat_rate", precision = 5, scale = 2)
+    private BigDecimal vatRate;
+
     @Column(name = "line_amount", precision = 15, scale = 2)
     private BigDecimal lineAmount;
 

@@ -63,4 +63,7 @@ public class Repair {
 
     @Column(name = "created_by", nullable = false)
     private Long createdBy;
+
+    @OneToMany(mappedBy = "repair", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<RepairLine> repairLines = new java.util.ArrayList<>();
 }
