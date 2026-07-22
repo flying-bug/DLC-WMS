@@ -270,7 +270,9 @@
 }
 
 @media print {
-    .sidebar, .header {
+
+    .sidebar,
+    .header {
         display: none !important;
     }
 

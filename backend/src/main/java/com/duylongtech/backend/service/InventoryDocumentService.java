@@ -819,6 +819,7 @@ public class InventoryDocumentService {
                 .serialNumberId(lr.getSerialNumberId())
                 .serialNumbersText(formatSerialNumbers(lr.getSerialNumbers()))
                 .note(lr.getNote())
+                .vatPercent(lr.getVatPercent())
                 .build();
     }
 
@@ -980,6 +981,7 @@ public class InventoryDocumentService {
                 lr.setSerialNumberId(l.getSerialNumberId());
                 lr.setSerialNumbers(parseSerialNumbers(l.getSerialNumbersText()));
                 lr.setNote(l.getNote());
+                lr.setVatPercent(l.getVatPercent());
                 return lr;
             }).collect(Collectors.toList());
             r.setLines(lines);

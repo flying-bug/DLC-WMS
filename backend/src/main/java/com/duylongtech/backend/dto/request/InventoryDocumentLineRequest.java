@@ -22,4 +22,5 @@ public class InventoryDocumentLineRequest {
      * Nếu null hoặc <= 0, sản phẩm sẽ không được tạo phiếu bảo hành tự động.
      */
     private Integer warrantyMonths;
+    private BigDecimal vatPercent;
 }

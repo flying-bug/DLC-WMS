@@ -14,7 +14,8 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background-color: #f8f9fa; /* slightly off-white for the background */
+  background-color: #f8f9fa;
+  /* slightly off-white for the background */
   position: relative;
 }
 
@@ -422,7 +423,8 @@ textarea.formInput {
   margin: 24px -24px -24px -24px;
 }
 
-.footerLeft, .footerRight {
+.footerLeft,
+.footerRight {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -506,6 +508,7 @@ textarea.formInput {
   transition: all 0.2s ease;
   text-decoration: none;
 }
+
 .serialBadgeSuccess:hover {
   background-color: #d1fae5;
 }
@@ -525,6 +528,7 @@ textarea.formInput {
   transition: all 0.2s ease;
   text-decoration: none;
 }
+
 .serialBadgeWarning:hover {
   background-color: #ffedd5;
 }
@@ -542,7 +546,7 @@ textarea.formInput {
   z-index: 10;
   background-color: #f8fafc;
 }
+
 .textRight {
   text-align: right !important;
 }
-

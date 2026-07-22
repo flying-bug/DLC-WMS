@@ -431,9 +431,6 @@ function ImportHistoryPage() {
               <div className={styles.modalHeader}>
                 <h2 className={styles.modalTitle}>
                   <i className={`bi bi-file-earmark-text ${styles.detailIcon}`}></i>
-                  {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && 'Chi tiết phiếu nhập mua hàng: '}
-                  {selectedSlip.issuePurpose === 'PRODUCTION' && 'Chi tiết phiếu nhập thành phẩm sản xuất: '}
-                  {selectedSlip.issuePurpose === 'RETURN' && 'Chi tiết phiếu nhập hàng trả lại: '}
                   {selectedSlip.docCode}
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

@@ -392,7 +392,7 @@ function ExportSlipPage() {
               <div className={styles.modalHeader}>
                 <h2 className={styles.modalTitle}>
                   <i className={`bi bi-receipt ${styles.detailIcon}`}></i>
-                  Chi tiết phiếu xuất kho: {selectedSlip.docCode}
+                  {selectedSlip.docCode}
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   {selectedSlip.status === 'DRAFT' && (

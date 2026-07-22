@@ -87,6 +87,7 @@ const emptyLine = () => ({
   serialNumbers: [],
   quantity: 1,
   price: 0,
+  vatPercent: 0,
   note: '',
   isNew: true,
 });
@@ -105,7 +106,9 @@ function CreateImportSlipPage() {
     docCode: `IMP-${Date.now()}`,
     warehouseId: '',
     partnerId: '',
+    partnerName: '',
     customerId: '',
+    customerName: '',
     assemblyOrderId: '',
     deliverer: '',
     purchaser: '',
@@ -132,7 +135,7 @@ function CreateImportSlipPage() {
         importApi.getWarehouses({ size: 100 }),
         importApi.getSuppliers(),
         importApi.getProducts({ size: 100 }),
-        customerApi.searchCustomers('', '', '', 0, 100),
+        customerApi.searchCustomers('', 'APPROVED', '', 0, 1000),
         assemblyOrderApi.getAssemblyOrders({ size: 100 }),
         exportApi.getUsers({ size: 1000 })
       ]);
@@ -142,7 +145,8 @@ function CreateImportSlipPage() {
         setForm(prev => ({ ...prev, warehouseId: prev.warehouseId || data[0]?.id || '' }));
       }
       if (supplierRes.status === 'fulfilled') {
-        setSuppliers(pageContent(unwrap(supplierRes.value)));
+        const data = pageContent(unwrap(supplierRes.value)).filter(s => s.status !== 'INACTIVE');
+        setSuppliers(data);
       }
       if (productRes.status === 'fulfilled') {
         const data = pageContent(unwrap(productRes.value));
@@ -177,6 +181,8 @@ function CreateImportSlipPage() {
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
+  const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
+  const grandTotal = totalPrice + totalVat;
   const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const quantity = Number(item.quantity || 0);
@@ -184,9 +190,12 @@ function CreateImportSlipPage() {
     return item.variantId && quantity > 0 && Number(item.price) >= 0 && hasValidSerials;
   };
   const isFormValid = Boolean(
-    form.warehouseId && 
-    form.docDate && 
-    (importType === 'PURCHASE' ? form.partnerId : importType === 'PRODUCTION' ? form.assemblyOrderId : form.customerId) &&
+    form.warehouseId &&
+    form.docDate &&
+    (importType === 'PURCHASE' ? form.partnerId
+      : importType === 'PRODUCTION' ? form.assemblyOrderId
+      : importType === 'RETURN' ? form.customerId
+      : true) && // OTHER type has no required partner field
     items.length && items.every(isLineValid)
   );
 
@@ -231,7 +240,9 @@ function CreateImportSlipPage() {
   const buildPayload = (status) => ({
     docCode: form.docCode || undefined,
     warehouseId: Number(form.warehouseId),
-    partnerId: importType === 'RETURN' ? (form.customerId ? Number(form.customerId) : null) : (form.partnerId ? Number(form.partnerId) : null),
+    partnerId: importType === 'RETURN' ? (form.customerId ? Number(form.customerId) : null)
+      : importType === 'OTHER' ? null
+      : (form.partnerId ? Number(form.partnerId) : null),
     docDate: form.docDate,
     status,
     note: form.note,
@@ -242,11 +253,12 @@ function CreateImportSlipPage() {
       quantityOut: 0,
       unitCost: Number(item.price),
       unitPrice: Number(item.price),
+      vatPercent: Number(item.vatPercent || 0),
       serialNumbers: item.serialNumbers || [],
       note: item.note,
     })),
     issuePurpose: importType,
-    recipientName: form.deliverer,
+    recipientName: importType === 'OTHER' ? form.otherObjectName : form.deliverer,
     salespersonId: (!isNaN(Number(form.purchaser)) && String(form.purchaser).trim() !== '') ? Number(form.purchaser) : null,
     referenceType: importType === 'PRODUCTION' && form.assemblyOrderId ? 'ASSEMBLY_ORDER' : (form.referenceType || undefined),
     referenceId: importType === 'PRODUCTION' && form.assemblyOrderId ? Number(form.assemblyOrderId) : (form.referenceId || undefined),
@@ -264,7 +276,7 @@ function CreateImportSlipPage() {
         handleFormChange('partnerId', newSupplier.id);
       } else {
         const supRes = await importApi.getSuppliers({ size: 1000 });
-        const list = pageContent(unwrap(supRes));
+        const list = pageContent(unwrap(supRes)).filter(s => s.status !== 'INACTIVE');
         setSuppliers(list);
         if (list.length > 0) handleFormChange('partnerId', list[list.length - 1].id);
       }
@@ -277,7 +289,7 @@ function CreateImportSlipPage() {
 
   const handleSaveCustomer = async (isEdit, isContinue) => {
     try {
-      const res = await customerApi.searchCustomers('', '', '', 0, 1000);
+      const res = await customerApi.searchCustomers('', 'APPROVED', '', 0, 1000);
       const data = pageContent(unwrap(res));
       setCustomers(data);
       if (data && data.length > 0) {
@@ -317,7 +329,11 @@ function CreateImportSlipPage() {
       if (shouldPost && createdId) {
         await importApi.postImportSlip(createdId);
       }
-      navigate('/import-history', { state: { toastMessage: shouldPost ? 'Ghi sổ phiếu nhập kho thành công!' : 'Lưu tạm phiếu nhập kho thành công!', toastType: 'success' } });
+      if (status === 'DRAFT' && createdId) {
+        navigate(`/import-slips/${createdId}/edit`, { state: { toastMessage: 'Lưu tạm phiếu nhập kho thành công!', toastType: 'success' } });
+      } else {
+        navigate('/import-history', { state: { toastMessage: shouldPost ? 'Ghi sổ phiếu nhập kho thành công!' : 'Tạo phiếu nhập kho thành công!', toastType: 'success' } });
+      }
     } catch (err) {
       if (createdId) {
         navigate('/import-history', { state: { toastMessage: 'Đã tạo phiếu nhưng Ghi sổ thất bại: ' + (err.response?.data?.userMessage || err.message), toastType: 'warning' } });
@@ -341,11 +357,17 @@ function CreateImportSlipPage() {
               <span style={{ color: '#d1d5db', fontSize: '20px' }}>|</span>
               <div style={{ width: '280px' }}>
                 <Select
-                  value={[{ value: 'PURCHASE', label: 'Nhập kho mua hàng' }, { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' }, { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' }].find(o => o.value === importType)}
+                  value={[
+                    { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
+                    { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
+                    { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
+                    { value: 'OTHER', label: 'Khác' }
+                  ].find(o => o.value === importType)}
                   options={[
                     { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
                     { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
-                    { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' }
+                    { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
+                    { value: 'OTHER', label: 'Khác' }
                   ]}
                   onChange={(option) => {
                     setImportType(option.value);
@@ -376,14 +398,18 @@ function CreateImportSlipPage() {
               {importType === 'PURCHASE' && (
                 <div className="misa-form-row">
                   <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
-                    <label className="misa-label">Mã NCC <span className="required">*</span></label>
+                    <label className="misa-label">Mã nhà cung cấp <span className="required">*</span></label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <div style={{ flex: 1 }}>
                         <Select
-                          options={suppliers.map(s => ({ value: s.id, label: s.code || `NCC#${s.id}` }))}
-                          value={suppliers.find(s => String(s.id) === String(form.partnerId)) ? { value: form.partnerId, label: suppliers.find(s => String(s.id) === String(form.partnerId)).code || `NCC#${form.partnerId}` } : null}
-                          onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
-                          placeholder="Chọn Mã NCC..."
+                          options={suppliers.map(s => ({ value: s.id, label: `${s.code || `NCC#${s.id}`} - ${s.name || ''}`, codeOnly: s.code || `NCC#${s.id}` }))}
+                          value={suppliers.find(s => String(s.id) === String(form.partnerId)) ? { value: form.partnerId, label: `${suppliers.find(s => String(s.id) === String(form.partnerId)).code || `NCC#${form.partnerId}`} - ${suppliers.find(s => String(s.id) === String(form.partnerId)).name || ''}`, codeOnly: suppliers.find(s => String(s.id) === String(form.partnerId)).code || `NCC#${form.partnerId}` } : null}
+                          onChange={(selected) => {
+                            handleFormChange('partnerId', selected ? selected.value : '');
+                            handleFormChange('partnerName', selected ? (suppliers.find(s => String(s.id) === String(selected.value))?.name || '') : '');
+                          }}
+                          formatOptionLabel={(option, { context }) => context === 'value' ? option.codeOnly : option.label}
+                          placeholder="Chọn Mã nhà cung cấp..."
                           isClearable
                           styles={customSelectStyles}
                         />
@@ -394,14 +420,15 @@ function CreateImportSlipPage() {
                     </div>
                   </div>
                   <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
-                    <label className="misa-label">Tên NCC</label>
-                    <Select
-                      options={suppliers.map(s => ({ value: s.id, label: s.name || '' }))}
-                      value={suppliers.find(s => String(s.id) === String(form.partnerId)) ? { value: form.partnerId, label: suppliers.find(s => String(s.id) === String(form.partnerId)).name || '' } : null}
-                      onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
-                      placeholder="Chọn Tên NCC..."
-                      isClearable
-                      styles={customSelectStyles}
+                    <label className="misa-label">Tên nhà cung cấp</label>
+                    <input
+                      type="text"
+                      className="misa-input"
+                      value={form.partnerName !== undefined ? form.partnerName : (suppliers.find(s => String(s.id) === String(form.partnerId))?.name || '')}
+                      onChange={(e) => handleFormChange('partnerName', e.target.value)}
+                      placeholder="Nhập tên nhà cung cấp..."
+                      readOnly={!!form.partnerId}
+                      style={{ backgroundColor: form.partnerId ? '#f9fafb' : '#fff' }}
                     />
                   </div>
                 </div>
@@ -412,18 +439,18 @@ function CreateImportSlipPage() {
                   <div className="misa-form-group" style={{ flex: '0 0 100%' }}>
                     <label className="misa-label">Lệnh sản xuất <span className="required">*</span></label>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <input 
-                        type="text" 
-                        className="misa-input" 
-                        readOnly 
-                        value={assemblyOrders.find(o => String(o.id) === String(form.assemblyOrderId))?.orderCode || ''} 
+                      <input
+                        type="text"
+                        className="misa-input"
+                        readOnly
+                        value={assemblyOrders.find(o => String(o.id) === String(form.assemblyOrderId))?.orderCode || ''}
                         placeholder="Nhấn biểu tượng bên cạnh để chọn lệnh..."
                         style={{ flex: 1, backgroundColor: '#f3f4f6', cursor: 'pointer' }}
                         onClick={() => setShowAssemblyOrderModal(true)}
                       />
-                      <button 
-                        type="button" 
-                        onClick={() => setShowAssemblyOrderModal(true)} 
+                      <button
+                        type="button"
+                        onClick={() => setShowAssemblyOrderModal(true)}
                         style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <i className="bi bi-search" style={{ fontSize: '16px', color: 'var(--color-primary)' }}></i>
@@ -437,14 +464,18 @@ function CreateImportSlipPage() {
                 <>
                   <div className="misa-form-row">
                     <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
-                      <label className="misa-label">Mã KH <span className="required">*</span></label>
+                      <label className="misa-label">Mã khách hàng <span className="required">*</span></label>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <div style={{ flex: 1 }}>
                           <Select
-                            options={customers.map(c => ({ value: c.id, label: c.code || `KH#${c.id}` }))}
-                            value={customers.find(c => String(c.id) === String(form.customerId)) ? { value: form.customerId, label: customers.find(c => String(c.id) === String(form.customerId)).code || `KH#${form.customerId}` } : null}
-                            onChange={(selected) => handleFormChange('customerId', selected ? selected.value : '')}
-                            placeholder="Chọn Mã KH..."
+                            options={customers.map(c => ({ value: c.id, label: `${c.code || `KH#${c.id}`} - ${c.name || ''}`, codeOnly: c.code || `KH#${c.id}` }))}
+                            value={customers.find(c => String(c.id) === String(form.customerId)) ? { value: form.customerId, label: `${customers.find(c => String(c.id) === String(form.customerId)).code || `KH#${form.customerId}`} - ${customers.find(c => String(c.id) === String(form.customerId)).name || ''}`, codeOnly: customers.find(c => String(c.id) === String(form.customerId)).code || `KH#${form.customerId}` } : null}
+                            onChange={(selected) => {
+                              handleFormChange('customerId', selected ? selected.value : '');
+                              handleFormChange('customerName', selected ? (customers.find(c => String(c.id) === String(selected.value))?.name || '') : '');
+                            }}
+                            formatOptionLabel={(option, { context }) => context === 'value' ? option.codeOnly : option.label}
+                            placeholder="Chọn Mã khách hàng..."
                             isClearable
                             styles={customSelectStyles}
                           />
@@ -455,14 +486,15 @@ function CreateImportSlipPage() {
                       </div>
                     </div>
                     <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
-                      <label className="misa-label">Tên Khách hàng</label>
-                      <Select
-                        options={customers.map(c => ({ value: c.id, label: c.name || '' }))}
-                        value={customers.find(c => String(c.id) === String(form.customerId)) ? { value: form.customerId, label: customers.find(c => String(c.id) === String(form.customerId)).name || '' } : null}
-                        onChange={(selected) => handleFormChange('customerId', selected ? selected.value : '')}
-                        placeholder="Chọn Tên KH..."
-                        isClearable
-                        styles={customSelectStyles}
+                      <label className="misa-label">Tên khách hàng</label>
+                      <input
+                        type="text"
+                        className="misa-input"
+                        value={form.customerName !== undefined ? form.customerName : (customers.find(c => String(c.id) === String(form.customerId))?.name || '')}
+                        onChange={(e) => handleFormChange('customerName', e.target.value)}
+                        placeholder="Nhập tên khách hàng..."
+                        readOnly={!!form.customerId}
+                        style={{ backgroundColor: form.customerId ? '#f9fafb' : '#fff' }}
                       />
                     </div>
                   </div>
@@ -470,6 +502,45 @@ function CreateImportSlipPage() {
                     <div className="misa-form-group" style={{ flex: '1' }}>
                       <label className="misa-label">Địa chỉ</label>
                       <input type="text" className="misa-input" readOnly value={customers.find(c => String(c.id) === String(form.customerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {importType === 'OTHER' && (
+                <>
+                  <div className="misa-form-row">
+                    <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
+                      <label className="misa-label">Mã đối tượng</label>
+                      <input
+                        type="text"
+                        className="misa-input"
+                        value={form.otherObjectCode || ''}
+                        onChange={(e) => handleFormChange('otherObjectCode', e.target.value)}
+                        placeholder="Nhập mã đối tượng..."
+                      />
+                    </div>
+                    <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
+                      <label className="misa-label">Tên đối tượng</label>
+                      <input
+                        type="text"
+                        className="misa-input"
+                        value={form.otherObjectName || ''}
+                        onChange={(e) => handleFormChange('otherObjectName', e.target.value)}
+                        placeholder="Nhập tên đối tượng..."
+                      />
+                    </div>
+                  </div>
+                  <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                    <div className="misa-form-group" style={{ flex: '1' }}>
+                      <label className="misa-label">Địa chỉ</label>
+                      <input
+                        type="text"
+                        className="misa-input"
+                        value={form.otherObjectAddress || ''}
+                        onChange={(e) => handleFormChange('otherObjectAddress', e.target.value)}
+                        placeholder="Nhập địa chỉ..."
+                      />
                     </div>
                   </div>
                 </>
@@ -488,37 +559,38 @@ function CreateImportSlipPage() {
                   />
                 </div>
                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                </div>
-              </div>
-
-              <div className="misa-form-row" style={{ marginTop: '12px' }}>
-                {(importType === 'PURCHASE' || importType === 'PRODUCTION') && (
-                  <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                    <label className="misa-label">Người giao hàng</label>
-                    <input 
-                      type="text" 
-                      className="misa-input" 
-                      value={form.deliverer || ''} 
-                      onChange={(e) => handleFormChange('deliverer', e.target.value)} 
-                      placeholder="Nhập người giao hàng..."
-                    />
-                  </div>
-                )}
-                <div className="misa-form-group" style={{ flex: importType === 'RETURN' ? '1' : '0 0 50%' }}>
                   <label className="misa-label">
                     {importType === 'PURCHASE' && 'Nhân viên mua hàng'}
                     {importType === 'PRODUCTION' && 'Nhân viên phụ trách'}
                     {importType === 'RETURN' && 'Nhân viên nhận hàng'}
+                    {importType === 'OTHER' && 'Nhân viên nhận hàng'}
                   </label>
-                  <input 
-                    type="text" 
-                    className="misa-input" 
-                    value={form.purchaser || ''} 
-                    onChange={(e) => handleFormChange('purchaser', e.target.value)} 
+                  <input
+                    type="text"
+                    className="misa-input"
+                    value={form.purchaser || ''}
+                    onChange={(e) => handleFormChange('purchaser', e.target.value)}
                     placeholder="Nhập tên nhân viên..."
                   />
                 </div>
               </div>
+
+              {(importType === 'PURCHASE' || importType === 'PRODUCTION' || importType === 'OTHER') && (
+                <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                  <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                    <label className="misa-label">Người giao hàng</label>
+                    <input
+                      type="text"
+                      className="misa-input"
+                      value={form.deliverer || ''}
+                      onChange={(e) => handleFormChange('deliverer', e.target.value)}
+                      placeholder="Nhập người giao hàng..."
+                    />
+                  </div>
+                  <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                  </div>
+                </div>
+              )}
 
               <div className="misa-form-group" style={{ marginTop: '12px' }}>
                 <label className="misa-label">Ghi chú</label>
@@ -529,8 +601,8 @@ function CreateImportSlipPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
                   {!form.referenceId && (
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       style={{ padding: 0, fontSize: '13px', background: 'none', border: 'none', color: '#0070cc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       onClick={() => setShowReferenceModal(true)}
                     >
@@ -543,8 +615,8 @@ function CreateImportSlipPage() {
                     <span style={{ color: 'var(--color-primary)', fontWeight: '500', cursor: 'pointer' }} onClick={() => setShowReferenceModal(true)}>
                       <i className="bi bi-file-earmark-text"></i> {form.referenceCode}
                     </span>
-                    <i 
-                      className="bi bi-x-circle-fill" 
+                    <i
+                      className="bi bi-x-circle-fill"
                       style={{ color: '#dc3545', cursor: 'pointer', fontSize: '14px' }}
                       onClick={() => setForm(prev => ({ ...prev, referenceType: '', referenceId: '', referenceCode: '' }))}
                       title="Xóa tham chiếu"
@@ -563,13 +635,13 @@ function CreateImportSlipPage() {
               </div>
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
-                <label className="misa-label">Ngày nhập kho <span className="required">*</span></label>
-                <input type="date" className="misa-input" value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
+                <label className="misa-label">Số phiếu</label>
+                <input className="misa-input" placeholder="Để trống để hệ thống tự sinh" value={form.docCode} onChange={(e) => handleFormChange('docCode', e.target.value)} />
               </div>
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
-                <label className="misa-label">Số phiếu</label>
-                <input className="misa-input" placeholder="Để trống để hệ thống tự sinh" value={form.docCode} onChange={(e) => handleFormChange('docCode', e.target.value)} />
+                <label className="misa-label">Ngày nhập kho <span className="required">*</span></label>
+                <input type="date" className="misa-input" value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
               </div>
             </div>
           </div>
@@ -585,13 +657,14 @@ function CreateImportSlipPage() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Tên hàng</th>
                     <th>Mã hàng</th>
+                    <th>Tên hàng</th>
                     <th>ĐVT</th>
                     <th style={{ textAlign: 'right' }}>SL</th>
                     <th style={{ textAlign: 'center' }}>Serial</th>
                     <th style={{ textAlign: 'right' }}>Đơn giá</th>
                     <th style={{ textAlign: 'right' }}>Thành tiền</th>
+                    <th style={{ textAlign: 'right' }}>% thuế GTGT</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -601,6 +674,7 @@ function CreateImportSlipPage() {
                     return (
                       <tr key={item.localId}>
                         <td>{index + 1}</td>
+                        <td>{product?.sku || product?.productCode || ''}</td>
                         <td>
                           <Select
                             options={products.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}` }))}
@@ -613,7 +687,6 @@ function CreateImportSlipPage() {
                             menuPortalTarget={document.body}
                           />
                         </td>
-                        <td>{product?.sku || product?.productCode || ''}</td>
                         <td>{product?.unitName || ''}</td>
                         <td align="right">
                           <input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
@@ -638,6 +711,9 @@ function CreateImportSlipPage() {
                         <td align="right" className={`${styles.textBold} ${styles.textBlue}`}>
                           {money(Number(item.quantity || 0) * Number(item.price || 0))} đ
                         </td>
+                        <td align="right">
+                          <input type="number" min="0" max="100" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
+                        </td>
                         <td>
                           <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)}>
                             <i className="bi bi-trash"></i>
@@ -647,16 +723,58 @@ function CreateImportSlipPage() {
                     );
                   })}
                 </tbody>
-              </table>
-              <div className={styles.tableFooter}>
-                <span>Tổng cộng hàng nhập:</span>
-                <span>{money(totalQuantity)}</span>
-                <span className={styles.textBlue}>{money(totalPrice)} đ</span>
+                  <tfoot>
+                    <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
+                      <td colSpan="4" style={{ textAlign: 'right', padding: '12px' }}></td>
+                      <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalQuantity)}</td>
+                      <td colSpan="2"></td>
+                      <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>
+                      <td colSpan="2"></td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
-              <div className={styles.tableActions}>
-                <button className={styles.actionLink} onClick={addItem}><i className="bi bi-plus-circle"></i> Thêm dòng mới</button>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 24px', backgroundColor: '#fff', borderTop: '1px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
+                  <div style={{ color: '#4b5563', fontSize: '13px' }}>
+                    Tổng số: <strong>{items.length}</strong> bản ghi
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
+                    <button type="button" onClick={() => setItems([emptyLine()])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '350px' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
+                    <select style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
+                      <option>20 bản ghi trên 1 trang</option>
+                    </select>
+                    <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280' }}>
+                      <span style={{ cursor: 'pointer' }}>Trước</span>
+                      <span style={{ fontWeight: 'bold', color: '#111827' }}>1</span>
+                      <span style={{ cursor: 'pointer' }}>Sau</span>
+                    </div>
+                  </div>
+                  <table style={{ width: '100%', fontSize: '13px' }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền hàng</td>
+                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalPrice)}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Thuế GTGT</td>
+                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalVat)}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền thanh toán</td>
+                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(grandTotal)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
           </div>
         </div>
 
@@ -707,11 +825,11 @@ function CreateImportSlipPage() {
         isOpen={showReferenceModal}
         onClose={() => setShowReferenceModal(false)}
         onSelect={(data) => {
-          setForm(prev => ({ 
-            ...prev, 
-            referenceType: data.referenceType, 
+          setForm(prev => ({
+            ...prev,
+            referenceType: data.referenceType,
             referenceId: data.referenceId,
-            referenceCode: data.docCode 
+            referenceCode: data.docCode
           }));
         }}
       />
