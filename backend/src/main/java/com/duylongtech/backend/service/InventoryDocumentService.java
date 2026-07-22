@@ -203,8 +203,20 @@ public class InventoryDocumentService {
             }
             InventoryBalance balance = inventoryBalanceRepository
                     .findByWarehouseAndVariantForUpdate(doc.getWarehouseId(), line.getVariantId(), "GOOD")
-                    .orElseThrow(() -> new BusinessException(
-                            "Khong tim thay ton kho GOOD cho san pham " + line.getVariantId()));
+                    .orElse(null);
+
+            if (balance == null) {
+                List<InventoryBalance> balances = inventoryBalanceRepository
+                        .findByWarehouseAndVariantForUpdate(doc.getWarehouseId(), line.getVariantId());
+                balance = balances.stream()
+                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
+                        .findFirst()
+                        .orElse(balances.isEmpty() ? null : balances.get(0));
+            }
+
+            if (balance == null) {
+                throw new BusinessException("Khong tim thay ton kho cho san pham " + line.getVariantId());
+            }
 
             if (balance.getQuantityOnHand().compareTo(qtyToExport) < 0) {
                 throw new BusinessException("Số lượng xuất lớn hơn số lượng tồn kho, vui lòng điều chỉnh");
@@ -265,15 +277,28 @@ public class InventoryDocumentService {
             BigDecimal unitCost = nonNegativeOrZero(line.getUnitCost(), "unitCost");
             InventoryBalance balance = inventoryBalanceRepository
                     .findByWarehouseAndVariantForUpdate(savedDoc.getWarehouseId(), line.getVariantId(), "GOOD")
-                    .orElseGet(() -> InventoryBalance.builder()
-                            .warehouseId(savedDoc.getWarehouseId())
-                            .variantId(line.getVariantId())
-                            .stockStatus("GOOD")
-                            .quantityOnHand(ZERO)
-                            .quantityReserved(ZERO)
-                            .averageCost(ZERO)
-                            .updatedAt(LocalDateTime.now())
-                            .build());
+                    .orElse(null);
+
+            if (balance == null) {
+                List<InventoryBalance> balances = inventoryBalanceRepository
+                        .findByWarehouseAndVariantForUpdate(savedDoc.getWarehouseId(), line.getVariantId());
+                balance = balances.stream()
+                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
+                        .findFirst()
+                        .orElse(balances.isEmpty() ? null : balances.get(0));
+            }
+
+            if (balance == null) {
+                balance = InventoryBalance.builder()
+                        .warehouseId(savedDoc.getWarehouseId())
+                        .variantId(line.getVariantId())
+                        .stockStatus("GOOD")
+                        .quantityOnHand(ZERO)
+                        .quantityReserved(ZERO)
+                        .averageCost(ZERO)
+                        .updatedAt(LocalDateTime.now())
+                        .build();
+            }
 
             BigDecimal oldQty = balance.getQuantityOnHand();
             BigDecimal oldValue = oldQty.multiply(balance.getAverageCost());
@@ -695,6 +720,15 @@ public class InventoryDocumentService {
             InventoryBalance balance = inventoryBalanceRepository
                     .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), "GOOD")
                     .orElse(null);
+
+            if (balance == null) {
+                List<InventoryBalance> balances = inventoryBalanceRepository
+                        .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId());
+                balance = balances.stream()
+                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
+                        .findFirst()
+                        .orElse(balances.isEmpty() ? null : balances.get(0));
+            }
 
             if (balance == null || balance.getQuantityOnHand().compareTo(qtyToExport) < 0) {
                 throw new BusinessException("Số lượng xuất lớn hơn số lượng tồn kho, vui lòng điều chỉnh");

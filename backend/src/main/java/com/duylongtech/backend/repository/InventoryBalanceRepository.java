@@ -19,6 +19,10 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
     Optional<InventoryBalance> findByWarehouseAndVariantForUpdate(@Param("warehouseId") Long warehouseId, @Param("variantId") Long variantId, @Param("stockStatus") String stockStatus);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.variantId = :variantId AND b.serialNumberId IS NULL AND b.lotBatchId IS NULL")
+    List<InventoryBalance> findByWarehouseAndVariantForUpdate(@Param("warehouseId") Long warehouseId, @Param("variantId") Long variantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.variantId = :variantId AND b.serialNumberId = :serialNumberId AND b.stockStatus = :stockStatus")
     Optional<InventoryBalance> findByWarehouseVariantSerialForUpdate(@Param("warehouseId") Long warehouseId,
                                                                      @Param("variantId") Long variantId,
@@ -40,6 +44,7 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
 
     @Query("""
             SELECT
+                v.id AS variantId,
                 w.code AS warehouseCode,
                 w.name AS warehouseName,
                 p.productCode AS productCode,
@@ -55,13 +60,14 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
             JOIN ProductVariant v ON v.id = b.variantId
             JOIN v.product p
             WHERE b.warehouseId = :warehouseId
-            GROUP BY w.code, w.name, p.productCode, p.productName, v.sku, v.variantName
+            GROUP BY v.id, w.code, w.name, p.productCode, p.productName, v.sku, v.variantName
             ORDER BY COALESCE(SUM(b.quantityOnHand), 0) DESC
             """)
     List<WarehouseStockAiRow> findStockRowsForAiByWarehouseId(@Param("warehouseId") Long warehouseId);
 
     @Query("""
             SELECT
+                v.id AS variantId,
                 w.code AS warehouseCode,
                 w.name AS warehouseName,
                 p.productCode AS productCode,
@@ -76,7 +82,7 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
             JOIN Warehouse w ON w.id = b.warehouseId
             JOIN ProductVariant v ON v.id = b.variantId
             JOIN v.product p
-            GROUP BY w.code, w.name, p.productCode, p.productName, v.sku, v.variantName
+            GROUP BY v.id, w.code, w.name, p.productCode, p.productName, v.sku, v.variantName
             ORDER BY COALESCE(SUM(b.quantityOnHand - b.quantityReserved), 0) ASC,
                      COALESCE(SUM(b.quantityOnHand), 0) ASC
             """)
