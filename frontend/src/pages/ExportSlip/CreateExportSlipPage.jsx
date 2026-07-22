@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -84,6 +84,8 @@ const emptyLine = () => ({
 
 function CreateExportSlipPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const voiceData = location.state?.voiceData || null;
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -165,6 +167,38 @@ function CreateExportSlipPage() {
 
     loadLookups();
   }, []);
+
+  // ── Voice Data auto-fill ──────────────────────────────────
+  useEffect(() => {
+    if (!voiceData) return;
+
+    // Auto-select customer by keyword
+    if (voiceData.customerKeyword && customers.length > 0) {
+      const kw = voiceData.customerKeyword.toLowerCase();
+      const match = customers.find(c => c.name?.toLowerCase().includes(kw));
+      if (match) {
+        setForm(prev => ({ ...prev, partnerId: String(match.id) }));
+      }
+    }
+
+    // Auto-add product line by keyword
+    if (voiceData.productKeyword && products.length > 0) {
+      const kw = voiceData.productKeyword.toLowerCase();
+      const match = products.find(p =>
+        p.productName?.toLowerCase().includes(kw)
+        || p.variantName?.toLowerCase().includes(kw)
+      );
+      if (match) {
+        const qty = Number(voiceData.quantity) || 1;
+        setItems([{
+          ...emptyLine(),
+          variantId: String(match.id),
+          quantity: qty,
+          isNew: false,
+        }]);
+      }
+    }
+  }, [voiceData, customers, products]);
 
   const selectedCustomer = useMemo(() => customers.find(c => String(c.id) === String(form.partnerId)), [customers, form.partnerId]);
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as importApi from '../../api/inventoryImportApi';
 import * as customerApi from '../../api/customerApi';
@@ -94,6 +94,8 @@ const emptyLine = () => ({
 
 function CreateImportSlipPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const voiceData = location.state?.voiceData || null;
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -177,6 +179,38 @@ function CreateImportSlipPage() {
     };
     loadLookups();
   }, []);
+
+  // ── Voice Data auto-fill ──────────────────────────────────
+  useEffect(() => {
+    if (!voiceData) return;
+
+    // Auto-select supplier by keyword
+    if (voiceData.supplierKeyword && suppliers.length > 0) {
+      const kw = voiceData.supplierKeyword.toLowerCase();
+      const match = suppliers.find(s => s.name?.toLowerCase().includes(kw));
+      if (match) {
+        setForm(prev => ({ ...prev, partnerId: match.id, partnerName: match.name }));
+      }
+    }
+
+    // Auto-add product line by keyword
+    if (voiceData.productKeyword && products.length > 0) {
+      const kw = voiceData.productKeyword.toLowerCase();
+      const match = products.find(p =>
+        p.productName?.toLowerCase().includes(kw)
+        || p.variantName?.toLowerCase().includes(kw)
+      );
+      if (match) {
+        const qty = Number(voiceData.quantity) || 1;
+        setItems([{
+          ...emptyLine(),
+          variantId: String(match.id),
+          quantity: qty,
+          isNew: false,
+        }]);
+      }
+    }
+  }, [voiceData, suppliers, products]);
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);

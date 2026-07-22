@@ -188,3 +188,64 @@
     color: var(--color-text-subtle);
     font-size: 11px;
 }
+
+/* ── Voice AI Toggle ─────────────────────────────────────── */
+.voiceSection {
+    padding: 8px;
+}
+
+.voiceToggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.voiceToggle:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+}
+
+.voiceToggleActive {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.voiceToggleTrack {
+    width: 32px;
+    height: 18px;
+    border-radius: 100px;
+    background: var(--color-border);
+    position: relative;
+    transition: background 0.25s ease;
+    flex-shrink: 0;
+}
+
+.voiceToggleActive .voiceToggleTrack {
+    background: var(--color-primary);
+}
+
+.voiceToggleThumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-white);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.voiceToggleActive .voiceToggleThumb {
+    transform: translateX(14px);
+}
