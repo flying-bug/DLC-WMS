@@ -162,7 +162,7 @@ function UpdateExportSlipPage() {
           const userList = userRes.status === 'fulfilled' ? pageContent(unwrap(userRes.value)) : [];
           setUsers(userList);
           const salespersonUser = userList.find(u => String(u.id) === String(detail.salespersonId));
-          const currentUserId = localStorage.getItem('userId') || localStorage.getItem('id');
+          const currentUserId = sessionStorage.getItem('userId') || sessionStorage.getItem('id');
           const currentUser = userList.find(u => String(u.id) === String(currentUserId));
           const salespersonName = salespersonUser ? (salespersonUser.fullName || salespersonUser.username) : (detail.salespersonId || currentUser?.fullName || currentUser?.username || '');
 
@@ -387,7 +387,7 @@ function UpdateExportSlipPage() {
     docDate: form.docDate,
     status,
     note: form.note,
-    createdBy: Number(localStorage.getItem('userId') || localStorage.getItem('id') || 1),
+    createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
     lines: items.map(item => ({
       variantId: Number(item.variantId),
       quantityIn: 0,

@@ -195,7 +195,7 @@ function UpdateImportSlipPage() {
         setImportType(loadedImportType);
 
         const purchaserUser = userList.find(u => String(u.id) === String(detail.salespersonId));
-        const currentUserId = localStorage.getItem('userId') || localStorage.getItem('id');
+        const currentUserId = sessionStorage.getItem('userId') || sessionStorage.getItem('id');
         const currentUser = userList.find(u => String(u.id) === String(currentUserId));
         const purchaserName = purchaserUser ? (purchaserUser.fullName || purchaserUser.username) : (detail.salespersonId || currentUser?.fullName || currentUser?.username || '');
 
