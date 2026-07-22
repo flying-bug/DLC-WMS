@@ -171,6 +171,7 @@ textarea {
   justify-content: center !important;
   gap: 8px !important;
 }
+
 .btn-misa-cancel:hover {
   background-color: var(--color-bg-control-hover) !important;
 }
@@ -190,6 +191,7 @@ textarea {
   justify-content: center !important;
   gap: 8px !important;
 }
+
 .btn-misa-draft:hover {
   background-color: var(--color-primary-soft) !important;
 }
@@ -209,6 +211,7 @@ textarea {
   justify-content: center !important;
   gap: 8px !important;
 }
+
 .btn-misa-save:hover:not(:disabled) {
   background-color: var(--color-primary-hover) !important;
   border-color: var(--color-primary-hover) !important;
@@ -229,6 +232,7 @@ textarea {
   justify-content: center !important;
   gap: 8px !important;
 }
+
 .btn-misa-post:hover:not(:disabled) {
   background-color: var(--color-success-action-hover) !important;
   border-color: var(--color-success-action-hover) !important;
@@ -259,7 +263,8 @@ textarea {
 
 .misa-modal {
   background-color: var(--color-canvas, #ffffff) !important;
-  width: 650px !important; /* default width */
+  width: 650px !important;
+  /* default width */
   max-width: 95vw !important;
   max-height: 90vh !important;
   border-radius: 8px !important;
@@ -356,4 +361,3 @@ input::-ms-reveal,
 input::-ms-clear {
   display: none !important;
 }
-
