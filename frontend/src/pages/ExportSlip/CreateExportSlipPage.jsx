@@ -349,7 +349,7 @@ function CreateExportSlipPage() {
     docDate: form.docDate,
     status,
     note: form.note,
-    createdBy: Number(localStorage.getItem('userId') || localStorage.getItem('id') || 1),
+    createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
     lines: items.map(item => ({
       variantId: Number(item.variantId),
       quantityIn: 0,

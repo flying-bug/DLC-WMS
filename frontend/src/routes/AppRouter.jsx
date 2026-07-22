@@ -45,8 +45,8 @@ import ReportListPage from '../pages/Report/ReportListPage';
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
-    const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('role');
+    const token = sessionStorage.getItem('token');
+    const userRole = sessionStorage.getItem('role');
 
     if (!token) {
         return <Navigate to="/login" replace />;
@@ -61,7 +61,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
 // Wrapper for guest/public routes (redirects to dashboard if already logged in)
 const PublicRoute = () => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (token) {
         return <Navigate to="/dashboard" replace />;
     }

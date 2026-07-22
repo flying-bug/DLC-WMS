@@ -2,15 +2,15 @@ export const AUTH_EVENT = 'app:auth-changed';
 export const USER_EVENT = 'app:user-updated';
 
 export function getAuthToken() {
-    return localStorage.getItem('token');
+    return sessionStorage.getItem('token');
 }
 
 export function getAuthRole() {
-    return localStorage.getItem('role');
+    return sessionStorage.getItem('role');
 }
 
 export function getAuthUserId() {
-    const rawUserId = localStorage.getItem('userId');
+    const rawUserId = sessionStorage.getItem('userId');
     return rawUserId ? Number(rawUserId) : null;
 }
 
@@ -19,18 +19,18 @@ export function setAuthSession(session) {
         return;
     }
 
-    localStorage.setItem('token', session.token);
+    sessionStorage.setItem('token', session.token);
 
     if (session.role) {
-        localStorage.setItem('role', session.role);
+        sessionStorage.setItem('role', session.role);
     } else {
-        localStorage.removeItem('role');
+        sessionStorage.removeItem('role');
     }
 
     if (session.id != null) {
-        localStorage.setItem('userId', String(session.id));
+        sessionStorage.setItem('userId', String(session.id));
     } else {
-        localStorage.removeItem('userId');
+        sessionStorage.removeItem('userId');
     }
 
     window.dispatchEvent(new CustomEvent(AUTH_EVENT, {
@@ -39,9 +39,9 @@ export function setAuthSession(session) {
 }
 
 export function clearAuthSession() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    localStorage.removeItem('userId');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('role');
+    sessionStorage.removeItem('userId');
 }
 
 export function forceLogout(message) {
