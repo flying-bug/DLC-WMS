@@ -14,9 +14,9 @@ const listFrom = (payload) => payload?.content ?? payload ?? [];
 const today = () => new Date().toLocaleDateString('sv-SE');
 
 const STATUS_META = {
-    DRAFT: { label: 'Lưu tạm', code: 'info' },
-    SUBMITTED: { label: 'Hoàn thành', code: 'success' },
-    CANCELLED: { label: 'Đã hủy', code: 'danger' }
+    DRAFT: { label: 'LÆ°u táº¡m', code: 'info' },
+    SUBMITTED: { label: 'HoÃ n thÃ nh', code: 'success' },
+    CANCELLED: { label: 'ÄÃ£ há»§y', code: 'danger' }
 };
 
 const defaultBomLine = { componentVariantId: '', quantity: '1', note: '' };
@@ -69,7 +69,7 @@ function AssemblyOrderFormPage() {
     const selectedBom = useMemo(() => boms.find((bom) => String(bom.id) === String(form.bomId)), [boms, form.bomId]);
     const isViewMode = searchParams.get('mode') === 'view';
     const canEdit = (!editing || ['DRAFT'].includes(form.status)) && !isViewMode;
-    const status = STATUS_META[form.status] || { label: form.status || 'Chưa rõ', code: 'info' };
+    const status = STATUS_META[form.status] || { label: form.status || 'ChÆ°a rÃµ', code: 'info' };
 
     const loadBaseData = useCallback(async () => {
         setLoading(true);
@@ -81,7 +81,7 @@ function AssemblyOrderFormPage() {
             setBoms(listFrom(unwrap(bomResponse)));
             setWarehouses(listFrom(unwrap(warehouseResponse)));
         } catch (err) {
-            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được dữ liệu BOM/kho.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº£i Ä‘Æ°á»£c dá»¯ liá»‡u BOM/kho.');
         } finally {
             setLoading(false);
         }
@@ -96,7 +96,7 @@ function AssemblyOrderFormPage() {
             setProducts(listFrom(unwrap(productResponse)).filter((item) => item.active !== false));
             setVariants(listFrom(unwrap(variantResponse)).filter((item) => item.active !== false));
         } catch (err) {
-            setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách thành phẩm/SKU.');
+            setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº£i Ä‘Æ°á»£c danh sÃ¡ch thÃ nh pháº©m/SKU.');
         }
     }, []);
 
@@ -120,11 +120,11 @@ function AssemblyOrderFormPage() {
             });
             
             if (searchParams.get('mode') !== 'view' && order.status === 'SUBMITTED') {
-                showToast('error', 'Lệnh đã hoàn thành không được phép chỉnh sửa.');
+                showToast('error', 'Lá»‡nh Ä‘Ã£ hoÃ n thÃ nh khÃ´ng Ä‘Æ°á»£c phÃ©p chá»‰nh sá»­a.');
                 setSearchParams({ mode: 'view' }, { replace: true });
             }
         } catch (err) {
-            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được chi tiết lệnh.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº£i Ä‘Æ°á»£c chi tiáº¿t lá»‡nh.');
         } finally {
             setLoading(false);
         }
@@ -148,22 +148,22 @@ function AssemblyOrderFormPage() {
         status: overrideStatus || form.status,
         executionDate: form.executionDate,
         note: form.note || null,
-        createdBy: Number(localStorage.getItem('userId') || 1)
+        createdBy: Number(sessionStorage.getItem('userId') || 1)
     });
 
     const getPageTitle = () => {
-        const typeText = form.orderType === 'DISASSEMBLY' ? 'tháo dỡ' : 'lắp ráp';
+        const typeText = form.orderType === 'DISASSEMBLY' ? 'thÃ¡o dá»¡' : 'láº¯p rÃ¡p';
         const codeText = form.orderCode ? ` ${form.orderCode}` : '';
-        if (!editing) return `Tạo lệnh ${typeText}${codeText}`;
-        if (isViewMode) return `Chi tiết lệnh ${typeText}${codeText}`;
-        return `Cập nhật lệnh ${typeText}${codeText}`;
+        if (!editing) return `Táº¡o lá»‡nh ${typeText}${codeText}`;
+        if (isViewMode) return `Chi tiáº¿t lá»‡nh ${typeText}${codeText}`;
+        return `Cáº­p nháº­t lá»‡nh ${typeText}${codeText}`;
     };
 
     const validate = () => {
-        if (!form.bomId) return 'Vui lòng chọn BOM.';
-        if (!form.warehouseId) return 'Vui lòng chọn kho thực hiện.';
-        if (!form.quantity || Number(form.quantity) <= 0) return 'Số lượng phải lớn hơn 0.';
-        if (!form.executionDate) return 'Vui lòng chọn ngày thực hiện.';
+        if (!form.bomId) return 'Vui lÃ²ng chá»n BOM.';
+        if (!form.warehouseId) return 'Vui lÃ²ng chá»n kho thá»±c hiá»‡n.';
+        if (!form.quantity || Number(form.quantity) <= 0) return 'Sá»‘ lÆ°á»£ng pháº£i lá»›n hÆ¡n 0.';
+        if (!form.executionDate) return 'Vui lÃ²ng chá»n ngÃ y thá»±c hiá»‡n.';
         return '';
     };
 
@@ -183,14 +183,14 @@ function AssemblyOrderFormPage() {
                     ? await assemblyApi.createDisassemblyOrder(payload)
                     : await assemblyApi.createAssemblyOrder(payload);
             const saved = unwrap(response);
-            showToast('success', editing ? 'Cập nhật lệnh thành công.' : 'Tạo lệnh thành công.');
+            showToast('success', editing ? 'Cáº­p nháº­t lá»‡nh thÃ nh cÃ´ng.' : 'Táº¡o lá»‡nh thÃ nh cÃ´ng.');
             if (!editing && saved?.id) {
                 setTimeout(() => navigate(`/assembly-orders/${saved.id}`), 1500);
             } else if (editing) {
                 setTimeout(() => navigate('/assembly-orders'), 1500);
             }
         } catch (err) {
-            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không lưu được lệnh lắp ráp/tháo dỡ.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng lÆ°u Ä‘Æ°á»£c lá»‡nh láº¯p rÃ¡p/thÃ¡o dá»¡.');
         } finally {
             setSaving(false);
         }
@@ -230,15 +230,15 @@ function AssemblyOrderFormPage() {
     };
 
     const validateBomForm = () => {
-        if (!bomForm.productId) return 'Vui lòng chọn thành phẩm.';
-        if (!bomForm.bomName.trim()) return 'Vui lòng nhập tên BOM.';
-        if (!bomForm.versionNo || Number(bomForm.versionNo) <= 0) return 'Phiên bản BOM phải lớn hơn 0.';
-        if (!bomForm.lines.length) return 'BOM phải có ít nhất một linh kiện.';
+        if (!bomForm.productId) return 'Vui lÃ²ng chá»n thÃ nh pháº©m.';
+        if (!bomForm.bomName.trim()) return 'Vui lÃ²ng nháº­p tÃªn BOM.';
+        if (!bomForm.versionNo || Number(bomForm.versionNo) <= 0) return 'PhiÃªn báº£n BOM pháº£i lá»›n hÆ¡n 0.';
+        if (!bomForm.lines.length) return 'BOM pháº£i cÃ³ Ã­t nháº¥t má»™t linh kiá»‡n.';
         for (let index = 0; index < bomForm.lines.length; index += 1) {
             const line = bomForm.lines[index];
-            if (!line.componentVariantId) return `Vui lòng chọn SKU linh kiện dòng ${index + 1}.`;
-            if (!line.quantity || Number(line.quantity) <= 0) return `Định mức dòng ${index + 1} phải lớn hơn 0.`;
-            if (!Number.isInteger(Number(line.quantity))) return `Định mức dòng ${index + 1} phải là số nguyên.`;
+            if (!line.componentVariantId) return `Vui lÃ²ng chá»n SKU linh kiá»‡n dÃ²ng ${index + 1}.`;
+            if (!line.quantity || Number(line.quantity) <= 0) return `Äá»‹nh má»©c dÃ²ng ${index + 1} pháº£i lá»›n hÆ¡n 0.`;
+            if (!Number.isInteger(Number(line.quantity))) return `Äá»‹nh má»©c dÃ²ng ${index + 1} pháº£i lÃ  sá»‘ nguyÃªn.`;
         }
         return '';
     };
@@ -269,9 +269,9 @@ function AssemblyOrderFormPage() {
             setBoms(refreshed);
             setField('bomId', savedBom.id || '');
             setShowBomModal(false);
-            showToast('success', 'Đã tạo BOM nhanh và tự động chọn vào lệnh.');
+            showToast('success', 'ÄÃ£ táº¡o BOM nhanh vÃ  tá»± Ä‘á»™ng chá»n vÃ o lá»‡nh.');
         } catch (err) {
-            setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tạo được BOM nhanh.');
+            setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'KhÃ´ng táº¡o Ä‘Æ°á»£c BOM nhanh.');
         } finally {
             setSavingBom(false);
         }
@@ -332,13 +332,13 @@ function AssemblyOrderFormPage() {
                     {/* LEFT COLUMN: FORM */}
                     <div className={styles.leftColumn}>
                         <div className={styles.card}>
-                            <h2 className={styles.cardTitle}>Thông tin chung</h2>
+                            <h2 className={styles.cardTitle}>ThÃ´ng tin chung</h2>
                             
                             {editing && (
                                 <div className={styles.detailGrid} style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                    <div className={styles.detailItem}><span>Trạng thái</span><strong><span className={`${styles.badge} ${styles['badge' + status.code.charAt(0).toUpperCase() + status.code.slice(1)]}`}>{status.label}</span></strong></div>
-                                    <div className={styles.detailItem}><span>Người tạo</span><strong>{orderDetail?.createdBy ? `ID: ${orderDetail.createdBy}` : 'Hệ thống'}</strong></div>
-                                    <div className={styles.detailItem}><span>Ngày tạo</span><strong>{orderDetail?.createdAt ? new Date(orderDetail.createdAt).toLocaleString('vi-VN') : '---'}</strong></div>
+                                    <div className={styles.detailItem}><span>Tráº¡ng thÃ¡i</span><strong><span className={`${styles.badge} ${styles['badge' + status.code.charAt(0).toUpperCase() + status.code.slice(1)]}`}>{status.label}</span></strong></div>
+                                    <div className={styles.detailItem}><span>NgÆ°á»i táº¡o</span><strong>{orderDetail?.createdBy ? `ID: ${orderDetail.createdBy}` : 'Há»‡ thá»‘ng'}</strong></div>
+                                    <div className={styles.detailItem}><span>NgÃ y táº¡o</span><strong>{orderDetail?.createdAt ? new Date(orderDetail.createdAt).toLocaleString('vi-VN') : '---'}</strong></div>
                                 </div>
                             )}
 
@@ -346,10 +346,10 @@ function AssemblyOrderFormPage() {
                                 {!editing && (
                                     <div className="misa-form-row" style={{ marginBottom: '12px' }}>
                                         <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                                            <label className="misa-label">Loại lệnh <span className="required">*</span></label>
+                                            <label className="misa-label">Loáº¡i lá»‡nh <span className="required">*</span></label>
                                             <input 
                                                 className="misa-input" 
-                                                value={form.orderType === 'ASSEMBLY' ? 'Lắp ráp' : 'Tháo dỡ'} 
+                                                value={form.orderType === 'ASSEMBLY' ? 'Láº¯p rÃ¡p' : 'ThÃ¡o dá»¡'} 
                                                 disabled 
                                                 style={{ backgroundColor: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }} 
                                             />
@@ -359,72 +359,72 @@ function AssemblyOrderFormPage() {
                                 
                                 <div className="misa-form-row">
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                                        <label className="misa-label">Mã lệnh</label>
-                                        <input className="misa-input" value={form.orderCode} onChange={(event) => setField('orderCode', event.target.value)} placeholder="Để trống để tự sinh mã" disabled={!canEdit} />
+                                        <label className="misa-label">MÃ£ lá»‡nh</label>
+                                        <input className="misa-input" value={form.orderCode} onChange={(event) => setField('orderCode', event.target.value)} placeholder="Äá»ƒ trá»‘ng Ä‘á»ƒ tá»± sinh mÃ£" disabled={!canEdit} />
                                     </div>
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                                        <label className="misa-label">Ngày thực hiện <span className="required">*</span></label>
+                                        <label className="misa-label">NgÃ y thá»±c hiá»‡n <span className="required">*</span></label>
                                         <input type="date" className="misa-input" value={form.executionDate} onChange={(event) => setField('executionDate', event.target.value)} disabled={!canEdit} />
                                     </div>
                                 </div>
 
                                 <div className="misa-form-row" style={{ marginTop: '12px' }}>
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                                        <label className="misa-label">Chọn Kho <span className="required">*</span></label>
+                                        <label className="misa-label">Chá»n Kho <span className="required">*</span></label>
                                         <select className="misa-input" value={form.warehouseId} onChange={(event) => setField('warehouseId', event.target.value)} disabled={!canEdit || loading}>
-                                            <option value="">Chọn kho thực hiện</option>
+                                            <option value="">Chá»n kho thá»±c hiá»‡n</option>
                                             {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name || warehouse.warehouseName}</option>)}
                                         </select>
                                     </div>
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                                        <label className="misa-label">Số lượng <span className="required">*</span></label>
+                                        <label className="misa-label">Sá»‘ lÆ°á»£ng <span className="required">*</span></label>
                                         <input className="misa-input" style={{ textAlign: 'right' }} inputMode="decimal" type="number" min="0.0001" step="0.0001" value={form.quantity} onChange={(event) => setField('quantity', event.target.value)} disabled={!canEdit} />
                                     </div>
                                 </div>
 
                                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                                    <label className="misa-label">BOM (Định mức) <span className="required">*</span></label>
+                                    <label className="misa-label">BOM (Äá»‹nh má»©c) <span className="required">*</span></label>
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                         <select className="misa-input" style={{ flex: 1 }} value={form.bomId} onChange={(event) => setField('bomId', event.target.value)} disabled={!canEdit || loading}>
-                                            <option value="">{loading ? 'Đang tải BOM...' : 'Chọn BOM đã duyệt'}</option>
+                                            <option value="">{loading ? 'Äang táº£i BOM...' : 'Chá»n BOM Ä‘Ã£ duyá»‡t'}</option>
                                             {boms.map((bom) => <option key={bom.id} value={bom.id}>{bom.bomCode} - {bom.bomName}</option>)}
                                         </select>
                                         <button className={styles.btnOutline} type="button" onClick={openBomModal} disabled={!canEdit} style={{ whiteSpace: 'nowrap', padding: '0 12px', height: '32px' }}>
-                                            <i className="bi bi-plus-lg"></i> Tạo BOM
+                                            <i className="bi bi-plus-lg"></i> Táº¡o BOM
                                         </button>
                                     </div>
                                 </div>
                                 
                                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                                    <label className="misa-label">Trạng thái lưu</label>
+                                    <label className="misa-label">Tráº¡ng thÃ¡i lÆ°u</label>
                                     <select className="misa-input" value={form.status} onChange={(event) => setField('status', event.target.value)} disabled={!canEdit} style={{ width: '50%' }}>
-                                        <option value="DRAFT">Lưu tạm</option>
-                                        <option value="SUBMITTED">Hoàn thành</option>
+                                        <option value="DRAFT">LÆ°u táº¡m</option>
+                                        <option value="SUBMITTED">HoÃ n thÃ nh</option>
                                     </select>
                                 </div>
                                 
                                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                                    <label className="misa-label">Ghi chú</label>
-                                    <textarea className="misa-input" style={{ resize: 'vertical' }} value={form.note} onChange={(event) => setField('note', event.target.value)} disabled={!canEdit} placeholder="Ghi chú nội bộ cho lệnh" rows={2} />
+                                    <label className="misa-label">Ghi chÃº</label>
+                                    <textarea className="misa-input" style={{ resize: 'vertical' }} value={form.note} onChange={(event) => setField('note', event.target.value)} disabled={!canEdit} placeholder="Ghi chÃº ná»™i bá»™ cho lá»‡nh" rows={2} />
                                 </div>
                             </div>
                         </div>
                         
                         <div className={styles.card}>
-                            <h2 className={styles.cardTitle}>Chi tiết dòng nguyên liệu</h2>
+                            <h2 className={styles.cardTitle}>Chi tiáº¿t dÃ²ng nguyÃªn liá»‡u</h2>
                             <div className={styles.flowGridContainer}>
                                 <FlowPanel
                                     tone="loss"
-                                    title="Nguyên liệu xuất (Bị trừ)"
+                                    title="NguyÃªn liá»‡u xuáº¥t (Bá»‹ trá»«)"
                                     icon="bi-dash-circle-fill"
-                                    emptyText={loading ? 'Đang tính toán...' : 'Chọn BOM để xem hàng bị trừ.'}
+                                    emptyText={loading ? 'Äang tÃ­nh toÃ¡n...' : 'Chá»n BOM Ä‘á»ƒ xem hÃ ng bá»‹ trá»«.'}
                                     items={lossItems}
                                 />
                                 <FlowPanel
                                     tone="gain"
-                                    title="Sản phẩm nhập (Được cộng)"
+                                    title="Sáº£n pháº©m nháº­p (ÄÆ°á»£c cá»™ng)"
                                     icon="bi-plus-circle-fill"
-                                    emptyText={loading ? 'Đang tính toán...' : 'Chọn BOM để xem hàng được cộng.'}
+                                    emptyText={loading ? 'Äang tÃ­nh toÃ¡n...' : 'Chá»n BOM Ä‘á»ƒ xem hÃ ng Ä‘Æ°á»£c cá»™ng.'}
                                     items={gainItems}
                                 />
                             </div>
@@ -434,30 +434,30 @@ function AssemblyOrderFormPage() {
                     {/* RIGHT COLUMN: SUMMARY */}
                     <div className={styles.rightColumn}>
                         <div className={styles.card} style={{ position: 'sticky', top: '24px' }}>
-                            <h2 className={styles.cardTitle}>Tóm tắt cấu hình BOM</h2>
+                            <h2 className={styles.cardTitle}>TÃ³m táº¯t cáº¥u hÃ¬nh BOM</h2>
                             
                             <div className={styles.summaryList}>
                                 <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel}>Mã BOM</span>
+                                    <span className={styles.summaryLabel}>MÃ£ BOM</span>
                                     <span className={styles.summaryValue} style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{selectedBom?.bomCode || '---'}</span>
                                 </div>
                                 <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel}>Phiên bản</span>
+                                    <span className={styles.summaryLabel}>PhiÃªn báº£n</span>
                                     <span className={styles.summaryValue}>{selectedBom?.versionNo || '---'}</span>
                                 </div>
                                 <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel}>Thành phẩm</span>
-                                    <span className={styles.summaryValue}>{selectedBom?.productName || 'Chưa chọn'}</span>
+                                    <span className={styles.summaryLabel}>ThÃ nh pháº©m</span>
+                                    <span className={styles.summaryValue}>{selectedBom?.productName || 'ChÆ°a chá»n'}</span>
                                 </div>
                                 <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel}>Số linh kiện (SKU)</span>
+                                    <span className={styles.summaryLabel}>Sá»‘ linh kiá»‡n (SKU)</span>
                                     <span className={styles.summaryValue}>{previewLines.length}</span>
                                 </div>
                                 
                                 <hr className={styles.divider} />
                                 
                                 <div className={styles.summaryItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                                    <span className={styles.summaryLabel}>Tiến độ hiện tại:</span>
+                                    <span className={styles.summaryLabel}>Tiáº¿n Ä‘á»™ hiá»‡n táº¡i:</span>
                                     <div style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
                                         <div style={{ 
                                             height: '100%', 
@@ -477,16 +477,16 @@ function AssemblyOrderFormPage() {
 
             <div className={styles.bottomBar}>
                 <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-orders')}>
-                    {canEdit ? 'Hủy bỏ' : 'Đóng'}
+                    {canEdit ? 'Há»§y bá»' : 'ÄÃ³ng'}
                 </button>
                 {canEdit && (
                     <div className={styles.actionButtons}>
                         <button className="btn-misa-draft" type="button" onClick={(e) => handleSubmit(e, 'DRAFT')} disabled={saving}>
-                            <i className="bi bi-save"></i> Lưu tạm
+                            <i className="bi bi-save"></i> LÆ°u táº¡m
                         </button>
                         <button className="btn-misa-post" type="button" onClick={(e) => handleSubmit(e, 'SUBMITTED')} disabled={saving}>
                             <i className="bi bi-check-circle"></i>
-                            {saving ? 'Đang lưu...' : 'Hoàn thành lệnh'}
+                            {saving ? 'Äang lÆ°u...' : 'HoÃ n thÃ nh lá»‡nh'}
                         </button>
                     </div>
                 )}
@@ -499,7 +499,7 @@ function AssemblyOrderFormPage() {
             >
                 {/* Custom Modal Header to match Image 1 */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #e5e7eb' }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>Tạo nhanh BOM</h2>
+                    <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>Táº¡o nhanh BOM</h2>
                     <button type="button" onClick={() => setShowBomModal(false)} style={{ background: '#f3f4f6', border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280' }}>
                         <i className="bi bi-x-lg"></i>
                     </button>
@@ -515,33 +515,33 @@ function AssemblyOrderFormPage() {
 
                     <div className="misa-form-row">
                         <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                            <label className="misa-label">Thành phẩm</label>
+                            <label className="misa-label">ThÃ nh pháº©m</label>
                             <select className="misa-input" value={bomForm.productId} onChange={(event) => setBomField('productId', event.target.value)}>
-                                <option value="">Chọn thành phẩm</option>
+                                <option value="">Chá»n thÃ nh pháº©m</option>
                                 {products.map((product) => (
                                     <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
                                 ))}
                             </select>
                         </div>
                         <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                            <label className="misa-label">Mã BOM</label>
-                            <input className="misa-input" value={bomForm.bomCode} onChange={(event) => setBomField('bomCode', event.target.value)} placeholder="Để trống để tự sinh mã" />
+                            <label className="misa-label">MÃ£ BOM</label>
+                            <input className="misa-input" value={bomForm.bomCode} onChange={(event) => setBomField('bomCode', event.target.value)} placeholder="Äá»ƒ trá»‘ng Ä‘á»ƒ tá»± sinh mÃ£" />
                         </div>
                     </div>
                     <div className="misa-form-row" style={{ marginTop: '16px' }}>
                         <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                            <label className="misa-label">Tên BOM</label>
-                            <input className="misa-input" value={bomForm.bomName} onChange={(event) => setBomField('bomName', event.target.value)} placeholder="Ví dụ: Cấu hình PC văn phòng" />
+                            <label className="misa-label">TÃªn BOM</label>
+                            <input className="misa-input" value={bomForm.bomName} onChange={(event) => setBomField('bomName', event.target.value)} placeholder="VÃ­ dá»¥: Cáº¥u hÃ¬nh PC vÄƒn phÃ²ng" />
                         </div>
                         <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                            <label className="misa-label">Phiên bản</label>
+                            <label className="misa-label">PhiÃªn báº£n</label>
                             <input className="misa-input" inputMode="decimal" type="number" min="0.01" step="0.01" value={bomForm.versionNo} onChange={(event) => setBomField('versionNo', event.target.value)} />
                         </div>
                     </div>
 
                     <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
                         <button className="btn-misa-cancel" type="button" onClick={addBomLine} style={{ padding: '6px 16px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '600' }}>
-                            <i className="bi bi-plus"></i> Thêm linh kiện
+                            <i className="bi bi-plus"></i> ThÃªm linh kiá»‡n
                         </button>
                     </div>
 
@@ -549,9 +549,9 @@ function AssemblyOrderFormPage() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                             <thead style={{ backgroundColor: '#f9fafb', fontSize: '12px', color: '#6b7280' }}>
                                 <tr>
-                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '35%' }}>SKU LINH KIỆN</th>
-                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '20%' }}>ĐỊNH MỨC</th>
-                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '35%' }}>GHI CHÚ</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '35%' }}>SKU LINH KIá»†N</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '20%' }}>Äá»ŠNH Má»¨C</th>
+                                    <th style={{ padding: '12px 16px', fontWeight: '600', width: '35%' }}>GHI CHÃš</th>
                                     <th style={{ padding: '12px 16px', width: '10%', textAlign: 'center' }}></th>
                                 </tr>
                             </thead>
@@ -560,7 +560,7 @@ function AssemblyOrderFormPage() {
                                     <tr key={index} style={{ borderTop: '1px solid #e5e7eb' }}>
                                         <td style={{ padding: '12px 16px' }}>
                                             <select className="misa-input" style={{ height: '36px' }} value={line.componentVariantId} onChange={(event) => setBomLineField(index, 'componentVariantId', event.target.value)}>
-                                                <option value="">Chọn SKU</option>
+                                                <option value="">Chá»n SKU</option>
                                                 {variants.map((variant) => (
                                                     <option key={variant.id} value={variant.id}>{variant.sku} - {variant.productName} / {variant.variantName}</option>
                                                 ))}
@@ -570,7 +570,7 @@ function AssemblyOrderFormPage() {
                                             <input className="misa-input" style={{ height: '36px' }} inputMode="numeric" type="number" min="1" step="1" value={line.quantity} onChange={(event) => setBomLineField(index, 'quantity', event.target.value)} />
                                         </td>
                                         <td style={{ padding: '12px 16px' }}>
-                                            <input className="misa-input" style={{ height: '36px' }} value={line.note} onChange={(event) => setBomLineField(index, 'note', event.target.value)} placeholder="Ghi chú dòng" />
+                                            <input className="misa-input" style={{ height: '36px' }} value={line.note} onChange={(event) => setBomLineField(index, 'note', event.target.value)} placeholder="Ghi chÃº dÃ²ng" />
                                         </td>
                                         <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                                             <button type="button" onClick={() => removeBomLine(index)} style={{ backgroundColor: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px', width: '32px', height: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -584,10 +584,10 @@ function AssemblyOrderFormPage() {
                     </div>
 
                     <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                        <button className="btn-misa-cancel" type="button" onClick={() => setShowBomModal(false)} style={{ padding: '8px 24px', fontWeight: '600' }}>Hủy</button>
+                        <button className="btn-misa-cancel" type="button" onClick={() => setShowBomModal(false)} style={{ padding: '8px 24px', fontWeight: '600' }}>Há»§y</button>
                         <button className="btn-misa-post" type="button" onClick={saveQuickBom} disabled={savingBom} style={{ padding: '8px 24px', fontWeight: '600', backgroundColor: '#0070cc' }}>
                             <i className="bi bi-download"></i>
-                            {savingBom ? 'Đang lưu...' : 'Lưu'}
+                            {savingBom ? 'Äang lÆ°u...' : 'LÆ°u'}
                         </button>
                     </div>
                 </div>
@@ -630,8 +630,8 @@ function FlowPanel({ tone, title, icon, items, emptyText }) {
                         borderBottom: index < items.length - 1 ? '1px solid #f1f5f9' : 'none'
                     }}>
                         <div>
-                            <div style={{ fontWeight: 500, color: 'var(--color-text)', fontSize: '14px' }}>{item.name || 'Chưa có tên hàng'}</div>
-                            <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginTop: '2px' }}>{item.sku || 'Chưa có mã SKU'}</div>
+                            <div style={{ fontWeight: 500, color: 'var(--color-text)', fontSize: '14px' }}>{item.name || 'ChÆ°a cÃ³ tÃªn hÃ ng'}</div>
+                            <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginTop: '2px' }}>{item.sku || 'ChÆ°a cÃ³ mÃ£ SKU'}</div>
                         </div>
                         <div style={{ 
                             fontWeight: 600, 

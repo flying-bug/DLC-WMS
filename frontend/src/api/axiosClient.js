@@ -26,10 +26,10 @@ const axiosClient = axios.create({
     }
 });
 
-// Interceptor cho Request: Gắn token vào header nếu có
+// Interceptor cho Request: Gáº¯n token vÃ o header náº¿u cÃ³
 axiosClient.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
@@ -40,19 +40,19 @@ axiosClient.interceptors.request.use(
     }
 );
 
-// Interceptor cho Response: Xử lý lỗi chung (VD: hết hạn token)
+// Interceptor cho Response: Xá»­ lÃ½ lá»—i chung (VD: háº¿t háº¡n token)
 const ERROR_MAP = {
-    "Chi phieu xuat kho DRAFT hoac SUBMITTED moi co the ghi so": "Chỉ phiếu xuất kho lưu tạm mới có thể ghi sổ.",
-    "Chi phieu nhap kho DRAFT hoac SUBMITTED moi co the ghi so": "Chỉ phiếu nhập kho lưu tạm mới có thể ghi sổ.",
-    "Chi co the cap nhat phieu DRAFT hoac SUBMITTED": "Chỉ có thể cập nhật phiếu lưu tạm.",
-    "Trang thai phieu xuat kho phai la DRAFT hoac SUBMITTED": "Trạng thái phiếu xuất kho phải là lưu tạm.",
-    "Trang thai phieu nhap kho phai la DRAFT hoac SUBMITTED": "Trạng thái phiếu nhập kho phải là lưu tạm.",
-    // Dự phòng trường hợp dev đã xóa chữ SUBMITTED ở backend
-    "Chi phieu xuat kho DRAFT moi co the ghi so": "Chỉ phiếu xuất kho lưu tạm mới có thể ghi sổ.",
-    "Chi phieu nhap kho DRAFT moi co the ghi so": "Chỉ phiếu nhập kho lưu tạm mới có thể ghi sổ.",
-    "Chi co the cap nhat phieu DRAFT": "Chỉ có thể cập nhật phiếu lưu tạm.",
-    "Trang thai phieu xuat kho phai la DRAFT": "Trạng thái phiếu xuất kho phải là lưu tạm.",
-    "Trang thai phieu nhap kho phai la DRAFT": "Trạng thái phiếu nhập kho phải là lưu tạm."
+    "Chi phieu xuat kho DRAFT hoac SUBMITTED moi co the ghi so": "Chá»‰ phiáº¿u xuáº¥t kho lÆ°u táº¡m má»›i cÃ³ thá»ƒ ghi sá»•.",
+    "Chi phieu nhap kho DRAFT hoac SUBMITTED moi co the ghi so": "Chá»‰ phiáº¿u nháº­p kho lÆ°u táº¡m má»›i cÃ³ thá»ƒ ghi sá»•.",
+    "Chi co the cap nhat phieu DRAFT hoac SUBMITTED": "Chá»‰ cÃ³ thá»ƒ cáº­p nháº­t phiáº¿u lÆ°u táº¡m.",
+    "Trang thai phieu xuat kho phai la DRAFT hoac SUBMITTED": "Tráº¡ng thÃ¡i phiáº¿u xuáº¥t kho pháº£i lÃ  lÆ°u táº¡m.",
+    "Trang thai phieu nhap kho phai la DRAFT hoac SUBMITTED": "Tráº¡ng thÃ¡i phiáº¿u nháº­p kho pháº£i lÃ  lÆ°u táº¡m.",
+    // Dá»± phÃ²ng trÆ°á»ng há»£p dev Ä‘Ã£ xÃ³a chá»¯ SUBMITTED á»Ÿ backend
+    "Chi phieu xuat kho DRAFT moi co the ghi so": "Chá»‰ phiáº¿u xuáº¥t kho lÆ°u táº¡m má»›i cÃ³ thá»ƒ ghi sá»•.",
+    "Chi phieu nhap kho DRAFT moi co the ghi so": "Chá»‰ phiáº¿u nháº­p kho lÆ°u táº¡m má»›i cÃ³ thá»ƒ ghi sá»•.",
+    "Chi co the cap nhat phieu DRAFT": "Chá»‰ cÃ³ thá»ƒ cáº­p nháº­t phiáº¿u lÆ°u táº¡m.",
+    "Trang thai phieu xuat kho phai la DRAFT": "Tráº¡ng thÃ¡i phiáº¿u xuáº¥t kho pháº£i lÃ  lÆ°u táº¡m.",
+    "Trang thai phieu nhap kho phai la DRAFT": "Tráº¡ng thÃ¡i phiáº¿u nháº­p kho pháº£i lÃ  lÆ°u táº¡m."
 };
 
 axiosClient.interceptors.response.use(
@@ -62,7 +62,7 @@ axiosClient.interceptors.response.use(
     (error) => {
         const isLoginRequest = error.config?.url?.includes('/auth/login');
         if (error.response && error.response.status === 401 && !isLoginRequest) {
-            forceLogout(error.response?.data?.userMessage || 'Phiên đăng nhập của bạn đã hết hạn hoặc tài khoản đã bị khóa.');
+            forceLogout(error.response?.data?.userMessage || 'PhiÃªn Ä‘Äƒng nháº­p cá»§a báº¡n Ä‘Ã£ háº¿t háº¡n hoáº·c tÃ i khoáº£n Ä‘Ã£ bá»‹ khÃ³a.');
         }
 
         // Translate specific backend errors to nice Vietnamese

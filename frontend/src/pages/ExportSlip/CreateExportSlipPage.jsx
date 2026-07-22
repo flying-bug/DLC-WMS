@@ -228,7 +228,7 @@ function CreateExportSlipPage() {
           handleFormChange('partnerId', newlyAdded.id);
         }
       }
-      setToast({ isVisible: true, type: 'success', message: 'Thêm mới khách hàng thành công!' });
+      setToast({ isVisible: true, type: 'success', message: 'ThÃªm má»›i khÃ¡ch hÃ ng thÃ nh cÃ´ng!' });
     } catch (err) {
       console.error(err);
     } finally {
@@ -269,7 +269,7 @@ function CreateExportSlipPage() {
     setItems(prev => {
       if (scanResult.type === 'SERIAL') {
         if (prev.some(item => Number(item.serialNumberId) === Number(scanResult.serialNumberId))) {
-          setError('Serial này đã được quét trong phiếu.');
+          setError('Serial nÃ y Ä‘Ã£ Ä‘Æ°á»£c quÃ©t trong phiáº¿u.');
           return prev;
         }
         const serialLine = {
@@ -313,7 +313,7 @@ function CreateExportSlipPage() {
     const code = scanCode.trim();
     if (!code) return;
     if (!form.warehouseId) {
-      setError('Vui lòng chọn kho xuất trước khi quét mã.');
+      setError('Vui lÃ²ng chá»n kho xuáº¥t trÆ°á»›c khi quÃ©t mÃ£.');
       return;
     }
 
@@ -327,7 +327,7 @@ function CreateExportSlipPage() {
       addScannedItem(unwrap(response));
       setScanCode('');
     } catch (err) {
-      setError(err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không tìm thấy mã vừa quét');
+      setError(err.response?.data?.userMessage || err.response?.data?.devMessage || 'KhÃ´ng tÃ¬m tháº¥y mÃ£ vá»«a quÃ©t');
     } finally {
       setScanLoading(false);
     }
@@ -349,7 +349,7 @@ function CreateExportSlipPage() {
     docDate: form.docDate,
     status,
     note: form.note,
-    createdBy: Number(localStorage.getItem('userId') || localStorage.getItem('id') || 1),
+    createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
     lines: items.map(item => ({
       variantId: Number(item.variantId),
       quantityIn: 0,
@@ -365,14 +365,14 @@ function CreateExportSlipPage() {
 
   const submit = async (status, shouldPost = false) => {
     if (!isFormValid) {
-      if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho xuất.');
-      if (!form.partnerId) return showToast('error', 'Vui lòng chọn khách hàng.');
-      if (!form.receiverAddress) return showToast('error', 'Vui lòng nhập địa chỉ nhận hàng.');
-      if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày ghi nhận.');
+      if (!form.warehouseId) return showToast('error', 'Vui lÃ²ng chá»n kho xuáº¥t.');
+      if (!form.partnerId) return showToast('error', 'Vui lÃ²ng chá»n khÃ¡ch hÃ ng.');
+      if (!form.receiverAddress) return showToast('error', 'Vui lÃ²ng nháº­p Ä‘á»‹a chá»‰ nháº­n hÃ ng.');
+      if (!form.docDate) return showToast('error', 'Vui lÃ²ng chá»n ngÃ y ghi nháº­n.');
       if (!items.length || !items.every(item => item.variantId && Number(item.quantity) > 0)) {
-        return showToast('error', 'Vui lòng chọn hàng hóa và nhập số lượng > 0.');
+        return showToast('error', 'Vui lÃ²ng chá»n hÃ ng hÃ³a vÃ  nháº­p sá»‘ lÆ°á»£ng > 0.');
       }
-      return showToast('error', 'Vui lòng điền đầy đủ thông tin bắt buộc.');
+      return showToast('error', 'Vui lÃ²ng Ä‘iá»n Ä‘áº§y Ä‘á»§ thÃ´ng tin báº¯t buá»™c.');
     }
     setSaving(true);
     let createdId = null;
@@ -383,13 +383,13 @@ function CreateExportSlipPage() {
       if (shouldPost && createdId) {
         await exportApi.postExportSlip(createdId);
       }
-      navigate('/export-slips', { state: { toastMessage: shouldPost ? 'Ghi sổ phiếu xuất kho thành công!' : 'Lưu tạm phiếu xuất kho thành công!', toastType: 'success' } });
+      navigate('/export-slips', { state: { toastMessage: shouldPost ? 'Ghi sá»• phiáº¿u xuáº¥t kho thÃ nh cÃ´ng!' : 'LÆ°u táº¡m phiáº¿u xuáº¥t kho thÃ nh cÃ´ng!', toastType: 'success' } });
     } catch (err) {
       if (createdId) {
-        showToast('error', 'Đã tạo phiếu nhưng Ghi sổ thất bại: ' + (err.response?.data?.userMessage || err.response?.data?.devMessage || err.message));
-        navigate('/export-slips', { state: { toastMessage: 'Đã tạo phiếu nhưng Ghi sổ thất bại: ' + (err.response?.data?.userMessage || err.message), toastType: 'warning' } });
+        showToast('error', 'ÄÃ£ táº¡o phiáº¿u nhÆ°ng Ghi sá»• tháº¥t báº¡i: ' + (err.response?.data?.userMessage || err.response?.data?.devMessage || err.message));
+        navigate('/export-slips', { state: { toastMessage: 'ÄÃ£ táº¡o phiáº¿u nhÆ°ng Ghi sá»• tháº¥t báº¡i: ' + (err.response?.data?.userMessage || err.message), toastType: 'warning' } });
       } else {
-        showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không lưu được phiếu xuất kho');
+        showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'KhÃ´ng lÆ°u Ä‘Æ°á»£c phiáº¿u xuáº¥t kho');
       }
     } finally {
       setSaving(false);
@@ -400,7 +400,7 @@ function CreateExportSlipPage() {
     <AdminLayout>
       <div className={styles.pageHeader}>
         <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/export-slips'); }}>
-          <i className="bi bi-arrow-left"></i> Tạo phiếu xuất kho {form.docCode ? form.docCode : ''}
+          <i className="bi bi-arrow-left"></i> Táº¡o phiáº¿u xuáº¥t kho {form.docCode ? form.docCode : ''}
         </a>
       </div>
 
@@ -410,19 +410,19 @@ function CreateExportSlipPage() {
         <div className={styles.topSection}>
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              <i className="bi bi-person-fill"></i> Thông tin chung
+              <i className="bi bi-person-fill"></i> ThÃ´ng tin chung
             </div>
             <div className={styles.cardBody}>
               <div className="misa-form-row">
                 <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
-                  <label className="misa-label">Mã KH <span className="required">*</span></label>
+                  <label className="misa-label">MÃ£ KH <span className="required">*</span></label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <div style={{ flex: 1 }}>
                       <Select
                         options={customers.map(c => ({ value: c.id, label: c.code || `KH#${c.id}` }))}
                         value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).code || `KH#${form.partnerId}` } : null}
                         onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
-                        placeholder="Chọn Mã KH..."
+                        placeholder="Chá»n MÃ£ KH..."
                         isClearable
                         styles={customSelectStyles}
                       />
@@ -433,12 +433,12 @@ function CreateExportSlipPage() {
                   </div>
                 </div>
                 <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
-                  <label className="misa-label">Tên Khách hàng</label>
+                  <label className="misa-label">TÃªn KhÃ¡ch hÃ ng</label>
                   <Select
                     options={customers.map(c => ({ value: c.id, label: c.name || '' }))}
                     value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).name || '' } : null}
                     onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
-                    placeholder="Chọn Tên KH..."
+                    placeholder="Chá»n TÃªn KH..."
                     isClearable
                     styles={customSelectStyles}
                   />
@@ -447,30 +447,30 @@ function CreateExportSlipPage() {
 
 
               <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                <label className="misa-label">Địa chỉ khách hàng</label>
-                <input type="text" className="misa-input" readOnly value={customers.find(s => String(s.id) === String(form.partnerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} placeholder="Tự động điền theo Mã KH" />
+                <label className="misa-label">Äá»‹a chá»‰ khÃ¡ch hÃ ng</label>
+                <input type="text" className="misa-input" readOnly value={customers.find(s => String(s.id) === String(form.partnerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} placeholder="Tá»± Ä‘á»™ng Ä‘iá»n theo MÃ£ KH" />
               </div>
 
               <div className="misa-form-row" style={{ marginTop: '12px' }}>
                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                  <label className="misa-label">Kho xuất <span className="required">*</span></label>
+                  <label className="misa-label">Kho xuáº¥t <span className="required">*</span></label>
                   <Select
                     options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
                     value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
                     onChange={(selected) => handleFormChange('warehouseId', selected ? selected.value : '')}
-                    placeholder="Chọn kho"
+                    placeholder="Chá»n kho"
                     isClearable
                     styles={customSelectStyles}
                   />
                 </div>
                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                  <label className="misa-label">Nhân viên xuất hàng</label>
+                  <label className="misa-label">NhÃ¢n viÃªn xuáº¥t hÃ ng</label>
                   <input 
                     type="text" 
                     className="misa-input" 
                     value={form.salespersonId || ''} 
                     onChange={(e) => handleFormChange('salespersonId', e.target.value)} 
-                    placeholder="Nhập tên nhân viên xuất hàng..." 
+                    placeholder="Nháº­p tÃªn nhÃ¢n viÃªn xuáº¥t hÃ ng..." 
                   />
                 </div>
               </div>
@@ -478,20 +478,20 @@ function CreateExportSlipPage() {
 
 
               <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                <label className="misa-label">Ghi chú</label>
-                <input className="misa-input" value={form.note} onChange={(event) => handleFormChange('note', event.target.value)} placeholder="Nhập ghi chú" />
+                <label className="misa-label">Ghi chÃº</label>
+                <input className="misa-input" value={form.note} onChange={(event) => handleFormChange('note', event.target.value)} placeholder="Nháº­p ghi chÃº" />
               </div>
 
               <div className="misa-form-group" style={{ marginTop: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
+                  <label className="misa-label" style={{ marginBottom: 0 }}>KÃ¨m theo chá»©ng tá»«</label>
                   {!form.referenceId && (
                     <button 
                       type="button" 
                       style={{ padding: 0, fontSize: '13px', background: 'none', border: 'none', color: '#0070cc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       onClick={() => setShowReferenceModal(true)}
                     >
-                      <i className="bi bi-link-45deg" style={{ fontSize: '16px' }}></i> Tham chiếu
+                      <i className="bi bi-link-45deg" style={{ fontSize: '16px' }}></i> Tham chiáº¿u
                     </button>
                   )}
                 </div>
@@ -504,11 +504,11 @@ function CreateExportSlipPage() {
                       className="bi bi-x-circle-fill" 
                       style={{ color: '#dc3545', cursor: 'pointer', fontSize: '14px' }}
                       onClick={() => setForm(prev => ({ ...prev, referenceType: '', referenceId: '', referenceCode: '' }))}
-                      title="Xóa tham chiếu"
+                      title="XÃ³a tham chiáº¿u"
                     ></i>
                   </div>
                 ) : (
-                  <input type="text" className="misa-input" style={{ marginTop: '8px' }} placeholder="Số chứng từ đính kèm..." />
+                  <input type="text" className="misa-input" style={{ marginTop: '8px' }} placeholder="Sá»‘ chá»©ng tá»« Ä‘Ã­nh kÃ¨m..." />
                 )}
               </div>
             </div>
@@ -516,17 +516,17 @@ function CreateExportSlipPage() {
 
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              <i className="bi bi-file-earmark-text-fill"></i> Thông tin chứng từ
+              <i className="bi bi-file-earmark-text-fill"></i> ThÃ´ng tin chá»©ng tá»«
             </div>
             <div className={styles.cardBody}>
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
-                <label className="misa-label">Ngày ghi nhận <span className="required">*</span></label>
+                <label className="misa-label">NgÃ y ghi nháº­n <span className="required">*</span></label>
                 <input type="date" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
               </div>
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
-                <label className="misa-label">Số phiếu</label>
-                <input className="misa-input" placeholder="Để trống để hệ thống tự sinh" value={form.docCode} onChange={(event) => handleFormChange('docCode', event.target.value)} />
+                <label className="misa-label">Sá»‘ phiáº¿u</label>
+                <input className="misa-input" placeholder="Äá»ƒ trá»‘ng Ä‘á»ƒ há»‡ thá»‘ng tá»± sinh" value={form.docCode} onChange={(event) => handleFormChange('docCode', event.target.value)} />
               </div>
             </div>
           </div>
@@ -536,7 +536,7 @@ function CreateExportSlipPage() {
           <div className={styles.scanPanel}>
             <div>
               <div className={styles.scanTitle}>Scan Product / Serial</div>
-              <div className={styles.scanHint}>Quét serial cho hàng có serial, hoặc barcode/SKU cho hàng thường.</div>
+              <div className={styles.scanHint}>QuÃ©t serial cho hÃ ng cÃ³ serial, hoáº·c barcode/SKU cho hÃ ng thÆ°á»ng.</div>
             </div>
             <form className={styles.scanForm} onSubmit={handleScanSubmit}>
               <div className={styles.scanInputWrap}>
@@ -546,18 +546,18 @@ function CreateExportSlipPage() {
                   style={{ paddingLeft: '32px', height: '34px' }}
                   value={scanCode}
                   onChange={(event) => setScanCode(event.target.value)}
-                  placeholder="Đặt con trỏ vào đây rồi quét mã"
+                  placeholder="Äáº·t con trá» vÃ o Ä‘Ã¢y rá»“i quÃ©t mÃ£"
                   disabled={scanLoading}
                 />
               </div>
                   <button className={styles.btnAddRow} type="submit" disabled={scanLoading} style={{ display: 'none' }}>
-                    {scanLoading ? 'Đang quét...' : 'Thêm mã'}
+                    {scanLoading ? 'Äang quÃ©t...' : 'ThÃªm mÃ£'}
                   </button>
             </form>
           </div>
 
           <div className={styles.tableHeaderRow}>
-            <div className={styles.tableTitle}>Bảng hàng hóa</div>
+            <div className={styles.tableTitle}>Báº£ng hÃ ng hÃ³a</div>
           </div>
 
           <div className={styles.tableContainer}>
@@ -565,13 +565,13 @@ function CreateExportSlipPage() {
               <thead>
                 <tr>
                   <th style={{ width: '50px', textAlign: 'center' }}>STT</th>
-                  <th style={{ width: '22%' }}>Tên hàng</th>
-                  <th style={{ width: '14%' }}>Mã hàng</th>
-                  <th style={{ width: '8%' }}>ĐVT</th>
-                  <th style={{ width: '8%' }} className={styles.textCenter}>Tồn</th>
+                  <th style={{ width: '22%' }}>TÃªn hÃ ng</th>
+                  <th style={{ width: '14%' }}>MÃ£ hÃ ng</th>
+                  <th style={{ width: '8%' }}>ÄVT</th>
+                  <th style={{ width: '8%' }} className={styles.textCenter}>Tá»“n</th>
                   <th style={{ width: '12%' }} className={styles.textRight}>SL</th>
-                  <th style={{ width: '15%' }} className={styles.textRight}>Đơn giá</th>
-                  <th style={{ width: '15%' }} className={styles.textRight}>Thành tiền</th>
+                  <th style={{ width: '15%' }} className={styles.textRight}>ÄÆ¡n giÃ¡</th>
+                  <th style={{ width: '15%' }} className={styles.textRight}>ThÃ nh tiá»n</th>
                   <th style={{ width: '50px', textAlign: 'center' }}></th>
                 </tr>
               </thead>
@@ -586,7 +586,7 @@ function CreateExportSlipPage() {
                           options={products.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}` }))}
                           value={products.find(p => String(p.id) === String(item.variantId)) ? { value: item.variantId, label: `${products.find(p => String(p.id) === String(item.variantId)).productName} - ${products.find(p => String(p.id) === String(item.variantId)).sku || products.find(p => String(p.id) === String(item.variantId)).productCode}` } : null}
                           onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.value : '')}
-                          placeholder="Chọn hàng"
+                          placeholder="Chá»n hÃ ng"
                           isClearable
                           styles={customSelectStyles}
                           menuPortalTarget={document.body}
@@ -622,18 +622,18 @@ function CreateExportSlipPage() {
               <div className={styles.tableFooter}>
                 <div className={styles.summaryBox}>
                   <div className={styles.summaryRow}>
-                    <span>Tổng số lượng:</span>
+                    <span>Tá»•ng sá»‘ lÆ°á»£ng:</span>
                     <span>{money(totalQuantity)}</span>
                   </div>
                   <div className={styles.summaryTotal}>
-                    <span>Tổng cộng:</span>
+                    <span>Tá»•ng cá»™ng:</span>
                     <span className={styles.totalValue}>{money(totalPrice)}</span>
                   </div>
                 </div>
               </div>
               <div className={styles.tableActions}>
                 <button className={styles.actionLink} onClick={addItem}>
-                  <i className="bi bi-plus-circle"></i> Thêm dòng mới
+                  <i className="bi bi-plus-circle"></i> ThÃªm dÃ²ng má»›i
                 </button>
               </div>
         </div>
@@ -641,14 +641,14 @@ function CreateExportSlipPage() {
 
       <div className={styles.bottomBar}>
         <button className="btn-misa-cancel" onClick={() => navigate('/export-slips')}>
-          Hủy bỏ
+          Há»§y bá»
         </button>
         <div className={styles.actionButtons}>
           <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>
-            <i className="bi bi-save"></i> Lưu tạm
+            <i className="bi bi-save"></i> LÆ°u táº¡m
           </button>
           <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => setShowConfirm(true)}>
-            <i className="bi bi-printer"></i> Lưu và ghi sổ
+            <i className="bi bi-printer"></i> LÆ°u vÃ  ghi sá»•
           </button>
         </div>
       </div>
@@ -673,8 +673,8 @@ function CreateExportSlipPage() {
       />
       <ConfirmModal
         isOpen={showConfirm}
-        title="Xác nhận ghi sổ"
-        message="Bạn có chắc chắn muốn lưu và ghi sổ phiếu xuất kho này không? Thao tác này không thể hoàn tác và sẽ cập nhật lại số lượng hàng hóa trong kho."
+        title="XÃ¡c nháº­n ghi sá»•"
+        message="Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n lÆ°u vÃ  ghi sá»• phiáº¿u xuáº¥t kho nÃ y khÃ´ng? Thao tÃ¡c nÃ y khÃ´ng thá»ƒ hoÃ n tÃ¡c vÃ  sáº½ cáº­p nháº­t láº¡i sá»‘ lÆ°á»£ng hÃ ng hÃ³a trong kho."
         onConfirm={() => {
           setShowConfirm(false);
           submit('DRAFT', true);
