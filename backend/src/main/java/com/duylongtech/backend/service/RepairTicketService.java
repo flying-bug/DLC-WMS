@@ -227,7 +227,7 @@ public class RepairTicketService {
                 .variantName(line.getComponentVariant().getVariantName())
                 .quantity(line.getQuantity())
                 .unitPrice(line.getUnitPrice())
-                .isWarrantyCovered(line.getIsWarrantyCovered())
+                .isFreeWarranty(line.getIsWarrantyCovered())
                 .note(line.getNote())
                 .build();
     }
