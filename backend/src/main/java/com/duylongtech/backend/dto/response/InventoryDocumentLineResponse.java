@@ -18,4 +18,5 @@ public class InventoryDocumentLineResponse {
     private Long serialNumberId;
     private List<String> serialNumbers;
     private String note;
+    private BigDecimal vatPercent;
 }
