@@ -9,18 +9,20 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
-/**
- * Request DTO để thêm/cập nhật dòng linh kiện trong Lệnh Sửa Chữa.
- */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class RepairLineRequest {
-    private Long id; // Optional, dùng khi cập nhật
+    private Long id;
 
     @NotNull(message = "componentVariantId là bắt buộc")
     private Long componentVariantId;
+
+    @NotNull(message = "actionType là bắt buộc")
+    private String actionType; // "ADD" or "REMOVE"
+
+    private Long serialNumberId;
 
     @NotNull(message = "quantity là bắt buộc")
     @DecimalMin(value = "0.0001", message = "quantity phải lớn hơn 0")
@@ -29,9 +31,8 @@ public class RepairLineRequest {
     @DecimalMin(value = "0", message = "unitPrice không được âm")
     private BigDecimal unitPrice;
 
-    /** Có thuộc diện bảo hành không */
     private Boolean isWarrantyCovered;
+    private Boolean isFreeWarranty;
 
-    /** Ghi chú */
     private String note;
 }
