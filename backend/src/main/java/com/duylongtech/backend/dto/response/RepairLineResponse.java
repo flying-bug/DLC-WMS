@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class RepairLineResponse {
     private Long id;
+    private Long repairId;
     private Long componentVariantId;
     private String sku;
     private String variantName;
