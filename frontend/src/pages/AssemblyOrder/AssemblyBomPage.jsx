@@ -299,7 +299,7 @@ function AssemblyBomPage() {
                                         <span>Thành phẩm</span>
                                         <select value={form.productId} onChange={(event) => setField('productId', event.target.value)}>
                                             <option value="">Chọn thành phẩm</option>
-                                            {products.map((product) => (
+                                            {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
                                                 <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
                                             ))}
                                         </select>
