@@ -100,6 +100,18 @@ public enum SystemMessage {
     ASM_INSUFFICIENT_INVENTORY("ASM03", "Không đủ tồn kho thành phẩm hoặc linh kiện để thực hiện lệnh."),
     ASM_HAS_POSTED_DOCS("ASM04", "Không thể Hủy lệnh vì đã có chứng từ kho (Phiếu Nhập/Xuất) liên quan."),
 
+    // Repair Management
+    REP_NOT_FOUND("REP01", "Không tìm thấy lệnh sửa chữa."),
+    REP_CODE_EXISTS("REP02", "Mã lệnh sửa chữa đã tồn tại trên hệ thống."),
+    REP_INVALID_STATUS_TRANSITION("REP03", "Chuyển trạng thái lệnh sửa chữa không hợp lệ."),
+    REP_PARTNER_REQUIRED("REP04", "Lệnh sửa chữa phải có thông tin khách hàng."),
+    REP_INSUFFICIENT_INVENTORY("REP05", "Không đủ tồn kho linh kiện để xác nhận lệnh."),
+    REP_LINE_NOT_FOUND("REP06", "Không tìm thấy dòng linh kiện sửa chữa."),
+    REP_FEE_NOT_FOUND("REP07", "Không tìm thấy dòng phí dịch vụ."),
+    REP_CANNOT_MODIFY("REP08", "Lệnh sửa chữa không thể chỉnh sửa ở trạng thái này."),
+    REP_CANNOT_CANCEL("REP09", "Không thể hủy lệnh đã hoàn tất (DONE)."),
+    REP_WARRANTY_PRICE_INVALID("REP10", "Linh kiện/phí dịch vụ bảo hành phải có giá bằng 0."),
+
     // General Errors
     ACCESS_DENIED("SYS403", "Bạn không có quyền thực hiện thao tác này"),
     SESSION_EXPIRED("SYS401", "Phiên đăng nhập đã hết hạn"),

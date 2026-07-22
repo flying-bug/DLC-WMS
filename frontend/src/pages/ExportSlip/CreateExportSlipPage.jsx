@@ -8,11 +8,12 @@ import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Select from 'react-select';
+import axiosClient from '../../api/axiosClient';
 import styles from './CreateExportSlipPage.module.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date().toLocaleDateString('sv-SE');
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 const customSelectStyles = {
   control: (base, state) => ({
@@ -149,11 +150,16 @@ function CreateExportSlipPage() {
       if (userRes.status === 'fulfilled' && userRes.value) {
         const data = pageContent(unwrap(userRes.value));
         setUsers(data);
-        const currentUserId = localStorage.getItem('userId') || localStorage.getItem('id');
-        const currentUser = data.find(u => String(u.id) === String(currentUserId));
-        if (currentUser) {
-          setForm(prev => ({ ...prev, salespersonId: currentUser.id }));
+      }
+      try {
+        const meRes = await axiosClient.get('/users/me');
+        const me = meRes.data?.data || meRes.data;
+        if (me) {
+          const defaultName = me.fullName || me.username || '';
+          setForm(prev => ({ ...prev, salespersonId: prev.salespersonId || defaultName }));
         }
+      } catch (err) {
+        console.error('Failed to load me profile', err);
       }
     };
 
@@ -165,7 +171,7 @@ function CreateExportSlipPage() {
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
-  const isFormValid = Boolean(form.warehouseId && form.partnerId && form.receiverAddress && form.docDate && items.length && items.every(item => item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0));
+  const isFormValid = Boolean(form.warehouseId && form.partnerId && form.docDate && items.length && items.every(item => item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0));
 
   const handleFormChange = (field, value) => {
     setForm(prev => {
@@ -211,12 +217,25 @@ function CreateExportSlipPage() {
     });
   };
 
-  const handleSavePartner = async (formData) => {
-    const res = await exportApi.createCustomer(formData);
-    const newCustomer = res.data?.data || res.data;
-    setCustomers(prev => [...prev, newCustomer]);
-    setForm(prev => ({ ...prev, partnerId: newCustomer.id, customerAddress: newCustomer.address || '' }));
-    setShowPartnerModal(false);
+  const handleSavePartner = async (isEdit, isContinue) => {
+    try {
+      const res = await exportApi.getCustomers({ size: 1000 });
+      const data = pageContent(unwrap(res));
+      setCustomers(data);
+      if (data && data.length > 0) {
+        const newlyAdded = data[data.length - 1];
+        if (newlyAdded) {
+          handleFormChange('partnerId', newlyAdded.id);
+        }
+      }
+      setToast({ isVisible: true, type: 'success', message: 'Thêm mới khách hàng thành công!' });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (!isContinue) {
+        setShowPartnerModal(false);
+      }
+    }
   };
 
   const addItem = () => {
@@ -322,7 +341,7 @@ function CreateExportSlipPage() {
     docCode: form.docCode || undefined,
     warehouseId: Number(form.warehouseId),
     partnerId: form.partnerId ? Number(form.partnerId) : null,
-    salespersonId: form.salespersonId ? Number(form.salespersonId) : null,
+    salespersonId: (!isNaN(Number(form.salespersonId)) && String(form.salespersonId).trim() !== '') ? Number(form.salespersonId) : null,
     customerAddress: form.customerAddress,
     recipientName: form.receiverName || customers.find(s => String(s.id) === String(form.partnerId))?.name || '',
     receiverPhone: form.receiverPhone || selectedCustomer?.phone || '',
@@ -395,15 +414,15 @@ function CreateExportSlipPage() {
             </div>
             <div className={styles.cardBody}>
               <div className="misa-form-row">
-                <div className="misa-form-group" style={{ flex: '0 0 35%' }}>
+                <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
                   <label className="misa-label">Mã KH <span className="required">*</span></label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <div style={{ flex: 1 }}>
                       <Select
-                        options={customers.map(c => ({ value: c.id, label: c.code }))}
-                        value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).code } : null}
+                        options={customers.map(c => ({ value: c.id, label: c.code || `KH#${c.id}` }))}
+                        value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).code || `KH#${form.partnerId}` } : null}
                         onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
-                        placeholder="Chọn khách hàng"
+                        placeholder="Chọn Mã KH..."
                         isClearable
                         styles={customSelectStyles}
                       />
@@ -413,9 +432,16 @@ function CreateExportSlipPage() {
                     </button>
                   </div>
                 </div>
-                <div className="misa-form-group" style={{ flex: '0 0 65%' }}>
+                <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
                   <label className="misa-label">Tên Khách hàng</label>
-                  <input type="text" className="misa-input" readOnly value={customers.find(s => String(s.id) === String(form.partnerId))?.name || ''} style={{ backgroundColor: '#f3f4f6' }} />
+                  <Select
+                    options={customers.map(c => ({ value: c.id, label: c.name || '' }))}
+                    value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).name || '' } : null}
+                    onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
+                    placeholder="Chọn Tên KH..."
+                    isClearable
+                    styles={customSelectStyles}
+                  />
                 </div>
               </div>
 
@@ -439,10 +465,13 @@ function CreateExportSlipPage() {
                 </div>
                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                   <label className="misa-label">Nhân viên xuất hàng</label>
-                  <select className="misa-input" value={form.salespersonId} onChange={(e) => handleFormChange('salespersonId', e.target.value)}>
-                    <option value="">Chọn nhân viên</option>
-                    {users.map(user => <option key={user.id} value={user.id}>{user.fullName || user.username}</option>)}
-                  </select>
+                  <input 
+                    type="text" 
+                    className="misa-input" 
+                    value={form.salespersonId || ''} 
+                    onChange={(e) => handleFormChange('salespersonId', e.target.value)} 
+                    placeholder="Nhập tên nhân viên xuất hàng..." 
+                  />
                 </div>
               </div>
 
@@ -481,28 +510,6 @@ function CreateExportSlipPage() {
                 ) : (
                   <input type="text" className="misa-input" style={{ marginTop: '8px' }} placeholder="Số chứng từ đính kèm..." />
                 )}
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.card}>
-            <div className={styles.cardHeader}>
-              <i className="bi bi-truck"></i> Thông tin người nhận
-            </div>
-            <div className={styles.cardBody}>
-              <div className="misa-form-row">
-                <div className="misa-form-group">
-                  <label className="misa-label">Họ tên người nhận</label>
-                  <input className="misa-input" value={form.receiverName} onChange={(event) => handleFormChange('receiverName', event.target.value)} placeholder="Tên người nhận hàng" />
-                </div>
-                <div className="misa-form-group">
-                  <label className="misa-label">Số điện thoại</label>
-                  <input className="misa-input" value={form.receiverPhone} onChange={(event) => handleFormChange('receiverPhone', event.target.value)} placeholder="SĐT người nhận" />
-                </div>
-              </div>
-              <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                <label className="misa-label">Địa chỉ nhận hàng <span className="required">*</span></label>
-                <input className="misa-input" value={form.receiverAddress} onChange={(event) => handleFormChange('receiverAddress', event.target.value)} placeholder="Địa chỉ giao hàng" />
               </div>
             </div>
           </div>

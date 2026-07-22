@@ -9,10 +9,19 @@ import com.duylongtech.backend.entity.Product;
 import com.duylongtech.backend.entity.ProductCategory;
 import com.duylongtech.backend.entity.ProductVariant;
 import com.duylongtech.backend.entity.Unit;
+import com.duylongtech.backend.repository.AssemblyBomRepository;
+import com.duylongtech.backend.repository.AssemblyOrderRepository;
 import com.duylongtech.backend.repository.BrandRepository;
+import com.duylongtech.backend.repository.InventoryBalanceRepository;
+import com.duylongtech.backend.repository.InventoryCostLayerRepository;
+import com.duylongtech.backend.repository.InventoryDocumentLineRepository;
+import com.duylongtech.backend.repository.InventoryLedgerRepository;
 import com.duylongtech.backend.repository.ProductCategoryRepository;
 import com.duylongtech.backend.repository.ProductRepository;
 import com.duylongtech.backend.repository.ProductVariantRepository;
+import com.duylongtech.backend.repository.SalesOrderLineRepository;
+import com.duylongtech.backend.repository.SerialNumberRepository;
+import com.duylongtech.backend.repository.StockTransferLineRepository;
 import com.duylongtech.backend.repository.UnitRepository;
 import com.duylongtech.backend.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +56,15 @@ public class ProductService {
     private final ProductCategoryRepository categoryRepository;
     private final UnitRepository unitRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final InventoryBalanceRepository inventoryBalanceRepository;
+    private final InventoryCostLayerRepository inventoryCostLayerRepository;
+    private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
+    private final InventoryLedgerRepository inventoryLedgerRepository;
+    private final StockTransferLineRepository stockTransferLineRepository;
+    private final SalesOrderLineRepository salesOrderLineRepository;
+    private final SerialNumberRepository serialNumberRepository;
+    private final AssemblyBomRepository assemblyBomRepository;
+    private final AssemblyOrderRepository assemblyOrderRepository;
 
     public Page<ProductResponse> getProducts(int page, int size, String search) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
@@ -115,10 +133,36 @@ public class ProductService {
 
     @Transactional
     public void deleteProduct(Long id) {
-        if (!productRepository.existsById(id)) {
-            throw new BusinessException("Không tìm thấy hàng hóa để xóa.");
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy hàng hóa để xóa."));
+
+        List<ProductVariant> variants = productVariantRepository.findByProductIdOrderByIdAsc(id);
+        List<Long> variantIds = variants.stream().map(ProductVariant::getId).toList();
+
+        if (!variantIds.isEmpty()) {
+            boolean hasTransactions = inventoryDocumentLineRepository.existsByVariantIdIn(variantIds)
+                    || inventoryLedgerRepository.existsByVariantIdIn(variantIds)
+                    || stockTransferLineRepository.existsByVariantIdIn(variantIds)
+                    || salesOrderLineRepository.existsByVariantIdIn(variantIds)
+                    || serialNumberRepository.existsByVariantIdIn(variantIds)
+                    || assemblyBomRepository.existsByProductId(id)
+                    || assemblyBomRepository.existsByComponentVariantIdIn(variantIds)
+                    || assemblyOrderRepository.existsByTargetVariantIdIn(variantIds)
+                    || assemblyOrderRepository.existsByComponentVariantIdIn(variantIds);
+
+            if (hasTransactions) {
+                throw new BusinessException("Không thể xóa hàng hóa '" + product.getProductName() + "' vì đã có dữ liệu giao dịch phát sinh trong hệ thống. Bạn có thể chọn 'Ngừng sử dụng' để ẩn hàng hóa.");
+            }
+
+            // Cleanup non-transaction inventory balances & cost layers for these variants
+            inventoryBalanceRepository.deleteByVariantIdIn(variantIds);
+            inventoryCostLayerRepository.deleteByVariantIdIn(variantIds);
+
+            // Delete variants
+            productVariantRepository.deleteAll(variants);
         }
-        productRepository.deleteById(id);
+
+        productRepository.delete(product);
     }
 
     @Transactional(readOnly = true)
@@ -291,13 +335,30 @@ public class ProductService {
     @Transactional
     public void deleteVariant(Long productId, Long variantId) {
         ProductVariant variant = productVariantRepository.findById(variantId)
-                .orElseThrow(() -> new BusinessException("SKU khong ton tai."));
+                .orElseThrow(() -> new BusinessException("SKU không tồn tại."));
         if (variant.getProduct() == null || !variant.getProduct().getId().equals(productId)) {
-            throw new BusinessException("SKU khong thuoc san pham nay.");
+            throw new BusinessException("SKU không thuộc sản phẩm này.");
         }
         if (productVariantRepository.countByProductId(productId) <= 1) {
-            throw new BusinessException("San pham phai co it nhat mot SKU.");
+            throw new BusinessException("Sản phẩm phải có ít nhất một SKU.");
         }
+
+        List<Long> variantIds = List.of(variantId);
+        boolean hasTransactions = inventoryDocumentLineRepository.existsByVariantIdIn(variantIds)
+                || inventoryLedgerRepository.existsByVariantIdIn(variantIds)
+                || stockTransferLineRepository.existsByVariantIdIn(variantIds)
+                || salesOrderLineRepository.existsByVariantIdIn(variantIds)
+                || serialNumberRepository.existsByVariantIdIn(variantIds)
+                || assemblyBomRepository.existsByComponentVariantIdIn(variantIds)
+                || assemblyOrderRepository.existsByTargetVariantIdIn(variantIds)
+                || assemblyOrderRepository.existsByComponentVariantIdIn(variantIds);
+
+        if (hasTransactions) {
+            throw new BusinessException("Không thể xóa SKU '" + variant.getSku() + "' vì đã có dữ liệu giao dịch phát sinh. Bạn có thể chọn 'Ngừng sử dụng' SKU.");
+        }
+
+        inventoryBalanceRepository.deleteByVariantIdIn(variantIds);
+        inventoryCostLayerRepository.deleteByVariantIdIn(variantIds);
         productVariantRepository.delete(variant);
     }
 

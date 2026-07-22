@@ -71,12 +71,12 @@ function TransferHistoryPage() {
   }, [filters]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadLookups();
   }, [loadLookups]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadSlips();
   }, [loadSlips]);
 
@@ -223,7 +223,19 @@ function TransferHistoryPage() {
                     />
                   </td>
                   <td>{slip.date}</td>
-                  <td><a href="#" className={styles.link} onClick={(e) => e.preventDefault()}>{slip.transferCode}</a></td>
+                  <td>
+                    <a
+                      href="#"
+                      className={styles.link}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedSlip(slip);
+                      }}
+                    >
+                      {slip.transferCode}
+                    </a>
+                  </td>
                   <td>{slip.fromWarehouse}</td>
                   <td>{slip.toWarehouse}</td>
                   <td className={styles.textCenter}>{slip.quantity.toLocaleString('vi-VN')}</td>
@@ -268,7 +280,7 @@ function TransferHistoryPage() {
           <div className={styles.detailSection}>
             <div className={styles.detailHeader}>
               <i className={`bi bi-arrow-left-right ${styles.detailIcon}`}></i>
-              <h2 className={styles.detailTitle}>Chi tiết phiếu chuyển: {selectedSlip.transferCode}</h2>
+              <h2 className={styles.detailTitle}>{selectedSlip.transferCode}</h2>
               <div style={{ flex: 1 }}></div>
             </div>
 

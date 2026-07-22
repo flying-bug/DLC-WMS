@@ -60,4 +60,7 @@ public class InventoryDocumentLine {
      */
     @Column(name = "warranty_months")
     private Integer warrantyMonths;
+
+    @Column(name = "vat_percent", precision = 5, scale = 2)
+    private BigDecimal vatPercent;
 }

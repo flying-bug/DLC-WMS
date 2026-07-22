@@ -136,12 +136,12 @@ const WarehouseDetailPage = () => {
     };
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         fetchDetail();
         if (activeTab === 'history') {
             fetchLogs(0);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, [id, activeTab]);
 
     const handleBack = () => {

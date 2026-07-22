@@ -7,6 +7,9 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+/**
+ * Response DTO cho dòng linh kiện trong Lệnh Sửa Chữa.
+ */
 @Data
 @Builder
 @NoArgsConstructor

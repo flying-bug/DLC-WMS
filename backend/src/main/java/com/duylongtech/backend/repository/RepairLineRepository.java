@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface RepairLineRepository extends JpaRepository<RepairLine, Long> {
     List<RepairLine> findByRepairId(Long repairId);
+    void deleteByRepairId(Long repairId);
 }

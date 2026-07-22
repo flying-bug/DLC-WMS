@@ -20,4 +20,5 @@ public class InventoryDocumentLineResponse {
     private List<String> serialNumbers;
     private Integer warrantyMonths;
     private String note;
+    private BigDecimal vatPercent;
 }

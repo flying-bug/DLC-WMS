@@ -36,7 +36,7 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
         }, 500);
 
         return () => clearTimeout(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, [searchTerm]);
 
     const handleRoleToggle = (roleId) => {

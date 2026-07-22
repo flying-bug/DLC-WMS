@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import styles from './SupplierModal.module.css';
 
-const SupplierModal = ({ onClose, onSave, initialData = null }) => {
+const SupplierModal = ({ onClose, onSave, onSaved, initialData = null }) => {
     const [activeTab, setActiveTab] = useState('bankAccount');
     
     // Form state
@@ -19,10 +19,13 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
         status: 'APPROVED'
     });
     const [errors, setErrors] = useState({});
+    const [submitting, setSubmitting] = useState(false);
+    const [apiError, setApiError] = useState('');
 
     useEffect(() => {
+        setApiError('');
         if (initialData) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
+             
             setFormData(prev => ({ ...prev, ...initialData }));
         }
     }, [initialData]);
@@ -36,19 +39,31 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: null }));
         }
+        if (apiError) setApiError('');
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
+        setApiError('');
         const newErrors = {};
-        if (!formData.name.trim()) newErrors.name = 'Vui lòng nhập tên nhà cung cấp!';
-        if (!formData.phone.trim()) newErrors.phone = 'Vui lòng nhập số điện thoại!';
+        if (!formData.name || !formData.name.trim()) newErrors.name = 'Vui lòng nhập tên nhà cung cấp!';
+        if (!formData.phone || !formData.phone.trim()) newErrors.phone = 'Vui lòng nhập số điện thoại!';
         
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
+            setApiError('Vui lòng điền đầy đủ các thông tin bắt buộc (*)');
             return;
         }
-        if (onSave) {
-            onSave(formData);
+        const callback = onSave || onSaved;
+        if (callback) {
+            try {
+                setSubmitting(true);
+                await callback(formData);
+            } catch (err) {
+                const msg = err.response?.data?.userMessage || err.response?.data?.devMessage || err.message || 'Lỗi lưu nhà cung cấp!';
+                setApiError(msg);
+            } finally {
+                setSubmitting(false);
+            }
         }
     };
 
@@ -79,6 +94,12 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
 
                 {/* Body */}
                 <div className="misa-modal-body">
+                    {apiError && (
+                        <div style={{ padding: '10px 14px', backgroundColor: '#fee2e2', color: '#dc2626', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #fca5a5' }}>
+                            <i className="fas fa-exclamation-triangle" style={{ fontSize: '15px' }}></i>
+                            <span>{apiError}</span>
+                        </div>
+                    )}
                     {/* General Info Grid */}
                     <div className={styles.formGrid}>
                         <div className={`${styles.formGroup} ${styles.col6}`}>
@@ -245,14 +266,20 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
                 {/* Footer */}
                 <div className="misa-modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', backgroundColor: '#fff' }}>
                     <div className={styles.footerLeft}>
-                        <button className="btn-misa-outline" onClick={onClose}>Hủy</button>
+                        <button className="btn-misa-outline" onClick={onClose} disabled={submitting}>Hủy</button>
                     </div>
                     <div className={styles.footerRight} style={{ display: 'flex', gap: '12px' }}>
                         {!initialData && (
-                            <button className="btn-misa-outline" onClick={handleSave}>Lưu & Thêm tiếp</button>
+                            <button className="btn-misa-outline" onClick={handleSave} disabled={submitting}>
+                                {submitting ? 'Đang lưu...' : 'Lưu & Thêm tiếp'}
+                            </button>
                         )}
-                        <button className="btn-misa-primary" onClick={handleSave}>
-                            {initialData ? 'Cập nhật' : 'Lưu'}
+                        <button className="btn-misa-primary" onClick={handleSave} disabled={submitting}>
+                            {submitting ? (
+                                <><i className="fas fa-spinner fa-spin"></i> Đang lưu...</>
+                            ) : (
+                                initialData ? 'Cập nhật' : 'Lưu'
+                            )}
                         </button>
                     </div>
                 </div>

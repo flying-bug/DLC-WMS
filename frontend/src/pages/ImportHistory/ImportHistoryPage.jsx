@@ -46,7 +46,7 @@ function ImportHistoryPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [filters, setFilters] = useState({ docCode: '', fromDate: '', status: '' });
+  const [filters, setFilters] = useState({ docCode: location.state?.filterDocCode || '', fromDate: '', status: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -97,18 +97,18 @@ function ImportHistoryPage() {
   }, [filters]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadLookups();
   }, [loadLookups]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadSlips();
   }, [loadSlips]);
 
   useEffect(() => {
     if (location.state?.toastMessage) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       showToast(location.state.toastType || 'success', location.state.toastMessage);
       navigate(location.pathname, { replace: true, state: {} });
     }
@@ -282,7 +282,7 @@ function ImportHistoryPage() {
             </thead>
             <tbody>
               {paginatedRows.length > 0 ? paginatedRows.map(slip => (
-                <tr key={slip.id} className={selectedSlip?.id === slip.id ? styles.activeRow : ''} onClick={() => setSelectedSlip(slip)}>
+                <tr key={slip.id} className={selectedSlip?.id === slip.id ? styles.activeRow : ''} onClick={() => setSelectedSlip(slip)} style={{ cursor: 'pointer' }}>
                   <td style={{ textAlign: 'center' }}>
                     <input
                       type="checkbox"
@@ -293,7 +293,19 @@ function ImportHistoryPage() {
                     />
                   </td>
                   <td>{slip.date}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}><a href="#" className={styles.link} onClick={(e) => e.preventDefault()}>{slip.docCode}</a></td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <a
+                      href="#"
+                      className={styles.link}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedSlip(slip);
+                      }}
+                    >
+                      {slip.docCode}
+                    </a>
+                  </td>
                   <td>{slip.partner}</td>
                   <td>{slip.warehouse}</td>
                   <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>
@@ -419,9 +431,6 @@ function ImportHistoryPage() {
               <div className={styles.modalHeader}>
                 <h2 className={styles.modalTitle}>
                   <i className={`bi bi-file-earmark-text ${styles.detailIcon}`}></i>
-                  {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && 'Chi tiết phiếu nhập mua hàng: '}
-                  {selectedSlip.issuePurpose === 'PRODUCTION' && 'Chi tiết phiếu nhập thành phẩm sản xuất: '}
-                  {selectedSlip.issuePurpose === 'RETURN' && 'Chi tiết phiếu nhập hàng trả lại: '}
                   {selectedSlip.docCode}
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -465,7 +474,9 @@ function ImportHistoryPage() {
                         {selectedSlip.issuePurpose === 'PRODUCTION' && 'Nhân viên phụ trách'}
                         {selectedSlip.issuePurpose === 'RETURN' && 'Nhân viên bán hàng'}
                       </span>
-                      <span className={styles.detailValue}>{userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || 'Chưa có thông tin'}</span>
+                      <span className={styles.detailValue}>
+                        {selectedSlip.salespersonName || userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || (selectedSlip.salespersonId ? String(selectedSlip.salespersonId) : 'Chưa có thông tin')}
+                      </span>
                     </div>
                     {(selectedSlip.referenceType && selectedSlip.referenceId) && (
                       <div className={styles.detailItem}>
