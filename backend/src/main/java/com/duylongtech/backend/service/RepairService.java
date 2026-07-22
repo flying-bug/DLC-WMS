@@ -365,7 +365,7 @@ public class RepairService {
     }
 
     public RepairResponse toDetailResponse(Repair repair) {
-        List<RepairLineResponse> lineResponses = repair.getLines().stream()
+        List<RepairLineResponse> lineResponses = repair.getRepairLines().stream()
                 .map(this::toLineResponse)
                 .collect(Collectors.toList());
 
