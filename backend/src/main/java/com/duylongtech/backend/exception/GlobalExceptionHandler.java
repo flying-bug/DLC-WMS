@@ -87,10 +87,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
         log.error("Unhandled runtime exception caught: ", ex);
-        String devMessage = ex.getMessage();
-        if (ex.getCause() != null) {
-            devMessage += " | Cause: " + ex.getCause().getMessage();
-        }
+        String devMessage = "Internal Server Error";
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(SystemMessage.INTERNAL_ERROR.getCode(), SystemMessage.INTERNAL_ERROR.getMessage(), devMessage));
     }

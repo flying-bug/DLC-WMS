@@ -275,6 +275,27 @@
   background-color: var(--color-bg);
 }
 
+.iconBtn {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-white);
+  width: 38px;
+  height: 38px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  transition: all 0.2s ease;
+}
+
+.iconBtn:hover {
+  background-color: var(--color-bg);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
 /* Table */
 .tableContainer {
   background: var(--color-white);
@@ -807,3 +828,103 @@
   border-style: solid;
   border-color: #1e293b transparent transparent transparent;
 }
+
+/* ── Settings Column Modal ────────────────────────────────── */
+.settingsModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settingsModalHeader h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+
+.settingsModalCloseBtn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.settingsModalCloseBtn:hover {
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-strong);
+}
+
+.settingsModalBody {
+  padding: 20px;
+}
+
+.checkboxGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.checkboxLabel:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-bg-subtle);
+}
+
+.checkboxLabel input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.checkboxText {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-strong);
+}
+
+.settingsModalFooter {
+  padding: 16px 20px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btnSecondary {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border-strong);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btnSecondary:hover {
+  background-color: var(--color-border-soft);
+}
+
