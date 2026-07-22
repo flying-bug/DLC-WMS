@@ -17,6 +17,7 @@ public class ProductVariantResponse {
     private Long productId;
     private String productCode;
     private String productName;
+    private String productType;
     private Boolean trackSerial;
     private Long brandId;
     private String brandName;
