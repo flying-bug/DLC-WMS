@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "REPAIR_LINES")
@@ -22,9 +23,14 @@ public class RepairLine {
     @JoinColumn(name = "repair_id", nullable = false)
     private Repair repair;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "component_variant_id", nullable = false)
-    private ProductVariant componentVariant;
+    @Column(name = "component_variant_id", nullable = false)
+    private Long componentVariantId;
+
+    @Column(name = "action_type", nullable = false, length = 20)
+    private String actionType; // "ADD" or "REMOVE"
+
+    @Column(name = "serial_number_id")
+    private Long serialNumberId;
 
     @Column(nullable = false, precision = 15, scale = 4)
     private BigDecimal quantity;
@@ -37,6 +43,18 @@ public class RepairLine {
     @Builder.Default
     private Boolean isWarrantyCovered = false;
 
+    @Column(name = "is_free_warranty", nullable = false)
+    @Builder.Default
+    private Boolean isFreeWarranty = false;
+
     @Column(columnDefinition = "TEXT")
     private String note;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "updated_at")
+    @Builder.Default
+    private LocalDateTime updatedAt = LocalDateTime.now();
 }
