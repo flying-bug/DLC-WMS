@@ -112,7 +112,8 @@ public class Repair {
     @Column(name = "created_by")
     private Long createdBy;
 
-    @OneToMany(mappedBy = "repair", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "repair", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
     private java.util.List<RepairLine> repairLines = new java.util.ArrayList<>();
     @Column(name = "approved_by")
     private Long approvedBy;
@@ -133,10 +134,7 @@ public class Repair {
     @Builder.Default
     private Integer version = 0;
 
-    // Quan hệ với REPAIR_LINES
-    @OneToMany(mappedBy = "repair", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Builder.Default
-    private List<RepairLine> lines = new ArrayList<>();
+
 
     // Quan hệ với REPAIR_FEES
     @OneToMany(mappedBy = "repair", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

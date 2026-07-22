@@ -24,6 +24,7 @@ public class RepairLine {
      @JoinColumn(name = "component_variant_id", nullable = false, insertable = false, updatable = false)
     private ProductVariant componentVariant;  // ADD THIS
     
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "repair_id", nullable = false)
     private Repair repair;
 

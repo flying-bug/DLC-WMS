@@ -148,7 +148,7 @@ function AssemblyOrderFormPage() {
         status: overrideStatus || form.status,
         executionDate: form.executionDate,
         note: form.note || null,
-        createdBy: Number(localStorage.getItem('userId') || 1)
+        createdBy: Number(sessionStorage.getItem('userId') || 1)
     });
 
     const getPageTitle = () => {
