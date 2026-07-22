@@ -19,6 +19,7 @@ public class RepairLineResponse {
     private Long id;
     private Long repairId;
     private Long componentVariantId;
+    private String sku;
     private String componentName;        // ✅ Add this
     private String componentSku;         // ✅ Add this
     private String actionType;           // ✅ Add this
