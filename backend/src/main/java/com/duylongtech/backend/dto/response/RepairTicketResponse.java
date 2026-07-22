@@ -31,4 +31,5 @@ public class RepairTicketResponse {
     private BigDecimal repairCost;
     private String note;
     private Long createdBy;
+    private java.util.List<RepairLineResponse> repairLines;
 }

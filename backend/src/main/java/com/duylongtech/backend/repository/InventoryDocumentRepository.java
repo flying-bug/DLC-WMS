@@ -52,4 +52,10 @@ public interface InventoryDocumentRepository extends JpaRepository<InventoryDocu
     boolean existsByCreatedByAndWarehouseIdAndStatusIn(Long createdBy, Long warehouseId, List<String> statuses);
 
     boolean existsByReferenceTypeAndReferenceId(String referenceType, Long referenceId);
+
+    Optional<InventoryDocument> findByDocCode(String docCode);
+
+    @Query("SELECT d FROM InventoryDocument d LEFT JOIN FETCH d.lines WHERE d.referenceRepairId = :repairId ORDER BY d.createdAt DESC")
+    List<InventoryDocument> findByReferenceRepairId(@Param("repairId") Long repairId);
 }
+

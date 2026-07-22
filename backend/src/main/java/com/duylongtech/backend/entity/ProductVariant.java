@@ -47,6 +47,10 @@ public class ProductVariant {
     @Column(name = "specs_json", columnDefinition = "TEXT")
     private String specsJson;
 
+    @Column(name = "warranty_months")
+    @Builder.Default
+    private Integer warrantyMonths = 0;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean active = true;

@@ -54,20 +54,20 @@ public class StockTransferController {
         return ResponseEntity.ok(response);
     }
 
-    // @PostMapping("/{id}/dispatch")
-    // public ResponseEntity<StockTransferResponseDTO> dispatchTransfer(
-    //         @PathVariable("id") Long transferId,
-    //         @RequestBody StockTransferDispatchDTO dispatchDTO) {
-    //     StockTransferResponseDTO response = stockTransferService.dispatchTransfer(transferId, dispatchDTO, currentUserId);
-    //     return ResponseEntity.ok(response);
-    // }
+    @PostMapping("/{id}/dispatch")
+    public ResponseEntity<StockTransferResponseDTO> dispatchTransfer(
+            @PathVariable("id") Long transferId,
+            @RequestBody StockTransferDispatchDTO dispatchDTO) {
+        StockTransferResponseDTO response = stockTransferService.dispatchTransfer(transferId, dispatchDTO, currentUserId);
+        return ResponseEntity.ok(response);
+    }
 
-    // @PostMapping("/{id}/receive")
-    // public ResponseEntity<StockTransferResponseDTO> receiveTransfer(
-    //         @PathVariable("id") Long transferId,
-    //         @RequestBody StockTransferReceiptDTO receiptDTO) {
-    //     StockTransferResponseDTO response = stockTransferService.receiveTransfer(transferId, receiptDTO, currentUserId);
-    //     return ResponseEntity.ok(response);
-    // }
+    @PostMapping("/{id}/receive")
+    public ResponseEntity<StockTransferResponseDTO> receiveTransfer(
+            @PathVariable("id") Long transferId,
+            @RequestBody StockTransferReceiptDTO receiptDTO) {
+        StockTransferResponseDTO response = stockTransferService.receiveTransfer(transferId, receiptDTO, currentUserId);
+        return ResponseEntity.ok(response);
+    }
 
 }

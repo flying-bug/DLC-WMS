@@ -5,49 +5,61 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 
 public interface RepairRepository extends JpaRepository<Repair, Long> {
-    List<Repair> findByWarrantyId(Long warrantyId);
 
     boolean existsByRepairCode(String repairCode);
 
     boolean existsByRepairCodeAndIdNot(String repairCode, Long id);
 
-    @EntityGraph(attributePaths = {"warranty", "warranty.partner", "warranty.serialNumber", "warranty.serialNumber.variant"})
+    List<Repair> findByWarrantyId(Long warrantyId);
+
+    /**
+     * Tìm kiếm danh sách lệnh sửa chữa có phân trang và lọc theo keyword/status.
+     */
+    @EntityGraph(attributePaths = {"warranty"})
     @Query("""
             SELECT r FROM Repair r
-            LEFT JOIN r.warranty w
-            LEFT JOIN w.partner p
-            LEFT JOIN w.serialNumber sn
-            LEFT JOIN sn.variant pv
             WHERE (:status IS NULL OR r.repairStatus = :status)
-              AND (:fromDate IS NULL OR r.receivedDate >= :fromDate)
-              AND (:toDate IS NULL OR r.receivedDate <= :toDate)
               AND (
                 :keyword IS NULL
                 OR LOWER(r.repairCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(w.warrantyCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(p.phone) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(sn.serialNumber) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(pv.sku) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(pv.variantName) LIKE LOWER(CONCAT('%', :keyword, '%'))
               )
-            ORDER BY r.receivedDate DESC
+            ORDER BY r.createdAt DESC
             """)
-    Page<Repair> searchRepairTickets(@Param("keyword") String keyword,
-                                     @Param("status") String status,
-                                     @Param("fromDate") LocalDate fromDate,
-                                     @Param("toDate") LocalDate toDate,
-                                     Pageable pageable);
+    Page<Repair> searchRepairs(@Param("keyword") String keyword,
+                               @Param("status") String status,
+                               Pageable pageable);
 
-    @EntityGraph(attributePaths = {"warranty", "warranty.partner", "warranty.serialNumber", "warranty.serialNumber.variant"})
+    /**
+     * Lấy chi tiết lệnh kèm lines và fees (dùng khi cần đọc toàn bộ).
+     */
+    @EntityGraph(attributePaths = {"lines", "warranty"})
     @Query("SELECT r FROM Repair r WHERE r.id = :id")
     Optional<Repair> findWithDetailsById(@Param("id") Long id);
+
+    /**
+     * Lock pessimistic khi cần thực hiện workflow chuyển trạng thái.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Repair r WHERE r.id = :id")
+    Optional<Repair> findByIdForUpdate(@Param("id") Long id);
+
+    // Backward compat với RepairTicketService cũ
+    @EntityGraph(attributePaths = {"warranty", "warranty.partner", "warranty.serialNumber", "warranty.serialNumber.variant"})
+    @Query("SELECT r FROM Repair r WHERE r.id = :id")
+    Optional<Repair> findWithDetailsForTicketById(@Param("id") Long id);
+
+    /**
+     * Lấy số thứ tự lớn nhất của mã dạng SC-XXXXX để sinh mã tiếp theo.
+     */
+    @Query("SELECT r.repairCode FROM Repair r WHERE r.repairCode LIKE 'SC-%' ORDER BY r.repairCode DESC")
+    List<String> findLatestScCodes(Pageable pageable);
 }

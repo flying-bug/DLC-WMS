@@ -35,7 +35,7 @@ function ExportSlipPage() {
   const [users, setUsers] = useState([]);
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [filters, setFilters] = useState({ docCode: '', fromDate: '', status: '' });
+  const [filters, setFilters] = useState({ docCode: location.state?.filterDocCode || '', fromDate: '', status: '' });
   const [loading, setLoading] = useState(false);
 
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
@@ -94,18 +94,18 @@ function ExportSlipPage() {
   }, [filters]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadLookups();
   }, [loadLookups]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadSlips();
   }, [loadSlips]);
 
   useEffect(() => {
     if (location.state?.toastMessage) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       showToast(location.state.toastType || 'success', location.state.toastMessage);
       navigate(location.pathname, { replace: true, state: {} });
     }
@@ -392,7 +392,7 @@ function ExportSlipPage() {
               <div className={styles.modalHeader}>
                 <h2 className={styles.modalTitle}>
                   <i className={`bi bi-receipt ${styles.detailIcon}`}></i>
-                  Chi tiết phiếu xuất kho: {selectedSlip.docCode}
+                  {selectedSlip.docCode}
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   {selectedSlip.status === 'DRAFT' && (

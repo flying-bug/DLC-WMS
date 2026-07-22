@@ -29,9 +29,8 @@ import CustomerListPage from '../pages/Customer/CustomerListPage';
 import CustomerDetailPage from '../pages/Customer/CustomerDetailPage';
 import WarrantyListPage from '../pages/Warranty/WarrantyListPage';
 import WarrantyDetailPage from '../pages/Warranty/WarrantyDetailPage';
-import CreateRepairTicketPage from '../pages/RepairTicket/CreateRepairTicketPage';
-import RepairTicketListPage from '../pages/RepairTicket/RepairTicketListPage';
-import UpdateRepairTicketPage from '../pages/RepairTicket/UpdateRepairTicketPage';
+import RepairListPage from '../pages/Repair/RepairListPage';
+import RepairFormPage from '../pages/Repair/RepairFormPage';
 import BrandListPage from '../pages/Brand/BrandListPage';
 import BrandDetailPage from '../pages/Brand/BrandDetailPage';
 import AssemblyBomPage from '../pages/AssemblyOrder/AssemblyBomPage';
@@ -46,8 +45,8 @@ import ReportListPage from '../pages/Report/ReportListPage';
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
-    const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('role');
+    const token = sessionStorage.getItem('token');
+    const userRole = sessionStorage.getItem('role');
 
     if (!token) {
         return <Navigate to="/login" replace />;
@@ -62,7 +61,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
 // Wrapper for guest/public routes (redirects to dashboard if already logged in)
 const PublicRoute = () => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (token) {
         return <Navigate to="/dashboard" replace />;
     }
@@ -105,9 +104,9 @@ function AppRouter() {
                     <Route path="/customers/:id" element={<CustomerDetailPage />} />
                     <Route path="/warranties" element={<WarrantyListPage />} />
                     <Route path="/warranties/:id" element={<WarrantyDetailPage />} />
-                    <Route path="/repair-tickets" element={<RepairTicketListPage />} />
-                    <Route path="/repair-tickets/create" element={<CreateRepairTicketPage />} />
-                    <Route path="/repair-tickets/:id/edit" element={<UpdateRepairTicketPage />} />
+                    <Route path="/repairs" element={<RepairListPage />} />
+                    <Route path="/repairs/create" element={<RepairFormPage />} />
+                    <Route path="/repairs/:id" element={<RepairFormPage />} />
                     <Route path="/assembly-boms" element={<AssemblyBomPage />} />
                     <Route path="/assembly-orders" element={<AssemblyOrderListPage />} />
                     <Route path="/assembly-orders/create" element={<AssemblyOrderFormPage />} />

@@ -20,4 +20,5 @@ public class RepairTicketRequest {
     private String resolutionNote;
     private BigDecimal repairCost;
     private String note;
+    private java.util.List<RepairLineRequest> repairLines;
 }

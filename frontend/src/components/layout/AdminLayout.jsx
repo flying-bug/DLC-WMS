@@ -51,8 +51,8 @@ const AdminLayout = ({ children }) => {
                         <span>Bảo hành</span>
                     </button>
                     <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/repair-tickets') ? styles.active : ''}`}
-                        onClick={() => navigate('/repair-tickets')}
+                        className={`${styles.navItem} ${currentPath.startsWith('/repairs') ? styles.active : ''}`}
+                        onClick={() => navigate('/repairs')}
                         type="button"
                     >
                         <i className="fas fa-tools"></i>

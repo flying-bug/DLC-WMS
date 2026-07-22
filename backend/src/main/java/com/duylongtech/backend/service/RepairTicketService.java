@@ -9,7 +9,11 @@ import com.duylongtech.backend.entity.SerialNumber;
 import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.entity.Warranty;
 import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.dto.request.RepairLineRequest;
+import com.duylongtech.backend.dto.response.RepairLineResponse;
+import com.duylongtech.backend.entity.RepairLine;
 import com.duylongtech.backend.repository.RepairRepository;
+import com.duylongtech.backend.repository.ProductVariantRepository;
 import com.duylongtech.backend.repository.UserRepository;
 import com.duylongtech.backend.repository.WarrantyRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,18 +35,19 @@ import java.util.Set;
 public class RepairTicketService {
 
     private static final Set<String> VALID_STATUSES = Set.of(
-            "DRAFT", "SUBMITTED", "APPROVED", "POSTED", "CANCELLED", "RECEIVED", "REPAIRING"
+            "DRAFT", "SUBMITTED", "APPROVED", "POSTED", "CANCELLED", "RECEIVED", "REPAIRING", "WAITING_FOR_PARTS", "READY_FOR_PICKUP", "COMPLETED"
     );
 
     private final RepairRepository repairRepository;
     private final WarrantyRepository warrantyRepository;
     private final UserRepository userRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     @Transactional(readOnly = true)
     public Page<RepairTicketResponse> getRepairTickets(String keyword, String status, LocalDate fromDate,
                                                        LocalDate toDate, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1));
-        return repairRepository.searchRepairTickets(trimToNull(keyword), normalizeStatus(status), fromDate, toDate, pageable)
+        return repairRepository.searchRepairs(trimToNull(keyword), normalizeStatus(status), pageable)
                 .map(this::toResponse);
     }
 
@@ -75,6 +80,25 @@ public class RepairTicketService {
                 .createdBy(resolveCurrentUserId())
                 .build();
 
+        if (request.getRepairLines() != null) {
+            if (repair.getRepairLines() == null) {
+                repair.setRepairLines(new java.util.ArrayList<>());
+            }
+            for (RepairLineRequest lr : request.getRepairLines()) {
+                ProductVariant variant = productVariantRepository.findById(lr.getComponentVariantId())
+                        .orElseThrow(() -> new BusinessException("Khong tim thay linh kien " + lr.getComponentVariantId()));
+                RepairLine line = RepairLine.builder()
+                        .repair(repair)
+                        .componentVariant(variant)
+                        .quantity(lr.getQuantity())
+                        .unitPrice(lr.getUnitPrice() != null ? lr.getUnitPrice() : BigDecimal.ZERO)
+                        .isWarrantyCovered(lr.getIsWarrantyCovered() != null ? lr.getIsWarrantyCovered() : false)
+                        .note(trimToNull(lr.getNote()))
+                        .build();
+                repair.getRepairLines().add(line);
+            }
+        }
+
         return toResponse(repairRepository.save(repair));
     }
 
@@ -97,6 +121,23 @@ public class RepairTicketService {
         repair.setSolutionDescription(trimToNull(request.getResolutionNote()));
         repair.setRepairCost(nonNegativeCost(request.getRepairCost()));
         repair.setNote(trimToNull(request.getNote()));
+
+        repair.getRepairLines().clear();
+        if (request.getRepairLines() != null) {
+            for (RepairLineRequest lr : request.getRepairLines()) {
+                ProductVariant variant = productVariantRepository.findById(lr.getComponentVariantId())
+                        .orElseThrow(() -> new BusinessException("Khong tim thay linh kien " + lr.getComponentVariantId()));
+                RepairLine line = RepairLine.builder()
+                        .repair(repair)
+                        .componentVariant(variant)
+                        .quantity(lr.getQuantity())
+                        .unitPrice(lr.getUnitPrice() != null ? lr.getUnitPrice() : BigDecimal.ZERO)
+                        .isWarrantyCovered(lr.getIsWarrantyCovered() != null ? lr.getIsWarrantyCovered() : false)
+                        .note(trimToNull(lr.getNote()))
+                        .build();
+                repair.getRepairLines().add(line);
+            }
+        }
 
         return toResponse(repairRepository.save(repair));
     }
@@ -174,6 +215,20 @@ public class RepairTicketService {
                 .repairCost(repair.getRepairCost())
                 .note(repair.getNote())
                 .createdBy(repair.getCreatedBy())
+                .repairLines(repair.getRepairLines().stream().map(this::toLineResponse).toList())
+                .build();
+    }
+
+    private RepairLineResponse toLineResponse(RepairLine line) {
+        return RepairLineResponse.builder()
+                .id(line.getId())
+                .componentVariantId(line.getComponentVariant().getId())
+                .sku(line.getComponentVariant().getSku())
+                .variantName(line.getComponentVariant().getVariantName())
+                .quantity(line.getQuantity())
+                .unitPrice(line.getUnitPrice())
+                .isFreeWarranty(line.getIsWarrantyCovered())
+                .note(line.getNote())
                 .build();
     }
 

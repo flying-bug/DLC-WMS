@@ -12,7 +12,7 @@ function CreateStocktakePage() {
   const [warehouses, setWarehouses] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     purpose: 'Kiểm kê vật tư hàng hóa định kỳ',
     code: `KKK${Math.floor(10000 + Math.random() * 90000)}`,
     warehouseId: searchParams.get('warehouseId') || 'all',
@@ -21,7 +21,7 @@ function CreateStocktakePage() {
     conclusion: '',
     isProcessed: false,
     isValueStocktake: false
-  });
+  }));
 
   const [isSaved, setIsSaved] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
@@ -35,21 +35,6 @@ function CreateStocktakePage() {
   const [participants, setParticipants] = useState([
     { name: 'Nguyễn Văn A', title: 'Thủ kho', represent: 'Kho chính' }
   ]);
-
-  // Load Warehouses & Load Stock Items
-  useEffect(() => {
-    const loadWarehouses = async () => {
-      try {
-        const response = await stocktakeApi.getWarehouses();
-        const data = response?.data?.data?.content || response?.data?.data || response?.data || [];
-        setWarehouses(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error('Failed to load warehouses', err);
-      }
-    };
-    loadWarehouses();
-    fetchStockData(formData.warehouseId);
-  }, []);
 
   const fetchStockData = async (selectedWhId) => {
     setLoadingStock(true);
@@ -93,6 +78,22 @@ function CreateStocktakePage() {
       setLoadingStock(false);
     }
   };
+
+  // Load Warehouses & Load Stock Items
+  useEffect(() => {
+    const loadWarehouses = async () => {
+      try {
+        const response = await stocktakeApi.getWarehouses();
+        const data = response?.data?.data?.content || response?.data?.data || response?.data || [];
+        setWarehouses(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to load warehouses', err);
+      }
+    };
+    loadWarehouses();
+    fetchStockData(formData.warehouseId);
+  }, []);
+
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

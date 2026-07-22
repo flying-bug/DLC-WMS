@@ -46,7 +46,7 @@ function ImportHistoryPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [filters, setFilters] = useState({ docCode: '', fromDate: '', status: '' });
+  const [filters, setFilters] = useState({ docCode: location.state?.filterDocCode || '', fromDate: '', status: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -97,18 +97,18 @@ function ImportHistoryPage() {
   }, [filters]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadLookups();
   }, [loadLookups]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     loadSlips();
   }, [loadSlips]);
 
   useEffect(() => {
     if (location.state?.toastMessage) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       showToast(location.state.toastType || 'success', location.state.toastMessage);
       navigate(location.pathname, { replace: true, state: {} });
     }
@@ -431,9 +431,6 @@ function ImportHistoryPage() {
               <div className={styles.modalHeader}>
                 <h2 className={styles.modalTitle}>
                   <i className={`bi bi-file-earmark-text ${styles.detailIcon}`}></i>
-                  {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && 'Chi tiết phiếu nhập mua hàng: '}
-                  {selectedSlip.issuePurpose === 'PRODUCTION' && 'Chi tiết phiếu nhập thành phẩm sản xuất: '}
-                  {selectedSlip.issuePurpose === 'RETURN' && 'Chi tiết phiếu nhập hàng trả lại: '}
                   {selectedSlip.docCode}
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

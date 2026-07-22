@@ -8,7 +8,7 @@ import styles from './ProfilePage.module.css';
 
 function ProfilePage() {
     const navigate = useNavigate();
-    const userRole = localStorage.getItem('role') || 'STAFF';
+    const userRole = sessionStorage.getItem('role') || 'STAFF';
     const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN';
     const Layout = isSuperAdmin ? SuperAdminLayout : AdminLayout;
 

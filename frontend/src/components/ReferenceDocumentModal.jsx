@@ -66,7 +66,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
 
   useEffect(() => {
     if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       fetchDocuments();
     }
   }, [isOpen, page, docType, fetchDocuments]);

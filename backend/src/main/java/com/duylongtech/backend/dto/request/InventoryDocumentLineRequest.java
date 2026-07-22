@@ -12,6 +12,7 @@ public class InventoryDocumentLineRequest {
     private BigDecimal quantityOut;
     private BigDecimal unitCost;
     private BigDecimal unitPrice;
+    private BigDecimal vatRate;
     private BigDecimal lineAmount;
     private Long lotBatchId;
     private Long serialNumberId;
@@ -22,4 +23,5 @@ public class InventoryDocumentLineRequest {
      * Nếu null hoặc <= 0, sản phẩm sẽ không được tạo phiếu bảo hành tự động.
      */
     private Integer warrantyMonths;
+    private BigDecimal vatPercent;
 }

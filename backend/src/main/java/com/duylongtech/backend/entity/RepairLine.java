@@ -1,0 +1,65 @@
+package com.duylongtech.backend.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "REPAIR_LINES")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class RepairLine {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    
+     @JoinColumn(name = "component_variant_id", nullable = false, insertable = false, updatable = false)
+    private ProductVariant componentVariant;  // ADD THIS
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "repair_id", nullable = false)
+    private Repair repair;
+
+    @Column(name = "component_variant_id", nullable = false)
+    private Long componentVariantId;
+
+    @Column(name = "action_type", nullable = false, length = 20)
+    private String actionType; // "ADD" or "REMOVE"
+
+    @Column(name = "serial_number_id")
+    private Long serialNumberId;
+
+    @Column(nullable = false, precision = 15, scale = 4)
+    private BigDecimal quantity;
+
+    @Column(name = "unit_price", nullable = false, precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal unitPrice = BigDecimal.ZERO;
+
+    @Column(name = "is_warranty_covered", nullable = false)
+    @Builder.Default
+    private Boolean isWarrantyCovered = false;
+
+    @Column(name = "is_free_warranty", nullable = false)
+    @Builder.Default
+    private Boolean isFreeWarranty = false;
+
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "updated_at")
+    @Builder.Default
+    private LocalDateTime updatedAt = LocalDateTime.now();
+}

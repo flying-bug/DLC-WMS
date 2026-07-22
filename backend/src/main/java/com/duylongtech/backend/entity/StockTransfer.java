@@ -55,5 +55,6 @@ public class StockTransfer {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "stockTransfer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<StockTransferLine> lines = new ArrayList<>();
 }
