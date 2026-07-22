@@ -77,6 +77,7 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
+    @Builder.Default
     private Set<RoleEntity> roles = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.EAGER)
@@ -85,5 +86,6 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
+    @Builder.Default
     private Set<PermissionEntity> permissions = new HashSet<>();
 }

@@ -53,4 +53,8 @@ public interface WarrantyRepository extends JpaRepository<Warranty, Long> {
     @EntityGraph(attributePaths = {"partner", "serialNumber", "serialNumber.variant"})
     @Query("SELECT w FROM Warranty w WHERE w.id = :id")
     Optional<Warranty> findWithDetailsById(@Param("id") Long id);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Warranty w SET w.warrantyStatus = 'EXPIRED' WHERE w.endDate < CURRENT_DATE AND w.warrantyStatus = 'APPROVED'")
+    int expireOutdatedWarranties();
 }

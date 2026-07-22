@@ -30,4 +30,5 @@ public class ProductVariantRequest {
     private String manufacturerPartNumber;
     private String specsJson;
     private Boolean active;
+    private Integer warrantyMonths;
 }

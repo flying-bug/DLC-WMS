@@ -12,6 +12,7 @@ public class InventoryDocumentLineRequest {
     private BigDecimal quantityOut;
     private BigDecimal unitCost;
     private BigDecimal unitPrice;
+    private BigDecimal vatRate;
     private BigDecimal lineAmount;
     private Long lotBatchId;
     private Long serialNumberId;

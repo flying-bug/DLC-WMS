@@ -32,6 +32,7 @@ public class ProductVariantResponse {
     private String manufacturerPartNumber;
     private String specsJson;
     private Boolean active;
+    private Integer warrantyMonths;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

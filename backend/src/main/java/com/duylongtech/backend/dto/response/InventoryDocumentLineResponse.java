@@ -13,10 +13,12 @@ public class InventoryDocumentLineResponse {
     private BigDecimal quantityOut;
     private BigDecimal unitCost;
     private BigDecimal unitPrice;
+    private BigDecimal vatRate;
     private BigDecimal lineAmount;
     private Long lotBatchId;
     private Long serialNumberId;
     private List<String> serialNumbers;
+    private Integer warrantyMonths;
     private String note;
     private BigDecimal vatPercent;
 }

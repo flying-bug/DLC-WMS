@@ -112,6 +112,8 @@ public class Repair {
     @Column(name = "created_by")
     private Long createdBy;
 
+    @OneToMany(mappedBy = "repair", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<RepairLine> repairLines = new java.util.ArrayList<>();
     @Column(name = "approved_by")
     private Long approvedBy;
 
