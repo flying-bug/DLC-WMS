@@ -142,7 +142,7 @@ function CreateImportSlipPage() {
       if (warehouseRes.status === 'fulfilled') {
         const data = pageContent(unwrap(warehouseRes.value));
         setWarehouses(data);
-        setForm(prev => ({ ...prev, warehouseId: prev.warehouseId || data[0]?.id || '' }));
+        setForm(prev => ({ ...prev, warehouseId: prev.warehouseId || '' }));
       }
       if (supplierRes.status === 'fulfilled') {
         const data = pageContent(unwrap(supplierRes.value)).filter(s => s.status !== 'INACTIVE');
@@ -179,6 +179,15 @@ function CreateImportSlipPage() {
   }, []);
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      const type = p.productType;
+      if (importType === 'PURCHASE') return type === 'Hàng hóa';
+      if (importType === 'PRODUCTION') return type === 'Thành phẩm';
+      return type === 'Hàng hóa' || type === 'Thành phẩm';
+    });
+  }, [products, importType]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
@@ -377,6 +386,7 @@ function CreateImportSlipPage() {
                       customerId: '',
                       assemblyOrderId: ''
                     }));
+                    setItems([{ ...emptyLine(), isNew: false }]);
                   }}
                   styles={{
                     ...customSelectStyles,
@@ -677,11 +687,12 @@ function CreateImportSlipPage() {
                         <td>{product?.sku || product?.productCode || ''}</td>
                         <td>
                           <Select
-                            options={products.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}` }))}
-                            value={products.find(p => String(p.id) === String(item.variantId)) ? { value: item.variantId, label: `${products.find(p => String(p.id) === String(item.variantId)).productName} - ${products.find(p => String(p.id) === String(item.variantId)).sku || products.find(p => String(p.id) === String(item.variantId)).productCode}` } : null}
+                            options={filteredProducts.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}`, nameOnly: p.productName }))}
+                            value={product ? { value: product.id, label: `${product.productName} - ${product.sku || product.productCode}`, nameOnly: product.productName } : null}
                             onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.value : '')}
                             placeholder="Chọn hàng"
                             isClearable
+                            formatOptionLabel={(option, { context }) => context === 'value' ? option.nameOnly : option.label}
                             autoFocus={item.isNew}
                             styles={customSelectStyles}
                             menuPortalTarget={document.body}

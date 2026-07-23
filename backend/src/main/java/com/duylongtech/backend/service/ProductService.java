@@ -406,6 +406,7 @@ public class ProductService {
                 .productId(product != null ? product.getId() : null)
                 .productCode(product != null ? product.getProductCode() : null)
                 .productName(product != null ? product.getProductName() : null)
+                .productType(product != null ? product.getProductType() : null)
                 .trackSerial(product != null ? product.getTrackSerial() : false)
                 .brandId(product != null && product.getBrand() != null ? product.getBrand().getId() : null)
                 .brandName(product != null && product.getBrand() != null ? product.getBrand().getName() : null)

@@ -137,10 +137,14 @@ public class RepairWorkflowService {
         Long warehouseId = resolveRepairWarehouseId(repair);
 
         for (RepairLine line : addLines) {
-            InventoryBalance balance = inventoryBalanceRepository
-                    .findByWarehouseIdAndVariantIdAndStockStatus(
-                            warehouseId, line.getComponentVariantId(), "GOOD")
-                    .orElse(null);
+            InventoryBalance balance;
+            if (line.getSerialNumberId() != null) {
+                balance = inventoryBalanceRepository.findByWarehouseVariantSerialForUpdate(
+                        warehouseId, line.getComponentVariantId(), line.getSerialNumberId(), "GOOD").orElse(null);
+            } else {
+                balance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
+                        warehouseId, line.getComponentVariantId(), "GOOD").orElse(null);
+            }
 
             BigDecimal available = balance != null
                     ? balance.getQuantityOnHand().subtract(balance.getQuantityReserved())
@@ -263,9 +267,14 @@ public class RepairWorkflowService {
         // Trừ tồn kho thực tế cho từng dòng
         Long warehouseId = reserveDoc.getWarehouseId();
         for (InventoryDocumentLine line : reserveDoc.getLines()) {
-            InventoryBalance balance = inventoryBalanceRepository
-                    .findByWarehouseIdAndVariantIdAndStockStatus(warehouseId, line.getVariantId(), "GOOD")
-                    .orElse(null);
+            InventoryBalance balance;
+            if (line.getSerialNumberId() != null) {
+                balance = inventoryBalanceRepository.findByWarehouseVariantSerialForUpdate(
+                        warehouseId, line.getVariantId(), line.getSerialNumberId(), "GOOD").orElse(null);
+            } else {
+                balance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
+                        warehouseId, line.getVariantId(), "GOOD").orElse(null);
+            }
             if (balance != null && line.getQuantityOut() != null) {
                 BigDecimal newQty = balance.getQuantityOnHand().subtract(line.getQuantityOut());
                 if (newQty.compareTo(BigDecimal.ZERO) < 0) {
@@ -332,17 +341,27 @@ public class RepairWorkflowService {
 
         // Cập nhật tồn kho Scrap
         for (RepairLine line : removeLines) {
-            InventoryBalance scrapBalance = inventoryBalanceRepository
-                    .findByWarehouseIdAndVariantIdAndStockStatus(scrapWarehouseId, line.getComponentVariantId(), "GOOD")
-                    .orElseGet(() -> InventoryBalance.builder()
-                            .warehouseId(scrapWarehouseId)
-                            .variantId(line.getComponentVariantId())
-                            .stockStatus("GOOD")
-                            .quantityOnHand(BigDecimal.ZERO)
-                            .quantityReserved(BigDecimal.ZERO)
-                            .averageCost(BigDecimal.ZERO)
-                            .updatedAt(LocalDateTime.now())
-                            .build());
+            InventoryBalance scrapBalance;
+            if (line.getSerialNumberId() != null) {
+                scrapBalance = inventoryBalanceRepository.findByWarehouseVariantSerialForUpdate(
+                        scrapWarehouseId, line.getComponentVariantId(), line.getSerialNumberId(), "GOOD").orElse(null);
+            } else {
+                scrapBalance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
+                        scrapWarehouseId, line.getComponentVariantId(), "GOOD").orElse(null);
+            }
+
+            if (scrapBalance == null) {
+                scrapBalance = InventoryBalance.builder()
+                        .warehouseId(scrapWarehouseId)
+                        .variantId(line.getComponentVariantId())
+                        .serialNumberId(line.getSerialNumberId())
+                        .stockStatus("GOOD")
+                        .quantityOnHand(BigDecimal.ZERO)
+                        .quantityReserved(BigDecimal.ZERO)
+                        .averageCost(BigDecimal.ZERO)
+                        .updatedAt(LocalDateTime.now())
+                        .build();
+            }
             scrapBalance.setQuantityOnHand(scrapBalance.getQuantityOnHand().add(line.getQuantity()));
             scrapBalance.setUpdatedAt(LocalDateTime.now());
             inventoryBalanceRepository.save(scrapBalance);

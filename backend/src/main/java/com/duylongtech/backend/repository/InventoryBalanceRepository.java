@@ -35,7 +35,7 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
 
     boolean existsByWarehouseId(Long warehouseId);
 
-    Optional<InventoryBalance> findByWarehouseIdAndVariantIdAndStockStatus(Long warehouseId, Long variantId, String stockStatus);
+    Optional<InventoryBalance> findFirstByWarehouseIdAndVariantIdAndStockStatus(Long warehouseId, Long variantId, String stockStatus);
 
     @Query("SELECT COUNT(DISTINCT b.variantId) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId")
     Long countDistinctVariantsByWarehouseId(@Param("warehouseId") Long warehouseId);

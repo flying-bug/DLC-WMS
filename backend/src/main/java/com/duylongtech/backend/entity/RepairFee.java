@@ -43,6 +43,15 @@ public class RepairFee {
     @Builder.Default
     private Boolean isFreeWarranty = false;
 
+    // Số lượng
+    @Column(name = "quantity", precision = 15, scale = 4)
+    @Builder.Default
+    private BigDecimal quantity = BigDecimal.ONE;
+
+    // Đơn vị tính
+    @Column(name = "unit_name")
+    private String unitName;
+
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 

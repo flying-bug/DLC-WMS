@@ -25,6 +25,12 @@ public class RepairFeeRequest {
     /** Có miễn phí bảo hành không */
     private Boolean isFreeWarranty;
 
+    /** Số lượng */
+    private BigDecimal quantity;
+
+    /** Đơn vị tính */
+    private String unitName;
+
     /** Ghi chú */
     private String note;
 }

@@ -518,7 +518,7 @@ function AssemblyOrderFormPage() {
                             <label className="misa-label">Thành phẩm</label>
                             <select className="misa-input" value={bomForm.productId} onChange={(event) => setBomField('productId', event.target.value)}>
                                 <option value="">Chọn thành phẩm</option>
-                                {products.map((product) => (
+                                {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
                                     <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
                                 ))}
                             </select>

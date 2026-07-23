@@ -41,7 +41,7 @@ public interface RepairRepository extends JpaRepository<Repair, Long> {
     /**
      * Lấy chi tiết lệnh kèm lines và fees (dùng khi cần đọc toàn bộ).
      */
-    @EntityGraph(attributePaths = {"lines", "warranty"})
+    @EntityGraph(attributePaths = {"repairLines", "warranty"})
     @Query("SELECT r FROM Repair r WHERE r.id = :id")
     Optional<Repair> findWithDetailsById(@Param("id") Long id);
 
