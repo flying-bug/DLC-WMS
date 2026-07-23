@@ -261,6 +261,8 @@ public class RepairService {
                 .repair(repair)
                 .feeName(request.getFeeName().trim())
                 .feeAmount(feeAmount)
+                .quantity(request.getQuantity() != null ? request.getQuantity() : BigDecimal.ONE)
+                .unitName(request.getUnitName())
                 .isFreeWarranty(isFreeWarranty)
                 .note(trimToNull(request.getNote()))
                 .build();
@@ -470,6 +472,8 @@ public class RepairService {
                 .repairId(fee.getRepair() != null ? fee.getRepair().getId() : null)
                 .feeName(fee.getFeeName())
                 .feeAmount(fee.getFeeAmount())
+                .quantity(fee.getQuantity())
+                .unitName(fee.getUnitName())
                 .isFreeWarranty(fee.getIsFreeWarranty())
                 .note(fee.getNote())
                 .createdAt(fee.getCreatedAt())

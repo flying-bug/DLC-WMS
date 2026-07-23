@@ -18,6 +18,8 @@ public class RepairFeeResponse {
 
     private String feeName;
     private BigDecimal feeAmount;
+    private BigDecimal quantity;
+    private String unitName;
     private Boolean isFreeWarranty;
     private String note;
 

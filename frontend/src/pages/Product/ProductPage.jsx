@@ -17,6 +17,7 @@ const defaultFormData = {
     description: '',
     imageUrl: '',
     trackSerial: false,
+    isAssembly: false,
     active: true
 };
 
@@ -197,6 +198,7 @@ const ProductPage = () => {
             description: product.description || '',
             imageUrl: product.imageUrl || '',
             trackSerial: Boolean(product.trackSerial),
+            isAssembly: Boolean(product.isAssembly),
             active: product.active !== false
         }));
         setErrorMsg('');
@@ -217,6 +219,7 @@ const ProductPage = () => {
             description: product.description || '',
             imageUrl: product.imageUrl || '',
             trackSerial: Boolean(product.trackSerial),
+            isAssembly: Boolean(product.isAssembly),
             active: product.active !== false
         }));
         setErrorMsg('');
@@ -237,7 +240,7 @@ const ProductPage = () => {
         active: data.active,
         trackSerial: Boolean(data.trackSerial),
         trackLot: false,
-        isAssembly: false
+        isAssembly: data.productType === 'Thành phẩm'
     });
 
     const handleProductImageUpload = async (event) => {
@@ -638,6 +641,7 @@ const ProductPage = () => {
                                 <th style={{ width: '100px' }}>Hình ảnh</th>
                                 <th>Mã sản phẩm</th>
                                 <th>Tên sản phẩm</th>
+                                <th style={{ width: '120px' }}>Loại</th>
                                 <th style={{ width: '150px' }}>Danh mục</th>
                                 <th style={{ width: '140px' }}>Thương hiệu</th>
                                 <th style={{ width: '120px' }}>Đơn vị tính</th>
@@ -678,6 +682,7 @@ const ProductPage = () => {
                                         </td>
                                         <td className={styles.codeCell}>{item.productCode}</td>
                                         <td className={styles.nameCell} title={item.productName}>{item.productName}</td>
+                                        <td>{item.productType || '-'}</td>
                                         <td>{item.categoryName || '-'}</td>
                                         <td>{item.brandName || '-'}</td>
                                         <td>{item.unitName || '-'}</td>
@@ -798,6 +803,22 @@ const ProductPage = () => {
 
                                 <div className="misa-form-row">
                                     <div className="misa-form-group">
+                                        <label>Loại hàng hóa <span className="required">*</span></label>
+                                        <select
+                                            value={formData.productType}
+                                            onChange={(event) => setFormData({ ...formData, productType: event.target.value })}
+                                            className="misa-select"
+                                        >
+                                            <option value="Hàng hóa">Hàng hóa</option>
+                                            <option value="Thành phẩm">Thành phẩm</option>
+                                            <option value="Dịch vụ">Dịch vụ</option>
+                                        </select>
+                                    </div>
+                                    <div className="misa-form-group"></div>
+                                </div>
+
+                                <div className="misa-form-row">
+                                    <div className="misa-form-group">
                                         <label>Danh mục <span className="required">*</span></label>
                                         <select
                                             value={formData.categoryId}
@@ -868,7 +889,7 @@ const ProductPage = () => {
                                     <div className={styles.imageUploadControls}>
                                         <label className={styles.imageUploadBtn}>
                                             <i className={uploadingImage ? 'fas fa-spinner fa-spin' : 'fas fa-cloud-upload-alt'}></i>
-                                            {uploadingImage ? 'Dang tai anh...' : 'Tai anh len Cloudinary'}
+                                            {uploadingImage ? 'Đang tải ảnh...' : 'Tải ảnh'}
                                             <input
                                                 type="file"
                                                 accept="image/png,image/jpeg,image/webp,image/gif"

@@ -6,6 +6,7 @@ import * as repairApi from '../../api/repairApi';
 import * as customerApi from '../../api/customerApi';
 import axiosClient from '../../api/axiosClient';
 import CustomerModal from '../Customer/components/CustomerModal';
+import QuickProductModal from './components/QuickProductModal';
 import odooStyles from './OdooStyle.module.css';
 
 /* ─── Select styles ─────────────────────────────────────────────── */
@@ -39,7 +40,7 @@ const EDITABLE_STATUSES = ['DRAFT', 'QUOTATION'];
  * Một dòng "mới đang nhập" trong bảng inline.
  * type: 'PART' | 'FEE'
  */
-function NewInlineRow({ type, variants, onSave, onCancel, underWarranty }) {
+function NewInlineRow({ type, variants, onSave, onCancel, underWarranty, onQuickAdd }) {
     const [form, setForm] = useState(
         type === 'PART'
             ? { actionType: 'ADD', componentVariantId: '', quantity: 1, unitPrice: 0, isFreeWarranty: underWarranty || false, note: '' }
@@ -59,16 +60,32 @@ function NewInlineRow({ type, variants, onSave, onCancel, underWarranty }) {
                 </select>
             </td>
             <td>
-                <Select options={variants}
-                    onChange={opt => setForm({ ...form, componentVariantId: opt ? opt.value : '' })}
-                    placeholder="Chọn sản phẩm/linh kiện..."
-                    isClearable styles={selectStyles} menuPortalTarget={document.body}
-                    noOptionsMessage={() => 'Không tìm thấy'} />
+                <div style={{ display: 'flex', gap: '4px' }}>
+                    <div style={{ flex: 1 }}>
+                        <Select options={variants}
+                            onChange={opt => setForm({ ...form, componentVariantId: opt ? opt.value : '' })}
+                            placeholder="Chọn sản phẩm/linh kiện..."
+                            isClearable styles={selectStyles} menuPortalTarget={document.body}
+                            noOptionsMessage={() => 'Không tìm thấy'} />
+                    </div>
+                    {onQuickAdd && (
+                        <button type="button" onClick={() => onQuickAdd('Hàng hóa')}
+                            style={{ width: '32px', height: '32px', border: '1px solid #ced4da', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            title="Thêm nhanh linh kiện">
+                            <i className="bi bi-plus" style={{ fontSize: '18px', color: '#017e84' }}></i>
+                        </button>
+                    )}
+                </div>
             </td>
             <td>
                 <input type="number" className="form-control form-control-sm" min="1" value={form.quantity}
                     onChange={e => setForm({ ...form, quantity: e.target.value })}
                     style={{ width: '80px', fontSize: '12px' }} />
+            </td>
+            <td>
+                <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                    {variants.find(v => v.value === form.componentVariantId)?.unitName || '—'}
+                </span>
             </td>
             <td>
                 <input type="number" className="form-control form-control-sm" value={isFree ? 0 : form.unitPrice}
@@ -99,20 +116,56 @@ function NewInlineRow({ type, variants, onSave, onCancel, underWarranty }) {
     return (
         <tr style={{ background: '#eff6ff' }}>
             <td colSpan="2">
-                <input type="text" className="form-control form-control-sm" value={form.feeName}
-                    onChange={e => setForm({ ...form, feeName: e.target.value })}
-                    placeholder="Tên phí dịch vụ (VD: Công thợ, Vệ sinh...)" style={{ fontSize: '12px' }} />
+                <div style={{ display: 'flex', gap: '4px' }}>
+                    <div style={{ flex: 1 }}>
+                        <Select options={variants}
+                            onChange={opt => setForm({ 
+                                ...form, 
+                                feeName: opt ? opt.productName : '', 
+                                unitPrice: opt ? opt.salePrice : 0,
+                                quantity: 1,
+                                unitName: opt ? opt.unitName : '',
+                                feeAmount: opt ? opt.salePrice : 0, 
+                                isFreeWarranty: false 
+                            })}
+                            placeholder="Chọn dịch vụ..."
+                            isClearable styles={selectStyles} menuPortalTarget={document.body}
+                            noOptionsMessage={() => 'Không tìm thấy'} />
+                    </div>
+                    {onQuickAdd && (
+                        <button type="button" onClick={() => onQuickAdd('Dịch vụ')}
+                            style={{ width: '32px', height: '32px', border: '1px solid #ced4da', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            title="Thêm nhanh dịch vụ">
+                            <i className="bi bi-plus" style={{ fontSize: '18px', color: '#017e84' }}></i>
+                        </button>
+                    )}
+                </div>
             </td>
-            <td>—</td>
+            <td>
+                <input type="number" className="form-control form-control-sm" min="1" value={form.quantity || 1}
+                    onChange={e => {
+                        const q = e.target.value;
+                        setForm({ ...form, quantity: q, feeAmount: q * (form.unitPrice || 0) });
+                    }}
+                    style={{ width: '80px', fontSize: '12px' }} />
+            </td>
+            <td style={{ textAlign: 'center' }}>
+                <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                    {form.unitName || '—'}
+                </span>
+            </td>
             <td>
                 <input type="number" className="form-control form-control-sm" value={isFree ? 0 : form.feeAmount}
                     disabled={isFree}
-                    onChange={e => setForm({ ...form, feeAmount: e.target.value })}
+                    onChange={e => {
+                        const amt = e.target.value;
+                        setForm({ ...form, feeAmount: amt, unitPrice: (form.quantity > 0 ? amt / form.quantity : 0) });
+                    }}
                     style={{ width: '110px', fontSize: '12px' }} />
             </td>
             <td style={{ textAlign: 'center' }}>
                 <input type="checkbox" checked={form.isFreeWarranty}
-                    onChange={e => setForm({ ...form, isFreeWarranty: e.target.checked, feeAmount: e.target.checked ? 0 : form.feeAmount })} />
+                    onChange={e => setForm({ ...form, isFreeWarranty: e.target.checked, feeAmount: e.target.checked ? 0 : (form.quantity * (form.unitPrice || 0)) })} />
             </td>
             <td>
                 <input type="text" className="form-control form-control-sm" value={form.note}
@@ -164,6 +217,8 @@ function RepairFormPage() {
 
     // Inline editing state
     const [addingType, setAddingType] = useState(null); // 'PART' | 'FEE' | null
+    const [showQuickProductModal, setShowQuickProductModal] = useState(false);
+    const [quickProductType, setQuickProductType] = useState('Thành phẩm');
     // For isNew: pending items before save
     const [pendingLines, setPendingLines] = useState([]);
     const [pendingFees, setPendingFees] = useState([]);
@@ -227,7 +282,11 @@ function RepairFormPage() {
             const content = res.data?.data?.content || res.data?.content || [];
             setVariantOptions(content.map(v => ({
                 value: v.id,
-                label: [v.sku, v.productName, v.variantName].filter(Boolean).join(' - ')
+                label: [v.sku, v.productName, v.variantName].filter(Boolean).join(' - '),
+                productType: v.productType,
+                salePrice: v.salePrice,
+                productName: v.productName,
+                unitName: v.unitName
             })));
         } catch (e) { console.error(e); }
     }, []);
@@ -368,8 +427,9 @@ function RepairFormPage() {
         };
         if (isNew) {
             // Lưu tạm — dùng variantOptions để tìm nhãn
-            const variantLabel = variantOptions.find(p => p.value === form.componentVariantId)?.label || `ID: ${form.componentVariantId}`;
-            setPendingLines(prev => [...prev, { ...linePayload, _label: variantLabel, _key: Date.now() }]);
+            const variant = variantOptions.find(p => p.value === form.componentVariantId);
+            const variantLabel = variant?.label || `ID: ${form.componentVariantId}`;
+            setPendingLines(prev => [...prev, { ...linePayload, _label: variantLabel, _unitName: variant?.unitName, _key: Date.now() }]);
             setAddingType(null);
         } else {
             try {
@@ -385,8 +445,10 @@ function RepairFormPage() {
     const handleSaveFee = async (form) => {
         if (!form.feeName) { alert('Vui lòng nhập tên phí.'); return; }
         const feePayload = {
-            feeName: form.feeName,
+            feeName: form.feeName.trim(),
             feeAmount: Number(form.feeAmount),
+            quantity: Number(form.quantity || 1),
+            unitName: form.unitName || null,
             isFreeWarranty: form.isFreeWarranty,
             note: form.note || null
         };
@@ -604,22 +666,33 @@ function RepairFormPage() {
                                 <label className={odooStyles.odooFormLabel}>
                                     Sản phẩm cần sửa <span className="text-danger">*</span>
                                 </label>
-                                <Select
-                                    isDisabled={!isEditable}
-                                    options={products.map(p => ({
-                                        value: p.id,
-                                        label: [p.productCode, p.productName].filter(Boolean).join(' - ')
-                                    }))}
-                                    value={(() => {
-                                        const p = products.find(x => String(x.id) === String(formData.productId));
-                                        if (!p) return null;
-                                        return { value: p.id, label: [p.productCode, p.productName].filter(Boolean).join(' - ') };
-                                    })()}
-                                    onChange={opt => setFormData({ ...formData, productId: opt ? opt.value : '' })}
-                                    placeholder="Chọn sản phẩm..."
-                                    isClearable styles={selectStyles} menuPortalTarget={document.body}
-                                    noOptionsMessage={() => 'Không tìm thấy'}
-                                />
+                                <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <Select
+                                            isDisabled={!isEditable}
+                                            options={products.filter(p => p.productType === 'Thành phẩm').map(p => ({
+                                                value: p.id,
+                                                label: [p.productCode, p.productName].filter(Boolean).join(' - ')
+                                            }))}
+                                            value={(() => {
+                                                const p = products.find(x => String(x.id) === String(formData.productId));
+                                                if (!p) return null;
+                                                return { value: p.id, label: [p.productCode, p.productName].filter(Boolean).join(' - ') };
+                                            })()}
+                                            onChange={opt => setFormData({ ...formData, productId: opt ? opt.value : '' })}
+                                            placeholder="Chọn sản phẩm..."
+                                            isClearable styles={selectStyles} menuPortalTarget={document.body}
+                                            noOptionsMessage={() => 'Không tìm thấy'}
+                                        />
+                                    </div>
+                                    {isEditable && (
+                                        <button type="button" onClick={() => { setQuickProductType('Thành phẩm'); setShowQuickProductModal(true); }}
+                                            style={{ width: '28px', height: '28px', border: '1px solid #ced4da', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                            title="Thêm nhanh thành phẩm">
+                                            <i className="bi bi-plus" style={{ fontSize: '18px', color: '#017e84' }}></i>
+                                        </button>
+                                    )}
+                                </div>
 
                             </div>
 
@@ -768,6 +841,7 @@ function RepairFormPage() {
                                         <th style={thStyle}>Loại</th>
                                         <th style={thStyle}>Sản phẩm / Linh kiện / Phí dịch vụ</th>
                                         <th style={thStyle}>Số lượng</th>
+                                        <th style={thStyle}>ĐVT</th>
                                         <th style={thStyle}>Tiền sửa chữa</th>
                                         <th style={{ ...thStyle, textAlign: 'center' }}>Bảo hành</th>
                                         <th style={thStyle}>Ghi chú</th>
@@ -783,6 +857,7 @@ function RepairFormPage() {
                                             </td>
                                             <td style={tdStyle}>{line._label || `Variant ID: ${line.componentVariantId}`}</td>
                                             <td style={tdStyle}>{line.quantity}</td>
+                                            <td style={tdStyle}>{line._unitName || variantOptions.find(v => v.value === line.componentVariantId)?.unitName || '—'}</td>
                                             <td style={tdStyle}>{Number(line.unitPrice).toLocaleString('vi-VN')} ₫</td>
                                             <td style={{ ...tdStyle, textAlign: 'center' }}>{line.isFreeWarranty ? '✓' : ''}</td>
                                             <td style={tdStyle}>{line.note || '—'}</td>
@@ -798,7 +873,8 @@ function RepairFormPage() {
                                         <tr key={fee._key || idx} style={{ borderBottom: '1px solid #f3f4f6', background: '#fafafa' }}>
                                             <td style={tdStyle}><span style={feeBadgeStyle}>Phí DV</span></td>
                                             <td style={tdStyle}>{fee.feeName}</td>
-                                            <td style={tdStyle}>—</td>
+                                            <td style={tdStyle}>{fee.quantity || 1}</td>
+                                            <td style={tdStyle}>{fee.unitName || '—'}</td>
                                             <td style={tdStyle}>{Number(fee.feeAmount).toLocaleString('vi-VN')} ₫</td>
                                             <td style={{ ...tdStyle, textAlign: 'center' }}>{fee.isFreeWarranty ? '✓' : ''}</td>
                                             <td style={tdStyle}>{fee.note || '—'}</td>
@@ -823,6 +899,7 @@ function RepairFormPage() {
                                                 {line.componentName || `ID: ${line.componentVariantId}`}
                                             </td>
                                             <td style={tdStyle}>{Number(line.quantity).toLocaleString('vi-VN')}</td>
+                                            <td style={tdStyle}>{variantOptions.find(v => v.value === line.componentVariantId)?.unitName || '—'}</td>
                                             <td style={tdStyle}>{Number(line.unitPrice).toLocaleString('vi-VN')} ₫</td>
                                             <td style={{ ...tdStyle, textAlign: 'center' }}>
                                                 {line.isFreeWarranty && <i className="bi bi-shield-check" style={{ color: '#16a34a' }}></i>}
@@ -846,7 +923,8 @@ function RepairFormPage() {
                                             <td style={tdStyle}>
                                                 <div style={{ fontWeight: '500' }}>{fee.feeName}</div>
                                             </td>
-                                            <td style={tdStyle}>—</td>
+                                            <td style={tdStyle}>{fee.quantity || 1}</td>
+                                            <td style={tdStyle}>{fee.unitName || '—'}</td>
                                             <td style={tdStyle}>{Number(fee.feeAmount).toLocaleString('vi-VN')} ₫</td>
                                             <td style={{ ...tdStyle, textAlign: 'center' }}>
                                                 {fee.isFreeWarranty && <i className="bi bi-shield-check" style={{ color: '#16a34a' }}></i>}
@@ -866,20 +944,22 @@ function RepairFormPage() {
 
                                     {/* Dòng nhập inline mới */}
                                     {addingType === 'PART' && (
-                                        <NewInlineRow type="PART" variants={variantOptions}
+                                        <NewInlineRow type="PART" variants={variantOptions.filter(v => v.productType === 'Hàng hóa')}
                                             onSave={handleSaveLine} onCancel={() => setAddingType(null)}
-                                            underWarranty={formData.underWarranty} />
+                                            underWarranty={formData.underWarranty}
+                                            onQuickAdd={(type) => { setQuickProductType(type); setShowQuickProductModal(true); }} />
                                     )}
                                     {addingType === 'FEE' && (
-                                        <NewInlineRow type="FEE" variants={variantOptions}
+                                        <NewInlineRow type="FEE" variants={variantOptions.filter(v => v.productType === 'Dịch vụ')}
                                             onSave={handleSaveFee} onCancel={() => setAddingType(null)}
-                                            underWarranty={formData.underWarranty} />
+                                            underWarranty={formData.underWarranty}
+                                            onQuickAdd={(type) => { setQuickProductType(type); setShowQuickProductModal(true); }} />
                                     )}
 
                                     {/* Empty state */}
                                     {lines.length === 0 && fees.length === 0 && pendingLines.length === 0 && pendingFees.length === 0 && addingType === null && (
                                         <tr>
-                                            <td colSpan={isEditable ? 7 : 6}
+                                            <td colSpan={isEditable ? 8 : 7}
                                                 style={{ textAlign: 'center', padding: '24px', color: '#9ca3af' }}>
                                                 <i className="bi bi-box-seam" style={{ fontSize: '1.5rem', display: 'block', marginBottom: '8px' }}></i>
                                                 Chưa có linh kiện hay phí dịch vụ.
@@ -898,12 +978,22 @@ function RepairFormPage() {
 
             <CustomerModal
                 isOpen={showCustomerModal}
-                editData={null}
                 onClose={() => setShowCustomerModal(false)}
                 onSaved={async (newCustomer) => {
                     await loadCustomers();
                     if (newCustomer?.id) setFormData(prev => ({ ...prev, partnerId: newCustomer.id }));
                     setShowCustomerModal(false);
+                }}
+            />
+
+            <QuickProductModal
+                isOpen={showQuickProductModal}
+                fixedType={quickProductType}
+                onClose={() => setShowQuickProductModal(false)}
+                onSaved={() => {
+                    loadProducts();
+                    loadVariants();
+                    setShowQuickProductModal(false);
                 }}
             />
         </AdminLayout>
