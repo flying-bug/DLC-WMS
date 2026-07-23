@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
+import * as importApi from '../../api/inventoryImportApi';
+import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import { exportToExcel } from '../../utils/excelExport';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
@@ -53,6 +55,8 @@ function ExportSlipPage() {
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [assemblyOrders, setAssemblyOrders] = useState([]);
   const [users, setUsers] = useState([]);
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -84,14 +88,18 @@ function ExportSlipPage() {
   const warehouseById = useMemo(() => new Map(warehouses.map(item => [item.id, item])), [warehouses]);
   const productById = useMemo(() => new Map(products.map(item => [item.id, item])), [products]);
   const customerById = useMemo(() => new Map(customers.map(item => [item.id, item])), [customers]);
+  const supplierById = useMemo(() => new Map(suppliers.map(item => [item.id, item])), [suppliers]);
+  const assemblyOrderById = useMemo(() => new Map(assemblyOrders.map(item => [item.id, item])), [assemblyOrders]);
   const userById = useMemo(() => new Map(users.map(item => [item.id, item])), [users]);
 
   const loadLookups = useCallback(async () => {
-    const [warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
+    const [warehouseRes, productRes, customerRes, userRes, supplierRes, assemblyOrderRes] = await Promise.allSettled([
       exportApi.getWarehouses({ size: 100 }),
       exportApi.getProducts({ size: 100 }),
       exportApi.getCustomers({ size: 1000 }),
       exportApi.getUsers({ size: 1000 }).catch(() => null),
+      importApi.getSuppliers({ size: 1000 }).catch(() => null),
+      assemblyOrderApi.getAssemblyOrders({ size: 100 }).catch(() => null),
     ]);
 
     if (warehouseRes.status === 'fulfilled') {
@@ -105,6 +113,12 @@ function ExportSlipPage() {
     }
     if (userRes.status === 'fulfilled' && userRes.value) {
       setUsers(pageContent(unwrap(userRes.value)));
+    }
+    if (supplierRes.status === 'fulfilled' && supplierRes.value) {
+      setSuppliers(pageContent(unwrap(supplierRes.value)));
+    }
+    if (assemblyOrderRes.status === 'fulfilled' && assemblyOrderRes.value) {
+      setAssemblyOrders(pageContent(unwrap(assemblyOrderRes.value)));
     }
   }, []);
 
