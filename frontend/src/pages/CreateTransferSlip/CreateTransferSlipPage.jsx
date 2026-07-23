@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as transferApi from '../../api/stockTransferApi';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -24,6 +24,8 @@ const emptyLine = () => ({
 
 function CreateTransferSlipPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const voiceData = location.state?.voiceData || null;
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -88,6 +90,45 @@ function CreateTransferSlipPage() {
     };
     loadLookups();
   }, []);
+
+  // ── Voice Data auto-fill ──────────────────────────────────
+  useEffect(() => {
+    if (!voiceData) return;
+
+    // Auto-select warehouses by keyword
+    if (voiceData.fromWarehouseKeyword && warehouses.length > 0) {
+      const kw = voiceData.fromWarehouseKeyword.toLowerCase();
+      const match = warehouses.find(w => w.name?.toLowerCase().includes(kw) || w.code?.toLowerCase().includes(kw));
+      if (match) {
+        setForm(prev => ({ ...prev, fromWarehouseId: match.id }));
+      }
+    }
+
+    if (voiceData.toWarehouseKeyword && warehouses.length > 0) {
+      const kw = voiceData.toWarehouseKeyword.toLowerCase();
+      const match = warehouses.find(w => w.name?.toLowerCase().includes(kw) || w.code?.toLowerCase().includes(kw));
+      if (match) {
+        setForm(prev => ({ ...prev, toWarehouseId: match.id }));
+      }
+    }
+
+    // Auto-add product line by keyword
+    if (voiceData.productKeyword && products.length > 0) {
+      const kw = voiceData.productKeyword.toLowerCase();
+      const match = products.find(p =>
+        p.productName?.toLowerCase().includes(kw)
+        || p.variantName?.toLowerCase().includes(kw)
+      );
+      if (match) {
+        const qty = Number(voiceData.quantity) || 1;
+        setItems([{
+          ...emptyLine(),
+          variantId: String(match.id),
+          quantity: qty,
+        }]);
+      }
+    }
+  }, [voiceData, warehouses, products]);
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);

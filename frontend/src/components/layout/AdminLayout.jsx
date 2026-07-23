@@ -1,11 +1,24 @@
+import { useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
+import VoiceCommandButton from '../ui/VoiceCommandButton/VoiceCommandButton';
 import styles from './AdminLayout.module.css';
 
 const AdminLayout = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const currentPath = location.pathname;
+    const [voiceEnabled, setVoiceEnabled] = useState(() => {
+        return localStorage.getItem('dlc_voice_enabled') !== 'false';
+    });
+
+    const toggleVoice = () => {
+        setVoiceEnabled((prev) => {
+            const next = !prev;
+            localStorage.setItem('dlc_voice_enabled', String(next));
+            return next;
+        });
+    };
 
     return (
         <div className={styles.layout}>
@@ -191,7 +204,7 @@ const AdminLayout = ({ children }) => {
                         </button>
                     </nav>
                     <div className={styles.headerRight}>
-                        <UserProfileDropdown />
+                        <UserProfileDropdown voiceEnabled={voiceEnabled} onToggleVoice={toggleVoice} />
                     </div>
                 </header>
 
@@ -199,6 +212,8 @@ const AdminLayout = ({ children }) => {
                     {children || <Outlet />}
                 </main>
             </div>
+
+            {voiceEnabled && <VoiceCommandButton />}
         </div>
     );
 };

@@ -3,10 +3,33 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
+import * as importApi from '../../api/inventoryImportApi';
+import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import { exportToExcel } from '../../utils/excelExport';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import Modal from '../../components/ui/Modal/Modal';
 import styles from './ExportSlipPage.module.css';
+
+const DEFAULT_COLUMNS = {
+  date: true,
+  docCode: true,
+  partner: true,
+  warehouse: true,
+  total: true,
+  note: true,
+  status: true,
+};
+
+const COLUMN_OPTIONS = [
+  { id: 'date', label: 'Ngày Xuất' },
+  { id: 'docCode', label: 'Số Phiếu' },
+  { id: 'partner', label: 'Khách Hàng' },
+  { id: 'warehouse', label: 'Kho Xuất' },
+  { id: 'total', label: 'Tổng Tiền' },
+  { id: 'note', label: 'Ghi Chú' },
+  { id: 'status', label: 'Trạng Thái' },
+];
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
@@ -32,6 +55,8 @@ function ExportSlipPage() {
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [assemblyOrders, setAssemblyOrders] = useState([]);
   const [users, setUsers] = useState([]);
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -46,17 +71,35 @@ function ExportSlipPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
+  const [columns, setColumns] = useState(() => {
+    const saved = localStorage.getItem('dlc_export_columns');
+    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+  });
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  const toggleColumn = (colId) => {
+    setColumns(prev => {
+      const next = { ...prev, [colId]: !prev[colId] };
+      localStorage.setItem('dlc_export_columns', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const warehouseById = useMemo(() => new Map(warehouses.map(item => [item.id, item])), [warehouses]);
   const productById = useMemo(() => new Map(products.map(item => [item.id, item])), [products]);
   const customerById = useMemo(() => new Map(customers.map(item => [item.id, item])), [customers]);
+  const supplierById = useMemo(() => new Map(suppliers.map(item => [item.id, item])), [suppliers]);
+  const assemblyOrderById = useMemo(() => new Map(assemblyOrders.map(item => [item.id, item])), [assemblyOrders]);
   const userById = useMemo(() => new Map(users.map(item => [item.id, item])), [users]);
 
   const loadLookups = useCallback(async () => {
-    const [warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
+    const [warehouseRes, productRes, customerRes, userRes, supplierRes, assemblyOrderRes] = await Promise.allSettled([
       exportApi.getWarehouses({ size: 100 }),
       exportApi.getProducts({ size: 100 }),
       exportApi.getCustomers({ size: 1000 }),
       exportApi.getUsers({ size: 1000 }).catch(() => null),
+      importApi.getSuppliers({ size: 1000 }).catch(() => null),
+      assemblyOrderApi.getAssemblyOrders({ size: 100 }).catch(() => null),
     ]);
 
     if (warehouseRes.status === 'fulfilled') {
@@ -70,6 +113,12 @@ function ExportSlipPage() {
     }
     if (userRes.status === 'fulfilled' && userRes.value) {
       setUsers(pageContent(unwrap(userRes.value)));
+    }
+    if (supplierRes.status === 'fulfilled' && supplierRes.value) {
+      setSuppliers(pageContent(unwrap(supplierRes.value)));
+    }
+    if (assemblyOrderRes.status === 'fulfilled' && assemblyOrderRes.value) {
+      setAssemblyOrders(pageContent(unwrap(assemblyOrderRes.value)));
     }
   }, []);
 
@@ -178,6 +227,178 @@ function ExportSlipPage() {
     return pages;
   };
 
+  const handlePrintSlip = (slip, isImport = true) => {
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+      showToast('error', 'Trình duyệt chặn cửa sổ popup. Vui lòng cho phép popup để in phiếu.');
+      return;
+    }
+
+    const escapeHtml = (unsafe) => {
+      if (!unsafe) return '';
+      return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    };
+
+    const typeTitle = isImport ? 'NHẬP KHO' : 'XUẤT KHO';
+    const partnerTitle = isImport ? 'Nhà cung cấp / Đối tác' : 'Khách hàng';
+    const warehouseTitle = isImport ? 'Kho nhập' : 'Kho xuất';
+    const lines = slip.lines || [];
+
+    let rowsHtml = '';
+    lines.forEach((line, index) => {
+      const product = productById.get(line.variantId);
+      const sku = product?.sku || `SKU #${line.variantId}`;
+      const name = variantLabel(product) || 'Sản phẩm';
+      const unit = product?.unitName || '';
+      const qty = Number(isImport ? line.quantityIn : line.quantityOut || 0);
+      const price = Number(line.unitCost || line.unitPrice || 0);
+      const amount = qty * price;
+      const serials = line.serialNumbers && line.serialNumbers.length > 0 ? line.serialNumbers.join(', ') : 'Không có';
+
+      rowsHtml += `
+        <tr>
+          <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${index + 1}</td>
+          <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(sku)}</td>
+          <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(name)}</td>
+          <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(unit)}</td>
+          <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${qty.toLocaleString('vi-VN')}</td>
+          <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${price.toLocaleString('vi-VN')} đ</td>
+          <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${amount.toLocaleString('vi-VN')} đ</td>
+          <td style="border: 1px solid #ddd; padding: 8px; font-size: 11px;">${escapeHtml(serials)}</td>
+        </tr>
+      `;
+    });
+
+    const partnerName = isImport
+      ? ((!slip.issuePurpose || slip.issuePurpose === 'PURCHASE') ? (supplierById.get(slip.partnerId)?.name || 'Chưa chọn')
+        : slip.issuePurpose === 'PRODUCTION' ? (assemblyOrderById.get(slip.referenceId)?.orderCode || 'Chưa chọn')
+        : (customerById.get(slip.partnerId)?.name || 'Chưa chọn'))
+      : (customerById.get(slip.partnerId)?.name || 'Chưa chọn');
+
+    const warehouseName = warehouseById.get(slip.warehouseId)?.name || `Kho #${slip.warehouseId}`;
+    const salesperson = slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || 'Chưa rõ';
+    const slipDate = slip.docDate ? new Date(slip.docDate).toLocaleDateString('vi-VN') : '';
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>In phiếu ${escapeHtml(slip.docCode)}</title>
+          <style>
+            body { font-family: 'Segoe UI', Arial, sans-serif; color: #333; margin: 20px; line-height: 1.4; }
+            .header-table { width: 100%; margin-bottom: 30px; }
+            .title { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 5px; }
+            .subtitle { text-align: center; font-size: 14px; font-style: italic; margin-bottom: 20px; }
+            .info-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
+            .info-table td { padding: 6px 0; font-size: 14px; }
+            .main-table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; }
+            .main-table th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 10px 8px; font-size: 13px; font-weight: bold; }
+            .total-row td { font-weight: bold; background-color: #fafafa; }
+            .signatures { width: 100%; margin-top: 40px; }
+            .signatures td { text-align: center; width: 25%; font-size: 14px; padding-top: 10px; }
+            .sign-space { height: 80px; }
+          </style>
+        </head>
+        <body>
+          <table class="header-table">
+            <tr>
+              <td style="width: 50%;">
+                <strong style="font-size: 16px;">DLC COMPUTER</strong><br/>
+                <span style="font-size: 12px; color: #666;">Hệ thống quản lý kho WMS</span>
+              </td>
+              <td style="width: 50%; text-align: right; font-size: 13px;">
+                Số phiếu: <strong>${escapeHtml(slip.docCode)}</strong><br/>
+                Ngày lập: ${escapeHtml(slipDate)}
+              </td>
+            </tr>
+          </table>
+
+          <div class="title">PHIẾU ${escapeHtml(typeTitle)} KHO</div>
+          <div class="subtitle">Liên 1: Lưu trữ - Liên 2: Bàn giao</div>
+
+          <table class="info-table">
+            <tr>
+              <td style="width: 15%;"><strong>${escapeHtml(partnerTitle)}:</strong></td>
+              <td style="width: 50%;">${escapeHtml(partnerName)}</td>
+              <td style="width: 15%;"><strong>${escapeHtml(warehouseTitle)}:</strong></td>
+              <td style="width: 20%;">${escapeHtml(warehouseName)}</td>
+            </tr>
+            <tr>
+              <td><strong>Người giao/nhận:</strong></td>
+              <td>${escapeHtml(slip.recipientName || 'Chưa rõ')}</td>
+              <td><strong>Nhân viên:</strong></td>
+              <td>${escapeHtml(salesperson)}</td>
+            </tr>
+            <tr>
+              <td><strong>Ghi chú:</strong></td>
+              <td colspan="3">${escapeHtml(slip.note || 'Không có')}</td>
+            </tr>
+          </table>
+
+          <table class="main-table">
+            <thead>
+              <tr>
+                <th style="width: 5%;">STT</th>
+                <th style="width: 12%;">Mã sản phẩm</th>
+                <th>Tên sản phẩm</th>
+                <th style="width: 8%;">ĐVT</th>
+                <th style="width: 10%;">Số lượng</th>
+                <th style="width: 12%;">Đơn giá</th>
+                <th style="width: 15%;">Thành tiền</th>
+                <th style="width: 18%;">Số Serial</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+              <tr class="total-row">
+                <td colspan="4" style="text-align: right; border: 1px solid #ddd; padding: 10px;">Tổng cộng:</td>
+                <td style="text-align: center; border: 1px solid #ddd; padding: 10px;">${sumQuantity(slip.lines).toLocaleString('vi-VN')}</td>
+                <td style="border: 1px solid #ddd; padding: 10px;"></td>
+                <td style="text-align: right; border: 1px solid #ddd; padding: 10px;">${sumAmount(slip.lines).toLocaleString('vi-VN')} đ</td>
+                <td style="border: 1px solid #ddd; padding: 10px;"></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table class="signatures">
+            <tr>
+              <td><strong>Người giao hàng</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, ghi rõ họ tên)</span></td>
+              <td><strong>Người nhận hàng</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, ghi rõ họ tên)</span></td>
+              <td><strong>Thủ kho</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, đóng dấu)</span></td>
+              <td><strong>Người lập phiếu</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, ghi rõ họ tên)</span></td>
+            </tr>
+            <tr class="sign-space">
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td>${salesperson}</td>
+            </tr>
+          </table>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   return (
     <AdminLayout>
       <div className={styles.pageBody}>
@@ -223,11 +444,26 @@ function ExportSlipPage() {
             </div>
           </div>
           <div className={styles.filterActions}>
-            <button className={styles.btnOutline} onClick={() => setFilters({ docCode: '', fromDate: '', status: '' })}>
-              Làm mới
+            <button
+              className={styles.iconBtn}
+              onClick={() => setFilters({ docCode: '', fromDate: '', status: '' })}
+              title="Làm mới"
+            >
+              <i className="bi bi-arrow-clockwise"></i>
             </button>
-            <button className={styles.btnOutline} onClick={handleExport}>
-              <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+            <button
+              className={styles.iconBtn}
+              onClick={handleExport}
+              title="Xuất Excel"
+            >
+              <i className="bi bi-file-earmark-excel"></i>
+            </button>
+            <button
+              className={styles.iconBtn}
+              onClick={() => setShowSettingsModal(true)}
+              title="Thiết lập"
+            >
+              <i className="bi bi-gear"></i>
             </button>
             <button className={styles.btnPrimary} onClick={loadSlips}>
               <i className="bi bi-funnel"></i> Lọc dữ liệu
@@ -242,13 +478,13 @@ function ExportSlipPage() {
                 <th style={{ width: '40px', textAlign: 'center' }}>
                   <input type="checkbox" className={styles.checkbox} checked={rows.length > 0 && selectedIds.length === rows.length} onChange={handleSelectAll} />
                 </th>
-                <th style={{ width: '120px' }}>Ngày Xuất</th>
-                <th style={{ width: '180px' }}>Số Phiếu</th>
-                <th style={{ width: '200px' }}>Khách Hàng</th>
-                <th style={{ width: '120px' }}>Kho Xuất</th>
-                <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>
-                <th style={{ minWidth: '150px' }}>Ghi Chú</th>
-                <th style={{ width: '120px' }}>Trạng Thái</th>
+                {columns.date && <th style={{ width: '120px' }}>Ngày Xuất</th>}
+                {columns.docCode && <th style={{ width: '180px' }}>Số Phiếu</th>}
+                {columns.partner && <th style={{ width: '200px' }}>Khách Hàng</th>}
+                {columns.warehouse && <th style={{ width: '120px' }}>Kho Xuất</th>}
+                {columns.total && <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>}
+                {columns.note && <th style={{ minWidth: '150px' }}>Ghi Chú</th>}
+                {columns.status && <th style={{ width: '120px' }}>Trạng Thái</th>}
                 <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
               </tr>
             </thead>
@@ -256,38 +492,44 @@ function ExportSlipPage() {
               {paginatedRows.length > 0 ? paginatedRows.map(slip => (
                 <tr key={slip.id} className={selectedSlip?.id === slip.id ? styles.activeRow : ''} onClick={() => setSelectedSlip(slip)} style={{ cursor: 'pointer' }}>
                   <td style={{ textAlign: 'center' }}><input type="checkbox" className={styles.checkbox} checked={selectedIds.includes(slip.id)} onChange={(event) => handleSelectRow(event, slip.id)} onClick={(event) => event.stopPropagation()} /></td>
-                  <td>{slip.date}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    <a
-                      href="#"
-                      className={styles.link}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setSelectedSlip(slip);
-                      }}
-                    >
-                      {slip.docCode}
-                    </a>
-                  </td>
-                  <td>{slip.partner}</td>
-                  <td>{slip.warehouse}</td>
-                  <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>
-                  <td style={{ maxWidth: '180px' }}>
-                    <div className={styles.tooltipContainer}>
-                      <span className={styles.noteText}>{slip.note || 'Không có ghi chú'}</span>
-                      {slip.note && <span className={styles.tooltipText}>{slip.note}</span>}
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
-                      slip.statusCode === 'info' ? styles.badgeInfo :
-                        slip.statusCode === 'warning' ? styles.badgeWarning :
-                          styles.badgeDanger
-                      }`}>
-                      {slip.statusLabel}
-                    </span>
-                  </td>
+                  {columns.date && <td>{slip.date}</td>}
+                  {columns.docCode && (
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <a
+                        href="#"
+                        className={styles.link}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setSelectedSlip(slip);
+                        }}
+                      >
+                        {slip.docCode}
+                      </a>
+                    </td>
+                  )}
+                  {columns.partner && <td>{slip.partner}</td>}
+                  {columns.warehouse && <td>{slip.warehouse}</td>}
+                  {columns.total && <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>}
+                  {columns.note && (
+                    <td style={{ maxWidth: '180px' }}>
+                      <div className={styles.tooltipContainer}>
+                        <span className={styles.noteText}>{slip.note || 'Không có ghi chú'}</span>
+                        {slip.note && <span className={styles.tooltipText}>{slip.note}</span>}
+                      </div>
+                    </td>
+                  )}
+                  {columns.status && (
+                    <td>
+                      <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
+                        slip.statusCode === 'info' ? styles.badgeInfo :
+                          slip.statusCode === 'warning' ? styles.badgeWarning :
+                            styles.badgeDanger
+                        }`}>
+                        {slip.statusLabel}
+                      </span>
+                    </td>
+                  )}
                   <td className={styles.textCenter}>
                     <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(event) => { event.stopPropagation(); setSelectedSlip(slip); }}></i>
                     <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu xuất kho" onClick={(event) => {
@@ -395,13 +637,20 @@ function ExportSlipPage() {
                   {selectedSlip.docCode}
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button
+                    onClick={() => handlePrintSlip(selectedSlip, false)}
+                    className={styles.btnSecondary}
+                    style={{ padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <i className="bi bi-printer"></i> In phiếu
+                  </button>
                   {selectedSlip.status === 'DRAFT' && (
                     <button
                       onClick={() => setConfirmPost(true)}
                       className={styles.btnPrimary}
                       style={{ padding: '6px 12px', fontSize: '13px' }}
                     >
-                      <i className="bi bi-printer" style={{ marginRight: '6px' }}></i> Ghi sổ
+                      <i className="bi bi-journal-check" style={{ marginRight: '6px' }}></i> Ghi sổ
                     </button>
                   )}
                   <button className={styles.modalClose} onClick={() => setSelectedSlip(null)}>&times;</button>
@@ -526,6 +775,40 @@ function ExportSlipPage() {
           }}
           onCancel={() => setConfirmPost(false)}
         />
+        <Modal
+          isOpen={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          ariaLabel="Thiết lập cột hiển thị"
+        >
+          <div className={styles.settingsModalHeader}>
+            <h3>Thiết lập cột hiển thị</h3>
+            <button className={styles.settingsModalCloseBtn} onClick={() => setShowSettingsModal(false)}>
+              <i className="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <div className={styles.settingsModalBody}>
+            <div className={styles.checkboxGrid}>
+              {COLUMN_OPTIONS.map(col => (
+                <label key={col.id} className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={columns[col.id]}
+                    onChange={() => toggleColumn(col.id)}
+                  />
+                  <span className={styles.checkboxText}>{col.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className={styles.settingsModalFooter}>
+            <button className={styles.btnSecondary} onClick={() => setColumns(DEFAULT_COLUMNS)}>
+              Đặt lại
+            </button>
+            <button className={styles.btnPrimary} onClick={() => setShowSettingsModal(false)}>
+              Hoàn tất
+            </button>
+          </div>
+        </Modal>
       </div>
       <Toast
         isVisible={toast.isVisible}

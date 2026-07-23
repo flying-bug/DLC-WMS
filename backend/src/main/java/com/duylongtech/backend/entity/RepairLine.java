@@ -20,10 +20,9 @@ public class RepairLine {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    
-     @JoinColumn(name = "component_variant_id", nullable = false, insertable = false, updatable = false)
-    private ProductVariant componentVariant;  // ADD THIS
-    
+    @JoinColumn(name = "component_variant_id", nullable = false, insertable = false, updatable = false)
+    private ProductVariant componentVariant;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "repair_id", nullable = false)
     private Repair repair;

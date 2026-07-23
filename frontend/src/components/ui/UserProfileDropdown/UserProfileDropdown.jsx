@@ -5,7 +5,7 @@ import { forceLogout, getAuthRole, USER_EVENT } from '../../../auth/session';
 import { useTheme } from '../../../theme/useTheme';
 import styles from './UserProfileDropdown.module.css';
 
-function UserProfileDropdown() {
+function UserProfileDropdown({ voiceEnabled, onToggleVoice }) {
     const navigate = useNavigate();
     const { theme, themes, setTheme } = useTheme();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -113,6 +113,22 @@ function UserProfileDropdown() {
                         </div>
                     </div>
                     <div className={styles.dropdownDivider} />
+                    <div className={styles.voiceSection} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.themeTitle}>
+                            <i className="fas fa-microphone" /> Voice AI
+                        </div>
+                        <button
+                            type="button"
+                            className={`${styles.voiceToggle} ${voiceEnabled ? styles.voiceToggleActive : ''}`}
+                            onClick={onToggleVoice}
+                            aria-pressed={voiceEnabled}
+                        >
+                            <span className={styles.voiceToggleTrack}>
+                                <span className={styles.voiceToggleThumb} />
+                            </span>
+                            <span>{voiceEnabled ? 'Đang bật' : 'Đang tắt'}</span>
+                        </button>
+                    </div>
                     <div className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`} onClick={(e) => { e.stopPropagation(); setIsDropdownOpen(false); forceLogout(); }}>
                         <i className="bi bi-box-arrow-right" /> Đăng xuất
                     </div>

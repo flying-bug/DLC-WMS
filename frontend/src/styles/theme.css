@@ -140,6 +140,28 @@
   --color-secondary-hover: #2f214f;
 }
 
+:root[data-theme='pink'] {
+  --color-primary: #ec4899;
+  --color-primary-hover: #db2777;
+  --color-primary-soft: #fdf2f8;
+  --color-primary-accent: #f472b6;
+  --color-primary-dark: #be185d;
+  --color-primary-deep: #be185d;
+  --color-primary-navy: #9d174d;
+  --color-primary-sidebar: #db2777;
+  --color-primary-sidebar-hover: #be185d;
+  --color-primary-bright: #f472b6;
+  --color-primary-bright-hover: #ec4899;
+  --color-primary-link: #db2777;
+  --color-primary-pale: #fbcfe8;
+  --color-primary-tint: #fbcfe8;
+  --color-primary-tint-2: #fce7f3;
+  --color-info-bg: #fdf2f8;
+  --color-info-border: #fbcfe8;
+  --color-secondary: #4a283c;
+  --color-secondary-hover: #3b1d2e;
+}
+
 :root[data-theme='dark'] {
   --color-primary: #38bdf8;
   --color-primary-hover: #0ea5e9;
