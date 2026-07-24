@@ -55,6 +55,8 @@ function AssemblyOrderFormPage() {
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
     const [orderDetail, setOrderDetail] = useState(null);
+    const [customLines, setCustomLines] = useState([]);
+    const [customLinesDirty, setCustomLinesDirty] = useState(false);
     const [form, setForm] = useState(() => ({
         orderType: searchParams.get('type') === 'DISASSEMBLY' ? 'DISASSEMBLY' : 'ASSEMBLY',
         orderCode: (searchParams.get('type') === 'DISASSEMBLY' ? 'TD-' : 'LR-') + Date.now(),
@@ -140,6 +142,33 @@ function AssemblyOrderFormPage() {
         setForm((current) => ({ ...current, [field]: value }));
     };
 
+    
+    useEffect(() => {
+        if (editing && orderDetail?.lines && !customLinesDirty) {
+            setCustomLines(orderDetail.lines.map(line => ({
+                componentVariantId: line.componentVariantId,
+                quantityRequired: line.quantityRequired,
+                note: line.note || ''
+            })));
+        } else if (!editing && selectedBom && !customLinesDirty) {
+            setCustomLines(selectedBom.lines.map(line => ({
+                componentVariantId: line.componentVariantId,
+                quantityRequired: Number(line.quantity || 0) * Number(form.quantity || 1),
+                note: line.note || ''
+            })));
+        }
+    }, [orderDetail, selectedBom, editing]);
+
+    useEffect(() => {
+        if (!editing && !customLinesDirty && selectedBom) {
+             setCustomLines(selectedBom.lines.map(line => ({
+                componentVariantId: line.componentVariantId,
+                quantityRequired: Number(line.quantity || 0) * Number(form.quantity || 1),
+                note: line.note || ''
+            })));
+        }
+    }, [form.quantity]);
+
     const buildPayload = (overrideStatus = null) => ({
         orderCode: form.orderCode || null,
         bomId: Number(form.bomId),
@@ -148,7 +177,12 @@ function AssemblyOrderFormPage() {
         status: overrideStatus || form.status,
         executionDate: form.executionDate,
         note: form.note || null,
-        createdBy: Number(sessionStorage.getItem('userId') || 1)
+        createdBy: Number(sessionStorage.getItem('userId') || 1),
+        lines: form.orderType === 'ASSEMBLY' && customLinesDirty ? customLines.map(line => ({
+            componentVariantId: Number(line.componentVariantId),
+            quantityRequired: Number(line.quantityRequired),
+            note: line.note
+        })) : undefined
     });
 
     const getPageTitle = () => {
@@ -412,22 +446,95 @@ function AssemblyOrderFormPage() {
                         
                         <div className={styles.card}>
                             <h2 className={styles.cardTitle}>Chi tiết dòng nguyên liệu</h2>
-                            <div className={styles.flowGridContainer}>
-                                <FlowPanel
-                                    tone="loss"
-                                    title="Nguyên liệu xuất (Bị trừ)"
-                                    icon="bi-dash-circle-fill"
-                                    emptyText={loading ? 'Đang tính toán...' : 'Chọn BOM để xem hàng bị trừ.'}
-                                    items={lossItems}
-                                />
-                                <FlowPanel
-                                    tone="gain"
-                                    title="Sản phẩm nhập (Được cộng)"
-                                    icon="bi-plus-circle-fill"
-                                    emptyText={loading ? 'Đang tính toán...' : 'Chọn BOM để xem hàng được cộng.'}
-                                    items={gainItems}
-                                />
-                            </div>
+                            
+                            {form.orderType === 'ASSEMBLY' ? (
+                                <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden', marginTop: '12px' }}>
+                                    <div style={{ padding: '12px 16px', backgroundColor: '#f9fafb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ fontWeight: 600, color: '#374151' }}><i className="bi bi-tools"></i> Tùy chỉnh linh kiện xuất kho</div>
+                                        {canEdit && (
+                                            <button className={styles.btnOutline} type="button" onClick={() => {
+                                                setCustomLines(prev => [...prev, { componentVariantId: '', quantityRequired: 1, note: '' }]);
+                                                setCustomLinesDirty(true);
+                                            }} style={{ padding: '4px 12px', fontSize: '13px' }}>
+                                                <i className="bi bi-plus"></i> Thêm linh kiện
+                                            </button>
+                                        )}
+                                    </div>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                                        <thead style={{ backgroundColor: '#f3f4f6', color: '#6b7280' }}>
+                                            <tr>
+                                                <th style={{ padding: '8px 16px', fontWeight: '600' }}>SKU LINH KIỆN</th>
+                                                <th style={{ padding: '8px 16px', fontWeight: '600', width: '120px', textAlign: 'right' }}>SỐ LƯỢNG</th>
+                                                <th style={{ padding: '8px 16px', fontWeight: '600' }}>GHI CHÚ</th>
+                                                {canEdit && <th style={{ padding: '8px 16px', width: '40px' }}></th>}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {customLines.length === 0 ? (
+                                                <tr><td colSpan={canEdit ? 4 : 3} style={{ padding: '24px', textAlign: 'center', color: '#9ca3af' }}>Không có dữ liệu</td></tr>
+                                            ) : customLines.map((line, idx) => (
+                                                <tr key={idx} style={{ borderTop: '1px solid #e5e7eb' }}>
+                                                    <td style={{ padding: '8px 16px' }}>
+                                                        <select className="misa-input" style={{ height: '32px' }} value={line.componentVariantId} disabled={!canEdit} onChange={(e) => {
+                                                            const arr = [...customLines];
+                                                            arr[idx].componentVariantId = e.target.value;
+                                                            setCustomLines(arr);
+                                                            setCustomLinesDirty(true);
+                                                        }}>
+                                                            <option value="">Chọn linh kiện</option>
+                                                            {variants.map(v => <option key={v.id} value={v.id}>{v.sku} - {v.productName} / {v.variantName}</option>)}
+                                                        </select>
+                                                    </td>
+                                                    <td style={{ padding: '8px 16px' }}>
+                                                        <input className="misa-input" style={{ height: '32px', textAlign: 'right' }} type="number" min="0.0001" step="0.0001" value={line.quantityRequired} disabled={!canEdit} onChange={(e) => {
+                                                            const arr = [...customLines];
+                                                            arr[idx].quantityRequired = e.target.value;
+                                                            setCustomLines(arr);
+                                                            setCustomLinesDirty(true);
+                                                        }} />
+                                                    </td>
+                                                    <td style={{ padding: '8px 16px' }}>
+                                                        <input className="misa-input" style={{ height: '32px' }} value={line.note} disabled={!canEdit} onChange={(e) => {
+                                                            const arr = [...customLines];
+                                                            arr[idx].note = e.target.value;
+                                                            setCustomLines(arr);
+                                                            setCustomLinesDirty(true);
+                                                        }} />
+                                                    </td>
+                                                    {canEdit && (
+                                                        <td style={{ padding: '8px 16px', textAlign: 'center' }}>
+                                                            <button type="button" onClick={() => {
+                                                                setCustomLines(prev => prev.filter((_, i) => i !== idx));
+                                                                setCustomLinesDirty(true);
+                                                            }} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                                                <i className="bi bi-trash"></i>
+                                                            </button>
+                                                        </td>
+                                                    )}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className={styles.flowGridContainer}>
+                                    <FlowPanel
+                                        tone="loss"
+                                        title="Nguyên liệu xuất (Bị trừ)"
+                                        icon="bi-dash-circle-fill"
+                                        emptyText={loading ? 'Đang tính toán...' : 'Chọn BOM để xem hàng bị trừ.'}
+                                        items={lossItems}
+                                    />
+                                    <FlowPanel
+                                        tone="gain"
+                                        title="Sản phẩm nhập (Được cộng)"
+                                        icon="bi-plus-circle-fill"
+                                        emptyText={loading ? 'Đang tính toán...' : 'Chọn BOM để xem hàng được cộng.'}
+                                        items={gainItems}
+                                    />
+                                </div>
+                            )}
+
                         </div>
                     </div>
 
