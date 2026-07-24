@@ -34,6 +34,32 @@
   text-decoration: underline;
 }
 
+.headerModeSelect {
+  height: 38px;
+  padding: 0 36px 0 14px;
+  border: 2px solid var(--color-primary, #0075c0);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-strong, #1e293b);
+  background-color: #ffffff;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%230075c0'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px 16px;
+}
+
+.headerModeSelect:focus,
+.headerModeSelect:hover {
+  border-color: var(--color-primary-hover, #005a96);
+  box-shadow: 0 0 0 3px rgba(0, 117, 192, 0.15);
+}
+
 .card {
   background: white;
   border-radius: 8px;
@@ -559,5 +585,57 @@
 }
 .textRight {
   text-align: right !important;
+}
+
+/* Responsive Media Queries (4 Breakpoints) */
+@media (min-width: 1200px) {
+  .topSection {
+    grid-template-columns: 2fr 1fr;
+  }
+  .formGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .topSection {
+    grid-template-columns: 1fr;
+  }
+  .formGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .topSection {
+    grid-template-columns: 1fr;
+    gap: var(--space-3, 12px);
+  }
+  .formGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-3, 12px);
+  }
+  .pageBody {
+    padding: var(--space-3, 12px);
+    padding-bottom: 120px;
+  }
+  .stickyFooter {
+    flex-direction: column-reverse;
+    gap: var(--space-3, 12px);
+    padding: var(--space-3, 12px);
+  }
+  .stickyFooterRight {
+    width: 100%;
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+  }
+  .stickyFooterRight > * {
+    width: 100%;
+    min-height: var(--touch-target-min, 44px);
+    justify-content: center;
+  }
+  .btnDraft, .btnSave, .btnSavePrint {
+    min-height: var(--touch-target-min, 44px);
+  }
 }
 

@@ -412,17 +412,17 @@ function ExportSlipPage() {
         <div className={styles.filterSection}>
           <div className={styles.filterGroup}>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌM KIẾM</span>
+              <span className={styles.filterLabel}>TÌM KIẾM MÃ PHIẾU</span>
               <input
                 type="text"
                 className={styles.filterInput}
-                placeholder="Mã phiếu..."
+                placeholder="Nhập mã phiếu xuất..."
                 value={filters.docCode}
                 onChange={(event) => setFilters(prev => ({ ...prev, docCode: event.target.value }))}
               />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TỪ NGÀY</span>
+              <span className={styles.filterLabel}>TỪ NGÀY LẬP</span>
               <input
                 type="date"
                 className={styles.filterInput}
@@ -431,15 +431,15 @@ function ExportSlipPage() {
               />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌNH TRẠNG</span>
+              <span className={styles.filterLabel}>TRẠNG THÁI PHIẾU</span>
               <select
                 className={styles.filterSelect}
                 value={filters.status}
                 onChange={(event) => setFilters(prev => ({ ...prev, status: event.target.value }))}
               >
-                <option value="">Tất cả</option>
+                <option value="">Tất cả trạng thái</option>
                 <option value="DRAFT">Lưu tạm</option>
-                <option value="POSTED">Hoàn thành</option>
+                <option value="POSTED">Đã hoàn thành</option>
               </select>
             </div>
           </div>
@@ -447,21 +447,21 @@ function ExportSlipPage() {
             <button
               className={styles.iconBtn}
               onClick={() => setFilters({ docCode: '', fromDate: '', status: '' })}
-              title="Làm mới"
+              title="Đặt lại bộ lọc"
             >
               <i className="bi bi-arrow-clockwise"></i>
             </button>
             <button
               className={styles.iconBtn}
               onClick={handleExport}
-              title="Xuất Excel"
+              title="Xuất tệp Excel"
             >
               <i className="bi bi-file-earmark-excel"></i>
             </button>
             <button
               className={styles.iconBtn}
               onClick={() => setShowSettingsModal(true)}
-              title="Thiết lập"
+              title="Cấu hình hiển thị cột"
             >
               <i className="bi bi-gear"></i>
             </button>

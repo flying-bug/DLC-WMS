@@ -928,3 +928,61 @@
   background-color: var(--color-border-soft);
 }
 
+/* Responsive Media Queries (4 Breakpoints) */
+@media (min-width: 1200px) {
+  .detailGrid {
+    grid-template-columns: 2fr 2fr 1.5fr;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .filterSection {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3, 12px);
+  }
+  .filterGroup {
+    width: 100%;
+  }
+  .detailGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .pageBody {
+    padding: var(--space-3, 12px);
+  }
+  .pageTitleContainer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3, 12px);
+  }
+  .pageTitleContainer > * {
+    width: 100%;
+    min-height: var(--touch-target-min, 44px);
+    justify-content: center;
+  }
+  .filterSection {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-3, 12px);
+  }
+  .filterGroup {
+    flex-direction: column;
+    width: 100%;
+    gap: var(--space-2, 8px);
+  }
+  .filterInput, .filterSelect {
+    width: 100%;
+    min-height: var(--touch-target-min, 44px);
+  }
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+  .checkboxLabel {
+    min-height: var(--touch-target-min, 44px);
+    width: 100%;
+  }
+}
+

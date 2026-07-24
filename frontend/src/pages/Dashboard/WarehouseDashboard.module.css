@@ -348,6 +348,12 @@
     }
 }
 
+@media (max-width: 1199px) {
+    .dashboardContainer {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-height: 820px) and (min-width: 981px) {
     .panelHeader,
     .reportHeader {

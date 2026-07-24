@@ -396,14 +396,12 @@ function CreateImportSlipPage() {
 
   return (
     <AdminLayout>
-      <div className={styles.pageBody} style={{ padding: 0 }}>
-        <div className={styles.scrollableContent}>
-          <div className={styles.pageHeader}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/import-history'); }}>
-                <i className="bi bi-arrow-left"></i> Tạo phiếu nhập kho {form.docCode ? form.docCode : ''}
-              </a>
-              <span style={{ color: '#d1d5db', fontSize: '20px' }}>|</span>
+      <div className={styles.pageHeader}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/import-history'); }}>
+            <i className="bi bi-arrow-left"></i> Tạo phiếu nhập kho {form.docCode ? form.docCode : ''}
+          </a>
+          <span style={{ color: '#d1d5db', fontSize: '20px' }}>|</span>
               <div style={{ width: '280px' }}>
                 <Select
                   value={[
@@ -438,7 +436,8 @@ function CreateImportSlipPage() {
             </div>
           </div>
 
-          <div className={styles.topGrid}>
+          <div className={styles.pageBody}>
+        <div className={styles.topGrid}>
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <i className="bi bi-info-circle text-gray-500"></i>
@@ -799,9 +798,12 @@ function CreateImportSlipPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '350px' }}>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-                    <select style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
-                      <option>20 bản ghi trên 1 trang</option>
-                    </select>
+                  <select style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
+                    <option>5 bản ghi trên 1 trang</option>
+                    <option>10 bản ghi trên 1 trang</option>
+                    <option>20 bản ghi trên 1 trang</option>
+                    <option>50 bản ghi trên 1 trang</option>
+                  </select>
                     <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280' }}>
                       <span style={{ cursor: 'pointer' }}>Trước</span>
                       <span style={{ fontWeight: 'bold', color: '#111827' }}>1</span>
@@ -826,8 +828,8 @@ function CreateImportSlipPage() {
                   </table>
                 </div>
               </div>
+            </div>
           </div>
-        </div>
 
         <div className={styles.fixedFooter}>
           <div className={styles.footerLeft}>
@@ -840,7 +842,6 @@ function CreateImportSlipPage() {
             </button>
           </div>
         </div>
-      </div>
 
       <ManageSerialModal
         isOpen={Boolean(serialModalItemId)}

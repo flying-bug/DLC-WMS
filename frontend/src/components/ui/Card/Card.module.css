@@ -1,0 +1,127 @@
+.card {
+    background: var(--color-surface);
+    border-radius: var(--radius-card, 10px);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card-soft);
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.normal {
+    padding: var(--space-5, 20px);
+}
+
+.compact {
+    padding: var(--space-3, 12px);
+}
+
+.spacious {
+    padding: var(--space-6, 24px);
+}
+
+.noBorder {
+    border: none;
+}
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: var(--space-3, 12px);
+    margin-bottom: var(--space-3, 12px);
+    border-bottom: 1px solid var(--color-border-soft);
+}
+
+.cardTitle {
+    margin: 0;
+    font-size: var(--font-size-card-title);
+    font-weight: 700;
+    color: var(--color-text-strong);
+}
+
+.cardBody {
+    flex: 1;
+}
+
+/* StatisticCard Styles */
+.statCard {
+    position: relative;
+    overflow: hidden;
+}
+
+.statContent {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4, 16px);
+}
+
+.statInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.statTitle {
+    font-size: var(--font-size-caption);
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.statValue {
+    font-size: clamp(1.4rem, 2.5vw, 1.8rem);
+    font-weight: 800;
+    color: var(--color-text-strong);
+    line-height: 1.2;
+}
+
+.statSubtitle {
+    font-size: 0.75rem;
+    color: var(--color-text-subtle);
+}
+
+.statIconWrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-lg, 12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+/* Color Accent Variants */
+.color_success .statIconWrapper {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.color_warning .statIconWrapper {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+.color_danger .statIconWrapper {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+}
+
+.color_info .statIconWrapper {
+    background: var(--color-info-bg);
+    color: var(--color-info);
+}
+
+@media (max-width: 767px) {
+    .normal {
+        padding: var(--space-4, 16px);
+    }
+    .statIconWrapper {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+}
