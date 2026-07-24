@@ -19,7 +19,7 @@ public class RoleController {
     private final RoleRepository roleRepository;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('auth:view', 'warehouse:view', 'warehouse:edit')")
+    @PreAuthorize("hasAnyAuthority('auth:view', 'warehouse_master:view', 'warehouse_master:edit')")
     public ApiResponse<List<RoleEntity>> getRoles(@org.springframework.web.bind.annotation.RequestParam(required = false) String module) {
         List<RoleEntity> roles = roleRepository.findAll();
         if ("WAREHOUSE".equalsIgnoreCase(module)) {
