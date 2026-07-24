@@ -1,5 +1,6 @@
 package com.duylongtech.backend.controller;
 
+import jakarta.validation.Valid;
 import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
 import com.duylongtech.backend.dto.request.ScanResolveRequest;
 import com.duylongtech.backend.dto.response.InventoryDocumentResponse;
@@ -74,7 +75,7 @@ public class InventoryDocumentController {
     @PostMapping("/create")
     @Operation(summary = "Create export slip")
     @PreAuthorize("hasAuthority('export:add')")
-    public ApiResponse<InventoryDocumentResponse> createExport(@RequestBody InventoryDocumentRequest req, jakarta.servlet.http.HttpServletRequest servletRequest) {
+    public ApiResponse<InventoryDocumentResponse> createExport(@Valid @RequestBody InventoryDocumentRequest req, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
@@ -110,7 +111,7 @@ public class InventoryDocumentController {
     @PreAuthorize("hasAuthority('export:edit')")
     public ApiResponse<InventoryDocumentResponse> updateExport(
             @PathVariable Long id,
-            @RequestBody InventoryDocumentRequest req,
+            @Valid @RequestBody InventoryDocumentRequest req,
             jakarta.servlet.http.HttpServletRequest servletRequest
     ) {
         String ip = getClientIp(servletRequest);

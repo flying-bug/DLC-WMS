@@ -714,6 +714,7 @@ function ExportSlipPage() {
                         <th>DVT</th>
                         <th className={styles.textCenter}>Số lượng</th>
                         <th className={styles.textRight}>Đơn giá</th>
+                        <th className={styles.textRight}>% VAT</th>
                         <th className={styles.textRight}>Thành tiền</th>
                       </tr>
                     </thead>
@@ -740,6 +741,7 @@ function ExportSlipPage() {
                             <td>{product?.unitName || ''}</td>
                             <td className={styles.textCenter}>{Number(line.quantityOut || 0).toLocaleString('vi-VN')}</td>
                             <td className={styles.textRight}>{money(line.unitCost || line.unitPrice)}</td>
+                            <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>
                             <td className={styles.textRight}>{money(line.lineAmount)}</td>
                           </tr>
                         );

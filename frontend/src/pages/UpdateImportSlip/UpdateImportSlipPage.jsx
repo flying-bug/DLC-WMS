@@ -223,7 +223,7 @@ function UpdateImportSlipPage() {
           variantId: line.variantId || '',
           quantity: line.quantityIn || 1,
           price: line.unitCost || 0,
-          vatPercent: line.vatPercent || 0,
+          vatPercent: line.vatPercent ?? line.vatRate ?? 0,
           note: line.note || '',
           serialNumbers: line.serialNumbers || [],
           isNew: false,
@@ -251,7 +251,14 @@ function UpdateImportSlipPage() {
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
-  const isFormValid = Boolean(form.warehouseId && form.docDate && items.length && items.every(item => item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0));
+  const isLineValid = (item) => {
+    const product = productById.get(String(item.variantId));
+    const quantity = Number(item.quantity || 0);
+    const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
+    const hasValidSerials = !product?.trackSerial || (Number.isInteger(quantity) && item.serialNumbers?.length === quantity);
+    return item.variantId && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
+  };
+  const isFormValid = Boolean(form.warehouseId && form.docDate && items.length && items.every(isLineValid));
 
   const handleFormChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -307,6 +314,14 @@ function UpdateImportSlipPage() {
 
   const submit = async (status, shouldPost = false) => {
     if (!isFormValid) {
+      const invalidVat = items.some(item => {
+        const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
+        return isNaN(vat) || vat < 0 || vat > 10;
+      });
+      if (invalidVat) {
+        showToast('error', 'Thuế VAT phải nằm trong khoảng từ 0% đến 10%.');
+        return;
+      }
       showToast('error', 'Vui lòng chọn kho, ngày nhập kho và ít nhất một dòng hàng hợp lệ.');
       return;
     }
@@ -702,7 +717,7 @@ function UpdateImportSlipPage() {
                             {money(Number(item.quantity || 0) * Number(item.price || 0))} đ
                           </td>
                           <td align="right">
-                            <input type="number" min="0" max="100" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
+                            <input type="number" min="0" max="10" step="any" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
                           </td>
                           <td><button className={styles.deleteBtn} onClick={() => removeItem(item.localId)}><i className="bi bi-trash"></i></button></td>
                         </tr>

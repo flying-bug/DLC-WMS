@@ -229,8 +229,9 @@ function CreateImportSlipPage() {
   const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const quantity = Number(item.quantity || 0);
+    const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
     const hasValidSerials = !product?.trackSerial || (Number.isInteger(quantity) && item.serialNumbers?.length === quantity);
-    return item.variantId && quantity > 0 && Number(item.price) >= 0 && hasValidSerials;
+    return item.variantId && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
   };
   const isFormValid = Boolean(
     form.warehouseId &&
@@ -358,6 +359,11 @@ function CreateImportSlipPage() {
       if (importType === 'PRODUCTION' && !form.assemblyOrderId) return showToast('error', 'Vui lòng chọn lệnh quản lý BOM.');
       if (importType === 'RETURN' && !form.customerId) return showToast('error', 'Vui lòng chọn khách hàng.');
       if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày nhập kho.');
+      const invalidVat = items.some(item => {
+        const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
+        return isNaN(vat) || vat < 0 || vat > 10;
+      });
+      if (invalidVat) return showToast('error', 'Thuế VAT phải nằm trong khoảng từ 0% đến 10%.');
       if (!items.length || !items.every(isLineValid)) {
         return showToast('error', 'Vui lòng chọn hàng hóa và nhập số lượng hợp lệ (Hàng có serial cần khớp số lượng mã quét).');
       }
@@ -757,7 +763,7 @@ function CreateImportSlipPage() {
                           {money(Number(item.quantity || 0) * Number(item.price || 0))} đ
                         </td>
                         <td align="right">
-                          <input type="number" min="0" max="100" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
+                          <input type="number" min="0" max="10" step="any" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
                         </td>
                         <td>
                           <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)}>

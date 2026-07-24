@@ -783,7 +783,8 @@ public class InventoryDocumentService {
         BigDecimal quantityOut = requirePositive(lr.getQuantityOut(), "lines[" + index + "].quantityOut");
         BigDecimal unitCost = nonNegativeOrZero(lr.getUnitCost(), "lines[" + index + "].unitCost");
         BigDecimal unitPrice = nonNegativeOrZero(lr.getUnitPrice(), "lines[" + index + "].unitPrice");
-        BigDecimal vatRate = nonNegativeOrZero(lr.getVatRate(), "lines[" + index + "].vatRate");
+        BigDecimal rawVat = lr.getVatRate() != null ? lr.getVatRate() : lr.getVatPercent();
+        BigDecimal vatRate = validateVatRate(rawVat, "lines[" + index + "].vatRate");
         BigDecimal subtotal = quantityOut.multiply(unitPrice);
         BigDecimal vatAmount = subtotal.multiply(vatRate).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
         BigDecimal lineAmount = subtotal.add(vatAmount).setScale(2, RoundingMode.HALF_UP);
@@ -804,6 +805,7 @@ public class InventoryDocumentService {
                 .unitCost(unitCost)
                 .unitPrice(unitPrice)
                 .vatRate(vatRate)
+                .vatPercent(vatRate)
                 .lineAmount(lineAmount)
                 .lotBatchId(lr.getLotBatchId())
                 .serialNumberId(lr.getSerialNumberId())
@@ -819,7 +821,8 @@ public class InventoryDocumentService {
         }
         BigDecimal quantityIn = requirePositive(lr.getQuantityIn(), "lines[" + index + "].quantityIn");
         BigDecimal unitCost = nonNegativeOrZero(lr.getUnitCost(), "lines[" + index + "].unitCost");
-        BigDecimal vatRate = nonNegativeOrZero(lr.getVatRate(), "lines[" + index + "].vatRate");
+        BigDecimal rawVat = lr.getVatPercent() != null ? lr.getVatPercent() : lr.getVatRate();
+        BigDecimal vatRate = validateVatRate(rawVat, "lines[" + index + "].vatPercent");
         BigDecimal subtotal = quantityIn.multiply(unitCost);
         BigDecimal vatAmount = subtotal.multiply(vatRate).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
         BigDecimal lineAmount = subtotal.add(vatAmount).setScale(2, RoundingMode.HALF_UP);
@@ -836,8 +839,18 @@ public class InventoryDocumentService {
                 .serialNumberId(lr.getSerialNumberId())
                 .serialNumbersText(formatSerialNumbers(lr.getSerialNumbers()))
                 .note(lr.getNote())
-                .vatPercent(lr.getVatPercent())
+                .vatPercent(vatRate)
                 .build();
+    }
+
+    private BigDecimal validateVatRate(BigDecimal value, String fieldName) {
+        if (value == null) {
+            return ZERO;
+        }
+        if (value.compareTo(ZERO) < 0 || value.compareTo(new BigDecimal("10")) > 0) {
+            throw new BusinessException("Thuế VAT phải nằm trong khoảng từ 0% đến 10%");
+        }
+        return value;
     }
 
     private BigDecimal requirePositive(BigDecimal value, String fieldName) {

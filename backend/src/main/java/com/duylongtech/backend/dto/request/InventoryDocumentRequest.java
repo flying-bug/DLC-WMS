@@ -1,5 +1,6 @@
 package com.duylongtech.backend.dto.request;
 
+import jakarta.validation.Valid;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -23,5 +24,7 @@ public class InventoryDocumentRequest {
     private String recipientName;
     private String recipientAddress;
     private Long salespersonId;
+
+    @Valid
     private List<InventoryDocumentLineRequest> lines;
 }
