@@ -152,30 +152,38 @@ const WarehouseStaffList = ({ warehouseId }) => {
         }
     ];
 
-    const filterConfig = [
-        {
-            key: 'roleId',
-            type: 'select',
-            placeholder: '-- Tất cả vai trò --',
-            options: roles.map(r => ({ value: r.id, label: r.name }))
-        },
-        {
-            key: 'showInactive',
-            type: 'checkbox',
-            label: 'Hiển thị cả nhân sự ngừng hoạt động'
-        }
-    ];
-
     return (
         <div className={styles.container}>
             <div className={styles.toolbar}>
-                <SearchFilter 
-                    filters={filters}
-                    onChange={setFilters}
-                    onRefresh={() => fetchStaffs(0, size)}
-                    config={filterConfig}
-                    searchPlaceholder="Tìm theo tên hoặc email..."
-                />
+                <SearchFilter onReset={() => setFilters({ search: '', roleId: '', showInactive: false })}>
+                    <input 
+                        type="text" 
+                        className="misa-input" 
+                        placeholder="Tìm theo tên hoặc email..."
+                        value={filters.search}
+                        onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                        style={{ width: '250px' }}
+                    />
+                    <select 
+                        className="misa-select"
+                        value={filters.roleId}
+                        onChange={(e) => setFilters(prev => ({ ...prev, roleId: e.target.value }))}
+                        style={{ width: '200px' }}
+                    >
+                        <option value="">-- Tất cả vai trò --</option>
+                        {roles.map(r => (
+                            <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                    </select>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', color: '#4b5563' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={filters.showInactive}
+                            onChange={(e) => setFilters(prev => ({ ...prev, showInactive: e.target.checked }))}
+                        />
+                        Hiển thị cả nhân sự ngừng hoạt động
+                    </label>
+                </SearchFilter>
                 
                 <Button 
                     variant="primary" 

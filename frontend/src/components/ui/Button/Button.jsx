@@ -41,7 +41,7 @@ const Button = ({
                 <span className={styles.spinner}></span>
             ) : (
                 <>
-                    {icon && <span className={styles.icon}>{icon}</span>}
+                    {icon && (typeof icon === 'string' ? <i className={icon} style={{marginRight: children ? '8px' : '0'}}></i> : <span className={styles.icon}>{icon}</span>)}
                     {children && <span className={styles.label}>{children}</span>}
                 </>
             )}
