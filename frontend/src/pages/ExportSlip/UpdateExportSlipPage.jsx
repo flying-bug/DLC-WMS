@@ -218,9 +218,9 @@ function UpdateExportSlipPage() {
     return item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
   };
   const isFormValid = Boolean(
-    form.warehouseId && 
-    form.docDate && 
-    items.length && 
+    form.warehouseId &&
+    form.docDate &&
+    items.length &&
     items.every(isLineValid)
   );
 
@@ -468,37 +468,37 @@ function UpdateExportSlipPage() {
                   <i className="bi bi-person-fill"></i> Thông tin chung
                 </div>
                 <div className={styles.cardBody}>
-              <div className="misa-form-row">
-                <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
-                  <label className="misa-label">Mã KH <span className="required">*</span></label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <div style={{ flex: 1 }}>
+                  <div className="misa-form-row">
+                    <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
+                      <label className="misa-label">Mã KH <span className="required">*</span></label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ flex: 1 }}>
+                          <Select
+                            options={customers.map(c => ({ value: c.id, label: c.code || `KH#${c.id}` }))}
+                            value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).code || `KH#${form.partnerId}` } : null}
+                            onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
+                            placeholder="Chọn Mã KH..."
+                            isClearable
+                            styles={customSelectStyles}
+                          />
+                        </div>
+                        <button type="button" onClick={() => setShowPartnerModal(true)} style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <i className="bi bi-plus" style={{ fontSize: '18px', color: 'var(--color-primary)' }}></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
+                      <label className="misa-label">Tên Khách hàng</label>
                       <Select
-                        options={customers.map(c => ({ value: c.id, label: c.code || `KH#${c.id}` }))}
-                        value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).code || `KH#${form.partnerId}` } : null}
+                        options={customers.map(c => ({ value: c.id, label: c.name || '' }))}
+                        value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).name || '' } : null}
                         onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
-                        placeholder="Chọn Mã KH..."
+                        placeholder="Chọn Tên KH..."
                         isClearable
                         styles={customSelectStyles}
                       />
                     </div>
-                    <button type="button" onClick={() => setShowPartnerModal(true)} style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <i className="bi bi-plus" style={{ fontSize: '18px', color: 'var(--color-primary)' }}></i>
-                    </button>
                   </div>
-                </div>
-                <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
-                  <label className="misa-label">Tên Khách hàng</label>
-                  <Select
-                    options={customers.map(c => ({ value: c.id, label: c.name || '' }))}
-                    value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).name || '' } : null}
-                    onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
-                    placeholder="Chọn Tên KH..."
-                    isClearable
-                    styles={customSelectStyles}
-                  />
-                </div>
-              </div>
 
                   <div className="misa-form-group" style={{ marginTop: '12px' }}>
                     <label className="misa-label">Địa chỉ khách hàng</label>
@@ -518,15 +518,15 @@ function UpdateExportSlipPage() {
                       />
                     </div>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                  <label className="misa-label">Nhân viên xuất hàng</label>
-                  <input 
-                    type="text" 
-                    className="misa-input" 
-                    value={form.salespersonId || ''} 
-                    onChange={(e) => handleFormChange('salespersonId', e.target.value)} 
-                    placeholder="Nhập tên nhân viên xuất hàng..." 
-                  />
-                </div>
+                      <label className="misa-label">Nhân viên xuất hàng</label>
+                      <input
+                        type="text"
+                        className="misa-input"
+                        value={form.salespersonId || ''}
+                        onChange={(e) => handleFormChange('salespersonId', e.target.value)}
+                        placeholder="Nhập tên nhân viên xuất hàng..."
+                      />
+                    </div>
                   </div>
 
                   <div className="misa-form-group" style={{ marginTop: '12px' }}>
@@ -538,8 +538,8 @@ function UpdateExportSlipPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
                       {!form.referenceId && (
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           style={{ padding: 0, fontSize: '13px', background: 'none', border: 'none', color: '#0070cc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                           onClick={() => setShowReferenceModal(true)}
                         >
@@ -552,8 +552,8 @@ function UpdateExportSlipPage() {
                         <span style={{ color: 'var(--color-primary)', fontWeight: '500', cursor: 'pointer' }} onClick={() => setShowReferenceModal(true)}>
                           <i className="bi bi-file-earmark-text"></i> {form.referenceCode}
                         </span>
-                        <i 
-                          className="bi bi-x-circle-fill" 
+                        <i
+                          className="bi bi-x-circle-fill"
                           style={{ color: '#dc3545', cursor: 'pointer', fontSize: '14px' }}
                           onClick={() => setForm(prev => ({ ...prev, referenceType: '', referenceId: '', referenceCode: '' }))}
                           title="Xóa tham chiếu"

@@ -96,6 +96,9 @@ public class Product {
     @Builder.Default
     private List<ProductUnitConversion> unitConversions = new ArrayList<>();
 
+    @Column(name = "warranty_period_months")
+    private Integer warrantyPeriodMonths;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
