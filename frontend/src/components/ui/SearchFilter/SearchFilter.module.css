@@ -1,0 +1,103 @@
+.filterContainer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4, 16px);
+    background: var(--color-surface);
+    padding: var(--space-4, 16px);
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card-subtle);
+    margin-bottom: var(--space-5, 20px);
+    width: 100%;
+}
+
+.filterInputs {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3, 12px);
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.filterInputs > * {
+    min-width: 180px;
+    flex: 1;
+}
+
+.filterActions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    flex-shrink: 0;
+}
+
+.resetBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-soft);
+    color: var(--color-text-muted);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+    font-size: var(--font-size-caption);
+    font-weight: 500;
+    transition: all var(--transition-fast);
+}
+
+.resetBtn:hover {
+    background: var(--color-bg-control-hover);
+    color: var(--color-text-strong);
+}
+
+/* Breakpoint 2: Tablet (768px - 1199px) -> 2 Rows */
+@media (min-width: 768px) and (max-width: 1199px) {
+    .filterContainer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-3, 12px);
+    }
+
+    .filterActions {
+        justify-content: flex-end;
+    }
+}
+
+/* Breakpoint 4: Mobile (< 768px) -> Vertical Stack, Actions at bottom */
+@media (max-width: 767px) {
+    .filterContainer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-3, 12px);
+        padding: var(--space-3, 12px);
+    }
+
+    .filterInputs {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filterInputs > * {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .filterActions {
+        width: 100%;
+        justify-content: space-between;
+        padding-top: var(--space-2, 8px);
+        border-top: 1px dashed var(--color-border);
+    }
+
+    .filterActions > * {
+        flex: 1;
+        min-height: var(--touch-target-min, 44px);
+        justify-content: center;
+    }
+
+    .btnText {
+        display: inline;
+    }
+}

@@ -217,7 +217,12 @@ function UpdateExportSlipPage() {
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
     return item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
   };
-  const isFormValid = Boolean(form.warehouseId && form.partnerId && form.docDate && items.length && items.every(isLineValid));
+  const isFormValid = Boolean(
+    form.warehouseId && 
+    form.docDate && 
+    items.length && 
+    items.every(isLineValid)
+  );
 
   const handleFormChange = (field, value) => {
     setForm(prev => {
@@ -415,8 +420,6 @@ function UpdateExportSlipPage() {
   const submit = async (status, shouldPost = false) => {
     if (!isFormValid) {
       if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho xuất.');
-      if (!form.partnerId) return showToast('error', 'Vui lòng chọn khách hàng.');
-      if (!form.receiverAddress) return showToast('error', 'Vui lòng nhập địa chỉ nhận hàng.');
       if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày ghi nhận.');
       const invalidVat = items.some(item => {
         const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;

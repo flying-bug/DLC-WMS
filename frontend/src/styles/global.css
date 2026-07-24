@@ -361,3 +361,107 @@ input::-ms-reveal,
 input::-ms-clear {
   display: none !important;
 }
+
+/* ── Responsive Global Utilities & Media Queries ── */
+html, body, #root {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  width: 100%;
+}
+
+/* Fail-safe Text Wrapping & Touch Target Rules */
+* {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1199px) {
+  button,
+  .misa-input,
+  .misa-select,
+  .misa-form-group input,
+  .misa-form-group select {
+    min-height: var(--touch-target-min, 44px);
+  }
+}
+
+/* Global Mobile Fail-Safe Rules (< 768px) */
+@media (max-width: 767px) {
+  /* Prevent horizontal overflow on main containers */
+  main, [class*="mainContent"], [class*="pageBody"], [class*="mainWrapper"] {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    padding: var(--space-3, 12px) !important;
+  }
+
+  /* Responsive Form Rows & Grids */
+  .misa-form-row, [class*="formGrid"], [class*="detailGrid"] {
+    flex-direction: column !important;
+    grid-template-columns: 1fr !important;
+    gap: var(--space-3, 12px) !important;
+    width: 100% !important;
+  }
+
+  /* Page Title Bars & Header Containers */
+  [class*="pageTitleContainer"], [class*="pageHeader"], [class*="titleContainer"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: var(--space-3, 12px) !important;
+    width: 100% !important;
+  }
+
+  [class*="pageTitleContainer"] > *, [class*="pageHeader"] > * {
+    width: 100% !important;
+  }
+
+  /* Filter Section Stacking */
+  [class*="filterSection"], [class*="filterGroup"], [class*="filterContainer"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    gap: var(--space-3, 12px) !important;
+  }
+
+  [class*="filterInput"], [class*="filterSelect"], [class*="filterField"] {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Table Container Overflow Protection & Pagination */
+  [class*="tableContainer"], [class*="tableView"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+  }
+
+  [class*="pagination"] {
+    min-width: 0 !important;
+    width: 100% !important;
+    flex-direction: column !important;
+    gap: var(--space-3, 12px) !important;
+    align-items: center !important;
+    padding: var(--space-3, 12px) !important;
+  }
+
+  /* Modal System Mobile Bottom Sheet */
+  .misa-modal {
+    width: 95vw !important;
+    max-height: 94vh !important;
+    margin: 10px !important;
+  }
+
+  .misa-modal-footer {
+    flex-direction: column-reverse !important;
+    gap: var(--space-3, 12px) !important;
+  }
+
+  .misa-modal-footer > * {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .misa-modal {
+    width: 80vw !important;
+  }
+}

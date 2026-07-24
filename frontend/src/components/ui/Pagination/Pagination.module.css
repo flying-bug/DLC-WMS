@@ -71,26 +71,34 @@
     cursor: pointer;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
     .pagination {
         flex-direction: column;
-        gap: 16px;
-        align-items: stretch;
+        gap: var(--space-3, 12px);
+        align-items: center;
         text-align: center;
+        padding: var(--space-3, 12px);
     }
     
     .pageControls {
         justify-content: center;
         flex-wrap: wrap;
+        width: 100%;
+        gap: 6px;
     }
     
+    .pageNavBtn, .pageBtn {
+        min-width: var(--touch-target-min, 44px);
+        min-height: var(--touch-target-min, 44px);
+    }
+
     .pageSizeSelect {
         width: 100%;
         margin-left: 0;
-        margin-top: 12px;
     }
     
     .pageSizeSelect select {
         width: 100%;
+        min-height: var(--touch-target-min, 44px);
     }
 }

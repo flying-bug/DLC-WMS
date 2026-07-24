@@ -93,12 +93,39 @@
 
   --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
 
-  --font-size-caption: 13px;
-  --font-size-body: 14px;
-  --font-size-card-title: 16px;
-  --font-size-page-title: 22px;
+  /* Responsive Typography Tokens */
+  --font-size-caption: clamp(0.75rem, 0.9vw, 0.8125rem); /* 12px - 13px */
+  --font-size-body: clamp(0.8125rem, 1vw, 0.875rem);     /* 13px - 14px */
+  --font-size-card-title: clamp(0.95rem, 1.2vw, 1.05rem);/* 15.2px - 16.8px */
+  --font-size-section-title: clamp(1.1rem, 1.5vw, 1.35rem);/* 17.6px - 21.6px */
+  --font-size-page-title: clamp(1.25rem, 2vw, 1.625rem); /* 20px - 26px */
 
-  --radius-control: 4px;
-  --radius-card: 8px;
+  /* Spacing Tokens */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Radius Tokens */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-control: 6px;
+  --radius-card: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Heights & Touch Area Tokens */
   --height-control: 38px;
+  --touch-target-min: 44px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s ease;
 }

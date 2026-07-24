@@ -8,6 +8,7 @@ const AdminLayout = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const currentPath = location.pathname;
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [voiceEnabled, setVoiceEnabled] = useState(() => {
         return localStorage.getItem('dlc_voice_enabled') !== 'false';
     });
@@ -20,20 +21,40 @@ const AdminLayout = ({ children }) => {
         });
     };
 
+    const handleNavClick = (path) => {
+        navigate(path);
+        setMobileMenuOpen(false);
+    };
+
     return (
         <div className={styles.layout}>
-            <aside className={styles.sidebar}>
+            {/* Mobile Overlay Backdrop */}
+            {mobileMenuOpen && (
+                <div
+                    className={styles.mobileBackdrop}
+                    onClick={() => setMobileMenuOpen(false)}
+                />
+            )}
+
+            <aside className={`${styles.sidebar} ${mobileMenuOpen ? styles.mobileOpen : ''}`}>
                 <div className={styles.logoArea}>
                     <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.brandLogo} />
                     <div className={styles.brandText}>
                         <span className={styles.brandTitle}>Duy Long</span>
                         <span className={styles.brandSubtitle}>Warehouse Management</span>
                     </div>
+                    <button
+                        type="button"
+                        className={styles.mobileCloseBtn}
+                        onClick={() => setMobileMenuOpen(false)}
+                    >
+                        <i className="fas fa-times"></i>
+                    </button>
                 </div>
                 <nav className={styles.navMenu}>
                     <button
                         className={`${styles.navItem} ${currentPath === '/dashboard' ? styles.active : ''}`}
-                        onClick={() => navigate('/dashboard')}
+                        onClick={() => handleNavClick('/dashboard')}
                         type="button"
                     >
                         <i className="fas fa-warehouse"></i>
@@ -41,7 +62,7 @@ const AdminLayout = ({ children }) => {
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/suppliers') ? styles.active : ''}`}
-                        onClick={() => navigate('/suppliers')}
+                        onClick={() => handleNavClick('/suppliers')}
                         type="button"
                     >
                         <i className="fas fa-truck-loading"></i>
@@ -49,7 +70,7 @@ const AdminLayout = ({ children }) => {
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/customers') ? styles.active : ''}`}
-                        onClick={() => navigate('/customers')}
+                        onClick={() => handleNavClick('/customers')}
                         type="button"
                     >
                         <i className="fas fa-users"></i>
@@ -57,7 +78,7 @@ const AdminLayout = ({ children }) => {
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/warranties') ? styles.active : ''}`}
-                        onClick={() => navigate('/warranties')}
+                        onClick={() => handleNavClick('/warranties')}
                         type="button"
                     >
                         <i className="fas fa-shield-alt"></i>
@@ -65,7 +86,7 @@ const AdminLayout = ({ children }) => {
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/repairs') ? styles.active : ''}`}
-                        onClick={() => navigate('/repairs')}
+                        onClick={() => handleNavClick('/repairs')}
                         type="button"
                     >
                         <i className="fas fa-tools"></i>
@@ -73,7 +94,7 @@ const AdminLayout = ({ children }) => {
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/brands') ? styles.active : ''}`}
-                        onClick={() => navigate('/brands')}
+                        onClick={() => handleNavClick('/brands')}
                         type="button"
                     >
                         <i className="fas fa-tags"></i>
@@ -81,7 +102,7 @@ const AdminLayout = ({ children }) => {
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/assembly-orders') ? styles.active : ''}`}
-                        onClick={() => navigate('/assembly-orders')}
+                        onClick={() => handleNavClick('/assembly-orders')}
                         type="button"
                     >
                         <i className="fas fa-boxes-stacked"></i>
@@ -89,7 +110,7 @@ const AdminLayout = ({ children }) => {
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/assembly-boms') ? styles.active : ''}`}
-                        onClick={() => navigate('/assembly-boms')}
+                        onClick={() => handleNavClick('/assembly-boms')}
                         type="button"
                     >
                         <i className="fas fa-sitemap"></i>
@@ -97,7 +118,7 @@ const AdminLayout = ({ children }) => {
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/units') ? styles.active : ''}`}
-                        onClick={() => navigate('/units')}
+                        onClick={() => handleNavClick('/units')}
                         type="button"
                     >
                         <i className="fas fa-ruler-combined"></i>
@@ -105,7 +126,7 @@ const AdminLayout = ({ children }) => {
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/product-categories') ? styles.active : ''}`}
-                        onClick={() => navigate('/product-categories')}
+                        onClick={() => handleNavClick('/product-categories')}
                         type="button"
                     >
                         <i className="fas fa-layer-group"></i>
@@ -113,7 +134,7 @@ const AdminLayout = ({ children }) => {
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/ai-chat') ? styles.active : ''}`}
-                        onClick={() => navigate('/ai-chat')}
+                        onClick={() => handleNavClick('/ai-chat')}
                         type="button"
                     >
                         <i className="fas fa-robot"></i>
@@ -124,6 +145,15 @@ const AdminLayout = ({ children }) => {
 
             <div className={styles.mainWrapper}>
                 <header className={styles.header}>
+                    <button
+                        type="button"
+                        className={styles.hamburgerBtn}
+                        onClick={() => setMobileMenuOpen(true)}
+                        aria-label="Mở menu"
+                    >
+                        <i className="fas fa-bars"></i>
+                    </button>
+
                     <nav className={styles.topTabs}>
                         <button
                             className={`${styles.tab} ${currentPath === '/dashboard' ? styles.activeTab : ''}`}

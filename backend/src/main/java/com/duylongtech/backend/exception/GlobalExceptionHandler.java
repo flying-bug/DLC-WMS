@@ -56,6 +56,7 @@ public class GlobalExceptionHandler {
                         return code; // Fallback nếu không phải là mã Enum
                     }
                 })
+                .distinct()
                 .collect(Collectors.joining("; "));
         
         log.warn("Validation error: {}", errorMsg);

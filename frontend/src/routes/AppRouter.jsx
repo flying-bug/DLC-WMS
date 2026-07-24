@@ -84,6 +84,8 @@ function AppRouter() {
                     <Route path="/change-password" element={<ChangePasswordPage />} />
                     <Route path="/export-slips" element={<ExportSlipPage />} />
                     <Route path="/export-slips/create" element={<CreateExportSlipPage />} />
+                    <Route path="/export-slips/usage" element={<CreateExportSlipPage mode="USAGE" />} />
+                    <Route path="/export-slips/assembly" element={<CreateExportSlipPage mode="ASSEMBLY" />} />
                     <Route path="/export-slips/:id/edit" element={<UpdateExportSlipPage />} />
                     <Route path="/import-history" element={<ImportHistoryPage />} />
                     <Route path="/import-history/create" element={<CreateImportSlipPage />} />
