@@ -383,11 +383,10 @@ function CreateExportSlipPage({ mode: propMode }) {
     }
 
     setSaving(true);
-    let createdId = null;
     try {
       const response = await exportApi.createExportSlip(buildPayload(status));
       const created = unwrap(response);
-      createdId = created?.id;
+      const createdId = created?.id;
       if (shouldPost && createdId) {
         await exportApi.postExportSlip(createdId);
       }
