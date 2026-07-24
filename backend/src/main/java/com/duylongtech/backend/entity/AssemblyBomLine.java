@@ -32,6 +32,9 @@ public class AssemblyBomLine {
     @Builder.Default
     private BigDecimal costAllocationPct = BigDecimal.ZERO;
 
+    @Column(name = "component_role", length = 100)
+    private String componentRole;
+
     @Column(columnDefinition = "TEXT")
     private String note;
 }

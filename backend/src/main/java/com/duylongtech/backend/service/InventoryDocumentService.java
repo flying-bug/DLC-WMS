@@ -27,6 +27,7 @@ import com.duylongtech.backend.repository.SerialNumberRepository;
 import com.duylongtech.backend.repository.WarrantyRepository;
 import com.duylongtech.backend.repository.PartnerRepository;
 import com.duylongtech.backend.repository.UserRepository;
+import com.duylongtech.backend.repository.ProductRepository;
 import com.duylongtech.backend.repository.AssemblyOrderRepository;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
 import lombok.RequiredArgsConstructor;
@@ -79,6 +80,7 @@ public class InventoryDocumentService {
     private final WarrantyRepository warrantyRepository;
     private final PartnerRepository partnerRepository;
     private final UserRepository userRepository;
+    private final ProductRepository productRepository;
     private final AssemblyOrderRepository assemblyOrderRepository;
     private final AssemblyBomRepository assemblyBomRepository;
 

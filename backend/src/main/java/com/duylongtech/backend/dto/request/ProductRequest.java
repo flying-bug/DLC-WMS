@@ -39,6 +39,7 @@ public class ProductRequest {
     private Boolean active;
     private String taxReductionStatus;
     private BigDecimal stockQty;
+    private BigDecimal minStockQty;
     private BigDecimal stockValue;
     private String imageUrl;
 }

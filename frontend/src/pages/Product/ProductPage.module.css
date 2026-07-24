@@ -799,3 +799,326 @@
     text-decoration: underline;
 }
 
+/* Tabs */
+.tabs {
+    display: flex;
+    border-bottom: 1px solid var(--color-border-soft);
+    margin-bottom: 20px;
+    background-color: var(--color-bg);
+}
+
+.tabBtn {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tabBtn:hover {
+    color: var(--color-primary);
+}
+
+.activeTab {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.tabContent {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* BOM Layout */
+.bomContainer {
+    display: flex;
+    gap: 20px;
+}
+
+.bomLeftColumn {
+    flex: 0 0 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bomRightColumn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bomRow {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    gap: 12px;
+}
+
+.bomLabel {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--color-text);
+}
+
+.bomSelect {
+    flex: 1;
+}
+
+.bomQty {
+    width: 100px;
+}
+
+/* Conversion Units Layout */
+.unitConversionTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 12px;
+}
+
+.unitConversionTable th {
+    background-color: var(--color-bg-table);
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    border: 1px solid var(--color-border-soft);
+}
+
+.unitConversionTable td {
+    padding: 8px 12px;
+    border: 1px solid var(--color-border-soft);
+    vertical-align: middle;
+}
+
+.addUnitBtn {
+    background: none;
+    border: 1px dashed var(--color-primary);
+    color: var(--color-primary);
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    align-self: flex-start;
+}
+
+.addUnitBtn:hover {
+    background: var(--color-bg-hover);
+}
+
+/* ── Redesigned modal styles ── */
+
+/* Product type badge in modal header */
+.productTypeBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border: 1.5px solid #2563eb;
+    border-radius: 20px;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 600;
+    background: #eff6ff;
+    user-select: none;
+}
+
+/* "Thay đổi tính chất" link */
+.changeTypeLink {
+    color: #2563eb;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    user-select: none;
+}
+
+/* Type selector dropdown */
+.typeMenu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    z-index: 1000;
+    min-width: 140px;
+    overflow: hidden;
+}
+
+.typeMenuItem {
+    padding: 9px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #374151;
+    transition: background 0.15s;
+}
+
+.typeMenuItem:hover {
+    background: #f3f4f6;
+}
+
+.typeMenuItemActive {
+    color: #2563eb;
+    font-weight: 600;
+    background: #eff6ff;
+}
+
+/* Form field label */
+.fieldLabel {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 4px;
+}
+
+/* Form field input/select/textarea */
+.fieldInput {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #111827;
+    background: #fff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+    font-family: inherit;
+}
+
+.fieldInput:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.fieldInput:disabled {
+    background: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* Wrapper for a form field row */
+.formField {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Inline add (+) button next to select */
+.addInlineBtn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: #fff;
+    color: #2563eb;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    align-self: flex-end;
+    line-height: 1;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.addInlineBtn:hover {
+    background: #eff6ff;
+    border-color: #2563eb;
+}
+
+/* Image upload dashed box */
+.imageUploadBox {
+    width: 158px;
+    height: 158px;
+    border: 2px dashed #d1d5db;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+    overflow: hidden;
+    position: relative;
+    transition: border-color 0.15s;
+}
+
+.imageUploadBox:hover {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+/* Centered placeholder inside image upload box */
+.imageUploadPlaceholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    text-align: center;
+    pointer-events: none;
+}
+
+/* ── Quick-add inline panel (for Category, Brand, Unit) ── */
+.quickAddPanel {
+    margin-top: 8px;
+    padding: 12px 14px;
+    border: 1.5px solid #2563eb;
+    border-radius: 6px;
+    background: #f0f7ff;
+    animation: slideDown 0.15s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.quickSaveBtn {
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    border-radius: 4px;
+    background: #2563eb;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.quickSaveBtn:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.quickSaveBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.quickCancelBtn {
+    padding: 5px 12px;
+    font-size: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: #fff;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.quickCancelBtn:hover {
+    background: #f3f4f6;
+}
+

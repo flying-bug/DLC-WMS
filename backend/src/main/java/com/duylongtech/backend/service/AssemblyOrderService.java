@@ -3,6 +3,7 @@ package com.duylongtech.backend.service;
 import com.duylongtech.backend.dto.request.AssemblyBomLineRequest;
 import com.duylongtech.backend.dto.request.AssemblyBomRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderRequest;
+import com.duylongtech.backend.dto.request.AssemblyOrderLineRequest;
 import com.duylongtech.backend.dto.response.AssemblyBomLineResponse;
 import com.duylongtech.backend.dto.response.AssemblyBomResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderLineResponse;
@@ -156,7 +157,7 @@ public class AssemblyOrderService {
         order.setStatus(normalizeEditableStatus(request.getStatus(), order.getStatus()));
         order.setNote(request.getNote());
         order.setUpdatedAt(LocalDateTime.now());
-        rebuildLines(order, bom, request.getQuantity());
+        rebuildLines(order, bom, request);
         return toOrderResponse(assemblyOrderRepository.save(order));
     }
 
@@ -234,7 +235,7 @@ public class AssemblyOrderService {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
-        rebuildLines(order, bom, request.getQuantity());
+        rebuildLines(order, bom, request);
         return toOrderResponse(assemblyOrderRepository.save(order));
     }
 
@@ -350,19 +351,37 @@ public class AssemblyOrderService {
                 .orElse(variants.get(0));
     }
 
-    private void rebuildLines(AssemblyOrder order, AssemblyBom bom, BigDecimal orderQuantity) {
+    private void rebuildLines(AssemblyOrder order, AssemblyBom bom, AssemblyOrderRequest request) {
         order.getLines().clear();
-        for (AssemblyBomLine bomLine : bom.getLines()) {
-            BigDecimal required = bomLine.getQuantity().multiply(orderQuantity);
-            AssemblyOrderLine line = AssemblyOrderLine.builder()
-                    .assemblyOrder(order)
-                    .componentVariant(bomLine.getComponentVariant())
-                    .quantityRequired(required)
-                    .quantityActual(required)
-                    .unitCost(ZERO)
-                    .note(bomLine.getNote())
-                    .build();
-            order.getLines().add(line);
+        BigDecimal orderQuantity = request.getQuantity();
+
+        if (request.getLines() != null && !request.getLines().isEmpty()) {
+            for (AssemblyOrderLineRequest lineReq : request.getLines()) {
+                ProductVariant variant = productVariantRepository.findById(lineReq.getComponentVariantId())
+                        .orElseThrow(() -> new BusinessException("Không tìm thấy SKU linh kiện " + lineReq.getComponentVariantId()));
+                AssemblyOrderLine line = AssemblyOrderLine.builder()
+                        .assemblyOrder(order)
+                        .componentVariant(variant)
+                        .quantityRequired(lineReq.getQuantityRequired() != null ? lineReq.getQuantityRequired() : lineReq.getQuantityActual())
+                        .quantityActual(lineReq.getQuantityActual() != null ? lineReq.getQuantityActual() : lineReq.getQuantityRequired())
+                        .unitCost(ZERO)
+                        .note(lineReq.getNote())
+                        .build();
+                order.getLines().add(line);
+            }
+        } else {
+            for (AssemblyBomLine bomLine : bom.getLines()) {
+                BigDecimal required = bomLine.getQuantity().multiply(orderQuantity);
+                AssemblyOrderLine line = AssemblyOrderLine.builder()
+                        .assemblyOrder(order)
+                        .componentVariant(bomLine.getComponentVariant())
+                        .quantityRequired(required)
+                        .quantityActual(required)
+                        .unitCost(ZERO)
+                        .note(bomLine.getNote())
+                        .build();
+                order.getLines().add(line);
+            }
         }
     }
 

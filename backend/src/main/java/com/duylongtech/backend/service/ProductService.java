@@ -466,6 +466,7 @@ public class ProductService {
                 .active(dto.getActive() != null ? dto.getActive() : true)
                 .taxReductionStatus(dto.getTaxReductionStatus() != null ? dto.getTaxReductionStatus() : "Chưa xác định")
                 .stockQty(dto.getStockQty() != null ? dto.getStockQty() : BigDecimal.ZERO)
+                .minStockQty(dto.getMinStockQty() != null ? dto.getMinStockQty() : BigDecimal.ZERO)
                 .stockValue(dto.getStockValue() != null ? dto.getStockValue() : BigDecimal.ZERO)
                 .imageUrl(dto.getImageUrl())
                 .build();
@@ -519,6 +520,7 @@ public class ProductService {
                 .active(product.getActive())
                 .taxReductionStatus(product.getTaxReductionStatus())
                 .stockQty(product.getStockQty())
+                .minStockQty(product.getMinStockQty())
                 .stockValue(product.getStockValue())
                 .imageUrl(product.getImageUrl())
                 .brandId(product.getBrand() != null ? product.getBrand().getId() : null)

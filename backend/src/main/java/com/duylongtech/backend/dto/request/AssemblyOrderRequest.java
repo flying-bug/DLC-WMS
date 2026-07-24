@@ -15,4 +15,5 @@ public class AssemblyOrderRequest {
     private LocalDate executionDate;
     private String note;
     private Long createdBy;
+    private java.util.List<AssemblyOrderLineRequest> lines;
 }

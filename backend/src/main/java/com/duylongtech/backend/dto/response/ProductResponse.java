@@ -31,6 +31,7 @@ public class ProductResponse {
     private Boolean active;
     private String taxReductionStatus;
     private BigDecimal stockQty;
+    private BigDecimal minStockQty;
     private BigDecimal stockValue;
     private String imageUrl;
     private LocalDateTime createdAt;

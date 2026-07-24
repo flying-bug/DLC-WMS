@@ -14,6 +14,8 @@ public interface AssemblyBomRepository extends JpaRepository<AssemblyBom, Long> 
     boolean existsByBomCodeAndIdNot(String bomCode, Long id);
 
     boolean existsByProductId(Long productId);
+    
+    Optional<AssemblyBom> findByProductId(Long productId);
 
     @Query("SELECT CASE WHEN COUNT(l) > 0 THEN true ELSE false END FROM AssemblyBomLine l WHERE l.componentVariant.id IN :variantIds")
     boolean existsByComponentVariantIdIn(@Param("variantIds") List<Long> variantIds);
