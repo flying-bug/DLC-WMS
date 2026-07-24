@@ -88,10 +88,10 @@ const emptyLine = () => ({
 function CreateExportSlipPage({ mode: propMode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const searchParams = new URLSearchParams(location.search);
   const initialType = propMode || searchParams.get('type')?.toUpperCase() || 'SALE';
-  
+
   const [exportMode, setExportMode] = useState(initialType);
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
@@ -184,11 +184,11 @@ function CreateExportSlipPage({ mode: propMode }) {
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
     return item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
   };
-  
+
   const isFormValid = Boolean(
-    form.warehouseId && 
-    form.docDate && 
-    items.length && 
+    form.warehouseId &&
+    form.docDate &&
+    items.length &&
     items.every(isLineValid)
   );
 
@@ -312,7 +312,8 @@ function CreateExportSlipPage({ mode: propMode }) {
           variantId: scanResult.variantId,
           scannedCode: scanResult.code,
           quantity: 1,
-          price: scanResult.salePrice || 0
+          price: scanResult.salePrice || 0,
+          serialNumberId: scanResult.serialNumberId
         }
       ]);
       setScanCode('');
@@ -329,6 +330,7 @@ function CreateExportSlipPage({ mode: propMode }) {
 
   const buildPayload = (status) => ({
     docCode: form.docCode || undefined,
+    issuePurpose: exportMode === 'SALE' ? 'SALES' : exportMode === 'USAGE' ? 'USAGE' : exportMode === 'ASSEMBLY' ? 'ASSEMBLY' : undefined,
     warehouseId: Number(form.warehouseId),
     partnerId: form.partnerId ? Number(form.partnerId) : null,
     salespersonId: (!isNaN(Number(form.salespersonId)) && String(form.salespersonId).trim() !== '') ? Number(form.salespersonId) : null,
@@ -369,7 +371,7 @@ function CreateExportSlipPage({ mode: propMode }) {
       }
       return showToast('error', 'Vui lòng điền đầy đủ thông tin bắt buộc.');
     }
-    
+
     let hasOutOfStock = false;
     for (const item of items) {
       const product = productById.get(String(item.variantId));
@@ -390,13 +392,13 @@ function CreateExportSlipPage({ mode: propMode }) {
       if (shouldPost && createdId) {
         await exportApi.postExportSlip(createdId);
       }
-      
+
       const msgSuffix = hasOutOfStock ? ' (Lưu ý: Có sản phẩm xuất vượt tồn kho)' : '';
-      navigate('/export-slips', { 
-        state: { 
-          toastMessage: (shouldPost ? 'Lưu và ghi sổ phiếu xuất kho thành công!' : 'Lưu tạm phiếu xuất kho thành công!') + msgSuffix, 
-          toastType: hasOutOfStock ? 'warning' : 'success' 
-        } 
+      navigate('/export-slips', {
+        state: {
+          toastMessage: (shouldPost ? 'Lưu và ghi sổ phiếu xuất kho thành công!' : 'Lưu tạm phiếu xuất kho thành công!') + msgSuffix,
+          toastType: hasOutOfStock ? 'warning' : 'success'
+        }
       });
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || err.message || 'Không lưu được phiếu xuất kho');
@@ -446,7 +448,7 @@ function CreateExportSlipPage({ mode: propMode }) {
               <i className="bi bi-info-circle" style={{ fontSize: '16px', color: '#0075c0' }}></i> Thông tin chung
             </div>
             <div className={styles.cardBody}>
-              
+
               {/* MODE 1: SALE (Xuất kho bán hàng) */}
               {exportMode === 'SALE' && (
                 <>
@@ -560,12 +562,12 @@ function CreateExportSlipPage({ mode: propMode }) {
                 </div>
                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                   <label className="misa-label">Nhân viên phụ trách</label>
-                  <input 
-                    type="text" 
-                    className="misa-input" 
-                    value={form.salespersonId || ''} 
-                    onChange={(e) => handleFormChange('salespersonId', e.target.value)} 
-                    placeholder="Nhập tên nhân viên..." 
+                  <input
+                    type="text"
+                    className="misa-input"
+                    value={form.salespersonId || ''}
+                    onChange={(e) => handleFormChange('salespersonId', e.target.value)}
+                    placeholder="Nhập tên nhân viên..."
                   />
                 </div>
               </div>
@@ -589,12 +591,12 @@ function CreateExportSlipPage({ mode: propMode }) {
               {/* Ghi chú Field placed BEFORE Tham chiếu chứng từ (Matching Nhập Kho) */}
               <div className="misa-form-group" style={{ marginTop: '12px' }}>
                 <label className="misa-label">Ghi chú</label>
-                <textarea 
-                  className="misa-textarea" 
-                  value={form.note} 
-                  onChange={(e) => handleFormChange('note', e.target.value)} 
-                  style={{ minHeight: '60px' }} 
-                  placeholder="Nhập ghi chú..." 
+                <textarea
+                  className="misa-textarea"
+                  value={form.note}
+                  onChange={(e) => handleFormChange('note', e.target.value)}
+                  style={{ minHeight: '60px' }}
+                  placeholder="Nhập ghi chú..."
                 />
               </div>
 
@@ -603,8 +605,8 @@ function CreateExportSlipPage({ mode: propMode }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
                   {!form.referenceId && (
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       style={{ padding: 0, fontSize: '13px', background: 'none', border: 'none', color: '#0070cc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       onClick={() => setShowReferenceModal(true)}
                     >
@@ -617,21 +619,21 @@ function CreateExportSlipPage({ mode: propMode }) {
                     <span style={{ color: 'var(--color-primary)', fontWeight: '600', cursor: 'pointer' }} onClick={() => setShowReferenceModal(true)}>
                       <i className="bi bi-file-earmark-text"></i> {form.referenceCode}
                     </span>
-                    <i 
-                      className="bi bi-x-circle-fill" 
+                    <i
+                      className="bi bi-x-circle-fill"
                       style={{ color: '#dc3545', cursor: 'pointer', fontSize: '14px' }}
                       onClick={() => setForm(prev => ({ ...prev, referenceType: '', referenceId: '', referenceCode: '' }))}
                       title="Xóa tham chiếu"
                     ></i>
                   </div>
                 ) : (
-                  <input 
-                    type="text" 
-                    className="misa-input" 
-                    style={{ marginTop: '8px' }} 
+                  <input
+                    type="text"
+                    className="misa-input"
+                    style={{ marginTop: '8px' }}
                     value={form.attachedDocs || ''}
                     onChange={(e) => handleFormChange('attachedDocs', e.target.value)}
-                    placeholder="Số chứng từ đính kèm..." 
+                    placeholder="Số chứng từ đính kèm..."
                   />
                 )}
               </div>
@@ -826,11 +828,11 @@ function CreateExportSlipPage({ mode: propMode }) {
         isOpen={showReferenceModal}
         onClose={() => setShowReferenceModal(false)}
         onSelect={(data) => {
-          setForm(prev => ({ 
-            ...prev, 
-            referenceType: data.referenceType, 
+          setForm(prev => ({
+            ...prev,
+            referenceType: data.referenceType,
             referenceId: data.referenceId,
-            referenceCode: data.docCode 
+            referenceCode: data.docCode
           }));
         }}
       />
