@@ -7,6 +7,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "PRODUCTS")
@@ -75,6 +77,10 @@ public class Product {
     @Builder.Default
     private BigDecimal stockQty = BigDecimal.ZERO;
 
+    @Column(name = "min_stock_qty", precision = 15, scale = 4)
+    @Builder.Default
+    private BigDecimal minStockQty = BigDecimal.ZERO;
+
     // Giá trị tồn kho (để tiện CRUD trực tiếp cho MVP)
     @Column(name = "stock_value", precision = 15, scale = 2)
     @Builder.Default
@@ -83,6 +89,12 @@ public class Product {
     // URL Hình ảnh đại diện
     @Column(name = "image_url", length = 255)
     private String imageUrl;
+    @Column(name = "warranty_period", length = 50)
+    private String warrantyPeriod;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ProductUnitConversion> unitConversions = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
