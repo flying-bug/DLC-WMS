@@ -164,9 +164,10 @@ const ProductPage = () => {
             let lowStock = 0;
             content.forEach((product) => {
                 const qty = Number(product.stockQty || 0);
+                const minQty = Number(product.minStockQty || 0);
                 if (qty <= 0) {
                     outOfStock++;
-                } else if (qty < 10) {
+                } else if (minQty > 0 && qty <= minQty) {
                     lowStock++;
                 }
             });
