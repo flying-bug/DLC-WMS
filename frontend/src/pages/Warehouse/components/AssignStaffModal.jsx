@@ -125,19 +125,21 @@ const AssignStaffModal = ({ warehouseId, roles, userId: editUserId, staffs, onCl
                         
                         {users.length > 0 && !userId && !isEditMode && (
                             <ul className={styles.userDropdown}>
-                                {users.map(u => (
+                                {users.map(u => {
+                                    const contactInfo = u.email || u.phone;
+                                    return (
                                     <li key={u.id} onClick={() => {
                                         setUserId(u.id);
-                                        const contact = u.email || u.phone;
-                                        setSearchTerm(contact ? `${u.fullName} - ${contact}` : u.fullName);
+                                        setSearchTerm(contactInfo ? `${u.fullName} - ${contactInfo}` : u.fullName);
                                         setUsers([]);
                                     }}>
                                         <div className={styles.userInfo}>
                                             <span className={styles.userName}>{u.fullName}</span>
-                                            {contact && <span className={styles.userEmail}>{contact}</span>}
+                                            {contactInfo && <span className={styles.userEmail}>{contactInfo}</span>}
                                         </div>
                                     </li>
-                                ))}
+                                    );
+                                })}
                             </ul>
                         )}
                         {userId && !isEditMode && (
