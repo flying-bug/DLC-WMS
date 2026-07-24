@@ -128,12 +128,13 @@ const AssignStaffModal = ({ warehouseId, roles, userId: editUserId, staffs, onCl
                                 {users.map(u => (
                                     <li key={u.id} onClick={() => {
                                         setUserId(u.id);
-                                        setSearchTerm(`${u.fullName} - ${u.email || u.phone}`);
+                                        const contact = u.email || u.phone;
+                                        setSearchTerm(contact ? `${u.fullName} - ${contact}` : u.fullName);
                                         setUsers([]);
                                     }}>
                                         <div className={styles.userInfo}>
                                             <span className={styles.userName}>{u.fullName}</span>
-                                            <span className={styles.userEmail}>{u.email || u.phone}</span>
+                                            {contact && <span className={styles.userEmail}>{contact}</span>}
                                         </div>
                                     </li>
                                 ))}
