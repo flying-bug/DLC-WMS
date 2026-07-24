@@ -79,6 +79,7 @@ const emptyLine = () => ({
   scannedCode: '',
   quantity: 1,
   price: 0,
+  vatPercent: 0,
   note: '',
 });
 
@@ -205,7 +206,13 @@ function CreateExportSlipPage() {
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
-  const isFormValid = Boolean(form.warehouseId && form.partnerId && form.docDate && items.length && items.every(item => item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0));
+  const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
+  const grandTotal = totalPrice + totalVat;
+  const isLineValid = (item) => {
+    const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
+    return item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
+  };
+  const isFormValid = Boolean(form.warehouseId && form.partnerId && form.docDate && items.length && items.every(isLineValid));
 
   const handleFormChange = (field, value) => {
     setForm(prev => {
@@ -390,6 +397,8 @@ function CreateExportSlipPage() {
       quantityOut: Number(item.quantity),
       unitCost: 0,
       unitPrice: Number(item.price),
+      vatRate: Number(item.vatPercent || 0),
+      vatPercent: Number(item.vatPercent || 0),
       serialNumberId: item.serialNumberId || null,
       note: item.note,
     })),
@@ -403,7 +412,12 @@ function CreateExportSlipPage() {
       if (!form.partnerId) return showToast('error', 'Vui lòng chọn khách hàng.');
       if (!form.receiverAddress) return showToast('error', 'Vui lòng nhập địa chỉ nhận hàng.');
       if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày ghi nhận.');
-      if (!items.length || !items.every(item => item.variantId && Number(item.quantity) > 0)) {
+      const invalidVat = items.some(item => {
+        const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
+        return isNaN(vat) || vat < 0 || vat > 10;
+      });
+      if (invalidVat) return showToast('error', 'Thuế VAT phải nằm trong khoảng từ 0% đến 10%.');
+      if (!items.length || !items.every(isLineValid)) {
         return showToast('error', 'Vui lòng chọn hàng hóa và nhập số lượng > 0.');
       }
       return showToast('error', 'Vui lòng điền đầy đủ thông tin bắt buộc.');
@@ -600,12 +614,13 @@ function CreateExportSlipPage() {
                 <tr>
                   <th style={{ width: '50px', textAlign: 'center' }}>STT</th>
                   <th style={{ width: '22%' }}>Tên hàng</th>
-                  <th style={{ width: '14%' }}>Mã hàng</th>
+                  <th style={{ width: '12%' }}>Mã hàng</th>
                   <th style={{ width: '8%' }}>ĐVT</th>
                   <th style={{ width: '8%' }} className={styles.textCenter}>Tồn</th>
-                  <th style={{ width: '12%' }} className={styles.textRight}>SL</th>
-                  <th style={{ width: '15%' }} className={styles.textRight}>Đơn giá</th>
-                  <th style={{ width: '15%' }} className={styles.textRight}>Thành tiền</th>
+                  <th style={{ width: '10%' }} className={styles.textRight}>SL</th>
+                  <th style={{ width: '13%' }} className={styles.textRight}>Đơn giá</th>
+                  <th style={{ width: '13%' }} className={styles.textRight}>Thành tiền</th>
+                  <th style={{ width: '9%' }} className={styles.textRight}>% VAT</th>
                   <th style={{ width: '50px', textAlign: 'center' }}></th>
                 </tr>
               </thead>
@@ -643,6 +658,9 @@ function CreateExportSlipPage() {
                         <input type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} />
                       </td>
                       <td className={`${styles.textRight} ${styles.textBlue}`}>{money(Number(item.quantity || 0) * Number(item.price || 0))}</td>
+                      <td className={styles.textRight}>
+                        <input type="number" min="0" max="10" step="any" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '65px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(event) => handleItemChange(item.localId, 'vatPercent', event.target.value)} />
+                      </td>
                       <td className={styles.textCenter}>
                         <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)}><i className="bi bi-trash"></i></button>
                       </td>
@@ -659,9 +677,17 @@ function CreateExportSlipPage() {
                     <span>Tổng số lượng:</span>
                     <span>{money(totalQuantity)}</span>
                   </div>
+                  <div className={styles.summaryRow}>
+                    <span>Tiền hàng:</span>
+                    <span>{money(totalPrice)}</span>
+                  </div>
+                  <div className={styles.summaryRow}>
+                    <span>Tiền thuế VAT:</span>
+                    <span>{money(totalVat)}</span>
+                  </div>
                   <div className={styles.summaryTotal}>
-                    <span>Tổng cộng:</span>
-                    <span className={styles.totalValue}>{money(totalPrice)}</span>
+                    <span>Tổng cộng thanh toán:</span>
+                    <span className={styles.totalValue}>{money(grandTotal)}</span>
                   </div>
                 </div>
               </div>
