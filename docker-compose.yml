@@ -6,6 +6,7 @@ services:
     image: mysql:8.0.45
     container_name: dlc-mysql-db
     restart: always
+    command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_DATABASE: duylongcomputer
       MYSQL_ROOT_PASSWORD: "123456"
@@ -35,6 +36,8 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: "123456"
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    volumes:
+      - backup_data:/tmp/backups
     depends_on:
       db:
         condition: service_healthy
@@ -53,3 +56,5 @@ services:
 
 volumes:
   mysql_data:
+  backup_data:
+

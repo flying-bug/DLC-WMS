@@ -224,6 +224,7 @@ function UsersPage() {
                     <nav className={styles.navLinks}>
                         <a onClick={() => navigate('/users')} className={styles.navLinkActive}>Quản lý người dùng</a>
                         <a onClick={() => navigate('/audit-log')} className={styles.navLink}>Nhật ký hệ thống</a>
+                        <a onClick={() => navigate('/operations')} className={styles.navLink}>Operations Center</a>
                     </nav>
                 </div>
                 <div className={styles.headerRight}>

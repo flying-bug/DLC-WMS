@@ -1,0 +1,173 @@
+/* ─── SystemMonitorTab ──────────────────────────────────────────────────────── */
+.tab { display: flex; flex-direction: column; gap: 20px; }
+.pageHeader { display: flex; align-items: flex-start; justify-content: space-between; }
+.pageTitle { font-size: 22px; font-weight: 700; color: #e2e8f0; margin: 0 0 4px 0; display: flex; align-items: center; gap: 10px; }
+.pageTitle i { color: #6366f1; }
+.pageSubtitle { font-size: 13px; color: #64748b; margin: 0; }
+
+.subTabs { display: flex; gap: 6px; border-bottom: 1px solid rgba(99,102,241,0.1); padding-bottom: 4px; }
+.subTab {
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 16px; background: transparent;
+    border: 1px solid transparent; border-radius: 8px;
+    color: #64748b; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+}
+.subTab:hover { background: rgba(99,102,241,0.06); color: #94a3b8; }
+.subTabActive { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.25); color: #818cf8; font-weight: 600; }
+
+/* Resources */
+.resourcesWrap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 1100px) { .resourcesWrap { grid-template-columns: 1fr; } }
+
+.resourceCard {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(99,102,241,0.12);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 14px;
+}
+
+.resourceCardHeader {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 600; color: #c7d2fe;
+}
+.resourceCardHeader i { font-size: 16px; }
+
+.liveTag {
+    margin-left: auto; display: flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 700; color: #10b981;
+    background: rgba(16,185,129,0.1); padding: 2px 8px; border-radius: 10px;
+}
+.liveTag i { font-size: 7px; animation: blink 1.5s infinite; }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* Half-donut gauge */
+.gaugeBig { position: relative; display: flex; justify-content: center; }
+.halfDonut { width: 140px; overflow: visible; }
+.donutCenter {
+    position: absolute; bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+}
+.donutPct { font-size: 24px; font-weight: 700; color: #e2e8f0; display: block; line-height: 1; }
+.donutLabel { font-size: 11px; color: #64748b; }
+
+/* Gauge row */
+.gaugeRow { display: flex; align-items: center; gap: 10px; }
+.gaugeLabel { width: 40px; font-size: 11px; color: #64748b; text-align: right; }
+.gaugeTrack { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 6px; overflow: hidden; }
+.gaugeFill { height: 100%; border-radius: 6px; transition: width 0.6s ease; min-width: 4px; }
+.gaugeVal { font-size: 11px; color: #94a3b8; min-width: 80px; text-align: right; }
+.gaugeMax { color: #475569; }
+
+.diskPercent { font-size: 12px; text-align: center; }
+
+.dbMetrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.dbMetricItem { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 14px; }
+.dbMetricLabel { font-size: 11px; color: #64748b; display: block; margin-bottom: 4px; }
+.dbMetricVal { font-size: 15px; font-weight: 600; color: #e2e8f0; }
+.dbOnline { color: #34d399 !important; }
+.dbOffline { color: #f87171 !important; }
+
+/* Services */
+.servicesWrap { display: flex; flex-direction: column; gap: 10px; }
+.serviceCard {
+    display: flex; align-items: center; gap: 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(99,102,241,0.12);
+    border-radius: 14px; padding: 18px 20px;
+    transition: all 0.2s;
+}
+.serviceCard:hover { background: rgba(255,255,255,0.05); }
+
+.serviceIcon {
+    width: 48px; height: 48px;
+    background: rgba(99,102,241,0.12);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; color: #6366f1;
+}
+
+.serviceInfo { flex: 1; }
+.serviceName { font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 2px; }
+.serviceId { font-size: 12px; color: #64748b; font-family: monospace; }
+
+.serviceStatus {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 700;
+    padding: 6px 16px; border-radius: 20px;
+}
+.statusUp   { background: rgba(16,185,129,0.12); color: #34d399; }
+.statusDown { background: rgba(239,68,68,0.12);  color: #f87171; }
+
+.serviceNote {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.12);
+    border-radius: 10px; padding: 12px 14px;
+    font-size: 12px; color: #64748b;
+}
+.serviceNote i { flex-shrink: 0; color: #6366f1; margin-top: 1px; }
+
+/* Logs */
+.logsWrap { display: flex; flex-direction: column; gap: 10px; }
+
+.logFilters { display: flex; align-items: center; gap: 8px; }
+
+.filterBtn {
+    padding: 5px 14px; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px; background: rgba(255,255,255,0.04);
+    color: #64748b; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+}
+.filterBtn:hover { border-color: rgba(99,102,241,0.3); color: #94a3b8; }
+.filterBtnActive { background: rgba(99,102,241,0.12) !important; border-color: rgba(99,102,241,0.3) !important; color: #818cf8 !important; }
+
+.filterINFO.filterBtnActive   { background: rgba(99,102,241,0.12); color: #818cf8; }
+.filterWARN.filterBtnActive   { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3) !important; color: #fbbf24 !important; }
+.filterERROR.filterBtnActive  { background: rgba(239,68,68,0.12);  border-color: rgba(239,68,68,0.3) !important;  color: #f87171 !important; }
+
+.logCount { margin-left: auto; font-size: 12px; color: #475569; }
+
+.logViewer {
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(99,102,241,0.12);
+    border-radius: 12px; padding: 16px;
+    height: 320px; overflow-y: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    display: flex; flex-direction: column; gap: 2px;
+}
+
+.logLine {
+    display: flex; align-items: baseline; gap: 10px;
+    font-size: 12px; padding: 3px 6px; border-radius: 4px;
+    transition: background 0.1s;
+}
+.logLine:hover { background: rgba(255,255,255,0.04); }
+
+.logTime { color: #475569; flex-shrink: 0; }
+.logLevel { font-weight: 700; flex-shrink: 0; width: 42px; text-align: center; border-radius: 3px; padding: 1px 4px; font-size: 10px; }
+
+.levelINFO  { background: rgba(99,102,241,0.15); color: #818cf8; }
+.levelWARN  { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.levelERROR { background: rgba(239,68,68,0.15);  color: #f87171; }
+
+.logMsg { color: #94a3b8; flex: 1; }
+.logINFO .logMsg  { color: #94a3b8; }
+.logWARN .logMsg  { color: #fbbf24; }
+.logERROR .logMsg { color: #fca5a5; }
+
+.logEmpty { color: #475569; font-size: 13px; text-align: center; padding: 20px; }
+
+.logNote {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 12px; color: #475569;
+}
+.logNote i { color: #6366f1; flex-shrink: 0; }
+
+/* Loading / unavailable */
+.loadingState { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 40px; color: #64748b; }
+.spinner { width: 22px; height: 22px; border: 2px solid rgba(99,102,241,0.2); border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.unavailable { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 40px; color: #475569; }
+.unavailable i { font-size: 32px; }

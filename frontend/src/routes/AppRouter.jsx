@@ -41,7 +41,7 @@ import StocktakeListPage from '../pages/Stocktake/StocktakeListPage';
 import CreateStocktakePage from '../pages/Stocktake/CreateStocktakePage';
 import StocktakeDetailPage from '../pages/Stocktake/StocktakeDetailPage';
 import ReportListPage from '../pages/Report/ReportListPage';
-
+import OperationsCenterPage from '../pages/Operations/OperationsCenterPage';
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -129,6 +129,7 @@ function AppRouter() {
                     <Route path="/users/create" element={<CreateEmployeePage />} />
                     <Route path="/users/:id/permissions" element={<PermissionDetailPage />} />
                     <Route path="/audit-log" element={<AuditLogPage />} />
+                    <Route path="/operations" element={<OperationsCenterPage />} />
                 </Route>
 
                 {/* Catch-all Redirect */}
