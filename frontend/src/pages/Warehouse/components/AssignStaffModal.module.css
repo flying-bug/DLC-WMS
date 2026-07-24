@@ -1,22 +1,9 @@
-.overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal {
-    background-color: white;
-    border-radius: 8px;
+.modalDialog {
     width: 100%;
     max-width: 500px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.modalContent {
     display: flex;
     flex-direction: column;
 }
@@ -39,14 +26,20 @@
 .btnClose {
     background: none;
     border: none;
-    font-size: 24px;
+    font-size: 18px;
     line-height: 1;
     color: #6b7280;
     cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
 }
 
 .btnClose:hover {
     color: #111827;
+    background-color: #f3f4f6;
 }
 
 .form {
@@ -79,25 +72,17 @@
     color: #ef4444;
 }
 
-.input {
+.searchInputWrapper {
+    position: relative;
     width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-    font-size: 14px;
-    outline: none;
-    box-sizing: border-box;
 }
 
-.input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-}
-
-.searchingText {
-    font-size: 12px;
+.searchingSpinner {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
     color: #6b7280;
-    margin-top: 4px;
 }
 
 .userDropdown {
@@ -109,7 +94,7 @@
     border: 1px solid #d1d5db;
     border-top: none;
     border-radius: 0 0 4px 4px;
-    max-height: 150px;
+    max-height: 200px;
     overflow-y: auto;
     margin: 0;
     padding: 0;
@@ -119,9 +104,8 @@
 }
 
 .userDropdown li {
-    padding: 8px 12px;
+    padding: 10px 12px;
     cursor: pointer;
-    font-size: 14px;
     border-bottom: 1px solid #f3f4f6;
 }
 
@@ -129,19 +113,40 @@
     background-color: #f3f4f6;
 }
 
-.selectedUser {
-    margin-top: 8px;
-    font-size: 13px;
-    color: #16a34a;
+.userInfo {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
 }
 
-.selectedUser button {
+.userName {
+    font-weight: 500;
+    color: #111827;
+    font-size: 14px;
+}
+
+.userEmail {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.selectedUserAction {
+    margin-top: 8px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btnChangeUser {
     background: none;
     border: none;
     color: #3b82f6;
     cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btnChangeUser:hover {
     text-decoration: underline;
 }
 
@@ -149,7 +154,7 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: 10px;
-    max-height: 200px;
+    max-height: 250px;
     overflow-y: auto;
     padding: 2px;
 }
@@ -163,11 +168,17 @@
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
+    background-color: white;
 }
 
 .roleItem:hover {
     border-color: #d1d5db;
     background-color: #f9fafb;
+}
+
+.roleItem.selected {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
 }
 
 .roleItem input[type="checkbox"] {
@@ -194,38 +205,7 @@
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    margin-top: 10px;
-}
-
-.btnCancel {
-    padding: 8px 16px;
-    background-color: white;
-    border: 1px solid #d1d5db;
-    color: #374151;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.btnCancel:hover:not(:disabled) {
-    background-color: #f9fafb;
-}
-
-.btnSave {
-    padding: 8px 16px;
-    background-color: #3b82f6;
-    border: none;
-    color: white;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.btnSave:hover:not(:disabled) {
-    background-color: #2563eb;
-}
-
-.btnSave:disabled, .btnCancel:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
 }

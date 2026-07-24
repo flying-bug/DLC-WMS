@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import warehouseStaffApi from '../../../api/warehouseStaffApi';
 import axiosClient from '../../../api/axiosClient';
+import Modal from '../../../components/ui/Modal/Modal';
+import Button from '../../../components/ui/Button/Button';
 import styles from './AssignStaffModal.module.css';
 
-const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
-    const [userId, setUserId] = useState('');
+const AssignStaffModal = ({ warehouseId, roles, userId: editUserId, staffs, onClose, onSuccess }) => {
+    const [userId, setUserId] = useState(editUserId || '');
     const [selectedRoleIds, setSelectedRoleIds] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -13,6 +15,18 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [users, setUsers] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+
+    const isEditMode = !!editUserId;
+
+    useEffect(() => {
+        if (isEditMode && staffs) {
+            const staff = staffs.find(s => s.userId === editUserId);
+            if (staff) {
+                setSearchTerm(`${staff.fullName} (${staff.email})`);
+                setSelectedRoleIds(staff.roles.map(r => r.id));
+            }
+        }
+    }, [isEditMode, editUserId, staffs]);
 
     const searchUsers = async () => {
         setIsSearching(true);
@@ -27,6 +41,8 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
     };
 
     useEffect(() => {
+        if (isEditMode || !searchTerm.trim() || userId) return;
+
         const timer = setTimeout(() => {
             if (searchTerm.trim().length >= 2) {
                 searchUsers();
@@ -36,8 +52,7 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
         }, 500);
 
         return () => clearTimeout(timer);
-         
-    }, [searchTerm]);
+    }, [searchTerm, isEditMode, userId]);
 
     const handleRoleToggle = (roleId) => {
         setSelectedRoleIds(prev => 
@@ -76,11 +91,18 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
     };
 
     return (
-        <div className={styles.overlay}>
-            <div className={styles.modal}>
+        <Modal 
+            isOpen={true} 
+            onClose={onClose} 
+            dialogClassName={styles.modalDialog}
+            ariaLabel={isEditMode ? "Sửa quyền nhân sự kho" : "Gán quyền nhân sự kho"}
+        >
+            <div className={styles.modalContent}>
                 <div className={styles.header}>
-                    <h2>Gán Quyền Nhân Sự Kho</h2>
-                    <button className={styles.btnClose} onClick={onClose}>&times;</button>
+                    <h2>{isEditMode ? 'Sửa quyền nhân sự kho' : 'Gán quyền nhân sự kho'}</h2>
+                    <button type="button" className={styles.btnClose} onClick={onClose}>
+                        <i className="bi bi-x-lg"></i>
+                    </button>
                 </div>
                 
                 <form onSubmit={handleSubmit} className={styles.form}>
@@ -88,35 +110,43 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
                     
                     <div className={styles.formGroup}>
                         <label>Tìm nhân viên <span className={styles.required}>*</span></label>
-                        <input 
-                            type="text" 
-                            className={styles.input}
-                            placeholder="Nhập tên, username hoặc sđt để tìm..." 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                        {isSearching && <div className={styles.searchingText}>Đang tìm kiếm...</div>}
+                        <div className={styles.searchInputWrapper}>
+                            <input 
+                                type="text" 
+                                className="misa-input"
+                                placeholder={isEditMode ? '' : "Nhập tên, username hoặc sđt để tìm..."}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                disabled={isEditMode || userId !== ''}
+                                style={{ width: '100%' }}
+                            />
+                            {isSearching && <span className={styles.searchingSpinner}><i className="bi bi-arrow-repeat spin"></i></span>}
+                        </div>
                         
-                        {users.length > 0 && !userId && (
+                        {users.length > 0 && !userId && !isEditMode && (
                             <ul className={styles.userDropdown}>
                                 {users.map(u => (
                                     <li key={u.id} onClick={() => {
                                         setUserId(u.id);
-                                        setSearchTerm(`${u.fullName} (${u.username})`);
+                                        setSearchTerm(`${u.fullName} - ${u.email || u.phone}`);
                                         setUsers([]);
                                     }}>
-                                        {u.fullName} - {u.email || u.phone}
+                                        <div className={styles.userInfo}>
+                                            <span className={styles.userName}>{u.fullName}</span>
+                                            <span className={styles.userEmail}>{u.email || u.phone}</span>
+                                        </div>
                                     </li>
                                 ))}
                             </ul>
                         )}
-                        {userId && (
-                            <div className={styles.selectedUser}>
-                                Đã chọn nhân viên
-                                <button type="button" onClick={() => {
+                        {userId && !isEditMode && (
+                            <div className={styles.selectedUserAction}>
+                                <button type="button" className={styles.btnChangeUser} onClick={() => {
                                     setUserId('');
                                     setSearchTerm('');
-                                }}>Thay đổi</button>
+                                }}>
+                                    <i className="bi bi-arrow-counterclockwise"></i> Chọn nhân viên khác
+                                </button>
                             </div>
                         )}
                     </div>
@@ -125,7 +155,7 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
                         <label>Vai trò <span className={styles.required}>*</span></label>
                         <div className={styles.rolesGrid}>
                             {roles.map(role => (
-                                <label key={role.id} className={styles.roleItem}>
+                                <label key={role.id} className={`${styles.roleItem} ${selectedRoleIds.includes(role.id) ? styles.selected : ''}`}>
                                     <input 
                                         type="checkbox" 
                                         checked={selectedRoleIds.includes(role.id)}
@@ -141,16 +171,16 @@ const AssignStaffModal = ({ warehouseId, roles, onClose, onSuccess }) => {
                     </div>
 
                     <div className={styles.footer}>
-                        <button type="button" className={styles.btnCancel} onClick={onClose} disabled={loading}>
-                            Hủy
-                        </button>
-                        <button type="submit" className={styles.btnSave} disabled={loading}>
-                            {loading ? 'Đang xử lý...' : 'Xác nhận gán quyền'}
-                        </button>
+                        <Button variant="secondary" onClick={onClose} disabled={loading} type="button">
+                            Hủy bỏ
+                        </Button>
+                        <Button variant="primary" type="submit" isLoading={loading}>
+                            {isEditMode ? 'Lưu thay đổi' : 'Xác nhận gán quyền'}
+                        </Button>
                     </div>
                 </form>
             </div>
-        </div>
+        </Modal>
     );
 };
 

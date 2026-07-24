@@ -1,8 +1,12 @@
- 
 import { useState, useEffect } from 'react';
 import warehouseStaffApi from '../../../api/warehouseStaffApi';
 import AssignStaffModal from './AssignStaffModal';
 import Toast from '../../../components/ui/Toast/Toast';
+import ResponsiveTable from '../../../components/ui/Table/ResponsiveTable';
+import Pagination from '../../../components/ui/Pagination/Pagination';
+import SearchFilter from '../../../components/ui/SearchFilter/SearchFilter';
+import Button from '../../../components/ui/Button/Button';
+import ConfirmModal from '../../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './WarehouseStaffList.module.css';
 
 const WarehouseStaffList = ({ warehouseId }) => {
@@ -11,21 +15,35 @@ const WarehouseStaffList = ({ warehouseId }) => {
     const [loading, setLoading] = useState(true);
     
     // Filters
-    const [search, setSearch] = useState('');
-    const [roleId, setRoleId] = useState('');
-    const [showInactive, setShowInactive] = useState(false);
+    const [filters, setFilters] = useState({
+        search: '',
+        roleId: '',
+        showInactive: false
+    });
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     
     // Pagination
     const [page, setPage] = useState(0);
+    const [size, setSize] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
     
     // UI state
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [selectedUserId, setSelectedUserId] = useState(null);
     const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, userId: null });
 
     const showToast = (type, message) => {
         setToast({ isVisible: true, type, message });
     };
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(filters.search);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [filters.search]);
 
     const fetchRoles = async () => {
         try {
@@ -36,24 +54,25 @@ const WarehouseStaffList = ({ warehouseId }) => {
         }
     };
 
-    const fetchStaffs = async (pageIndex = 0) => {
+    const fetchStaffs = async (pageIndex = 0, pageSize = size) => {
         setLoading(true);
         try {
             const params = {
                 page: pageIndex,
-                size: 10,
-                isActive: showInactive ? null : true
+                size: pageSize,
+                isActive: filters.showInactive ? null : true
             };
-            if (search) params.search = search;
-            if (roleId) params.roleId = roleId;
+            if (debouncedSearch) params.search = debouncedSearch;
+            if (filters.roleId) params.roleId = filters.roleId;
             
             const res = await warehouseStaffApi.getStaffList(warehouseId, params);
             setStaffs(res.data.data.content || []);
             setTotalPages(res.data.data.totalPages || 0);
+            setTotalElements(res.data.data.totalElements || 0);
             setPage(pageIndex);
         } catch (error) {
             console.error('Lỗi tải danh sách nhân sự:', error);
-            showToast('error', 'Không thể tải danh sách nhân sự.');
+            showToast('error', 'Không tải được danh sách nhân sự kho.');
         } finally {
             setLoading(false);
         }
@@ -64,147 +83,167 @@ const WarehouseStaffList = ({ warehouseId }) => {
     }, []);
 
     useEffect(() => {
-        fetchStaffs(0);
-         
-    }, [warehouseId, showInactive, roleId, search]);
+        fetchStaffs(0, size);
+    }, [warehouseId, filters.showInactive, filters.roleId, debouncedSearch, size]);
 
-    const handleRevoke = async (userId) => {
-        if (!window.confirm('Bạn có chắc chắn muốn thu hồi quyền của nhân viên này tại kho?')) return;
-        
+    const handleRevoke = async () => {
         try {
-            await warehouseStaffApi.revokeAccess(warehouseId, userId);
-            showToast('success', 'Thu hồi quyền thành công!');
-            fetchStaffs(page);
+            await warehouseStaffApi.revokeAccess(warehouseId, confirmModal.userId);
+            showToast('success', 'Thu hồi quyền nhân sự thành công!');
+            fetchStaffs(page, size);
         } catch (error) {
             console.error(error);
-            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra!');
+            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Không thể thu hồi quyền nhân sự!');
+        } finally {
+            setConfirmModal({ isOpen: false, userId: null });
         }
     };
+
+    const columns = [
+        { key: 'index', label: '#', width: '5%', align: 'center', render: (_, index) => page * size + index + 1 },
+        { key: 'fullName', label: 'Tên nhân viên' },
+        { key: 'email', label: 'Email' },
+        { 
+            key: 'roles', 
+            label: 'Vai trò',
+            render: (staff) => (
+                <div className={styles.rolesList}>
+                    {staff.roles?.map(r => (
+                        <span key={r.id} className={styles.roleBadge}>{r.name}</span>
+                    ))}
+                </div>
+            )
+        },
+        {
+            key: 'status',
+            label: 'Trạng thái',
+            render: (staff) => (
+                <span className={`${styles.statusBadge} ${staff.isActive ? styles.active : styles.inactive}`}>
+                    {staff.isActive ? 'Đang hoạt động' : 'Đã thu hồi'}
+                </span>
+            )
+        },
+        {
+            key: 'actions',
+            label: 'Thao tác',
+            align: 'center',
+            width: '100px',
+            render: (staff) => staff.isActive && (
+                <div className={styles.actionButtons}>
+                    <button
+                        className={styles.iconBtnEdit}
+                        onClick={() => {
+                            setSelectedUserId(staff.userId);
+                            setIsAssignModalOpen(true);
+                        }}
+                        title="Sửa phân quyền"
+                    >
+                        <i className="bi bi-pencil"></i>
+                    </button>
+                    <button 
+                        className={styles.iconBtnDanger}
+                        onClick={() => setConfirmModal({ isOpen: true, userId: staff.userId })}
+                        title="Thu hồi toàn bộ quyền"
+                    >
+                        <i className="bi bi-trash"></i>
+                    </button>
+                </div>
+            )
+        }
+    ];
+
+    const filterConfig = [
+        {
+            key: 'roleId',
+            type: 'select',
+            placeholder: '-- Tất cả vai trò --',
+            options: roles.map(r => ({ value: r.id, label: r.name }))
+        },
+        {
+            key: 'showInactive',
+            type: 'checkbox',
+            label: 'Hiển thị cả nhân sự ngừng hoạt động'
+        }
+    ];
 
     return (
         <div className={styles.container}>
             <div className={styles.toolbar}>
-                <div className={styles.filters}>
-                    <input 
-                        type="text" 
-                        placeholder="Tìm theo tên hoặc email..." 
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className={styles.searchInput}
-                    />
-                    <select 
-                        value={roleId} 
-                        onChange={(e) => setRoleId(e.target.value)}
-                        className={styles.roleSelect}
-                    >
-                        <option value="">-- Tất cả vai trò --</option>
-                        {roles.map(r => (
-                            <option key={r.id} value={r.id}>{r.name}</option>
-                        ))}
-                    </select>
-                    <label className={styles.checkboxLabel}>
-                        <input 
-                            type="checkbox" 
-                            checked={showInactive}
-                            onChange={(e) => setShowInactive(e.target.checked)}
-                        />
-                        Hiển thị cả nhân sự ngừng hoạt động
-                    </label>
-                </div>
-                <button className={styles.btnAssign} onClick={() => setIsAssignModalOpen(true)}>
-                    <i className="fas fa-user-plus"></i> Gán quyền nhân sự
-                </button>
+                <SearchFilter 
+                    filters={filters}
+                    onChange={setFilters}
+                    onRefresh={() => fetchStaffs(0, size)}
+                    config={filterConfig}
+                    searchPlaceholder="Tìm theo tên hoặc email..."
+                />
+                
+                <Button 
+                    variant="primary" 
+                    icon="bi bi-person-plus" 
+                    onClick={() => {
+                        setSelectedUserId(null);
+                        setIsAssignModalOpen(true);
+                    }}
+                >
+                    Thêm nhân sự
+                </Button>
             </div>
 
-            <div className={styles.tableContainer}>
-                {loading ? (
-                    <div className={styles.loading}>Đang tải dữ liệu...</div>
-                ) : staffs.length === 0 ? (
-                    <div className={styles.empty}>Không có nhân sự nào trong kho.</div>
-                ) : (
-                    <table className={styles.table}>
-                        <thead>
-                            <tr>
-                                <th>Nhân viên</th>
-                                <th>Email</th>
-                                <th>Vai trò</th>
-                                <th>Trạng thái</th>
-                                <th>Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {staffs.map(staff => (
-                                <tr key={staff.userId} className={!staff.isActive ? styles.inactiveRow : ''}>
-                                    <td>{staff.fullName}</td>
-                                    <td>{staff.email}</td>
-                                    <td>
-                                        <div className={styles.rolesList}>
-                                            {staff.roles.map(r => (
-                                                <span key={r.id} className={styles.roleBadge}>{r.name}</span>
-                                            ))}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className={`${styles.statusBadge} ${staff.isActive ? styles.active : styles.inactive}`}>
-                                            {staff.isActive ? 'Đang hoạt động' : 'Đã thu hồi'}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {staff.isActive && (
-                                            <button 
-                                                className={styles.btnRevoke}
-                                                onClick={() => handleRevoke(staff.userId)}
-                                                title="Thu hồi quyền"
-                                            >
-                                                <i className="fas fa-user-times"></i>
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+            <ResponsiveTable 
+                columns={columns}
+                data={staffs}
+                isLoading={loading}
+                emptyMessage="Không có nhân sự nào trong kho."
+                getRowClass={(staff) => !staff.isActive ? styles.inactiveRow : ''}
+            />
 
-            {totalPages > 1 && (
-                <div className={styles.pagination}>
-                    <button 
-                        disabled={page === 0} 
-                        onClick={() => fetchStaffs(page - 1)}
-                        className={styles.pageBtn}
-                    >
-                        Trước
-                    </button>
-                    <span className={styles.pageInfo}>Trang {page + 1} / {totalPages}</span>
-                    <button 
-                        disabled={page >= totalPages - 1} 
-                        onClick={() => fetchStaffs(page + 1)}
-                        className={styles.pageBtn}
-                    >
-                        Sau
-                    </button>
-                </div>
-            )}
+            <Pagination 
+                page={page}
+                size={size}
+                totalPages={totalPages}
+                totalElements={totalElements}
+                onPageChange={(p) => fetchStaffs(p, size)}
+                onSizeChange={(s) => {
+                    setSize(s);
+                    fetchStaffs(0, s);
+                }}
+            />
 
             {isAssignModalOpen && (
                 <AssignStaffModal 
                     warehouseId={warehouseId}
                     roles={roles}
-                    onClose={() => setIsAssignModalOpen(false)}
+                    userId={selectedUserId}
+                    staffs={staffs}
+                    onClose={() => {
+                        setIsAssignModalOpen(false);
+                        setSelectedUserId(null);
+                    }}
                     onSuccess={() => {
                         setIsAssignModalOpen(false);
-                        showToast('success', 'Gán quyền thành công!');
-                        fetchStaffs(page);
+                        setSelectedUserId(null);
+                        showToast('success', selectedUserId ? 'Cập nhật phân quyền thành công!' : 'Thêm nhân sự thành công!');
+                        fetchStaffs(page, size);
                     }}
                 />
             )}
+
+            <ConfirmModal 
+                isOpen={confirmModal.isOpen}
+                title="Xác nhận thu hồi quyền"
+                message="Bạn có chắc chắn muốn thu hồi toàn bộ quyền của nhân viên này tại kho?"
+                confirmText="Đồng ý thu hồi"
+                cancelText="Hủy bỏ"
+                onConfirm={handleRevoke}
+                onCancel={() => setConfirmModal({ isOpen: false, userId: null })}
+                type="danger"
+            />
 
             <Toast 
                 isVisible={toast.isVisible}
                 type={toast.type}
                 message={toast.message}
-                onClose={() => setToast({ ...toast, isVisible: false })}
+                onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
             />
         </div>
     );
