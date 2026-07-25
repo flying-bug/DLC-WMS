@@ -101,7 +101,9 @@ function BackupCenterTab() {
         try {
             const res = await getBackupSchedule();
             if (res.success) setSchedule(res.data);
-        } catch {}
+        } catch (err) {
+            console.error('Failed to fetch schedule:', err);
+        }
     }, []);
 
     useEffect(() => {
