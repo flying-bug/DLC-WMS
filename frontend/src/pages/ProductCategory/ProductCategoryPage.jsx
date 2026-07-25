@@ -11,6 +11,7 @@ const emptyForm = {
     code: '',
     name: '',
     status: 'APPROVED',
+    description: '',
 };
 
 const statusOptions = [
@@ -122,6 +123,7 @@ const ProductCategoryPage = () => {
             code: category.code || '',
             name: category.name || '',
             status: category.status || 'APPROVED',
+            description: category.description || '',
         });
         setErrorMsg('');
         setShowModal(true);
@@ -136,6 +138,7 @@ const ProductCategoryPage = () => {
             code: `${category.code}-COPY`,
             name: `${category.name} - Copy`,
             status: 'APPROVED',
+            description: category.description || '',
         });
         setErrorMsg('');
         setShowModal(true);
@@ -147,6 +150,7 @@ const ProductCategoryPage = () => {
         code: formData.code.trim(),
         name: formData.name.trim(),
         status: formData.status,
+        description: formData.description?.trim(),
     });
 
     const handleSave = async (closeAfterSave = true) => {
@@ -293,6 +297,7 @@ const ProductCategoryPage = () => {
                             <tr>
                                 <th>Mã danh mục</th>
                                 <th>Tên danh mục</th>
+                                <th>Mô tả</th>
                                 <th>Danh mục cha</th>
                                 <th>Trạng thái</th>
                                 <th>Ngày cập nhật</th>
@@ -302,17 +307,20 @@ const ProductCategoryPage = () => {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="6" className={styles.emptyCell}>Đang tải dữ liệu...</td>
+                                    <td colSpan="7" className={styles.emptyCell}>Đang tải dữ liệu...</td>
                                 </tr>
                             ) : categories.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className={styles.emptyCell}>Không có danh mục phù hợp.</td>
+                                    <td colSpan="7" className={styles.emptyCell}>Không có danh mục phù hợp.</td>
                                 </tr>
                             ) : (
                                 categories.map((category) => (
                                     <tr key={category.id}>
                                         <td className={styles.codeCell}>{category.code}</td>
                                         <td className={styles.nameCell}>{category.name}</td>
+                                        <td style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {category.description || '-'}
+                                        </td>
                                         <td>{category.parentName || '-'}</td>
                                         <td>
                                             <span className={`${styles.statusBadge} ${category.status === 'APPROVED' ? styles.active : styles.inactive}`}>
@@ -385,11 +393,12 @@ const ProductCategoryPage = () => {
                                 <div className="misa-form-group">
                                     <label>Mã danh mục <span className="required">*</span></label>
                                     <input
-                                        className="misa-input"
+                                        className={`misa-input ${isEdit ? 'disabled' : ''}`}
                                         value={formData.code}
                                         onChange={(event) => setFormData({ ...formData, code: event.target.value.toUpperCase() })}
                                         placeholder="Ví dụ: CPU"
-                                        autoFocus
+                                        disabled={isEdit}
+                                        autoFocus={!isEdit}
                                     />
                                 </div>
                                 <div className="misa-form-group">
@@ -430,6 +439,19 @@ const ProductCategoryPage = () => {
                                             <option key={option.value} value={option.value}>{option.label}</option>
                                         ))}
                                     </select>
+                                </div>
+                            </div>
+
+                            <div className="misa-form-row">
+                                <div className="misa-form-group" style={{ width: '100%' }}>
+                                    <label>Mô tả</label>
+                                    <textarea
+                                        className="misa-input"
+                                        style={{ minHeight: '80px', resize: 'vertical' }}
+                                        value={formData.description || ''}
+                                        onChange={(event) => setFormData({ ...formData, description: event.target.value })}
+                                        placeholder="Nhập mô tả danh mục..."
+                                    />
                                 </div>
                             </div>
                         </div>

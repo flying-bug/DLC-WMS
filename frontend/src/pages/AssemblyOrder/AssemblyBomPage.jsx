@@ -14,7 +14,7 @@ const STATUS_META = {
     INACTIVE: { label: 'Ngừng dùng', tone: 'danger' }
 };
 
-const defaultBomLine = { componentVariantId: '', quantity: '1', costAllocationPct: '0', note: '' };
+const defaultBomLine = { componentVariantId: '', quantity: '1', note: '' };
 
 const createDefaultForm = () => ({
     id: null,
@@ -104,7 +104,6 @@ function AssemblyBomPage() {
             lines: bom.lines?.length ? bom.lines.map((line) => ({
                 componentVariantId: line.componentVariantId || '',
                 quantity: String(Number(line.quantity || 1)),
-                costAllocationPct: String(Number(line.costAllocationPct ?? 0)),
                 note: line.note || ''
             })) : [{ ...defaultBomLine }]
         });
@@ -115,6 +114,35 @@ function AssemblyBomPage() {
 
     const setField = (field, value) => {
         setForm((current) => ({ ...current, [field]: value }));
+    };
+
+    const handleProductChange = async (productId) => {
+        setField('productId', productId);
+        if (!productId) {
+            setForm((current) => ({ ...current, lines: [{ ...defaultBomLine }] }));
+            return;
+        }
+
+        const selectedProduct = products.find(p => String(p.id) === String(productId));
+        if (selectedProduct && selectedProduct.bomTemplate) {
+            try {
+                const templateLines = JSON.parse(selectedProduct.bomTemplate);
+                if (templateLines && templateLines.length > 0) {
+                    const newLines = templateLines.map(line => ({
+                        componentVariantId: line.componentVariantId ? String(line.componentVariantId) : '',
+                        quantity: String(Number(line.quantity || 1)),
+                        note: line.note || ''
+                    }));
+                    
+                    setForm((current) => ({ ...current, lines: newLines }));
+                    return;
+                }
+            } catch (err) {
+                console.error("Lỗi parse khung cấu hình", err);
+            }
+        }
+        
+        setForm((current) => ({ ...current, lines: [{ ...defaultBomLine }] }));
     };
 
     const setLineField = (index, field, value) => {
@@ -148,10 +176,7 @@ function AssemblyBomPage() {
             if (!line.componentVariantId) return `Vui lòng chọn SKU linh kiện dòng ${index + 1}.`;
             if (!line.quantity || Number(line.quantity) <= 0) return `Định mức dòng ${index + 1} phải lớn hơn 0.`;
             if (!Number.isInteger(Number(line.quantity))) return `Định mức dòng ${index + 1} phải là số nguyên.`;
-            if (line.costAllocationPct === '' || Number(line.costAllocationPct) < 0) return `Tỷ lệ phân bổ dòng ${index + 1} không được âm.`;
         }
-        const totalPct = form.lines.reduce((sum, l) => sum + Number(l.costAllocationPct || 0), 0);
-        if (Math.abs(totalPct - 100) > 0.01) return `Tổng tỷ lệ phân bổ giá vốn phải bằng 100% (hiện tại: ${totalPct.toFixed(2)}%).`;
         return '';
     };
 
@@ -164,7 +189,6 @@ function AssemblyBomPage() {
         lines: form.lines.map((line) => ({
             componentVariantId: Number(line.componentVariantId),
             quantity: Number.parseInt(line.quantity, 10),
-            costAllocationPct: Number(line.costAllocationPct || 0),
             note: line.note?.trim() || null
         }))
     });
@@ -297,7 +321,7 @@ function AssemblyBomPage() {
                                 <div className={styles.formGrid}>
                                     <label className={styles.field}>
                                         <span>Thành phẩm</span>
-                                        <select value={form.productId} onChange={(event) => setField('productId', event.target.value)}>
+                                        <select value={form.productId} onChange={(event) => handleProductChange(event.target.value)}>
                                             <option value="">Chọn thành phẩm</option>
                                             {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
                                                 <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
@@ -326,63 +350,95 @@ function AssemblyBomPage() {
                                     </label>
                                 </div>
 
-                                <div className={styles.lineActions}>
-                                    <button className={styles.secondaryButton} type="button" onClick={addLine}>
-                                        <i className="bi bi-plus-lg"></i>
-                                        Thêm linh kiện
-                                    </button>
-                                </div>
 
-                                {/* Cảnh báo tổng phân bổ */}
-                                {(() => {
-                                    const total = form.lines.reduce((sum, l) => sum + Number(l.costAllocationPct || 0), 0);
-                                    return Math.abs(total - 100) > 0.01 ? (
-                                        <div className={styles.errorBox} style={{ marginBottom: 8 }}>
-                                            ⚠️ Tổng tỷ lệ phân bổ giá vốn: <strong>{total.toFixed(2)}%</strong> — phải bằng đúng <strong>100%</strong>.
+
+                                <div className={styles.bomBuilderContainer}>
+                                    <div className={styles.bomBuilderHeader}>
+                                        <h3 className={styles.bomBuilderTitle}>Chọn linh kiện xây cấu hình máy tính theo nhu cầu</h3>
+                                        <div className={styles.bomTotalCost}>
+                                            Chi phí dự tính: {form.lines.reduce((sum, line) => {
+                                                const v = variants.find(v => String(v.id) === String(line.componentVariantId));
+                                                return sum + (v ? Number(v.salePrice || 0) : 0) * Number(line.quantity || 0);
+                                            }, 0).toLocaleString('vi-VN')} đ
                                         </div>
-                                    ) : null;
-                                })()}
+                                    </div>
+                                    <div className={styles.bomList}>
+                                        {form.lines.map((line, index) => {
+                                            const selectedVariant = variants.find(v => String(v.id) === String(line.componentVariantId));
+                                            
+                                            return (
+                                                <div key={index} className={styles.bomLineCard}>
+                                                    <div className={styles.bomLineHeader}>
+                                                        {index + 1}. {selectedVariant ? (selectedVariant.productType || 'Linh kiện') : 'Linh kiện'}
+                                                    </div>
+                                                    
+                                                    {selectedVariant ? (
+                                                        <div className={styles.bomLineContent}>
+                                                            <div className={styles.bomItemImgBox}>
+                                                                {selectedVariant.imageUrl ? (
+                                                                    <img src={selectedVariant.imageUrl} alt={selectedVariant.variantName} />
+                                                                ) : (
+                                                                    <i className="bi bi-box"></i>
+                                                                )}
+                                                            </div>
+                                                            <div className={styles.bomItemDetails}>
+                                                                <div className={styles.bomItemTitle} title={`${selectedVariant.productName} / ${selectedVariant.variantName}`}>
+                                                                    {selectedVariant.productName} {selectedVariant.variantName && `/ ${selectedVariant.variantName}`}
+                                                                </div>
+                                                                <div className={styles.bomItemMeta}>
+                                                                    <span>Bảo hành: <strong>{selectedVariant.warranty || '36 Tháng'}</strong></span>
+                                                                    <span className={styles.stockStatus}>Kho hàng: <strong>{Number(selectedVariant.stockQty || 0) > 0 ? 'Còn hàng' : 'Hết hàng'}</strong></span>
+                                                                    <span>Mã SP: <strong>{selectedVariant.sku}</strong></span>
+                                                                </div>
+                                                                <div className={styles.bomExtraFields}>
 
-                                <div className={styles.tablePanel}>
-                                    <table className={styles.table}>
-                                        <thead>
-                                            <tr>
-                                                <th>SKU linh kiện</th>
-                                                <th>Định mức</th>
-                                                <th>% Phân bổ giá vốn</th>
-                                                <th>Ghi chú</th>
-                                                <th></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {form.lines.map((line, index) => (
-                                                <tr key={index}>
-                                                    <td>
-                                                        <select value={line.componentVariantId} onChange={(event) => setLineField(index, 'componentVariantId', event.target.value)}>
-                                                            <option value="">Chọn SKU</option>
-                                                            {variants.map((variant) => (
-                                                                <option key={variant.id} value={variant.id}>{variant.sku} - {variant.productName} / {variant.variantName}</option>
-                                                            ))}
-                                                        </select>
-                                                    </td>
-                                                    <td>
-                                                        <input className={styles.numberInput} inputMode="numeric" type="number" min="1" step="1" value={line.quantity} onChange={(event) => setLineField(index, 'quantity', event.target.value)} />
-                                                    </td>
-                                                    <td>
-                                                        <input className={styles.numberInput} inputMode="decimal" type="number" min="0" max="100" step="0.01" value={line.costAllocationPct} onChange={(event) => setLineField(index, 'costAllocationPct', event.target.value)} placeholder="0.00" />
-                                                    </td>
-                                                    <td>
-                                                        <input value={line.note} onChange={(event) => setLineField(index, 'note', event.target.value)} placeholder="Ghi chú dòng" />
-                                                    </td>
-                                                    <td>
-                                                        <button className={styles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeLine(index)}>
-                                                            <i className="bi bi-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                                                    <label>
+                                                                        Ghi chú:
+                                                                        <input type="text" className={styles.fullWidth} value={line.note} onChange={(event) => setLineField(index, 'note', event.target.value)} />
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                            <div className={styles.bomItemPriceGroup}>
+                                                                <span className={styles.bomItemPrice}>{Number(selectedVariant.salePrice || 0).toLocaleString('vi-VN')}</span>
+                                                                <span>x</span>
+                                                                <input className={styles.bomItemQtyInput} type="number" min="1" step="1" value={line.quantity} onChange={(event) => setLineField(index, 'quantity', event.target.value)} />
+                                                                <span>=</span>
+                                                                <span className={styles.bomItemTotal}>
+                                                                    {(Number(selectedVariant.salePrice || 0) * Number(line.quantity || 0)).toLocaleString('vi-VN')}
+                                                                </span>
+                                                            </div>
+                                                            <div className={styles.bomItemActions}>
+                                                                <button className={`${styles.bomActionBtn} ${styles.edit}`} type="button" title="Đổi linh kiện" onClick={() => setLineField(index, 'componentVariantId', '')}>
+                                                                    <i className="bi bi-pencil-square"></i>
+                                                                </button>
+                                                                <button className={`${styles.bomActionBtn} ${styles.delete}`} type="button" title="Xóa" onClick={() => removeLine(index)}>
+                                                                    <i className="bi bi-trash"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className={styles.bomEmptySlot}>
+                                                            <select style={{ flex: 1, marginRight: 16, padding: '8px 12px', border: '1px solid var(--color-border)', borderRadius: 4 }} value={line.componentVariantId} onChange={(event) => setLineField(index, 'componentVariantId', event.target.value)}>
+                                                                <option value="">+ Chọn linh kiện...</option>
+                                                                {variants.map((variant) => (
+                                                                    <option key={variant.id} value={variant.id}>{variant.sku} - {variant.productName} {variant.variantName ? `/ ${variant.variantName}` : ''}</option>
+                                                                ))}
+                                                            </select>
+                                                            <button className={styles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeLine(index)}>
+                                                                <i className="bi bi-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                        
+                                        <div style={{ marginTop: 8 }}>
+                                            <button className={styles.addBomLineBtn} type="button" onClick={addLine}>
+                                                <i className="bi bi-plus-circle"></i> Thêm linh kiện
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

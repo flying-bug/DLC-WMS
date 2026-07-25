@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -40,15 +41,159 @@ const getPageContent = (response) => {
 
 let globalSpecIdCounter = 1;
 
-const defaultBomLinesData = [
-    { componentVariantId: '', componentRole: 'CPU - Bộ vi xử lý', quantity: '', note: '' },
-    { componentVariantId: '', componentRole: 'MAINBOARD - Bo mạch chủ', quantity: '', note: '' },
-    { componentVariantId: '', componentRole: 'RAM', quantity: '', note: '' },
-    { componentVariantId: '', componentRole: 'HDD', quantity: '', note: '' },
-    { componentVariantId: '', componentRole: 'SSD', quantity: '', note: '' },
-    { componentVariantId: '', componentRole: 'VGA', quantity: '', note: '' },
-    { componentVariantId: '', componentRole: 'Nguồn', quantity: '', note: '' }
-];
+const getPredefinedBomLines = (categoriesList) => {
+    const predefinedNames = ['CPU', 'MAINBOARD', 'RAM', 'HDD', 'SSD', 'VGA', 'Nguồn'];
+    const lines = predefinedNames.map(name => {
+        const cat = (categoriesList || []).find(c =>
+            (c.name && c.name.toUpperCase().includes(name.toUpperCase())) ||
+            (c.code && c.code.toUpperCase().includes(name.toUpperCase()))
+        );
+        return { componentVariantId: '', categoryId: cat ? cat.id : '', quantity: '', note: '' };
+    });
+    return lines.length > 0 ? lines : [{ componentVariantId: '', categoryId: '', quantity: '', note: '' }];
+};
+
+const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const dropdownRef = useRef(null);
+    const inputRef = useRef(null);
+    const listRef = useRef(null);
+    const [rect, setRect] = useState(null);
+
+    const updateRect = () => {
+        if (dropdownRef.current) {
+            setRect(dropdownRef.current.getBoundingClientRect());
+        }
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+                !(listRef.current && listRef.current.contains(event.target))) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        if (isOpen) {
+            updateRect();
+            window.addEventListener('scroll', updateRect, true);
+            window.addEventListener('resize', updateRect);
+            return () => {
+                window.removeEventListener('scroll', updateRect, true);
+                window.removeEventListener('resize', updateRect);
+            };
+        }
+    }, [isOpen]);
+
+    const selectedCat = categories.find(c => String(c.id) === String(value));
+
+    const handleOpen = () => {
+        setIsOpen(true);
+        setSearchTerm(selectedCat ? selectedCat.name : '');
+        setTimeout(() => inputRef.current?.focus(), 0);
+    };
+
+    const filteredCategories = categories.filter(cat =>
+        (cat.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (cat.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (cat.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div ref={dropdownRef} style={{ position: 'relative', width: '100%', minWidth: '180px' }}>
+            <div
+                onClick={handleOpen}
+                style={{
+                    padding: '6px 8px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    cursor: 'text',
+                    backgroundColor: '#fff',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    minHeight: '32px'
+                }}
+            >
+                {isOpen ? (
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Tìm danh mục..."
+                        style={{ border: 'none', outline: 'none', width: '100%', fontSize: '13px', padding: 0 }}
+                    />
+                ) : (
+                    selectedCat ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
+                            <span style={{ fontWeight: 500, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedCat.name}</span>
+                            {selectedCat.description && <span style={{ fontSize: '11px', color: '#6b7280', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedCat.description}</span>}
+                        </div>
+                    ) : (
+                        <span style={{ color: '#9ca3af' }}>Tìm kiếm danh mục</span>
+                    )
+                )}
+                <i className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`} style={{ color: '#9ca3af', fontSize: '10px', marginLeft: '8px', flexShrink: 0 }}></i>
+            </div>
+
+            {isOpen && rect && createPortal(
+                <div ref={listRef} style={{
+                    position: 'fixed',
+                    top: rect.bottom + 4,
+                    left: rect.left,
+                    width: rect.width,
+                    zIndex: 999999,
+                    backgroundColor: '#fff',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    maxHeight: '200px',
+                    overflowY: 'auto'
+                }}>
+                    {filteredCategories.length > 0 ? filteredCategories.map(cat => (
+                        <div
+                            key={cat.id}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onChange(cat.id);
+                                setIsOpen(false);
+                            }}
+                            style={{
+                                padding: '8px',
+                                cursor: 'pointer',
+                                borderBottom: '1px solid #f3f4f6',
+                                backgroundColor: String(cat.id) === String(value) ? '#eff6ff' : 'transparent'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = String(cat.id) === String(value) ? '#eff6ff' : 'transparent'}
+                        >
+                            <div style={{ fontWeight: 500, fontSize: '13px', color: '#111827' }}>
+                                {cat.code ? `${cat.code} - ` : ''}{cat.name}
+                            </div>
+                            {cat.description && (
+                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {cat.description}
+                                </div>
+                            )}
+                        </div>
+                    )) : (
+                        <div style={{ padding: '8px', fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>
+                            Không tìm thấy kết quả
+                        </div>
+                    )}
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+};
 
 const ProductPage = () => {
     const navigate = useNavigate();
@@ -222,7 +367,7 @@ const ProductPage = () => {
         setIsEdit(false);
         setFormData(buildInitialFormData());
         setUnitConversions([]);
-        setBomLines([...defaultBomLinesData]);
+        setBomLines(getPredefinedBomLines(categories));
         setActiveTab('units');
         setWarrantyQty(0);
         setWarrantyUnit('Tháng');
@@ -230,7 +375,7 @@ const ProductPage = () => {
         setShowModal(true);
     };
 
-    const handleOpenEdit = (product) => {
+    const handleOpenEdit = async (product) => {
         setIsEdit(true);
         setFormData(buildInitialFormData({
             id: product.id,
@@ -248,7 +393,23 @@ const ProductPage = () => {
             active: product.active !== false,
             minStockQty: Number(product.minStockQty || 0)
         }));
-        setBomLines(product.bomLines || []);
+
+        let loadedBomLines = product.bomLines || [];
+        if (product.productType === 'Thành phẩm') {
+            if (product.bomTemplate) {
+                try {
+                    loadedBomLines = JSON.parse(product.bomTemplate);
+                } catch (e) {
+                    console.error("Lỗi parse cấu hình khung", e);
+                }
+            }
+        }
+
+        if (loadedBomLines.length === 0) {
+            loadedBomLines = getPredefinedBomLines(categories);
+        }
+
+        setBomLines(loadedBomLines);
         setUnitConversions(product.unitConversions || []);
         setErrorMsg('');
         setShowModal(true);
@@ -276,34 +437,42 @@ const ProductPage = () => {
         setOpenDropdownId(null);
     };
 
-    const buildPayload = (data) => ({
-        productCode: data.productCode.trim().toUpperCase(),
-        productName: data.productName.trim(),
-        productType: data.productType || 'Hàng hóa',
-        categoryId: Number(data.categoryId),
-        brandId: Number(data.brandId),
-        unitId: Number(data.unitId),
-        salePrice: Number(data.salePrice || 0),
-        description: data.description?.trim() || '',
-        imageUrl: data.imageUrl || '',
-        active: data.active,
-        trackSerial: Boolean(data.trackSerial),
-        trackLot: false,
-        isAssembly: data.productType === 'Thành phẩm',
-        bomLines: data.productType === 'Thành phẩm' ? bomLines.filter(line => line.componentVariantId).map(line => ({
-            componentVariantId: Number(line.componentVariantId),
-            componentRole: line.componentRole,
-            quantity: Number(line.quantity || 0),
-            note: line.note || ''
-        })) : [],
-        minStockQty: Number(data.minStockQty || 0),
-        unitConversions: unitConversions.filter(uc => uc.unitId).map(uc => ({
-            unitId: Number(uc.unitId),
-            operator: uc.operator || 'DIVIDE',
-            ratio: Number(uc.ratio || 1),
-            note: uc.note || ''
-        }))
-    });
+    const buildPayload = (data) => {
+        let finalBrandId = Number(data.brandId);
+        if (!finalBrandId) {
+            const khacBrand = brands.find(b => b.name && b.name.trim().toLowerCase() === 'khác');
+            finalBrandId = khacBrand ? Number(khacBrand.id) : null;
+        }
+
+        return {
+            productCode: data.productCode.trim().toUpperCase(),
+            productName: data.productName.trim(),
+            productType: data.productType || 'Hàng hóa',
+            categoryId: Number(data.categoryId) || null,
+            brandId: finalBrandId,
+            unitId: Number(data.unitId),
+            salePrice: Number(data.salePrice || 0),
+            description: data.description?.trim() || '',
+            imageUrl: data.imageUrl || '',
+            active: data.active,
+            trackSerial: Boolean(data.trackSerial),
+            trackLot: false,
+            isAssembly: data.productType === 'Thành phẩm',
+            bomLines: data.productType === 'Thành phẩm' ? bomLines.filter(line => line.componentVariantId).map(line => ({
+                componentVariantId: Number(line.componentVariantId),
+                componentRole: line.componentRole,
+                quantity: Number(line.quantity || 0),
+                note: line.note || ''
+            })) : [],
+            minStockQty: Number(data.minStockQty || 0),
+            unitConversions: unitConversions.filter(uc => uc.unitId).map(uc => ({
+                unitId: Number(uc.unitId),
+                operator: uc.operator || 'DIVIDE',
+                ratio: Number(uc.ratio || 1),
+                note: uc.note || ''
+            }))
+        };
+    };
 
     const handleProductImageUpload = async (event) => {
         const file = event.target.files?.[0];
@@ -334,8 +503,7 @@ const ProductPage = () => {
     const validateForm = () => {
         if (!formData.productCode.trim()) return 'Mã sản phẩm không được để trống.';
         if (!formData.productName.trim()) return 'Tên sản phẩm không được để trống.';
-        if (!formData.categoryId) return 'Vui lòng chọn danh mục.';
-        if (!formData.brandId) return 'Vui lòng chọn thương hiệu.';
+        if (!formData.categoryId && formData.productType !== 'Dịch vụ') return 'Vui lòng chọn danh mục.';
         if (!formData.unitId) return 'Vui lòng chọn đơn vị tính.';
         if (formData.salePrice === '' || Number.isNaN(Number(formData.salePrice))) return 'Giá bán không hợp lệ.';
         if (Number(formData.salePrice) < 0) return 'Giá bán không được âm.';
@@ -356,13 +524,38 @@ const ProductPage = () => {
 
         try {
             const payload = buildPayload(formData);
+            if (payload.productType === 'Thành phẩm') {
+                const validBomLines = bomLines.filter(l => l.categoryId || l.componentVariantId);
+                if (validBomLines.length > 0) {
+                    const linesPayload = validBomLines.map((l, idx) => {
+                        const selectedCat = categories.find(c => String(c.id) === String(l.categoryId));
+                        const roleName = selectedCat ? selectedCat.name : (l.componentRole || '');
+
+                        return {
+                            componentVariantId: l.componentVariantId ? Number(l.componentVariantId) : null,
+                            componentRole: roleName,
+                            quantity: l.quantity ? Number(l.quantity) : null,
+                            categoryId: l.categoryId,
+                            note: l.note || ''
+                        };
+                    });
+                    payload.bomTemplate = JSON.stringify(linesPayload);
+                } else {
+                    payload.bomTemplate = null;
+                }
+            }
+
+            let savedProductId = null;
             if (isEdit) {
                 await axiosClient.put(`/products/${formData.id}`, payload);
+                savedProductId = formData.id;
                 showToast('success', 'Cập nhật sản phẩm thành công.');
             } else {
-                await axiosClient.post('/products', payload);
+                const res = await axiosClient.post('/products', payload);
+                savedProductId = res.data?.data?.id || res.data?.id;
                 showToast('success', 'Thêm sản phẩm thành công.');
             }
+
             await fetchProducts();
             if (closeAfterSave) {
                 setShowModal(false);
@@ -644,8 +837,8 @@ const ProductPage = () => {
                 </div>
 
                 <div className={styles.kpiContainer}>
-                    <div 
-                        className={`${styles.kpiCard} ${styles.kpiWarning}`} 
+                    <div
+                        className={`${styles.kpiCard} ${styles.kpiWarning}`}
                         style={{ cursor: 'pointer', border: stockFilter === 'LOW_STOCK' ? '2px solid #f59e0b' : 'none' }}
                         onClick={() => setStockFilter(prev => prev === 'LOW_STOCK' ? 'ALL' : 'LOW_STOCK')}
                     >
@@ -657,7 +850,7 @@ const ProductPage = () => {
                             <div className={styles.kpiLabel}>Sản phẩm sắp hết hàng</div>
                         </div>
                     </div>
-                    <div 
+                    <div
                         className={`${styles.kpiCard} ${styles.kpiDanger}`}
                         style={{ cursor: 'pointer', border: stockFilter === 'OUT_OF_STOCK' ? '2px solid #ef4444' : 'none' }}
                         onClick={() => setStockFilter(prev => prev === 'OUT_OF_STOCK' ? 'ALL' : 'OUT_OF_STOCK')}
@@ -877,7 +1070,7 @@ const ProductPage = () => {
                                                             setShowTypeMenu(false);
                                                             if (type !== 'Dịch vụ') setActiveTab('units');
                                                             if (type === 'Thành phẩm' && bomLines.length === 0) {
-                                                                setBomLines([...defaultBomLinesData]);
+                                                                setBomLines(getPredefinedBomLines(categories));
                                                             }
                                                         }}
                                                     >
@@ -1376,24 +1569,29 @@ const ProductPage = () => {
                                                             {bomLines.map((line, idx) => (
                                                                 <tr key={idx}>
                                                                     <td style={{ border: '1px solid #e5e7eb', padding: '4px' }}>
-                                                                        <input
-                                                                            type="text"
-                                                                            value={line.componentRole}
-                                                                            onChange={(e) => { const a = [...bomLines]; a[idx].componentRole = e.target.value; setBomLines(a); }}
-                                                                            style={{ width: '100%', border: 'none', outline: 'none', fontSize: '13px', padding: '3px', background: 'transparent' }}
-                                                                            placeholder="Nhập tên cấu hình..."
+                                                                        <SearchableCategoryDropdown
+                                                                            categories={categories}
+                                                                            value={line.categoryId || ''}
+                                                                            onChange={(newCatId) => {
+                                                                                const a = [...bomLines];
+                                                                                a[idx].categoryId = newCatId;
+                                                                                a[idx].componentVariantId = '';
+                                                                                setBomLines(a);
+                                                                            }}
                                                                         />
                                                                     </td>
                                                                     <td style={{ border: '1px solid #e5e7eb', padding: '4px' }}>
                                                                         <select
                                                                             value={line.componentVariantId}
                                                                             onChange={(e) => { const a = [...bomLines]; a[idx].componentVariantId = e.target.value; setBomLines(a); }}
-                                                                            style={{ width: '100%', border: 'none', outline: 'none', fontSize: '13px', padding: '3px', background: 'transparent' }}
+                                                                            style={{ width: '100%', border: 'none', outline: 'none', fontSize: '13px', padding: '3px', paddingRight: '20px', background: 'transparent', textOverflow: 'ellipsis' }}
                                                                         >
-                                                                            <option value="">-- Chọn linh kiện --</option>
-                                                                            {allVariants.map(v => (
-                                                                                <option key={v.id} value={v.id}>{v.sku} - {v.variantName}</option>
-                                                                            ))}
+                                                                            <option value="">Chọn linh kiện</option>
+                                                                            {allVariants
+                                                                                .filter(v => !line.categoryId || String(v.categoryId) === String(line.categoryId))
+                                                                                .map(v => (
+                                                                                    <option key={v.id} value={v.id}>{v.sku} - {v.variantName}</option>
+                                                                                ))}
                                                                         </select>
                                                                     </td>
                                                                     <td style={{ border: '1px solid #e5e7eb', padding: '4px' }}>
@@ -1413,7 +1611,7 @@ const ProductPage = () => {
                                                         </tbody>
                                                     </table>
                                                     <button
-                                                        onClick={() => setBomLines([...bomLines, { componentVariantId: '', componentRole: '', quantity: '', note: '' }])}
+                                                        onClick={() => setBomLines([...bomLines, { componentVariantId: '', categoryId: '', quantity: '', note: '' }])}
                                                         style={{ marginTop: '8px', padding: '5px 12px', fontSize: '12px', border: '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer', background: '#fff', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}
                                                     >
                                                         <i className="fas fa-plus" style={{ fontSize: '11px' }}></i> Thêm linh kiện
