@@ -46,9 +46,9 @@ public class AssemblyOrderService {
     private final InventoryDocumentService inventoryDocumentService;
 
     @Transactional(readOnly = true)
-    public List<AssemblyBomResponse> getBoms(String status) {
+    public List<AssemblyBomResponse> getBoms(String status, Long productId) {
         String normalizedStatus = normalizeOptionalBomStatus(status);
-        return assemblyBomRepository.findAllWithLines(normalizedStatus).stream()
+        return assemblyBomRepository.findAllWithLines(normalizedStatus, productId).stream()
                 .map(this::toBomResponse)
                 .toList();
     }
@@ -276,27 +276,25 @@ public class AssemblyOrderService {
         if (request.getLines() == null || request.getLines().isEmpty()) {
             throw new BusinessException("BOM phải có ít nhất một linh kiện");
         }
-        BigDecimal totalCostPct = BigDecimal.ZERO;
+
+        boolean isApproved = "APPROVED".equals(request.getStatus());
+
         for (int i = 0; i < request.getLines().size(); i++) {
             AssemblyBomLineRequest line = request.getLines().get(i);
-            if (line == null || line.getComponentVariantId() == null) {
-                throw new BusinessException("Linh kiện dòng " + (i + 1) + " là bắt buộc");
+            
+            if (isApproved) {
+                if (line == null || line.getComponentVariantId() == null) {
+                    throw new BusinessException("Linh kiện dòng " + (i + 1) + " là bắt buộc");
+                }
+                if (line.getQuantity() == null || line.getQuantity().compareTo(ZERO) <= 0) {
+                    throw new BusinessException("Định mức dòng " + (i + 1) + " phải lớn hơn 0");
+                }
+                try {
+                    line.getQuantity().stripTrailingZeros().intValueExact();
+                } catch (ArithmeticException ex) {
+                    throw new BusinessException("Định mức dòng " + (i + 1) + " phải là số nguyên");
+                }
             }
-            if (line.getQuantity() == null || line.getQuantity().compareTo(ZERO) <= 0) {
-                throw new BusinessException("Định mức dòng " + (i + 1) + " phải lớn hơn 0");
-            }
-            if (line.getCostAllocationPct() == null || line.getCostAllocationPct().compareTo(ZERO) < 0) {
-                throw new BusinessException(com.duylongtech.backend.constant.SystemMessage.ASM_INVALID_COST_PCT.getMessage());
-            }
-            totalCostPct = totalCostPct.add(line.getCostAllocationPct());
-            try {
-                line.getQuantity().stripTrailingZeros().intValueExact();
-            } catch (ArithmeticException ex) {
-                throw new BusinessException("Định mức dòng " + (i + 1) + " phải là số nguyên");
-            }
-        }
-        if (totalCostPct.compareTo(BigDecimal.valueOf(100)) != 0) {
-            throw new BusinessException(com.duylongtech.backend.constant.SystemMessage.ASM_INVALID_COST_PCT.getMessage());
         }
     }
 
@@ -309,7 +307,7 @@ public class AssemblyOrderService {
                     .assemblyBom(bom)
                     .componentVariant(component)
                     .quantity(requestLine.getQuantity())
-                    .costAllocationPct(requestLine.getCostAllocationPct())
+                    .componentRole(requestLine.getComponentRole())
                     .note(requestLine.getNote())
                     .build();
             bom.getLines().add(line);
@@ -513,7 +511,7 @@ public class AssemblyOrderService {
                 .componentName(variantName(variant))
                 .unitName(product != null && product.getUnit() != null ? product.getUnit().getName() : null)
                 .quantity(line.getQuantity())
-                .costAllocationPct(line.getCostAllocationPct())
+                .componentRole(line.getComponentRole())
                 .note(line.getNote())
                 .build();
     }

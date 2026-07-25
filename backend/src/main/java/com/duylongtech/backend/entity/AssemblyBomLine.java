@@ -22,15 +22,11 @@ public class AssemblyBomLine {
     private AssemblyBom assemblyBom;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "component_variant_id", nullable = false)
+    @JoinColumn(name = "component_variant_id", nullable = true)
     private ProductVariant componentVariant;
 
-    @Column(nullable = false, precision = 15, scale = 4)
+    @Column(name = "quantity", nullable = false, precision = 15, scale = 4)
     private BigDecimal quantity;
-
-    @Column(name = "cost_allocation_pct", nullable = false, precision = 5, scale = 2)
-    @Builder.Default
-    private BigDecimal costAllocationPct = BigDecimal.ZERO;
 
     @Column(name = "component_role", length = 100)
     private String componentRole;

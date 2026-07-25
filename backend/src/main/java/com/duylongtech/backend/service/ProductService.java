@@ -130,6 +130,7 @@ public class ProductService {
         product.setActive(dto.getActive());
         product.setTaxReductionStatus(dto.getTaxReductionStatus());
         product.setImageUrl(dto.getImageUrl());
+        product.setBomTemplate(dto.getBomTemplate());
 
         if (dto.getMinStockQty() != null) {
             product.setMinStockQty(dto.getMinStockQty());
@@ -495,6 +496,7 @@ public class ProductService {
                 .minStockQty(dto.getMinStockQty() != null ? dto.getMinStockQty() : BigDecimal.ZERO)
                 .stockValue(dto.getStockValue() != null ? dto.getStockValue() : BigDecimal.ZERO)
                 .imageUrl(dto.getImageUrl())
+                .bomTemplate(dto.getBomTemplate())
                 .build();
 
         updateRelations(product, dto);
@@ -553,6 +555,7 @@ public class ProductService {
                 .minStockQty(product.getMinStockQty())
                 .stockValue(product.getStockValue())
                 .imageUrl(product.getImageUrl())
+                .bomTemplate(product.getBomTemplate())
                 .brandId(product.getBrand() != null ? product.getBrand().getId() : null)
                 .brandName(product.getBrand() != null ? product.getBrand().getName() : null)
                 .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
