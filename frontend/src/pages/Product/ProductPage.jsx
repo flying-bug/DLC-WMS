@@ -557,6 +557,7 @@ const ProductPage = () => {
             }
 
             await fetchProducts();
+            await fetchAllVariants();
             if (closeAfterSave) {
                 setShowModal(false);
             } else {
@@ -578,6 +579,7 @@ const ProductPage = () => {
             });
             await axiosClient.put(`/products/${product.id}`, payload);
             fetchProducts();
+            fetchAllVariants();
             showToast('success', product.active ? 'Đã ngừng sử dụng sản phẩm.' : 'Đã kích hoạt sản phẩm.');
         } catch (error) {
             console.error('Lỗi cập nhật trạng thái sản phẩm:', error);
@@ -591,6 +593,7 @@ const ProductPage = () => {
             try {
                 await axiosClient.delete(`/products/${id}`);
                 fetchProducts();
+                fetchAllVariants();
                 showToast('success', 'Xóa sản phẩm thành công.');
             } catch (error) {
                 console.error('Lỗi xóa sản phẩm:', error);
@@ -886,7 +889,7 @@ const ProductPage = () => {
                             />
                             <i className="fas fa-search" onClick={handleSearchBtnClick}></i>
                         </div>
-                        <button className={styles.iconBtn} onClick={fetchProducts} title="Tải lại">
+                        <button className={styles.iconBtn} onClick={() => { fetchProducts(); fetchAllVariants(); }} title="Tải lại">
                             <i className="fas fa-sync-alt"></i>
                         </button>
                         <button className={styles.iconBtn} title="Xuất Excel" onClick={handleExportExcel}>
