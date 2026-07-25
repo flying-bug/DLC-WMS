@@ -35,7 +35,7 @@ public class AssemblyOrderService {
     private static final Set<String> VALID_TYPES = Set.of(ASSEMBLY, DISASSEMBLY);
     private static final Set<String> VALID_BOM_STATUSES = Set.of("DRAFT", "APPROVED", "INACTIVE");
     private static final Set<String> VALID_STATUSES = Set.of("DRAFT", "SUBMITTED", "APPROVED", "POSTED", "CANCELLED");
-    private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "SUBMITTED");
+    private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "APPROVED");
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
     private final AssemblyBomRepository assemblyBomRepository;
@@ -179,8 +179,8 @@ public class AssemblyOrderService {
     @Transactional
     public void generateInventoryDocument(Long id, com.duylongtech.backend.dto.request.GenerateInventoryDocumentRequest request, String actor) {
         AssemblyOrder order = findOrderOrThrow(id);
-        if (!"APPROVED".equals(order.getStatus())) {
-            throw new BusinessException("Chỉ có thể tạo phiếu kho cho lệnh đã APPROVED");
+        if (!"SUBMITTED".equals(order.getStatus()) && !"APPROVED".equals(order.getStatus())) {
+            throw new BusinessException("Chỉ có thể tạo phiếu kho cho lệnh đã hoàn thành hoặc được duyệt");
         }
         
         com.duylongtech.backend.dto.request.InventoryDocumentRequest docReq = new com.duylongtech.backend.dto.request.InventoryDocumentRequest();
@@ -529,6 +529,7 @@ public class AssemblyOrderService {
                 .targetVariantId(target != null ? target.getId() : null)
                 .targetSku(target != null ? target.getSku() : null)
                 .targetName(variantName(target))
+                .targetSalePrice(target != null ? target.getSalePrice() : null)
                 .warehouseId(order.getWarehouseId())
                 .quantity(order.getQuantity())
                 .status(order.getStatus())
@@ -554,6 +555,7 @@ public class AssemblyOrderService {
                 .quantityRequired(line.getQuantityRequired())
                 .quantityActual(line.getQuantityActual())
                 .unitCost(line.getUnitCost())
+                .salePrice(variant != null ? variant.getSalePrice() : null)
                 .note(line.getNote())
                 .build();
     }

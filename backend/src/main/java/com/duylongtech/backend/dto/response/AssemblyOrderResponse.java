@@ -20,6 +20,7 @@ public class AssemblyOrderResponse {
     private Long targetVariantId;
     private String targetSku;
     private String targetName;
+    private BigDecimal targetSalePrice;
     private Long warehouseId;
     private BigDecimal quantity;
     private BigDecimal quantityProduced;

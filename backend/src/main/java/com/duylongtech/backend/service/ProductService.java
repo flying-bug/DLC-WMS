@@ -439,6 +439,7 @@ public class ProductService {
                 .brandName(product != null && product.getBrand() != null ? product.getBrand().getName() : null)
                 .categoryId(product != null && product.getCategory() != null ? product.getCategory().getId() : null)
                 .categoryName(product != null && product.getCategory() != null ? product.getCategory().getName() : null)
+                .categoryDescription(product != null && product.getCategory() != null ? product.getCategory().getDescription() : null)
                 .unitId(product != null && product.getUnit() != null ? product.getUnit().getId() : null)
                 .unitName(product != null && product.getUnit() != null ? product.getUnit().getName() : null)
                 .sku(variant.getSku())

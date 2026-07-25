@@ -23,6 +23,7 @@ public class ProductVariantResponse {
     private String brandName;
     private Long categoryId;
     private String categoryName;
+    private String categoryDescription;
     private Long unitId;
     private String unitName;
     private String sku;
