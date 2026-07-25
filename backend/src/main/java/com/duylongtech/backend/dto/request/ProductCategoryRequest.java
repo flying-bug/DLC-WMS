@@ -20,4 +20,5 @@ public class ProductCategoryRequest {
     private String name;
 
     private String status;
+    private String description;
 }

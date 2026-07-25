@@ -63,6 +63,9 @@ public class Product {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "bom_template", columnDefinition = "TEXT")
+    private String bomTemplate;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean active = true;

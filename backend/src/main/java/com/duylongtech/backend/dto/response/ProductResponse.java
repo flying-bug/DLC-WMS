@@ -34,6 +34,7 @@ public class ProductResponse {
     private BigDecimal minStockQty;
     private BigDecimal stockValue;
     private String imageUrl;
+    private String bomTemplate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

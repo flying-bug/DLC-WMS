@@ -32,6 +32,9 @@ public class ProductCategory {
     @Builder.Default
     private String status = "APPROVED";
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

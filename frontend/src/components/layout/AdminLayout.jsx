@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { getAuthRole } from '../../auth/session';
 import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
 import VoiceCommandButton from '../ui/VoiceCommandButton/VoiceCommandButton';
 import styles from './AdminLayout.module.css';
@@ -8,6 +9,9 @@ const AdminLayout = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const currentPath = location.pathname;
+
+    const userRole = getAuthRole() || 'STAFF';
+    const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'ROLE_ADMIN';
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [voiceEnabled, setVoiceEnabled] = useState(() => {
         return localStorage.getItem('dlc_voice_enabled') !== 'false';
@@ -140,6 +144,17 @@ const AdminLayout = ({ children }) => {
                         <i className="fas fa-robot"></i>
                         <span>AI Chat</span>
                     </button>
+                    {isSuperAdmin && (
+                        <button
+                            className={`${styles.navItem} ${currentPath.startsWith('/operations') ? styles.active : ''}`}
+                            onClick={() => handleNavClick('/operations')}
+                            type="button"
+                            style={{ background: 'rgba(99, 102, 241, 0.12)', color: '#6366f1', marginTop: '8px', fontWeight: 'bold' }}
+                        >
+                            <i className="fas fa-database"></i>
+                            <span>Backup & System</span>
+                        </button>
+                    )}
                 </nav>
             </aside>
 
@@ -232,6 +247,17 @@ const AdminLayout = ({ children }) => {
                         >
                             AI Chat
                         </button>
+                        {isSuperAdmin && (
+                            <button
+                                className={`${styles.tab} ${currentPath.startsWith('/operations') ? styles.activeTab : ''}`}
+                                onClick={() => navigate('/operations')}
+                                type="button"
+                                style={{ color: '#6366f1', fontWeight: 'bold' }}
+                            >
+                                <i className="fas fa-database" style={{ marginRight: '6px' }}></i>
+                                Backup DB
+                            </button>
+                        )}
                     </nav>
                     <div className={styles.headerRight}>
                         <UserProfileDropdown voiceEnabled={voiceEnabled} onToggleVoice={toggleVoice} />

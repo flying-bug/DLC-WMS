@@ -34,6 +34,7 @@ import RepairFormPage from '../pages/Repair/RepairFormPage';
 import BrandListPage from '../pages/Brand/BrandListPage';
 import BrandDetailPage from '../pages/Brand/BrandDetailPage';
 import AssemblyBomPage from '../pages/AssemblyOrder/AssemblyBomPage';
+import AssemblyBomFormPage from '../pages/AssemblyOrder/AssemblyBomFormPage';
 import AssemblyOrderListPage from '../pages/AssemblyOrder/AssemblyOrderListPage';
 import AssemblyOrderFormPage from '../pages/AssemblyOrder/AssemblyOrderFormPage';
 import AiChatPage from '../pages/AiChat/AiChatPage';
@@ -41,7 +42,7 @@ import StocktakeListPage from '../pages/Stocktake/StocktakeListPage';
 import CreateStocktakePage from '../pages/Stocktake/CreateStocktakePage';
 import StocktakeDetailPage from '../pages/Stocktake/StocktakeDetailPage';
 import ReportListPage from '../pages/Report/ReportListPage';
-
+import OperationsCenterPage from '../pages/Operations/OperationsCenterPage';
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -110,6 +111,8 @@ function AppRouter() {
                     <Route path="/repairs/create" element={<RepairFormPage />} />
                     <Route path="/repairs/:id" element={<RepairFormPage />} />
                     <Route path="/assembly-boms" element={<AssemblyBomPage />} />
+                    <Route path="/assembly-boms/create" element={<AssemblyBomFormPage />} />
+                    <Route path="/assembly-boms/:id" element={<AssemblyBomFormPage />} />
                     <Route path="/assembly-orders" element={<AssemblyOrderListPage />} />
                     <Route path="/assembly-orders/create" element={<AssemblyOrderFormPage />} />
                     <Route path="/assembly-orders/:id" element={<AssemblyOrderFormPage />} />
@@ -129,6 +132,7 @@ function AppRouter() {
                     <Route path="/users/create" element={<CreateEmployeePage />} />
                     <Route path="/users/:id/permissions" element={<PermissionDetailPage />} />
                     <Route path="/audit-log" element={<AuditLogPage />} />
+                    <Route path="/operations" element={<OperationsCenterPage />} />
                 </Route>
 
                 {/* Catch-all Redirect */}

@@ -772,7 +772,19 @@ public class InventoryDocumentService {
     private String resolveCreateImportDocCode(String requestedCode) {
         String docCode = trimToNull(requestedCode);
         if (docCode == null) {
-            docCode = "IMP-" + System.currentTimeMillis();
+            Optional<InventoryDocument> lastDoc = inventoryDocumentRepository
+                    .findTopByDocCodeStartingWithOrderByDocCodeDesc("NK");
+            if (lastDoc.isPresent()) {
+                String lastCode = lastDoc.get().getDocCode();
+                try {
+                    int lastNum = Integer.parseInt(lastCode.substring(2));
+                    docCode = String.format("NK%05d", lastNum + 1);
+                } catch (NumberFormatException e) {
+                    docCode = "NK" + System.currentTimeMillis();
+                }
+            } else {
+                docCode = "NK00001";
+            }
         }
         if (inventoryDocumentRepository.existsByDocCode(docCode)) {
             throw new BusinessException("Mã phiếu nhập kho đã tồn tại");

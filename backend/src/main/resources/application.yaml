@@ -22,8 +22,11 @@ spring:
       ddl-auto: update
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 5MB
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+backup:
+  path: ${BACKUP_PATH:/tmp/backups}
 
 google:
   client-id: 889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com

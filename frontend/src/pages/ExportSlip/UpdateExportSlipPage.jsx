@@ -163,14 +163,13 @@ function UpdateExportSlipPage() {
           setUsers(userList);
           const salespersonUser = userList.find(u => String(u.id) === String(detail.salespersonId));
           const currentUserId = sessionStorage.getItem('userId') || sessionStorage.getItem('id');
-          const currentUser = userList.find(u => String(u.id) === String(currentUserId));
-          const salespersonName = salespersonUser ? (salespersonUser.fullName || salespersonUser.username) : (detail.salespersonId || currentUser?.fullName || currentUser?.username || '');
+          const salespersonIdToSet = detail.salespersonId ? String(detail.salespersonId) : (currentUserId ? String(currentUserId) : '');
 
           setForm({
             docCode: detail.docCode || '',
             warehouseId: detail.warehouseId || '',
             partnerId: detail.partnerId || '',
-            salespersonId: salespersonName,
+            salespersonId: salespersonIdToSet,
             customerAddress: detail.customerAddress || '',
             receiverName: detail.recipientName || '',
             receiverPhone: detail.receiverPhone || '',
@@ -518,15 +517,15 @@ function UpdateExportSlipPage() {
                       />
                     </div>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                      <label className="misa-label">Nhân viên xuất hàng</label>
-                      <input
-                        type="text"
-                        className="misa-input"
-                        value={form.salespersonId || ''}
-                        onChange={(e) => handleFormChange('salespersonId', e.target.value)}
-                        placeholder="Nhập tên nhân viên xuất hàng..."
-                      />
-                    </div>
+                    <label className="misa-label">Nhân viên xuất hàng</label>
+                    <input
+                      type="text"
+                      className="misa-input"
+                      value={users.find(u => String(u.id) === String(form.salespersonId)) ? (users.find(u => String(u.id) === String(form.salespersonId)).fullName || users.find(u => String(u.id) === String(form.salespersonId)).username) : 'Đang tải...'}
+                      readOnly
+                      style={{ backgroundColor: '#f3f4f6' }}
+                    />
+                  </div>
                   </div>
 
                   <div className="misa-form-group" style={{ marginTop: '12px' }}>
