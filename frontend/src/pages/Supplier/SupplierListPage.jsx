@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SupplierModal from './components/SupplierModal';
@@ -12,11 +12,6 @@ import axiosClient from '../../api/axiosClient';
 const STATUS_LABELS = {
     APPROVED: { label: 'Đang hoạt động', code: 'success' },
     INACTIVE: { label: 'Ngừng hoạt động', code: 'danger' },
-};
-
-const formatCurrency = (val) => {
-    if (!val) return '0 đ';
-    return `${new Intl.NumberFormat('vi-VN').format(val)} đ`;
 };
 
 const SupplierListPage = () => {
@@ -45,9 +40,9 @@ const SupplierListPage = () => {
     const fetchSuppliers = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await axiosClient.get('/suppliers', {
-                params: { search: filters.search || undefined }
-            });
+            const params = {};
+            if (filters.search) params.search = filters.search;
+            const res = await axiosClient.get('/suppliers', { params });
             let data = [];
             if (res.data && res.data.data) {
                 data = res.data.data;
@@ -58,7 +53,7 @@ const SupplierListPage = () => {
             setSuppliers(data);
             setSelectedIds([]);
         } catch (error) {
-            console.error('Lỗi tải danh sách NCC:', error);
+            console.error('Lỗi tải danh sách nhà cung cấp:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách nhà cung cấp');
         } finally {
             setLoading(false);
@@ -66,13 +61,11 @@ const SupplierListPage = () => {
     }, [filters.search, filters.status]);
 
     useEffect(() => {
-         
         fetchSuppliers();
     }, [fetchSuppliers]);
 
     useEffect(() => {
         if (location.state?.toastMessage) {
-             
             showToast(location.state.toastType || 'success', location.state.toastMessage);
             navigate(location.pathname, { replace: true, state: {} });
         }
@@ -94,12 +87,12 @@ const SupplierListPage = () => {
     const paginatedRows = rows.slice(startIndex, startIndex + pageSize);
 
     const handleExport = () => {
-        const headers = ['Mã nhà cung cấp', 'Tên nhà cung cấp', 'Địa chỉ', 'Mã số thuế', 'Trạng thái'];
+        const headers = ['Mã nhà cung cấp', 'Tên nhà cung cấp', 'Mã số thuế', 'Địa chỉ', 'Trạng thái'];
         const data = rows.map(item => [
             item.code,
             item.name,
-            item.address || '',
             item.taxCode || '',
+            item.address || '',
             item.statusLabel
         ]);
         exportToExcel(headers, data, 'Danh_sach_nha_cung_cap');
@@ -124,14 +117,7 @@ const SupplierListPage = () => {
         e.stopPropagation();
         setModalConfig({
             isOpen: true,
-            data: {
-                ...item,
-                tax_code: item.taxCode,
-                group_type: item.groupType,
-                bank_name: item.bankName,
-                bank_account_number: item.bankAccountNumber,
-                bank_beneficiary_name: item.bankBeneficiaryName
-            }
+            data: item
         });
     };
 
@@ -143,6 +129,10 @@ const SupplierListPage = () => {
             fetchSuppliers();
         } catch (error) {
             showToast('error', error.response?.data?.userMessage || 'Có lỗi xảy ra khi xóa nhà cung cấp');
+            if (error.response?.status === 409) {
+                // Refresh list if it was a soft delete conflict
+                fetchSuppliers();
+            }
         } finally {
             setDeleteConfirm({ isOpen: false, supplier: null });
         }
@@ -189,7 +179,7 @@ const SupplierListPage = () => {
                             <input
                                 type="text"
                                 className={styles.filterInput}
-                                placeholder="Tên hoặc mã NCC..."
+                                placeholder="Mã hoặc tên nhà cung cấp..."
                                 value={filters.search}
                                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                                 onKeyDown={(e) => e.key === 'Enter' && fetchSuppliers()}
@@ -202,30 +192,32 @@ const SupplierListPage = () => {
                                 value={filters.status}
                                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
                             >
-                                <option value="">Tất cả</option>
+                                <option value="">Tất cả trạng thái</option>
                                 <option value="APPROVED">Đang hoạt động</option>
                                 <option value="INACTIVE">Ngừng hoạt động</option>
                             </select>
                         </div>
                     </div>
                     <div className={styles.filterActions}>
-                        <button className={styles.btnOutline} onClick={() => { setFilters({ search: '', status: '' }); fetchSuppliers(); }}>
-                            Làm mới
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => { setFilters({ search: '', status: '' }); setTimeout(fetchSuppliers, 0); }}
+                            title="Đặt lại bộ lọc"
+                        >
+                            <i className="bi bi-arrow-clockwise"></i>
                         </button>
-                        <button className={styles.btnOutline} onClick={handleExport}>
-                            <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                        <button
+                            className={styles.iconBtn}
+                            onClick={handleExport}
+                            title="Xuất tệp Excel"
+                        >
+                            <i className="bi bi-file-earmark-excel"></i>
                         </button>
                         <button className={styles.btnPrimary} onClick={fetchSuppliers}>
                             <i className="bi bi-funnel"></i> Lọc dữ liệu
                         </button>
                     </div>
                 </div>
-
-                {selectedIds.length > 0 && (
-                    <div className={styles.bulkActionsToolbar}>
-                        <div className={styles.bulkText}>Đã chọn {selectedIds.length} nhà cung cấp</div>
-                    </div>
-                )}
 
                 <div className={styles.tableContainer}>
                     <table className={styles.table}>
@@ -250,13 +242,13 @@ const SupplierListPage = () => {
                         <tbody>
                             {loading && paginatedRows.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
+                                    <td colSpan="7" className={styles.textCenter} style={{ padding: '40px' }}>
                                         <div className={styles.emptyState}>Đang tải dữ liệu...</div>
                                     </td>
                                 </tr>
                             ) : paginatedRows.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8">
+                                    <td colSpan="7">
                                         <div className={styles.emptyState}>
                                             <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
                                             <div className={styles.emptyText}>Không tìm thấy nhà cung cấp nào</div>
@@ -265,7 +257,7 @@ const SupplierListPage = () => {
                                 </tr>
                             ) : (
                                 paginatedRows.map(item => (
-                                    <tr key={item.id} onClick={() => navigate(`/suppliers/${item.id}`)}>
+                                    <tr key={item.id} onClick={() => navigate(`/suppliers/${item.id}`)} style={{ cursor: 'pointer' }}>
                                         <td style={{ textAlign: 'center' }}>
                                             <input 
                                                 type="checkbox" 
@@ -275,12 +267,24 @@ const SupplierListPage = () => {
                                                 onClick={(e) => e.stopPropagation()} 
                                             />
                                         </td>
-                                        <td className={styles.textBlue} style={{ whiteSpace: 'nowrap' }}>{item.code}</td>
+                                        <td style={{ whiteSpace: 'nowrap' }}>
+                                            <a
+                                                href="#"
+                                                className={styles.link}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    navigate(`/suppliers/${item.id}`);
+                                                }}
+                                            >
+                                                {item.code}
+                                            </a>
+                                        </td>
                                         <td style={{ fontWeight: 600 }}>{item.name}</td>
                                         <td>{item.taxCode || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>
-                                        <td>
-                                            <div className={styles.tooltipContainer} style={{ display: 'inline-block', maxWidth: '100%' }}>
-                                                <span className={styles.noteText}>{item.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                                        <td style={{ maxWidth: '250px' }}>
+                                            <div className={styles.tooltipContainer}>
+                                                <span className={styles.noteText}>{item.address || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có địa chỉ</span>}</span>
                                                 {item.address && <span className={styles.tooltipText}>{item.address}</span>}
                                             </div>
                                         </td>
@@ -396,33 +400,40 @@ const SupplierListPage = () => {
                 <SupplierModal
                     initialData={modalConfig.data}
                     onClose={() => setModalConfig({ isOpen: false, data: null })}
-                    onSave={async (data) => {
+                    onSave={async (data, isContinue = false) => {
                         try {
                             const cleanString = (str) => (str && str.trim() !== '') ? str.trim() : null;
 
                             const payload = {
                                 code: cleanString(data.code),
                                 name: cleanString(data.name),
+                                groupType: cleanString(data.groupType) || 'RETAIL',
+                                taxCode: cleanString(data.taxCode),
                                 phone: cleanString(data.phone),
                                 email: cleanString(data.email),
                                 address: cleanString(data.address),
-                                taxCode: cleanString(data.tax_code),
-                                groupType: cleanString(data.group_type) || 'RETAIL',
-                                status: data.status || 'APPROVED',
-                                bankName: cleanString(data.bank_name),
-                                bankAccountNumber: cleanString(data.bank_account_number),
-                                bankBeneficiaryName: cleanString(data.bank_beneficiary_name)
+                                contactName: cleanString(data.contactName),
+                                bankName: cleanString(data.bankName),
+                                bankAccountNumber: cleanString(data.bankAccountNumber),
+                                bankBeneficiaryName: cleanString(data.bankBeneficiaryName),
+                                status: data.status || 'APPROVED'
                             };
                             
                             if (modalConfig.data && modalConfig.data.id) {
                                 await axiosClient.put(`/suppliers/${modalConfig.data.id}`, payload);
                                 showToast('success', 'Cập nhật nhà cung cấp thành công!');
+                                setModalConfig({ isOpen: false, data: null });
                             } else {
                                 await axiosClient.post('/suppliers', payload);
                                 showToast('success', 'Thêm mới nhà cung cấp thành công!');
+                                if (!isContinue) {
+                                    setModalConfig({ isOpen: false, data: null });
+                                } else {
+                                    setModalConfig({ isOpen: false, data: null });
+                                    setTimeout(() => setModalConfig({ isOpen: true, data: null }), 100);
+                                }
                             }
                             
-                            setModalConfig({ isOpen: false, data: null });
                             fetchSuppliers();
                         } catch (error) {
                             showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra');

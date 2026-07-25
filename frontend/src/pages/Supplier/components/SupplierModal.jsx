@@ -1,31 +1,27 @@
 import { useState, useEffect } from 'react';
+import Modal from '../../../components/ui/Modal/Modal';
 import styles from './SupplierModal.module.css';
 
-const SupplierModal = ({ onClose, onSave, onSaved, initialData = null }) => {
-    const [activeTab, setActiveTab] = useState('bankAccount');
-    
-    // Form state
+const SupplierModal = ({ onClose, onSave, initialData = null }) => {
     const [formData, setFormData] = useState({
         code: '',
-        tax_code: '',
         name: '',
+        status: 'APPROVED',
+        groupType: 'RETAIL',
+        taxCode: '',
         phone: '',
         email: '',
         address: '',
-        group_type: 'RETAIL',
-        bank_name: '',
-        bank_account_number: '',
-        bank_beneficiary_name: '',
-        status: 'APPROVED'
+        contactName: '',
+        bankName: '',
+        bankAccountNumber: '',
+        bankBeneficiaryName: ''
     });
+
     const [errors, setErrors] = useState({});
-    const [submitting, setSubmitting] = useState(false);
-    const [apiError, setApiError] = useState('');
 
     useEffect(() => {
-        setApiError('');
         if (initialData) {
-             
             setFormData(prev => ({ ...prev, ...initialData }));
         }
     }, [initialData]);
@@ -39,163 +35,75 @@ const SupplierModal = ({ onClose, onSave, onSaved, initialData = null }) => {
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: null }));
         }
-        if (apiError) setApiError('');
     };
 
-    const handleSave = async () => {
-        setApiError('');
+    const validate = () => {
         const newErrors = {};
-        if (!formData.name || !formData.name.trim()) newErrors.name = 'Vui lòng nhập tên nhà cung cấp!';
-        if (!formData.phone || !formData.phone.trim()) newErrors.phone = 'Vui lòng nhập số điện thoại!';
-        
+
+        if (!formData.name.trim()) {
+            newErrors.name = 'Vui lòng nhập tên nhà cung cấp!';
+        }
+
+        if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            newErrors.email = 'Email không đúng định dạng!';
+        }
+
+        if (formData.phone && !/^(0[3|5|7|8|9])+([0-9]{8})$/.test(formData.phone)) {
+            newErrors.phone = 'Số điện thoại không hợp lệ (VD: 0912345678)!';
+        }
+
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
-            setApiError('Vui lòng điền đầy đủ các thông tin bắt buộc (*)');
-            return;
+            return false;
         }
-        const callback = onSave || onSaved;
-        if (callback) {
-            try {
-                setSubmitting(true);
-                await callback(formData);
-            } catch (err) {
-                const msg = err.response?.data?.userMessage || err.response?.data?.devMessage || err.message || 'Lỗi lưu nhà cung cấp!';
-                setApiError(msg);
-            } finally {
-                setSubmitting(false);
-            }
+
+        setErrors({});
+        return true;
+    };
+
+    const handleSave = () => {
+        if (validate()) {
+            if (onSave) onSave(formData);
         }
     };
 
-    const handleBackdropClick = (e) => {
-        if (e.target === e.currentTarget) {
-            onClose();
+    const handleSaveNext = () => {
+        if (validate()) {
+            if (onSave) onSave(formData, true);
         }
     };
 
     return (
-        <div className="misa-modal-overlay" onClick={handleBackdropClick}>
-            <div className="misa-modal" style={{ width: '800px', maxWidth: '90%' }}>
-                
-                {/* Header */}
-                <div className="misa-modal-header">
-                    <div className={styles.headerTitle}>
-                        {initialData ? 'Chỉnh sửa Nhà Cung Cấp' : 'Thêm Nhà Cung Cấp'}
+        <Modal isOpen={true} onClose={onClose} dialogStyle={{ width: '800px', maxWidth: '95%', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div className={styles.header}>
+                <h3 className={styles.headerTitle}>
+                    {initialData ? 'Chỉnh sửa nhà cung cấp' : 'Thêm nhà cung cấp mới'}
+                </h3>
+                <button className={styles.iconBtn} onClick={onClose} title="Đóng">
+                    <i className="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            {/* Body */}
+            <div className={styles.body}>
+                <div className={styles.formGrid}>
+                    <div className={`${styles.formGroup} ${styles.col6}`}>
+                        <label className={styles.formLabel}>Mã nhà cung cấp</label>
+                        <input 
+                            type="text" 
+                            className={styles.input} 
+                            name="code"
+                            value={formData.code}
+                            onChange={handleChange}
+                            placeholder="Tự động sinh nếu để trống" 
+                            disabled={!!initialData}
+                        />
                     </div>
-                    <div className={styles.headerActions}>
-                        <button className={styles.iconBtn} title="Hướng dẫn">
-                            <i className="far fa-question-circle"></i>
-                        </button>
-                        <button className={styles.iconBtn} onClick={onClose} title="Đóng">
-                            <i className="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
 
-                {/* Body */}
-                <div className="misa-modal-body">
-                    {apiError && (
-                        <div style={{ padding: '10px 14px', backgroundColor: '#fee2e2', color: '#dc2626', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #fca5a5' }}>
-                            <i className="fas fa-exclamation-triangle" style={{ fontSize: '15px' }}></i>
-                            <span>{apiError}</span>
-                        </div>
-                    )}
-                    {/* General Info Grid */}
-                    <div className={styles.formGrid}>
-                        <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Mã nhà cung cấp</label>
-                            <input 
-                                type="text" 
-                                className={styles.input} 
-                                name="code"
-                                value={formData.code}
-                                onChange={handleChange}
-                                placeholder="Tự động hoặc nhập tay..." 
-                            />
-                        </div>
-                        <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Mã số thuế</label>
-                            <input 
-                                type="text" 
-                                className={styles.input} 
-                                name="tax_code"
-                                value={formData.tax_code}
-                                onChange={handleChange}
-                            />
-                        </div>
-
-                        <div className={`${styles.formGroup} ${styles.col12}`}>
-                            <label className={styles.formLabel}>Tên nhà cung cấp <span className={styles.required}>*</span></label>
-                            <input 
-                                type="text" 
-                                className={`${styles.input} ${errors.name ? styles.inputError : ''}`} 
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                placeholder="Ví dụ: Công ty TNHH Duy Long" 
-                            />
-                            {errors.name && <span className={styles.errorMsg}>{errors.name}</span>}
-                        </div>
-
-                        <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Điện thoại <span className={styles.required}>*</span></label>
-                            <div className={styles.inputWrapper}>
-                                <input 
-                                    type="text" 
-                                    className={`${styles.input} ${errors.phone ? styles.inputError : ''}`} 
-                                    name="phone"
-                                    value={formData.phone}
-                                    onChange={handleChange}
-                                    placeholder="024 3..." 
-                                />
-                                <i className={`fas fa-phone-alt ${styles.inputIcon}`}></i>
-                            </div>
-                            {errors.phone && <span className={styles.errorMsg}>{errors.phone}</span>}
-                        </div>
-                        <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Email</label>
-                            <div className={styles.inputWrapper}>
-                                <input 
-                                    type="email" 
-                                    className={styles.input} 
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    placeholder="contact@company.com" 
-                                />
-                                <i className={`fas fa-envelope ${styles.inputIcon}`}></i>
-                            </div>
-                        </div>
-
-                        <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Địa chỉ</label>
-                            <input 
-                                type="text" 
-                                className={styles.input} 
-                                name="address"
-                                value={formData.address}
-                                onChange={handleChange}
-                                placeholder="Số 82 Duy Tân, Dịch Vọng Hậu, Cầu Giấy, Hà Nội" 
-                            />
-                        </div>
-                        <div className={`${styles.formGroup} ${styles.col6}`}>
-                            <label className={styles.formLabel}>Nhóm nhà cung cấp</label>
-                            <div className={styles.inputWrapper}>
-                                <select 
-                                    className={styles.select} 
-                                    name="group_type"
-                                    value={formData.group_type}
-                                    onChange={handleChange}
-                                >
-                                    <option value="RETAIL">Sản phẩm công nghệ</option>
-                                    <option value="WHOLESALE">Nhà phân phối sỉ</option>
-                                    <option value="DISTRIBUTOR">Đại lý ủy quyền</option>
-                                </select>
-                                <i className={`fas fa-chevron-down ${styles.selectIcon}`}></i>
-                            </div>
-                        </div>
+                    <div className={`${styles.formGroup} ${styles.col6}`}>
                         {initialData && (
-                            <div className={`${styles.formGroup} ${styles.col6}`}>
+                            <>
                                 <label className={styles.formLabel}>Trạng thái</label>
                                 <div className={styles.inputWrapper}>
                                     <select 
@@ -207,85 +115,179 @@ const SupplierModal = ({ onClose, onSave, onSaved, initialData = null }) => {
                                         <option value="APPROVED">Đang hoạt động</option>
                                         <option value="INACTIVE">Ngừng hoạt động</option>
                                     </select>
-                                    <i className={`fas fa-chevron-down ${styles.selectIcon}`}></i>
+                                    <i className={`bi bi-chevron-down ${styles.selectIcon}`}></i>
                                 </div>
-                            </div>
+                            </>
                         )}
                     </div>
 
-                    {/* Tabs */}
-                    <div className={styles.tabs}>
-                        <button 
-                            className={`${styles.tab} ${activeTab === 'bankAccount' ? styles.tabActive : ''}`}
-                            onClick={() => setActiveTab('bankAccount')}
-                        >
-                            Tài khoản ngân hàng
-                        </button>
+                    <div className={`${styles.formGroup} ${styles.col12}`}>
+                        <label className={styles.formLabel}>Tên nhà cung cấp <span className={styles.required}>*</span></label>
+                        <input 
+                            type="text" 
+                            className={`${styles.input} ${errors.name ? styles.inputError : ''}`} 
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            placeholder="Ví dụ: Công ty TNHH MTV..." 
+                        />
+                        {errors.name && <span className={styles.errorMsg}>{errors.name}</span>}
+                    </div>
+                    
+                    <div className={`${styles.formGroup} ${styles.col6}`}>
+                        <label className={styles.formLabel}>Nhóm nhà cung cấp</label>
+                        <div className={styles.inputWrapper}>
+                            <select 
+                                className={styles.select} 
+                                name="groupType"
+                                value={formData.groupType}
+                                onChange={handleChange}
+                            >
+                                <option value="RETAIL">Bán lẻ</option>
+                                <option value="WHOLESALE">Bán buôn</option>
+                            </select>
+                            <i className={`bi bi-chevron-down ${styles.selectIcon}`}></i>
+                        </div>
+                    </div>
+                    
+                    <div className={`${styles.formGroup} ${styles.col6}`}>
+                        <label className={styles.formLabel}>Mã số thuế</label>
+                        <input 
+                            type="text" 
+                            className={styles.input} 
+                            name="taxCode"
+                            value={formData.taxCode}
+                            onChange={handleChange}
+                            placeholder="Nhập mã số thuế..." 
+                        />
                     </div>
 
-                    {/* Tab Content */}
-                    <div className={styles.tabContent}>
-                        {activeTab === 'bankAccount' && (
-                            <div className={styles.formGrid} style={{ marginBottom: 0 }}>
-                                <div className={`${styles.formGroup} ${styles.col12}`}>
-                                    <label className={styles.formLabel}>Tên ngân hàng (và chi nhánh)</label>
-                                    <input 
-                                        type="text" 
-                                        className={styles.input} 
-                                        name="bank_name"
-                                        value={formData.bank_name}
-                                        onChange={handleChange}
-                                        placeholder="VD: VIETCOMBANK - Chi nhánh Thạch Thất" 
-                                    />
-                                </div>
-                                <div className={`${styles.formGroup} ${styles.col6}`}>
-                                    <label className={styles.formLabel}>Số tài khoản</label>
-                                    <input 
-                                        type="text" 
-                                        className={styles.input} 
-                                        name="bank_account_number"
-                                        value={formData.bank_account_number}
-                                        onChange={handleChange}
-                                    />
-                                </div>
-                                <div className={`${styles.formGroup} ${styles.col6}`}>
-                                    <label className={styles.formLabel}>Tên người thụ hưởng</label>
-                                    <input 
-                                        type="text" 
-                                        className={styles.input} 
-                                        name="bank_beneficiary_name"
-                                        value={formData.bank_beneficiary_name}
-                                        onChange={handleChange}
-                                    />
-                                </div>
-                            </div>
-                        )}
+                    <div className={`${styles.formGroup} ${styles.col6}`}>
+                        <label className={styles.formLabel}>Điện thoại</label>
+                        <div className={styles.inputWrapper}>
+                            <input 
+                                type="text" 
+                                className={`${styles.input} ${errors.phone ? styles.inputError : ''}`} 
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleChange}
+                                placeholder="09xx..." 
+                            />
+                            <i className={`bi bi-telephone ${styles.inputIcon}`}></i>
+                        </div>
+                        {errors.phone && <span className={styles.errorMsg}>{errors.phone}</span>}
+                    </div>
+
+                    <div className={`${styles.formGroup} ${styles.col6}`}>
+                        <label className={styles.formLabel}>Email</label>
+                        <div className={styles.inputWrapper}>
+                            <input 
+                                type="email" 
+                                className={`${styles.input} ${errors.email ? styles.inputError : ''}`} 
+                                name="email"
+                                value={formData.email}
+                                onChange={handleChange}
+                                placeholder="contact@supplier.com" 
+                            />
+                            <i className={`bi bi-envelope ${styles.inputIcon}`}></i>
+                        </div>
+                        {errors.email && <span className={styles.errorMsg}>{errors.email}</span>}
+                    </div>
+                    
+                    <div className={`${styles.formGroup} ${styles.col6}`}>
+                        <label className={styles.formLabel}>Người liên hệ</label>
+                        <div className={styles.inputWrapper}>
+                            <input 
+                                type="text" 
+                                className={styles.input} 
+                                name="contactName"
+                                value={formData.contactName}
+                                onChange={handleChange}
+                                placeholder="Nhập tên người liên hệ..." 
+                            />
+                            <i className={`bi bi-person ${styles.inputIcon}`}></i>
+                        </div>
+                    </div>
+                    
+                    <div className={`${styles.formGroup} ${styles.col6}`}>
+                        <label className={styles.formLabel}>Địa chỉ</label>
+                        <div className={styles.inputWrapper}>
+                            <input 
+                                type="text" 
+                                className={styles.input} 
+                                name="address"
+                                value={formData.address}
+                                onChange={handleChange}
+                                placeholder="Nhập địa chỉ..." 
+                            />
+                            <i className={`bi bi-geo-alt ${styles.inputIcon}`}></i>
+                        </div>
+                    </div>
+                    
+                    {/* Bank Info section */}
+                    <div className={`${styles.formGroup} ${styles.col12}`} style={{ marginTop: '8px', marginBottom: '0' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--color-text-strong)', borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>
+                            <i className="bi bi-bank" style={{ marginRight: '8px' }}></i>
+                            Thông tin ngân hàng
+                        </div>
+                    </div>
+                    
+                    <div className={`${styles.formGroup} ${styles.col4}`}>
+                        <label className={styles.formLabel}>Tên ngân hàng</label>
+                        <input 
+                            type="text" 
+                            className={styles.input} 
+                            name="bankName"
+                            value={formData.bankName}
+                            onChange={handleChange}
+                            placeholder="Vietcombank, Techcombank..." 
+                        />
+                    </div>
+                    
+                    <div className={`${styles.formGroup} ${styles.col4}`}>
+                        <label className={styles.formLabel}>Số tài khoản</label>
+                        <input 
+                            type="text" 
+                            className={styles.input} 
+                            name="bankAccountNumber"
+                            value={formData.bankAccountNumber}
+                            onChange={handleChange}
+                            placeholder="Nhập số tài khoản..." 
+                        />
+                    </div>
+                    
+                    <div className={`${styles.formGroup} ${styles.col4}`}>
+                        <label className={styles.formLabel}>Tên chủ thẻ</label>
+                        <input 
+                            type="text" 
+                            className={styles.input} 
+                            name="bankBeneficiaryName"
+                            value={formData.bankBeneficiaryName}
+                            onChange={handleChange}
+                            placeholder="Nhập tên chủ thẻ..." 
+                        />
                     </div>
                 </div>
-
-                {/* Footer */}
-                <div className="misa-modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', backgroundColor: '#fff' }}>
-                    <div className={styles.footerLeft}>
-                        <button className="btn-misa-outline" onClick={onClose} disabled={submitting}>Hủy</button>
-                    </div>
-                    <div className={styles.footerRight} style={{ display: 'flex', gap: '12px' }}>
-                        {!initialData && (
-                            <button className="btn-misa-outline" onClick={handleSave} disabled={submitting}>
-                                {submitting ? 'Đang lưu...' : 'Lưu & Thêm tiếp'}
-                            </button>
-                        )}
-                        <button className="btn-misa-primary" onClick={handleSave} disabled={submitting}>
-                            {submitting ? (
-                                <><i className="fas fa-spinner fa-spin"></i> Đang lưu...</>
-                            ) : (
-                                initialData ? 'Cập nhật' : 'Lưu'
-                            )}
-                        </button>
-                    </div>
-                </div>
-
             </div>
-        </div>
+
+            {/* Footer */}
+            <div className={styles.footer}>
+                <div className={styles.footerLeft}>
+                    <button className={styles.btnOutline} onClick={onClose}>Hủy</button>
+                </div>
+                <div className={styles.footerRight}>
+                    {!initialData && (
+                        <button className={styles.btnOutline} onClick={handleSaveNext}>
+                            Lưu & Thêm tiếp
+                        </button>
+                    )}
+                    <button className={styles.btnPrimary} onClick={handleSave}>
+                        <i className="bi bi-check-lg" style={{ marginRight: '6px' }}></i>
+                        {initialData ? 'Cập nhật' : 'Lưu'}
+                    </button>
+                </div>
+            </div>
+        </Modal>
     );
 };
 
