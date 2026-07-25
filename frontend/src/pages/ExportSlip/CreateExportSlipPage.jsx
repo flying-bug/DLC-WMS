@@ -96,6 +96,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [users, setUsers] = useState([]);
   const [saving, setSaving] = useState(false);
   const [scanCode, setScanCode] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
@@ -103,6 +104,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   const [showPartnerModal, setShowPartnerModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'error', message: '' });
   const [showConfirm, setShowConfirm] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   const [showAssemblyModal, setShowAssemblyModal] = useState(false);
   const [selectedAssemblyOrder, setSelectedAssemblyOrder] = useState(null);
@@ -150,10 +152,11 @@ function CreateExportSlipPage({ mode: propMode }) {
 
   useEffect(() => {
     const loadLookups = async () => {
-      const [warehouseRes, productRes, customerRes] = await Promise.allSettled([
+      const [warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
         exportApi.getWarehouses({ size: 100 }),
         exportApi.getProducts({ size: 100 }),
         exportApi.getCustomers({ size: 1000 }),
+        exportApi.getUsers({ size: 1000 }).catch(() => null),
       ]);
 
       if (warehouseRes.status === 'fulfilled') {
@@ -168,6 +171,19 @@ function CreateExportSlipPage({ mode: propMode }) {
       if (customerRes.status === 'fulfilled') {
         const data = pageContent(unwrap(customerRes.value));
         setCustomers(data);
+      }
+      if (userRes.status === 'fulfilled' && userRes.value) {
+        setUsers(pageContent(unwrap(userRes.value)));
+      }
+      try {
+        const meRes = await axiosClient.get('/users/me');
+        const me = meRes.data?.data || meRes.data;
+        if (me) {
+          setCurrentUser(me);
+          setForm(prev => ({ ...prev, salespersonId: String(me.id) }));
+        }
+      } catch (err) {
+        console.error('Failed to load me profile', err);
       }
     };
 
@@ -561,13 +577,13 @@ function CreateExportSlipPage({ mode: propMode }) {
                   />
                 </div>
                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                  <label className="misa-label">Nhân viên phụ trách</label>
+                  <label className="misa-label">Nhân viên xuất hàng</label>
                   <input
                     type="text"
                     className="misa-input"
-                    value={form.salespersonId || ''}
-                    onChange={(e) => handleFormChange('salespersonId', e.target.value)}
-                    placeholder="Nhập tên nhân viên..."
+                    value={currentUser ? (currentUser.fullName || currentUser.username) : 'Đang tải...'}
+                    readOnly
+                    style={{ backgroundColor: '#f3f4f6' }}
                   />
                 </div>
               </div>
