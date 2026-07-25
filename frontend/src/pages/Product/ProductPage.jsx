@@ -18,7 +18,8 @@ const defaultFormData = {
     imageUrl: '',
     trackSerial: false,
     isAssembly: false,
-    active: true
+    active: true,
+    minStockQty: 0
 };
 
 const defaultVariantData = {
@@ -58,6 +59,7 @@ const ProductPage = () => {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [tempSearch, setTempSearch] = useState('');
+    const [stockFilter, setStockFilter] = useState('ALL');
 
     const [page, setPage] = useState(0);
     const [size, setSize] = useState(20);
@@ -178,6 +180,7 @@ const ProductPage = () => {
             showToast('error', 'Không thể tải danh sách sản phẩm.');
         } finally {
             setLoading(false);
+            setStockFilter('ALL');
         }
     }, [page, size, searchTerm]);
 
@@ -242,7 +245,8 @@ const ProductPage = () => {
             imageUrl: product.imageUrl || '',
             trackSerial: Boolean(product.trackSerial),
             isAssembly: Boolean(product.isAssembly),
-            active: product.active !== false
+            active: product.active !== false,
+            minStockQty: Number(product.minStockQty || 0)
         }));
         setBomLines(product.bomLines || []);
         setUnitConversions(product.unitConversions || []);
@@ -292,6 +296,7 @@ const ProductPage = () => {
             quantity: Number(line.quantity || 0),
             note: line.note || ''
         })) : [],
+        minStockQty: Number(data.minStockQty || 0),
         unitConversions: unitConversions.filter(uc => uc.unitId).map(uc => ({
             unitId: Number(uc.unitId),
             operator: uc.operator || 'DIVIDE',
@@ -607,6 +612,19 @@ const ProductPage = () => {
         }).format(value);
     };
 
+    const getFilteredProducts = () => {
+        if (stockFilter === 'ALL') return products;
+        return products.filter((product) => {
+            const qty = Number(product.stockQty || 0);
+            const minQty = Number(product.minStockQty || 0);
+            if (stockFilter === 'OUT_OF_STOCK') return qty <= 0;
+            if (stockFilter === 'LOW_STOCK') return qty > 0 && minQty > 0 && qty <= minQty;
+            return true;
+        });
+    };
+
+    const filteredProducts = getFilteredProducts();
+
     return (
         <AdminLayout>
             <Toast
@@ -626,7 +644,11 @@ const ProductPage = () => {
                 </div>
 
                 <div className={styles.kpiContainer}>
-                    <div className={`${styles.kpiCard} ${styles.kpiWarning}`}>
+                    <div 
+                        className={`${styles.kpiCard} ${styles.kpiWarning}`} 
+                        style={{ cursor: 'pointer', border: stockFilter === 'LOW_STOCK' ? '2px solid #f59e0b' : 'none' }}
+                        onClick={() => setStockFilter(prev => prev === 'LOW_STOCK' ? 'ALL' : 'LOW_STOCK')}
+                    >
                         <div className={styles.kpiIcon}>
                             <i className="fas fa-box-open"></i>
                         </div>
@@ -635,7 +657,11 @@ const ProductPage = () => {
                             <div className={styles.kpiLabel}>Sản phẩm sắp hết hàng</div>
                         </div>
                     </div>
-                    <div className={`${styles.kpiCard} ${styles.kpiDanger}`}>
+                    <div 
+                        className={`${styles.kpiCard} ${styles.kpiDanger}`}
+                        style={{ cursor: 'pointer', border: stockFilter === 'OUT_OF_STOCK' ? '2px solid #ef4444' : 'none' }}
+                        onClick={() => setStockFilter(prev => prev === 'OUT_OF_STOCK' ? 'ALL' : 'OUT_OF_STOCK')}
+                    >
                         <div className={styles.kpiIcon}>
                             <i className="fas fa-exclamation-triangle"></i>
                         </div>
@@ -714,14 +740,14 @@ const ProductPage = () => {
                                         <div className={styles.spinner}></div> Đang tải danh sách sản phẩm...
                                     </td>
                                 </tr>
-                            ) : products.length === 0 ? (
+                            ) : filteredProducts.length === 0 ? (
                                 <tr>
-                                    <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted-2)' }}>
-                                        Không tìm thấy sản phẩm phù hợp.
+                                    <td colSpan="11" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted-2)' }}>
+                                        Không tìm thấy sản phẩm phù hợp với bộ lọc hiện tại.
                                     </td>
                                 </tr>
                             ) : (
-                                products.map((item) => (
+                                filteredProducts.map((item) => (
                                     <tr key={item.id} className={!item.active ? styles.inactiveRow : ''}>
                                         <td style={{ textAlign: 'center' }}>
                                             <input type="checkbox" />
