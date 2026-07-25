@@ -28,8 +28,9 @@ public interface AssemblyBomRepository extends JpaRepository<AssemblyBom, Long> 
             "LEFT JOIN FETCH cv.product cp " +
             "LEFT JOIN FETCH cp.unit " +
             "WHERE (:status IS NULL OR b.status = :status) " +
+            "AND (:productId IS NULL OR p.id = :productId) " +
             "ORDER BY b.updatedAt DESC")
-    List<AssemblyBom> findAllWithLines(@Param("status") String status);
+    List<AssemblyBom> findAllWithLines(@Param("status") String status, @Param("productId") Long productId);
 
     @Query("SELECT DISTINCT b FROM AssemblyBom b " +
             "JOIN FETCH b.product p " +

@@ -46,9 +46,6 @@ public class ProductCategoryService {
         if (categoryRepository.existsByCode(dto.getCode())) {
             throw new BusinessException(SystemMessage.CATEGORY_CODE_EXISTS);
         }
-        if (categoryRepository.existsByName(dto.getName())) {
-            throw new BusinessException(SystemMessage.CATEGORY_NAME_EXISTS);
-        }
 
         validateParentExists(dto.getParentId());
 
@@ -57,6 +54,7 @@ public class ProductCategoryService {
                 .code(dto.getCode())
                 .name(dto.getName())
                 .status(dto.getStatus() != null ? dto.getStatus() : "APPROVED")
+                .description(dto.getDescription())
                 .build();
 
         ProductCategory saved = categoryRepository.save(category);
@@ -68,17 +66,12 @@ public class ProductCategoryService {
         ProductCategory category = categoryRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(SystemMessage.CATEGORY_NOT_FOUND));
 
-        if (!category.getCode().equals(dto.getCode()) && categoryRepository.existsByCode(dto.getCode())) {
-            throw new BusinessException(SystemMessage.CATEGORY_CODE_EXISTS);
-        }
-        if (!category.getName().equals(dto.getName()) && categoryRepository.existsByName(dto.getName())) {
-            throw new BusinessException(SystemMessage.CATEGORY_NAME_EXISTS);
-        }
         validateParent(id, dto.getParentId());
 
         category.setParentId(dto.getParentId());
-        category.setCode(dto.getCode());
+        // Do NOT update code: category.setCode(dto.getCode());
         category.setName(dto.getName());
+        category.setDescription(dto.getDescription());
         if (dto.getStatus() != null) {
             category.setStatus(dto.getStatus());
         }
@@ -138,6 +131,7 @@ public class ProductCategoryService {
                 .code(category.getCode())
                 .name(category.getName())
                 .status(category.getStatus())
+                .description(category.getDescription())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
                 .build();

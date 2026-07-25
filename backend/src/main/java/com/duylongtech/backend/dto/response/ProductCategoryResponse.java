@@ -18,6 +18,7 @@ public class ProductCategoryResponse {
     private String code;
     private String name;
     private String status;
+    private String description;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

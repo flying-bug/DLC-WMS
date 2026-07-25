@@ -44,8 +44,11 @@ public class AssemblyOrderController {
     @GetMapping("/assembly-boms")
     @Operation(summary = "View assembly BOMs")
     @PreAuthorize("hasAuthority('assembly:view')")
-    public ApiResponse<List<AssemblyBomResponse>> getBoms(@RequestParam(required = false) String status) {
-        return ApiResponse.success(assemblyOrderService.getBoms(status));
+    public ApiResponse<List<AssemblyBomResponse>> getBoms(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long productId
+    ) {
+        return ApiResponse.success(assemblyOrderService.getBoms(status, productId));
     }
 
     @GetMapping("/assembly-boms/{id}")
