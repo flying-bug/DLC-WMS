@@ -15,6 +15,7 @@ import styles from './ImportHistoryPage.module.css';
 const DEFAULT_COLUMNS = {
   date: true,
   docCode: true,
+  issuePurpose: true,
   partner: true,
   warehouse: true,
   purchaser: true,
@@ -28,6 +29,7 @@ const DEFAULT_COLUMNS = {
 const COLUMN_OPTIONS = [
   { id: 'date', label: 'Ngày Nhập' },
   { id: 'docCode', label: 'Số Phiếu' },
+  { id: 'issuePurpose', label: 'Loại Phiếu' },
   { id: 'partner', label: 'Đối tác / Tham chiếu' },
   { id: 'warehouse', label: 'Kho Nhập' },
   { id: 'purchaser', label: 'Nhân viên mua hàng' },
@@ -41,6 +43,13 @@ const COLUMN_OPTIONS = [
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
   POSTED: { label: 'Hoàn thành', code: 'success' },
+};
+
+const IMPORT_PURPOSE_LABELS = {
+  PURCHASE: 'Mua hàng',
+  RETURN: 'Hàng bán bị trả lại',
+  PRODUCTION: 'Nhập kho sản xuất',
+  OTHER: 'Khác'
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -177,6 +186,7 @@ function ImportHistoryPage() {
     return {
       ...slip,
       date: formatDate(slip.docDate),
+      issuePurposeLabel: IMPORT_PURPOSE_LABELS[slip.issuePurpose] || 'Khác',
       partner: partnerLabel,
       warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa chọn'),
       purchaserName: slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || (slip.salespersonId ? String(slip.salespersonId) : 'Chưa rõ'),
@@ -190,10 +200,11 @@ function ImportHistoryPage() {
   });
 
   const handleExport = () => {
-    const headers = ['Ngày ghi nhận', 'Số chứng từ', 'Đối tác / Tham chiếu', 'Kho nhập', 'Tổng tiền', 'Tiền VAT', 'Trạng thái'];
+    const headers = ['Ngày ghi nhận', 'Số chứng từ', 'Loại phiếu', 'Đối tác / Tham chiếu', 'Kho nhập', 'Tổng tiền', 'Tiền VAT', 'Trạng thái'];
     const data = rows.map(item => [
       item.date,
       item.docCode,
+      item.issuePurposeLabel,
       item.partner,
       item.warehouse,
       item.total,
@@ -525,7 +536,8 @@ function ImportHistoryPage() {
                   />
                 </th>
                 {columns.date && <th style={{ width: '120px' }}>Ngày Nhập</th>}
-                {columns.docCode && <th style={{ width: '180px' }}>Số Phiếu</th>}
+                {columns.docCode && <th style={{ width: '150px' }}>Số Phiếu</th>}
+                {columns.issuePurpose && <th style={{ width: '150px' }}>Loại Phiếu</th>}
                 {columns.partner && <th style={{ width: '200px' }}>Đối tác / Tham chiếu</th>}
                 {columns.warehouse && <th style={{ width: '120px' }}>Kho Nhập</th>}
                 {columns.purchaser && <th style={{ width: '150px' }}>Nhân viên mua hàng</th>}
@@ -565,6 +577,7 @@ function ImportHistoryPage() {
                       </a>
                     </td>
                   )}
+                  {columns.issuePurpose && <td>{slip.issuePurposeLabel}</td>}
                   {columns.partner && <td>{slip.partner}</td>}
                   {columns.warehouse && <td>{slip.warehouse}</td>}
                   {columns.purchaser && <td>{slip.purchaserName}</td>}

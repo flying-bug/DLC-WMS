@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
+import Select from 'react-select';
 import styles from './CreateStocktakePage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 
@@ -10,6 +11,7 @@ function CreateStocktakePage() {
   const [searchParams] = useSearchParams();
 
   const [warehouses, setWarehouses] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
 
   const [formData, setFormData] = useState(() => ({
@@ -37,21 +39,25 @@ function CreateStocktakePage() {
   ]);
 
   const fetchStockData = async (selectedWhId) => {
+    if (!selectedWhId || selectedWhId === 'all') {
+      setLines([]);
+      return;
+    }
     setLoadingStock(true);
     try {
-      const response = await stocktakeApi.getProducts({ size: 1000 });
-      const data = response?.data?.data?.content || response?.data?.data || response?.data || [];
-      const productList = Array.isArray(data) ? data : [];
+      const response = await stocktakeApi.getInventoryReport({ warehouseId: selectedWhId });
+      const data = response?.data?.data || response?.data || [];
+      const stockList = Array.isArray(data) ? data : [];
 
-      if (productList.length > 0) {
-        const formattedLines = productList.map((item, idx) => {
-          const bookQty = Number(item.stockQty || item.quantityOnHand || item.quantity || 10);
+      if (stockList.length > 0) {
+        const formattedLines = stockList.map((item, idx) => {
+          const bookQty = Number(item.totalQuantity || 0);
           return {
-            id: item.id || idx + 1,
-            variantId: item.id,
-            itemCode: item.productCode || `VT00${idx + 1}`,
+            id: item.variantId || idx + 1,
+            variantId: item.variantId,
+            itemCode: item.itemCode || `VT00${idx + 1}`,
             sku: item.sku || `SKU-${idx + 1}`,
-            itemName: item.productName ? `${item.productName} ${item.variantName ? `(${item.variantName})` : ''}` : item.name || `Sản phẩm ${idx + 1}`,
+            itemName: item.itemName || `Sản phẩm ${idx + 1}`,
             unit: item.unitName || 'Cái',
             bookQty: bookQty,
             countQty: bookQty,
@@ -64,33 +70,34 @@ function CreateStocktakePage() {
         });
         setLines(formattedLines);
       } else {
-        // Mock fallback if product list is empty
-        setLines([
-          { id: 1, itemCode: 'VT001', sku: 'SKU-BP-001', itemName: 'Bàn phím cơ Logitech K845', unit: 'Cái', bookQty: 15, countQty: 15, diffQty: 0, good100: 15, bad: 0, lost: 0, action: 'Không xử lý' },
-          { id: 2, itemCode: 'VT002', sku: 'SKU-CHUOT-002', itemName: 'Chuột máy tính Kingston', unit: 'Cái', bookQty: 20, countQty: 18, diffQty: -2, good100: 18, bad: 0, lost: 0, action: 'Xử lý chênh lệch' },
-          { id: 3, itemCode: 'VT003', sku: 'SKU-CPU-003', itemName: 'CPU Intel Core i7-12700K', unit: 'Cái', bookQty: 5, countQty: 6, diffQty: 1, good100: 6, bad: 0, lost: 0, action: 'Xử lý chênh lệch' }
-        ]);
+        setLines([]);
       }
     } catch (err) {
       console.error('Failed to load stock data', err);
-      showToast('error', 'Có lỗi khi tải danh sách hàng hóa.');
+      showToast('error', 'Có lỗi khi tải danh sách hàng hóa trong kho.');
     } finally {
       setLoadingStock(false);
     }
   };
 
-  // Load Warehouses & Load Stock Items
   useEffect(() => {
-    const loadWarehouses = async () => {
+    const loadMasterData = async () => {
       try {
-        const response = await stocktakeApi.getWarehouses();
-        const data = response?.data?.data?.content || response?.data?.data || response?.data || [];
-        setWarehouses(Array.isArray(data) ? data : []);
+        const [whRes, prodRes] = await Promise.all([
+          stocktakeApi.getWarehouses(),
+          stocktakeApi.getProducts({ size: 10000 })
+        ]);
+        
+        const whData = whRes?.data?.data?.content || whRes?.data?.data || whRes?.data || [];
+        setWarehouses(Array.isArray(whData) ? whData : []);
+        
+        const prodData = prodRes?.data?.data?.content || prodRes?.data?.data || prodRes?.data || [];
+        setProducts(Array.isArray(prodData) ? prodData : []);
       } catch (err) {
-        console.error('Failed to load warehouses', err);
+        console.error('Failed to load master data', err);
       }
     };
-    loadWarehouses();
+    loadMasterData();
     fetchStockData(formData.warehouseId);
   }, []);
 
@@ -147,9 +154,11 @@ function CreateStocktakePage() {
       ...prev,
       {
         id: newId,
-        itemCode: `VT_${prev.length + 1}`,
-        sku: `SKU_${prev.length + 1}`,
-        itemName: 'Hàng hóa bổ sung',
+        isNew: true,
+        variantId: '',
+        itemCode: '',
+        sku: '',
+        itemName: '',
         unit: 'Cái',
         bookQty: 0,
         countQty: 1,
@@ -160,6 +169,23 @@ function CreateStocktakePage() {
         action: 'Xử lý chênh lệch'
       }
     ]);
+  };
+
+  const handleProductSelect = (index, variantId) => {
+    const selectedProduct = products.find(p => String(p.id) === String(variantId));
+    if (!selectedProduct) return;
+    
+    setLines(prev => prev.map((line, idx) => {
+      if (idx !== index) return line;
+      return {
+        ...line,
+        variantId: selectedProduct.id,
+        itemCode: selectedProduct.productCode || `VT-${selectedProduct.id}`,
+        sku: selectedProduct.sku || `SKU-${selectedProduct.id}`,
+        itemName: selectedProduct.productName ? `${selectedProduct.productName} ${selectedProduct.variantName ? `(${selectedProduct.variantName})` : ''}` : selectedProduct.name,
+        unit: selectedProduct.unitName || 'Cái'
+      };
+    }));
   };
 
   const handleRemoveLine = (index) => {
@@ -436,7 +462,21 @@ function CreateStocktakePage() {
                   <tr key={line.id || idx}>
                     <td>{line.itemCode}</td>
                     <td style={{ fontWeight: 600, color: '#0284c7' }}>{line.sku}</td>
-                    <td>{line.itemName}</td>
+                    <td>
+                      {line.isNew && !isSaved ? (
+                        <Select
+                          options={products.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}` }))}
+                          value={products.find(p => String(p.id) === String(line.variantId)) ? { value: line.variantId, label: `${products.find(p => String(p.id) === String(line.variantId)).productName} - ${products.find(p => String(p.id) === String(line.variantId)).sku || products.find(p => String(p.id) === String(line.variantId)).productCode}` } : null}
+                          onChange={(selected) => handleProductSelect(idx, selected ? selected.value : '')}
+                          placeholder="Chọn vật tư / hàng hóa..."
+                          isClearable
+                          menuPortalTarget={document.body}
+                          styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                        />
+                      ) : (
+                        line.itemName
+                      )}
+                    </td>
                     <td>{line.unit}</td>
                     <td className={styles.numberCol}>{line.bookQty}</td>
                     <td className={styles.numberCol}>

@@ -23,6 +23,8 @@ public class ReportRepository {
         StringBuilder sql = new StringBuilder(
                 "SELECT " +
                         "pv.sku AS itemCode, " +
+                        "pv.sku AS sku, " +
+                        "pv.id AS variantId, " +
                         "pv.variant_name AS itemName, " +
                         "u.name AS unitName, " +
                         "w.code AS warehouseCode, " +
@@ -48,7 +50,7 @@ public class ReportRepository {
             params.add("%" + search + "%");
         }
 
-        sql.append(" GROUP BY pv.sku, pv.variant_name, u.name, w.code, w.name ");
+        sql.append(" GROUP BY pv.sku, pv.id, pv.variant_name, u.name, w.code, w.name ");
         sql.append(" ORDER BY w.code, pv.sku ");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> InventoryBalanceReportResponse.builder()
@@ -59,6 +61,8 @@ public class ReportRepository {
                 .warehouseName(rs.getString("warehouseName"))
                 .totalQuantity(rs.getBigDecimal("totalQuantity"))
                 .totalValue(rs.getBigDecimal("totalValue"))
+                .variantId(rs.getLong("variantId"))
+                .sku(rs.getString("sku"))
                 .build(), params.toArray());
     }
 

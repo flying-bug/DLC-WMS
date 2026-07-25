@@ -55,13 +55,17 @@ public class ReportController {
     @PreAuthorize("hasAuthority('report:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
     public ResponseEntity<ApiResponse<List<StockTransferReportResponse>>> getStockTransferReport(
             @RequestParam(required = false) Long warehouseId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status) {
+        
+        LocalDate start = startDate != null ? startDate.toLocalDate() : null;
+        LocalDate end = endDate != null ? endDate.toLocalDate() : null;
+        
         return ResponseEntity.ok(ApiResponse.<List<StockTransferReportResponse>>builder()
                 .success(true)
-                .data(reportService.getStockTransferReport(warehouseId, startDate, endDate, search, status))
+                .data(reportService.getStockTransferReport(warehouseId, start, end, search, status))
                 .build());
     }
 
