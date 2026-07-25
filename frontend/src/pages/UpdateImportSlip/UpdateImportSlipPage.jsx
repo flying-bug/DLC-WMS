@@ -196,8 +196,7 @@ function UpdateImportSlipPage() {
 
         const purchaserUser = userList.find(u => String(u.id) === String(detail.salespersonId));
         const currentUserId = sessionStorage.getItem('userId') || sessionStorage.getItem('id');
-        const currentUser = userList.find(u => String(u.id) === String(currentUserId));
-        const purchaserName = purchaserUser ? (purchaserUser.fullName || purchaserUser.username) : (detail.salespersonId || currentUser?.fullName || currentUser?.username || '');
+        const purchaserId = detail.salespersonId ? String(detail.salespersonId) : (currentUserId ? String(currentUserId) : '');
 
         setForm({
           docCode: detail.docCode || '',
@@ -209,7 +208,7 @@ function UpdateImportSlipPage() {
           assemblyOrderId: loadedImportType === 'PRODUCTION' ? detail.referenceId || '' : '',
           assemblyOrderCode: '', // will be resolved in render
           deliverer: detail.recipientName || '',
-          purchaser: purchaserName,
+          purchaser: purchaserId,
           referenceType: detail.referenceType || '',
           referenceId: detail.referenceId || '',
           referenceCode: detail.referenceCode || '',
@@ -567,9 +566,9 @@ function UpdateImportSlipPage() {
                     <input
                       type="text"
                       className="misa-input"
-                      value={form.purchaser || ''}
-                      onChange={(e) => handleFormChange('purchaser', e.target.value)}
-                      placeholder="Nhập tên nhân viên..."
+                      value={users.find(u => String(u.id) === String(form.purchaser)) ? (users.find(u => String(u.id) === String(form.purchaser)).fullName || users.find(u => String(u.id) === String(form.purchaser)).username) : 'Đang tải...'}
+                      readOnly
+                      style={{ backgroundColor: '#f3f4f6' }}
                     />
                   </div>
                 </div>

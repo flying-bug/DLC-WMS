@@ -104,8 +104,9 @@ function CreateImportSlipPage() {
   const [showPartnerModal, setShowPartnerModal] = useState(false);
   const [serialModalItemId, setSerialModalItemId] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [form, setForm] = useState(() => ({
-    docCode: `IMP-${Date.now()}`,
+    docCode: '',
     warehouseId: '',
     partnerId: '',
     partnerName: '',
@@ -170,8 +171,8 @@ function CreateImportSlipPage() {
         const meRes = await axiosClient.get('/users/me');
         const me = meRes.data?.data || meRes.data;
         if (me) {
-          const defaultName = me.fullName || me.username || '';
-          setForm(prev => ({ ...prev, purchaser: prev.purchaser || defaultName }));
+          setCurrentUser(me);
+          setForm(prev => ({ ...prev, purchaser: String(me.id) }));
         }
       } catch (err) {
         console.error('Failed to load me profile', err);
@@ -617,9 +618,9 @@ function CreateImportSlipPage() {
                   <input
                     type="text"
                     className="misa-input"
-                    value={form.purchaser || ''}
-                    onChange={(e) => handleFormChange('purchaser', e.target.value)}
-                    placeholder="Nhập tên nhân viên..."
+                    value={currentUser ? (currentUser.fullName || currentUser.username) : 'Đang tải...'}
+                    readOnly
+                    style={{ backgroundColor: '#f3f4f6' }}
                   />
                 </div>
               </div>

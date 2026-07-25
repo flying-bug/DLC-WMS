@@ -17,7 +17,10 @@ const DEFAULT_COLUMNS = {
   docCode: true,
   partner: true,
   warehouse: true,
+  purchaser: true,
+  deliverer: true,
   total: true,
+  vat: true,
   note: true,
   status: true,
 };
@@ -27,17 +30,17 @@ const COLUMN_OPTIONS = [
   { id: 'docCode', label: 'Số Phiếu' },
   { id: 'partner', label: 'Đối tác / Tham chiếu' },
   { id: 'warehouse', label: 'Kho Nhập' },
+  { id: 'purchaser', label: 'Nhân viên mua hàng' },
+  { id: 'deliverer', label: 'Người giao hàng' },
   { id: 'total', label: 'Tổng Tiền' },
+  { id: 'vat', label: 'Tiền VAT' },
   { id: 'note', label: 'Ghi Chú' },
   { id: 'status', label: 'Trạng Thái' },
 ];
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
-  SUBMITTED: { label: 'Chờ duyệt', code: 'warning' },
-  APPROVED: { label: 'Đã duyệt', code: 'success' },
   POSTED: { label: 'Hoàn thành', code: 'success' },
-  CANCELLED: { label: 'Đã hủy', code: 'danger' },
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -45,6 +48,17 @@ const pageContent = (payload) => payload?.content ?? payload ?? [];
 const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')} đ`;
 const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN') : '';
 const sumAmount = (lines = []) => lines.reduce((sum, line) => sum + Number(line.lineAmount || 0), 0);
+const sumSubtotal = (lines = []) => lines.reduce((sum, line) => {
+  const qty = Number(line.quantityIn || line.quantityOut || 0);
+  const price = Number(line.unitCost || line.unitPrice || 0);
+  return sum + (qty * price);
+}, 0);
+const sumVat = (lines = []) => lines.reduce((sum, line) => {
+  const qty = Number(line.quantityIn || line.quantityOut || 0);
+  const price = Number(line.unitCost || line.unitPrice || 0);
+  const vatRate = Number(line.vatPercent ?? line.vatRate ?? 0) / 100;
+  return sum + (qty * price * vatRate);
+}, 0);
 const sumQuantity = (lines = []) => lines.reduce((sum, line) => sum + Number(line.quantityIn || 0), 0);
 const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
   ? `${item.productName} - ${item.variantName}`
@@ -165,7 +179,10 @@ function ImportHistoryPage() {
       date: formatDate(slip.docDate),
       partner: partnerLabel,
       warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa chọn'),
-      total: money(sumAmount(slip.lines)),
+      purchaserName: slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || (slip.salespersonId ? String(slip.salespersonId) : 'Chưa rõ'),
+      delivererName: slip.recipientName || 'Chưa rõ',
+      total: money(sumSubtotal(slip.lines) + sumVat(slip.lines)),
+      vat: money(sumVat(slip.lines)),
       quantity: sumQuantity(slip.lines),
       statusLabel: status.label,
       statusCode: status.code,
@@ -173,13 +190,14 @@ function ImportHistoryPage() {
   });
 
   const handleExport = () => {
-    const headers = ['Ngày ghi nhận', 'Số chứng từ', 'Đối tác / Tham chiếu', 'Kho nhập', 'Tổng tiền', 'Trạng thái'];
+    const headers = ['Ngày ghi nhận', 'Số chứng từ', 'Đối tác / Tham chiếu', 'Kho nhập', 'Tổng tiền', 'Tiền VAT', 'Trạng thái'];
     const data = rows.map(item => [
       item.date,
       item.docCode,
       item.partner,
       item.warehouse,
       item.total,
+      item.vat,
       item.statusLabel
     ]);
     exportToExcel(headers, data, 'Danh_sach_phieu_nhap_kho');
@@ -257,6 +275,8 @@ function ImportHistoryPage() {
       const qty = Number(isImport ? line.quantityIn : line.quantityOut || 0);
       const price = Number(line.unitCost || line.unitPrice || 0);
       const amount = qty * price;
+      const vatPercent = Number(line.vatPercent ?? line.vatRate ?? 0);
+      const vatAmount = amount * (vatPercent / 100);
       const serials = line.serialNumbers && line.serialNumbers.length > 0 ? line.serialNumbers.join(', ') : 'Không có';
 
       rowsHtml += `
@@ -267,6 +287,8 @@ function ImportHistoryPage() {
           <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(unit)}</td>
           <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${qty.toLocaleString('vi-VN')}</td>
           <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${price.toLocaleString('vi-VN')} đ</td>
+          <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${vatPercent}%</td>
+          <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${vatAmount.toLocaleString('vi-VN')} đ</td>
           <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${amount.toLocaleString('vi-VN')} đ</td>
           <td style="border: 1px solid #ddd; padding: 8px; font-size: 11px;">${escapeHtml(serials)}</td>
         </tr>
@@ -346,18 +368,30 @@ function ImportHistoryPage() {
                 <th>Tên sản phẩm</th>
                 <th style="width: 8%;">ĐVT</th>
                 <th style="width: 10%;">Số lượng</th>
-                <th style="width: 12%;">Đơn giá</th>
-                <th style="width: 15%;">Thành tiền</th>
-                <th style="width: 18%;">Số Serial</th>
+                <th style="width: 10%;">Đơn giá</th>
+                <th style="width: 7%;">% VAT</th>
+                <th style="width: 10%;">Tiền VAT</th>
+                <th style="width: 12%;">Thành tiền</th>
+                <th style="width: 14%;">Số Serial</th>
               </tr>
             </thead>
             <tbody>
               ${rowsHtml}
               <tr class="total-row">
-                <td colspan="4" style="text-align: right; border: 1px solid #ddd; padding: 10px;">Tổng cộng:</td>
+                <td colspan="4" style="text-align: right; border: 1px solid #ddd; padding: 10px;">Tổng tiền hàng:</td>
                 <td style="text-align: center; border: 1px solid #ddd; padding: 10px;">${sumQuantity(slip.lines).toLocaleString('vi-VN')}</td>
                 <td style="border: 1px solid #ddd; padding: 10px;"></td>
-                <td style="text-align: right; border: 1px solid #ddd; padding: 10px;">${sumAmount(slip.lines).toLocaleString('vi-VN')} đ</td>
+                <td style="text-align: right; border: 1px solid #ddd; padding: 10px;">${sumSubtotal(slip.lines).toLocaleString('vi-VN')} đ</td>
+                <td colspan="3" style="border: 1px solid #ddd; padding: 10px;"></td>
+              </tr>
+              <tr class="total-row">
+                <td colspan="8" style="text-align: right; border: 1px solid #ddd; padding: 10px;">Tiền VAT:</td>
+                <td style="text-align: right; border: 1px solid #ddd; padding: 10px;">${sumVat(slip.lines).toLocaleString('vi-VN')} đ</td>
+                <td style="border: 1px solid #ddd; padding: 10px;"></td>
+              </tr>
+              <tr class="total-row">
+                <td colspan="8" style="text-align: right; border: 1px solid #ddd; padding: 10px; color: #d32f2f;">Tổng thanh toán:</td>
+                <td style="text-align: right; border: 1px solid #ddd; padding: 10px; color: #d32f2f;">${(sumSubtotal(slip.lines) + sumVat(slip.lines)).toLocaleString('vi-VN')} đ</td>
                 <td style="border: 1px solid #ddd; padding: 10px;"></td>
               </tr>
             </tbody>
@@ -438,9 +472,7 @@ function ImportHistoryPage() {
               >
                 <option value="">Tất cả</option>
                 <option value="DRAFT">Lưu tạm</option>
-                <option value="SUBMITTED">Chờ duyệt</option>
                 <option value="POSTED">Hoàn thành</option>
-                <option value="CANCELLED">Đã hủy</option>
               </select>
             </div>
           </div>
@@ -496,6 +528,9 @@ function ImportHistoryPage() {
                 {columns.docCode && <th style={{ width: '180px' }}>Số Phiếu</th>}
                 {columns.partner && <th style={{ width: '200px' }}>Đối tác / Tham chiếu</th>}
                 {columns.warehouse && <th style={{ width: '120px' }}>Kho Nhập</th>}
+                {columns.purchaser && <th style={{ width: '150px' }}>Nhân viên mua hàng</th>}
+                {columns.deliverer && <th style={{ width: '150px' }}>Người giao hàng</th>}
+                {columns.vat && <th className={styles.textRight} style={{ width: '110px' }}>Tiền VAT</th>}
                 {columns.total && <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>}
                 {columns.note && <th style={{ minWidth: '150px' }}>Ghi Chú</th>}
                 {columns.status && <th style={{ width: '120px' }}>Trạng Thái</th>}
@@ -532,6 +567,9 @@ function ImportHistoryPage() {
                   )}
                   {columns.partner && <td>{slip.partner}</td>}
                   {columns.warehouse && <td>{slip.warehouse}</td>}
+                  {columns.purchaser && <td>{slip.purchaserName}</td>}
+                  {columns.deliverer && <td>{slip.delivererName}</td>}
+                  {columns.vat && <td className={`${styles.money} ${styles.textRight}`}>{slip.vat}</td>}
                   {columns.total && <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>}
                   {columns.note && (
                     <td style={{ maxWidth: '180px' }}>
@@ -748,6 +786,8 @@ function ImportHistoryPage() {
                       <th>ĐVT</th>
                       <th className={styles.textCenter}>Số lượng</th>
                       <th className={styles.textRight}>Giá nhập</th>
+                      <th className={styles.textRight}>% VAT</th>
+                      <th className={styles.textRight}>Tiền VAT</th>
                       <th className={styles.textRight}>Thành tiền</th>
                       <th>Số Serial</th>
                     </tr>
@@ -763,6 +803,8 @@ function ImportHistoryPage() {
                           <td>{product?.unitName || ''}</td>
                           <td className={styles.textCenter}>{Number(line.quantityIn || 0).toLocaleString('vi-VN')}</td>
                           <td className={styles.textRight}>{money(line.unitCost)}</td>
+                          <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>
+                          <td className={styles.textRight}>{money(Number(line.quantityIn || 0) * Number(line.unitCost || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>
                           <td className={styles.textRight}>{money(line.lineAmount)}</td>
                           <td style={{ maxWidth: '200px', wordWrap: 'break-word', whiteSpace: 'normal' }}>
                             {line.serialNumbers && line.serialNumbers.length > 0 
@@ -778,8 +820,12 @@ function ImportHistoryPage() {
                 <div className={styles.detailFooter}>
                   <div className={styles.footerTotalLabel}>Tổng cộng hàng nhập:</div>
                   <div className={styles.footerQty}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</div>
-                  <div className={styles.footerTotalLabel} style={{ flex: 0, whiteSpace: 'nowrap', paddingRight: '16px' }}>Tổng tiền:</div>
-                  <div className={styles.footerMoney}>{money(sumAmount(selectedSlip.lines))}</div>
+                  <div style={{ flex: 1 }}></div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ marginBottom: '4px', fontSize: '13px' }}>Tổng tiền hàng: <strong>{money(sumSubtotal(selectedSlip.lines))}</strong></div>
+                    <div style={{ marginBottom: '4px', fontSize: '13px' }}>Tiền VAT: <strong>{money(sumVat(selectedSlip.lines))}</strong></div>
+                    <div style={{ fontSize: '16px', color: 'var(--color-primary)' }}>Tổng thanh toán: <strong>{money(sumSubtotal(selectedSlip.lines) + sumVat(selectedSlip.lines))}</strong></div>
+                  </div>
                 </div>
               </div>
             </div>
