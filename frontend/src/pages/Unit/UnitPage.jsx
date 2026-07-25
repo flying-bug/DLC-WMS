@@ -1,171 +1,224 @@
 import { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
-import axiosClient from '../../api/axiosClient';
+import UnitModal from './components/UnitModal';
 import { exportToExcel } from '../../utils/excelExport';
+import Toast from '../../components/ui/Toast/Toast';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './UnitPage.module.css';
+
+import axiosClient from '../../api/axiosClient';
+
+const STATUS_LABELS = {
+    ACTIVE: { label: 'Đang sử dụng', code: 'success' },
+    INACTIVE: { label: 'Ngừng sử dụng', code: 'danger' },
+};
 
 const UnitPage = () => {
     const [units, setUnits] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-
-    // Pagination state
-    const [page, setPage] = useState(0);
-    const [size, setSize] = useState(20);
-    const [totalPages, setTotalPages] = useState(0);
+    
+    // Filters and Pagination
+    const [filters, setFilters] = useState({ search: '', status: '' });
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    
+    // Modals & Toast
+    const [modalConfig, setModalConfig] = useState({ isOpen: false, data: null });
+    const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
+    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, unit: null });
 
-    // Modal state
-    const [showModal, setShowModal] = useState(false);
-    const [isEdit, setIsEdit] = useState(false);
-    const [formData, setFormData] = useState({ id: null, name: '', description: '', status: 'ACTIVE' });
-    const [errorMsg, setErrorMsg] = useState('');
-
-    // Dropdown state
-    const [openDropdownId, setOpenDropdownId] = useState(null);
-
-    const handleExport = () => {
-        const headers = ['Đơn vị tính', 'Mô tả', 'Trạng thái'];
-        const data = units.map(unit => [
-            unit.name,
-            unit.description || '',
-            unit.status === 'ACTIVE' ? 'Đang sử dụng' : 'Ngừng sử dụng'
-        ]);
-        exportToExcel(headers, data, 'Danh_sach_don_vi_tinh');
-    };
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = () => setOpenDropdownId(null);
-        window.addEventListener('click', handleClickOutside);
-        return () => window.removeEventListener('click', handleClickOutside);
-    }, []);
+    const showToast = (type, message) => setToast({ isVisible: true, type, message });
+    const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
     const fetchUnits = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await axiosClient.get(`/units?page=${page}&size=${size}${searchTerm ? `&search=${searchTerm}` : ''}`);
-            setUnits(res.data.content);
-            setTotalPages(res.data.totalPages);
-            setTotalElements(res.data.totalElements);
+            const params = {
+                page: currentPage - 1,
+                size: pageSize
+            };
+            if (filters.search) params.search = filters.search;
+            if (filters.status) params.status = filters.status;
+            
+            const res = await axiosClient.get('/units', { params });
+            if (res.data && res.data.content) {
+                setUnits(res.data.content);
+                setTotalPages(res.data.totalPages);
+                setTotalElements(res.data.totalElements);
+            } else {
+                setUnits(res.data || []);
+                setTotalPages(1);
+                setTotalElements(res.data?.length || 0);
+            }
         } catch (error) {
-            console.error("Error fetching units:", error);
+            console.error('Lỗi tải danh sách đơn vị tính:', error);
+            showToast('error', error.response?.data?.userMessage || 'Không tải được danh sách đơn vị tính');
         } finally {
             setLoading(false);
         }
-    }, [page, size, searchTerm]);
+    }, [filters, currentPage, pageSize]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchUnits();
-        }, 0);
+        }, 300); // debounce
         return () => clearTimeout(timer);
     }, [fetchUnits]);
 
-    const handleSearch = (e) => {
-        if (e.key === 'Enter') {
-            setPage(0);
-            fetchUnits();
-        }
+    const rows = units.map(item => {
+        const status = STATUS_LABELS[item.status] || { label: item.status || 'Không rõ', code: 'info' };
+        return {
+            ...item,
+            statusLabel: status.label,
+            statusCode: status.code
+        };
+    });
+
+    const handleExport = () => {
+        const headers = ['Tên đơn vị tính', 'Mô tả', 'Trạng thái'];
+        const data = rows.map(item => [
+            item.name,
+            item.description || '',
+            item.statusLabel
+        ]);
+        exportToExcel(headers, data, 'Danh_sach_don_vi_tinh');
+        showToast('success', 'Xuất Excel thành công!');
     };
 
-    const openAddModal = () => {
-        setIsEdit(false);
-        setFormData({ id: null, name: '', description: '', status: 'ACTIVE' });
-        setErrorMsg('');
-        setShowModal(true);
+    const handleDeleteClick = (e, unit) => {
+        e.stopPropagation();
+        setDeleteConfirm({ isOpen: true, unit });
     };
 
-    const openEditModal = (unit) => {
-        setIsEdit(true);
-        setFormData({ id: unit.id, name: unit.name, description: unit.description, status: unit.status });
-        setErrorMsg('');
-        setShowModal(true);
+    const handleEditClick = (e, item) => {
+        e.stopPropagation();
+        setModalConfig({ isOpen: true, data: item });
     };
 
-    const handleDuplicate = (unit) => {
-        setIsEdit(false);
-        setFormData({ id: null, name: `${unit.name} - Copy`, description: unit.description, status: 'ACTIVE' });
-        setErrorMsg('');
-        setShowModal(true);
-        setOpenDropdownId(null);
-    };
-
-    const handleToggleStatus = async (unit) => {
-        const newStatus = unit.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    const handleToggleStatus = async (item) => {
+        const newStatus = item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
         try {
-            await axiosClient.put(`/units/${unit.id}`, { ...unit, status: newStatus });
+            await axiosClient.put(`/units/` + item.id, { ...item, status: newStatus });
+            showToast('success', 'Cập nhật trạng thái thành công!');
             fetchUnits();
         } catch (error) {
-            console.error("Lỗi thay đổi trạng thái:", error);
-            alert(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật trạng thái!');
+            console.error('Lỗi cập nhật trạng thái:', error);
+            showToast('error', error.response?.data?.userMessage || 'Không thể cập nhật trạng thái!');
         }
-        setOpenDropdownId(null);
     };
 
-    const handleSave = async (closeAfterSave = true) => {
-        if (!formData.name.trim()) {
-            setErrorMsg('Đơn vị tính không được để trống.');
-            return;
-        }
-
+    const executeDelete = async () => {
+        if (!deleteConfirm.unit) return;
         try {
-            if (isEdit) {
-                await axiosClient.put(`/units/${formData.id}`, formData);
+            await axiosClient.delete(`/units/` + deleteConfirm.unit.id);
+            showToast('success', 'Xóa thành công!');
+            setDeleteConfirm({ isOpen: false, unit: null });
+            if (rows.length === 1 && currentPage > 1) {
+                setCurrentPage(currentPage - 1);
             } else {
-                await axiosClient.post('/units', formData);
-            }
-            fetchUnits();
-            if (closeAfterSave) {
-                setShowModal(false);
-            } else {
-                // Giữ modal mở để thêm tiếp
-                setFormData({ id: null, name: '', description: '', status: 'ACTIVE' });
-                setIsEdit(false);
-            }
-        } catch (error) {
-            setErrorMsg(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi lưu.');
-        }
-    };
-
-    const handleDelete = async (id) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa đơn vị tính này không?')) {
-            try {
-                await axiosClient.delete(`/units/${id}`);
                 fetchUnits();
-            } catch (error) {
-                console.error("Lỗi xóa đơn vị:", error);
-                alert(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
+            }
+        } catch (error) {
+            console.error('Lỗi xóa đơn vị tính:', error);
+            showToast('error', error.response?.data?.userMessage || 'Không thể xóa đơn vị tính này!');
+            setDeleteConfirm({ isOpen: false, unit: null });
+        }
+    };
+
+    const onModalSave = (isEdit, isContinue) => {
+        showToast('success', isEdit ? 'Cập nhật thành công!' : 'Thêm mới thành công!');
+        fetchUnits();
+        if (!isContinue) {
+            setModalConfig({ isOpen: false, data: null });
+        } else {
+            setModalConfig({ isOpen: true, data: null });
+        }
+    };
+
+    const onModalError = (msg) => {
+        showToast('error', msg);
+    };
+
+    const getPageNumbers = () => {
+        const pages = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            if (currentPage <= 4) {
+                for (let i = 1; i <= 5; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            } else if (currentPage >= totalPages - 3) {
+                pages.push(1);
+                pages.push('...');
+                for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+            } else {
+                pages.push(1);
+                pages.push('...');
+                for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
             }
         }
-        setOpenDropdownId(null);
+        return pages;
     };
 
     return (
-        <AdminLayout activeTab="dashboard">
-            <div className={styles.container}>
-                <div className={styles.header}>
-                    <h2>Đơn vị tính</h2>
-                    <div className={styles.breadcrumb}>
-                        <i className="fas fa-chevron-left"></i> Tất cả danh mục
-                    </div>
+        <AdminLayout>
+            <div className={styles.pageBody}>
+                <div className={styles.pageTitleContainer}>
+                    <h1 className={styles.pageTitle}>Đơn vị tính</h1>
+                    <button className={styles.btnPrimary} onClick={() => setModalConfig({ isOpen: true, data: null })}>
+                        <i className="bi bi-plus"></i> Thêm mới
+                    </button>
                 </div>
 
-                <div className={styles.toolbar}>
-                    <div className={styles.searchBox}>
-                        <input
-                            type="text"
-                            placeholder="Tìm kiếm theo đơn vị tính"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            onKeyDown={handleSearch}
-                        />
-                        <i className="fas fa-search" onClick={() => { setPage(0); fetchUnits(); }}></i>
+                <div className={styles.filterSection}>
+                    <div className={styles.filterGroup}>
+                        <div className={styles.filterField}>
+                            <span className={styles.filterLabel}>TÌM KIẾM</span>
+                            <input
+                                type="text"
+                                className={styles.filterInput}
+                                placeholder="Tên ĐVT..."
+                                value={filters.search}
+                                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { setCurrentPage(1); fetchUnits(); } }}
+                            />
+                        </div>
+                        <div className={styles.filterField}>
+                            <span className={styles.filterLabel}>TÌNH TRẠNG</span>
+                            <select
+                                className={styles.filterSelect}
+                                value={filters.status}
+                                onChange={(e) => { setFilters(prev => ({ ...prev, status: e.target.value })); setCurrentPage(1); }}
+                            >
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="ACTIVE">Đang sử dụng</option>
+                                <option value="INACTIVE">Ngừng sử dụng</option>
+                            </select>
+                        </div>
                     </div>
-                    <div className={styles.actions}>
-                        <button className={styles.iconBtn} onClick={fetchUnits} title="Tải lại"><i className="fas fa-sync-alt"></i></button>
-                        <button className={styles.iconBtn} onClick={handleExport} title="Xuất Excel"><i className="fas fa-file-excel" style={{color: 'var(--color-excel)'}}></i></button>
-                        <button className={styles.primaryBtn} onClick={openAddModal}>Thêm</button>
+                    <div className={styles.filterActions}>
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => { setFilters({ search: '', status: '' }); setCurrentPage(1); setTimeout(fetchUnits, 0); }}
+                            title="Đặt lại bộ lọc"
+                        >
+                            <i className="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <button
+                            className={styles.iconBtn}
+                            onClick={handleExport}
+                            title="Xuất tệp Excel"
+                        >
+                            <i className="bi bi-file-earmark-excel"></i>
+                        </button>
+                        <button className={styles.btnPrimary} onClick={() => { setCurrentPage(1); fetchUnits(); }}>
+                            <i className="bi bi-funnel"></i> Lọc dữ liệu
+                        </button>
                     </div>
                 </div>
 
@@ -173,126 +226,179 @@ const UnitPage = () => {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th>Đơn vị tính</th>
-                                <th>Mô tả</th>
-                                <th>Trạng thái</th>
-                                <th style={{ textAlign: 'center', width: '100px' }}>Chức năng</th>
+                                <th style={{ minWidth: '220px' }}>Tên Đơn Vị Tính</th>
+                                <th style={{ minWidth: '150px' }}>Mô Tả</th>
+                                <th style={{ width: '140px' }}>Trạng Thái</th>
+                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {loading ? (
-                                <tr><td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>Đang tải dữ liệu...</td></tr>
-                            ) : units.length === 0 ? (
-                                <tr><td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>Không có dữ liệu.</td></tr>
+                            {loading && rows.length === 0 ? (
+                                <tr>
+                                    <td colSpan="4" className={styles.textCenter} style={{ padding: '40px' }}>
+                                        <div className={styles.emptyState}>Đang tải dữ liệu...</div>
+                                    </td>
+                                </tr>
+                            ) : rows.length === 0 ? (
+                                <tr>
+                                    <td colSpan="4">
+                                        <div className={styles.emptyState}>
+                                            <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
+                                            <div className={styles.emptyText}>Không tìm thấy đơn vị tính nào</div>
+                                        </div>
+                                    </td>
+                                </tr>
                             ) : (
-                                units.map((unit) => (
-                                    <tr key={unit.id}>
-                                        <td>{unit.name}</td>
-                                        <td>{unit.description}</td>
-                                        <td>{unit.status === 'ACTIVE' ? 'Đang sử dụng' : 'Ngừng sử dụng'}</td>
-                                        <td className={styles.actionCell}>
-                                            <span className={styles.editText} onClick={() => openEditModal(unit)}>Sửa</span>
-
-                                            <div className={styles.dropdownContainer}>
-                                                <div
-                                                    className={styles.dropdownToggle}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setOpenDropdownId(openDropdownId === unit.id ? null : unit.id);
-                                                    }}
-                                                >
-                                                    <i className="fas fa-caret-down"></i>
-                                                </div>
-
-                                                {openDropdownId === unit.id && (
-                                                    <div className={styles.dropdownMenu}>
-                                                        <div className={styles.dropdownItem} onClick={() => handleDuplicate(unit)}>Nhân bản</div>
-                                                        <div className={styles.dropdownItem} onClick={() => handleDelete(unit.id)}>Xóa</div>
-                                                        <div className={styles.dropdownItem} onClick={() => handleToggleStatus(unit)}>
-                                                            {unit.status === 'ACTIVE' ? 'Ngừng sử dụng' : 'Sử dụng'}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
+                                rows.map(item => (
+                                    <tr key={item.id}>
+                                        <td style={{ fontWeight: 600 }}>{item.name}</td>
+                                        <td>
+                                            <span className={styles.noteText}>{item.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có ghi chú</span>}</span>
+                                        </td>
+                                        <td>
+                                            <span className={`${styles.badge} ${item.statusCode === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
+                                                {item.statusLabel}
+                                            </span>
+                                        </td>
+                                        <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
+                                            <i 
+                                                className="bi bi-pencil" 
+                                                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
+                                                title="Chỉnh sửa" 
+                                                onClick={(e) => handleEditClick(e, item)}
+                                            ></i>
+                                            {item.status === 'ACTIVE' ? (
+                                                <i 
+                                                    className="bi bi-slash-circle" 
+                                                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
+                                                    title="Vô hiệu hoá" 
+                                                    onClick={() => handleToggleStatus(item)}
+                                                ></i>
+                                            ) : (
+                                                <i 
+                                                    className="bi bi-check2-circle" 
+                                                    style={{ cursor: 'pointer', color: 'var(--color-success)', fontSize: '16px', marginRight: '12px' }} 
+                                                    title="Kích hoạt" 
+                                                    onClick={() => handleToggleStatus(item)}
+                                                ></i>
+                                            )}
+                                            <i 
+                                                className="bi bi-trash" 
+                                                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
+                                                title="Xóa ĐVT" 
+                                                onClick={(e) => handleDeleteClick(e, item)}
+                                            ></i>
                                         </td>
                                     </tr>
                                 ))
                             )}
                         </tbody>
                     </table>
-                </div>
 
-                {/* Pagination */}
-                <div className={styles.pagination}>
-                    <div className={styles.totalInfo}>Tổng số: <b>{totalElements}</b> bản ghi</div>
-                    <div className={styles.pageControls}>
-                        <select value={size} onChange={(e) => { setSize(Number(e.target.value)); setPage(0); }}>
-                            <option value={10}>10 bản ghi trên 1 trang</option>
-                            <option value={20}>20 bản ghi trên 1 trang</option>
-                            <option value={30}>30 bản ghi trên 1 trang</option>
-                            <option value={50}>50 bản ghi trên 1 trang</option>
-                        </select>
-                        <span
-                            className={`${styles.pageBtn} ${page === 0 ? styles.disabled : ''}`}
-                            onClick={() => page > 0 && setPage(page - 1)}
-                        >
-                            Trước
-                        </span>
-                        <span className={styles.currentPage}>{page + 1}</span>
-                        <span
-                            className={`${styles.pageBtn} ${page >= totalPages - 1 ? styles.disabled : ''}`}
-                            onClick={() => page < totalPages - 1 && setPage(page + 1)}
-                        >
-                            Sau
-                        </span>
-                    </div>
-                </div>
-
-                {/* Modal Thêm / Sửa */}
-                {showModal && (
-                    <div className="misa-modal-overlay">
-                        <div className="misa-modal">
-                            <div className="misa-modal-header">
-                                <h3>{isEdit ? 'Sửa Đơn vị tính' : 'Thêm Đơn vị tính'}</h3>
-                                <i className="fas fa-times" onClick={() => setShowModal(false)} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
-                            </div>
-                            <div className="misa-modal-body">
-                                {errorMsg && <div className={styles.errorAlert}>{errorMsg}</div>}
-
-                                <div className="misa-form-group">
-                                    <label>Đơn vị tính <span className="required">*</span></label>
-                                    <input
-                                        type="text"
-                                        className="misa-input"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                        autoFocus
-                                    />
-                                </div>
-
-                                <div className="misa-form-group">
-                                    <label>Mô tả</label>
-                                    <textarea
-                                        className="misa-textarea"
-                                        rows="3"
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                    ></textarea>
-                                </div>
-                            </div>
-                            <div className="misa-modal-footer">
-                                <button className="btn-misa-cancel" onClick={() => setShowModal(false)}>Hủy</button>
-                                <div className={styles.rightButtons} style={{ display: 'flex', gap: '12px' }}>
-                                    {!isEdit && (
-                                        <button className="btn-misa-draft" onClick={() => handleSave(false)}>Cất và Thêm</button>
-                                    )}
-                                    <button className="btn-misa-save" onClick={() => handleSave(true)}>Cất</button>
-                                </div>
-                            </div>
+                    <div className={styles.pagination}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span>Hiển thị</span>
+                            <select
+                                className="misa-select"
+                                style={{ width: '70px', height: '32px', padding: '0 8px' }}
+                                value={pageSize}
+                                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                            >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                            <span>trên tổng số {totalElements} bản ghi</span>
                         </div>
+
+                        {totalPages > 1 && (
+                            <div className={styles.pageControls}>
+                                <button
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    className={styles.pageBtn}
+                                >
+                                    <i className="bi bi-chevron-left"></i>
+                                    <span>Trước</span>
+                                </button>
+
+                                <div className={styles.paginationNumbers}>
+                                    {getPageNumbers().map((num, idx) => (
+                                        num === currentPage ? (
+                                            <input
+                                                key={idx}
+                                                className={`${styles.pageNumber} ${styles.active}`}
+                                                style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
+                                                defaultValue={num}
+                                                title="Nhập số trang và nhấn Enter"
+                                                onBlur={(e) => e.target.value = currentPage}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        let p = parseInt(e.target.value, 10);
+                                                        if (!isNaN(p)) {
+                                                            p = Math.max(1, Math.min(totalPages, p));
+                                                            setCurrentPage(p);
+                                                            e.target.blur();
+                                                        } else {
+                                                            e.target.value = currentPage;
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        ) : (
+                                            <span
+                                                key={idx}
+                                                className={`${styles.pageNumber} ${num === '...' ? styles.dots : ''}`}
+                                                onClick={() => num !== '...' && setCurrentPage(num)}
+                                            >
+                                                {num}
+                                            </span>
+                                        )
+                                    ))}
+                                </div>
+
+                                <button
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    className={styles.pageBtn}
+                                >
+                                    <span>Sau</span>
+                                    <i className="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        )}
                     </div>
-                )}
+                </div>
             </div>
+
+            {modalConfig.isOpen && (
+                <UnitModal 
+                    isOpen={modalConfig.isOpen}
+                    onClose={() => setModalConfig({ isOpen: false, data: null })}
+                    onSaved={onModalSave}
+                    onError={onModalError}
+                    editData={modalConfig.data}
+                />
+            )}
+
+            <ConfirmModal 
+                isOpen={deleteConfirm.isOpen}
+                onClose={() => setDeleteConfirm({ isOpen: false, unit: null })}
+                onConfirm={executeDelete}
+                title="Xác nhận xoá"
+                message={<>Bạn có chắc chắn muốn xoá đơn vị tính <b>{deleteConfirm.unit?.name}</b> không? Hành động này không thể hoàn tác.</>}
+                confirmText="Xóa"
+                confirmStyle="danger"
+            />
+
+            {toast.isVisible && (
+                <Toast 
+                    type={toast.type}
+                    message={toast.message}
+                    onClose={hideToast}
+                />
+            )}
         </AdminLayout>
     );
 };
