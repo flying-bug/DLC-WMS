@@ -14,6 +14,6 @@ public class AssemblyBomLineResponse {
     private String componentName;
     private String unitName;
     private BigDecimal quantity;
-    private BigDecimal costAllocationPct;
+    private String componentRole;
     private String note;
 }

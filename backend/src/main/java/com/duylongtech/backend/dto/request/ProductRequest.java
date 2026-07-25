@@ -42,4 +42,5 @@ public class ProductRequest {
     private BigDecimal minStockQty;
     private BigDecimal stockValue;
     private String imageUrl;
+    private String bomTemplate;
 }
