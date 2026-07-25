@@ -4,6 +4,9 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import * as transferApi from '../../api/stockTransferApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import * as warehouseApi from '../../api/warehouseApi';
+import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
+import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
+import Select from 'react-select';
 import styles from './CreateTransferSlipPage.module.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -13,12 +16,69 @@ const variantLabel = (item) => item?.variantName && item.variantName !== item.pr
   ? `${item.productName} - ${item.variantName}`
   : item?.productName || '';
 
+const customSelectStyles = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: '32px',
+    height: '32px',
+    fontSize: '13px',
+    borderColor: state.isFocused ? '#2563eb' : '#d1d5db',
+    boxShadow: state.isFocused ? '0 0 0 1px #2563eb' : 'none',
+    '&:hover': {
+      borderColor: state.isFocused ? '#2563eb' : '#9ca3af'
+    }
+  }),
+  valueContainer: (base) => ({
+    ...base,
+    height: '32px',
+    padding: '0 8px'
+  }),
+  input: (base) => ({
+    ...base,
+    margin: '0',
+    padding: '0'
+  }),
+  indicatorSeparator: () => ({
+    display: 'none'
+  }),
+  indicatorsContainer: (base) => ({
+    ...base,
+    height: '30px'
+  }),
+  dropdownIndicator: (base) => ({
+    ...base,
+    padding: '4px'
+  }),
+  clearIndicator: (base) => ({
+    ...base,
+    padding: '4px'
+  }),
+  menu: (base) => ({
+    ...base,
+    fontSize: '13px',
+    zIndex: 9999
+  }),
+  menuPortal: (base) => ({
+    ...base,
+    zIndex: 9999
+  }),
+  menuList: (base) => ({
+    ...base,
+    maxHeight: '200px',
+    overflowY: 'auto'
+  }),
+  option: (base) => ({
+    ...base,
+    padding: '6px 12px'
+  })
+};
+
 const emptyLine = () => ({
   localId: crypto.randomUUID(),
   variantId: '',
-  serialNumberId: null,
-  scannedCode: '',
   quantity: 1,
+  price: 0,
+  serialNumbers: [],
   note: '',
 });
 
@@ -34,16 +94,33 @@ function CreateTransferSlipPage() {
   const [scanCode, setScanCode] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
 
-  const [form, setForm] = useState({
-    transferCode: '',
+  const [form, setForm] = useState(() => ({
+    transferCode: `CK-${Date.now()}`,
     fromWarehouseId: '',
     toWarehouseId: '',
     transferDate: today(),
     note: '',
-  });
+    deliverer: '',
+    attachedDocument: '',
+    referenceId: '',
+    referenceType: '',
+    referenceCode: '',
+  }));
   
   const [items, setItems] = useState([emptyLine()]);
   const [sourceInventory, setSourceInventory] = useState(new Map());
+  const [serialModalItemId, setSerialModalItemId] = useState(null);
+  const [showReferenceModal, setShowReferenceModal] = useState(false);
+
+  const handleSerialModalClose = (serials) => {
+    if (serials) {
+      handleItemChange(serialModalItemId, 'serialNumbers', serials);
+      if (serials.length > 0 && items.find(i => i.localId === serialModalItemId)?.quantity < serials.length) {
+        handleItemChange(serialModalItemId, 'quantity', serials.length);
+      }
+    }
+    setSerialModalItemId(null);
+  };
 
   useEffect(() => {
     if (!form.fromWarehouseId) {
@@ -131,7 +208,14 @@ function CreateTransferSlipPage() {
   }, [voiceData, warehouses, products]);
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
+  const selectedSerialItem = useMemo(() => items.find(i => i.localId === serialModalItemId), [items, serialModalItemId]);
+  const selectedSerialProduct = useMemo(() => {
+    if (!selectedSerialItem?.variantId) return null;
+    return productById.get(String(selectedSerialItem.variantId));
+  }, [selectedSerialItem, productById]);
+
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const totalPrice = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0)), 0);
   
   const isLineValid = (item) => {
     const quantity = Number(item.quantity || 0);
@@ -255,35 +339,19 @@ function CreateTransferSlipPage() {
   };
 
   const buildPayload = () => {
-    const groupedItems = new Map();
-    
-    items.forEach(item => {
-      if (!item.variantId || !item.quantity) return;
-      
-      const vId = String(item.variantId);
-      if (!groupedItems.has(vId)) {
-        groupedItems.set(vId, {
-          variantId: Number(item.variantId),
-          quantity: 0,
-          note: item.note,
-          serialNumbers: []
-        });
-      }
-      
-      const group = groupedItems.get(vId);
-      group.quantity += Number(item.quantity);
-      if (item.scannedCode && item.serialNumberId) {
-        group.serialNumbers.push(item.scannedCode);
-      }
-    });
-
     return {
       transferCode: form.transferCode || undefined,
       fromWarehouseId: Number(form.fromWarehouseId),
       toWarehouseId: Number(form.toWarehouseId),
       transferDate: form.transferDate,
       note: form.note,
-      lines: Array.from(groupedItems.values()),
+      lines: items.filter(isLineValid).map(item => ({
+        variantId: Number(item.variantId),
+        quantity: Number(item.quantity),
+        unitCost: Number(item.price || 0),
+        serialNumbers: item.serialNumbers || [],
+        note: item.note || ''
+      })),
     };
   };
 
@@ -326,7 +394,7 @@ function CreateTransferSlipPage() {
         <div className={styles.scrollableContent}>
           <div className={styles.pageHeader}>
             <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/transfer-history'); }}>
-              <i className="bi bi-arrow-left"></i> Tạo phiếu chuyển kho
+              <i className="bi bi-arrow-left"></i> Tạo phiếu chuyển kho {form.transferCode ? form.transferCode : ''}
             </a>
           </div>
 
@@ -356,6 +424,13 @@ function CreateTransferSlipPage() {
                 </div>
               </div>
 
+              <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                <div className="misa-form-group">
+                  <label className="misa-label">Người chuyển hàng</label>
+                  <input type="text" className="misa-input" value={form.deliverer || ''} onChange={(e) => handleFormChange('deliverer', e.target.value)} placeholder="Nhập tên người chuyển hàng..." />
+                </div>
+              </div>
+
               <div className="misa-form-group" style={{ marginTop: '12px' }}>
                 <label className="misa-label">Lý do chuyển</label>
                 <textarea className="misa-textarea" value={form.note} onChange={(e) => handleFormChange('note', e.target.value)} style={{ minHeight: '60px' }} />
@@ -375,7 +450,39 @@ function CreateTransferSlipPage() {
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                 <label className="misa-label">Số phiếu</label>
-                <input className="misa-input" placeholder="Để trống để hệ thống tự sinh" value={form.transferCode} onChange={(e) => handleFormChange('transferCode', e.target.value)} />
+                <input type="text" className="misa-input" placeholder="Tự động tạo nếu để trống" value={form.transferCode} onChange={(e) => handleFormChange('transferCode', e.target.value)} />
+              </div>
+
+              <div className="misa-form-row">
+                <div className="misa-form-group" style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
+                    {!form.referenceId && (
+                      <button
+                        type="button"
+                        style={{ padding: 0, fontSize: '13px', background: 'none', border: 'none', color: '#0070cc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        onClick={() => setShowReferenceModal(true)}
+                      >
+                        <i className="bi bi-link-45deg" style={{ fontSize: '16px' }}></i> Tham chiếu
+                      </button>
+                    )}
+                  </div>
+                  {form.referenceId ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                      <span style={{ color: 'var(--color-primary)', fontWeight: '500', cursor: 'pointer' }} onClick={() => setShowReferenceModal(true)}>
+                        <i className="bi bi-file-earmark-text"></i> {form.referenceCode}
+                      </span>
+                      <i
+                        className="bi bi-x-circle-fill"
+                        style={{ color: '#dc3545', cursor: 'pointer', fontSize: '14px' }}
+                        onClick={() => setForm(prev => ({ ...prev, referenceType: '', referenceId: '', referenceCode: '' }))}
+                        title="Xóa tham chiếu"
+                      ></i>
+                    </div>
+                  ) : (
+                    <input type="text" className="misa-input" style={{ marginTop: '8px' }} value={form.attachedDocument || ''} onChange={(e) => handleFormChange('attachedDocument', e.target.value)} placeholder="Nhập số/tên chứng từ đính kèm..." />
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -412,6 +519,9 @@ function CreateTransferSlipPage() {
                     <th>ĐVT</th>
                     <th style={{ textAlign: 'right' }}>Tồn khả dụng</th>
                     <th style={{ textAlign: 'right' }}>Số lượng</th>
+                    <th style={{ textAlign: 'center' }}>Serial</th>
+                    <th style={{ textAlign: 'right' }}>Đơn giá</th>
+                    <th style={{ textAlign: 'right' }}>Thành tiền</th>
                     <th>Ghi chú</th>
                     <th></th>
                   </tr>
@@ -424,21 +534,45 @@ function CreateTransferSlipPage() {
                       <tr key={item.localId}>
                         <td>{index + 1}</td>
                         <td>
-                          <select className="misa-select" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={item.variantId} onChange={(e) => handleItemChange(item.localId, 'variantId', e.target.value)}>
-                            <option value="">Chọn hàng</option>
-                            {products.map(productItem => <option key={productItem.id} value={productItem.id}>{productItem.sku || productItem.productCode}</option>)}
-                          </select>
+                          {product?.sku || product?.productCode || ''}
                         </td>
                         <td>
-                          {variantLabel(product)}
-                          {item.serialNumberId && <div style={{ fontSize: '11px', color: '#155e75', backgroundColor: '#cffafe', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '4px', border: '1px solid #a5f3fc' }}>{item.scannedCode}</div>}
+                          <Select
+                            options={products.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}`, nameOnly: p.productName }))}
+                            value={product ? { value: product.id, label: `${product.productName} - ${product.sku || product.productCode}`, nameOnly: product.productName } : null}
+                            onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.value : '')}
+                            placeholder="Chọn hàng"
+                            isClearable
+                            formatOptionLabel={(option, { context }) => context === 'value' ? option.nameOnly : option.label}
+                            styles={customSelectStyles}
+                            menuPortalTarget={document.body}
+                          />
                         </td>
                         <td>{product?.unitName || ''}</td>
                         <td align="right" style={{ fontWeight: '500', color: stock <= 0 ? '#ef4444' : '#475569' }}>
                           {stock.toLocaleString('vi-VN')}
                         </td>
                         <td align="right">
-                          <input type="number" min="1" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
+                          <input type="number" min="1" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '80px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
+                        </td>
+                        <td align="center">
+                          <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            {product?.trackSerial && (
+                              <button
+                                type="button"
+                                className={(item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? styles.serialBadgeSuccess : styles.serialBadgeWarning}
+                                onClick={() => setSerialModalItemId(item.localId)}
+                              >
+                                <i className="bi bi-upc-scan"></i> {(item.serialNumbers?.length || 0)} / {Number(item.quantity || 0)}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td align="right">
+                          <input type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
+                        </td>
+                        <td align="right" style={{ fontWeight: 'bold', color: '#0070cc' }}>
+                          {new Intl.NumberFormat('vi-VN').format(Number(item.quantity || 0) * Number(item.price || 0))} đ
                         </td>
                         <td>
                           <input type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={item.note} onChange={(e) => handleItemChange(item.localId, 'note', e.target.value)} />
@@ -453,12 +587,19 @@ function CreateTransferSlipPage() {
                   })}
                 </tbody>
               </table>
-              <div className={styles.tableFooter}>
-                <span>Tổng cộng hàng chuyển:</span>
-                <span className={styles.textBlue}>{totalQuantity.toLocaleString('vi-VN')}</span>
+              <div className={styles.tableFooter} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span>Tổng cộng hàng chuyển:</span>
+                  <span className={styles.textBlue} style={{ marginLeft: '8px' }}>{totalQuantity.toLocaleString('vi-VN')}</span>
+                </div>
+                <div>
+                  <span style={{ marginRight: '8px' }}>Tổng tiền:</span>
+                  <span style={{ fontWeight: 'bold', color: '#0070cc' }}>{new Intl.NumberFormat('vi-VN').format(totalPrice)} đ</span>
+                </div>
               </div>
-              <div className={styles.tableActions}>
-                <button className={styles.actionLink} onClick={addItem}><i className="bi bi-plus-circle"></i> Thêm dòng mới</button>
+              <div className={styles.tableActions} style={{ display: 'flex', gap: '8px', padding: '16px' }}>
+                <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
+                <button type="button" onClick={() => setItems([emptyLine()])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
               </div>
             </div>
           </div>
@@ -469,15 +610,29 @@ function CreateTransferSlipPage() {
             <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>Hủy bỏ</button>
           </div>
           <div className={styles.footerRight}>
-            <button className="btn-misa-save-draft" disabled={!isFormValid || saving} onClick={() => submit('DRAFT')} style={{ marginRight: '8px' }}>
-              <i className="bi bi-file-earmark"></i> Lưu tạm
+            <button className="btn-misa-draft" disabled={!isFormValid || saving} onClick={() => submit('DRAFT')} style={{ marginRight: '8px' }}>
+              Lưu tạm
             </button>
-            <button className="btn-misa-save" disabled={!isFormValid || saving} onClick={() => submit('POSTED')}>
-              <i className="bi bi-save"></i> Lưu (Hoàn thành)
+            <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => submit('POSTED')}>
+              <i className="bi bi-printer"></i> Lưu và ghi sổ
             </button>
           </div>
         </div>
       </div>
+      <ManageSerialModal
+        isOpen={Boolean(serialModalItemId)}
+        onClose={handleSerialModalClose}
+        productName={variantLabel(selectedSerialProduct)}
+        targetQuantity={Number(selectedSerialItem?.quantity || 0)}
+        initialSerials={selectedSerialItem?.serialNumbers || []}
+      />
+      <ReferenceDocumentModal
+        isOpen={showReferenceModal}
+        onClose={() => setShowReferenceModal(false)}
+        onSelect={(doc) => {
+          setForm(prev => ({ ...prev, referenceType: doc.type, referenceId: doc.id, referenceCode: doc.code }));
+        }}
+      />
     </AdminLayout>
   );
 }
