@@ -7,11 +7,6 @@ import Toast from '../../components/ui/Toast/Toast';
 import axiosClient from '../../api/axiosClient';
 import styles from './SupplierDetailPage.module.css';
 
-const formatCurrency = (val) => {
-    if (!val) return '0 đ';
-    return `${new Intl.NumberFormat('vi-VN').format(val)} đ`;
-};
-
 const SupplierDetailPage = () => {
     const navigate = useNavigate();
     const { id } = useParams();
@@ -88,8 +83,9 @@ const SupplierDetailPage = () => {
                 <div className={styles.pageTitleContainer}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <button 
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }} 
+                            className={styles.backButton}
                             onClick={() => navigate('/suppliers')}
+                            title="Quay lại danh sách"
                         >
                             <i className="bi bi-arrow-left"></i>
                         </button>
@@ -147,6 +143,10 @@ const SupplierDetailPage = () => {
                                 <span className={styles.detailLabel}>Email</span>
                                 <span className={styles.detailValue}>{supplier.email || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
+                            <div className={styles.detailItem}>
+                                <span className={styles.detailLabel}>Người liên hệ</span>
+                                <span className={styles.detailValue}>{supplier.contactName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                            </div>
                         </div>
 
                         <div className={styles.detailRight}>
@@ -172,14 +172,7 @@ const SupplierDetailPage = () => {
 
             {isEditModalOpen && (
                 <SupplierModal 
-                    initialData={{
-                        ...supplier,
-                        tax_code: supplier.taxCode,
-                        group_type: supplier.groupType,
-                        bank_name: supplier.bankName,
-                        bank_account_number: supplier.bankAccountNumber,
-                        bank_beneficiary_name: supplier.bankBeneficiaryName
-                    }}
+                    initialData={supplier}
                     onClose={() => setIsEditModalOpen(false)}
                     onSave={async (data) => {
                         try {
@@ -190,11 +183,12 @@ const SupplierDetailPage = () => {
                                 phone: cleanString(data.phone),
                                 email: cleanString(data.email),
                                 address: cleanString(data.address),
-                                taxCode: cleanString(data.tax_code),
-                                groupType: cleanString(data.group_type) || 'RETAIL',
-                                bankName: cleanString(data.bank_name),
-                                bankAccountNumber: cleanString(data.bank_account_number),
-                                bankBeneficiaryName: cleanString(data.bank_beneficiary_name),
+                                taxCode: cleanString(data.taxCode),
+                                groupType: cleanString(data.groupType) || 'RETAIL',
+                                bankName: cleanString(data.bankName),
+                                bankAccountNumber: cleanString(data.bankAccountNumber),
+                                bankBeneficiaryName: cleanString(data.bankBeneficiaryName),
+                                contactName: cleanString(data.contactName),
                                 status: data.status || supplier.status
                             };
                             await axiosClient.put(`/suppliers/${id}`, updateData);
