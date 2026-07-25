@@ -11,7 +11,7 @@ import java.util.Optional;
 
 public interface InventoryDocumentRepository extends JpaRepository<InventoryDocument, Long> {
 
-    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'EX_SO' AND (:docCode IS NULL OR LOWER(e.docCode) LIKE LOWER(CONCAT('%',:docCode,'%'))) AND (:warehouseId IS NULL OR e.warehouseId = :warehouseId) AND (:status IS NULL OR e.status = :status) AND (:issuePurpose IS NULL OR e.issuePurpose = :issuePurpose) AND (:referenceType IS NULL OR e.referenceType = :referenceType) AND (:referenceId IS NULL OR e.referenceId = :referenceId) AND (:fromDate IS NULL OR e.docDate >= :fromDate) AND (:toDate IS NULL OR e.docDate <= :toDate) ORDER BY e.updatedAt DESC, e.id DESC")
+    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'EX_SO' AND (e.issuePurpose IS NULL OR e.issuePurpose != 'TRANSFER_EXPORT') AND (:docCode IS NULL OR LOWER(e.docCode) LIKE LOWER(CONCAT('%',:docCode,'%'))) AND (:warehouseId IS NULL OR e.warehouseId = :warehouseId) AND (:status IS NULL OR e.status = :status) AND (:issuePurpose IS NULL OR e.issuePurpose = :issuePurpose) AND (:referenceType IS NULL OR e.referenceType = :referenceType) AND (:referenceId IS NULL OR e.referenceId = :referenceId) AND (:fromDate IS NULL OR e.docDate >= :fromDate) AND (:toDate IS NULL OR e.docDate <= :toDate) ORDER BY e.updatedAt DESC, e.id DESC")
     List<InventoryDocument> searchExports(@Param("docCode") String docCode,
                                          @Param("fromDate") LocalDate fromDate,
                                          @Param("toDate") LocalDate toDate,
@@ -21,20 +21,20 @@ public interface InventoryDocumentRepository extends JpaRepository<InventoryDocu
                                          @Param("referenceType") String referenceType,
                                          @Param("referenceId") Long referenceId);
 
-    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'EX_SO' ORDER BY e.updatedAt DESC, e.id DESC")
+    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'EX_SO' AND (e.issuePurpose IS NULL OR e.issuePurpose != 'TRANSFER_EXPORT') ORDER BY e.updatedAt DESC, e.id DESC")
     List<InventoryDocument> findAllExports();
 
     @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.id = :id AND e.docType = 'EX_SO'")
     Optional<InventoryDocument> findExportByIdWithLines(@Param("id") Long id);
 
-    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'IN_PO' AND (:docCode IS NULL OR LOWER(e.docCode) LIKE LOWER(CONCAT('%',:docCode,'%'))) AND (:warehouseId IS NULL OR e.warehouseId = :warehouseId) AND (:status IS NULL OR e.status = :status) AND (:fromDate IS NULL OR e.docDate >= :fromDate) AND (:toDate IS NULL OR e.docDate <= :toDate) ORDER BY e.updatedAt DESC, e.id DESC")
+    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'IN_PO' AND (e.issuePurpose IS NULL OR e.issuePurpose != 'TRANSFER_IMPORT') AND (:docCode IS NULL OR LOWER(e.docCode) LIKE LOWER(CONCAT('%',:docCode,'%'))) AND (:warehouseId IS NULL OR e.warehouseId = :warehouseId) AND (:status IS NULL OR e.status = :status) AND (:fromDate IS NULL OR e.docDate >= :fromDate) AND (:toDate IS NULL OR e.docDate <= :toDate) ORDER BY e.updatedAt DESC, e.id DESC")
     List<InventoryDocument> searchImports(@Param("docCode") String docCode,
                                          @Param("fromDate") LocalDate fromDate,
                                          @Param("toDate") LocalDate toDate,
                                          @Param("status") String status,
                                          @Param("warehouseId") Long warehouseId);
 
-    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'IN_PO' ORDER BY e.updatedAt DESC, e.id DESC")
+    @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.docType = 'IN_PO' AND (e.issuePurpose IS NULL OR e.issuePurpose != 'TRANSFER_IMPORT') ORDER BY e.updatedAt DESC, e.id DESC")
     List<InventoryDocument> findAllImports();
 
     @Query("SELECT DISTINCT e FROM InventoryDocument e LEFT JOIN FETCH e.lines l WHERE e.id = :id AND e.docType = 'IN_PO'")

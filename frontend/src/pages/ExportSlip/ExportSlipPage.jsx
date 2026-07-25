@@ -14,6 +14,7 @@ import styles from './ExportSlipPage.module.css';
 const DEFAULT_COLUMNS = {
   date: true,
   docCode: true,
+  issuePurpose: true,
   partner: true,
   warehouse: true,
   salesperson: true,
@@ -27,7 +28,8 @@ const DEFAULT_COLUMNS = {
 const COLUMN_OPTIONS = [
   { id: 'date', label: 'Ngày Xuất' },
   { id: 'docCode', label: 'Số Phiếu' },
-  { id: 'partner', label: 'Khách Hàng' },
+  { id: 'issuePurpose', label: 'Loại Phiếu' },
+  { id: 'partner', label: 'Khách Hàng / LSX' },
   { id: 'warehouse', label: 'Kho Xuất' },
   { id: 'salesperson', label: 'Nhân viên xuất hàng' },
   { id: 'recipient', label: 'Người nhận hàng' },
@@ -40,6 +42,12 @@ const COLUMN_OPTIONS = [
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
   POSTED: { label: 'Hoàn thành', code: 'success' },
+};
+
+const EXPORT_PURPOSE_LABELS = {
+  SALES: 'Bán hàng',
+  USAGE: 'Sử dụng nội bộ',
+  ASSEMBLY: 'Xuất lắp ráp / tháo dỡ'
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -177,10 +185,19 @@ function ExportSlipPage() {
 
   const rows = slips.map(slip => {
     const status = STATUS_LABELS[slip.status] || { label: slip.status || 'Không rõ', code: 'info' };
+
+    let partnerLabel = 'Chưa chọn';
+    if (!slip.issuePurpose || slip.issuePurpose === 'SALES') {
+      partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `Khách hàng #${slip.partnerId}` : 'Chưa chọn');
+    } else if (slip.issuePurpose === 'ASSEMBLY') {
+      partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');
+    }
+
     return {
       ...slip,
       date: formatDate(slip.docDate),
-      partner: customerById.get(slip.partnerId)?.name || (slip.partnerId ? `Khách hàng #${slip.partnerId}` : 'Chưa chọn'),
+      issuePurposeLabel: EXPORT_PURPOSE_LABELS[slip.issuePurpose] || 'Khác',
+      partner: partnerLabel,
       warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa chọn'),
       salespersonName: slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || (slip.salespersonId ? String(slip.salespersonId) : 'Chưa rõ'),
       recipientName: slip.recipientName || 'Chưa rõ',
@@ -193,10 +210,11 @@ function ExportSlipPage() {
   });
 
   const handleExport = () => {
-    const headers = ['Ngày ghi nhận', 'Số chứng từ', 'Khách hàng', 'Kho xuất', 'Tổng tiền', 'Tiền VAT', 'Trạng thái'];
+    const headers = ['Ngày ghi nhận', 'Số chứng từ', 'Loại phiếu', 'Khách hàng / LSX', 'Kho xuất', 'Tổng tiền', 'Tiền VAT', 'Trạng thái'];
     const data = rows.map(item => [
       item.date,
       item.docCode,
+      item.issuePurposeLabel,
       item.partner,
       item.warehouse,
       item.total,
@@ -514,8 +532,9 @@ function ExportSlipPage() {
                   <input type="checkbox" className={styles.checkbox} checked={rows.length > 0 && selectedIds.length === rows.length} onChange={handleSelectAll} />
                 </th>
                 {columns.date && <th style={{ width: '120px' }}>Ngày Xuất</th>}
-                {columns.docCode && <th style={{ width: '180px' }}>Số Phiếu</th>}
-                {columns.partner && <th style={{ width: '200px' }}>Khách Hàng</th>}
+                {columns.docCode && <th style={{ width: '150px' }}>Số Phiếu</th>}
+                {columns.issuePurpose && <th style={{ width: '150px' }}>Loại Phiếu</th>}
+                {columns.partner && <th style={{ width: '200px' }}>Khách Hàng / LSX</th>}
                 {columns.warehouse && <th style={{ width: '120px' }}>Kho Xuất</th>}
                 {columns.salesperson && <th style={{ width: '150px' }}>Nhân viên xuất hàng</th>}
                 {columns.recipient && <th style={{ width: '150px' }}>Người nhận hàng</th>}

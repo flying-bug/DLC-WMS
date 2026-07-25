@@ -476,6 +476,7 @@ public class InventoryDocumentService {
                 .unitName(product != null && product.getUnit() != null ? product.getUnit().getName() : null)
                 .trackSerial(product != null ? product.getTrackSerial() : false)
                 .salePrice(variant.getSalePrice())
+                .costPrice(variant.getCostPrice())
                 .build();
     }
 

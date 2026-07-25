@@ -21,4 +21,5 @@ public class ScanResolveResponse {
     private String unitName;
     private Boolean trackSerial;
     private BigDecimal salePrice;
+    private BigDecimal costPrice;
 }

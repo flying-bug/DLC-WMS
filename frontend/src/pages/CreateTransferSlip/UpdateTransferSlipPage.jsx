@@ -213,6 +213,12 @@ function UpdateTransferSlipPage() {
   const handleItemChange = (localId, field, value) => {
     setItems(prev => prev.map(item => {
       if (item.localId !== localId) return item;
+      
+      if (field === 'variantId') {
+         const product = productById.get(String(value));
+         return { ...item, [field]: value, price: product?.costPrice || 0 };
+      }
+
       return { ...item, [field]: value };
     }));
   };
@@ -241,6 +247,7 @@ function UpdateTransferSlipPage() {
           variantName: scanResult.productName,
           unitName: scanResult.unitName || '',
           trackSerial: scanResult.trackSerial,
+          costPrice: scanResult.costPrice || 0,
         },
       ];
     });
@@ -260,6 +267,7 @@ function UpdateTransferSlipPage() {
           serialNumberId: scanResult.serialNumberId || true,
           scannedCode: scanResult.serialNumber || scanResult.code,
           quantity: 1,
+          price: scanResult.costPrice || 0,
           note: scanResult.serialNumber ? `Serial: ${scanResult.serialNumber}` : '',
         };
         if (prev.length === 1 && !prev[0].variantId) {
@@ -280,6 +288,7 @@ function UpdateTransferSlipPage() {
         variantId: scanResult.variantId,
         scannedCode: scanResult.barcode || scanResult.code,
         quantity: 1,
+        price: scanResult.costPrice || 0,
       };
       if (prev.length === 1 && !prev[0].variantId) {
         return [barcodeLine];
