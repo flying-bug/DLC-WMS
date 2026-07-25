@@ -6,6 +6,8 @@ import Modal from '../../components/ui/Modal/Modal';
 import Toast from '../../components/ui/Toast/Toast';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import * as warehouseApi from '../../api/warehouseApi';
+import * as exportApi from '../../api/inventoryExportApi';
+import * as importApi from '../../api/inventoryImportApi';
 import axiosClient from '../../api/axiosClient';
 import styles from './AssemblyOrderFormPage.module.css';
 
@@ -15,6 +17,7 @@ const today = () => new Date().toLocaleDateString('sv-SE');
 
 const STATUS_META = {
     DRAFT: { label: 'Lưu tạm', code: 'info' },
+    APPROVED: { label: 'Đã duyệt (Chờ xuất/nhập)', code: 'primary' },
     SUBMITTED: { label: 'Hoàn thành', code: 'success' },
     CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
@@ -40,8 +43,12 @@ function AssemblyOrderFormPage() {
     const [products, setProducts] = useState([]);
     const [variants, setVariants] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [orderDetail, setOrderDetail] = useState(null);
+    const [linkedExports, setLinkedExports] = useState([]);
+    const [linkedImports, setLinkedImports] = useState([]);
     const [saving, setSaving] = useState(false);
     const [savingBom, setSavingBom] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
     
     // Modal states
     const [showBomModal, setShowBomModal] = useState(false);
@@ -54,7 +61,6 @@ function AssemblyOrderFormPage() {
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-    const [orderDetail, setOrderDetail] = useState(null);
     const [customLines, setCustomLines] = useState([]);
     const [customLinesDirty, setCustomLinesDirty] = useState(false);
     const [form, setForm] = useState(() => ({
@@ -70,7 +76,7 @@ function AssemblyOrderFormPage() {
 
     const selectedBom = useMemo(() => boms.find((bom) => String(bom.id) === String(form.bomId)), [boms, form.bomId]);
     const isViewMode = searchParams.get('mode') === 'view';
-    const canEdit = (!editing || ['DRAFT'].includes(form.status)) && !isViewMode;
+    const canEdit = (!editing || ['DRAFT', 'APPROVED'].includes(form.status)) && !isViewMode;
     const status = STATUS_META[form.status] || { label: form.status || 'Chưa rõ', code: 'info' };
 
     const loadBaseData = useCallback(async () => {
@@ -110,6 +116,20 @@ function AssemblyOrderFormPage() {
         try {
             const order = unwrap(await assemblyApi.getAssemblyOrderById(id));
             setOrderDetail(order);
+            
+            try {
+                const expRes = await exportApi.getExportHistory({ referenceType: 'ASSEMBLY_ORDER', referenceId: id });
+                setLinkedExports(unwrap(expRes));
+            } catch (e) {
+                console.error('Không tải được phiếu xuất liên kết', e);
+            }
+            try {
+                const impRes = await importApi.getImportHistory({ referenceType: 'ASSEMBLY_ORDER', referenceId: id });
+                setLinkedImports(unwrap(impRes));
+            } catch (e) {
+                console.error('Không tải được phiếu nhập liên kết', e);
+            }
+
             setForm({
                 orderType: order.orderType || 'ASSEMBLY',
                 orderCode: order.orderCode || '',
@@ -203,25 +223,33 @@ function AssemblyOrderFormPage() {
 
     const handleSubmit = async (event, overrideStatus = null) => {
         if (event) event.preventDefault();
-        const validationMessage = validate();
-        if (validationMessage) {
-            showToast('error', validationMessage);
-            return;
-        }
+        
         setSaving(true);
         try {
-            const payload = buildPayload(overrideStatus);
-            const response = editing
-                ? await assemblyApi.updateAssemblyOrder(id, payload)
-                : form.orderType === 'DISASSEMBLY'
-                    ? await assemblyApi.createDisassemblyOrder(payload)
-                    : await assemblyApi.createAssemblyOrder(payload);
-            const saved = unwrap(response);
-            showToast('success', editing ? 'Cập nhật lệnh thành công.' : 'Tạo lệnh thành công.');
-            if (!editing && saved?.id) {
-                setTimeout(() => navigate(`/assembly-orders/${saved.id}`), 1500);
-            } else if (editing) {
-                setTimeout(() => navigate('/assembly-orders'), 1500);
+            if (overrideStatus === 'SUBMITTED' && editing) {
+                await assemblyApi.updateOrderStatus(id, overrideStatus);
+                showToast('success', 'Lệnh đã hoàn thành.');
+                setTimeout(() => loadOrder(), 1000);
+            } else {
+                const validationMessage = validate();
+                if (validationMessage) {
+                    showToast('error', validationMessage);
+                    setSaving(false);
+                    return;
+                }
+                const payload = buildPayload(overrideStatus);
+                const response = editing
+                    ? await assemblyApi.updateAssemblyOrder(id, payload)
+                    : form.orderType === 'DISASSEMBLY'
+                        ? await assemblyApi.createDisassemblyOrder(payload)
+                        : await assemblyApi.createAssemblyOrder(payload);
+                const saved = unwrap(response);
+                showToast('success', editing ? 'Cập nhật lệnh thành công.' : 'Tạo lệnh thành công.');
+                if (!editing && saved?.id) {
+                    setTimeout(() => navigate(`/assembly-orders/${saved.id}`), 1000);
+                } else if (editing) {
+                    setTimeout(() => loadOrder(), 1000);
+                }
             }
         } catch (err) {
             showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không lưu được lệnh lắp ráp/tháo dỡ.');
@@ -275,6 +303,38 @@ function AssemblyOrderFormPage() {
             if (!Number.isInteger(Number(line.quantity))) return `Định mức dòng ${index + 1} phải là số nguyên.`;
         }
         return '';
+    };
+
+    const handleGenerateInventory = (documentType) => {
+        if (!orderDetail || !orderDetail.id) return;
+        
+        const targetPath = documentType === 'GOODS_ISSUE' ? '/export-slips/assembly' : '/import-history/create?type=PRODUCTION';
+        
+        let lines = orderDetail.lines.map(l => ({
+            variantId: l.componentVariantId,
+            quantity: l.quantityRequired,
+            price: l.salePrice || l.unitCost || 0
+        }));
+        
+        if (documentType === 'GOODS_RECEIPT') {
+            lines = [{
+                variantId: orderDetail.targetVariantId || orderDetail.targetSku,
+                quantity: orderDetail.quantity,
+                price: orderDetail.targetSalePrice || 0
+            }];
+        }
+        
+        navigate(targetPath, {
+            state: {
+                assemblyData: {
+                    id: orderDetail.id,
+                    code: orderDetail.orderCode,
+                    warehouseId: orderDetail.warehouseId,
+                    lines: lines
+                },
+                returnUrl: `/assembly-orders/${orderDetail.id}`
+            }
+        });
     };
 
     const saveQuickBom = async () => {
@@ -429,13 +489,6 @@ function AssemblyOrderFormPage() {
                                     </div>
                                 </div>
                                 
-                                <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                                    <label className="misa-label">Trạng thái lưu</label>
-                                    <select className="misa-input" value={form.status} onChange={(event) => setField('status', event.target.value)} disabled={!canEdit} style={{ width: '50%' }}>
-                                        <option value="DRAFT">Lưu tạm</option>
-                                        <option value="SUBMITTED">Hoàn thành</option>
-                                    </select>
-                                </div>
                                 
                                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
                                     <label className="misa-label">Ghi chú</label>
@@ -586,14 +639,27 @@ function AssemblyOrderFormPage() {
                 <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-orders')}>
                     {canEdit ? 'Hủy bỏ' : 'Đóng'}
                 </button>
+                {orderDetail?.status === 'APPROVED' && (
+                    <div className={styles.actionButtons} style={{ marginRight: 'auto', marginLeft: '12px', display: 'flex', gap: '8px' }}>
+                        <button className={styles.btnOutline} type="button" onClick={() => handleGenerateInventory('GOODS_ISSUE')} disabled={linkedExports.length > 0}>
+                            <i className="bi bi-box-arrow-up"></i> {linkedExports.length > 0 ? 'Đã lập phiếu xuất' : 'Lập phiếu xuất kho'}
+                        </button>
+                        <button className={styles.btnOutline} type="button" onClick={() => handleGenerateInventory('GOODS_RECEIPT')} disabled={linkedExports.length === 0 || linkedImports.length > 0}>
+                            <i className="bi bi-box-arrow-in-down"></i> {linkedImports.length > 0 ? 'Đã lập phiếu nhập' : 'Lập phiếu nhập kho'}
+                        </button>
+                        <button className="btn-misa-post" style={{ backgroundColor: '#0ea5e9' }} type="button" onClick={(e) => handleSubmit(e, 'SUBMITTED')} disabled={saving || linkedImports.length === 0}>
+                            <i className="bi bi-check-circle-fill"></i> Hoàn thành
+                        </button>
+                    </div>
+                )}
                 {canEdit && (
                     <div className={styles.actionButtons}>
                         <button className="btn-misa-draft" type="button" onClick={(e) => handleSubmit(e, 'DRAFT')} disabled={saving}>
                             <i className="bi bi-save"></i> Lưu tạm
                         </button>
-                        <button className="btn-misa-post" type="button" onClick={(e) => handleSubmit(e, 'SUBMITTED')} disabled={saving}>
+                        <button className="btn-misa-post" type="button" onClick={(e) => handleSubmit(e, 'APPROVED')} disabled={saving}>
                             <i className="bi bi-check-circle"></i>
-                            {saving ? 'Đang lưu...' : 'Hoàn thành lệnh'}
+                            {saving ? 'Đang lưu...' : 'Duyệt lệnh (Lưu)'}
                         </button>
                     </div>
                 )}

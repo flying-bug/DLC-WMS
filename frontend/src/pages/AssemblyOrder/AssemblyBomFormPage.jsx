@@ -255,8 +255,13 @@ function AssemblyBomFormPage() {
                                 
                                 return (
                                     <div key={index} className={styles.bomLineCard}>
-                                        <div className={styles.bomLineHeader}>
-                                            {index + 1}. {selectedVariant ? (selectedVariant.productType || 'Linh kiện') : 'Linh kiện'}
+                                        <div className={styles.bomLineHeader} style={{ flexDirection: 'column', justifyContent: 'center' }}>
+                                            <div>{index + 1}. {selectedVariant ? (selectedVariant.categoryName || 'Linh kiện') : 'Linh kiện'}</div>
+                                            {selectedVariant && selectedVariant.categoryDescription && (
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px', fontWeight: 'normal' }}>
+                                                    ({selectedVariant.categoryDescription})
+                                                </div>
+                                            )}
                                         </div>
                                         
                                         {selectedVariant ? (
@@ -269,8 +274,8 @@ function AssemblyBomFormPage() {
                                                     )}
                                                 </div>
                                                 <div className={styles.bomItemDetails}>
-                                                    <div className={styles.bomItemTitle} title={`${selectedVariant.productName} / ${selectedVariant.variantName}`}>
-                                                        {selectedVariant.productName} {selectedVariant.variantName && `/ ${selectedVariant.variantName}`}
+                                                    <div className={styles.bomItemTitle} title={`${selectedVariant.productName} ${(selectedVariant.variantName && selectedVariant.variantName !== selectedVariant.productName) ? `/ ${selectedVariant.variantName}` : ''}`}>
+                                                        {selectedVariant.productName} {(selectedVariant.variantName && selectedVariant.variantName !== selectedVariant.productName) && `/ ${selectedVariant.variantName}`}
                                                     </div>
                                                     <div className={styles.bomItemMeta}>
                                                         <span>Bảo hành: <strong>{selectedVariant.warranty || '36 Tháng'}</strong></span>
@@ -376,7 +381,7 @@ function AssemblyBomFormPage() {
                                             </div>
                                             <div className={styles.variantPickerInfo}>
                                                 <div className={styles.variantPickerTitle}>
-                                                    {variant.productName} {variant.variantName && `/ ${variant.variantName}`}
+                                                    {variant.productName} {(variant.variantName && variant.variantName !== variant.productName) && `/ ${variant.variantName}`}
                                                 </div>
                                                 <div className={styles.bomItemMeta}>
                                                     <span>Mã SP: <strong>{variant.sku}</strong></span>

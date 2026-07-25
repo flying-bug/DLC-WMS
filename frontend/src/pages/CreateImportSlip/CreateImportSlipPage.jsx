@@ -96,6 +96,11 @@ function CreateImportSlipPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const voiceData = location.state?.voiceData || null;
+  const assemblyData = location.state?.assemblyData || null;
+  const returnUrl = location.state?.returnUrl || null;
+  const searchParams = new URLSearchParams(location.search);
+  const initialType = searchParams.get('type')?.toUpperCase() || 'PURCHASE';
+
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -105,26 +110,39 @@ function CreateImportSlipPage() {
   const [serialModalItemId, setSerialModalItemId] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+
   const [form, setForm] = useState(() => ({
     docCode: '',
-    warehouseId: '',
+    warehouseId: assemblyData?.warehouseId || '',
     partnerId: '',
     partnerName: '',
     customerId: '',
     customerName: '',
-    assemblyOrderId: '',
+    assemblyOrderId: assemblyData?.id || '',
     deliverer: '',
     purchaser: '',
     attachedDoc: '',
     docDate: today(),
-    note: '',
+    note: assemblyData ? `Nhập thành phẩm phục vụ Lệnh lắp ráp/tháo dỡ ${assemblyData.code}` : '',
     status: 'DRAFT',
-    referenceType: '',
-    referenceId: '',
-    referenceCode: '',
+    referenceType: assemblyData ? 'ASSEMBLY_ORDER' : '',
+    referenceId: assemblyData ? assemblyData.id : '',
+    referenceCode: assemblyData ? assemblyData.code : '',
   }));
-  const [items, setItems] = useState([{ ...emptyLine(), isNew: false }]);
-  const [importType, setImportType] = useState('PURCHASE');
+  const [items, setItems] = useState(() => {
+    if (assemblyData && assemblyData.lines && assemblyData.lines.length > 0) {
+      return assemblyData.lines.map(comp => ({
+        ...emptyLine(),
+        variantId: String(comp.variantId || comp.id),
+        quantity: comp.quantity || 1,
+        price: comp.price || 0,
+        note: `BOM cho Lệnh ${assemblyData.code}`,
+        isNew: false
+      }));
+    }
+    return [{ ...emptyLine(), isNew: false }];
+  });
+  const [importType, setImportType] = useState(initialType);
   const [customers, setCustomers] = useState([]);
   const [assemblyOrders, setAssemblyOrders] = useState([]);
   const [users, setUsers] = useState([]);
@@ -379,7 +397,10 @@ function CreateImportSlipPage() {
       if (shouldPost && createdId) {
         await importApi.postImportSlip(createdId);
       }
-      if (status === 'DRAFT' && createdId) {
+      if (returnUrl) {
+        showToast('success', shouldPost ? 'Ghi sổ phiếu nhập kho thành công!' : 'Tạo phiếu nhập kho thành công!');
+        setTimeout(() => navigate(returnUrl), 1000);
+      } else if (status === 'DRAFT' && createdId) {
         navigate(`/import-slips/${createdId}/edit`, { state: { toastMessage: 'Lưu tạm phiếu nhập kho thành công!', toastType: 'success' } });
       } else {
         navigate('/import-history', { state: { toastMessage: shouldPost ? 'Ghi sổ phiếu nhập kho thành công!' : 'Tạo phiếu nhập kho thành công!', toastType: 'success' } });
@@ -399,9 +420,10 @@ function CreateImportSlipPage() {
     <AdminLayout>
       <div className={styles.pageHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/import-history'); }}>
-            <i className="bi bi-arrow-left"></i> Tạo phiếu nhập kho {form.docCode ? form.docCode : ''}
+          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/import-history'); }}>
+            <i className="bi bi-arrow-left"></i> Quay lại
           </a>
+          <span style={{ fontWeight: 600, fontSize: '18px' }}>Tạo phiếu nhập kho {form.docCode ? form.docCode : ''}</span>
           <span style={{ color: '#d1d5db', fontSize: '20px' }}>|</span>
               <div style={{ width: '280px' }}>
                 <Select
