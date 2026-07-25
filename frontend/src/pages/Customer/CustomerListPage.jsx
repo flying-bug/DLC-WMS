@@ -211,14 +211,26 @@ const CustomerListPage = () => {
                         </div>
                     </div>
                     <div className={styles.filterActions}>
-                        <button className={styles.btnOutline} onClick={() => { setFilters({ search: '', status: '', groupType: '' }); setPage(1); }}>
-                            Làm mới
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => { setFilters({ search: '', status: '', groupType: '' }); setPage(1); }}
+                            title="Đặt lại bộ lọc"
+                        >
+                            <i className="bi bi-arrow-clockwise"></i>
                         </button>
-                        <button className={styles.btnOutline} onClick={() => setIsImportModalOpen(true)}>
-                            <i className="bi bi-file-earmark-arrow-up"></i> Nhập Excel
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => setIsImportModalOpen(true)}
+                            title="Nhập Excel"
+                        >
+                            <i className="bi bi-file-earmark-arrow-up"></i>
                         </button>
-                        <button className={styles.btnOutline} onClick={handleExport}>
-                            <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                        <button
+                            className={styles.iconBtn}
+                            onClick={handleExport}
+                            title="Xuất tệp Excel"
+                        >
+                            <i className="bi bi-file-earmark-excel"></i>
                         </button>
                         <button className={styles.btnPrimary} onClick={() => fetchCustomers()}>
                             <i className="bi bi-funnel"></i> Lọc dữ liệu

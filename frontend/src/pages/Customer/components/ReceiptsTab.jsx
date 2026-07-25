@@ -19,7 +19,14 @@ const ReceiptsTab = ({ data, loading, page, setPage, formatDate, formatCurrency,
                     {loading ? (
                         <tr><td colSpan="6" className={styles.loadingState}>Đang tải...</td></tr>
                     ) : data.content.length === 0 ? (
-                        <tr><td colSpan="6" className={styles.emptyState}>Chưa có lịch sử giao dịch</td></tr>
+                        <tr>
+                            <td colSpan="6">
+                                <div className={styles.emptyState}>
+                                    <i className={`bi bi-inbox ${styles.emptyIcon}`} style={{ fontSize: '32px' }}></i>
+                                    <div className={styles.emptyText}>Chưa có lịch sử giao dịch</div>
+                                </div>
+                            </td>
+                        </tr>
                     ) : data.content.map((item, idx) => (
                         <tr key={idx}>
                             <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{item.receiptCode}</td>

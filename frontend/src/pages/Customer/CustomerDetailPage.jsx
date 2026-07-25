@@ -176,7 +176,7 @@ const CustomerDetailPage = () => {
                 <div className={styles.pageTitleContainer}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <button 
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }} 
+                            className={styles.iconBtn} 
                             onClick={() => navigate('/customers')}
                         >
                             <i className="bi bi-arrow-left"></i>
@@ -242,19 +242,19 @@ const CustomerDetailPage = () => {
                         </div>
                     </div>
 
-                    <div className={styles.detailSection} style={{ margin: 0 }}>
+                    <div className={styles.detailSection} style={{ display: 'flex', flexDirection: 'column' }}>
                         <div className={styles.detailHeader}>
                             <i className={`bi bi-wallet2 ${styles.detailIcon}`}></i>
                             <h2 className={styles.detailTitle}>Tổng quan tài chính</h2>
                         </div>
-                        <div style={{ padding: '24px' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 24px 24px 24px' }}>
                             <div style={{ marginBottom: '16px' }}>
-                                <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>Tổng tiền khách đã trả</div>
+                                <div className={styles.detailLabel} style={{ marginBottom: '8px' }}>Tổng tiền khách đã trả</div>
                                 <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-primary)' }}>{formatCurrency(receiptData.totalPaid)} ₫</h2>
                             </div>
                             <div style={{ borderTop: '1px solid var(--color-border)', margin: '16px 0' }}></div>
                             <div>
-                                <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>Dư nợ hiện tại</div>
+                                <div className={styles.detailLabel} style={{ marginBottom: '8px' }}>Dư nợ hiện tại</div>
                                 <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-danger)' }}>{formatCurrency(receiptData.currentDebt || 0)} ₫</h2>
                             </div>
                         </div>

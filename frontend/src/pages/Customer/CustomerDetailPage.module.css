@@ -1,335 +1,4 @@
-.container {
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    background-color: var(--page-bg, #f8f9fa);
-    min-height: 100%;
-}
-
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.backLink {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 13px;
-    color: var(--color-primary, #002b6b);
-    cursor: pointer;
-    font-weight: 500;
-    margin-bottom: 8px;
-}
-
-.title {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--color-text-strong, #1e293b);
-}
-
-/* Action Buttons */
-.actionBtnGroup {
-    display: flex;
-    gap: 12px;
-}
-
-.btnEdit {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    border-radius: 6px;
-    background: #eff6ff; /* Light blue */
-    color: #0b57d0;
-    border: 1px solid #bfdbfe;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    outline: none;
-}
-
-.btnEdit:hover {
-    background: #dbeafe;
-    border-color: #93c5fd;
-    box-shadow: 0 2px 4px rgba(11, 87, 208, 0.1);
-}
-
-.btnDeactivate {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    border-radius: 6px;
-    background: #fef2f2; /* Light red */
-    color: #dc2626;
-    border: 1px solid #fecaca;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    outline: none;
-}
-
-.btnDeactivate:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
-}
-
-.topCards {
-    display: flex;
-    gap: 20px;
-}
-
-/* Info Card */
-.infoCard {
-    flex: 1;
-    background-color: white;
-    border: 1px solid var(--color-border, #e2e8f0);
-    border-radius: 4px;
-    padding: 20px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-}
-
-.cardTitle {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--color-text-strong, #1e293b);
-    margin-top: 0;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.infoGrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-}
-
-.infoItem {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.infoLabel {
-    font-size: 12px;
-    color: var(--color-text-muted, #64748b);
-    font-weight: 500;
-}
-
-.infoValue {
-    font-size: 14px;
-    color: var(--color-text-strong, #1e293b);
-    font-weight: 500;
-}
-
-.badgeActive {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    background-color: #dcfce7;
-    color: #16a34a;
-}
-
-.badgeInactive {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    background-color: #f1f5f9;
-    color: #64748b;
-}
-
-/* Summary Card */
-.summaryCard {
-    width: 320px;
-    background-color: white;
-    border: 1px solid var(--color-border, #e2e8f0);
-    border-radius: 4px;
-    padding: 24px 0;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    background: linear-gradient(135deg, #002b6b 0%, #001f4d 100%);
-    color: white;
-}
-
-.summaryRow {
-    padding: 0 24px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
-
-.summaryLabel {
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.75);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    font-weight: 600;
-}
-
-.summaryAmount {
-    font-size: 26px;
-    font-weight: 700;
-    margin: 0;
-    color: #4ade80; /* Green color to indicate positive paid amount */
-}
-
-.summaryAmountDebt {
-    font-size: 26px;
-    font-weight: 700;
-    margin: 0;
-    color: #f87171; /* Red color to indicate debt */
-}
-
-.summaryDivider {
-    width: 100%;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.15);
-    margin: 20px 0;
-}
-
-/* Tabs Section */
-.tabsContainer {
-    background-color: white;
-    border: 1px solid var(--color-border, #e2e8f0);
-    border-radius: 4px;
-    display: flex;
-    flex-direction: column;
-    min-height: 400px;
-}
-
-.tabHeader {
-    display: flex;
-    border-bottom: 1px solid var(--color-border, #e2e8f0);
-    padding: 0 16px;
-}
-
-.tabBtn {
-    padding: 16px 24px;
-    border: none;
-    background: transparent;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--color-text-muted, #64748b);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.tabBtn:hover {
-    color: var(--color-primary, #002b6b);
-}
-
-.tabBtnActive {
-    color: var(--color-primary, #002b6b);
-    border-bottom-color: var(--color-primary, #002b6b);
-}
-
-.tabContent {
-    padding: 16px;
-    flex: 1;
-}
-
-/* Table */
-.table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-
-.table th {
-    text-align: left;
-    padding: 12px 16px;
-    color: var(--color-text-muted, #64748b);
-    font-weight: 600;
-    border-bottom: 1px solid var(--color-border, #e2e8f0);
-    text-transform: uppercase;
-    font-size: 11px;
-}
-
-.table td {
-    padding: 12px 16px;
-    color: var(--color-text-strong, #1e293b);
-    border-bottom: 1px solid var(--color-border, #e2e8f0);
-    vertical-align: middle;
-}
-
-.table tbody tr:hover {
-    background-color: #fbfbfc;
-}
-
-.emptyState {
-    text-align: center;
-    padding: 40px !important;
-    color: var(--color-text-muted, #64748b);
-}
-
-.loadingState {
-    text-align: center;
-    padding: 40px !important;
-    color: var(--color-text-muted, #64748b);
-}
-
-/* Pagination */
-.pagination {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 16px;
-}
-
-.pageInfo {
-    font-size: 13px;
-    color: var(--color-text-muted, #64748b);
-}
-
-.pageNav {
-    display: flex;
-    gap: 4px;
-}
-
-.pageBtn {
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    border: 1px solid var(--color-border, #e2e8f0);
-    background-color: white;
-    cursor: pointer;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.pageBtn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.pageBtn.active {
-    background-color: var(--color-primary, #002b6b);
-    color: white;
-    border-color: var(--color-primary, #002b6b);
-    font-weight: 600;
-}.pageLayout {
+﻿.pageLayout {
   display: flex;
   height: 100vh;
   width: 100vw;
@@ -588,13 +257,6 @@
   border-color: var(--color-primary);
 }
 
-.filterActions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
 .btnOutline {
   border: 1px solid var(--color-border-strong);
   background: var(--color-white);
@@ -613,6 +275,27 @@
   background-color: var(--color-bg);
 }
 
+.iconBtn {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-white);
+  width: 38px;
+  height: 38px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  transition: all 0.2s ease;
+}
+
+.iconBtn:hover {
+  background-color: var(--color-bg);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
 /* Table */
 .tableContainer {
   background: var(--color-white);
@@ -625,7 +308,7 @@
 
 .table {
   width: 100%;
-  min-width: 920px;
+  min-width: 980px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -639,6 +322,7 @@
   color: var(--color-text-muted);
   border-bottom: 1px solid var(--color-border);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .table td {
@@ -718,7 +402,7 @@
   font-size: 13px;
   color: var(--color-text-muted-2);
   gap: 16px;
-  min-width: 920px;
+  min-width: 980px;
 }
 
 .pageControls {
@@ -741,44 +425,6 @@
 
 .pageBtn:hover {
   color: var(--color-primary);
-}
-
-.paginationNumbers {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.pageNumber {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.pageNumber.dots {
-  cursor: default;
-  background-color: transparent;
-}
-
-.pageNumber:not(.dots):not(.active):hover {
-  background-color: var(--color-bg);
-}
-
-.pageNumber.active {
-  background-color: var(--color-primary);
-  color: var(--color-white);
-}
-
-.pageNumber.active:focus {
-  background-color: var(--color-white);
-  color: var(--color-text, #1e293b);
-  border: 1px solid var(--color-primary);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
 }
 
 /* Detail Section */
@@ -956,63 +602,75 @@
   color: var(--color-primary);
 }
 
-/* Checkbox */
-.checkbox {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: #0075c0;
-}
-
-/* Bulk Toolbar */
-.bulkActionsToolbar {
-  background-color: #f0f9ff;
+/* Filter Section */
+.filterSection {
+  background: var(--color-white);
+  padding: 16px 20px;
   border-radius: 8px;
-  padding: 12px 20px;
-  margin-bottom: 24px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  border: 1px solid #bae6fd;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.bulkText {
-  font-weight: 600;
-  color: #0369a1;
-  font-size: 14px;
-}
-
-.bulkButtons {
-  display: flex;
-  gap: 12px;
-}
-
-/* Empty State */
-.emptyState {
-  padding: 80px 20px;
-  text-align: center;
-  color: #64748b;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  border: 1px solid var(--color-border);
   gap: 16px;
 }
 
-.emptyIcon {
-  font-size: 64px;
-  color: #e2e8f0;
+.filterGroup {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
 }
 
-.emptyText {
-  font-size: 15px;
-  font-weight: 500;
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filterLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted-2);
+  text-transform: uppercase;
+}
+
+.filterInput, .filterSelect {
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+  min-width: 200px;
+  color: var(--color-text-strong);
+}
+
+.filterInput:focus, .filterSelect:focus {
+  border-color: var(--color-primary);
+}
+
+.filterActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btnOutline {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-white);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.btnOutline:hover {
+  background-color: var(--color-bg);
 }
 
 /* Modal Styles */
@@ -1077,6 +735,44 @@
   overflow-y: auto;
 }
 
+.paginationNumbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pageNumber {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pageNumber.dots {
+  cursor: default;
+  background-color: transparent;
+}
+
+.pageNumber:not(.dots):not(.active):hover {
+  background-color: var(--color-bg);
+}
+
+.pageNumber.active {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.pageNumber.active:focus {
+  background-color: var(--color-white);
+  color: var(--color-text, #1e293b);
+  border: 1px solid var(--color-primary);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
 /* Tooltip Styles */
 .tooltipContainer {
   position: relative;
@@ -1133,3 +829,257 @@
   border-color: #1e293b transparent transparent transparent;
 }
 
+/* â”€â”€ Settings Column Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.settingsModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settingsModalHeader h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-strong);
+}
+
+.settingsModalCloseBtn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.settingsModalCloseBtn:hover {
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-strong);
+}
+
+.settingsModalBody {
+  padding: 20px;
+}
+
+.checkboxGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.checkboxLabel:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-bg-subtle);
+}
+
+.checkboxLabel input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.checkboxText {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-strong);
+}
+
+.settingsModalFooter {
+  padding: 16px 20px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btnSecondary {
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border-strong);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btnSecondary:hover {
+  background-color: var(--color-border-soft);
+}
+
+/* Responsive Media Queries (4 Breakpoints) */
+@media (min-width: 1200px) {
+  .detailGrid {
+    grid-template-columns: 2fr 2fr 1.5fr;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .filterSection {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3, 12px);
+  }
+  .filterGroup {
+    width: 100%;
+  }
+  .detailGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .pageBody {
+    padding: var(--space-3, 12px);
+  }
+  .pageTitleContainer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3, 12px);
+  }
+  .pageTitleContainer > * {
+    width: 100%;
+    min-height: var(--touch-target-min, 44px);
+    justify-content: center;
+  }
+  .filterSection {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-3, 12px);
+  }
+  .filterGroup {
+    flex-direction: column;
+    width: 100%;
+    gap: var(--space-2, 8px);
+  }
+  .filterInput, .filterSelect {
+    width: 100%;
+    min-height: var(--touch-target-min, 44px);
+  }
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+  .checkboxLabel {
+    min-height: var(--touch-target-min, 44px);
+    width: 100%;
+  }
+}
+
+
+/* Tabs Section */
+.tabsContainer {
+    background-color: white;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+    margin-top: 24px;
+}
+
+.tabHeader {
+    display: flex;
+    border-bottom: 1px solid var(--color-border);
+    padding: 0 16px;
+}
+
+.tabBtn {
+    padding: 16px 24px;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tabBtn:hover {
+    color: var(--color-primary);
+}
+
+.tabBtnActive {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.tabContent {
+    padding: 24px;
+    flex: 1;
+}
+
+.summaryCard {
+    width: 320px;
+    background-color: white;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 24px 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: linear-gradient(135deg, #002b6b 0%, #001f4d 100%);
+    color: white;
+}
+
+.summaryRow {
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.summaryLabel {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.75);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.summaryAmount {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0;
+    color: #4ade80;
+}
+
+.summaryAmountDebt {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0;
+    color: #f87171;
+}
+
+.summaryDivider {
+    width: 100%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 20px 0;
+}
