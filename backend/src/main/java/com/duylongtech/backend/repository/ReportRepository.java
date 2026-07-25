@@ -34,7 +34,7 @@ public class ReportRepository {
                         "JOIN products p ON pv.product_id = p.id " +
                         "JOIN units u ON p.unit_id = u.id " +
                         "JOIN warehouses w ON ib.warehouse_id = w.id " +
-                        "WHERE 1=1 "
+                        "WHERE ib.serial_number_id IS NULL "
         );
         List<Object> params = new ArrayList<>();
 
@@ -349,17 +349,17 @@ public class ReportRepository {
 
         // CompletableFuture to fetch all metrics in parallel
         var lowStockFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT COUNT(DISTINCT pv.id) FROM inventory_balances ib JOIN product_variants pv ON ib.variant_id = pv.id WHERE ib.quantity_on_hand > 0 AND ib.quantity_on_hand <= 5";
+            String sql = "SELECT COUNT(DISTINCT pv.id) FROM inventory_balances ib JOIN product_variants pv ON ib.variant_id = pv.id WHERE ib.serial_number_id IS NULL AND ib.quantity_on_hand > 0 AND ib.quantity_on_hand <= 5";
             return jdbcTemplate.queryForObject(sql, Integer.class);
         });
 
         var outOfStockFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT COUNT(DISTINCT pv.id) FROM product_variants pv WHERE pv.active = TRUE AND NOT EXISTS (SELECT 1 FROM inventory_balances ib WHERE ib.variant_id = pv.id AND ib.quantity_on_hand > 0)";
+            String sql = "SELECT COUNT(DISTINCT pv.id) FROM product_variants pv WHERE pv.active = TRUE AND NOT EXISTS (SELECT 1 FROM inventory_balances ib WHERE ib.variant_id = pv.id AND ib.serial_number_id IS NULL AND ib.quantity_on_hand > 0)";
             return jdbcTemplate.queryForObject(sql, Integer.class);
         });
 
         var totalValueFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT COALESCE(SUM(quantity_on_hand * average_cost), 0) FROM inventory_balances";
+            String sql = "SELECT COALESCE(SUM(quantity_on_hand * average_cost), 0) FROM inventory_balances WHERE serial_number_id IS NULL";
             return jdbcTemplate.queryForObject(sql, BigDecimal.class);
         });
 

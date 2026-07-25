@@ -37,14 +37,17 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
 
     Optional<InventoryBalance> findFirstByWarehouseIdAndVariantIdAndStockStatus(Long warehouseId, Long variantId, String stockStatus);
 
-    @Query("SELECT COUNT(DISTINCT b.variantId) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId")
+    @Query("SELECT COUNT(DISTINCT b.variantId) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.serialNumberId IS NULL")
     Long countDistinctVariantsByWarehouseId(@Param("warehouseId") Long warehouseId);
 
-    @Query("SELECT COALESCE(SUM(b.quantityOnHand), 0) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId")
+    @Query("SELECT COALESCE(SUM(b.quantityOnHand), 0) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.serialNumberId IS NULL")
     java.math.BigDecimal sumQuantityOnHandByWarehouseId(@Param("warehouseId") Long warehouseId);
 
-    @Query("SELECT COALESCE(SUM(b.quantityOnHand * b.averageCost), 0) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId")
+    @Query("SELECT COALESCE(SUM(b.quantityOnHand * b.averageCost), 0) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.serialNumberId IS NULL")
     java.math.BigDecimal sumTotalValueByWarehouseId(@Param("warehouseId") Long warehouseId);
+
+    @Query("SELECT v.product.id, COALESCE(SUM(b.quantityOnHand), 0) FROM InventoryBalance b JOIN ProductVariant v ON v.id = b.variantId WHERE v.product.id IN :productIds AND b.serialNumberId IS NULL GROUP BY v.product.id")
+    List<Object[]> sumQuantityOnHandByProductIds(@Param("productIds") List<Long> productIds);
 
     @Query("""
             SELECT
@@ -63,7 +66,7 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
             JOIN Warehouse w ON w.id = b.warehouseId
             JOIN ProductVariant v ON v.id = b.variantId
             JOIN v.product p
-            WHERE b.warehouseId = :warehouseId
+            WHERE b.warehouseId = :warehouseId AND b.serialNumberId IS NULL
             GROUP BY v.id, w.code, w.name, p.productCode, p.productName, v.sku, v.variantName
             ORDER BY COALESCE(SUM(b.quantityOnHand), 0) DESC
             """)
@@ -86,6 +89,7 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
             JOIN Warehouse w ON w.id = b.warehouseId
             JOIN ProductVariant v ON v.id = b.variantId
             JOIN v.product p
+            WHERE b.serialNumberId IS NULL
             GROUP BY v.id, w.code, w.name, p.productCode, p.productName, v.sku, v.variantName
             ORDER BY COALESCE(SUM(b.quantityOnHand - b.quantityReserved), 0) ASC,
                      COALESCE(SUM(b.quantityOnHand), 0) ASC
