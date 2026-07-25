@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import BrandModal from './components/BrandModal';
@@ -21,7 +21,7 @@ const BrandDetailPage = () => {
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-    const fetchBrand = async () => {
+    const fetchBrand = useCallback(async () => {
         try {
             setLoading(true);
             const res = await axiosClient.get(`/brands/${id}`);
@@ -34,13 +34,13 @@ const BrandDetailPage = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id]);
 
     useEffect(() => {
         if (id) {
             fetchBrand();
         }
-    }, [id]);
+    }, [fetchBrand, id]);
 
     const handleDelete = async () => {
         try {
@@ -70,9 +70,9 @@ const BrandDetailPage = () => {
         return (
             <AdminLayout>
                 <div className={styles.pageBody}>
-                    <div className={styles.emptyState}>
-                        <i className={`bi bi-exclamation-circle ${styles.emptyIcon}`}></i>
-                        <div className={styles.emptyText}>Không tìm thấy thương hiệu này</div>
+                    <div className={styles.emptyState} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '40px' }}>
+                        <i className={`bi bi-exclamation-circle ${styles.emptyIcon}`} style={{ fontSize: '48px', color: '#cbd5e1', marginBottom: '16px' }}></i>
+                        <div className={styles.emptyText} style={{ color: '#64748b', marginBottom: '24px' }}>Không tìm thấy thương hiệu này</div>
                         <button className={styles.btnPrimary} onClick={() => navigate('/brands')}>Quay lại danh sách</button>
                     </div>
                 </div>
@@ -86,7 +86,8 @@ const BrandDetailPage = () => {
                 <div className={styles.pageTitleContainer}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <button 
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }} 
+                            className={styles.iconBtn}
+                            style={{ border: 'none', background: 'none' }}
                             onClick={() => navigate('/brands')}
                         >
                             <i className="bi bi-arrow-left"></i>
@@ -113,7 +114,7 @@ const BrandDetailPage = () => {
                     </div>
 
                     <div className={styles.detailGrid}>
-                        <div className={styles.detailGroup}>
+                        <div className={styles.detailGroup} style={{ gridColumn: 'span 2' }}>
                             <div className={styles.detailItem}>
                                 <span className={styles.detailLabel}>Mã thương hiệu</span>
                                 <span className={styles.detailValue}>{brand.code}</span>
@@ -123,20 +124,26 @@ const BrandDetailPage = () => {
                                 <span className={styles.detailValue} style={{ fontWeight: 600 }}>{brand.name}</span>
                             </div>
                             <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Mô tả</span>
-                                <span className={styles.detailValue}>{brand.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có</span>}</span>
+                                <span className={styles.detailLabel}>Mô tả chi tiết</span>
+                                <span className={styles.detailValue}>{brand.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có ghi chú</span>}</span>
                             </div>
                         </div>
 
-                        <div className={styles.detailGroup}>
-                            <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Số điện thoại liên hệ</span>
-                                <span className={styles.detailValue}>{brand.hotline || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                        <div className={styles.detailRight}>
+                            <div className={styles.detailRightRow}>
+                                <span className={styles.detailRightLabel}>Điện thoại liên hệ</span>
+                                <span className={styles.detailRightValue}>{brand.hotline || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
-                            <div className={styles.detailItem}>
-                                <span className={styles.detailLabel}>Email liên hệ</span>
-                                <span className={styles.detailValue}>{brand.contactEmail || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                            <div className={styles.detailRightRow}>
+                                <span className={styles.detailRightLabel}>Email liên hệ</span>
+                                <span className={styles.detailRightValue}>{brand.contactEmail || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
                             </div>
+                            {brand.createdAt && (
+                                <div className={styles.detailRightRow}>
+                                    <span className={styles.detailRightLabel}>Ngày tạo</span>
+                                    <span className={styles.detailRightValue}>{new Date(brand.createdAt).toLocaleDateString('vi-VN')}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

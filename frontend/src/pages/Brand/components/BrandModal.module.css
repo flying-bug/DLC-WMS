@@ -269,53 +269,36 @@
     gap: 12px;
 }
 
-.btnCancel {
-    height: 36px;
-    padding: 0 16px;
-    background-color: var(--color-canvas, #ffffff);
-    border: 1px solid var(--color-border, #cbd5e1);
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--color-text-strong, #1e293b);
+.btnOutline {
+    background-color: var(--color-white, #ffffff);
+    border: 1px solid var(--color-border-strong, #94a3b8);
+    padding: 8px 16px;
+    border-radius: 4px;
     cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--color-text-secondary, #475569);
     transition: all 0.2s;
 }
 
-.btnCancel:hover {
-    background-color: var(--color-bg-soft, #f1f5f9);
+.btnOutline:hover {
+    background-color: var(--color-bg, #f8fafc);
 }
 
-.btnSaveNext {
-    height: 36px;
-    padding: 0 16px;
-    background-color: var(--color-canvas, #ffffff);
-    border: 1px solid var(--color-primary, #0052ff);
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--color-primary, #0052ff);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btnSaveNext:hover {
-    background-color: rgba(0, 82, 255, 0.05);
-}
-
-.btnSave {
-    height: 36px;
-    padding: 0 24px;
+.btnPrimary {
     background-color: var(--color-primary, #0052ff);
+    color: var(--color-white, #ffffff);
     border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
     cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
     transition: all 0.2s;
 }
 
-.btnSave:hover {
-    background-color: var(--color-primary-active, #003ecc);
+.btnPrimary:hover {
+    background-color: var(--color-primary-hover, #003ecc);
 }

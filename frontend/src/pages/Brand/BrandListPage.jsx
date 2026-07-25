@@ -5,9 +5,28 @@ import BrandModal from './components/BrandModal';
 import { exportToExcel } from '../../utils/excelExport';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import Modal from '../../components/ui/Modal/Modal';
 import styles from './BrandListPage.module.css';
 
 import axiosClient from '../../api/axiosClient';
+
+const DEFAULT_COLUMNS = {
+    code: true,
+    name: true,
+    hotline: true,
+    contactEmail: true,
+    description: true,
+    status: true,
+};
+
+const COLUMN_OPTIONS = [
+    { id: 'code', label: 'Mã Thương Hiệu' },
+    { id: 'name', label: 'Tên Thương Hiệu' },
+    { id: 'hotline', label: 'Điện Thoại' },
+    { id: 'contactEmail', label: 'Email' },
+    { id: 'description', label: 'Mô Tả' },
+    { id: 'status', label: 'Trạng Thái' },
+];
 
 const STATUS_LABELS = {
     APPROVED: { label: 'Đang hoạt động', code: 'success' },
@@ -34,23 +53,32 @@ const BrandListPage = () => {
     const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, brand: null });
 
+    const [columns, setColumns] = useState(() => {
+        const saved = localStorage.getItem('dlc_brand_columns');
+        return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+    });
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+    const toggleColumn = (colId) => {
+        setColumns(prev => {
+            const next = { ...prev, [colId]: !prev[colId] };
+            localStorage.setItem('dlc_brand_columns', JSON.stringify(next));
+            return next;
+        });
+    };
+
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
     const fetchBrands = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await axiosClient.get('/brands');
+            const params = {};
+            if (filters.search) params.search = filters.search;
+            const res = await axiosClient.get('/brands', { params });
             let data = [];
             if (res.data && res.data.data) {
                 data = res.data.data;
-            }
-            if (filters.search) {
-                const term = filters.search.toLowerCase();
-                data = data.filter(b => 
-                    b.name.toLowerCase().includes(term) || 
-                    b.code.toLowerCase().includes(term)
-                );
             }
             if (filters.status) {
                 data = data.filter(b => b.status === filters.status);
@@ -185,7 +213,7 @@ const BrandListPage = () => {
                             <input
                                 type="text"
                                 className={styles.filterInput}
-                                placeholder="Tên hoặc mã thương hiệu..."
+                                placeholder="Mã hoặc tên thương hiệu..."
                                 value={filters.search}
                                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                                 onKeyDown={(e) => e.key === 'Enter' && fetchBrands()}
@@ -198,30 +226,39 @@ const BrandListPage = () => {
                                 value={filters.status}
                                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
                             >
-                                <option value="">Tất cả</option>
+                                <option value="">Tất cả trạng thái</option>
                                 <option value="APPROVED">Đang hoạt động</option>
                                 <option value="INACTIVE">Ngừng hoạt động</option>
                             </select>
                         </div>
                     </div>
                     <div className={styles.filterActions}>
-                        <button className={styles.btnOutline} onClick={() => { setFilters({ search: '', status: '' }); fetchBrands(); }}>
-                            Làm mới
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => { setFilters({ search: '', status: '' }); setTimeout(fetchBrands, 0); }}
+                            title="Đặt lại bộ lọc"
+                        >
+                            <i className="bi bi-arrow-clockwise"></i>
                         </button>
-                        <button className={styles.btnOutline} onClick={handleExport}>
-                            <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                        <button
+                            className={styles.iconBtn}
+                            onClick={handleExport}
+                            title="Xuất tệp Excel"
+                        >
+                            <i className="bi bi-file-earmark-excel"></i>
+                        </button>
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => setShowSettingsModal(true)}
+                            title="Cấu hình hiển thị cột"
+                        >
+                            <i className="bi bi-gear"></i>
                         </button>
                         <button className={styles.btnPrimary} onClick={fetchBrands}>
                             <i className="bi bi-funnel"></i> Lọc dữ liệu
                         </button>
                     </div>
                 </div>
-
-                {selectedIds.length > 0 && (
-                    <div className={styles.bulkActionsToolbar}>
-                        <div className={styles.bulkText}>Đã chọn {selectedIds.length} thương hiệu</div>
-                    </div>
-                )}
 
                 <div className={styles.tableContainer}>
                     <table className={styles.table}>
@@ -235,24 +272,25 @@ const BrandListPage = () => {
                                         onChange={handleSelectAll} 
                                     />
                                 </th>
-                                <th style={{ width: '160px' }}>Mã Thương Hiệu</th>
-                                <th style={{ minWidth: '220px' }}>Tên Thương Hiệu</th>
-                                <th style={{ width: '150px' }}>Điện Thoại</th>
-                                <th style={{ width: '250px' }}>Mô Tả</th>
-                                <th style={{ width: '140px' }}>Trạng Thái</th>
+                                {columns.code && <th style={{ width: '160px' }}>Mã Thương Hiệu</th>}
+                                {columns.name && <th style={{ minWidth: '220px' }}>Tên Thương Hiệu</th>}
+                                {columns.hotline && <th style={{ width: '150px' }}>Điện Thoại</th>}
+                                {columns.contactEmail && <th style={{ width: '200px' }}>Email</th>}
+                                {columns.description && <th style={{ minWidth: '150px' }}>Mô Tả</th>}
+                                {columns.status && <th style={{ width: '140px' }}>Trạng Thái</th>}
                                 <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading && paginatedRows.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className={styles.textCenter} style={{ padding: '40px' }}>
+                                    <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
                                         <div className={styles.emptyState}>Đang tải dữ liệu...</div>
                                     </td>
                                 </tr>
                             ) : paginatedRows.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7">
+                                    <td colSpan="8">
                                         <div className={styles.emptyState}>
                                             <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
                                             <div className={styles.emptyText}>Không tìm thấy thương hiệu nào</div>
@@ -261,7 +299,7 @@ const BrandListPage = () => {
                                 </tr>
                             ) : (
                                 paginatedRows.map(item => (
-                                    <tr key={item.id} onClick={() => navigate(`/brands/${item.id}`)}>
+                                    <tr key={item.id} onClick={() => navigate(`/brands/${item.id}`)} style={{ cursor: 'pointer' }}>
                                         <td style={{ textAlign: 'center' }}>
                                             <input 
                                                 type="checkbox" 
@@ -271,20 +309,39 @@ const BrandListPage = () => {
                                                 onClick={(e) => e.stopPropagation()} 
                                             />
                                         </td>
-                                        <td className={styles.textBlue} style={{ whiteSpace: 'nowrap' }}>{item.code}</td>
-                                        <td style={{ fontWeight: 600 }}>{item.name}</td>
-                                        <td>{item.hotline || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>
-                                        <td>
-                                            <div className={styles.tooltipContainer} style={{ display: 'inline-block', maxWidth: '100%' }}>
-                                                <span className={styles.noteText}>{item.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có</span>}</span>
-                                                {item.description && <span className={styles.tooltipText}>{item.description}</span>}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className={`${styles.badge} ${item.statusCode === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
-                                                {item.statusLabel}
-                                            </span>
-                                        </td>
+                                        {columns.code && (
+                                            <td style={{ whiteSpace: 'nowrap' }}>
+                                                <a
+                                                    href="#"
+                                                    className={styles.link}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        navigate(`/brands/${item.id}`);
+                                                    }}
+                                                >
+                                                    {item.code}
+                                                </a>
+                                            </td>
+                                        )}
+                                        {columns.name && <td style={{ fontWeight: 600 }}>{item.name}</td>}
+                                        {columns.hotline && <td>{item.hotline || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>}
+                                        {columns.contactEmail && <td>{item.contactEmail || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</td>}
+                                        {columns.description && (
+                                            <td style={{ maxWidth: '180px' }}>
+                                                <div className={styles.tooltipContainer}>
+                                                    <span className={styles.noteText}>{item.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có ghi chú</span>}</span>
+                                                    {item.description && <span className={styles.tooltipText}>{item.description}</span>}
+                                                </div>
+                                            </td>
+                                        )}
+                                        {columns.status && (
+                                            <td>
+                                                <span className={`${styles.badge} ${item.statusCode === 'success' ? styles.badgeSuccess : styles.badgeDanger}`}>
+                                                    {item.statusLabel}
+                                                </span>
+                                            </td>
+                                        )}
                                         <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
                                             <i 
                                                 className="bi bi-eye" 
@@ -428,6 +485,33 @@ const BrandListPage = () => {
                     }}
                 />
             )}
+
+            <Modal
+                isOpen={showSettingsModal}
+                onClose={() => setShowSettingsModal(false)}
+                ariaLabel="Thiết lập cột hiển thị"
+            >
+                <div className={styles.settingsModalHeader}>
+                    <h3 style={{ margin: 0, fontSize: '16px' }}>Thiết lập cột hiển thị</h3>
+                    <button className={styles.iconBtn} style={{ border: 'none', background: 'none' }} onClick={() => setShowSettingsModal(false)}>
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div className={styles.settingsModalBody} style={{ padding: '16px' }}>
+                    <div className={styles.checkboxGrid} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        {COLUMN_OPTIONS.map(col => (
+                            <label key={col.id} className={styles.checkboxLabel} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={columns[col.id]}
+                                    onChange={() => toggleColumn(col.id)}
+                                />
+                                <span className={styles.checkboxText}>{col.label}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+            </Modal>
 
             <ConfirmModal
                 isOpen={deleteConfirm.isOpen}
