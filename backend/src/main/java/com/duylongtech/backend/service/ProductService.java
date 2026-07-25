@@ -68,13 +68,27 @@ public class ProductService {
 
     public Page<ProductResponse> getProducts(int page, int size, String search) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        return productRepository.searchProducts(search, pageable).map(this::convertToDto);
+        Page<Product> productPage = productRepository.searchProducts(search, pageable);
+        List<Long> productIds = productPage.getContent().stream().map(Product::getId).toList();
+        java.util.Map<Long, BigDecimal> stockMap = new java.util.HashMap<>();
+        if (!productIds.isEmpty()) {
+            List<Object[]> stockResults = inventoryBalanceRepository.sumQuantityOnHandByProductIds(productIds);
+            for (Object[] result : stockResults) {
+                stockMap.put((Long) result[0], (BigDecimal) result[1]);
+            }
+        }
+        return productPage.map(product -> convertToDtoWithStock(product, stockMap.getOrDefault(product.getId(), BigDecimal.ZERO)));
     }
 
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy hàng hóa với ID: " + id));
-        return convertToDto(product);
+        return convertToDtoWithStock(product, getActualStock(id));
+    }
+
+    private BigDecimal getActualStock(Long productId) {
+        List<Object[]> stockResults = inventoryBalanceRepository.sumQuantityOnHandByProductIds(List.of(productId));
+        return stockResults.isEmpty() ? BigDecimal.ZERO : (BigDecimal) stockResults.get(0)[1];
     }
 
     @Transactional
@@ -117,6 +131,10 @@ public class ProductService {
         product.setTaxReductionStatus(dto.getTaxReductionStatus());
         product.setImageUrl(dto.getImageUrl());
 
+        if (dto.getMinStockQty() != null) {
+            product.setMinStockQty(dto.getMinStockQty());
+        }
+
         if (dto.getStockQty() != null) {
             product.setStockQty(dto.getStockQty());
         }
@@ -128,7 +146,7 @@ public class ProductService {
         updateRelations(product, dto);
 
         Product updated = productRepository.save(product);
-        return convertToDto(updated);
+        return convertToDtoWithStock(updated, getActualStock(updated.getId()));
     }
 
     @Transactional
@@ -168,6 +186,14 @@ public class ProductService {
     @Transactional(readOnly = true)
     public byte[] exportProductsToExcel(String search, String exporterName) {
         List<Product> products = productRepository.searchProducts(search, Pageable.unpaged()).getContent();
+        List<Long> productIds = products.stream().map(Product::getId).toList();
+        java.util.Map<Long, BigDecimal> stockMap = new java.util.HashMap<>();
+        if (!productIds.isEmpty()) {
+            List<Object[]> stockResults = inventoryBalanceRepository.sumQuantityOnHandByProductIds(productIds);
+            for (Object[] result : stockResults) {
+                stockMap.put((Long) result[0], (BigDecimal) result[1]);
+            }
+        }
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Danh Sach San Pham");
@@ -231,7 +257,7 @@ public class ProductService {
                 row.createCell(4).setCellValue(product.getBrand() != null ? product.getBrand().getName() : "");
                 row.createCell(5).setCellValue(product.getUnit() != null ? product.getUnit().getName() : "");
                 row.createCell(6).setCellValue(toDouble(product.getSalePrice()));
-                row.createCell(7).setCellValue(toDouble(product.getStockQty()));
+                row.createCell(7).setCellValue(toDouble(stockMap.getOrDefault(product.getId(), BigDecimal.ZERO)));
                 row.createCell(8).setCellValue(Boolean.FALSE.equals(product.getActive()) ? "Ngung su dung" : "Dang su dung");
                 row.createCell(9).setCellValue(product.getDescription() != null ? product.getDescription() : "");
             }
@@ -507,6 +533,10 @@ public class ProductService {
     }
 
     private ProductResponse convertToDto(Product product) {
+        return convertToDtoWithStock(product, product.getStockQty());
+    }
+
+    private ProductResponse convertToDtoWithStock(Product product, BigDecimal stockQty) {
         return ProductResponse.builder()
                 .id(product.getId())
                 .productCode(product.getProductCode())
@@ -519,7 +549,7 @@ public class ProductService {
                 .description(product.getDescription())
                 .active(product.getActive())
                 .taxReductionStatus(product.getTaxReductionStatus())
-                .stockQty(product.getStockQty())
+                .stockQty(stockQty)
                 .minStockQty(product.getMinStockQty())
                 .stockValue(product.getStockValue())
                 .imageUrl(product.getImageUrl())
