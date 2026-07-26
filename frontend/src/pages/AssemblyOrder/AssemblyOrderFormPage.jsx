@@ -61,6 +61,9 @@ function AssemblyOrderFormPage() {
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
+    const [serialMappings, setSerialMappings] = useState({});
+    const [savingSerials, setSavingSerials] = useState(false);
+
     const [customLines, setCustomLines] = useState([]);
     const [customLinesDirty, setCustomLinesDirty] = useState(false);
     const [form, setForm] = useState(() => ({
@@ -128,6 +131,21 @@ function AssemblyOrderFormPage() {
                 setLinkedImports(unwrap(impRes));
             } catch (e) {
                 console.error('Không tải được phiếu nhập liên kết', e);
+            }
+
+            try {
+                const serialsRes = await assemblyApi.getAssemblyOrderSerials(id);
+                const fetchedSerials = unwrap(serialsRes);
+                if (fetchedSerials && fetchedSerials.length > 0) {
+                    const mappings = {};
+                    fetchedSerials.forEach(s => {
+                        if (!mappings[s.targetSerial]) mappings[s.targetSerial] = {};
+                        mappings[s.targetSerial][s.componentVariantId] = s.componentSerial;
+                    });
+                    setSerialMappings(mappings);
+                }
+            } catch (e) {
+                console.error('Không tải được serials', e);
             }
 
             setForm({
@@ -228,6 +246,76 @@ function AssemblyOrderFormPage() {
     const hasDrafts = linkedExports.some(s => s.status === 'DRAFT') || linkedImports.some(s => s.status === 'DRAFT');
     const disableComplete = saving || !isReadyToComplete || hasDrafts;
 
+    const targetSerials = useMemo(() => {
+        let serials = [];
+        if (form.orderType !== 'ASSEMBLY') return serials;
+        linkedImports
+            .filter(slip => slip.status === 'POSTED')
+            .forEach(slip => {
+                slip.lines
+                    .filter(l => String(l.variantId) === String(targetVariantId))
+                    .forEach(line => {
+                        if (line.serialNumbers) serials.push(...line.serialNumbers);
+                    });
+            });
+        return serials;
+    }, [linkedImports, form.orderType, targetVariantId]);
+
+    const componentSerialsByVariant = useMemo(() => {
+        let serials = {};
+        if (form.orderType !== 'ASSEMBLY') return serials;
+        linkedExports
+            .filter(slip => slip.status === 'POSTED')
+            .forEach(slip => {
+                slip.lines
+                    .filter(l => componentIds.has(String(l.variantId)))
+                    .forEach(line => {
+                        if (line.serialNumbers) {
+                            if (!serials[line.variantId]) serials[line.variantId] = [];
+                            serials[line.variantId].push(...line.serialNumbers);
+                        }
+                    });
+            });
+        return serials;
+    }, [linkedExports, form.orderType, componentIds]);
+
+    const isTrackingSerial = targetSerials.length > 0;
+
+    const handleMappingChange = (targetSerial, componentVariantId, componentSerial) => {
+        setSerialMappings(prev => ({
+            ...prev,
+            [targetSerial]: {
+                ...(prev[targetSerial] || {}),
+                [componentVariantId]: componentSerial
+            }
+        }));
+    };
+
+    const handleSaveSerials = async () => {
+        setSavingSerials(true);
+        try {
+            let requests = [];
+            Object.keys(serialMappings).forEach(ts => {
+                const comps = serialMappings[ts];
+                Object.keys(comps).forEach(cvId => {
+                    if (comps[cvId]) {
+                        requests.push({
+                            targetVariantId: Number(targetVariantId),
+                            targetSerial: ts,
+                            componentVariantId: Number(cvId),
+                            componentSerial: comps[cvId]
+                        });
+                    }
+                });
+            });
+            await assemblyApi.saveAssemblyOrderSerials(id, requests);
+            showToast('success', 'Đã lưu cấu hình Serial.');
+        } catch (err) {
+            showToast('error', err.response?.data?.userMessage || 'Không lưu được cấu hình Serial.');
+        } finally {
+            setSavingSerials(false);
+        }
+    };
 
     const buildPayload = (overrideStatus = null) => ({
         orderCode: form.orderCode || null,
@@ -359,7 +447,7 @@ function AssemblyOrderFormPage() {
         const isTargetItem = (isAssembly && documentType === 'GOODS_RECEIPT') || (!isAssembly && documentType === 'GOODS_ISSUE');
         const isScrapItem = documentType === 'SCRAP';
 
-        let lines = [];
+        let lines;
 
         if (isTargetItem) {
             let totalComponentsCost = 0;
@@ -612,6 +700,78 @@ function AssemblyOrderFormPage() {
                             </div>
 
                         </div>
+
+                        {isTrackingSerial && (
+                            <div className={styles.card}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                    <div>
+                                        <h2 className={styles.cardTitle} style={{ margin: 0 }}>Cấu hình Serial (Serial Mapping)</h2>
+                                        <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>Vui lòng gán Serial linh kiện cho từng Serial thành phẩm.</p>
+                                    </div>
+                                    {orderDetail?.status === 'APPROVED' && (
+                                        <button className="btn-misa-post" type="button" onClick={handleSaveSerials} disabled={savingSerials} style={{ padding: '6px 16px', fontSize: '13px' }}>
+                                            <i className="bi bi-save"></i> {savingSerials ? 'Đang lưu...' : 'Lưu cấu hình'}
+                                        </button>
+                                    )}
+                                </div>
+                                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+                                        <thead style={{ backgroundColor: '#f8fafc', color: '#475569' }}>
+                                            <tr>
+                                                <th style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>Serial Thành Phẩm (PC)</th>
+                                                {Object.keys(componentSerialsByVariant).map(vId => {
+                                                    const variantName = previewLines.find(l => String(l.componentVariantId) === String(vId))?.componentName || `Linh kiện ${vId}`;
+                                                    return <th key={vId} style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{variantName}</th>;
+                                                })}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {targetSerials.map((targetSerial, index) => (
+                                                <tr key={targetSerial} style={{ borderBottom: index < targetSerials.length - 1 ? '1px solid #f1f5f9' : 'none', backgroundColor: '#fff' }}>
+                                                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--color-primary)' }}>{targetSerial}</td>
+                                                    {Object.keys(componentSerialsByVariant).map(vId => {
+                                                        const availableSerials = componentSerialsByVariant[vId] || [];
+                                                        const selectedByOthers = new Set();
+                                                        Object.keys(serialMappings).forEach(ts => {
+                                                            if (ts !== targetSerial && serialMappings[ts][vId]) {
+                                                                selectedByOthers.add(serialMappings[ts][vId]);
+                                                            }
+                                                        });
+                                                        const currentSelection = serialMappings[targetSerial]?.[vId] || '';
+                                                        
+                                                        return (
+                                                            <td key={vId} style={{ padding: '12px 16px' }}>
+                                                                <select 
+                                                                    className="misa-input" 
+                                                                    value={currentSelection}
+                                                                    onChange={(e) => handleMappingChange(targetSerial, vId, e.target.value)}
+                                                                    disabled={orderDetail?.status !== 'APPROVED'}
+                                                                    style={{ minWidth: '150px', height: '36px' }}
+                                                                >
+                                                                    <option value="">-- Chọn Serial --</option>
+                                                                    {availableSerials.map(cs => (
+                                                                        <option key={cs} value={cs} disabled={selectedByOthers.has(cs)}>
+                                                                            {cs} {selectedByOthers.has(cs) ? '(Đã dùng)' : ''}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            ))}
+                                            {targetSerials.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={100} style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
+                                                        Chưa có dữ liệu Serial thành phẩm. Vui lòng lập Phiếu Nhập kho thành phẩm và khai báo Serial trước.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* RIGHT COLUMN: SUMMARY */}
