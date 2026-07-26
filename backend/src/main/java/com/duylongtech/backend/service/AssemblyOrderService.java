@@ -172,6 +172,67 @@ public class AssemblyOrderService {
                 throw new BusinessException(com.duylongtech.backend.constant.SystemMessage.ASM_HAS_POSTED_DOCS.getMessage());
             }
         }
+        
+        if ("SUBMITTED".equals(status)) {
+            List<InventoryDocument> exports = inventoryDocumentRepository.searchExports(null, null, null, null, null, null, "ASSEMBLY_ORDER", id);
+            List<InventoryDocument> imports = inventoryDocumentRepository.searchImports(null, null, null, null, null, "ASSEMBLY_ORDER", id);
+            
+            boolean anyDraft = exports.stream().anyMatch(d -> "DRAFT".equals(d.getStatus())) ||
+                               imports.stream().anyMatch(d -> "DRAFT".equals(d.getStatus()));
+                               
+            if (anyDraft) {
+                throw new BusinessException("Các phiếu xuất và nhập kho liên kết đang lưu nháp phải được ghi sổ hoặc hủy bỏ.");
+            }
+            
+            BigDecimal requiredComponents = order.getLines().stream()
+                .map(AssemblyOrderLine::getQuantityRequired)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal requiredTarget = order.getQuantity();
+
+            Set<Long> componentIds = order.getLines().stream()
+                .map(l -> l.getComponentVariant().getId())
+                .collect(java.util.stream.Collectors.toSet());
+            Long targetId = order.getTargetVariant().getId();
+
+            BigDecimal exportedComponents = exports.stream()
+                .filter(d -> "POSTED".equals(d.getStatus()))
+                .flatMap(d -> d.getLines().stream())
+                .filter(l -> l.getVariant() != null && componentIds.contains(l.getVariant().getId()))
+                .map(InventoryDocumentLine::getQuantityOut)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal exportedTarget = exports.stream()
+                .filter(d -> "POSTED".equals(d.getStatus()))
+                .flatMap(d -> d.getLines().stream())
+                .filter(l -> l.getVariant() != null && targetId.equals(l.getVariant().getId()))
+                .map(InventoryDocumentLine::getQuantityOut)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal importedComponents = imports.stream()
+                .filter(d -> "POSTED".equals(d.getStatus()))
+                .flatMap(d -> d.getLines().stream())
+                .filter(l -> l.getVariant() != null && componentIds.contains(l.getVariant().getId()))
+                .map(InventoryDocumentLine::getQuantityIn)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal importedTarget = imports.stream()
+                .filter(d -> "POSTED".equals(d.getStatus()))
+                .flatMap(d -> d.getLines().stream())
+                .filter(l -> l.getVariant() != null && targetId.equals(l.getVariant().getId()))
+                .map(InventoryDocumentLine::getQuantityIn)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            if (ASSEMBLY.equals(order.getOrderType())) {
+                if (exportedComponents.compareTo(requiredComponents) < 0 || importedTarget.compareTo(requiredTarget) < 0) {
+                    throw new BusinessException("Chưa hoàn tất xuất/nhập đủ số lượng yêu cầu để hoàn thành lệnh.");
+                }
+            } else {
+                if (exportedTarget.compareTo(requiredTarget) < 0 || importedComponents.compareTo(requiredComponents) < 0) {
+                    throw new BusinessException("Chưa hoàn tất xuất/nhập đủ số lượng yêu cầu để hoàn thành lệnh.");
+                }
+            }
+        }
+
         order.setStatus(status);
         order.setUpdatedAt(LocalDateTime.now());
         return toOrderResponse(assemblyOrderRepository.save(order));
