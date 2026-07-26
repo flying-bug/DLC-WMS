@@ -2,14 +2,17 @@ package com.duylongtech.backend.controller;
 
 import com.duylongtech.backend.dto.request.AssemblyBomRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderRequest;
+import com.duylongtech.backend.dto.request.AssemblyOrderSerialRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.AssemblyBomResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderResponse;
+import com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse;
 import com.duylongtech.backend.service.AssemblyOrderService;
 import com.duylongtech.backend.service.AuditLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
@@ -195,5 +198,22 @@ public class AssemblyOrderController {
             auditLogService.logEvent(actor, "CREATE", "InventoryDocument", null, "FAILED", "Tạo phiếu kho thất bại: " + e.getMessage(), ip, null);
             throw e;
         }
+    }
+
+    @GetMapping("/assembly-orders/{id}/serials")
+    @Operation(summary = "Get assembly order serials")
+    @PreAuthorize("hasAuthority('assembly:view')")
+    public ApiResponse<List<AssemblyOrderSerialResponse>> getSerials(@PathVariable Long id) {
+        return ApiResponse.success(assemblyOrderService.getSerials(id));
+    }
+
+    @PostMapping("/assembly-orders/{id}/serials")
+    @Operation(summary = "Save assembly order serials")
+    @PreAuthorize("hasAuthority('assembly:edit')")
+    public ApiResponse<Void> saveSerials(
+            @PathVariable Long id,
+            @RequestBody @Valid List<AssemblyOrderSerialRequest> requests) {
+        assemblyOrderService.saveSerials(id, requests);
+        return ApiResponse.success(null);
     }
 }

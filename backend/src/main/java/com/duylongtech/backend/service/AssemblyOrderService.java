@@ -4,14 +4,17 @@ import com.duylongtech.backend.dto.request.AssemblyBomLineRequest;
 import com.duylongtech.backend.dto.request.AssemblyBomRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderLineRequest;
+import com.duylongtech.backend.dto.request.AssemblyOrderSerialRequest;
 import com.duylongtech.backend.dto.response.AssemblyBomLineResponse;
 import com.duylongtech.backend.dto.response.AssemblyBomResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderLineResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderResponse;
+import com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse;
 import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
 import com.duylongtech.backend.repository.AssemblyOrderRepository;
+import com.duylongtech.backend.repository.AssemblyOrderSerialRepository;
 import com.duylongtech.backend.repository.InventoryDocumentRepository;
 import com.duylongtech.backend.repository.ProductRepository;
 import com.duylongtech.backend.repository.ProductVariantRepository;
@@ -20,11 +23,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +49,7 @@ public class AssemblyOrderService {
     private final ProductVariantRepository productVariantRepository;
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryDocumentService inventoryDocumentService;
+    private final AssemblyOrderSerialRepository assemblyOrderSerialRepository;
     private final com.duylongtech.backend.repository.UserRepository userRepository;
 
     @Transactional(readOnly = true)
@@ -197,34 +203,49 @@ public class AssemblyOrderService {
             BigDecimal exportedComponents = exports.stream()
                 .filter(d -> "POSTED".equals(d.getStatus()))
                 .flatMap(d -> d.getLines().stream())
-                .filter(l -> l.getVariant() != null && componentIds.contains(l.getVariant().getId()))
+                .filter(l -> l.getVariantId() != null && componentIds.contains(l.getVariantId()))
                 .map(InventoryDocumentLine::getQuantityOut)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal exportedTarget = exports.stream()
                 .filter(d -> "POSTED".equals(d.getStatus()))
                 .flatMap(d -> d.getLines().stream())
-                .filter(l -> l.getVariant() != null && targetId.equals(l.getVariant().getId()))
+                .filter(l -> l.getVariantId() != null && targetId.equals(l.getVariantId()))
                 .map(InventoryDocumentLine::getQuantityOut)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal importedComponents = imports.stream()
                 .filter(d -> "POSTED".equals(d.getStatus()))
                 .flatMap(d -> d.getLines().stream())
-                .filter(l -> l.getVariant() != null && componentIds.contains(l.getVariant().getId()))
+                .filter(l -> l.getVariantId() != null && componentIds.contains(l.getVariantId()))
                 .map(InventoryDocumentLine::getQuantityIn)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal importedTarget = imports.stream()
                 .filter(d -> "POSTED".equals(d.getStatus()))
                 .flatMap(d -> d.getLines().stream())
-                .filter(l -> l.getVariant() != null && targetId.equals(l.getVariant().getId()))
+                .filter(l -> l.getVariantId() != null && targetId.equals(l.getVariantId()))
                 .map(InventoryDocumentLine::getQuantityIn)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             if (ASSEMBLY.equals(order.getOrderType())) {
                 if (exportedComponents.compareTo(requiredComponents) < 0 || importedTarget.compareTo(requiredTarget) < 0) {
                     throw new BusinessException("Chưa hoàn tất xuất/nhập đủ số lượng yêu cầu để hoàn thành lệnh.");
+                }
+                
+                // Validate Serial Mapping if Target tracks serial
+                if (order.getTargetVariant().getProduct().getTrackSerial()) {
+                    List<AssemblyOrderSerial> serials = assemblyOrderSerialRepository.findByAssemblyOrderId(id);
+                    Set<String> mappedTargetSerials = serials.stream().map(AssemblyOrderSerial::getTargetSerial).collect(Collectors.toSet());
+                    
+                    // We expect the number of unique target serials mapped to be at least requiredTarget
+                    if (mappedTargetSerials.size() < requiredTarget.intValue()) {
+                        throw new BusinessException("Chưa gắn đủ Serial thành phẩm. Vui lòng vào mục Cấu hình Serial để hoàn tất.");
+                    }
+                    
+                    // Also check if component mapping is full?
+                    // We can assume if the user mapped the target, they mapped the components, but we could be stricter.
+                    // For now, checking the target serial count is a good start.
                 }
             } else {
                 if (exportedTarget.compareTo(requiredTarget) < 0 || importedComponents.compareTo(requiredComponents) < 0) {
@@ -646,5 +667,48 @@ public class AssemblyOrderService {
             return prodName + " - " + varName;
         }
         return varName;
+    }
+
+    public List<AssemblyOrderSerialResponse> getSerials(Long orderId) {
+        return assemblyOrderSerialRepository.findByAssemblyOrderId(orderId).stream().map(s -> {
+            AssemblyOrderSerialResponse res = new AssemblyOrderSerialResponse();
+            res.setId(s.getId());
+            res.setAssemblyOrderId(s.getAssemblyOrder().getId());
+            res.setTargetVariantId(s.getTargetVariant().getId());
+            res.setTargetSerial(s.getTargetSerial());
+            res.setComponentVariantId(s.getComponentVariant().getId());
+            res.setComponentSerial(s.getComponentSerial());
+            return res;
+        }).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void saveSerials(Long orderId, List<AssemblyOrderSerialRequest> requests) {
+        AssemblyOrder order = assemblyOrderRepository.findById(orderId)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found with id: " + orderId));
+        
+        assemblyOrderSerialRepository.deleteByAssemblyOrderId(orderId);
+        
+        if (requests == null || requests.isEmpty()) {
+            return;
+        }
+        
+        List<AssemblyOrderSerial> newSerials = requests.stream().map(req -> {
+            ProductVariant targetVar = productVariantRepository.findById(req.getTargetVariantId())
+                    .orElseThrow(() -> new EntityNotFoundException("Target variant not found: " + req.getTargetVariantId()));
+            ProductVariant compVar = productVariantRepository.findById(req.getComponentVariantId())
+                    .orElseThrow(() -> new EntityNotFoundException("Component variant not found: " + req.getComponentVariantId()));
+            
+            return AssemblyOrderSerial.builder()
+                    .assemblyOrder(order)
+                    .targetVariant(targetVar)
+                    .targetSerial(req.getTargetSerial())
+                    .componentVariant(compVar)
+                    .componentSerial(req.getComponentSerial())
+                    .createdBy(order.getCreatedBy())
+                    .build();
+        }).collect(Collectors.toList());
+        
+        assemblyOrderSerialRepository.saveAll(newSerials);
     }
 }
