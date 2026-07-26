@@ -27,8 +27,6 @@ function StocktakeListPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({ stocktakeCode: '', fromDate: '', status: '' });
   const [loading, setLoading] = useState(false);
-  const [editingRowId, setEditingRowId] = useState(null);
-  const [editStatusValue, setEditStatusValue] = useState('');
   const [showInitModal, setShowInitModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
 
@@ -240,62 +238,20 @@ function StocktakeListPage() {
                   <td>{st.warehouse}</td>
                   <td>{st.note || ''}</td>
                   <td>
-                    {editingRowId === st.id ? (
-                      <select 
-                        value={editStatusValue} 
-                        onChange={(e) => setEditStatusValue(e.target.value)}
-                        className={styles.statusSelect}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {Object.entries(STATUS_LABELS).map(([key, val]) => (
-                          <option key={key} value={key}>{val.label}</option>
-                        ))}
-                      </select>
-                    ) : (
                       <span className={`${styles.badge} ${
                         st.statusCode === 'success' ? styles.badgeSuccess :
                         st.statusCode === 'info' ? styles.badgeInfo :
                         st.statusCode === 'warning' ? styles.badgeWarning :
                         styles.badgeDanger
-                      }`}
-                      style={{ cursor: 'pointer' }}
-                      title="Nhấn để đổi trạng thái"
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        setEditingRowId(st.id);
-                        setEditStatusValue(st.status || 'DRAFT');
-                      }}
-                      >
+                      }`}>
                         {st.statusLabel}
                       </span>
-                    )}
                   </td>
                   <td className={styles.textCenter}>
                     {st.isProcessed ? <i className="bi bi-check-circle-fill" style={{ color: 'var(--color-success-strong)' }}></i> : ''}
                   </td>
                   <td className={styles.textCenter}>
-                    {editingRowId === st.id ? (
-                      <>
-                        <i className="bi bi-check-lg" style={{ cursor: 'pointer', color: 'var(--color-success-strong)', fontSize: '18px', marginRight: '12px' }} title="Lưu" onClick={(e) => { 
-                          e.stopPropagation(); 
-                          // Update mock data logic here
-                          const updated = stocktakes.map(item => item.id === st.id ? { 
-                            ...item, 
-                            status: editStatusValue,
-                            statusCode: STATUS_LABELS[editStatusValue]?.code,
-                            statusLabel: STATUS_LABELS[editStatusValue]?.label
-                          } : item);
-                          setStocktakes(updated);
-                          setEditingRowId(null);
-                          showToast('success', 'Đã cập nhật trạng thái phiếu kiểm kê!');
-                        }}></i>
-                        <i className="bi bi-x-lg" style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '18px' }} title="Hủy" onClick={(e) => { e.stopPropagation(); setEditingRowId(null); }}></i>
-                      </>
-                    ) : (
-                      <>
-                        <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); navigate(`/stocktakes/${st.id}`); }}></i>
-                      </>
-                    )}
+                     <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); navigate(`/stocktakes/${st.id}`); }}></i>
                   </td>
                 </tr>
               )) : (

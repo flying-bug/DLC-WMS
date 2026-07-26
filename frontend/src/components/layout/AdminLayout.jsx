@@ -13,6 +13,9 @@ const AdminLayout = ({ children }) => {
     const userRole = getAuthRole() || 'STAFF';
     const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'ROLE_ADMIN';
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+        return localStorage.getItem('dlc_sidebar_collapsed') === 'true';
+    });
     const [voiceEnabled, setVoiceEnabled] = useState(() => {
         return localStorage.getItem('dlc_voice_enabled') !== 'false';
     });
@@ -21,6 +24,14 @@ const AdminLayout = ({ children }) => {
         setVoiceEnabled((prev) => {
             const next = !prev;
             localStorage.setItem('dlc_voice_enabled', String(next));
+            return next;
+        });
+    };
+
+    const toggleSidebar = () => {
+        setIsSidebarCollapsed(prev => {
+            const next = !prev;
+            localStorage.setItem('dlc_sidebar_collapsed', String(next));
             return next;
         });
     };
@@ -40,7 +51,7 @@ const AdminLayout = ({ children }) => {
                 />
             )}
 
-            <aside className={`${styles.sidebar} ${mobileMenuOpen ? styles.mobileOpen : ''}`}>
+            <aside className={`${styles.sidebar} ${mobileMenuOpen ? styles.mobileOpen : ''} ${isSidebarCollapsed ? styles.collapsed : ''}`}>
                 <div className={styles.logoArea}>
                     <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.brandLogo} />
                     <div className={styles.brandText}>
@@ -156,6 +167,16 @@ const AdminLayout = ({ children }) => {
                         </button>
                     )}
                 </nav>
+                <div className={styles.collapseBtnContainer}>
+                    <button
+                        type="button"
+                        className={styles.collapseBtn}
+                        onClick={toggleSidebar}
+                        title={isSidebarCollapsed ? "Mở rộng" : "Thu gọn"}
+                    >
+                        <i className={`fas ${isSidebarCollapsed ? 'fa-angle-double-right' : 'fa-angle-double-left'}`}></i>
+                    </button>
+                </div>
             </aside>
 
             <div className={styles.mainWrapper}>

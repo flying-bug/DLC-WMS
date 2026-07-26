@@ -565,12 +565,13 @@ function ExportSlipPage() {
                       </a>
                     </td>
                   )}
+                  {columns.issuePurpose && <td>{slip.issuePurposeLabel}</td>}
                   {columns.partner && <td>{slip.partner}</td>}
                   {columns.warehouse && <td>{slip.warehouse}</td>}
                   {columns.salesperson && <td>{slip.salespersonName}</td>}
                   {columns.recipient && <td>{slip.recipientName}</td>}
-                  {columns.vat && <td className={`${styles.money} ${styles.textRight}`}>{slip.vat}</td>}
-                  {columns.total && <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>}
+                  {columns.vat && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.vat}</td>}
+                  {columns.total && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.total}</td>}
                   {columns.note && (
                     <td style={{ maxWidth: '180px' }}>
                       <div className={styles.tooltipContainer}>
