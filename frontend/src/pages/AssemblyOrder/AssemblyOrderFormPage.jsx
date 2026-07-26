@@ -188,6 +188,47 @@ function AssemblyOrderFormPage() {
         }
     }, [form.quantity]);
 
+    const requiredComponents = useMemo(() => {
+        if (!orderDetail || !orderDetail.lines) return 0;
+        return orderDetail.lines.reduce((sum, line) => sum + Number(line.quantityRequired || 0), 0);
+    }, [orderDetail]);
+
+    const requiredTarget = Number(orderDetail?.quantity || 1);
+
+    const targetVariantId = orderDetail?.targetVariantId || orderDetail?.targetSku;
+    const componentIds = useMemo(() => {
+        if (!orderDetail || !orderDetail.lines) return new Set();
+        return new Set(orderDetail.lines.map(l => String(l.componentVariantId)));
+    }, [orderDetail]);
+
+    const actualExports = useMemo(() => {
+        return linkedExports
+            .filter(slip => slip.status === 'POSTED')
+            .reduce((sum, slip) => sum + slip.lines
+                .filter(l => form.orderType === 'ASSEMBLY' ? componentIds.has(String(l.variantId)) : String(l.variantId) === String(targetVariantId))
+                .reduce((s, line) => s + Number(line.quantityOut || 0), 0), 0);
+    }, [linkedExports, componentIds, targetVariantId, form.orderType]);
+
+    const actualImports = useMemo(() => {
+        return linkedImports
+            .filter(slip => slip.status === 'POSTED')
+            .reduce((sum, slip) => sum + slip.lines
+                .filter(l => form.orderType === 'ASSEMBLY' ? String(l.variantId) === String(targetVariantId) : componentIds.has(String(l.variantId)))
+                .reduce((s, line) => s + Number(line.quantityIn || 0), 0), 0);
+    }, [linkedImports, componentIds, targetVariantId, form.orderType]);
+
+    const isAssembly = form.orderType !== 'DISASSEMBLY';
+    const requiredExportsQty = isAssembly ? requiredComponents : requiredTarget;
+    const requiredImportsQty = isAssembly ? requiredTarget : requiredComponents;
+
+    const exportProgress = requiredExportsQty > 0 ? Math.min(100, (actualExports / requiredExportsQty) * 100) : 0;
+    const importProgress = requiredImportsQty > 0 ? Math.min(100, (actualImports / requiredImportsQty) * 100) : 0;
+    
+    const isReadyToComplete = actualExports >= requiredExportsQty && actualImports >= requiredImportsQty;
+    const hasDrafts = linkedExports.some(s => s.status === 'DRAFT') || linkedImports.some(s => s.status === 'DRAFT');
+    const disableComplete = saving || !isReadyToComplete || hasDrafts;
+
+
     const buildPayload = (overrideStatus = null) => ({
         orderCode: form.orderCode || null,
         bomId: Number(form.bomId),
@@ -307,19 +348,18 @@ function AssemblyOrderFormPage() {
     const handleGenerateInventory = (documentType) => {
         if (!orderDetail || !orderDetail.id) return;
 
-        const targetPath = documentType === 'GOODS_ISSUE' ? '/export-slips/assembly' : '/import-history/create?type=PRODUCTION';
+        const targetPath = documentType === 'GOODS_ISSUE' ? '/export-slips/assembly' 
+            : documentType === 'SCRAP' ? '/import-history/create?type=SCRAP'
+            : '/import-history/create?type=PRODUCTION';
 
         const isAssembly = orderDetail.orderType !== 'DISASSEMBLY';
-
-        let lines = orderDetail.lines.map(l => ({
-            variantId: l.componentVariantId,
-            quantity: l.quantityRequired,
-            price: l.salePrice || l.unitCost || 0
-        }));
 
         // Lắp ráp -> Nhập thành phẩm (GOODS_RECEIPT)
         // Tháo dỡ -> Xuất thành phẩm (GOODS_ISSUE)
         const isTargetItem = (isAssembly && documentType === 'GOODS_RECEIPT') || (!isAssembly && documentType === 'GOODS_ISSUE');
+        const isScrapItem = documentType === 'SCRAP';
+
+        let lines = [];
 
         if (isTargetItem) {
             let totalComponentsCost = 0;
@@ -332,13 +372,51 @@ function AssemblyOrderFormPage() {
 
             const assemblyQty = Number(orderDetail.quantity) || 1;
             const calculatedUnitPrice = totalComponentsCost / assemblyQty;
+            const targetVariantId = orderDetail.targetVariantId || orderDetail.targetSku;
+
+            // Tính số lượng đã nhập/xuất để gợi ý số lượng còn lại
+            const completedQty = (documentType === 'GOODS_RECEIPT' ? linkedImports : linkedExports)
+                .filter(s => s.status === 'POSTED')
+                .reduce((sum, slip) => sum + slip.lines.filter(l => String(l.variantId) === String(targetVariantId)).reduce((s, l) => s + (documentType === 'GOODS_RECEIPT' ? (l.quantityIn || 0) : (l.quantityOut || 0)), 0), 0);
+
+            const remainingQty = Math.max(0, assemblyQty - completedQty);
 
             lines = [{
-                variantId: orderDetail.targetVariantId || orderDetail.targetSku,
-                quantity: orderDetail.quantity,
+                variantId: targetVariantId,
+                quantity: remainingQty,
                 price: totalComponentsCost > 0 ? calculatedUnitPrice : (orderDetail.targetSalePrice || 0)
             }];
+        } else if (isScrapItem) {
+            lines = orderDetail.lines.map(l => ({
+                 variantId: l.componentVariantId,
+                 quantity: 1, // Default quantity
+                 price: l.salePrice || l.unitCost || 0
+             }));
+        } else {
+            // Document Type: GOODS_ISSUE cho Lắp ráp hoặc GOODS_RECEIPT cho tháo dỡ (Thành phần)
+            const completedMap = {};
+            (documentType === 'GOODS_ISSUE' ? linkedExports : linkedImports)
+                .filter(s => s.status === 'POSTED')
+                .forEach(slip => {
+                    slip.lines.forEach(l => {
+                        completedMap[l.variantId] = (completedMap[l.variantId] || 0) + (documentType === 'GOODS_ISSUE' ? (l.quantityOut || 0) : (l.quantityIn || 0));
+                    });
+                });
+
+            lines = orderDetail.lines.map(l => {
+                const required = Number(l.quantityRequired || 0);
+                const completed = completedMap[l.componentVariantId] || 0;
+                const remaining = Math.max(0, required - completed);
+                
+                return {
+                    variantId: l.componentVariantId,
+                    quantity: remaining,
+                    price: l.salePrice || l.unitCost || 0
+                };
+            }).filter(l => l.quantity > 0); // Chỉ giữ lại những linh kiện còn thiếu
         }
+
+
 
         navigate(targetPath, {
             state: {
@@ -562,16 +640,29 @@ function AssemblyOrderFormPage() {
                                 <hr className={styles.divider} />
 
                                 <div className={styles.summaryItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                                    <span className={styles.summaryLabel}>Tiến độ hiện tại:</span>
+                                    <span className={styles.summaryLabel}>Tiến độ xuất kho (Bị trừ):</span>
+                                    <div style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                                        <div style={{
+                                            height: '100%',
+                                            backgroundColor: 'var(--color-warning)',
+                                            width: `${exportProgress}%`
+                                        }}></div>
+                                    </div>
+                                    <span className={styles.summaryValue} style={{ alignSelf: 'flex-end', fontSize: '12px' }}>
+                                        {actualExports.toLocaleString('vi-VN')} / {requiredExportsQty.toLocaleString('vi-VN')}
+                                    </span>
+                                </div>
+                                <div className={styles.summaryItem} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
+                                    <span className={styles.summaryLabel}>Tiến độ nhập kho (Được cộng):</span>
                                     <div style={{ width: '100%', height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
                                         <div style={{
                                             height: '100%',
                                             backgroundColor: 'var(--color-success)',
-                                            width: `${orderDetail ? Math.min(100, (Number(orderDetail.quantityProduced || 0) / Number(orderDetail.quantity || 1)) * 100) : 0}%`
+                                            width: `${importProgress}%`
                                         }}></div>
                                     </div>
                                     <span className={styles.summaryValue} style={{ alignSelf: 'flex-end', fontSize: '12px' }}>
-                                        {Number(orderDetail?.quantityProduced || 0).toLocaleString('vi-VN')} / {Number(form.quantity || 0).toLocaleString('vi-VN')}
+                                        {actualImports.toLocaleString('vi-VN')} / {requiredImportsQty.toLocaleString('vi-VN')}
                                     </span>
                                 </div>
                             </div>
@@ -586,13 +677,13 @@ function AssemblyOrderFormPage() {
                 </button>
                 {orderDetail?.status === 'APPROVED' && (
                     <div className={styles.actionButtons}>
-                        <button className={styles.btnOutline} type="button" onClick={() => handleGenerateInventory('GOODS_ISSUE')} disabled={linkedExports.length > 0}>
-                            <i className="bi bi-box-arrow-up"></i> {linkedExports.length > 0 ? 'Đã lập phiếu xuất' : 'Lập phiếu xuất kho'}
+                        <button className={styles.btnOutline} type="button" onClick={() => handleGenerateInventory('GOODS_ISSUE')} disabled={actualExports >= requiredExportsQty}>
+                            <i className="bi bi-box-arrow-up"></i> {actualExports >= requiredExportsQty ? 'Đã lập đủ xuất' : 'Lập phiếu xuất kho'}
                         </button>
-                        <button className={styles.btnOutline} type="button" onClick={() => handleGenerateInventory('GOODS_RECEIPT')} disabled={linkedExports.length === 0 || linkedImports.length > 0}>
-                            <i className="bi bi-box-arrow-in-down"></i> {linkedImports.length > 0 ? 'Đã lập phiếu nhập' : 'Lập phiếu nhập kho'}
+                        <button className={styles.btnOutline} type="button" onClick={() => handleGenerateInventory('GOODS_RECEIPT')} disabled={actualExports < requiredExportsQty || actualImports >= requiredImportsQty}>
+                            <i className="bi bi-box-arrow-in-down"></i> {actualImports >= requiredImportsQty ? 'Đã lập đủ nhập' : 'Lập phiếu nhập kho'}
                         </button>
-                        <button className="btn-misa-post" style={{ backgroundColor: '#0ea5e9' }} type="button" onClick={(e) => handleSubmit(e, 'SUBMITTED')} disabled={saving || linkedImports.length === 0}>
+                        <button className="btn-misa-post" style={{ backgroundColor: '#0ea5e9' }} type="button" onClick={(e) => handleSubmit(e, 'SUBMITTED')} disabled={disableComplete}>
                             <i className="bi bi-check-circle-fill"></i> Hoàn thành
                         </button>
                     </div>

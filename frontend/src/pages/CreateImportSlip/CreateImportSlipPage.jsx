@@ -238,6 +238,7 @@ function CreateImportSlipPage() {
       const type = p.productType;
       if (importType === 'PURCHASE') return type === 'Hàng hóa';
       if (importType === 'PRODUCTION') return type === 'Thành phẩm';
+      if (importType === 'SCRAP') return type === 'Hàng hóa' || type === 'Thành phẩm';
       return type === 'Hàng hóa' || type === 'Thành phẩm';
     });
   }, [products, importType]);
@@ -256,7 +257,7 @@ function CreateImportSlipPage() {
     form.warehouseId &&
     form.docDate &&
     (importType === 'PURCHASE' ? form.partnerId
-      : importType === 'PRODUCTION' ? form.assemblyOrderId
+      : (importType === 'PRODUCTION' || importType === 'SCRAP') ? form.assemblyOrderId
       : importType === 'RETURN' ? form.customerId
       : true) && // OTHER type has no required partner field
     items.length && items.every(isLineValid)
@@ -323,8 +324,8 @@ function CreateImportSlipPage() {
     issuePurpose: importType,
     recipientName: importType === 'OTHER' ? form.otherObjectName : form.deliverer,
     salespersonId: (!isNaN(Number(form.purchaser)) && String(form.purchaser).trim() !== '') ? Number(form.purchaser) : null,
-    referenceType: importType === 'PRODUCTION' && form.assemblyOrderId ? 'ASSEMBLY_ORDER' : (form.referenceType || undefined),
-    referenceId: importType === 'PRODUCTION' && form.assemblyOrderId ? Number(form.assemblyOrderId) : (form.referenceId || undefined),
+    referenceType: (importType === 'PRODUCTION' || importType === 'SCRAP') && form.assemblyOrderId ? 'ASSEMBLY_ORDER' : (form.referenceType || undefined),
+    referenceId: (importType === 'PRODUCTION' || importType === 'SCRAP') && form.assemblyOrderId ? Number(form.assemblyOrderId) : (form.referenceId || undefined),
   });
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
@@ -375,7 +376,7 @@ function CreateImportSlipPage() {
     if (!isFormValid) {
       if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho nhập.');
       if (importType === 'PURCHASE' && !form.partnerId) return showToast('error', 'Vui lòng chọn nhà cung cấp.');
-      if (importType === 'PRODUCTION' && !form.assemblyOrderId) return showToast('error', 'Vui lòng chọn lệnh quản lý BOM.');
+      if ((importType === 'PRODUCTION' || importType === 'SCRAP') && !form.assemblyOrderId) return showToast('error', 'Vui lòng chọn lệnh quản lý BOM.');
       if (importType === 'RETURN' && !form.customerId) return showToast('error', 'Vui lòng chọn khách hàng.');
       if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày nhập kho.');
       const invalidVat = items.some(item => {
@@ -431,12 +432,14 @@ function CreateImportSlipPage() {
                     { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
                     { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
                     { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
+                    { value: 'SCRAP', label: 'Nhập kho phế phẩm / Thu hồi' },
                     { value: 'OTHER', label: 'Khác' }
                   ].find(o => o.value === importType)}
                   options={[
                     { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
                     { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
                     { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
+                    { value: 'SCRAP', label: 'Nhập kho phế phẩm / Thu hồi' },
                     { value: 'OTHER', label: 'Khác' }
                   ]}
                   onChange={(option) => {
@@ -506,7 +509,7 @@ function CreateImportSlipPage() {
                 </div>
               )}
 
-              {importType === 'PRODUCTION' && (
+              {(importType === 'PRODUCTION' || importType === 'SCRAP') && (
                 <div className="misa-form-row">
                   <div className="misa-form-group" style={{ flex: '0 0 100%' }}>
                     <label className="misa-label">Lệnh sản xuất <span className="required">*</span></label>
