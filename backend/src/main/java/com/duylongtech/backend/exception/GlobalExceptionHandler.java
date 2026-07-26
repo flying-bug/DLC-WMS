@@ -81,8 +81,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolationException(org.springframework.dao.DataIntegrityViolationException ex) {
         log.warn("Data integrity violation: {}", ex.getMessage());
+        String causeMsg = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+        String msg = causeMsg != null ? causeMsg.toLowerCase() : "";
+        if (msg.contains("delete") || msg.contains("foreign key constraint")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("ERR400", "Không thể xóa bản ghi này do dữ liệu đang được liên kết với các bản ghi khác trong hệ thống."));
+        }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("ERR400", "Không thể xóa bản ghi này do dữ liệu đang được liên kết với các bản ghi khác trong hệ thống."));
+                .body(ApiResponse.error("ERR400", "Lỗi ràng buộc dữ liệu: " + causeMsg));
     }
 
     @ExceptionHandler(RuntimeException.class)

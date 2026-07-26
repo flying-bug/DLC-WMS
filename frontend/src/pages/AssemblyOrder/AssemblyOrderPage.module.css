@@ -513,14 +513,16 @@
 }
 
 .bomLineHeader {
-    width: 140px;
+    width: 180px;
     background: var(--color-bg-soft);
     padding: 16px;
     border-right: 1px solid var(--color-border);
     font-weight: 700;
+    font-size: 0.9rem;
     color: var(--color-text-strong);
     display: flex;
     align-items: flex-start;
+    flex-shrink: 0;
 }
 
 .bomLineContent {
@@ -532,8 +534,8 @@
 }
 
 .bomItemImgBox {
-    width: 60px;
-    height: 60px;
+    width: 100px;
+    height: 100px;
     border-radius: 4px;
     border: 1px solid var(--color-border);
     display: flex;
@@ -551,7 +553,7 @@
 }
 
 .bomItemImgBox i {
-    font-size: 20px;
+    font-size: 40px;
     color: #cbd5e1;
 }
 
@@ -566,11 +568,10 @@
 .bomItemTitle {
     font-weight: 700;
     color: var(--color-text-strong);
-    font-size: 0.95rem;
+    font-size: 0.86rem;
     line-height: 1.4;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    word-break: break-word;
 }
 
 .bomItemMeta {
@@ -726,6 +727,7 @@
     border-radius: 6px;
     cursor: pointer;
     font-weight: 500;
+    font-size: 0.86rem;
     text-align: left;
     transition: all 0.2s;
 }
@@ -749,8 +751,8 @@
 }
 
 .variantPickerImg {
-    width: 60px;
-    height: 60px;
+    width: 100px;
+    height: 100px;
     background: #f1f5f9;
     border-radius: 8px;
     display: flex;
@@ -768,7 +770,7 @@
 }
 
 .variantPickerImg i {
-    font-size: 24px;
+    font-size: 40px;
     color: #94a3b8;
 }
 
@@ -781,14 +783,15 @@
 
 .variantPickerTitle {
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: var(--color-text-primary);
+    line-height: 1.4;
 }
 
 .variantPickerPrice {
     font-weight: bold;
     color: #e11d48;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     margin-top: 4px;
 }
 
@@ -800,8 +803,10 @@
 .variantPickerAction button {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
+    gap: 6px;
+    padding: 6px 12px;
     border-radius: 6px;
     font-weight: 600;
+    font-size: 0.85rem;
+    min-height: 32px;
 }

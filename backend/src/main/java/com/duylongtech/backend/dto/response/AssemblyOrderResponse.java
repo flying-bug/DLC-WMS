@@ -20,6 +20,7 @@ public class AssemblyOrderResponse {
     private Long targetVariantId;
     private String targetSku;
     private String targetName;
+    private BigDecimal targetSalePrice;
     private Long warehouseId;
     private BigDecimal quantity;
     private BigDecimal quantityProduced;
@@ -27,7 +28,9 @@ public class AssemblyOrderResponse {
     private LocalDate executionDate;
     private String note;
     private Long createdBy;
+    private String createdByName;
     private Long approvedBy;
+    private String approvedByName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<AssemblyOrderLineResponse> lines;

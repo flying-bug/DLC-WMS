@@ -11,11 +11,12 @@ const STATUS_OPTIONS = [
 const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onError, parentOptions = [] }) => {
     const isEditMode = !!editData;
 
-    const [form, setForm] = useState({ 
+    const [form, setForm] = useState({
         parentId: '',
         code: '',
-        name: '', 
-        status: 'APPROVED' 
+        name: '',
+        status: 'APPROVED',
+        description: ''
     });
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
@@ -30,9 +31,10 @@ const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onErr
                 code: editData.code || '',
                 name: editData.name || '',
                 status: editData.status || 'APPROVED',
+                description: editData.description || '',
             });
         } else {
-            setForm({ parentId: '', code: '', name: '', status: 'APPROVED' });
+            setForm({ parentId: '', code: '', name: '', status: 'APPROVED', description: '' });
         }
         setErrors({});
     }, [isOpen, editData, isEditMode]);
@@ -76,6 +78,7 @@ const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onErr
                 code: cleanString(form.code),
                 name: cleanString(form.name),
                 status: form.status,
+                description: cleanString(form.description),
             };
 
             if (isEditMode) {
@@ -130,17 +133,17 @@ const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onErr
                         <span>{apiError}</span>
                     </div>
                 )}
-                
+
                 <div className={styles.formGrid}>
                     <div className={`${styles.formGroup} ${styles.col6}`}>
                         <label className={styles.formLabel}>Mã danh mục <span className={styles.required}>*</span></label>
-                        <input 
-                            type="text" 
-                            className={`${styles.input} ${errors.code ? styles.inputError : ''}`} 
+                        <input
+                            type="text"
+                            className={`${styles.input} ${errors.code ? styles.inputError : ''}`}
                             name="code"
                             value={form.code}
                             onChange={handleChange}
-                            placeholder="Ví dụ: CPU..." 
+                            placeholder="Ví dụ: CPU..."
                             maxLength={50}
                             autoFocus
                         />
@@ -149,13 +152,13 @@ const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onErr
 
                     <div className={`${styles.formGroup} ${styles.col6}`}>
                         <label className={styles.formLabel}>Tên danh mục <span className={styles.required}>*</span></label>
-                        <input 
-                            type="text" 
-                            className={`${styles.input} ${errors.name ? styles.inputError : ''}`} 
+                        <input
+                            type="text"
+                            className={`${styles.input} ${errors.name ? styles.inputError : ''}`}
                             name="name"
                             value={form.name}
                             onChange={handleChange}
-                            placeholder="Ví dụ: Bộ vi xử lý..." 
+                            placeholder="Ví dụ: Bộ vi xử lý..."
                             maxLength={100}
                         />
                         {errors.name && <span className={styles.errorMsg}>{errors.name}</span>}
@@ -163,8 +166,8 @@ const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onErr
 
                     <div className={`${styles.formGroup} ${styles.col6}`}>
                         <label className={styles.formLabel}>Danh mục cha</label>
-                        <select 
-                            className={styles.select} 
+                        <select
+                            className={styles.select}
                             name="parentId"
                             value={form.parentId}
                             onChange={handleChange}
@@ -178,8 +181,8 @@ const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onErr
 
                     <div className={`${styles.formGroup} ${styles.col6}`}>
                         <label className={styles.formLabel}>Trạng thái</label>
-                        <select 
-                            className={styles.select} 
+                        <select
+                            className={styles.select}
                             name="status"
                             value={form.status}
                             onChange={handleChange}
@@ -188,6 +191,18 @@ const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onErr
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                         </select>
+                    </div>
+
+                    <div className={`${styles.formGroup} ${styles.col12}`}>
+                        <label className={styles.formLabel}>Mô tả</label>
+                        <textarea
+                            className={styles.input}
+                            name="description"
+                            value={form.description}
+                            onChange={handleChange}
+                            placeholder="Nhập mô tả danh mục..."
+                            style={{ minHeight: '80px', resize: 'vertical', padding: '12px' }}
+                        />
                     </div>
                 </div>
             </div>

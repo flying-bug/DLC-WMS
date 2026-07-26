@@ -17,14 +17,14 @@ const ProductCategoryPage = () => {
     const [categories, setCategories] = useState([]);
     const [parentOptions, setParentOptions] = useState([]);
     const [loading, setLoading] = useState(false);
-    
+
     // Filters and Pagination
     const [filters, setFilters] = useState({ search: '', status: '' });
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
-    
+
     // Modals & Toast
     const [modalConfig, setModalConfig] = useState({ isOpen: false, data: null });
     const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
@@ -51,15 +51,15 @@ const ProductCategoryPage = () => {
             };
             if (filters.search) params.search = filters.search;
             if (filters.status) params.status = filters.status; // Currently API doesn't filter by status, but we send it anyway
-            
+
             const res = await axiosClient.get('/product-categories', { params });
             let data = res.data.content || [];
-            
+
             // Client-side fallback filter for status if API doesn't support it
             if (filters.status) {
                 data = data.filter(c => c.status === filters.status);
             }
-            
+
             setCategories(data);
             setTotalPages(res.data.totalPages || 1);
             setTotalElements(res.data.totalElements || data.length);
@@ -116,11 +116,11 @@ const ProductCategoryPage = () => {
     const handleToggleStatus = async (item) => {
         const newStatus = item.status === 'APPROVED' ? 'INACTIVE' : 'APPROVED';
         try {
-            await axiosClient.put(`/product-categories/` + item.id, { 
+            await axiosClient.put(`/product-categories/` + item.id, {
                 parentId: item.parentId || null,
                 code: item.code,
                 name: item.name,
-                status: newStatus 
+                status: newStatus
             });
             showToast('success', 'Cập nhật trạng thái thành công!');
             fetchCategories();
@@ -252,6 +252,7 @@ const ProductCategoryPage = () => {
                             <tr>
                                 <th style={{ width: '160px' }}>Mã Danh Mục</th>
                                 <th style={{ minWidth: '220px' }}>Tên Danh Mục</th>
+                                <th style={{ minWidth: '200px' }}>Mô Tả</th>
                                 <th style={{ minWidth: '200px' }}>Danh Mục Cha</th>
                                 <th style={{ width: '140px' }}>Trạng Thái</th>
                                 <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
@@ -281,6 +282,11 @@ const ProductCategoryPage = () => {
                                         </td>
                                         <td style={{ fontWeight: 600 }}>{item.name}</td>
                                         <td>
+                                            <span className={styles.noteText} style={{ whiteSpace: 'pre-wrap' }}>
+                                                {item.description || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>---</span>}
+                                            </span>
+                                        </td>
+                                        <td>
                                             <span className={styles.noteText}>
                                                 {item.parentName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Không có</span>}
                                             </span>
@@ -291,31 +297,31 @@ const ProductCategoryPage = () => {
                                             </span>
                                         </td>
                                         <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
-                                            <i 
-                                                className="bi bi-pencil" 
-                                                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }} 
-                                                title="Chỉnh sửa" 
+                                            <i
+                                                className="bi bi-pencil"
+                                                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }}
+                                                title="Chỉnh sửa"
                                                 onClick={(e) => handleEditClick(e, item)}
                                             ></i>
                                             {item.status === 'APPROVED' ? (
-                                                <i 
-                                                    className="bi bi-slash-circle" 
-                                                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
-                                                    title="Vô hiệu hoá" 
+                                                <i
+                                                    className="bi bi-slash-circle"
+                                                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }}
+                                                    title="Vô hiệu hoá"
                                                     onClick={() => handleToggleStatus(item)}
                                                 ></i>
                                             ) : (
-                                                <i 
-                                                    className="bi bi-check2-circle" 
-                                                    style={{ cursor: 'pointer', color: 'var(--color-success)', fontSize: '16px', marginRight: '12px' }} 
-                                                    title="Kích hoạt" 
+                                                <i
+                                                    className="bi bi-check2-circle"
+                                                    style={{ cursor: 'pointer', color: 'var(--color-success)', fontSize: '16px', marginRight: '12px' }}
+                                                    title="Kích hoạt"
                                                     onClick={() => handleToggleStatus(item)}
                                                 ></i>
                                             )}
-                                            <i 
-                                                className="bi bi-trash" 
-                                                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }} 
-                                                title="Xóa danh mục" 
+                                            <i
+                                                className="bi bi-trash"
+                                                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }}
+                                                title="Xóa danh mục"
                                                 onClick={(e) => handleDeleteClick(e, item)}
                                             ></i>
                                         </td>
@@ -403,7 +409,7 @@ const ProductCategoryPage = () => {
             </div>
 
             {modalConfig.isOpen && (
-                <ProductCategoryModal 
+                <ProductCategoryModal
                     isOpen={modalConfig.isOpen}
                     onClose={() => setModalConfig({ isOpen: false, data: null })}
                     onSaved={onModalSave}
@@ -413,7 +419,7 @@ const ProductCategoryPage = () => {
                 />
             )}
 
-            <ConfirmModal 
+            <ConfirmModal
                 isOpen={deleteConfirm.isOpen}
                 onClose={() => setDeleteConfirm({ isOpen: false, category: null })}
                 onConfirm={executeDelete}
@@ -424,7 +430,7 @@ const ProductCategoryPage = () => {
             />
 
             {toast.isVisible && (
-                <Toast 
+                <Toast
                     type={toast.type}
                     message={toast.message}
                     onClose={hideToast}

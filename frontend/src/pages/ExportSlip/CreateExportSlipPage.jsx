@@ -109,9 +109,12 @@ function CreateExportSlipPage({ mode: propMode }) {
   const [showAssemblyModal, setShowAssemblyModal] = useState(false);
   const [selectedAssemblyOrder, setSelectedAssemblyOrder] = useState(null);
 
+  const assemblyData = location.state?.assemblyData || null;
+  const returnUrl = location.state?.returnUrl || null;
+
   const [form, setForm] = useState(() => ({
     docCode: exportMode === 'USAGE' ? `XKSD-${Date.now()}` : exportMode === 'ASSEMBLY' ? `XKLR-${Date.now()}` : `EXP-${Date.now()}`,
-    warehouseId: '',
+    warehouseId: assemblyData?.warehouseId || '',
     partnerId: '',
     salespersonId: '',
     customerAddress: '',
@@ -119,14 +122,25 @@ function CreateExportSlipPage({ mode: propMode }) {
     receiverPhone: '',
     receiverAddress: '',
     docDate: today(),
-    note: '',
-    referenceType: '',
-    referenceId: '',
-    referenceCode: '',
+    note: assemblyData ? `Xuất linh kiện phục vụ Lệnh lắp ráp/tháo dỡ ${assemblyData.code}` : '',
+    referenceType: assemblyData ? 'ASSEMBLY_ORDER' : '',
+    referenceId: assemblyData ? assemblyData.id : '',
+    referenceCode: assemblyData ? assemblyData.code : '',
     attachedDocs: '',
   }));
 
-  const [items, setItems] = useState([{ ...emptyLine(), isNew: false }]);
+  const [items, setItems] = useState(() => {
+    if (assemblyData && assemblyData.lines && assemblyData.lines.length > 0) {
+      return assemblyData.lines.map(comp => ({
+        ...emptyLine(),
+        variantId: String(comp.variantId || comp.id),
+        quantity: comp.quantity || 1,
+        price: comp.price || 0,
+        note: `BOM cho Lệnh ${assemblyData.code}`,
+      }));
+    }
+    return [{ ...emptyLine(), isNew: false }];
+  });
   const [inventoryBalances, setInventoryBalances] = useState([]);
   const [showReferenceModal, setShowReferenceModal] = useState(false);
 
@@ -390,13 +404,13 @@ function CreateExportSlipPage({ mode: propMode }) {
 
     let hasOutOfStock = false;
     for (const item of items) {
-      const product = productById.get(String(item.variantId));
-      if (product) {
-        const balance = inventoryBalances.find(b => String(b.itemCode) === String(product.productCode) || String(b.itemCode) === String(product.sku))?.totalQuantity || 0;
-        if (Number(item.quantity) > balance) {
-          hasOutOfStock = true;
-          break;
-        }
+        const product = productById.get(String(item.variantId));
+        if (product) {
+          const balance = inventoryBalances.find(b => String(b.variantId) === String(product.id) || String(b.itemCode) === String(product.productCode) || String(b.itemCode) === String(product.sku))?.totalQuantity || 0;
+          if (Number(item.quantity) > balance) {
+            hasOutOfStock = true;
+            break;
+          }
       }
     }
 
@@ -410,12 +424,18 @@ function CreateExportSlipPage({ mode: propMode }) {
       }
 
       const msgSuffix = hasOutOfStock ? ' (Lưu ý: Có sản phẩm xuất vượt tồn kho)' : '';
-      navigate('/export-slips', {
-        state: {
-          toastMessage: (shouldPost ? 'Lưu và ghi sổ phiếu xuất kho thành công!' : 'Lưu tạm phiếu xuất kho thành công!') + msgSuffix,
-          toastType: hasOutOfStock ? 'warning' : 'success'
-        }
-      });
+      
+      if (returnUrl) {
+          showToast(hasOutOfStock ? 'warning' : 'success', (shouldPost ? 'Lưu và ghi sổ phiếu xuất kho thành công!' : 'Lưu tạm phiếu xuất kho thành công!') + msgSuffix);
+          setTimeout(() => navigate(returnUrl), 1000);
+      } else {
+          navigate('/export-slips', {
+            state: {
+              toastMessage: (shouldPost ? 'Lưu và ghi sổ phiếu xuất kho thành công!' : 'Lưu tạm phiếu xuất kho thành công!') + msgSuffix,
+              toastType: hasOutOfStock ? 'warning' : 'success'
+            }
+          });
+      }
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || err.message || 'Không lưu được phiếu xuất kho');
     } finally {
@@ -427,9 +447,10 @@ function CreateExportSlipPage({ mode: propMode }) {
     <AdminLayout>
       <div className={styles.pageHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/export-slips'); }}>
-            <i className="bi bi-arrow-left"></i> Tạo phiếu xuất kho {form.docCode ? form.docCode : ''}
+          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/export-slips'); }}>
+            <i className="bi bi-arrow-left"></i> Quay lại
           </a>
+          <span style={{ fontWeight: 600, fontSize: '18px' }}>Tạo phiếu xuất kho {form.docCode ? form.docCode : ''}</span>
           <span style={{ color: '#d1d5db', fontSize: '20px' }}>|</span>
           <div style={{ width: '280px' }}>
             <Select
@@ -546,7 +567,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                         type="text"
                         className="misa-input"
                         readOnly
-                        value={selectedAssemblyOrder?.orderCode || ''}
+                        value={selectedAssemblyOrder?.orderCode || form.referenceCode || ''}
                         placeholder="Nhấn biểu tượng bên cạnh để chọn lệnh..."
                         style={{ flex: 1, backgroundColor: '#f3f4f6', cursor: 'pointer' }}
                         onClick={() => setShowAssemblyModal(true)}
@@ -743,7 +764,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                         {product?.unitName || 'Cái'}
                       </td>
                       <td className={styles.textCenter} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>
-                        {product ? (inventoryBalances.find(b => String(b.itemCode) === String(product?.productCode) || String(b.itemCode) === String(product?.sku))?.totalQuantity || 0) : ''}
+                        {product ? (inventoryBalances.find(b => String(b.variantId) === String(product?.id) || String(b.itemCode) === String(product?.productCode) || String(b.itemCode) === String(product?.sku))?.totalQuantity || 0) : ''}
                       </td>
                       <td className={styles.textRight}>
                         <input type="number" min="1" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />

@@ -58,17 +58,18 @@ public class InventoryDocumentService {
     // Phân loại phiếu xuất kho thủ công (do người dùng tạo)
     public static final String ISSUE_PURPOSE_SALES = "SALES"; // Xuất kho bán hàng — tự sinh bảo hành
     public static final String ISSUE_PURPOSE_USAGE = "USAGE"; // Xuất kho sử dụng nội bộ — không sinh bảo hành
+    public static final String ISSUE_PURPOSE_ASSEMBLY = "ASSEMBLY"; // Xuất kho lắp ráp/tháo dỡ
 
     // Phân loại phiếu xuất/nhập kho tự động từ module Chuyển kho
     public static final String ISSUE_PURPOSE_TRANSFER_OUT = "TRANSFER_EXPORT"; // Xuất kho chuyển đi
     public static final String ISSUE_PURPOSE_TRANSFER_IN = "TRANSFER_IMPORT"; // Nhập kho từ chuyển về
 
     // Tập hợp các mục đích hợp lệ khi người dùng tạo phiếu xuất thủ công
-    private static final Set<String> VALID_MANUAL_EXPORT_PURPOSES = Set.of(ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE);
+    private static final Set<String> VALID_MANUAL_EXPORT_PURPOSES = Set.of(ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE, ISSUE_PURPOSE_ASSEMBLY);
 
     // Tập hợp các mục đích hợp lệ toàn bộ (bắt cả nội bộ và người dùng)
     private static final Set<String> VALID_ALL_EXPORT_PURPOSES = Set.of(
-            ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE, ISSUE_PURPOSE_TRANSFER_OUT);
+            ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE, ISSUE_PURPOSE_ASSEMBLY, ISSUE_PURPOSE_TRANSFER_OUT);
 
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
@@ -122,15 +123,16 @@ public class InventoryDocumentService {
 
     @Transactional(readOnly = true)
     public List<InventoryDocumentResponse> getImportHistory(String docCode, LocalDate fromDate, LocalDate toDate,
-            String status, Long warehouseId) {
+            String status, Long warehouseId, String referenceType, Long referenceId) {
         String normalizedDocCode = trimToNull(docCode);
         String normalizedStatus = normalizeOptionalStatus(status);
+        String normalizedReferenceType = normalizeOptionalReference(referenceType);
         boolean noFilters = normalizedDocCode == null && fromDate == null && toDate == null && normalizedStatus == null
-                && warehouseId == null;
+                && warehouseId == null && normalizedReferenceType == null && referenceId == null;
         List<InventoryDocument> docs = noFilters
                 ? inventoryDocumentRepository.findAllImports()
                 : inventoryDocumentRepository.searchImports(normalizedDocCode, fromDate, toDate, normalizedStatus,
-                        warehouseId);
+                        warehouseId, normalizedReferenceType, referenceId);
         return docs.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
@@ -348,7 +350,7 @@ public class InventoryDocumentService {
             // (bao gồm cả TRANSFER_EXPORT được dùng nội bộ bởi module Chuyển kho)
             if (!VALID_ALL_EXPORT_PURPOSES.contains(issuePurpose)) {
                 throw new BusinessException(
-                        "Mục đích xuất kho không hợp lệ. Chỉ chấp nhận: SALES (Bán hàng) hoặc USAGE (Xuất sử dụng)");
+                        "Mục đích xuất kho không hợp lệ. Chỉ chấp nhận: SALES (Bán hàng), USAGE (Xuất sử dụng) hoặc ASSEMBLY (Xuất lắp ráp)");
             }
         }
 
@@ -386,7 +388,7 @@ public class InventoryDocumentService {
             // Khi cập nhật phiếu, cũng chỉ cho phép 2 mục đích thủ công
             if (!VALID_MANUAL_EXPORT_PURPOSES.contains(issuePurpose)) {
                 throw new BusinessException(
-                        "Mục đích xuất kho không hợp lệ. Chỉ chấp nhận: SALES (Bán hàng) hoặc USAGE (Xuất sử dụng)");
+                        "Mục đích xuất kho không hợp lệ. Chỉ chấp nhận: SALES (Bán hàng), USAGE (Xuất sử dụng) hoặc ASSEMBLY (Xuất lắp ráp)");
             }
         }
 

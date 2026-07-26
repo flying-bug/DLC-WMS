@@ -35,7 +35,7 @@ public class AssemblyOrderService {
     private static final Set<String> VALID_TYPES = Set.of(ASSEMBLY, DISASSEMBLY);
     private static final Set<String> VALID_BOM_STATUSES = Set.of("DRAFT", "APPROVED", "INACTIVE");
     private static final Set<String> VALID_STATUSES = Set.of("DRAFT", "SUBMITTED", "APPROVED", "POSTED", "CANCELLED");
-    private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "SUBMITTED");
+    private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "APPROVED");
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
     private final AssemblyBomRepository assemblyBomRepository;
@@ -44,6 +44,7 @@ public class AssemblyOrderService {
     private final ProductVariantRepository productVariantRepository;
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryDocumentService inventoryDocumentService;
+    private final com.duylongtech.backend.repository.UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public List<AssemblyBomResponse> getBoms(String status, Long productId) {
@@ -179,8 +180,8 @@ public class AssemblyOrderService {
     @Transactional
     public void generateInventoryDocument(Long id, com.duylongtech.backend.dto.request.GenerateInventoryDocumentRequest request, String actor) {
         AssemblyOrder order = findOrderOrThrow(id);
-        if (!"APPROVED".equals(order.getStatus())) {
-            throw new BusinessException("Chỉ có thể tạo phiếu kho cho lệnh đã APPROVED");
+        if (!"SUBMITTED".equals(order.getStatus()) && !"APPROVED".equals(order.getStatus())) {
+            throw new BusinessException("Chỉ có thể tạo phiếu kho cho lệnh đã hoàn thành hoặc được duyệt");
         }
         
         com.duylongtech.backend.dto.request.InventoryDocumentRequest docReq = new com.duylongtech.backend.dto.request.InventoryDocumentRequest();
@@ -519,6 +520,14 @@ public class AssemblyOrderService {
     private AssemblyOrderResponse toOrderResponse(AssemblyOrder order) {
         AssemblyBom bom = order.getBom();
         ProductVariant target = order.getTargetVariant();
+        
+        String createdByName = null;
+        if (order.getCreatedBy() != null) {
+            createdByName = userRepository.findById(order.getCreatedBy())
+                    .map(com.duylongtech.backend.entity.User::getFullName)
+                    .orElse(String.valueOf(order.getCreatedBy()));
+        }
+        
         return AssemblyOrderResponse.builder()
                 .id(order.getId())
                 .orderCode(order.getOrderCode())
@@ -529,12 +538,14 @@ public class AssemblyOrderService {
                 .targetVariantId(target != null ? target.getId() : null)
                 .targetSku(target != null ? target.getSku() : null)
                 .targetName(variantName(target))
+                .targetSalePrice(target != null ? target.getSalePrice() : null)
                 .warehouseId(order.getWarehouseId())
                 .quantity(order.getQuantity())
                 .status(order.getStatus())
                 .executionDate(order.getExecutionDate())
                 .note(order.getNote())
                 .createdBy(order.getCreatedBy())
+                .createdByName(createdByName)
                 .approvedBy(order.getApprovedBy())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
@@ -554,6 +565,7 @@ public class AssemblyOrderService {
                 .quantityRequired(line.getQuantityRequired())
                 .quantityActual(line.getQuantityActual())
                 .unitCost(line.getUnitCost())
+                .salePrice(variant != null ? variant.getSalePrice() : null)
                 .note(line.getNote())
                 .build();
     }
@@ -563,9 +575,15 @@ public class AssemblyOrderService {
             return null;
         }
         Product product = variant.getProduct();
-        if (product != null && product.getProductName() != null) {
-            return product.getProductName() + " - " + variant.getVariantName();
+        String prodName = product != null ? product.getProductName() : null;
+        String varName = variant.getVariantName();
+        
+        if (prodName != null) {
+            if (varName == null || varName.isEmpty() || prodName.equals(varName)) {
+                return prodName;
+            }
+            return prodName + " - " + varName;
         }
-        return variant.getVariantName();
+        return varName;
     }
 }
