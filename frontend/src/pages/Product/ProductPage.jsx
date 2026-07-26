@@ -394,6 +394,20 @@ const ProductPage = () => {
             minStockQty: Number(product.minStockQty || 0)
         }));
 
+        if (product.warrantyPeriod) {
+            const parts = product.warrantyPeriod.split(' ');
+            if (parts.length >= 2) {
+                setWarrantyQty(Number(parts[0]) || 0);
+                setWarrantyUnit(parts[1]);
+            } else {
+                setWarrantyQty(product.warrantyPeriodMonths || 0);
+                setWarrantyUnit('Tháng');
+            }
+        } else {
+            setWarrantyQty(product.warrantyPeriodMonths || 0);
+            setWarrantyUnit('Tháng');
+        }
+
         let loadedBomLines = product.bomLines || [];
         if (product.productType === 'Thành phẩm') {
             if (product.bomTemplate) {
@@ -432,6 +446,21 @@ const ProductPage = () => {
             isAssembly: Boolean(product.isAssembly),
             active: product.active !== false
         }));
+
+        if (product.warrantyPeriod) {
+            const parts = product.warrantyPeriod.split(' ');
+            if (parts.length >= 2) {
+                setWarrantyQty(Number(parts[0]) || 0);
+                setWarrantyUnit(parts[1]);
+            } else {
+                setWarrantyQty(product.warrantyPeriodMonths || 0);
+                setWarrantyUnit('Tháng');
+            }
+        } else {
+            setWarrantyQty(product.warrantyPeriodMonths || 0);
+            setWarrantyUnit('Tháng');
+        }
+
         setErrorMsg('');
         setShowModal(true);
         setOpenDropdownId(null);
@@ -465,6 +494,8 @@ const ProductPage = () => {
                 note: line.note || ''
             })) : [],
             minStockQty: Number(data.minStockQty || 0),
+            warrantyPeriod: warrantyQty > 0 ? `${warrantyQty} ${warrantyUnit}` : null,
+            warrantyPeriodMonths: warrantyQty > 0 ? (warrantyUnit === 'Năm' ? warrantyQty * 12 : warrantyQty) : 0,
             unitConversions: unitConversions.filter(uc => uc.unitId).map(uc => ({
                 unitId: Number(uc.unitId),
                 operator: uc.operator || 'DIVIDE',

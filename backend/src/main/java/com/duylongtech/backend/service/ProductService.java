@@ -143,6 +143,9 @@ public class ProductService {
             product.setStockValue(dto.getStockValue());
         }
 
+        product.setWarrantyPeriod(dto.getWarrantyPeriod());
+        product.setWarrantyPeriodMonths(dto.getWarrantyPeriodMonths());
+
         // Cập nhật quan hệ
         updateRelations(product, dto);
 
@@ -317,6 +320,7 @@ public class ProductService {
                 .manufacturerPartNumber(trimToNull(request.getManufacturerPartNumber()))
                 .specsJson(trimToNull(request.getSpecsJson()))
                 .active(request.getActive() != null ? request.getActive() : true)
+                .warrantyMonths(request.getWarrantyMonths())
                 .build();
         return convertVariantToDto(productVariantRepository.save(variant));
     }
@@ -356,6 +360,7 @@ public class ProductService {
         variant.setManufacturerPartNumber(trimToNull(request.getManufacturerPartNumber()));
         variant.setSpecsJson(trimToNull(request.getSpecsJson()));
         variant.setActive(request.getActive() != null ? request.getActive() : true);
+        variant.setWarrantyMonths(request.getWarrantyMonths());
         return convertVariantToDto(productVariantRepository.save(variant));
     }
 
@@ -498,6 +503,8 @@ public class ProductService {
                 .stockValue(dto.getStockValue() != null ? dto.getStockValue() : BigDecimal.ZERO)
                 .imageUrl(dto.getImageUrl())
                 .bomTemplate(dto.getBomTemplate())
+                .warrantyPeriod(dto.getWarrantyPeriod())
+                .warrantyPeriodMonths(dto.getWarrantyPeriodMonths())
                 .build();
 
         updateRelations(product, dto);
@@ -557,6 +564,8 @@ public class ProductService {
                 .stockValue(product.getStockValue())
                 .imageUrl(product.getImageUrl())
                 .bomTemplate(product.getBomTemplate())
+                .warrantyPeriod(product.getWarrantyPeriod())
+                .warrantyPeriodMonths(product.getWarrantyPeriodMonths())
                 .brandId(product.getBrand() != null ? product.getBrand().getId() : null)
                 .brandName(product.getBrand() != null ? product.getBrand().getName() : null)
                 .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
