@@ -592,6 +592,7 @@
 .detailItem strong { font-size: 14px; color: #333; }
 .badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; display: inline-block; white-space: nowrap; }
 .badgeSuccess { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.badgePrimary { background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .badgeInfo { background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
 .badgeWarning { background-color: #fef9c3; color: #a16207; border: 1px solid #fef08a; }
 .badgeDanger { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }

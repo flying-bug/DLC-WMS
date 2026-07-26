@@ -354,6 +354,12 @@
   border: 1px solid var(--status-success-border);
 }
 
+.badgePrimary {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
 .badgeInfo {
   background-color: var(--color-info-bg);
   color: var(--color-primary);

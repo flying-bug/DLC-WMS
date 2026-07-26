@@ -567,7 +567,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                         type="text"
                         className="misa-input"
                         readOnly
-                        value={selectedAssemblyOrder?.orderCode || ''}
+                        value={selectedAssemblyOrder?.orderCode || form.referenceCode || ''}
                         placeholder="Nhấn biểu tượng bên cạnh để chọn lệnh..."
                         style={{ flex: 1, backgroundColor: '#f3f4f6', cursor: 'pointer' }}
                         onClick={() => setShowAssemblyModal(true)}

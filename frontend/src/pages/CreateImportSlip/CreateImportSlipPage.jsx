@@ -515,7 +515,7 @@ function CreateImportSlipPage() {
                         type="text"
                         className="misa-input"
                         readOnly
-                        value={assemblyOrders.find(o => String(o.id) === String(form.assemblyOrderId))?.orderCode || ''}
+                        value={assemblyOrders.find(o => String(o.id) === String(form.assemblyOrderId))?.orderCode || form.referenceCode || ''}
                         placeholder="Nhấn biểu tượng bên cạnh để chọn lệnh..."
                         style={{ flex: 1, backgroundColor: '#f3f4f6', cursor: 'pointer' }}
                         onClick={() => setShowAssemblyOrderModal(true)}
@@ -891,7 +891,7 @@ function CreateImportSlipPage() {
         isOpen={showAssemblyOrderModal}
         onClose={() => setShowAssemblyOrderModal(false)}
         onSelect={(assemblyOrder) => {
-          setForm(prev => ({ ...prev, assemblyOrderId: assemblyOrder.id }));
+          setForm(prev => ({ ...prev, assemblyOrderId: assemblyOrder.id, referenceCode: assemblyOrder.orderCode }));
           setShowAssemblyOrderModal(false);
         }}
         assemblyOrders={assemblyOrders}

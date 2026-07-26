@@ -8,7 +8,7 @@ import styles from './AssemblyOrderListPage.module.css';
 
 const STATUS_META = {
     DRAFT: { label: 'Lưu tạm', code: 'info' },
-    APPROVED: { label: 'Đã duyệt (Chờ thực hiện)', code: 'primary' },
+    APPROVED: { label: 'Đã duyệt', code: 'primary' },
     SUBMITTED: { label: 'Hoàn thành', code: 'success' },
     CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
@@ -33,17 +33,17 @@ const formatDate = (value) => (value ? new Date(value).toLocaleDateString('vi-VN
 
 function AssemblyOrderListPage() {
     const navigate = useNavigate();
-    
+
     // Data states
     const [orders, setOrders] = useState([]);
     const [warehouses, setWarehouses] = useState([]);
     const [loading, setLoading] = useState(false);
-    
+
     // Filters and Pagination
     const [filters, setFilters] = useState(DEFAULT_FILTERS);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    
+
     // Toast
     const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
 
@@ -217,7 +217,7 @@ function AssemblyOrderListPage() {
                             />
                         </div>
                     </div>
-                    
+
                     <div className={styles.filterActions}>
                         <button className={styles.btnOutline} onClick={() => { setFilters(DEFAULT_FILTERS); setPage(1); }}>
                             Làm mới
@@ -275,22 +275,22 @@ function AssemblyOrderListPage() {
                                                 </span>
                                             </td>
                                             <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
-                                                <i 
-                                                    className="bi bi-eye" 
-                                                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
-                                                    title="Xem chi tiết" 
+                                                <i
+                                                    className="bi bi-eye"
+                                                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }}
+                                                    title="Xem chi tiết"
                                                     onClick={(e) => { e.stopPropagation(); navigate(`/assembly-orders/${item.id}?mode=view`); }}
                                                 ></i>
-                                                <i 
-                                                    className="bi bi-pencil" 
-                                                    style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} 
-                                                    title="Cập nhật lệnh" 
-                                                    onClick={(e) => { 
-                                                        e.stopPropagation(); 
+                                                <i
+                                                    className="bi bi-pencil"
+                                                    style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }}
+                                                    title="Cập nhật lệnh"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         if (item.status === 'SUBMITTED') {
                                                             showToast('error', 'Lệnh đã hoàn thành không được phép chỉnh sửa.');
                                                         } else {
-                                                            navigate(`/assembly-orders/${item.id}?mode=edit`); 
+                                                            navigate(`/assembly-orders/${item.id}?mode=edit`);
                                                         }
                                                     }}
                                                 ></i>
