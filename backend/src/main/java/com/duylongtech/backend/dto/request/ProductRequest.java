@@ -43,4 +43,6 @@ public class ProductRequest {
     private BigDecimal stockValue;
     private String imageUrl;
     private String bomTemplate;
+    private String warrantyPeriod;
+    private Integer warrantyPeriodMonths;
 }
