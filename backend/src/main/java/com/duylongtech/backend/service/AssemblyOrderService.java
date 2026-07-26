@@ -44,6 +44,7 @@ public class AssemblyOrderService {
     private final ProductVariantRepository productVariantRepository;
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryDocumentService inventoryDocumentService;
+    private final com.duylongtech.backend.repository.UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public List<AssemblyBomResponse> getBoms(String status, Long productId) {
@@ -519,6 +520,14 @@ public class AssemblyOrderService {
     private AssemblyOrderResponse toOrderResponse(AssemblyOrder order) {
         AssemblyBom bom = order.getBom();
         ProductVariant target = order.getTargetVariant();
+        
+        String createdByName = null;
+        if (order.getCreatedBy() != null) {
+            createdByName = userRepository.findById(order.getCreatedBy())
+                    .map(com.duylongtech.backend.entity.User::getFullName)
+                    .orElse(String.valueOf(order.getCreatedBy()));
+        }
+        
         return AssemblyOrderResponse.builder()
                 .id(order.getId())
                 .orderCode(order.getOrderCode())
@@ -536,6 +545,7 @@ public class AssemblyOrderService {
                 .executionDate(order.getExecutionDate())
                 .note(order.getNote())
                 .createdBy(order.getCreatedBy())
+                .createdByName(createdByName)
                 .approvedBy(order.getApprovedBy())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
@@ -565,9 +575,15 @@ public class AssemblyOrderService {
             return null;
         }
         Product product = variant.getProduct();
-        if (product != null && product.getProductName() != null) {
-            return product.getProductName() + " - " + variant.getVariantName();
+        String prodName = product != null ? product.getProductName() : null;
+        String varName = variant.getVariantName();
+        
+        if (prodName != null) {
+            if (varName == null || varName.isEmpty() || prodName.equals(varName)) {
+                return prodName;
+            }
+            return prodName + " - " + varName;
         }
-        return variant.getVariantName();
+        return varName;
     }
 }
