@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 public class ProductCategoryRequest {
     private Long parentId;
 
-    @NotBlank(message = "FIELD_REQUIRED")
     private String code;
 
     @NotBlank(message = "FIELD_REQUIRED")

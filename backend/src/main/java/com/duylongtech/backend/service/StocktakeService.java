@@ -173,7 +173,7 @@ public class StocktakeService {
     private String resolveDocCode(String requestedCode) {
         String docCode = requestedCode != null && !requestedCode.trim().isEmpty() ? requestedCode.trim() : null;
         if (docCode == null) {
-            docCode = codeGeneratorService.generateCode("STOCKTAKES", "stocktake_code", "KK", 6);
+            docCode = codeGeneratorService.generateCode("stocktakes", "stocktake_code", "KK", 6);
         }
         if (stocktakeRepository.existsByStocktakeCode(docCode)) {
             throw new BusinessException("Mã kiểm kê đã tồn tại: " + docCode);

@@ -95,7 +95,7 @@ public class ProductService {
     @Transactional
     public ProductResponse createProduct(ProductRequest dto) {
         if (dto.getProductCode() == null || dto.getProductCode().isBlank()) {
-            dto.setProductCode(codeGeneratorService.generateCode("PRODUCTS", "product_code", "SP", 5));
+            dto.setProductCode(codeGeneratorService.generateCode("products", "product_code", "SP", 5));
         }
         if (productRepository.findByProductCode(dto.getProductCode()).isPresent()) {
             throw new BusinessException("Mã hàng hóa '" + dto.getProductCode() + "' đã tồn tại.");

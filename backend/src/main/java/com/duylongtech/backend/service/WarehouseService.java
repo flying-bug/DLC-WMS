@@ -46,7 +46,7 @@ public class WarehouseService {
     @Transactional
     public WarehouseResponse createWarehouse(WarehouseRequest request, Long currentUserId) {
         if (request.getCode() == null || request.getCode().isBlank()) {
-            request.setCode(codeGeneratorService.generateCode("WAREHOUSES", "code", "KHO", 3));
+            request.setCode(codeGeneratorService.generateCode("warehouses", "code", "KHO", 3));
         }
         // Kiểm tra mã kho trùng (case-insensitive)
         if (warehouseRepository.existsByCodeIgnoreCase(request.getCode())) {

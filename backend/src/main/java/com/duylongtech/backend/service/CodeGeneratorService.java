@@ -25,20 +25,32 @@ public class CodeGeneratorService {
     @Transactional(readOnly = true)
     public String generateCode(String tableName, String columnName, String prefix, int padding) {
         String sql = String.format(
-                "SELECT MAX(CAST(SUBSTRING(%s, %d) AS UNSIGNED)) FROM %s WHERE %s LIKE :prefixLike",
-                columnName, prefix.length() + 1, tableName, columnName
+                "SELECT %s FROM %s WHERE %s LIKE :prefixLike",
+                columnName.toLowerCase(), tableName.toLowerCase(), columnName.toLowerCase()
         );
 
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("prefixLike", prefix + "%");
 
-        Number maxNumber = (Number) query.getSingleResult();
-        long nextVal = 1;
-        if (maxNumber != null) {
-            nextVal = maxNumber.longValue() + 1;
+        @SuppressWarnings("unchecked")
+        java.util.List<String> codes = query.getResultList();
+        
+        long maxVal = 0;
+        for (String code : codes) {
+            if (code != null && code.length() > prefix.length()) {
+                String suffix = code.substring(prefix.length());
+                try {
+                    long val = Long.parseLong(suffix);
+                    if (val > maxVal) {
+                        maxVal = val;
+                    }
+                } catch (NumberFormatException e) {
+                    // Bỏ qua các mã có hậu tố không phải số
+                }
+            }
         }
 
         String format = "%s%0" + padding + "d";
-        return String.format(format, prefix, nextVal);
+        return String.format(format, prefix, maxVal + 1);
     }
 }

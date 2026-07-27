@@ -511,7 +511,7 @@ public class RepairService {
     }
 
     private String generateRepairCode() {
-        return codeGeneratorService.generateCode("REPAIRS", "repair_code", "SC", 6);
+        return codeGeneratorService.generateCode("repairs", "repair_code", "SC", 6);
     }
 
     /**

@@ -257,7 +257,7 @@ public class SupplierService {
         String code = trimToNull(requestedCode);
         if (code == null) {
             // Tự động sinh mã
-            code = codeGeneratorService.generateCode("PARTNERS", "code", "NCC", 5);
+            code = codeGeneratorService.generateCode("partners", "code", "NCC", 5);
         }
         // BR-09: Kiểm tra unique
         if (partnerRepository.existsByCode(code)) {

@@ -132,7 +132,7 @@ public class WarrantyLifecycleService {
         if (code != null) {
             return code.toUpperCase();
         }
-        return codeGeneratorService.generateCode("WARRANTIES", "warranty_code", "BH", 6);
+        return codeGeneratorService.generateCode("warranties", "warranty_code", "BH", 6);
     }
 
     private String resolveUpdateCode(Long id, String requestedCode, String currentCode) {

@@ -245,7 +245,7 @@ public class BrandService {
         String code = trimToNull(requestedCode);
         if (code == null) {
             // Tự động sinh mã NSX theo sequence
-            code = codeGeneratorService.generateCode("BRANDS", "code", CODE_PREFIX, 3);
+            code = codeGeneratorService.generateCode("brands", "code", CODE_PREFIX, 3);
         }
         // BR-09: Kiểm tra unique trên toàn hệ thống
         if (brandRepository.existsByCode(code)) {

@@ -659,7 +659,7 @@ public class CustomerService {
      * VD: KH000001
      */
     private String generateCustomerCode() {
-        return codeGeneratorService.generateCode("PARTNERS", "code", "KH", 6);
+        return codeGeneratorService.generateCode("partners", "code", "KH", 6);
     }
 
     private String resolveGroupType(String groupType) {

@@ -265,9 +265,9 @@ public class InventoryDocumentService {
 
             if (serialNumber != null) {
                 updateExportedSerialBalance(doc, line, serialNumber, avgUnitCost);
-                // Tự động tạo phiếu bảo hành nếu line có khai báo warrantyMonths > 0
-                generateWarrantyIfNeeded(doc, line, serialNumber);
             }
+            // Tự động tạo phiếu bảo hành nếu line/sản phẩm có khai báo warrantyMonths > 0
+            generateWarrantyIfNeeded(doc, line, serialNumber);
         }
 
         doc.setStatus("POSTED");
@@ -537,31 +537,46 @@ public class InventoryDocumentService {
      */
     private void generateWarrantyIfNeeded(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial) {
         // Chỉ tự động sinh phiếu bảo hành khi mục đích là SALES (Xuất kho bán hàng)
-        // USAGE (Xuất sử dụng nội bộ) và TRANSFER_EXPORT (Chuyển kho) đều KHÔNG sinh
-        // bảo hành
-        if (!ISSUE_PURPOSE_SALES.equals(doc.getIssuePurpose())) {
+        // USAGE (Xuất sử dụng nội bộ) và TRANSFER_EXPORT (Chuyển kho) đều KHÔNG sinh bảo hành
+        if (doc.getIssuePurpose() == null || !ISSUE_PURPOSE_SALES.equalsIgnoreCase(doc.getIssuePurpose().trim())) {
             return;
         }
+
+        // Lấy số tháng bảo hành: ưu tiên line -> variant -> product
         Integer warrantyMonths = line.getWarrantyMonths();
+        if (warrantyMonths == null || warrantyMonths <= 0) {
+            ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
+            if (variant != null) {
+                warrantyMonths = variant.getWarrantyMonths();
+                if ((warrantyMonths == null || warrantyMonths <= 0) && variant.getProduct() != null) {
+                    warrantyMonths = variant.getProduct().getWarrantyPeriodMonths();
+                }
+            }
+        }
+
         if (warrantyMonths == null || warrantyMonths <= 0) {
             return; // Sản phẩm này không có chính sách bảo hành
         }
+
         if (doc.getPartnerId() == null) {
             return; // Không có khách hàng — không tạo bảo hành
         }
-        // Kiểm tra idempotency: tránh tạo trùng nếu có retry
-        boolean alreadyExists = warrantyRepository.existsBySerialNumberId(serial.getId());
-        if (alreadyExists) {
-            return;
+
+        // Kiểm tra idempotency nếu có serial: tránh tạo trùng khi retry
+        if (serial != null && serial.getId() != null) {
+            boolean alreadyExists = warrantyRepository.existsBySerialNumberId(serial.getId());
+            if (alreadyExists) {
+                return;
+            }
         }
 
-        LocalDate startDate = doc.getDocDate();
+        LocalDate startDate = doc.getDocDate() != null ? doc.getDocDate() : LocalDate.now();
         LocalDate endDate = startDate.plusMonths(warrantyMonths);
-        String warrantyCode = codeGeneratorService.generateCode("WARRANTIES", "warranty_code", "BH", 6);
+        String warrantyCode = codeGeneratorService.generateCode("warranties", "warranty_code", "BH", 6);
 
         Warranty warranty = Warranty.builder()
                 .warrantyCode(warrantyCode)
-                .serialNumberId(serial.getId())
+                .serialNumberId(serial != null ? serial.getId() : null)
                 .partnerId(doc.getPartnerId())
                 .salesOrderId(doc.getSalesOrderId())
                 .startDate(startDate)
