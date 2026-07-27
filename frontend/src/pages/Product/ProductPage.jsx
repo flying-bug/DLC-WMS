@@ -31,7 +31,8 @@ const defaultVariantData = {
     salePrice: 0,
     manufacturerPartNumber: '',
     specsJson: '',
-    active: true
+    active: true,
+    warrantyMonths: 0
 };
 
 const getPageContent = (response) => {
@@ -697,7 +698,8 @@ const ProductPage = () => {
             ...defaultVariantData,
             sku: product.productCode || '',
             variantName: product.productName || '',
-            salePrice: Number(product.salePrice || 0)
+            salePrice: Number(product.salePrice || 0),
+            warrantyMonths: Number(product.warrantyPeriodMonths || 0)
         });
         setSpecList([{ id: globalSpecIdCounter++, key: '', value: '' }]);
         setUseRawJson(false);
@@ -716,7 +718,8 @@ const ProductPage = () => {
             salePrice: Number(variant.salePrice || 0),
             manufacturerPartNumber: variant.manufacturerPartNumber || '',
             specsJson: variant.specsJson || '',
-            active: variant.active !== false
+            active: variant.active !== false,
+            warrantyMonths: Number(variant.warrantyMonths || 0)
         });
         setSpecList(parseSpecsToList(variant.specsJson));
         setUseRawJson(false);
@@ -728,7 +731,8 @@ const ProductPage = () => {
             ...defaultVariantData,
             sku: selectedProduct?.productCode || '',
             variantName: selectedProduct?.productName || '',
-            salePrice: Number(selectedProduct?.salePrice || 0)
+            salePrice: Number(selectedProduct?.salePrice || 0),
+            warrantyMonths: Number(selectedProduct?.warrantyPeriodMonths || 0)
         });
         setSpecList([{ id: globalSpecIdCounter++, key: '', value: '' }]);
         setUseRawJson(false);
@@ -762,7 +766,8 @@ const ProductPage = () => {
                 salePrice: Number(variantForm.salePrice || 0),
                 manufacturerPartNumber: variantForm.manufacturerPartNumber?.trim() || '',
                 specsJson: specsJsonPayload,
-                active: variantForm.active
+                active: variantForm.active,
+                warrantyMonths: Number(variantForm.warrantyMonths || 0)
             };
             if (variantForm.id) {
                 await axiosClient.put(`/products/${selectedProduct.id}/variants/${variantForm.id}`, payload);
@@ -1740,6 +1745,20 @@ const ProductPage = () => {
                                             className="misa-input"
                                         />
                                     </div>
+                                    <div className="misa-form-group">
+                                        <label>Thời hạn bảo hành (tháng)</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={variantForm.warrantyMonths}
+                                            onChange={(event) => setVariantForm({ ...variantForm, warrantyMonths: Number(event.target.value) })}
+                                            className="misa-input"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="misa-form-row">
                                     <div className="misa-form-group">
                                         <label>Trạng thái</label>
                                         <label className={styles.checkboxLabel} style={{ minHeight: 34 }}>
