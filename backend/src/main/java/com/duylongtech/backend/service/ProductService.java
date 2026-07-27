@@ -411,6 +411,7 @@ public class ProductService {
                 .costPrice(BigDecimal.ZERO)
                 .salePrice(resolveMoney(dto.getSalePrice()))
                 .active(dto.getActive() != null ? dto.getActive() : true)
+                .warrantyMonths(dto.getWarrantyPeriodMonths())
                 .build();
         productVariantRepository.save(variant);
     }
@@ -459,6 +460,7 @@ public class ProductService {
                 .manufacturerPartNumber(variant.getManufacturerPartNumber())
                 .specsJson(variant.getSpecsJson())
                 .active(variant.getActive())
+                .warrantyMonths(variant.getWarrantyMonths())
                 .createdAt(variant.getCreatedAt())
                 .updatedAt(variant.getUpdatedAt())
                 .build();
