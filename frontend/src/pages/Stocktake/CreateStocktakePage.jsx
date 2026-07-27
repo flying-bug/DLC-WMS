@@ -18,7 +18,7 @@ function CreateStocktakePage() {
 
   const [formData, setFormData] = useState(() => ({
     purpose: 'Kiểm kê vật tư hàng hóa định kỳ',
-    code: `KKK${Math.floor(10000 + Math.random() * 90000)}`,
+    code: '',
     warehouseId: searchParams.get('warehouseId') || 'all',
     toDate: searchParams.get('toDate') || new Date().toISOString().split('T')[0],
     createdDate: new Date().toISOString().slice(0, 16),
@@ -428,7 +428,7 @@ function CreateStocktakePage() {
           <div className={styles.formGridRight}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Số phiếu kiểm kê</label>
-              <input type="text" className={styles.formInput} value={formData.code} disabled />
+              <input type="text" className={styles.formInput} value={formData.code} disabled placeholder="Tự động sinh" />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Ngày kiểm kê</label>

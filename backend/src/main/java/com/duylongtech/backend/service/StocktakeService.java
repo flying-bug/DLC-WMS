@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 public class StocktakeService {
 
     private final StocktakeRepository stocktakeRepository;
+    private final CodeGeneratorService codeGeneratorService;
     private final ProductVariantRepository productVariantRepository;
     private final WarehouseRepository warehouseRepository;
     private final InventoryDocumentService inventoryDocumentService;
@@ -172,21 +173,10 @@ public class StocktakeService {
     private String resolveDocCode(String requestedCode) {
         String docCode = requestedCode != null && !requestedCode.trim().isEmpty() ? requestedCode.trim() : null;
         if (docCode == null) {
-            Optional<Stocktake> lastDoc = stocktakeRepository.findTopByStocktakeCodeStartingWithOrderByStocktakeCodeDesc("KKK");
-            if (lastDoc.isPresent()) {
-                String lastCode = lastDoc.get().getStocktakeCode();
-                try {
-                    int lastNum = Integer.parseInt(lastCode.substring(3));
-                    docCode = String.format("KKK%05d", lastNum + 1);
-                } catch (NumberFormatException e) {
-                    docCode = "KKK" + System.currentTimeMillis();
-                }
-            } else {
-                docCode = "KKK00001";
-            }
+            docCode = codeGeneratorService.generateCode("STOCKTAKES", "stocktake_code", "KK", 6);
         }
         if (stocktakeRepository.existsByStocktakeCode(docCode)) {
-            throw new BusinessException("Mã phiếu kiểm kê đã tồn tại");
+            throw new BusinessException("Mã kiểm kê đã tồn tại: " + docCode);
         }
         return docCode;
     }

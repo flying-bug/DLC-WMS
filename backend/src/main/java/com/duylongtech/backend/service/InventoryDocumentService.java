@@ -48,6 +48,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class InventoryDocumentService {
 
+    private final CodeGeneratorService codeGeneratorService;
+
     private static final String EXPORT_DOC_TYPE = "EX_SO";
     private static final String IMPORT_DOC_TYPE = "IN_PO";
     private static final String DEFAULT_STATUS = "DRAFT";
@@ -555,11 +557,7 @@ public class InventoryDocumentService {
 
         LocalDate startDate = doc.getDocDate();
         LocalDate endDate = startDate.plusMonths(warrantyMonths);
-        String warrantyCode = "BH-" + doc.getDocCode() + "-" + serial.getSerialNumber();
-        // Đảm bảo warrantyCode không vượt quá 50 ký tự (giới hạn schema)
-        if (warrantyCode.length() > 50) {
-            warrantyCode = "BH-" + System.currentTimeMillis() + "-" + serial.getId();
-        }
+        String warrantyCode = codeGeneratorService.generateCode("WARRANTIES", "warranty_code", "BH", 6);
 
         Warranty warranty = Warranty.builder()
                 .warrantyCode(warrantyCode)

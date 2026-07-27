@@ -72,6 +72,7 @@ public class CustomerService {
     private final SalesOrderLineRepository salesOrderLineRepository;
     private final WarrantyRepository warrantyRepository;
     private final RepairRepository repairRepository;
+    private final CodeGeneratorService codeGeneratorService;
 
     private static final String[] EXCEL_HEADERS = {
             "Mã KH", "Tên khách hàng", "Số điện thoại", "Email", "Địa chỉ", "Nhóm KH", "Trạng thái"
@@ -654,14 +655,11 @@ public class CustomerService {
     }
 
     /**
-     * Sinh mã khách hàng theo format KH{yyyy}{MM}{counter 4 chữ số}.
-     * VD: KH2026060001.
+     * Sinh mã khách hàng tự động tuần tự.
+     * VD: KH000001
      */
     private String generateCustomerCode() {
-        String prefix = "KH" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
-        // Sử dụng UUID để đảm bảo sinh mã unique trong vòng lặp tốc độ cao
-        String suffix = java.util.UUID.randomUUID().toString().substring(0, 4).toUpperCase();
-        return prefix + suffix;
+        return codeGeneratorService.generateCode("PARTNERS", "code", "KH", 6);
     }
 
     private String resolveGroupType(String groupType) {

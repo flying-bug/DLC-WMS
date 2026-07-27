@@ -89,18 +89,18 @@ const BrandModal = ({ onClose, onSave, initialData = null }) => {
             {/* Body */}
             <div className={styles.body}>
                 <div className={styles.formGrid}>
-                    <div className={`${styles.formGroup} ${styles.col6}`}>
-                        <label className={styles.formLabel}>Mã thương hiệu</label>
-                        <input 
-                            type="text" 
-                            className={styles.input} 
-                            name="code"
-                            value={formData.code}
-                            onChange={handleChange}
-                            placeholder="Tự động sinh nếu để trống" 
-                            disabled={!!initialData}
-                        />
-                    </div>
+                    {initialData && (
+                        <div className={`${styles.formGroup} ${styles.col6}`}>
+                            <label className={styles.formLabel}>Mã thương hiệu</label>
+                            <input 
+                                type="text" 
+                                className={styles.input} 
+                                name="code"
+                                value={formData.code}
+                                disabled={true}
+                            />
+                        </div>
+                    )}
 
                     <div className={`${styles.formGroup} ${styles.col6}`}>
                         {initialData && (

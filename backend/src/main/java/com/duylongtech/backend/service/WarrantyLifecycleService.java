@@ -24,6 +24,7 @@ public class WarrantyLifecycleService {
     );
 
     private final WarrantyRepository warrantyRepository;
+    private final CodeGeneratorService codeGeneratorService;
 
     @Transactional
     public WarrantyResponse createWarranty(WarrantyRequest request) {
@@ -131,7 +132,7 @@ public class WarrantyLifecycleService {
         if (code != null) {
             return code.toUpperCase();
         }
-        return "BH" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        return codeGeneratorService.generateCode("WARRANTIES", "warranty_code", "BH", 6);
     }
 
     private String resolveUpdateCode(Long id, String requestedCode, String currentCode) {

@@ -65,6 +65,7 @@ public class ProductService {
     private final SerialNumberRepository serialNumberRepository;
     private final AssemblyBomRepository assemblyBomRepository;
     private final AssemblyOrderRepository assemblyOrderRepository;
+    private final CodeGeneratorService codeGeneratorService;
 
     public Page<ProductResponse> getProducts(int page, int size, String search) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
@@ -93,6 +94,9 @@ public class ProductService {
 
     @Transactional
     public ProductResponse createProduct(ProductRequest dto) {
+        if (dto.getProductCode() == null || dto.getProductCode().isBlank()) {
+            dto.setProductCode(codeGeneratorService.generateCode("PRODUCTS", "product_code", "SP", 5));
+        }
         if (productRepository.findByProductCode(dto.getProductCode()).isPresent()) {
             throw new BusinessException("Mã hàng hóa '" + dto.getProductCode() + "' đã tồn tại.");
         }

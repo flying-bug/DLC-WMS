@@ -48,6 +48,8 @@ public class SupplierService {
     private static final String DEFAULT_GROUP_TYPE    = "RETAIL";
 
     private final PartnerRepository partnerRepository;
+    private final AuditLogService   auditLogService;
+    private final CodeGeneratorService codeGeneratorService;
 
     // ─────────────────────────────────────────────────────────────────────────
     // READ
@@ -251,14 +253,11 @@ public class SupplierService {
         }
     }
 
-    /**
-     * Resolve mã nhà cung cấp: sinh tự động nếu null, kiểm tra unique.
-     */
     private String resolveCode(String requestedCode) {
         String code = trimToNull(requestedCode);
         if (code == null) {
-            // Tự động sinh mã: NCC-{timestamp}
-            code = "NCC-" + System.currentTimeMillis();
+            // Tự động sinh mã
+            code = codeGeneratorService.generateCode("PARTNERS", "code", "NCC", 5);
         }
         // BR-09: Kiểm tra unique
         if (partnerRepository.existsByCode(code)) {

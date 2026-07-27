@@ -532,7 +532,7 @@ const ProductPage = () => {
     };
 
     const validateForm = () => {
-        if (!formData.productCode.trim()) return 'Mã sản phẩm không được để trống.';
+        if (isEdit && !formData.productCode.trim()) return 'Mã sản phẩm không được để trống.';
         if (!formData.productName.trim()) return 'Tên sản phẩm không được để trống.';
         if (!formData.categoryId && formData.productType !== 'Dịch vụ') return 'Vui lòng chọn danh mục.';
         if (!formData.unitId) return 'Vui lòng chọn đơn vị tính.';
@@ -1142,17 +1142,17 @@ const ProductPage = () => {
 
                                         {/* Row 2: Mã + (Danh mục OR Đơn vị tính chính for Dịch vụ) */}
                                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                                            <div className={styles.formField} style={{ width: '38%', flexShrink: 0 }}>
-                                                <label className={styles.fieldLabel}>Mã <span className="required">*</span></label>
-                                                <input
-                                                    type="text"
-                                                    className={styles.fieldInput}
-                                                    value={formData.productCode}
-                                                    onChange={(e) => setFormData(fd => ({ ...fd, productCode: e.target.value }))}
-                                                    disabled={isEdit}
-                                                    placeholder="VT00001"
-                                                />
-                                            </div>
+                                            {isEdit && (
+                                                <div className={styles.formField} style={{ width: '38%', flexShrink: 0 }}>
+                                                    <label className={styles.fieldLabel}>Mã</label>
+                                                    <input
+                                                        type="text"
+                                                        className={styles.fieldInput}
+                                                        value={formData.productCode}
+                                                        disabled={true}
+                                                    />
+                                                </div>
+                                            )}
 
                                             {formData.productType !== 'Dịch vụ' ? (
                                                 <div className={styles.formField} style={{ flex: 1 }}>

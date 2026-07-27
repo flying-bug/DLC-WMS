@@ -19,6 +19,7 @@ public class ProductCategoryService {
 
     private final ProductCategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final CodeGeneratorService codeGeneratorService;
 
     public Page<ProductCategoryResponse> getCategories(String search, Pageable pageable) {
         Page<ProductCategory> categories;
@@ -43,6 +44,9 @@ public class ProductCategoryService {
 
     @Transactional
     public ProductCategoryResponse createCategory(ProductCategoryRequest dto) {
+        if (dto.getCode() == null || dto.getCode().isBlank()) {
+            dto.setCode(codeGeneratorService.generateCode("PRODUCT_CATEGORIES", "code", "DM", 3));
+        }
         if (categoryRepository.existsByCode(dto.getCode())) {
             throw new BusinessException(SystemMessage.CATEGORY_CODE_EXISTS);
         }

@@ -44,9 +44,10 @@ public class BrandService {
     private static final Set<String> VALID_STATUSES = Set.of(APPROVED, INACTIVE);
 
     /** Prefix tự động sinh mã Thương hiệu nếu client không truyền code. */
-    private static final String CODE_PREFIX = "TH-";
+    private static final String CODE_PREFIX = "TH";
 
     private final BrandRepository brandRepository;
+    private final CodeGeneratorService codeGeneratorService;
 
     // ─────────────────────────────────────────────────────────────────────────
     // READ
@@ -243,8 +244,8 @@ public class BrandService {
     private String resolveCode(String requestedCode) {
         String code = trimToNull(requestedCode);
         if (code == null) {
-            // Tự động sinh mã NSX theo timestamp
-            code = CODE_PREFIX + System.currentTimeMillis();
+            // Tự động sinh mã NSX theo sequence
+            code = codeGeneratorService.generateCode("BRANDS", "code", CODE_PREFIX, 3);
         }
         // BR-09: Kiểm tra unique trên toàn hệ thống
         if (brandRepository.existsByCode(code)) {
