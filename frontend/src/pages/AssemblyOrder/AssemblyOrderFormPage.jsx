@@ -63,6 +63,7 @@ function AssemblyOrderFormPage() {
 
     const [serialMappings, setSerialMappings] = useState({});
     const [savingSerials, setSavingSerials] = useState(false);
+    const [savingNote, setSavingNote] = useState(false);
 
     const [customLines, setCustomLines] = useState([]);
     const [customLinesDirty, setCustomLinesDirty] = useState(false);
@@ -386,6 +387,20 @@ function AssemblyOrderFormPage() {
         }
     };
 
+    const handleUpdateNote = async () => {
+        if (!orderDetail || form.note === orderDetail.note) return;
+        setSavingNote(true);
+        try {
+            await assemblyApi.updateAssemblyOrderNote(orderDetail.id, form.note);
+            setOrderDetail({ ...orderDetail, note: form.note });
+            showToast('success', 'Đã cập nhật ghi chú thành công');
+        } catch (err) {
+            showToast('error', err.response?.data?.userMessage || 'Không cập nhật được ghi chú');
+        } finally {
+            setSavingNote(false);
+        }
+    };
+
     const setBomField = (field, value) => {
         setBomForm((current) => ({ ...current, [field]: value }));
         setBomError('');
@@ -673,8 +688,21 @@ function AssemblyOrderFormPage() {
 
 
                                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                                    <label className="misa-label">Ghi chú</label>
-                                    <textarea className="misa-input" style={{ resize: 'vertical' }} value={form.note} onChange={(event) => setField('note', event.target.value)} disabled={!canEdit} placeholder="Ghi chú nội bộ cho lệnh" rows={2} />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <label className="misa-label">Ghi chú</label>
+                                        {!canEdit && orderDetail && orderDetail.status !== 'SUBMITTED' && orderDetail.status !== 'CANCELLED' && form.note !== orderDetail.note && (
+                                            <button 
+                                                className={styles.btnOutline} 
+                                                type="button" 
+                                                onClick={handleUpdateNote} 
+                                                disabled={savingNote} 
+                                                style={{ fontSize: '12px', padding: '2px 8px', height: '24px' }}
+                                            >
+                                                {savingNote ? 'Đang lưu...' : 'Lưu ghi chú'}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <textarea className="misa-input" style={{ resize: 'vertical' }} disabled={!canEdit && (orderDetail?.status === 'SUBMITTED' || orderDetail?.status === 'CANCELLED')} value={form.note} onChange={(event) => setField('note', event.target.value)} placeholder="Ghi chú nội bộ cho lệnh" rows={2} />
                                 </div>
                             </div>
                         </div>
