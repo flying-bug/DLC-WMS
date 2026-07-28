@@ -248,13 +248,20 @@ public class InventoryDocumentService {
                 remainingQty = remainingQty.subtract(qtyFromLayer);
             }
 
-            if (remainingQty.compareTo(ZERO) > 0) {
+            if (remainingQty.compareTo(ZERO) > 0 || totalCost.compareTo(ZERO) <= 0) {
                 ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
-                BigDecimal fallbackCost = (balance != null && balance.getAverageCost() != null
-                        && balance.getAverageCost().compareTo(ZERO) > 0)
+                BigDecimal fallbackCost = (line.getUnitCost() != null && line.getUnitCost().compareTo(ZERO) > 0)
+                        ? line.getUnitCost()
+                        : ((balance != null && balance.getAverageCost() != null && balance.getAverageCost().compareTo(ZERO) > 0)
                                 ? balance.getAverageCost()
-                                : (variant != null && variant.getCostPrice() != null ? variant.getCostPrice() : ZERO);
-                totalCost = totalCost.add(remainingQty.multiply(fallbackCost));
+                                : (variant != null && variant.getCostPrice() != null && variant.getCostPrice().compareTo(ZERO) > 0
+                                        ? variant.getCostPrice()
+                                        : (variant != null && variant.getSalePrice() != null ? variant.getSalePrice() : ZERO)));
+                if (totalCost.compareTo(ZERO) <= 0) {
+                    totalCost = qtyToExport.multiply(fallbackCost);
+                } else if (remainingQty.compareTo(ZERO) > 0) {
+                    totalCost = totalCost.add(remainingQty.multiply(fallbackCost));
+                }
                 remainingQty = ZERO;
             }
 

@@ -273,10 +273,10 @@ const BrandListPage = () => {
                                     />
                                 </th>
                                 {columns.code && <th style={{ width: '160px' }}>Mã Thương Hiệu</th>}
-                                {columns.name && <th style={{ minWidth: '220px' }}>Tên Thương Hiệu</th>}
+                                {columns.name && <th style={{ width: '220px' }}>Tên Thương Hiệu</th>}
                                 {columns.hotline && <th style={{ width: '150px' }}>Điện Thoại</th>}
                                 {columns.contactEmail && <th style={{ width: '200px' }}>Email</th>}
-                                {columns.description && <th style={{ minWidth: '150px' }}>Mô Tả</th>}
+                                {columns.description && <th style={{ width: '180px' }}>Mô Tả</th>}
                                 {columns.status && <th style={{ width: '140px' }}>Trạng Thái</th>}
                                 <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
                             </tr>

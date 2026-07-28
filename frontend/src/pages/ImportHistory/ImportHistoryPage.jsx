@@ -10,6 +10,7 @@ import * as customerApi from '../../api/customerApi';
 import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import { exportToExcel } from '../../utils/excelExport';
+import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import styles from './ImportHistoryPage.module.css';
 
 const DEFAULT_COLUMNS = {
@@ -25,6 +26,17 @@ const DEFAULT_COLUMNS = {
   note: true,
   status: true,
 };
+
+const IMPORT_PURPOSE_OPTIONS = [
+  { value: 'PURCHASE', label: 'Nhập mua hàng' },
+  { value: 'STOCKTAKE_ADD', label: 'Hàng thừa từ kiểm kê' },
+  { value: 'PRODUCTION', label: 'Lắp ráp / tháo dỡ' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'DRAFT', label: 'Lưu tạm' },
+  { value: 'POSTED', label: 'Hoàn thành' },
+];
 
 const COLUMN_OPTIONS = [
   { id: 'date', label: 'Ngày Nhập' },
@@ -90,7 +102,19 @@ function ImportHistoryPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [filters, setFilters] = useState({ docCode: location.state?.filterDocCode || '', fromDate: '', status: '' });
+  const DEFAULT_FILTERS = useMemo(() => ({
+    docCode: location.state?.filterDocCode || '',
+    fromDate: '',
+    toDate: '',
+    preset: 'ALL',
+    status: '',
+    warehouseId: '',
+    partnerId: '',
+    staffId: '',
+    issuePurpose: '',
+  }), [location.state?.filterDocCode]);
+
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -140,7 +164,10 @@ function ImportHistoryPage() {
       const params = {
         docCode: filters.docCode || undefined,
         fromDate: filters.fromDate || undefined,
+        toDate: filters.toDate || undefined,
         status: filters.status || undefined,
+        warehouseId: filters.warehouseId || undefined,
+        issuePurpose: filters.issuePurpose || undefined,
       };
       const response = await importApi.getImportHistory(params);
       const data = unwrap(response) || [];
@@ -152,7 +179,7 @@ function ImportHistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters.docCode, filters.fromDate, filters.toDate, filters.status, filters.warehouseId, filters.issuePurpose]);
 
   useEffect(() => {
      
@@ -172,32 +199,38 @@ function ImportHistoryPage() {
     }
   }, [location, navigate]);
 
-  const rows = slips.map(slip => {
-    const status = STATUS_LABELS[slip.status] || { label: slip.status || 'Không rõ', code: 'info' };
-    let partnerLabel = 'Chưa chọn';
-    if (!slip.issuePurpose || slip.issuePurpose === 'PURCHASE') {
-      partnerLabel = supplierById.get(slip.partnerId)?.name || (slip.partnerId ? `NCC #${slip.partnerId}` : 'Chưa chọn');
-    } else if (slip.issuePurpose === 'RETURN') {
-      partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `KH #${slip.partnerId}` : 'Chưa chọn');
-    } else if (slip.issuePurpose === 'PRODUCTION') {
-      partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');
-    }
+  const rows = slips
+    .filter(slip => {
+      if (filters.partnerId && String(slip.partnerId) !== String(filters.partnerId)) return false;
+      if (filters.staffId && String(slip.salespersonId) !== String(filters.staffId)) return false;
+      return true;
+    })
+    .map(slip => {
+      const status = STATUS_LABELS[slip.status] || { label: slip.status || 'Không rõ', code: 'info' };
+      let partnerLabel = 'Chưa chọn';
+      if (!slip.issuePurpose || slip.issuePurpose === 'PURCHASE') {
+        partnerLabel = supplierById.get(slip.partnerId)?.name || (slip.partnerId ? `NCC #${slip.partnerId}` : 'Chưa chọn');
+      } else if (slip.issuePurpose === 'RETURN') {
+        partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `KH #${slip.partnerId}` : 'Chưa chọn');
+      } else if (slip.issuePurpose === 'PRODUCTION') {
+        partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');
+      }
 
-    return {
-      ...slip,
-      date: formatDate(slip.docDate),
-      issuePurposeLabel: IMPORT_PURPOSE_LABELS[slip.issuePurpose] || 'Khác',
-      partner: partnerLabel,
-      warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa chọn'),
-      purchaserName: slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || (slip.salespersonId ? String(slip.salespersonId) : 'Chưa rõ'),
-      delivererName: slip.recipientName || 'Chưa rõ',
-      total: money(sumSubtotal(slip.lines) + sumVat(slip.lines)),
-      vat: money(sumVat(slip.lines)),
-      quantity: sumQuantity(slip.lines),
-      statusLabel: status.label,
-      statusCode: status.code,
-    };
-  });
+      return {
+        ...slip,
+        date: formatDate(slip.docDate),
+        issuePurposeLabel: IMPORT_PURPOSE_LABELS[slip.issuePurpose] || 'Khác',
+        partner: partnerLabel,
+        warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa chọn'),
+        purchaserName: slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || (slip.salespersonId ? String(slip.salespersonId) : 'Chưa rõ'),
+        delivererName: slip.recipientName || 'Chưa rõ',
+        total: money(sumSubtotal(slip.lines) + sumVat(slip.lines)),
+        vat: money(sumVat(slip.lines)),
+        quantity: sumQuantity(slip.lines),
+        statusLabel: status.label,
+        statusCode: status.code,
+      };
+    });
 
   const handleExport = () => {
     const headers = ['Ngày ghi nhận', 'Số chứng từ', 'Loại phiếu', 'Đối tác / Tham chiếu', 'Kho nhập', 'Tổng tiền', 'Tiền VAT', 'Trạng thái'];
@@ -454,43 +487,42 @@ function ImportHistoryPage() {
         </div>
 
         <div className={styles.filterSection}>
-          <div className={styles.filterGroup}>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌM KIẾM</span>
+          <div className={styles.searchAndPopover}>
+            <div className={styles.searchBox}>
+              <i className="bi bi-search"></i>
               <input
                 type="text"
-                className={styles.filterInput}
-                placeholder="Mã phiếu..."
+                className={styles.searchInput}
+                placeholder="Nhập từ khóa tìm kiếm mã phiếu..."
                 value={filters.docCode}
                 onChange={(e) => setFilters(prev => ({ ...prev, docCode: e.target.value }))}
               />
+              {filters.docCode && (
+                <button className={styles.clearSearchBtn} onClick={() => setFilters(prev => ({ ...prev, docCode: '' }))}>
+                  <i className="bi bi-x-circle-fill"></i>
+                </button>
+              )}
             </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TỪ NGÀY</span>
-              <input
-                type="date"
-                className={styles.filterInput}
-                value={filters.fromDate}
-                onChange={(e) => setFilters(prev => ({ ...prev, fromDate: e.target.value }))}
-              />
-            </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌNH TRẠNG</span>
-              <select
-                className={styles.filterSelect}
-                value={filters.status}
-                onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              >
-                <option value="">Tất cả</option>
-                <option value="DRAFT">Lưu tạm</option>
-                <option value="POSTED">Hoàn thành</option>
-              </select>
-            </div>
+
+            <FilterPopover
+              filters={filters}
+              onApply={(newFilters) => setFilters(newFilters)}
+              onReset={() => setFilters(DEFAULT_FILTERS)}
+              warehouses={warehouses}
+              partners={suppliers}
+              staffList={users}
+              purposeOptions={IMPORT_PURPOSE_OPTIONS}
+              statusOptions={STATUS_OPTIONS}
+              partnerLabel="Nhà cung cấp / Đối tác"
+              staffLabel="Nhân viên mua"
+              purposeLabel="Loại phiếu nhập"
+            />
           </div>
+
           <div className={styles.filterActions}>
             <button
               className={styles.iconBtn}
-              onClick={() => setFilters({ docCode: '', fromDate: '', status: '' })}
+              onClick={() => setFilters(DEFAULT_FILTERS)}
               title="Làm mới"
             >
               <i className="bi bi-arrow-clockwise"></i>
@@ -508,9 +540,6 @@ function ImportHistoryPage() {
               title="Thiết lập"
             >
               <i className="bi bi-gear"></i>
-            </button>
-            <button className={styles.btnPrimary} onClick={loadSlips}>
-              <i className="bi bi-funnel"></i> Lọc dữ liệu
             </button>
           </div>
         </div>
@@ -544,7 +573,7 @@ function ImportHistoryPage() {
                 {columns.deliverer && <th style={{ width: '150px' }}>Người giao hàng</th>}
                 {columns.vat && <th className={styles.textRight} style={{ width: '110px' }}>Tiền VAT</th>}
                 {columns.total && <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>}
-                {columns.note && <th style={{ minWidth: '150px' }}>Ghi Chú</th>}
+                {columns.note && <th style={{ width: '180px' }}>Ghi Chú</th>}
                 {columns.status && <th style={{ width: '120px' }}>Trạng Thái</th>}
                 <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
               </tr>

@@ -9,6 +9,7 @@ import { exportToExcel } from '../../utils/excelExport';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
+import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import styles from './ExportSlipPage.module.css';
 
 const DEFAULT_COLUMNS = {
@@ -24,6 +25,17 @@ const DEFAULT_COLUMNS = {
   note: true,
   status: true,
 };
+
+const EXPORT_PURPOSE_OPTIONS = [
+  { value: 'SALES', label: 'Bán hàng' },
+  { value: 'USAGE', label: 'Sử dụng nội bộ' },
+  { value: 'ASSEMBLY', label: 'Xuất lắp ráp / tháo dỡ' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'DRAFT', label: 'Lưu tạm' },
+  { value: 'POSTED', label: 'Hoàn thành' },
+];
 
 const COLUMN_OPTIONS = [
   { id: 'date', label: 'Ngày Xuất' },
@@ -83,7 +95,19 @@ function ExportSlipPage() {
   const [users, setUsers] = useState([]);
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [filters, setFilters] = useState({ docCode: location.state?.filterDocCode || '', fromDate: '', status: '' });
+  const DEFAULT_FILTERS = useMemo(() => ({
+    docCode: location.state?.filterDocCode || '',
+    fromDate: '',
+    toDate: '',
+    preset: 'ALL',
+    status: '',
+    warehouseId: '',
+    partnerId: '',
+    staffId: '',
+    issuePurpose: '',
+  }), [location.state?.filterDocCode]);
+
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
 
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
@@ -152,7 +176,10 @@ function ExportSlipPage() {
       const response = await exportApi.getExportHistory({
         docCode: filters.docCode || undefined,
         fromDate: filters.fromDate || undefined,
+        toDate: filters.toDate || undefined,
         status: filters.status || undefined,
+        warehouseId: filters.warehouseId || undefined,
+        issuePurpose: filters.issuePurpose || undefined,
       });
       const data = unwrap(response) || [];
       setSlips(data);
@@ -163,7 +190,7 @@ function ExportSlipPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters.docCode, filters.fromDate, filters.toDate, filters.status, filters.warehouseId, filters.issuePurpose]);
 
   useEffect(() => {
      
@@ -183,31 +210,37 @@ function ExportSlipPage() {
     }
   }, [location, navigate]);
 
-  const rows = slips.map(slip => {
-    const status = STATUS_LABELS[slip.status] || { label: slip.status || 'Không rõ', code: 'info' };
+  const rows = slips
+    .filter(slip => {
+      if (filters.partnerId && String(slip.partnerId) !== String(filters.partnerId)) return false;
+      if (filters.staffId && String(slip.salespersonId) !== String(filters.staffId)) return false;
+      return true;
+    })
+    .map(slip => {
+      const status = STATUS_LABELS[slip.status] || { label: slip.status || 'Không rõ', code: 'info' };
 
-    let partnerLabel = 'Chưa chọn';
-    if (!slip.issuePurpose || slip.issuePurpose === 'SALES') {
-      partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `Khách hàng #${slip.partnerId}` : 'Chưa chọn');
-    } else if (slip.issuePurpose === 'ASSEMBLY') {
-      partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');
-    }
+      let partnerLabel = 'Chưa chọn';
+      if (!slip.issuePurpose || slip.issuePurpose === 'SALES') {
+        partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `Khách hàng #${slip.partnerId}` : 'Chưa chọn');
+      } else if (slip.issuePurpose === 'ASSEMBLY') {
+        partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');
+      }
 
-    return {
-      ...slip,
-      date: formatDate(slip.docDate),
-      issuePurposeLabel: EXPORT_PURPOSE_LABELS[slip.issuePurpose] || 'Khác',
-      partner: partnerLabel,
-      warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa chọn'),
-      salespersonName: slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || (slip.salespersonId ? String(slip.salespersonId) : 'Chưa rõ'),
-      recipientName: slip.recipientName || 'Chưa rõ',
-      total: money(sumSubtotal(slip.lines) + sumVat(slip.lines)),
-      vat: money(sumVat(slip.lines)),
-      quantity: sumQuantity(slip.lines),
-      statusLabel: status.label,
-      statusCode: status.code,
-    };
-  });
+      return {
+        ...slip,
+        date: formatDate(slip.docDate),
+        issuePurposeLabel: EXPORT_PURPOSE_LABELS[slip.issuePurpose] || 'Khác',
+        partner: partnerLabel,
+        warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa chọn'),
+        salespersonName: slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || (slip.salespersonId ? String(slip.salespersonId) : 'Chưa rõ'),
+        recipientName: slip.recipientName || 'Chưa rõ',
+        total: money(sumSubtotal(slip.lines) + sumVat(slip.lines)),
+        vat: money(sumVat(slip.lines)),
+        quantity: sumQuantity(slip.lines),
+        statusLabel: status.label,
+        statusCode: status.code,
+      };
+    });
 
   const handleExport = () => {
     const headers = ['Ngày ghi nhận', 'Số chứng từ', 'Loại phiếu', 'Khách hàng / LSX', 'Kho xuất', 'Tổng tiền', 'Tiền VAT', 'Trạng thái'];
@@ -463,43 +496,42 @@ function ExportSlipPage() {
         </div>
 
         <div className={styles.filterSection}>
-          <div className={styles.filterGroup}>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌM KIẾM MÃ PHIẾU</span>
+          <div className={styles.searchAndPopover}>
+            <div className={styles.searchBox}>
+              <i className="bi bi-search"></i>
               <input
                 type="text"
-                className={styles.filterInput}
-                placeholder="Nhập mã phiếu xuất..."
+                className={styles.searchInput}
+                placeholder="Nhập từ khóa tìm kiếm mã phiếu..."
                 value={filters.docCode}
                 onChange={(event) => setFilters(prev => ({ ...prev, docCode: event.target.value }))}
               />
+              {filters.docCode && (
+                <button className={styles.clearSearchBtn} onClick={() => setFilters(prev => ({ ...prev, docCode: '' }))}>
+                  <i className="bi bi-x-circle-fill"></i>
+                </button>
+              )}
             </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TỪ NGÀY LẬP</span>
-              <input
-                type="date"
-                className={styles.filterInput}
-                value={filters.fromDate}
-                onChange={(event) => setFilters(prev => ({ ...prev, fromDate: event.target.value }))}
-              />
-            </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TRẠNG THÁI PHIẾU</span>
-              <select
-                className={styles.filterSelect}
-                value={filters.status}
-                onChange={(event) => setFilters(prev => ({ ...prev, status: event.target.value }))}
-              >
-                <option value="">Tất cả trạng thái</option>
-                <option value="DRAFT">Lưu tạm</option>
-                <option value="POSTED">Hoàn thành</option>
-              </select>
-            </div>
+
+            <FilterPopover
+              filters={filters}
+              onApply={(newFilters) => setFilters(newFilters)}
+              onReset={() => setFilters(DEFAULT_FILTERS)}
+              warehouses={warehouses}
+              partners={customers}
+              staffList={users}
+              purposeOptions={EXPORT_PURPOSE_OPTIONS}
+              statusOptions={STATUS_OPTIONS}
+              partnerLabel="Khách hàng"
+              staffLabel="Nhân viên xuất"
+              purposeLabel="Loại phiếu xuất"
+            />
           </div>
+
           <div className={styles.filterActions}>
             <button
               className={styles.iconBtn}
-              onClick={() => setFilters({ docCode: '', fromDate: '', status: '' })}
+              onClick={() => setFilters(DEFAULT_FILTERS)}
               title="Đặt lại bộ lọc"
             >
               <i className="bi bi-arrow-clockwise"></i>
@@ -517,9 +549,6 @@ function ExportSlipPage() {
               title="Cấu hình hiển thị cột"
             >
               <i className="bi bi-gear"></i>
-            </button>
-            <button className={styles.btnPrimary} onClick={loadSlips}>
-              <i className="bi bi-funnel"></i> Lọc dữ liệu
             </button>
           </div>
         </div>
@@ -540,7 +569,7 @@ function ExportSlipPage() {
                 {columns.recipient && <th style={{ width: '150px' }}>Người nhận hàng</th>}
                 {columns.vat && <th className={styles.textRight} style={{ width: '110px' }}>Tiền VAT</th>}
                 {columns.total && <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>}
-                {columns.note && <th style={{ minWidth: '150px' }}>Ghi Chú</th>}
+                {columns.note && <th style={{ width: '180px' }}>Ghi Chú</th>}
                 {columns.status && <th style={{ width: '120px' }}>Trạng Thái</th>}
                 <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
               </tr>

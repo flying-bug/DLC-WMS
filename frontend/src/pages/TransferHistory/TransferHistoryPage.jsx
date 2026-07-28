@@ -422,8 +422,8 @@ function TransferHistoryPage() {
                 </th>
                 {columns.date && <th style={{ width: '130px' }}>Ngày Ghi Nhận</th>}
                 {columns.transferCode && <th style={{ width: '160px' }}>Số Phiếu</th>}
-                {columns.fromWarehouse && <th style={{ minWidth: '150px' }}>Kho Xuất</th>}
-                {columns.toWarehouse && <th style={{ minWidth: '150px' }}>Kho Nhập</th>}
+                {columns.fromWarehouse && <th style={{ width: '150px' }}>Kho Xuất</th>}
+                {columns.toWarehouse && <th style={{ width: '150px' }}>Kho Nhập</th>}
                 {columns.quantity && <th className={styles.textCenter} style={{ width: '120px' }}>Số Lượng</th>}
                 {columns.status && <th style={{ width: '140px' }}>Trạng Thái</th>}
                 <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
