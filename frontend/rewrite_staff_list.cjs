@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+const fs = require('fs');
+
+const content = \import { useState, useEffect } from 'react';
 import warehouseStaffApi from '../../../api/warehouseStaffApi';
 import AssignStaffModal from './AssignStaffModal';
 import Toast from '../../../components/ui/Toast/Toast';
@@ -12,6 +14,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
     // Filters
     const [search, setSearch] = useState('');
     const [roleId, setRoleId] = useState('');
+    const [showInactive, setShowInactive] = useState(false);
     
     // Pagination (0-indexed backend, 1-indexed frontend)
     const [page, setPage] = useState(1);
@@ -32,7 +35,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
             const res = await warehouseStaffApi.getWarehouseRoles();
             setRoles(res.data.data || []);
         } catch (error) {
-            console.error('Lỗi tải danh sách vai trò:', error);
+            console.error('L?i t?i danh s�ch vai tr�:', error);
         }
     };
 
@@ -42,7 +45,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
             const params = {
                 page: pageIndex - 1,
                 size: currentSize,
-                isActive: true
+                isActive: showInactive ? null : true
             };
             if (search) params.search = search;
             if (roleId) params.roleId = roleId;
@@ -53,8 +56,8 @@ const WarehouseStaffList = ({ warehouseId }) => {
             setTotalItems(res.data.data.totalElements || 0);
             setPage(pageIndex);
         } catch (error) {
-            console.error('Lỗi tải danh sách nhân sự:', error);
-            showToast('error', 'Không thể tải danh sách nhân sự.');
+            console.error('L?i t?i danh s�ch nh�n s?:', error);
+            showToast('error', 'Kh�ng th? t?i danh s�ch nh�n s?.');
         } finally {
             setLoading(false);
         }
@@ -65,26 +68,28 @@ const WarehouseStaffList = ({ warehouseId }) => {
     }, []);
 
     useEffect(() => {
-        fetchStaffs(page, pageSize);
-    }, [warehouseId, roleId, search, pageSize, page]);
+        fetchStaffs(1, pageSize);
+    }, [warehouseId, showInactive, roleId, search, pageSize]);
 
     const handleRevoke = async (userId) => {
-        if (!window.confirm('Bạn có chắc chắn muốn thu hồi quyền của nhân viên này tại kho?')) return;
+        if (!window.confirm('B?n c� ch?c ch?n mu?n thu h?i quy?n c?a nh�n vi�n n�y t?i kho?')) return;
         
         try {
             await warehouseStaffApi.revokeAccess(warehouseId, userId);
-            showToast('success', 'Thu hồi quyền thành công!');
+            showToast('success', 'Thu h?i quy?n th�nh c�ng!');
             fetchStaffs(page, pageSize);
         } catch (error) {
             console.error(error);
-            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra!');
+            showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'C� l?i x?y ra!');
         }
     };
 
     const handleRefresh = () => {
         setSearch('');
         setRoleId('');
+        setShowInactive(false);
         setPage(1);
+        fetchStaffs(1, pageSize);
     };
 
     const getPageNumbers = () => {
@@ -123,44 +128,55 @@ const WarehouseStaffList = ({ warehouseId }) => {
                         <input 
                             type="text" 
                             className={styles.filterInput} 
-                            placeholder="Tên, email nhân viên..." 
+                            placeholder="T�n, email nh�n vi�n..." 
                             value={search}
-                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                            onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
                     <div className={styles.filterField}>
                         <select 
                             className={styles.filterSelect}
                             value={roleId}
-                            onChange={(e) => { setRoleId(e.target.value); setPage(1); }}
+                            onChange={(e) => setRoleId(e.target.value)}
                         >
-                            <option value="">Tất cả vai trò</option>
+                            <option value="">T?t c? vai tr�</option>
                             {roles.map(r => (
                                 <option key={r.id} value={r.id}>{r.name}</option>
                             ))}
                         </select>
                     </div>
+                    <div className={styles.filterField} style={{ justifyContent: 'center' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', color: '#374151', height: '100%' }}>
+                            <input 
+                                type="checkbox" 
+                                className={styles.checkbox}
+                                checked={showInactive}
+                                onChange={(e) => setShowInactive(e.target.checked)}
+                            />
+                            Hi?n th? c? nh�n s? d� thu h?i
+                        </label>
+                    </div>
                 </div>
                 <div className={styles.filterActions}>
                     <button className={styles.btnOutline} onClick={handleRefresh}>
-                        <i className="fas fa-sync-alt"></i> Làm mới
+                        <i className="fas fa-sync-alt"></i> L�m m?i
                     </button>
                     <button className={styles.btnPrimary} onClick={() => setIsAssignModalOpen(true)}>
-                        <i className="fas fa-user-plus"></i> Thêm nhân sự kho
+                        <i className="fas fa-user-plus"></i> G�n quy?n nh�n s?
                     </button>
                 </div>
             </div>
 
             {/* Table */}
-            <div className={styles.tableContainer}>
+            <div className={styles.tableContainer} style={{ flex: 1, minHeight: '300px', marginBottom: 0 }}>
                 <table className={styles.table}>
                     <thead>
                         <tr>
-                            <th>Nhân viên</th>
+                            <th>Nh�n vi�n</th>
                             <th>Email</th>
-                            <th>Vai trò</th>
-                            <th style={{ width: '150px' }}>Trạng thái</th>
-                            <th style={{ width: '80px', textAlign: 'center' }}>Thao tác</th>
+                            <th>Vai tr�</th>
+                            <th style={{ width: '150px' }}>Tr?ng th�i</th>
+                            <th style={{ width: '80px', textAlign: 'center' }}>Thao t�c</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -168,14 +184,14 @@ const WarehouseStaffList = ({ warehouseId }) => {
                             <tr>
                                 <td colSpan="5" className={styles.emptyState}>
                                     <i className="fas fa-spinner fa-spin" style={{ fontSize: '24px', color: '#9ca3af', marginBottom: '8px' }}></i>
-                                    <div className={styles.emptyText}>Đang tải dữ liệu...</div>
+                                    <div className={styles.emptyText}>�ang t?i d? li?u...</div>
                                 </td>
                             </tr>
                         ) : staffs.length === 0 ? (
                             <tr>
                                 <td colSpan="5" className={styles.emptyState}>
                                     <i className="fas fa-users-slash" style={{ fontSize: '48px', color: '#e2e8f0', marginBottom: '16px' }}></i>
-                                    <div className={styles.emptyText}>Không có dữ liệu nhân sự phù hợp.</div>
+                                    <div className={styles.emptyText}>Kh�ng c� d? li?u nh�n s? ph� h?p.</div>
                                 </td>
                             </tr>
                         ) : (
@@ -196,12 +212,12 @@ const WarehouseStaffList = ({ warehouseId }) => {
                                     </td>
                                     <td>
                                         {staff.isActive ? (
-                                            <span className={`${styles.badge} ${styles.badgeSuccess}`}>
-                                                Đang hoạt động
+                                            <span className={${styles.badge} }>
+                                                �ang ho?t d?ng
                                             </span>
                                         ) : (
-                                            <span className={`${styles.badge} ${styles.badgeDanger}`}>
-                                                Đã thu hồi
+                                            <span className={${styles.badge} }>
+                                                �� thu h?i
                                             </span>
                                         )}
                                     </td>
@@ -210,7 +226,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                                             <button 
                                                 className={styles.iconBtn}
                                                 onClick={() => handleRevoke(staff.userId)}
-                                                title="Thu hồi quyền"
+                                                title="Thu h?i quy?n"
                                                 style={{ margin: '0 auto' }}
                                             >
                                                 <i className="fas fa-user-times"></i>
@@ -228,7 +244,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
             {!loading && totalItems > 0 && (
                 <div className={styles.pagination} style={{ borderTop: '1px solid #e5e7eb' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>Hiển thị</span>
+                        <span>Hi?n th?</span>
                         <select 
                             className="misa-select" 
                             style={{ width: '70px', height: '32px', padding: '0 8px', border: '1px solid #d1d5db', borderRadius: '4px' }} 
@@ -240,7 +256,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                             <option value={50}>50</option>
                             <option value={100}>100</option>
                         </select>
-                        <span>trên tổng số {totalItems} bản ghi</span>
+                        <span>tr�n t?ng s? {totalItems} b?n ghi</span>
                     </div>
                     
                     {totalPages > 1 && (
@@ -250,66 +266,43 @@ const WarehouseStaffList = ({ warehouseId }) => {
                                 onClick={() => setPage(p => Math.max(1, p - 1))}
                                 className={styles.pageBtn}
                             >
-                                <i className="bi bi-chevron-left"></i>
-                                <span>Trước</span>
+                                <i className="fas fa-chevron-left" style={{ fontSize: '10px' }}></i>
+                                <span>Tru?c</span>
                             </button>
             
                             <div className={styles.paginationNumbers}>
-                                {(() => {
-                                    const pages = [];
-                                    if (totalPages <= 7) {
-                                        for (let i = 1; i <= totalPages; i++) pages.push(i);
-                                    } else {
-                                        if (page <= 4) {
-                                            for (let i = 1; i <= 5; i++) pages.push(i);
-                                            pages.push('...');
-                                            pages.push(totalPages);
-                                        } else if (page >= totalPages - 3) {
-                                            pages.push(1);
-                                            pages.push('...');
-                                            for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
-                                        } else {
-                                            pages.push(1);
-                                            pages.push('...');
-                                            for (let i = page - 1; i <= page + 1; i++) pages.push(i);
-                                            pages.push('...');
-                                            pages.push(totalPages);
-                                        }
-                                    }
-                                    
-                                    return pages.map((num, idx) => (
-                                        num === page ? (
-                                            <input
-                                                key={idx}
-                                                className={`${styles.pageNumber} ${styles.active}`}
-                                                style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
-                                                defaultValue={num}
-                                                title="Nhập số trang và nhấn Enter"
-                                                onBlur={(e) => e.target.value = page}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        let p = parseInt(e.target.value, 10);
-                                                        if (!isNaN(p)) {
-                                                            p = Math.max(1, Math.min(totalPages, p));
-                                                            setPage(p);
-                                                            e.target.blur();
-                                                        } else {
-                                                            e.target.value = page;
-                                                        }
+                                {getPageNumbers().map((num, idx) => (
+                                    num === page ? (
+                                        <input
+                                            key={idx}
+                                            className={${styles.pageNumber} }
+                                            style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
+                                            defaultValue={num}
+                                            title="Nh?p s? trang v� nh?n Enter"
+                                            onBlur={(e) => e.target.value = page}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    let p = parseInt(e.target.value, 10);
+                                                    if (!isNaN(p)) {
+                                                        p = Math.max(1, Math.min(totalPages, p));
+                                                        setPage(p);
+                                                        e.target.blur();
+                                                    } else {
+                                                        e.target.value = page;
                                                     }
-                                                }}
-                                            />
-                                        ) : (
-                                            <span 
-                                                key={idx} 
-                                                className={`${styles.pageNumber} ${num === '...' ? styles.dots : ''}`}
-                                                onClick={() => num !== '...' && setPage(num)}
-                                            >
-                                                {num}
-                                            </span>
-                                        )
-                                    ));
-                                })()}
+                                                }
+                                            }}
+                                        />
+                                    ) : (
+                                        <span 
+                                            key={idx} 
+                                            className={${styles.pageNumber} }
+                                            onClick={() => num !== '...' && setPage(num)}
+                                        >
+                                            {num}
+                                        </span>
+                                    )
+                                ))}
                             </div>
             
                             <button 
@@ -318,7 +311,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                                 className={styles.pageBtn}
                             >
                                 <span>Sau</span>
-                                <i className="bi bi-chevron-right"></i>
+                                <i className="fas fa-chevron-right" style={{ fontSize: '10px' }}></i>
                             </button>
                         </div>
                     )}
@@ -332,7 +325,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                     onClose={() => setIsAssignModalOpen(false)}
                     onSuccess={() => {
                         setIsAssignModalOpen(false);
-                        showToast('success', 'Gán quyền thành công!');
+                        showToast('success', 'G�n quy?n th�nh c�ng!');
                         fetchStaffs(page, pageSize);
                     }}
                 />
@@ -349,3 +342,6 @@ const WarehouseStaffList = ({ warehouseId }) => {
 };
 
 export default WarehouseStaffList;
+\;
+fs.writeFileSync('d:/DLC-WMS/frontend/src/pages/Warehouse/components/WarehouseStaffList.jsx', content);
+console.log('done');

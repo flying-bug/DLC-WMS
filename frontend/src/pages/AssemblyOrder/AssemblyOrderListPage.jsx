@@ -8,9 +8,7 @@ import styles from './AssemblyOrderListPage.module.css';
 
 const STATUS_META = {
     DRAFT: { label: 'Lưu tạm', code: 'info' },
-    APPROVED: { label: 'Đã duyệt', code: 'primary' },
-    SUBMITTED: { label: 'Hoàn thành', code: 'success' },
-    CANCELLED: { label: 'Đã hủy', code: 'danger' }
+    SUBMITTED: { label: 'Hoàn thành', code: 'success' }
 };
 
 const TYPE_META = {
@@ -134,7 +132,7 @@ function AssemblyOrderListPage() {
             <div className={styles.pageBody}>
                 <div className={styles.pageTitleContainer}>
                     <div>
-                        <h1 className={styles.pageTitle}>Lịch sử Lắp ráp / Tháo dỡ</h1>
+                        <h1 className={styles.pageTitle}>Lắp ráp/Tháo dỡ</h1>
                         <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px', marginTop: '4px' }}>
                             Quản lý các lệnh tạo máy thành phẩm và rã linh kiện.
                         </p>
@@ -219,8 +217,12 @@ function AssemblyOrderListPage() {
                     </div>
 
                     <div className={styles.filterActions}>
-                        <button className={styles.btnOutline} onClick={() => { setFilters(DEFAULT_FILTERS); setPage(1); }}>
-                            Làm mới
+                        <button 
+                            className={styles.iconBtn} 
+                            onClick={() => { setFilters(DEFAULT_FILTERS); setPage(1); }}
+                            title="Làm mới"
+                        >
+                            <i className="bi bi-arrow-clockwise"></i>
                         </button>
                         <button className={styles.btnPrimary} onClick={() => loadOrders()}>
                             <i className="bi bi-funnel"></i> Lọc dữ liệu

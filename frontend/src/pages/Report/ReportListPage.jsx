@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import { getWarehouses } from '../../api/warehouseApi';
@@ -59,6 +60,8 @@ const ReportListPage = () => {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedLanguage, setSelectedLanguage] = useState('vi');
+    const location = useLocation();
+    const navigate = useNavigate();
 
     // Report selection and display states
     const [activeReport, setActiveReport] = useState(null); // The report definition currently selected
@@ -84,6 +87,23 @@ const ReportListPage = () => {
         }, 400);
         return () => clearTimeout(timer);
     }, [filters.search]);
+
+    useEffect(() => {
+        if (location.state?.reportId) {
+            let foundReport = null;
+            for (const cat of MOCK_CATEGORIES) {
+                const r = cat.reports?.find(x => x.id === location.state.reportId);
+                if (r) {
+                    foundReport = r;
+                    break;
+                }
+            }
+            if (foundReport) {
+                setActiveReport(foundReport);
+                setViewMode('detail');
+            }
+        }
+    }, [location.state]);
 
     const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
 
@@ -365,8 +385,15 @@ const ReportListPage = () => {
                         <div className={styles.detailContainer}>
                             {/* Back Header */}
                             <div className={styles.backHeader}>
-                                <button className={styles.backBtn} onClick={() => { setViewMode('list'); setReportData([]); }}>
-                                    <i className="fas fa-arrow-left"></i> Quay lại danh sách báo cáo
+                                <button className={styles.backBtn} onClick={() => { 
+                                    if (location.state?.fromDashboard) {
+                                        navigate('/dashboard');
+                                    } else {
+                                        setViewMode('list'); 
+                                        setReportData([]); 
+                                    }
+                                }}>
+                                    <i className="fas fa-arrow-left"></i> {location.state?.fromDashboard ? 'Quay lại Dashboard' : 'Quay lại danh sách báo cáo'}
                                 </button>
                             </div>
 

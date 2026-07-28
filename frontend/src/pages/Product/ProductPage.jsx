@@ -868,9 +868,9 @@ const ProductPage = () => {
     };
 
     const formatQuantity = (value) => {
-        if (value === undefined || value === null) return '0,00';
+        if (value === undefined || value === null) return '0';
         return new Intl.NumberFormat('vi-VN', {
-            minimumFractionDigits: 2,
+            minimumFractionDigits: 0,
             maximumFractionDigits: 4
         }).format(value);
     };
@@ -892,7 +892,7 @@ const ProductPage = () => {
         <AdminLayout>
             <div className={styles.pageBody}>
                 <div className={styles.pageTitleContainer}>
-                    <h1 className={styles.pageTitle}>Hàng hóa</h1>
+                    <h1 className={styles.pageTitle}>Hàng hóa, dịch vụ</h1>
                     <button className={styles.btnPrimary} onClick={handleOpenAdd}>
                         <i className="bi bi-plus"></i> Thêm mới
                     </button>
@@ -1066,9 +1066,10 @@ const ProductPage = () => {
                             )}
                         </tbody>
                     </table>
+                </div>
 
-                    <div className={styles.pagination}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className={styles.pagination}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span>Hiển thị</span>
                             <select
                                 className="misa-select"
@@ -1108,7 +1109,6 @@ const ProductPage = () => {
                             </div>
                         )}
                     </div>
-                </div>
 
                 {showModal && (
                     <div className="misa-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
@@ -1198,7 +1198,7 @@ const ProductPage = () => {
                                                         >
                                                             <option value="">Chọn danh mục</option>
                                                             {categories.map(cat => (
-                                                                <option key={cat.id} value={cat.id}>{cat.code ? `${cat.code} - ` : ''}{cat.name}</option>
+                                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
                                                             ))}
                                                         </select>
                                                         <button
