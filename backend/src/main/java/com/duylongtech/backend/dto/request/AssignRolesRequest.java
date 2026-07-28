@@ -12,6 +12,5 @@ public class AssignRolesRequest {
     @NotNull(message = "Mã nhân viên là bắt buộc")
     private Long userId;
     
-    @NotEmpty(message = "Phải chọn ít nhất một vai trò")
     private List<Long> roleIds;
 }

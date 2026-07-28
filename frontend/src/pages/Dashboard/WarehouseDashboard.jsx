@@ -10,24 +10,24 @@ function WarehouseDashboard() {
         { label: 'Xuất kho', icon: 'fas fa-truck-loading', action: () => navigate('/export-slips') },
         { label: 'Nhập kho', icon: 'fas fa-boxes', action: () => navigate('/import-history') },
         { label: 'Chuyển kho', icon: 'fas fa-exchange-alt', action: () => navigate('/transfer-history') },
-        { label: 'Quản lý kho', icon: 'fas fa-warehouse', action: () => navigate('/warehouses') },
+        { label: 'Quản lý BOM', icon: 'fas fa-sitemap', action: () => navigate('/assembly-boms') },
         { label: 'Kiểm kê', icon: 'fas fa-clipboard-check' },
     ];
 
     const toolbarItems = [
         { label: 'Kho', icon: 'fas fa-warehouse', action: () => navigate('/warehouses') },
-        { label: 'Vật tư hàng hóa', icon: 'fas fa-box', action: () => navigate('/products') },
+        { label: 'Hàng hóa dịch vụ', icon: 'fas fa-box', action: () => navigate('/products') },
         { label: 'Đơn vị tính', icon: 'fas fa-balance-scale', action: () => navigate('/units') },
-        { label: 'Tiện ích', icon: 'fas fa-cog' },
-        { label: 'Tùy chọn', icon: 'fas fa-sliders-h' },
+        { label: 'Danh mục sản phẩm', icon: 'fas fa-list', action: () => navigate('/product-categories') },
+        { label: 'Bảo hành', icon: 'fas fa-shield-alt', action: () => navigate('/warranties') }
     ];
 
     const reportItems = [
-        'Sổ chi tiết vật tư hàng hóa',
-        'Tổng hợp tồn kho',
-        'Báo cáo đối chiếu giá thành và giá trị nhập kho',
-        'Báo cáo đối chiếu kho và sổ cái',
-        'Báo cáo tiến độ sản xuất',
+        { id: 'inventory-summary', name: 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)' },
+        { id: 'stock-ledger', name: 'Sổ chi tiết vật tư hàng hóa' },
+        { id: 'inventory-balance', name: 'Báo cáo tồn kho hiện tại' },
+        { id: 'stock-transfers', name: 'Báo cáo chuyển kho nội bộ' },
+        { id: 'debt', name: 'Báo cáo công nợ đối tác' }
     ];
 
     return (
@@ -77,9 +77,9 @@ function WarehouseDashboard() {
                     </div>
                     <ul className={styles.reportList}>
                         {reportItems.map((report) => (
-                            <li key={report} onClick={() => navigate('/reports')} style={{ cursor: 'pointer' }}>
+                            <li key={report.id} onClick={() => navigate('/reports', { state: { reportId: report.id, fromDashboard: true } })} style={{ cursor: 'pointer' }}>
                                 <i className="fas fa-chart-line"></i>
-                                <span>{report}</span>
+                                <span>{report.name}</span>
                             </li>
                         ))}
                     </ul>

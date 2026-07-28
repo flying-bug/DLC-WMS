@@ -10,15 +10,17 @@ import styles from './WarehouseListPage.module.css';
 const WarehouseListPage = () => {
     const navigate = useNavigate();
     const [warehouses, setWarehouses] = useState([]);
+    const [loading, setLoading] = useState(false);
     
     // Các state bộ lọc
     const [searchCode, setSearchCode] = useState('');
     const [searchName, setSearchName] = useState('');
     const [searchAddress, setSearchAddress] = useState('');
-    const [filterStatus, setFilterStatus] = useState('');
+
+    const [allWarehouses, setAllWarehouses] = useState([]);
 
     // Pagination
-    const [page, setPage] = useState(0);
+    const [page, setPage] = useState(1); // 1-indexed for UI
     const [size, setSize] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
@@ -42,50 +44,70 @@ const WarehouseListPage = () => {
     // State sắp xếp
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
-    const fetchWarehouses = async () => {
+    const fetchWarehouses = async (pageIndex = 1, currentSize = size) => {
+        setLoading(true);
         try {
             const res = await warehouseApi.getWarehouses({
                 code: searchCode || undefined,
                 name: searchName || undefined,
                 address: searchAddress || undefined,
-                status: filterStatus || undefined,
-                page: page,
-                size: size
+                page: pageIndex - 1, // backend is 0-indexed
+                size: currentSize
             });
             setWarehouses(res.data.data.content || []);
             setTotalPages(res.data.data.totalPages || 0);
             setTotalElements(res.data.data.totalElements || 0);
+            setPage(pageIndex);
         } catch (error) {
             console.error("Lỗi fetch kho:", error);
             showToast('error', 'Không thể tải dữ liệu kho!');
+        } finally {
+            setLoading(false);
         }
     };
 
     useEffect(() => {
-         
-        fetchWarehouses();
-         
-    }, [page, size]); 
+        const delayDebounceFn = setTimeout(() => {
+            fetchWarehouses(page, size);
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [page, size, searchCode, searchName, searchAddress]);
+
+    useEffect(() => {
+        const fetchAll = async () => {
+            try {
+                const res = await warehouseApi.getWarehouses({ size: 1000 });
+                setAllWarehouses(res.data.data.content || []);
+            } catch (err) {
+                console.error("Lỗi lấy danh sách tất cả kho:", err);
+            }
+        };
+        fetchAll();
+    }, []);
 
     const handleFilter = () => {
-        setPage(0);
-        fetchWarehouses();
+        if (page === 1) {
+            fetchWarehouses(1, size);
+        } else {
+            setPage(1);
+        }
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleFilter();
+        }
     };
 
     const handleReload = () => {
         setSearchCode('');
         setSearchName('');
         setSearchAddress('');
-        setFilterStatus('');
         setSortConfig({ key: null, direction: 'asc' });
-        setPage(0);
-        warehouseApi.getWarehouses({ page: 0, size: size }).then(res => {
-            setWarehouses(res.data.data.content || []);
-            setTotalPages(res.data.data.totalPages || 0);
-            setTotalElements(res.data.data.totalElements || 0);
-        }).catch(err => {
-            console.error(err);
-        });
+        setPage(1);
+        // Will trigger useEffect because page might change, or if it doesn't we fetch directly:
+        fetchWarehouses(1, size);
     };
 
     const handleSort = (key) => {
@@ -113,15 +135,17 @@ const WarehouseListPage = () => {
                 await warehouseApi.createWarehouse(formData);
                 showToast('success', 'Thêm mới kho thành công!');
             }
-            fetchWarehouses();
+            setShowModal(false);
+            fetchWarehouses(page, size);
         } catch (error) {
             console.error(error);
             showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra!');
-            throw error; // Re-throw để WarehouseFormModal không tự động clear form nếu lỗi
+            throw error;
         }
     };
 
-    const handleDelete = (warehouse) => {
+    const handleDelete = (e, warehouse) => {
+        e.stopPropagation(); // prevent row click
         setDeletingWarehouse(warehouse);
         setShowDeleteModal(true);
     };
@@ -129,16 +153,27 @@ const WarehouseListPage = () => {
     const handleDeleteConfirm = async (id) => {
         try {
             await warehouseApi.deleteWarehouse(id);
-            fetchWarehouses();
+            fetchWarehouses(page, size);
             showToast('success', 'Xóa kho thành công!');
         } catch (error) {
             console.error("Lỗi xóa kho:", error);
             showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi xóa!');
-            fetchWarehouses();
+            fetchWarehouses(page, size);
         } finally {
             setShowDeleteModal(false);
             setDeletingWarehouse(null);
         }
+    };
+
+    const handleEdit = (e, warehouse) => {
+        e.stopPropagation(); // prevent row click
+        setIsEdit(true);
+        setSelectedData(warehouse);
+        setShowModal(true);
+    };
+
+    const handleRowClick = (id) => {
+        navigate(`/warehouses/${id}`);
     };
 
     const getSortIcon = (key) => {
@@ -158,12 +193,6 @@ const WarehouseListPage = () => {
                     </div>
                 );
             case 'PAUSED':
-                return (
-                    <div className={`${styles.statusBadge} ${styles.statusPaused}`}>
-                        <span className={styles.statusDot}></span>
-                        Tạm ngưng
-                    </div>
-                );
             case 'STOPPED':
             case 'INACTIVE':
                 return (
@@ -182,11 +211,9 @@ const WarehouseListPage = () => {
             const res = await warehouseApi.exportWarehouses({
                 code: searchCode || undefined,
                 name: searchName || undefined,
-                address: searchAddress || undefined,
-                status: filterStatus || undefined
+                address: searchAddress || undefined
             });
             
-            // Create Blob URL and download
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
             link.href = url;
@@ -218,184 +245,262 @@ const WarehouseListPage = () => {
                 <div className={styles.pageHeader}>
                     <div className={styles.titleWrapper}>
                         <h2 className={styles.pageTitle}>Quản lý kho</h2>
-                        <p className={styles.pageSubtitle}>Danh sách và cấu hình các kho hàng thuộc hệ thống Duy Long Computer</p>
+                        <p className={styles.pageSubtitle}>Danh sách và cấu hình các kho hàng thuộc hệ thống</p>
                     </div>
                     <div className={styles.actionButtons}>
-                        <button className={styles.btnAdd} type="button" onClick={() => {
+                        <button className={styles.btnPrimary} type="button" onClick={() => {
                             setIsEdit(false);
                             setSelectedData(null);
                             setShowModal(true);
                         }}>
-                            <i className="fas fa-plus"></i> Thêm kho
-                        </button>
-                        <button className={styles.btnExport} type="button" onClick={handleExportExcel}>
-                            <i className="fas fa-file-excel"></i> Xuất Excel
+                            <i className="bi bi-plus"></i> Thêm mới
                         </button>
                     </div>
                 </div>
 
-                {/* Filter Card */}
-                <div className={styles.filterCard}>
-                    <div className={styles.filterGrid}>
-                        <div className={styles.filterGroup}>
-                            <label>Tìm theo mã kho</label>
+                {/* Filter Section */}
+                <div className={styles.filterSection}>
+                    <div className={styles.filterGroup}>
+                        <div className={styles.filterField}>
+                            <label className={styles.filterLabel}>Mã kho</label>
                             <input 
                                 type="text" 
+                                className={styles.filterInput}
                                 placeholder="Ví dụ: K01, MK01..." 
                                 value={searchCode}
-                                onChange={(e) => setSearchCode(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchCode(e.target.value);
+                                    setPage(1);
+                                }}
+                                onKeyDown={handleKeyDown}
                             />
                         </div>
-                        <div className={styles.filterGroup}>
-                            <label>Tìm theo tên kho</label>
-                            <input 
-                                type="text" 
-                                placeholder="Nhập tên kho hàng" 
+                        <div className={styles.filterField}>
+                            <label className={styles.filterLabel}>Tên kho</label>
+                            <select
+                                className={styles.filterInput}
                                 value={searchName}
-                                onChange={(e) => setSearchName(e.target.value)}
-                            />
+                                onChange={(e) => {
+                                    setSearchName(e.target.value);
+                                    setPage(1);
+                                }}
+                            >
+                                <option value="">Tất cả</option>
+                                {allWarehouses.map(w => (
+                                    <option key={w.id} value={w.name}>{w.name}</option>
+                                ))}
+                            </select>
                         </div>
-                        <div className={styles.filterGroup}>
-                            <label>Địa chỉ</label>
+                        <div className={styles.filterField}>
+                            <label className={styles.filterLabel}>Địa chỉ</label>
                             <input 
                                 type="text" 
+                                className={styles.filterInput}
                                 placeholder="Nhập địa chỉ" 
                                 value={searchAddress}
-                                onChange={(e) => setSearchAddress(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchAddress(e.target.value);
+                                    setPage(1);
+                                }}
+                                onKeyDown={handleKeyDown}
                             />
                         </div>
-                        <div className={styles.filterGroup}>
-                            <label>Trạng thái</label>
-                            <div className={styles.selectWrapper}>
-                                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                                    <option value="">Tất cả</option>
-                                    <option value="APPROVED">Đang hoạt động</option>
-                                    <option value="INACTIVE">Ngừng sử dụng</option>
-                                </select>
-                                <i className={`fas fa-chevron-down ${styles.selectIcon}`}></i>
-                            </div>
-                        </div>
-                        <div className={styles.filterAction}>
-                            <button className={styles.btnFilter} onClick={handleFilter} type="button">
-                                <i className="fas fa-filter"></i> Lọc dữ liệu
-                            </button>
-                        </div>
+                    </div>
+                    <div className={styles.filterActions}>
+                        <button className={styles.iconBtn} onClick={handleReload} type="button" title="Làm mới">
+                            <i className="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <button className={styles.iconBtn} onClick={handleExportExcel} type="button" title="Xuất Excel">
+                            <i className="bi bi-file-earmark-excel"></i>
+                        </button>
+                        <button className={styles.btnPrimary} onClick={handleFilter} type="button">
+                            <i className="bi bi-funnel"></i> Lọc dữ liệu
+                        </button>
                     </div>
                 </div>
 
-                {/* Table Card */}
-                <div className={styles.tableCard}>
-                    <div className={styles.tableResponsive}>
-                        <table className={styles.table}>
-                            <thead>
+                {/* Table */}
+                <div className={styles.tableContainer}>
+                    <table className={styles.table}>
+                        <thead>
+                            <tr>
+                                <th style={{ width: '15%' }} onClick={() => handleSort('code')}>
+                                    MÃ KHO {getSortIcon('code')}
+                                </th>
+                                <th style={{ width: '25%' }} onClick={() => handleSort('name')}>
+                                    TÊN KHO {getSortIcon('name')}
+                                </th>
+                                <th style={{ width: '30%' }} onClick={() => handleSort('address')}>
+                                    ĐỊA CHỈ {getSortIcon('address')}
+                                </th>
+                                <th style={{ width: '15%' }} onClick={() => handleSort('status')}>
+                                    TRẠNG THÁI {getSortIcon('status')}
+                                </th>
+                                <th style={{ width: '15%', textAlign: 'center' }}>
+                                    THAO TÁC
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
                                 <tr>
-                                    <th style={{ width: '15%' }} onClick={() => handleSort('code')} className={styles.sortableHeader}>
-                                        MÃ KHO {getSortIcon('code')}
-                                    </th>
-                                    <th style={{ width: '20%' }} onClick={() => handleSort('name')} className={styles.sortableHeader}>
-                                        TÊN KHO {getSortIcon('name')}
-                                    </th>
-                                    <th style={{ width: '25%' }} onClick={() => handleSort('address')} className={styles.sortableHeader}>
-                                        ĐỊA CHỈ {getSortIcon('address')}
-                                    </th>
-                                    <th style={{ width: '15%' }} onClick={() => handleSort('status')} className={styles.sortableHeader}>
-                                        TRẠNG THÁI {getSortIcon('status')}
-                                    </th>
-                                    <th style={{ width: '10%', textAlign: 'center' }}>THAO TÁC</th>
+                                    <td colSpan="5" style={{ textAlign: 'center', padding: '40px' }}>Đang tải dữ liệu...</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {warehouses.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="5" style={{ padding: '0' }}>
-                                            <div className={styles.emptyState}>
-                                                <div className={styles.emptyIcon}>
-                                                    <i className="fas fa-box-open"></i>
-                                                </div>
-                                                <p className={styles.emptyTitle}>Không tìm thấy kho hàng</p>
-                                                <p className={styles.emptySubtitle}>Không có dữ liệu nào khớp với điều kiện tìm kiếm hiện tại của bạn.</p>
-                                                <button className={styles.btnClearFilter} onClick={handleReload} type="button">
-                                                    Xóa bộ lọc
-                                                </button>
+                            ) : warehouses.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className={styles.emptyState}>
+                                        <i className={`fas fa-box-open ${styles.emptyIcon}`}></i>
+                                        <div className={styles.emptyText}>Không có dữ liệu kho.</div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                warehouses.map((item) => (
+                                    <tr 
+                                        key={item.id} 
+                                        onClick={() => handleRowClick(item.id)}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <td className={styles.codeCell}>{item.code}</td>
+                                        <td className={styles.nameCell}>{item.name}</td>
+                                        <td>{item.address}</td>
+                                        <td>{getStatusBadge(item.status)}</td>
+                                        <td className={styles.textCenter}>
+                                            <div className={styles.rowActions}>
+                                                <i 
+                                                    className="bi bi-eye"
+                                                    title="Xem chi tiết"
+                                                    style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleRowClick(item.id);
+                                                    }}
+                                                ></i>
+                                                <i 
+                                                    className="bi bi-pencil" 
+                                                    title="Chỉnh sửa"
+                                                    style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }}
+                                                    onClick={(e) => handleEdit(e, item)}
+                                                ></i>
+                                                <i 
+                                                    className="bi bi-trash"
+                                                    title="Xóa"
+                                                    style={{ cursor: 'pointer', color: '#ef4444', fontSize: '16px' }}
+                                                    onClick={(e) => handleDelete(e, item)}
+                                                ></i>
                                             </div>
                                         </td>
                                     </tr>
-                                ) : (
-                                    warehouses.map((warehouse) => (
-                                        <tr key={warehouse.id}>
-                                            <td className={styles.codeCell}>{warehouse.code}</td>
-                                            <td className={styles.nameCell}>{warehouse.name}</td>
-                                            <td>{warehouse.address}</td>
-                                            <td>{getStatusBadge(warehouse.status)}</td>
-                                            <td>
-                                                <div className={styles.rowActions}>
-                                                    <button className={styles.iconBtn} title="Xem chi tiết" onClick={() => navigate(`/warehouses/${warehouse.id}`)}>
-                                                        <i className="far fa-eye"></i>
-                                                    </button>
-                                                    <button className={styles.iconBtn} title="Sửa" onClick={() => {
-                                                        setIsEdit(true);
-                                                        setSelectedData(warehouse);
-                                                        setShowModal(true);
-                                                    }}>
-                                                        <i className="fas fa-pencil-alt"></i>
-                                                    </button>
-                                                    <button 
-                                                        className={styles.iconBtn} 
-                                                        title="Xóa" 
-                                                        onClick={() => handleDelete(warehouse)}
-                                                        disabled={warehouse.status === 'INACTIVE' || warehouse.status === 'STOPPED'}
-                                                    >
-                                                        <i className="far fa-trash-alt"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Pagination */}
-                    {warehouses.length > 0 && (
-                        <div className={styles.pagination}>
-                            <div className={styles.pageInfo}>
-                                Hiển thị {page * size + 1} - {Math.min((page + 1) * size, totalElements)} trong tổng số {totalElements} bản ghi
-                            </div>
-                            <div className={styles.pageControls}>
-                                <button className={styles.pageNavBtn} disabled={page === 0} onClick={() => setPage(page - 1)}>
-                                    <i className="fas fa-chevron-left"></i>
-                                </button>
-                                
-                                {[...Array(totalPages)].map((_, i) => (
-                                    <button 
-                                        key={i} 
-                                        className={`${styles.pageBtn} ${page === i ? styles.active : ''}`}
-                                        onClick={() => setPage(i)}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
-
-                                <button className={styles.pageNavBtn} disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>
-                                    <i className="fas fa-chevron-right"></i>
-                                </button>
-                                
-                                <div className={styles.pageSizeSelect}>
-                                    <select value={size} onChange={(e) => {
-                                        setSize(Number(e.target.value));
-                                        setPage(0);
-                                    }}>
-                                        <option value={10}>10 bản ghi / trang</option>
-                                        <option value={20}>20 bản ghi / trang</option>
-                                        <option value={50}>50 bản ghi / trang</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
 
+                {/* Pagination */}
+                {!loading && totalElements > 0 && (
+                    <div className={styles.pagination}>
+                        <div className={styles.pageInfo}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>Hiển thị</span>
+                                <select 
+                                    className="misa-select"
+                                    style={{ width: '70px', height: '32px', padding: '0 8px', border: '1px solid #d4d4d7', borderRadius: '4px', outline: 'none' }}
+                                    value={size} 
+                                    onChange={(e) => {
+                                        setSize(Number(e.target.value));
+                                        setPage(1);
+                                    }}
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={20}>20</option>
+                                    <option value={50}>50</option>
+                                </select>
+                                <span>trên tổng số {totalElements} bản ghi</span>
+                            </div>
+                        </div>
+                        <div className={styles.pageControls}>
+                            <button 
+                                disabled={page === 1} 
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                className={styles.pageBtn}
+                            >
+                                <i className="bi bi-chevron-left"></i>
+                                <span>Trước</span>
+                            </button>
+                            
+                            <div className={styles.paginationNumbers}>
+                                {(() => {
+                                    const pages = [];
+                                    if (totalPages <= 7) {
+                                        for (let i = 1; i <= totalPages; i++) pages.push(i);
+                                    } else {
+                                        if (page <= 4) {
+                                            for (let i = 1; i <= 5; i++) pages.push(i);
+                                            pages.push('...');
+                                            pages.push(totalPages);
+                                        } else if (page >= totalPages - 3) {
+                                            pages.push(1);
+                                            pages.push('...');
+                                            for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+                                        } else {
+                                            pages.push(1);
+                                            pages.push('...');
+                                            for (let i = page - 1; i <= page + 1; i++) pages.push(i);
+                                            pages.push('...');
+                                            pages.push(totalPages);
+                                        }
+                                    }
+                                    
+                                    return pages.map((num, idx) => (
+                                        num === page ? (
+                                            <input
+                                                key={idx}
+                                                className={`${styles.pageNumber} ${styles.active}`}
+                                                style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
+                                                defaultValue={num}
+                                                title="Nhập số trang và nhấn Enter"
+                                                onBlur={(e) => e.target.value = page}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        let p = parseInt(e.target.value, 10);
+                                                        if (!isNaN(p)) {
+                                                            p = Math.max(1, Math.min(totalPages, p));
+                                                            setPage(p);
+                                                            e.target.blur();
+                                                        } else {
+                                                            e.target.value = page;
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        ) : (
+                                            <span 
+                                                key={idx} 
+                                                className={`${styles.pageNumber} ${num === '...' ? styles.dots : ''}`}
+                                                onClick={() => num !== '...' && setPage(num)}
+                                            >
+                                                {num}
+                                            </span>
+                                        )
+                                    ));
+                                })()}
+                            </div>
+                            
+                            <button 
+                                disabled={page === totalPages} 
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                className={styles.pageBtn}
+                            >
+                                <span>Sau</span>
+                                <i className="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Modals */}
+            {showModal && (
                 <WarehouseFormModal
                     isOpen={showModal}
                     onClose={() => setShowModal(false)}
@@ -403,21 +508,28 @@ const WarehouseListPage = () => {
                     isEdit={isEdit}
                     initialData={selectedData}
                 />
+            )}
 
-                <WarehouseDeleteModal 
+            {showDeleteModal && (
+                <WarehouseDeleteModal
                     isOpen={showDeleteModal}
-                    onClose={() => setShowDeleteModal(false)}
-                    onConfirm={handleDeleteConfirm}
-                    warehouse={deletingWarehouse}
+                    onClose={() => {
+                        setShowDeleteModal(false);
+                        setDeletingWarehouse(null);
+                    }}
+                    onConfirm={() => handleDeleteConfirm(deletingWarehouse.id)}
+                    warehouseName={deletingWarehouse?.name}
+                    warehouseCode={deletingWarehouse?.code}
                 />
+            )}
 
-                <Toast 
-                    isVisible={toast.isVisible}
+            {toast.isVisible && (
+                <Toast
                     type={toast.type}
                     message={toast.message}
                     onClose={() => setToast({ ...toast, isVisible: false })}
                 />
-            </div>
+            )}
         </AdminLayout>
     );
 };

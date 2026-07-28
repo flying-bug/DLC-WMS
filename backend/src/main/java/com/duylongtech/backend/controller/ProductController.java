@@ -41,8 +41,9 @@ public class ProductController {
     public ResponseEntity<Page<ProductResponse>> getProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String search) {
-        return ResponseEntity.ok(productService.getProducts(page, size, search));
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long categoryId) {
+        return ResponseEntity.ok(productService.getProducts(page, size, search, categoryId));
     }
 
     @GetMapping("/export")

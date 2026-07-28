@@ -16,11 +16,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query(value = "SELECT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.unit " +
            "WHERE (:search IS NULL OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :search, '%')))",
+           "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "AND (:categoryId IS NULL OR p.category.id = :categoryId)",
            countQuery = "SELECT count(p) FROM Product p " +
            "WHERE (:search IS NULL OR LOWER(p.productName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :search, '%')))")
-    Page<Product> searchProducts(@Param("search") String search, Pageable pageable);
+           "OR LOWER(p.productCode) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "AND (:categoryId IS NULL OR p.category.id = :categoryId)")
+    Page<Product> searchProducts(@Param("search") String search, @Param("categoryId") Long categoryId, Pageable pageable);
 
     boolean existsByCategoryId(Long categoryId);
 }
