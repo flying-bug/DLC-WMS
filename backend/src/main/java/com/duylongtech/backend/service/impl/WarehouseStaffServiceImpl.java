@@ -97,8 +97,10 @@ public class WarehouseStaffServiceImpl implements WarehouseStaffService {
         // Get current roles of this user in this warehouse
         List<UserWarehouseRole> currentRoles = userWarehouseRoleRepository.findByUserIdAndWarehouseId(request.getUserId(), warehouseId);
 
+        List<Long> requestedRoleIds = request.getRoleIds() != null ? request.getRoleIds() : java.util.Collections.emptyList();
+
         // Filter out roles that are in the request
-        for (Long roleId : request.getRoleIds()) {
+        for (Long roleId : requestedRoleIds) {
             RoleEntity role = roleRepository.findById(roleId)
                     .orElseThrow(() -> new BusinessException(SystemMessage.ACCESS_DENIED));
 
@@ -130,7 +132,7 @@ public class WarehouseStaffServiceImpl implements WarehouseStaffService {
 
         // Deactivate roles not in the request
         for (UserWarehouseRole currentRole : currentRoles) {
-            if (!request.getRoleIds().contains(currentRole.getRoleId()) && currentRole.getIsActive()) {
+            if (!requestedRoleIds.contains(currentRole.getRoleId()) && currentRole.getIsActive()) {
                 currentRole.setIsActive(false);
                 userWarehouseRoleRepository.save(currentRole);
             }

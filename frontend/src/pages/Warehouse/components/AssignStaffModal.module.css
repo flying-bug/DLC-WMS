@@ -1,231 +1,249 @@
-.overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 24px;
 }
 
-.modal {
-    background-color: white;
-    border-radius: 8px;
-    width: 100%;
-    max-width: 500px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-direction: column;
+.modalContent {
+  background-color: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
 }
 
-.header {
-    padding: 16px 20px;
-    border-bottom: 1px solid #e5e7eb;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.modalHeader {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.header h2 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #111827;
+.modalTitle {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: #111827;
 }
 
-.btnClose {
-    background: none;
-    border: none;
-    font-size: 24px;
-    line-height: 1;
-    color: #6b7280;
-    cursor: pointer;
+.modalClose {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #9ca3af;
+  line-height: 1;
 }
 
-.btnClose:hover {
-    color: #111827;
+.modalClose:hover {
+  color: #111827;
 }
 
-.form {
-    padding: 20px;
+.modalBody {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
 }
 
-.errorAlert {
-    background-color: #fee2e2;
-    color: #b91c1c;
-    padding: 10px 12px;
-    border-radius: 4px;
-    margin-bottom: 16px;
-    font-size: 14px;
+.modalFooter {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background-color: #f9fafb;
 }
 
-.formGroup {
-    margin-bottom: 20px;
-    position: relative;
+.modalError {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
 }
 
-.formGroup label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
-    color: #374151;
-    font-size: 14px;
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  position: relative;
 }
 
-.required {
-    color: #ef4444;
+.fieldLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
 }
 
-.input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
-    font-size: 14px;
-    outline: none;
-    box-sizing: border-box;
+.fieldInput {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+  color: #1f2937;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
 }
 
-.input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-}
-
-.searchingText {
-    font-size: 12px;
-    color: #6b7280;
-    margin-top: 4px;
+.fieldInput:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
 }
 
 .userDropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #d1d5db;
-    border-top: none;
-    border-radius: 0 0 4px 4px;
-    max-height: 150px;
-    overflow-y: auto;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    z-index: 10;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  z-index: 20;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .userDropdown li {
-    padding: 8px 12px;
-    cursor: pointer;
-    font-size: 14px;
-    border-bottom: 1px solid #f3f4f6;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #374151;
 }
 
 .userDropdown li:hover {
-    background-color: #f3f4f6;
+  background-color: #f3f4f6;
+  color: #111827;
 }
 
 .selectedUser {
-    margin-top: 8px;
-    font-size: 13px;
-    color: #16a34a;
-    display: flex;
-    justify-content: space-between;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #059669;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #ecfdf5;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #a7f3d0;
 }
 
-.selectedUser button {
-    background: none;
-    border: none;
-    color: #3b82f6;
-    cursor: pointer;
-    text-decoration: underline;
+.changeUserBtn {
+  background: none;
+  border: none;
+  color: #059669;
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 500;
+  padding: 0;
 }
 
 .rolesGrid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-    max-height: 200px;
-    overflow-y: auto;
-    padding: 2px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 4px 2px;
 }
 
 .roleItem {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: #fff;
 }
 
 .roleItem:hover {
-    border-color: #d1d5db;
-    background-color: #f9fafb;
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.roleItemActive {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
 }
 
 .roleItem input[type="checkbox"] {
-    margin-top: 4px;
+  margin-top: 2px;
+  cursor: pointer;
+  accent-color: #0075c0;
 }
 
 .roleInfo {
-    display: flex;
-    flex-direction: column;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .roleName {
-    font-weight: 500;
-    color: #111827;
-    font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  font-size: 13px;
 }
 
 .roleCode {
-    font-size: 12px;
-    color: #6b7280;
-}
-
-.footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    margin-top: 10px;
+  font-size: 11px;
+  color: #6b7280;
 }
 
 .btnCancel {
-    padding: 8px 16px;
-    background-color: white;
-    border: 1px solid #d1d5db;
-    color: #374151;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
+  padding: 8px 16px;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
 }
 
 .btnCancel:hover:not(:disabled) {
-    background-color: #f9fafb;
+  background-color: #f9fafb;
 }
 
 .btnSave {
-    padding: 8px 16px;
-    background-color: #3b82f6;
-    border: none;
-    color: white;
-    border-radius: 4px;
-    font-weight: 500;
-    cursor: pointer;
+  padding: 8px 16px;
+  background-color: var(--color-primary);
+  border: none;
+  color: white;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
 }
 
 .btnSave:hover:not(:disabled) {
-    background-color: #2563eb;
+  background-color: var(--color-primary-hover);
 }
 
 .btnSave:disabled, .btnCancel:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  opacity: 0.6;
+  cursor: not-allowed;
 }

@@ -257,6 +257,34 @@
   border-color: var(--color-primary);
 }
 
+.filterActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.iconBtn {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-white);
+  width: 38px;
+  height: 38px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  transition: all 0.2s ease;
+}
+
+.iconBtn:hover {
+  background-color: var(--color-bg);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
 .btnOutline {
   border: 1px solid var(--color-border-strong);
   background: var(--color-white);

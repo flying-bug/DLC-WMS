@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import axiosClient from '../../api/axiosClient';
 import styles from './ProductPage.module.css';
 
@@ -18,9 +19,11 @@ const defaultFormData = {
     description: '',
     imageUrl: '',
     trackSerial: false,
+    trackLot: false,
     isAssembly: false,
     active: true,
-    minStockQty: 0
+    minStockQty: 0,
+    taxReductionStatus: 'NORMAL'
 };
 
 const defaultVariantData = {
@@ -206,6 +209,7 @@ const ProductPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [tempSearch, setTempSearch] = useState('');
     const [stockFilter, setStockFilter] = useState('ALL');
+    const [categoryFilter, setCategoryFilter] = useState('');
 
     const [page, setPage] = useState(0);
     const [size, setSize] = useState(20);
@@ -218,6 +222,33 @@ const ProductPage = () => {
     const [errorMsg, setErrorMsg] = useState('');
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
+
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', id: null, title: '', message: '' });
+
+    const handleConfirmDelete = async () => {
+        const { type, id } = confirmModal;
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        
+        if (type === 'PRODUCT') {
+            try {
+                await axiosClient.delete(`/products/${id}`);
+                fetchProducts();
+                fetchAllVariants();
+                showToast('success', 'Xóa sản phẩm thành công.');
+            } catch (error) {
+                console.error('Lỗi xóa sản phẩm:', error);
+                showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xóa sản phẩm.'));
+            }
+        } else if (type === 'SKU') {
+            try {
+                await axiosClient.delete(`/products/${selectedProduct.id}/variants/${id}`);
+                showToast('success', 'Xóa SKU thành công.');
+                await fetchVariants(selectedProduct.id);
+            } catch (error) {
+                showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xóa SKU.'));
+            }
+        }
+    };
     const [uploadingImage, setUploadingImage] = useState(false);
     const [showVariantModal, setShowVariantModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -226,8 +257,7 @@ const ProductPage = () => {
     const [variantError, setVariantError] = useState('');
     const [loadingVariants, setLoadingVariants] = useState(false);
 
-    const [activeTab, setActiveTab] = useState('units');
-    const [unitConversions, setUnitConversions] = useState([]);
+    const [activeTab, setActiveTab] = useState('bom');
     const [bomLines, setBomLines] = useState([]);
     const [allVariants, setAllVariants] = useState([]);
     const [warrantyQty, setWarrantyQty] = useState(0);
@@ -236,6 +266,14 @@ const ProductPage = () => {
     const [showQuickAddCat, setShowQuickAddCat] = useState(false);
     const [quickCatForm, setQuickCatForm] = useState({ code: '', name: '' });
     const [savingCat, setSavingCat] = useState(false);
+    const [showQuickAddUnit, setShowQuickAddUnit] = useState(false);
+    const [quickUnitForm, setQuickUnitForm] = useState({ code: '', name: '' });
+    const [savingUnit, setSavingUnit] = useState(false);
+
+    const [showQuickAddBrand, setShowQuickAddBrand] = useState(false);
+    const [quickBrandForm, setQuickBrandForm] = useState({ code: '', name: '' });
+    const [savingBrand, setSavingBrand] = useState(false);
+
 
     const [specList, setSpecList] = useState([{ id: 1, key: '', value: '' }]);
     const [useRawJson, setUseRawJson] = useState(false);
@@ -302,7 +340,8 @@ const ProductPage = () => {
         try {
             setLoading(true);
             const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
-            const res = await axiosClient.get(`/products?page=${page}&size=${size}${searchQuery}`);
+            const categoryQuery = categoryFilter ? `&categoryId=${categoryFilter}` : '';
+            const res = await axiosClient.get(`/products?page=${page}&size=${size}${searchQuery}${categoryQuery}`);
             const content = res.data.content || [];
             setProducts(content);
             setTotalPages(res.data.totalPages || 0);
@@ -328,7 +367,7 @@ const ProductPage = () => {
             setLoading(false);
             setStockFilter('ALL');
         }
-    }, [page, size, searchTerm]);
+    }, [page, size, searchTerm, categoryFilter]);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -367,9 +406,8 @@ const ProductPage = () => {
     const handleOpenAdd = () => {
         setIsEdit(false);
         setFormData(buildInitialFormData());
-        setUnitConversions([]);
         setBomLines(getPredefinedBomLines(categories));
-        setActiveTab('units');
+        setActiveTab('bom');
         setWarrantyQty(0);
         setWarrantyUnit('Tháng');
         setErrorMsg('');
@@ -390,9 +428,11 @@ const ProductPage = () => {
             description: product.description || '',
             imageUrl: product.imageUrl || '',
             trackSerial: Boolean(product.trackSerial),
+            trackLot: Boolean(product.trackLot),
             isAssembly: Boolean(product.isAssembly),
             active: product.active !== false,
-            minStockQty: Number(product.minStockQty || 0)
+            minStockQty: Number(product.minStockQty || 0),
+            taxReductionStatus: product.taxReductionStatus || 'NORMAL'
         }));
 
         if (product.warrantyPeriod) {
@@ -425,7 +465,6 @@ const ProductPage = () => {
         }
 
         setBomLines(loadedBomLines);
-        setUnitConversions(product.unitConversions || []);
         setErrorMsg('');
         setShowModal(true);
         setOpenDropdownId(null);
@@ -444,8 +483,10 @@ const ProductPage = () => {
             description: product.description || '',
             imageUrl: product.imageUrl || '',
             trackSerial: Boolean(product.trackSerial),
+            trackLot: Boolean(product.trackLot),
             isAssembly: Boolean(product.isAssembly),
-            active: product.active !== false
+            active: product.active !== false,
+            taxReductionStatus: product.taxReductionStatus || 'NORMAL'
         }));
 
         if (product.warrantyPeriod) {
@@ -486,7 +527,8 @@ const ProductPage = () => {
             imageUrl: data.imageUrl || '',
             active: data.active,
             trackSerial: Boolean(data.trackSerial),
-            trackLot: false,
+            trackLot: Boolean(data.trackLot),
+            taxReductionStatus: data.taxReductionStatus || 'NORMAL',
             isAssembly: data.productType === 'Thành phẩm',
             bomLines: data.productType === 'Thành phẩm' ? bomLines.filter(line => line.componentVariantId).map(line => ({
                 componentVariantId: Number(line.componentVariantId),
@@ -496,13 +538,7 @@ const ProductPage = () => {
             })) : [],
             minStockQty: Number(data.minStockQty || 0),
             warrantyPeriod: warrantyQty > 0 ? `${warrantyQty} ${warrantyUnit}` : null,
-            warrantyPeriodMonths: warrantyQty > 0 ? (warrantyUnit === 'Năm' ? warrantyQty * 12 : warrantyQty) : 0,
-            unitConversions: unitConversions.filter(uc => uc.unitId).map(uc => ({
-                unitId: Number(uc.unitId),
-                operator: uc.operator || 'DIVIDE',
-                ratio: Number(uc.ratio || 1),
-                note: uc.note || ''
-            }))
+            warrantyPeriodMonths: warrantyQty > 0 ? (warrantyUnit === 'Năm' ? warrantyQty * 12 : warrantyQty) : 0
         };
     };
 
@@ -526,7 +562,7 @@ const ProductPage = () => {
             const imageUrl = response.data?.data?.secureUrl || response.data?.data?.url || '';
             setFormData((current) => ({ ...current, imageUrl }));
         } catch (error) {
-            setErrorMsg(getErrorMessage(error, 'Khong the tai anh san pham.'));
+            setErrorMsg(getErrorMessage(error, 'Không thể tải ảnh sản phẩm.'));
         } finally {
             setUploadingImage(false);
         }
@@ -620,18 +656,14 @@ const ProductPage = () => {
         setOpenDropdownId(null);
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này không?')) {
-            try {
-                await axiosClient.delete(`/products/${id}`);
-                fetchProducts();
-                fetchAllVariants();
-                showToast('success', 'Xóa sản phẩm thành công.');
-            } catch (error) {
-                console.error('Lỗi xóa sản phẩm:', error);
-                showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xóa sản phẩm.'));
-            }
-        }
+    const handleDelete = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            type: 'PRODUCT',
+            id,
+            title: 'Xác nhận xóa',
+            message: 'Bạn có chắc chắn muốn xóa sản phẩm này không?'
+        });
         setOpenDropdownId(null);
     };
 
@@ -785,15 +817,14 @@ const ProductPage = () => {
         }
     };
 
-    const deleteVariant = async (variantId) => {
-        if (!window.confirm('Bạn có chắc chắn muốn xóa SKU này không?')) return;
-        try {
-            await axiosClient.delete(`/products/${selectedProduct.id}/variants/${variantId}`);
-            showToast('success', 'Xóa SKU thành công.');
-            await fetchVariants(selectedProduct.id);
-        } catch (error) {
-            showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xóa SKU.'));
-        }
+    const deleteVariant = (variantId) => {
+        setConfirmModal({
+            isOpen: true,
+            type: 'SKU',
+            id: variantId,
+            title: 'Xác nhận xóa',
+            message: 'Bạn có chắc chắn muốn xóa SKU này không?'
+        });
     };
 
     const buildTimestamp = () => {
@@ -837,9 +868,9 @@ const ProductPage = () => {
     };
 
     const formatQuantity = (value) => {
-        if (value === undefined || value === null) return '0,00';
+        if (value === undefined || value === null) return '0';
         return new Intl.NumberFormat('vi-VN', {
-            minimumFractionDigits: 2,
+            minimumFractionDigits: 0,
             maximumFractionDigits: 4
         }).format(value);
     };
@@ -859,180 +890,176 @@ const ProductPage = () => {
 
     return (
         <AdminLayout>
-            <Toast
-                isVisible={toast.isVisible}
-                type={toast.type}
-                message={toast.message}
-                onClose={() => setToast((current) => ({ ...current, isVisible: false }))}
-            />
-            <div className={styles.container}>
-                <div className={styles.header}>
-                    <div className={styles.titleArea}>
-                        <h2>Hàng hóa</h2>
-                        <span className={styles.backLink} onClick={() => navigate('/dashboard')}>
-                            <i className="fas fa-chevron-left"></i> Tất cả danh mục
-                        </span>
-                    </div>
+            <div className={styles.pageBody}>
+                <div className={styles.pageTitleContainer}>
+                    <h1 className={styles.pageTitle}>Hàng hóa, dịch vụ</h1>
+                    <button className={styles.btnPrimary} onClick={handleOpenAdd}>
+                        <i className="bi bi-plus"></i> Thêm mới
+                    </button>
                 </div>
 
-                <div className={styles.kpiContainer}>
-                    <div
-                        className={`${styles.kpiCard} ${styles.kpiWarning}`}
-                        style={{ cursor: 'pointer', border: stockFilter === 'LOW_STOCK' ? '2px solid #f59e0b' : 'none' }}
-                        onClick={() => setStockFilter(prev => prev === 'LOW_STOCK' ? 'ALL' : 'LOW_STOCK')}
+                
+                <div className={styles.summaryCards}>
+                    <div 
+                        className={`${styles.summaryCard} ${stockFilter === 'LOW_STOCK' ? styles.activeCardWarning : ''}`}
+                        onClick={() => { setStockFilter(stockFilter === 'LOW_STOCK' ? 'ALL' : 'LOW_STOCK'); setPage(0); }}
                     >
-                        <div className={styles.kpiIcon}>
-                            <i className="fas fa-box-open"></i>
+                        <div className={styles.iconWarning}>
+                            <i className="bi bi-box-seam"></i>
                         </div>
-                        <div className={styles.kpiInfo}>
-                            <div className={styles.kpiNumber}>{lowStockCount}</div>
-                            <div className={styles.kpiLabel}>Sản phẩm sắp hết hàng</div>
+                        <div className={styles.cardInfo}>
+                            <h3>{lowStockCount}</h3>
+                            <p>Sản phẩm sắp hết hàng</p>
                         </div>
                     </div>
-                    <div
-                        className={`${styles.kpiCard} ${styles.kpiDanger}`}
-                        style={{ cursor: 'pointer', border: stockFilter === 'OUT_OF_STOCK' ? '2px solid #ef4444' : 'none' }}
-                        onClick={() => setStockFilter(prev => prev === 'OUT_OF_STOCK' ? 'ALL' : 'OUT_OF_STOCK')}
+                    <div 
+                        className={`${styles.summaryCard} ${stockFilter === 'OUT_OF_STOCK' ? styles.activeCardDanger : ''}`}
+                        onClick={() => { setStockFilter(stockFilter === 'OUT_OF_STOCK' ? 'ALL' : 'OUT_OF_STOCK'); setPage(0); }}
                     >
-                        <div className={styles.kpiIcon}>
-                            <i className="fas fa-exclamation-triangle"></i>
+                        <div className={styles.iconDanger}>
+                            <i className="bi bi-exclamation-triangle-fill"></i>
                         </div>
-                        <div className={styles.kpiInfo}>
-                            <div className={styles.kpiNumber}>{outOfStockCount}</div>
-                            <div className={styles.kpiLabel}>Sản phẩm hết hàng</div>
+                        <div className={styles.cardInfo}>
+                            <h3>{outOfStockCount}</h3>
+                            <p>Sản phẩm hết hàng</p>
                         </div>
                     </div>
                 </div>
 
-                <div className={styles.toolbar}>
-                    <div className={styles.toolbarLeft}>
-                        <div className={styles.bulkDropdown}>
-                            Thực hiện hàng loạt <i className="fas fa-chevron-down"></i>
-                        </div>
-                        <button className={styles.filterBtn}>
-                            <i className="fas fa-filter"></i> Lọc
-                        </button>
-                    </div>
-
-                    <div className={styles.toolbarRight}>
-                        <div className={styles.searchBox}>
+                <div className={styles.filterSection}>
+                    <div className={styles.filterGroup}>
+                        <div className={styles.filterField}>
+                            <span className={styles.filterLabel}>TÌM KIẾM</span>
                             <input
                                 type="text"
-                                placeholder="Tìm theo mã, tên sản phẩm"
+                                className={styles.filterInput}
+                                placeholder="Mã hoặc tên sản phẩm..."
                                 value={tempSearch}
-                                onChange={(event) => setTempSearch(event.target.value)}
+                                onChange={(e) => setTempSearch(e.target.value)}
                                 onKeyDown={handleSearch}
                             />
-                            <i className="fas fa-search" onClick={handleSearchBtnClick}></i>
                         </div>
-                        <button className={styles.iconBtn} onClick={() => { fetchProducts(); fetchAllVariants(); }} title="Tải lại">
-                            <i className="fas fa-sync-alt"></i>
-                        </button>
-                        <button className={styles.iconBtn} title="Xuất Excel" onClick={handleExportExcel}>
-                            <i className="fas fa-file-excel"></i>
-                        </button>
-                        <button className={styles.iconBtn} title="Thiết lập cột">
-                            <i className="fas fa-cog"></i>
-                        </button>
-
-                        <div className={styles.actionBtnGroup}>
-                            <button className={styles.addBtn} onClick={handleOpenAdd}>
-                                Thêm
-                            </button>
-                            <button className={styles.addMoreDropdownBtn}>
-                                <i className="fas fa-chevron-down"></i>
-                            </button>
+                        <div className={styles.filterField}>
+                            <span className={styles.filterLabel}>DANH MỤC</span>
+                            <select
+                                className={styles.filterInput}
+                                value={categoryFilter}
+                                onChange={(e) => { setCategoryFilter(e.target.value); setPage(0); }}
+                            >
+                                <option value="">Tất cả danh mục</option>
+                                {categories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                            </select>
                         </div>
+                        
+                    </div>
+                    <div className={styles.filterActions}>
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => { setTempSearch(''); setSearchTerm(''); setCategoryFilter(''); setStockFilter('ALL'); setPage(0); }}
+                            title="Đặt lại bộ lọc"
+                        >
+                            <i className="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <button
+                            className={styles.iconBtn}
+                            onClick={handleExportExcel}
+                            title="Xuất tệp Excel"
+                        >
+                            <i className="bi bi-file-earmark-excel"></i>
+                        </button>
+                        <button className={styles.btnPrimary} onClick={handleSearchBtnClick}>
+                            <i className="bi bi-funnel"></i> Lọc dữ liệu
+                        </button>
                     </div>
                 </div>
 
-                <div className={styles.tableWrapper}>
+                <div className={styles.tableContainer}>
                     <table className={styles.table}>
                         <thead>
                             <tr>
                                 <th style={{ width: '40px', textAlign: 'center' }}>
-                                    <input type="checkbox" />
+                                    <input type="checkbox" className={styles.checkbox} />
                                 </th>
-                                <th style={{ width: '100px' }}>Hình ảnh</th>
-                                <th>Mã sản phẩm</th>
-                                <th>Tên sản phẩm</th>
-                                <th style={{ width: '120px' }}>Loại</th>
-                                <th style={{ width: '150px' }}>Danh mục</th>
-                                <th style={{ width: '140px' }}>Thương hiệu</th>
-                                <th style={{ width: '120px' }}>Đơn vị tính</th>
-                                <th style={{ textAlign: 'right', width: '140px' }}>Giá bán</th>
-                                <th style={{ textAlign: 'right', width: '120px' }}>Tồn kho</th>
-                                <th style={{ width: '120px', textAlign: 'center' }}>Chức năng</th>
+                                <th style={{ width: '80px', textAlign: 'center' }}>Hình ảnh</th>
+                                <th style={{ width: '120px' }}>Mã sản phẩm</th>
+                                <th style={{ minWidth: '150px' }}>Tên sản phẩm</th>
+                                <th style={{ width: '100px' }}>Loại</th>
+                                <th style={{ width: '120px' }}>Danh mục</th>
+                                <th style={{ width: '120px' }}>Thương hiệu</th>
+                                <th style={{ width: '100px' }}>Đơn vị tính</th>
+                                <th className={styles.textRight} style={{ width: '120px' }}>Giá bán</th>
+                                <th className={styles.textRight} style={{ width: '100px' }}>Tồn kho</th>
+                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="10" style={{ textAlign: 'center', padding: '40px' }}>
-                                        <div className={styles.spinner}></div> Đang tải danh sách sản phẩm...
+                                    <td colSpan="11">
+                                        <div className={styles.emptyState}>
+                                            <div className={styles.emptyText}>Đang tải dữ liệu...</div>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : filteredProducts.length === 0 ? (
                                 <tr>
-                                    <td colSpan="11" style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted-2)' }}>
-                                        Không tìm thấy sản phẩm phù hợp với bộ lọc hiện tại.
+                                    <td colSpan="11">
+                                        <div className={styles.emptyState}>
+                                            <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
+                                            <div className={styles.emptyText}>Không tìm thấy sản phẩm nào</div>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : (
                                 filteredProducts.map((item) => (
                                     <tr key={item.id} className={!item.active ? styles.inactiveRow : ''}>
                                         <td style={{ textAlign: 'center' }}>
-                                            <input type="checkbox" />
+                                            <input type="checkbox" className={styles.checkbox} />
                                         </td>
-                                        <td>
-                                            <div className={styles.imageCell}>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <div style={{ width: '36px', height: '36px', margin: '0 auto', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--color-border)', backgroundColor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 {item.imageUrl ? (
-                                                    <img src={item.imageUrl} alt={item.productName} className={styles.productImg} />
+                                                    <img src={item.imageUrl} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                 ) : (
-                                                    <div className={styles.noImage}>
-                                                        <i className="fas fa-image"></i>
-                                                    </div>
+                                                    <i className="bi bi-image" style={{ color: '#9ca3af', fontSize: '18px' }}></i>
                                                 )}
                                             </div>
                                         </td>
-                                        <td className={styles.codeCell}>{item.productCode}</td>
-                                        <td className={styles.nameCell} title={item.productName}>{item.productName}</td>
+                                        <td><span className={styles.link}>{item.productCode}</span></td>
+                                        <td style={{ fontWeight: 600 }} title={item.productName}>{item.productName}</td>
                                         <td>{item.productType || '-'}</td>
                                         <td>{item.categoryName || '-'}</td>
                                         <td>{item.brandName || '-'}</td>
                                         <td>{item.unitName || '-'}</td>
-                                        <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(item.salePrice)}</td>
-                                        <td style={{ textAlign: 'right' }}>{formatQuantity(item.stockQty)}</td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <div className={styles.actionCell}>
-                                                <span className={styles.editLink} onClick={() => handleOpenEdit(item)}>Sửa</span>
-                                                <button
-                                                    className={styles.dropdownBtn}
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        setOpenDropdownId(openDropdownId === item.id ? null : item.id);
-                                                    }}
-                                                >
-                                                    <i className="fas fa-caret-down"></i>
-                                                </button>
-
-                                                {openDropdownId === item.id && (
-                                                    <div className={styles.dropdownMenu}>
-                                                        <div className={styles.dropdownItem} onClick={() => openVariantModal(item)}>
-                                                            Quản lý SKU
-                                                        </div>
-                                                        <div className={styles.dropdownItem} onClick={() => handleDuplicate(item)}>
-                                                            Nhân bản
-                                                        </div>
-                                                        <div className={styles.dropdownItem} onClick={() => handleDelete(item.id)}>
-                                                            Xóa
-                                                        </div>
-                                                        <div className={styles.dropdownItem} onClick={() => handleToggleStatus(item)}>
-                                                            {item.active ? 'Ngừng sử dụng' : 'Sử dụng'}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
+                                        <td className={`${styles.money} ${styles.textRight}`}>{formatCurrency(item.salePrice)}</td>
+                                        <td className={styles.textRight}>{formatQuantity(item.stockQty)}</td>
+                                        <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
+                                            <i
+                                                className="bi bi-pencil"
+                                                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }}
+                                                title="Sửa sản phẩm"
+                                                onClick={() => handleOpenEdit(item)}
+                                            ></i>
+                                            <i
+                                                className="bi bi-gear"
+                                                style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }}
+                                                title="Quản lý SKU"
+                                                onClick={() => openVariantModal(item)}
+                                            ></i>
+                                            <i
+                                                className={item.active ? "bi bi-slash-circle" : "bi bi-check2-circle"}
+                                                style={{ cursor: 'pointer', color: item.active ? 'var(--color-text-muted-2)' : 'var(--color-success)', fontSize: '16px', marginRight: '12px' }}
+                                                title={item.active ? "Ngừng sử dụng" : "Kích hoạt"}
+                                                onClick={() => handleToggleStatus(item)}
+                                            ></i>
+                                            <i
+                                                className="bi bi-trash"
+                                                style={{ cursor: 'pointer', color: 'var(--color-danger)', fontSize: '16px' }}
+                                                title="Xóa"
+                                                onClick={() => handleDelete(item.id)}
+                                            ></i>
                                         </td>
                                     </tr>
                                 ))
@@ -1042,45 +1069,46 @@ const ProductPage = () => {
                 </div>
 
                 <div className={styles.pagination}>
-                    <div className={styles.pageInfo}>
-                        Tong so: <strong>{totalElements}</strong> ban ghi
-                    </div>
-                    <div className={styles.pageControls}>
-                        <select
-                            value={size}
-                            onChange={(event) => {
-                                setSize(Number(event.target.value));
-                                setPage(0);
-                            }}
-                            className={styles.sizeSelect}
-                        >
-                            <option value={10}>10 ban ghi tren 1 trang</option>
-                            <option value={20}>20 ban ghi tren 1 trang</option>
-                            <option value={50}>50 ban ghi tren 1 trang</option>
-                            <option value={100}>100 ban ghi tren 1 trang</option>
-                        </select>
-
-                        <div className={styles.pageNav}>
-                            <button
-                                className={styles.pageNavBtn}
-                                disabled={page === 0}
-                                onClick={() => setPage(page - 1)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span>Hiển thị</span>
+                            <select
+                                className="misa-select"
+                                style={{ width: '70px', height: '32px', padding: '0 8px' }}
+                                value={size}
+                                onChange={(e) => { setSize(Number(e.target.value)); setPage(0); }}
                             >
-                                Truoc
-                            </button>
-                            <span className={styles.pageNumber}>
-                                Trang <strong>{page + 1}</strong> / {totalPages || 1}
-                            </span>
-                            <button
-                                className={styles.pageNavBtn}
-                                disabled={page >= totalPages - 1}
-                                onClick={() => setPage(page + 1)}
-                            >
-                                Sau
-                            </button>
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
+                            <span>trên tổng số {totalElements} bản ghi</span>
                         </div>
+
+                        {totalPages > 1 && (
+                            <div className={styles.pageControls}>
+                                <button
+                                    disabled={page === 0}
+                                    onClick={() => setPage(p => Math.max(0, p - 1))}
+                                    className={styles.pageBtn}
+                                >
+                                    <i className="bi bi-chevron-left"></i>
+                                    <span>Trước</span>
+                                </button>
+                                <span className={styles.pageNumber} style={{ width: 'auto', padding: '0 8px', fontWeight: 'bold' }}>
+                                    Trang {page + 1} / {totalPages}
+                                </span>
+                                <button
+                                    disabled={page >= totalPages - 1}
+                                    onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                                    className={styles.pageBtn}
+                                >
+                                    <span>Sau</span>
+                                    <i className="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        )}
                     </div>
-                </div>
 
                 {showModal && (
                     <div className="misa-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
@@ -1170,7 +1198,7 @@ const ProductPage = () => {
                                                         >
                                                             <option value="">Chọn danh mục</option>
                                                             {categories.map(cat => (
-                                                                <option key={cat.id} value={cat.id}>{cat.code ? `${cat.code} - ` : ''}{cat.name}</option>
+                                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
                                                             ))}
                                                         </select>
                                                         <button
@@ -1186,7 +1214,7 @@ const ProductPage = () => {
                                                 </div>
                                             ) : (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>Đơn vị tính chính</label>
+                                                    <label className={styles.fieldLabel}>Đơn vị tính</label>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
                                                         <select
                                                             className={styles.fieldInput}
@@ -1198,7 +1226,7 @@ const ProductPage = () => {
                                                                 <option key={u.id} value={u.id}>{u.name}</option>
                                                             ))}
                                                         </select>
-                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button">+</button>
+                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => setShowQuickAddUnit(v => !v)}>+</button>
                                                     </div>
                                                 </div>
                                             )}
@@ -1281,7 +1309,7 @@ const ProductPage = () => {
                                             {/* Đơn vị tính chính cho Hàng hóa / Thành phẩm */}
                                             {formData.productType !== 'Dịch vụ' && (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>Đơn vị tính chính</label>
+                                                    <label className={styles.fieldLabel}>Đơn vị tính</label>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
                                                         <select
                                                             className={styles.fieldInput}
@@ -1293,7 +1321,7 @@ const ProductPage = () => {
                                                                 <option key={u.id} value={u.id}>{u.name}</option>
                                                             ))}
                                                         </select>
-                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button">+</button>
+                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => setShowQuickAddUnit(v => !v)}>+</button>
                                                     </div>
                                                 </div>
                                             )}
@@ -1313,7 +1341,7 @@ const ProductPage = () => {
                                                                 <option key={b.id} value={b.id}>{b.name}</option>
                                                             ))}
                                                         </select>
-                                                        <button className={styles.addInlineBtn} title="Thêm nhanh thương hiệu" type="button">+</button>
+                                                        <button className={styles.addInlineBtn} title="Thêm nhanh thương hiệu" type="button" onClick={() => setShowQuickAddBrand(v => !v)}>+</button>
                                                     </div>
                                                 </div>
                                             )}
@@ -1366,6 +1394,125 @@ const ProductPage = () => {
                                                 </>
                                             )}
                                         </div>
+
+                                        
+                                        {/* Quick Add Unit Panel */}
+                                        {showQuickAddUnit && (
+                                            <div className={styles.quickAddPanel} style={{ marginBottom: '12px' }}>
+                                                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Mã ĐVT <span className="required">*</span></label>
+                                                        <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
+                                                            value={quickUnitForm.code} onChange={e => setQuickUnitForm(f => ({...f, code: e.target.value}))}
+                                                            placeholder="VD: DVT01" autoFocus
+                                                        />
+                                                    </div>
+                                                    <div style={{ flex: 2 }}>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên ĐVT <span className="required">*</span></label>
+                                                        <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
+                                                            value={quickUnitForm.name} onChange={e => setQuickUnitForm(f => ({...f, name: e.target.value}))}
+                                                            placeholder="Tên đơn vị tính"
+                                                            onKeyDown={async (e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    if (!quickUnitForm.code.trim() || !quickUnitForm.name.trim()) return;
+                                                                    setSavingUnit(true);
+                                                                    try {
+                                                                        const res = await axiosClient.post('/units', { code: quickUnitForm.code.trim().toUpperCase(), name: quickUnitForm.name.trim(), status: 'ACTIVE' });
+                                                                        const newObj = res.data?.data ?? res.data;
+                                                                        setUnits(prev => [...prev, newObj]);
+                                                                        setFormData(fd => ({ ...fd, unitId: newObj.id }));
+                                                                        setShowQuickAddUnit(false);
+                                                                        showToast('success', `Đã thêm ĐVT "${newObj.name}"`);
+                                                                    } catch (err) {
+                                                                        showToast('error', err.response?.data?.userMessage || 'Không thể thêm ĐVT.');
+                                                                    } finally { setSavingUnit(false); }
+                                                                }
+                                                                if (e.key === 'Escape') setShowQuickAddUnit(false);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                                    <button type="button" className={styles.quickCancelBtn} onClick={() => setShowQuickAddUnit(false)}>Hủy</button>
+                                                    <button type="button" className={styles.quickSaveBtn} disabled={savingUnit || !quickUnitForm.code.trim() || !quickUnitForm.name.trim()}
+                                                        onClick={async () => {
+                                                            setSavingUnit(true);
+                                                            try {
+                                                                const res = await axiosClient.post('/units', { code: quickUnitForm.code.trim().toUpperCase(), name: quickUnitForm.name.trim(), status: 'ACTIVE' });
+                                                                const newObj = res.data?.data ?? res.data;
+                                                                setUnits(prev => [...prev, newObj]);
+                                                                setFormData(fd => ({ ...fd, unitId: newObj.id }));
+                                                                setShowQuickAddUnit(false);
+                                                                showToast('success', `Đã thêm ĐVT "${newObj.name}"`);
+                                                            } catch (err) {
+                                                                showToast('error', err.response?.data?.userMessage || 'Không thể thêm ĐVT.');
+                                                            } finally { setSavingUnit(false); }
+                                                        }}>
+                                                        {savingUnit ? <i className="fas fa-spinner fa-spin"></i> : 'Lưu'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Quick Add Brand Panel */}
+                                        {showQuickAddBrand && (
+                                            <div className={styles.quickAddPanel} style={{ marginBottom: '12px' }}>
+                                                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Mã TH <span className="required">*</span></label>
+                                                        <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
+                                                            value={quickBrandForm.code} onChange={e => setQuickBrandForm(f => ({...f, code: e.target.value}))}
+                                                            placeholder="VD: TH01" autoFocus
+                                                        />
+                                                    </div>
+                                                    <div style={{ flex: 2 }}>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên TH <span className="required">*</span></label>
+                                                        <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
+                                                            value={quickBrandForm.name} onChange={e => setQuickBrandForm(f => ({...f, name: e.target.value}))}
+                                                            placeholder="Tên thương hiệu"
+                                                            onKeyDown={async (e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    if (!quickBrandForm.code.trim() || !quickBrandForm.name.trim()) return;
+                                                                    setSavingBrand(true);
+                                                                    try {
+                                                                        const res = await axiosClient.post('/brands', { code: quickBrandForm.code.trim().toUpperCase(), name: quickBrandForm.name.trim(), status: 'ACTIVE' });
+                                                                        const newObj = res.data?.data ?? res.data;
+                                                                        setBrands(prev => [...prev, newObj]);
+                                                                        setFormData(fd => ({ ...fd, brandId: newObj.id }));
+                                                                        setShowQuickAddBrand(false);
+                                                                        showToast('success', `Đã thêm thương hiệu "${newObj.name}"`);
+                                                                    } catch (err) {
+                                                                        showToast('error', err.response?.data?.userMessage || 'Không thể thêm thương hiệu.');
+                                                                    } finally { setSavingBrand(false); }
+                                                                }
+                                                                if (e.key === 'Escape') setShowQuickAddBrand(false);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                                    <button type="button" className={styles.quickCancelBtn} onClick={() => setShowQuickAddBrand(false)}>Hủy</button>
+                                                    <button type="button" className={styles.quickSaveBtn} disabled={savingBrand || !quickBrandForm.code.trim() || !quickBrandForm.name.trim()}
+                                                        onClick={async () => {
+                                                            setSavingBrand(true);
+                                                            try {
+                                                                const res = await axiosClient.post('/brands', { code: quickBrandForm.code.trim().toUpperCase(), name: quickBrandForm.name.trim(), status: 'ACTIVE' });
+                                                                const newObj = res.data?.data ?? res.data;
+                                                                setBrands(prev => [...prev, newObj]);
+                                                                setFormData(fd => ({ ...fd, brandId: newObj.id }));
+                                                                setShowQuickAddBrand(false);
+                                                                showToast('success', `Đã thêm thương hiệu "${newObj.name}"`);
+                                                            } catch (err) {
+                                                                showToast('error', err.response?.data?.userMessage || 'Không thể thêm thương hiệu.');
+                                                            } finally { setSavingBrand(false); }
+                                                        }}>
+                                                        {savingBrand ? <i className="fas fa-spinner fa-spin"></i> : 'Lưu'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {/* Row 4: Hàng hóa -> Tồn kho tối thiểu + Giá bán, Thành phẩm -> none, Dịch vụ -> none */}
                                         {formData.productType === 'Hàng hóa' && (
@@ -1423,9 +1570,9 @@ const ProductPage = () => {
                                             />
                                         </div>
 
-                                        {/* Checkboxes: Serial */}
+                                        {/* Checkboxes: Serial, Lot */}
                                         {formData.productType !== 'Dịch vụ' && (
-                                            <div className={styles.checkboxGroup} style={{ marginTop: '16px' }}>
+                                            <div className={styles.checkboxGroup} style={{ marginTop: '16px', display: 'flex', gap: '20px' }}>
                                                 <label className={styles.checkboxLabel}>
                                                     <input
                                                         type="checkbox"
@@ -1490,110 +1637,24 @@ const ProductPage = () => {
                                     </div>
                                 </div>
 
-                                {/* ─── Tabs Section (Unit Conversions / BOM) ─── */}
-                                {formData.productType !== 'Dịch vụ' && (
+                                {/* ─── Tabs Section (BOM) ─── */}
+                                {formData.productType === 'Thành phẩm' && (
                                     <div style={{ marginTop: '24px', border: '1px solid #e5e7eb', borderRadius: '6px', overflow: 'hidden' }}>
                                         <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
                                             <button
-                                                onClick={() => setActiveTab('units')}
+                                                onClick={() => setActiveTab('bom')}
                                                 style={{
                                                     padding: '9px 18px', fontSize: '13px', border: 'none', cursor: 'pointer', background: 'transparent',
-                                                    borderBottom: activeTab === 'units' ? '2px solid #2563eb' : '2px solid transparent',
-                                                    color: activeTab === 'units' ? '#2563eb' : '#6b7280', fontWeight: activeTab === 'units' ? 600 : 400
+                                                    borderBottom: activeTab === 'bom' ? '2px solid #2563eb' : '2px solid transparent',
+                                                    color: activeTab === 'bom' ? '#2563eb' : '#6b7280', fontWeight: activeTab === 'bom' ? 600 : 400
                                                 }}
                                             >
-                                                Đơn vị chuyển đổi
+                                                Định mức cấu hình
                                             </button>
-                                            {formData.productType === 'Thành phẩm' && (
-                                                <button
-                                                    onClick={() => setActiveTab('bom')}
-                                                    style={{
-                                                        padding: '9px 18px', fontSize: '13px', border: 'none', cursor: 'pointer', background: 'transparent',
-                                                        borderBottom: activeTab === 'bom' ? '2px solid #2563eb' : '2px solid transparent',
-                                                        color: activeTab === 'bom' ? '#2563eb' : '#6b7280', fontWeight: activeTab === 'bom' ? 600 : 400
-                                                    }}
-                                                >
-                                                    Định mức cấu hình
-                                                </button>
-                                            )}
                                         </div>
 
                                         <div style={{ padding: '14px 16px', minHeight: '120px' }}>
-                                            {activeTab === 'units' && (
-                                                <div>
-                                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                                                        <thead>
-                                                            <tr style={{ backgroundColor: '#f9fafb' }}>
-                                                                <th style={{ padding: '7px 10px', textAlign: 'left', border: '1px solid #e5e7eb', width: '28%', fontWeight: 600 }}>Đơn vị chuyển đổi</th>
-                                                                <th style={{ padding: '7px 10px', textAlign: 'left', border: '1px solid #e5e7eb', width: '18%', fontWeight: 600 }}>Phép tính</th>
-                                                                <th style={{ padding: '7px 10px', textAlign: 'left', border: '1px solid #e5e7eb', width: '22%', fontWeight: 600 }}>Tỷ lệ</th>
-                                                                <th style={{ padding: '7px 10px', textAlign: 'left', border: '1px solid #e5e7eb', fontWeight: 600 }}>Ghi chú</th>
-                                                                <th style={{ padding: '7px 10px', border: '1px solid #e5e7eb', width: '36px' }}></th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {unitConversions.map((uc, idx) => (
-                                                                <tr key={idx}>
-                                                                    <td style={{ border: '1px solid #e5e7eb', padding: '4px' }}>
-                                                                        <select
-                                                                            value={uc.unitId}
-                                                                            onChange={(e) => { const a = [...unitConversions]; a[idx].unitId = e.target.value; setUnitConversions(a); }}
-                                                                            style={{ width: '100%', border: 'none', outline: 'none', fontSize: '13px', padding: '3px', background: 'transparent' }}
-                                                                        >
-                                                                            <option value="">Chọn ĐV</option>
-                                                                            {units.filter(u => String(u.id) !== String(formData.unitId)).map(u => (
-                                                                                <option key={u.id} value={u.id}>{u.name}</option>
-                                                                            ))}
-                                                                        </select>
-                                                                    </td>
-                                                                    <td style={{ border: '1px solid #e5e7eb', padding: '4px' }}>
-                                                                        <select
-                                                                            value={uc.operator}
-                                                                            onChange={(e) => { const a = [...unitConversions]; a[idx].operator = e.target.value; setUnitConversions(a); }}
-                                                                            style={{ width: '100%', border: 'none', outline: 'none', fontSize: '13px', padding: '3px', background: 'transparent' }}
-                                                                        >
-                                                                            <option value="DIVIDE">Chia</option>
-                                                                            <option value="MULTIPLY">Nhân</option>
-                                                                        </select>
-                                                                    </td>
-                                                                    <td style={{ border: '1px solid #e5e7eb', padding: '4px' }}>
-                                                                        <input
-                                                                            type="number" min="0.0001" step="any"
-                                                                            value={uc.ratio}
-                                                                            onChange={(e) => { const a = [...unitConversions]; a[idx].ratio = e.target.value; setUnitConversions(a); }}
-                                                                            style={{ width: '100%', border: 'none', outline: 'none', fontSize: '13px', padding: '3px', background: 'transparent' }}
-                                                                            placeholder="1.0"
-                                                                        />
-                                                                    </td>
-                                                                    <td style={{ border: '1px solid #e5e7eb', padding: '4px' }}>
-                                                                        <input
-                                                                            type="text"
-                                                                            value={uc.note}
-                                                                            onChange={(e) => { const a = [...unitConversions]; a[idx].note = e.target.value; setUnitConversions(a); }}
-                                                                            style={{ width: '100%', border: 'none', outline: 'none', fontSize: '13px', padding: '3px', background: 'transparent' }}
-                                                                            placeholder="Ghi chú"
-                                                                        />
-                                                                    </td>
-                                                                    <td style={{ border: '1px solid #e5e7eb', textAlign: 'center', padding: '4px' }}>
-                                                                        <button
-                                                                            onClick={() => { const a = [...unitConversions]; a.splice(idx, 1); setUnitConversions(a); }}
-                                                                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '13px' }}
-                                                                        ><i className="fas fa-trash"></i></button>
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                    <button
-                                                        onClick={() => setUnitConversions([...unitConversions, { unitId: '', operator: 'DIVIDE', ratio: '', note: '' }])}
-                                                        style={{ marginTop: '8px', padding: '5px 12px', fontSize: '12px', border: '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer', background: '#fff', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                                    >
-                                                        <i className="fas fa-plus" style={{ fontSize: '11px' }}></i> Thêm dòng
-                                                    </button>
-                                                </div>
-                                            )}
-
-                                            {activeTab === 'bom' && formData.productType === 'Thành phẩm' && (
+                                            {activeTab === 'bom' && (
                                                 <div>
                                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                                                         <thead>
@@ -1666,10 +1727,10 @@ const ProductPage = () => {
                             <div className="misa-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
                                 <button className="btn-misa-cancel" onClick={() => setShowModal(false)}>Hủy</button>
                                 <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button className="btn-misa-draft" onClick={() => handleSave(true)}>Cất</button>
-                                    <button className="btn-misa-save" onClick={() => handleSave(false)}>
-                                        <i className="fas fa-plus-circle" style={{ marginRight: '6px' }}></i>Cất và Thêm
+                                    <button className="btn-misa-draft" onClick={() => handleSave(false)}>
+                                        <i className="fas fa-plus-circle" style={{ marginRight: '6px' }}></i>Lưu & Thêm tiếp
                                     </button>
+                                    <button className="btn-misa-save" onClick={() => handleSave(true)}>Lưu</button>
                                 </div>
                             </div>
                         </div>
@@ -1895,7 +1956,23 @@ const ProductPage = () => {
                     </div>
                 )}
             </div>
+        
+            <Toast
+                isVisible={toast.isVisible}
+                type={toast.type}
+                message={toast.message}
+                onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
+            />
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                isDanger={true}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+            />
         </AdminLayout>
+
     );
 };
 

@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import Modal from '../ui/Modal';
+﻿import { useState, useEffect, useRef } from 'react';
 import styles from './WarehouseFormModal.module.css';
 
 /**
@@ -19,11 +18,11 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
     const [saving, setSaving] = useState(false);
     const [addressSuggestions, setAddressSuggestions] = useState([]);
     const [addressLoading, setAddressLoading] = useState(false);
+    const suggestionRef = useRef(null);
 
     useEffect(() => {
         if (isOpen) {
             if (isEdit && initialData) {
-                 
                 setFormData({
                     code: initialData.code || '',
                     name: initialData.name || '',
@@ -35,8 +34,20 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                 setFormData({ code: '', name: '', address: '', status: 'APPROVED', version: null });
             }
             setErrorMsg('');
+            setAddressSuggestions([]);
         }
     }, [isOpen, isEdit, initialData]);
+
+    // Handle clicking outside suggestions
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (suggestionRef.current && !suggestionRef.current.contains(event.target)) {
+                setAddressSuggestions([]);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const handleChange = (field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -56,7 +67,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
         const timeoutId = window.setTimeout(async () => {
             setAddressLoading(true);
             try {
-                // Sử dụng API Nominatim của OpenStreetMap để hỗ trợ tiếng Việt
+                // API Nominatim OpenStreetMap
                 const params = new URLSearchParams({ 
                     q: query, 
                     format: 'json', 
@@ -93,146 +104,153 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
         };
     }, [formData.address, isOpen]);
 
-    const handleSubmit = async (closeAfterSave = true) => {
+    const handleSubmit = async (e, closeAfterSave = true) => {
+        if (e) e.preventDefault();
+        
         // Validation
         if (!formData.name.trim()) {
             setErrorMsg('Tên kho là bắt buộc.');
             return;
         }
+        if (formData.name.trim().length > 100) {
+            setErrorMsg('Tên kho không được vượt quá 100 ký tự.');
+            return;
+        }
+        if (formData.code && formData.code.trim().length > 50) {
+            setErrorMsg('Mã kho không được vượt quá 50 ký tự.');
+            return;
+        }
 
-        setSaving(true);
         try {
-            await onSave(formData, closeAfterSave);
-            if (closeAfterSave) {
-                onClose();
-            } else {
-                // Reset form để thêm tiếp
-                setFormData({ code: '', name: '', address: '', status: 'APPROVED' });
+            setSaving(true);
+            const dataToSave = {
+                ...formData,
+                code: formData.code.trim() || undefined,
+                name: formData.name.trim(),
+                address: formData.address.trim(),
+            };
+            await onSave(dataToSave);
+            
+            if (!closeAfterSave) {
+                setFormData({ code: '', name: '', address: '', status: 'APPROVED', version: null });
+                setErrorMsg('');
             }
-        } catch (err) {
-            const msg =
-                err.response?.data?.userMessage ||
-                err.response?.data?.message ||
-                'Có lỗi xảy ra khi lưu.';
-            setErrorMsg(msg);
+        } catch (error) {
+            // Error handling done in parent component, just stop loading
         } finally {
             setSaving(false);
         }
     };
 
+    if (!isOpen) return null;
+
     return (
-        <Modal 
-            isOpen={isOpen} 
-            onClose={onClose} 
-            ariaLabel={isEdit ? 'Sửa thông tin kho' : 'Thêm kho mới'}
-            dialogStyle={{ maxWidth: '650px', width: '100%' }}
-        >
-            <div className={styles.modalHeader}>
-                <h3>{isEdit ? 'Sửa thông tin kho' : 'Thêm kho mới'}</h3>
-                <div className={styles.modalIcons}>
-                    <i className="fas fa-times" onClick={onClose}></i>
+        <div className={styles.modalOverlay}>
+            <div className={styles.modalContent}>
+                <div className={styles.modalHeader}>
+                    <h2 className={styles.modalTitle}>{isEdit ? 'Cập nhật kho' : 'Thêm kho mới'}</h2>
+                    <button className={styles.modalClose} onClick={onClose} type="button">&times;</button>
                 </div>
-            </div>
-
-            <div className={styles.modalBody}>
-                {errorMsg && <div className={styles.errorAlert}>{errorMsg}</div>}
-
-                <div className={styles.formRow}>
-                    {/* Mã kho */}
-                    {isEdit && (
+                
+                <form onSubmit={(e) => handleSubmit(e, true)}>
+                    <div className={styles.modalBody}>
+                        {errorMsg && <div className={styles.errorAlert}>{errorMsg}</div>}
+                        
                         <div className={styles.formGroup}>
                             <label>Mã kho</label>
                             <input
-                                id="warehouse-code"
                                 type="text"
                                 className={styles.inputField}
+                                placeholder="Để trống để hệ thống tự động sinh (VD: KHO001)"
                                 value={formData.code}
-                                disabled={true}
-                                maxLength={50}
+                                onChange={(e) => handleChange('code', e.target.value)}
+                                disabled={saving}
                             />
-                            <small className={styles.hint}>Mã kho không thể thay đổi sau khi tạo.</small>
                         </div>
-                    )}
+                        
+                        <div className={styles.formGroup}>
+                            <label>Tên kho <span className={styles.required}>*</span></label>
+                            <input
+                                type="text"
+                                className={styles.inputField}
+                                placeholder="Nhập tên kho hàng"
+                                value={formData.name}
+                                onChange={(e) => handleChange('name', e.target.value)}
+                                disabled={saving}
+                                autoFocus
+                            />
+                        </div>
 
-                    {/* Tên kho */}
-                    <div className={styles.formGroup}>
-                        <label>Tên kho <span className={styles.required}>*</span></label>
-                        <input
-                            id="warehouse-name"
-                            type="text"
-                            className={styles.inputField}
-                            value={formData.name}
-                            onChange={(e) => handleChange('name', e.target.value)}
-                            autoFocus={isEdit}
-                            maxLength={100}
-                        />
-                    </div>
-                </div>
-
-                {/* Địa chỉ */}
-                <div className={styles.formGroup}>
-                    <label>Địa chỉ</label>
-                    <div className={styles.addressField}>
-                        <textarea
-                            id="warehouse-address"
-                            className={styles.textareaField}
-                            rows="3"
-                            value={formData.address}
-                            onChange={(e) => handleChange('address', e.target.value)}
-                            onBlur={() => window.setTimeout(() => setAddressSuggestions([]), 150)}
-                        />
-                        {(addressLoading || addressSuggestions.length > 0) && (
-                            <div className={styles.suggestionList}>
+                        <div className={styles.formGroup}>
+                            <label>Địa chỉ</label>
+                            <div className={styles.addressField} ref={suggestionRef}>
+                                <textarea
+                                    className={styles.textareaField}
+                                    placeholder="Nhập địa chỉ kho hàng (tối thiểu 3 ký tự để tìm kiếm)"
+                                    value={formData.address}
+                                    onChange={(e) => handleChange('address', e.target.value)}
+                                    disabled={saving}
+                                />
                                 {addressLoading && (
-                                    <div className={styles.suggestionMeta}>Đang tìm địa chỉ...</div>
+                                    <div className={styles.hint}>Đang tìm kiếm địa chỉ...</div>
                                 )}
-                                {addressSuggestions.map((suggestion) => (
-                                    <button
-                                        key={suggestion.id}
-                                        type="button"
-                                        className={styles.suggestionItem}
-                                        onMouseDown={(event) => event.preventDefault()}
-                                        onClick={() => {
-                                            handleChange('address', suggestion.label);
-                                            setAddressSuggestions([]);
-                                        }}
-                                    >
-                                        {suggestion.label}
-                                    </button>
-                                ))}
+                                {addressSuggestions.length > 0 && (
+                                    <div className={styles.suggestionList}>
+                                        {addressSuggestions.map((item) => (
+                                            <button
+                                                key={item.id}
+                                                type="button"
+                                                className={styles.suggestionItem}
+                                                onClick={() => {
+                                                    handleChange('address', item.label);
+                                                    setAddressSuggestions([]);
+                                                }}
+                                            >
+                                                {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        )}
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label>Trạng thái</label>
+                            <select
+                                className={styles.selectField}
+                                value={formData.status}
+                                onChange={(e) => handleChange('status', e.target.value)}
+                                disabled={saving}
+                            >
+                                <option value="APPROVED">Đang hoạt động</option>
+                                <option value="INACTIVE">Ngừng sử dụng</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
 
-                <div className={styles.formGroup}>
-                    <label>Trạng thái</label>
-                    <select
-                        id="warehouse-status"
-                        className={styles.inputField}
-                        value={formData.status}
-                        onChange={(e) => handleChange('status', e.target.value)}
-                    >
-                        <option value="APPROVED">Đang hoạt động</option>
-                        <option value="INACTIVE">Ngừng sử dụng</option>
-                    </select>
-                </div>
-            </div>
-
-            <div className={styles.modalFooter}>
-                <button className={styles.btnCancel} onClick={onClose} disabled={saving}>Hủy bỏ</button>
-                <div className={styles.rightButtons}>
-                    {!isEdit && (
-                        <button className={styles.btnSaveAndAdd} onClick={() => handleSubmit(false)} disabled={saving}>
-                            Lưu & Thêm tiếp
+                    <div className={styles.modalFooter}>
+                        <button type="button" className={styles.btnCancel} onClick={onClose} disabled={saving}>
+                            Hủy
                         </button>
-                    )}
-                    <button className={styles.btnSave} onClick={() => handleSubmit(true)} disabled={saving}>
-                        {saving ? 'Đang lưu...' : 'Lưu kho'}
-                    </button>
-                </div>
+                        <div className={styles.rightButtons}>
+                            {!isEdit && (
+                                <button 
+                                    type="button" 
+                                    className={styles.btnSaveAndAdd} 
+                                    onClick={(e) => handleSubmit(e, false)} 
+                                    disabled={saving}
+                                >
+                                    {saving ? 'Đang xử lý...' : 'Lưu & Thêm tiếp'}
+                                </button>
+                            )}
+                            <button type="submit" className={styles.btnSave} disabled={saving}>
+                                {saving ? 'Đang xử lý...' : (isEdit ? 'Cập nhật' : 'Xác nhận')}
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
-        </Modal>
+        </div>
     );
 }
 
