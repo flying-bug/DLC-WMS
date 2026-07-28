@@ -120,12 +120,30 @@ public class StocktakeService {
                     InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
                     lineReq.setVariantId(line.getVariantId());
                     lineReq.setQuantityIn(diff);
-                    lineReq.setUnitCost(BigDecimal.ZERO); // Sẽ được hệ thống tính tự động dựa trên tồn kho hoặc 0
+                    lineReq.setUnitCost(BigDecimal.ZERO);
+                    lineReq.setNote("Nhập bổ sung hàng thừa theo phiếu kiểm kê " + stocktake.getStocktakeCode() + " (+ " + diff + ")");
                     surplusLines.add(lineReq);
                 } else if (diff.compareTo(BigDecimal.ZERO) < 0) {
                     InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
                     lineReq.setVariantId(line.getVariantId());
                     lineReq.setQuantityOut(diff.abs());
+                    
+                    StringBuilder detailNote = new StringBuilder("Xuất giảm hàng thiếu theo phiếu kiểm kê ")
+                            .append(stocktake.getStocktakeCode())
+                            .append(" (-").append(diff.abs()).append(")");
+                    
+                    List<String> details = new ArrayList<>();
+                    if (line.getLostQty() != null && line.getLostQty().compareTo(BigDecimal.ZERO) > 0) {
+                        details.add("Hỏng/Mất: " + line.getLostQty());
+                    }
+                    if (line.getBadQty() != null && line.getBadQty().compareTo(BigDecimal.ZERO) > 0) {
+                        details.add("Kém cấp: " + line.getBadQty());
+                    }
+                    if (!details.isEmpty()) {
+                        detailNote.append(" [").append(String.join(", ", details)).append("]");
+                    }
+                    
+                    lineReq.setNote(detailNote.toString());
                     shortageLines.add(lineReq);
                 }
             }
@@ -137,10 +155,12 @@ public class StocktakeService {
             importReq.setWarehouseId(stocktake.getWarehouseId());
             importReq.setDocDate(LocalDate.now());
             importReq.setIssuePurpose(InventoryDocumentService.ISSUE_PURPOSE_INVENTORY_ADJUSTMENT);
+            importReq.setReferenceType("STOCKTAKE");
+            importReq.setReferenceId(stocktake.getId());
             importReq.setNote("Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê " + stocktake.getStocktakeCode());
             importReq.setCreatedBy(processedBy != null ? processedBy : stocktake.getCreatedBy());
             importReq.setLines(surplusLines);
-            importReq.setStatus("DRAFT"); // Lưu nháp chờ duyệt thủ công theo thống nhất
+            importReq.setStatus("DRAFT"); // Lưu nháp chờ duyệt thủ công
             var importDoc = inventoryDocumentService.createImport(importReq);
             stocktake.setReferenceImportId(importDoc.getId());
         }
@@ -151,6 +171,8 @@ public class StocktakeService {
             exportReq.setWarehouseId(stocktake.getWarehouseId());
             exportReq.setDocDate(LocalDate.now());
             exportReq.setIssuePurpose(InventoryDocumentService.ISSUE_PURPOSE_INVENTORY_ADJUSTMENT);
+            exportReq.setReferenceType("STOCKTAKE");
+            exportReq.setReferenceId(stocktake.getId());
             exportReq.setNote("Phiếu xuất kho xử lý chênh lệch kiểm kê " + stocktake.getStocktakeCode());
             exportReq.setCreatedBy(processedBy != null ? processedBy : stocktake.getCreatedBy());
             exportReq.setLines(shortageLines);

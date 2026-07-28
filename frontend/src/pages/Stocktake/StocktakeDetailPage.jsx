@@ -304,47 +304,51 @@ function StocktakeDetailPage() {
   };
 
   const handleCreateExportSlip = () => {
-    if (formData.referenceExportId) {
-      navigate(`/inventory/export/${formData.referenceExportId}`);
-      return;
-    }
     const diffLackLines = lines.filter(l => Number(l.diffQty || 0) < 0);
     if (diffLackLines.length === 0) {
       showToast('warning', 'Không có sản phẩm nào bị thiếu/hỏng để lập phiếu xuất kho xử lý!');
       return;
     }
-    navigate('/inventory/export/create', {
+    navigate('/export-slips/create', {
       state: {
-        reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
-        items: diffLackLines.map(l => ({
-          variantId: l.variantId,
-          sku: l.sku,
-          productName: l.itemName,
-          quantity: Math.abs(Number(l.diffQty))
-        }))
+        stocktakeData: {
+          id: formData.id,
+          code: formData.code,
+          warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
+          reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
+          lines: diffLackLines.map(l => ({
+            variantId: l.variantId,
+            sku: l.sku,
+            productName: l.itemName,
+            quantity: Math.abs(Number(l.diffQty)),
+            note: `Hàng thiếu từ kiểm kê ${formData.code}`
+          }))
+        }
       }
     });
   };
 
   const handleCreateImportSlip = () => {
-    if (formData.referenceImportId) {
-      navigate(`/inventory/import/${formData.referenceImportId}`);
-      return;
-    }
     const diffSurplusLines = lines.filter(l => Number(l.diffQty || 0) > 0);
     if (diffSurplusLines.length === 0) {
       showToast('warning', 'Không có sản phẩm nào bị thừa để lập phiếu nhập kho điều chỉnh!');
       return;
     }
-    navigate('/inventory/import/create', {
+    navigate('/import-history/create', {
       state: {
-        reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
-        items: diffSurplusLines.map(l => ({
-          variantId: l.variantId,
-          sku: l.sku,
-          productName: l.itemName,
-          quantity: Number(l.diffQty)
-        }))
+        stocktakeData: {
+          id: formData.id,
+          code: formData.code,
+          warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
+          reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
+          lines: diffSurplusLines.map(l => ({
+            variantId: l.variantId,
+            sku: l.sku,
+            productName: l.itemName,
+            quantity: Number(l.diffQty),
+            note: `Hàng thừa từ kiểm kê ${formData.code}`
+          }))
+        }
       }
     });
   };
@@ -664,12 +668,16 @@ function StocktakeDetailPage() {
         <div className={styles.pageFooterView}>
           <div className={styles.footerViewLeft}>
             <button className={styles.btnViewIcon} onClick={handleCancel} title="Quay lại danh sách"><i className="bi bi-arrow-left"></i></button>
-            <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Tạo phiếu xuất kho cho hàng thiếu/hỏng">
-              <i className="bi bi-box-arrow-up"></i> Lập phiếu xuất
-            </button>
-            <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Tạo phiếu nhập kho cho hàng thừa">
-              <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
-            </button>
+            {lines.some(l => Number(l.diffQty || 0) < 0) && (
+              <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Tạo phiếu xuất kho cho hàng thiếu/hỏng">
+                <i className="bi bi-box-arrow-up"></i> Lập phiếu xuất
+              </button>
+            )}
+            {lines.some(l => Number(l.diffQty || 0) > 0) && (
+              <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Tạo phiếu nhập kho cho hàng thừa">
+                <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
+              </button>
+            )}
             <button className={styles.btnViewPrimary} onClick={() => setIsSaved(false)}>
               <i className="bi bi-pencil"></i> Sửa lại
             </button>
