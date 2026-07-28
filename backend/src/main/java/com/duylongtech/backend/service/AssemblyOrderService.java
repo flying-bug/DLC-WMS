@@ -260,6 +260,17 @@ public class AssemblyOrderService {
     }
 
     @Transactional
+    public AssemblyOrderResponse updateNote(Long id, AssemblyOrderRequest request) {
+        AssemblyOrder order = findOrderOrThrow(id);
+        if ("SUBMITTED".equals(order.getStatus())) {
+            throw new BusinessException("Lệnh đã hoàn thành, không thể sửa ghi chú");
+        }
+        order.setNote(request.getNote());
+        order.setUpdatedAt(LocalDateTime.now());
+        return toOrderResponse(assemblyOrderRepository.save(order));
+    }
+
+    @Transactional
     public void generateInventoryDocument(Long id, com.duylongtech.backend.dto.request.GenerateInventoryDocumentRequest request, String actor) {
         AssemblyOrder order = findOrderOrThrow(id);
         if (!"SUBMITTED".equals(order.getStatus()) && !"APPROVED".equals(order.getStatus())) {

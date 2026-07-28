@@ -40,6 +40,10 @@ export const updateAssemblyOrder = (id, data) => {
     return axiosClient.put(`/assembly-orders/${id}`, data);
 };
 
+export const updateAssemblyOrderNote = (id, note) => {
+    return axiosClient.patch(`/assembly-orders/${id}/note`, { note });
+};
+
 /**
  * Cập nhật trạng thái lệnh (Duyệt / Hủy…)
  * PUT /api/v1/assembly-orders/{id}/status?status=APPROVED

@@ -7,6 +7,7 @@ import CustomerModal from '../Customer/components/CustomerModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Select from 'react-select';
+import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import styles from './UpdateExportSlipPage.module.css';
 
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
@@ -75,7 +76,7 @@ const customSelectStyles = {
 const emptyLine = () => ({
   localId: crypto.randomUUID(),
   variantId: '',
-  serialNumberId: null,
+  serialNumbers: [],
   scannedCode: '',
   quantity: 1,
   price: 0,
@@ -98,6 +99,7 @@ function UpdateExportSlipPage() {
   const [showReferenceModal, setShowReferenceModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'error', message: '' });
   const [showConfirm, setShowConfirm] = useState(false);
+  const [serialModalItemId, setSerialModalItemId] = useState(null);
   const [form, setForm] = useState({
     docCode: '',
     warehouseId: '',
@@ -189,7 +191,7 @@ function UpdateExportSlipPage() {
             price: line.unitPrice || 0,
             vatPercent: line.vatPercent ?? line.vatRate ?? 0,
             note: line.note || '',
-            serialNumberId: line.serialNumberId || null,
+            serialNumbers: line.serialNumbers || [],
             scannedCode: line.serialNumber || line.productCode || '',
           })));
         }
@@ -246,8 +248,16 @@ function UpdateExportSlipPage() {
 
   const handleItemChange = (localId, field, value) => {
     setItems(prev => {
+      if (field === 'quantity') {
+        const quantity = Number(value || 0);
+        return prev.map(item => item.localId === localId ? { 
+            ...item, 
+            quantity: value, 
+            serialNumbers: item.serialNumbers?.slice(0, Math.max(0, quantity)) || [] 
+        } : item);
+      }
       if (field === 'variantId') {
-        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value) && !item.serialNumberId);
+        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value) && !(item.serialNumbers && item.serialNumbers.length > 0));
         if (existingIndex >= 0) {
           const newItems = [...prev];
           newItems[existingIndex] = {
@@ -260,11 +270,24 @@ function UpdateExportSlipPage() {
         return prev.map(item => item.localId === localId ? {
           ...item,
           variantId: value,
+          serialNumbers: [],
           price: selectedProduct ? Number(selectedProduct.salePrice || 0) : 0
         } : item);
       }
       return prev.map(item => item.localId === localId ? { ...item, [field]: value } : item);
     });
+  };
+
+  const selectedSerialItem = items.find(item => item.localId === serialModalItemId);
+  const selectedSerialProduct = selectedSerialItem ? productById.get(String(selectedSerialItem.variantId)) : null;
+
+  const handleSerialModalClose = (serialNumbers) => {
+    if (Array.isArray(serialNumbers) && serialModalItemId) {
+      setItems(prev => prev.map(item => item.localId === serialModalItemId
+        ? { ...item, serialNumbers }
+        : item));
+    }
+    setSerialModalItemId(null);
   };
 
   const handleSavePartner = async (isEdit, isContinue) => {
@@ -317,44 +340,45 @@ function UpdateExportSlipPage() {
   const addScannedItem = (scanResult) => {
     ensureScannedProduct(scanResult);
     setItems(prev => {
-      if (scanResult.type === 'SERIAL') {
-        if (prev.some(item => Number(item.serialNumberId) === Number(scanResult.serialNumberId))) {
-          setError('Serial này đã được quét trong phiếu.');
-          return prev;
-        }
-        const serialLine = {
-          ...emptyLine(),
-          variantId: scanResult.variantId,
-          serialNumberId: scanResult.serialNumberId,
-          scannedCode: scanResult.serialNumber || scanResult.code,
-          quantity: 1,
-          price: scanResult.salePrice || 0,
-          note: scanResult.serialNumber ? `Serial: ${scanResult.serialNumber}` : '',
-        };
-        if (prev.length === 1 && !prev[0].variantId) {
-          return [serialLine];
-        }
-        return [...prev, serialLine];
-      }
+      const existingIndex = prev.findIndex(item => String(item.variantId) === String(scanResult.variantId));
+      const serial = scanResult.serialNumber;
 
-      const existingIndex = prev.findIndex(item => String(item.variantId) === String(scanResult.variantId) && !item.serialNumberId);
       if (existingIndex >= 0) {
-        return prev.map((item, index) => index === existingIndex
-          ? { ...item, quantity: Number(item.quantity || 0) + 1, scannedCode: scanResult.barcode || scanResult.code }
-          : item);
+        const newItems = [...prev];
+        const currentItem = newItems[existingIndex];
+        const currentSerials = currentItem.serialNumbers || [];
+        
+        if (serial && !currentSerials.includes(serial)) {
+          const newSerials = [...currentSerials, serial];
+          newItems[existingIndex] = {
+            ...currentItem,
+            serialNumbers: newSerials,
+            quantity: Math.max(Number(currentItem.quantity || 0), newSerials.length)
+          };
+        } else if (!serial) {
+          newItems[existingIndex] = {
+            ...currentItem,
+            quantity: Number(currentItem.quantity || 0) + 1
+          };
+        } else {
+           showToast('warning', `Serial ${serial} đã được quét trước đó.`);
+        }
+        return newItems;
       }
 
-      const barcodeLine = {
+      const newLine = {
         ...emptyLine(),
         variantId: scanResult.variantId,
-        scannedCode: scanResult.barcode || scanResult.code,
+        scannedCode: scanResult.code,
         quantity: 1,
         price: scanResult.salePrice || 0,
+        serialNumbers: serial ? [serial] : []
       };
+      
       if (prev.length === 1 && !prev[0].variantId) {
-        return [barcodeLine];
+        return [newLine];
       }
-      return [...prev, barcodeLine];
+      return [...prev, newLine];
     });
   };
 
@@ -409,7 +433,7 @@ function UpdateExportSlipPage() {
       unitPrice: Number(item.price),
       vatRate: Number(item.vatPercent || 0),
       vatPercent: Number(item.vatPercent || 0),
-      serialNumberId: item.serialNumberId || null,
+      serialNumbers: item.serialNumbers || [],
       note: item.note,
     })),
     referenceType: form.referenceType || undefined,
@@ -617,16 +641,17 @@ function UpdateExportSlipPage() {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th style={{ width: '50px', textAlign: 'center' }}>STT</th>
+                      <th style={{ width: '50px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
                       <th style={{ width: '22%' }}>Tên hàng</th>
                       <th style={{ width: '12%' }}>Mã hàng</th>
-                      <th style={{ width: '8%' }}>ĐVT</th>
-                      <th style={{ width: '8%' }} className={styles.textCenter}>Tồn</th>
-                      <th style={{ width: '10%' }} className={styles.textRight}>SL</th>
-                      <th style={{ width: '13%' }} className={styles.textRight}>Đơn giá</th>
-                      <th style={{ width: '13%' }} className={styles.textRight}>Thành tiền</th>
-                      <th style={{ width: '9%' }} className={styles.textRight}>% VAT</th>
-                      <th style={{ width: '50px', textAlign: 'center' }}></th>
+                      <th style={{ width: '7%' }}>ĐVT</th>
+                      <th style={{ width: '7%' }} className={styles.textCenter}>Tồn</th>
+                      <th style={{ width: '8%' }} className={styles.textRight}>SL</th>
+                      <th style={{ width: '10%', textAlign: 'center' }}>Serial</th>
+                      <th style={{ width: '11%' }} className={styles.textRight}>Đơn giá</th>
+                      <th style={{ width: '11%' }} className={styles.textRight}>Thành tiền</th>
+                      <th style={{ width: '8%' }} className={styles.textRight}>% VAT</th>
+                      <th style={{ width: '40px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -658,6 +683,34 @@ function UpdateExportSlipPage() {
                           </td>
                           <td className={styles.textRight}>
                             <input type="number" min="0" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
+                          </td>
+                          <td align="center">
+                            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                              {product?.trackSerial && (
+                                <button
+                                  type="button"
+                                  style={{
+                                    background: (item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? '#dcfce7' : '#fef9c3',
+                                    color: (item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? '#166534' : '#854d0e',
+                                    border: `1px solid ${(item.serialNumbers?.length || 0) === Number(item.quantity || 0) ? '#bbf7d0' : '#fef08a'}`,
+                                    borderRadius: '4px',
+                                    padding: '2px 8px',
+                                    fontSize: '12px',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '4px',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                  onClick={() => setSerialModalItemId(item.localId)}
+                                >
+                                  <i className="bi bi-upc-scan"></i>
+                                  {(item.serialNumbers?.length || 0)} / {Number(item.quantity || 0)}
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td className={styles.textRight}>
                             <input type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} />
@@ -749,6 +802,16 @@ function UpdateExportSlipPage() {
         }}
         onCancel={() => setShowConfirm(false)}
       />
+      {serialModalItemId && selectedSerialProduct && (
+        <ManageSerialModal
+          isOpen={true}
+          onClose={() => setSerialModalItemId(null)}
+          onSave={handleSerialModalClose}
+          product={selectedSerialProduct}
+          quantity={Number(selectedSerialItem.quantity || 0)}
+          initialSerials={selectedSerialItem.serialNumbers || []}
+        />
+      )}
       <Toast
         isVisible={toast.isVisible}
         message={toast.message}

@@ -846,6 +846,7 @@ public class InventoryDocumentService {
                 .lineAmount(lineAmount)
                 .lotBatchId(lr.getLotBatchId())
                 .serialNumberId(lr.getSerialNumberId())
+                .serialNumbersText(formatSerialNumbers(lr.getSerialNumbers()))
                 .warrantyMonths(warrantyMonths)
                 .note(lr.getNote())
                 .build();
