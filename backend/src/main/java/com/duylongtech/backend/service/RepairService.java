@@ -63,6 +63,7 @@ public class RepairService {
     private final SerialNumberRepository serialNumberRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final CodeGeneratorService codeGeneratorService;
 
     // =====================================================================
     // READ Operations
@@ -510,15 +511,7 @@ public class RepairService {
     }
 
     private String generateRepairCode() {
-        List<String> latestCodes = repairRepository.findLatestScCodes(PageRequest.of(0, 1));
-        if (!latestCodes.isEmpty()) {
-            String latest = latestCodes.get(0); // e.g. "SC-00042"
-            try {
-                int num = Integer.parseInt(latest.substring(3));
-                return String.format("SC-%05d", num + 1);
-            } catch (NumberFormatException ignored) { /* fall through */ }
-        }
-        return "SC-00001";
+        return codeGeneratorService.generateCode("repairs", "repair_code", "SC", 6);
     }
 
     /**

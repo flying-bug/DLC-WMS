@@ -106,13 +106,7 @@ function RepairFormPage() {
       if (userRes.status === 'fulfilled') setUsers(userRes.value?.data?.data?.content || []);
 
       if (isNew) {
-        try {
-          const res = await axiosClient.get('/repairs', { params: { page: 0, size: 1 } });
-          const total = res.data?.data?.totalElements || 0;
-          setFormData(prev => ({ ...prev, repairCode: `SC-${String(total + 1).padStart(5, '0')}` }));
-        } catch {
-          setFormData(prev => ({ ...prev, repairCode: 'SC-00001' }));
-        }
+        setFormData(prev => ({ ...prev, repairCode: '' }));
       } else {
         const res = await repairApi.getRepairById(id);
         const data = res.data?.data;

@@ -14,7 +14,59 @@
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-dropdown);
+    box-shadow: var(--shadow-dropdown);
     z-index: 10;
+    transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+    width: 68px;
+}
+
+.sidebar.collapsed .brandText {
+    display: none;
+}
+
+.sidebar.collapsed .navItem span {
+    display: none;
+}
+
+.sidebar.collapsed .navItem {
+    justify-content: center;
+    padding: 14px 0;
+}
+
+.sidebar.collapsed .navItem i {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.collapseBtnContainer {
+    margin-top: auto;
+    padding: 12px;
+    border-top: 1px solid var(--overlay-white-line);
+    display: flex;
+    justify-content: center;
+}
+
+.collapseBtn {
+    background: transparent;
+    border: none;
+    color: var(--overlay-white-soft-text);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: color 0.2s;
+    width: 100%;
+    text-align: center;
+    padding: 8px 0;
+}
+
+.collapseBtn:hover {
+    color: var(--color-white);
+}
+
+.sidebar.collapsed .collapseBtnContainer {
+    padding: 12px 0;
 }
 
 .logoArea {
@@ -85,6 +137,12 @@
     padding: 12px 0;
     overflow-y: auto;
     flex: 1;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.navMenu::-webkit-scrollbar {
+    display: none;
 }
 
 .navItem {

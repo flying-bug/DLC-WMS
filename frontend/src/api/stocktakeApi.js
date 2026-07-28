@@ -3,10 +3,7 @@ import axiosClient from './axiosClient';
 const STOCKTAKE_BASE = '/stocktakes';
 
 export const getStocktakes = (params = {}) => {
-  return axiosClient.get(STOCKTAKE_BASE, { params }).catch(() => {
-    // Return empty array fallback if backend endpoint isn't created yet
-    return { data: { data: { content: [], totalElements: 0, totalPages: 0 } } };
-  });
+  return axiosClient.get(STOCKTAKE_BASE, { params });
 };
 
 export const getStocktakeDetail = (id) => {

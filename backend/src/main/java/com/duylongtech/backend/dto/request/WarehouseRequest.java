@@ -11,7 +11,6 @@ import lombok.*;
 @Builder
 public class WarehouseRequest {
 
-    @NotBlank(message = "Mã kho là bắt buộc")
     @Size(max = 50, message = "Mã kho không được vượt quá 50 ký tự")
     private String code;
 

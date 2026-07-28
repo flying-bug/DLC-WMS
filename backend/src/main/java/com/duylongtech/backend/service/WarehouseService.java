@@ -37,6 +37,7 @@ public class WarehouseService {
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final UserRepository userRepository;
+    private final CodeGeneratorService codeGeneratorService;
 
     // ──────────────────────────────────────────────────────────
     // US1: Tạo mới kho
@@ -44,6 +45,9 @@ public class WarehouseService {
 
     @Transactional
     public WarehouseResponse createWarehouse(WarehouseRequest request, Long currentUserId) {
+        if (request.getCode() == null || request.getCode().isBlank()) {
+            request.setCode(codeGeneratorService.generateCode("warehouses", "code", "KHO", 3));
+        }
         // Kiểm tra mã kho trùng (case-insensitive)
         if (warehouseRepository.existsByCodeIgnoreCase(request.getCode())) {
             throw new BusinessException(SystemMessage.WH_CODE_EXISTS);

@@ -14,16 +14,13 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductRequest {
-    @NotNull(message = "FIELD_REQUIRED")
     private Long brandId;
 
-    @NotNull(message = "FIELD_REQUIRED")
     private Long categoryId;
 
     @NotNull(message = "FIELD_REQUIRED")
     private Long unitId;
 
-    @NotBlank(message = "FIELD_REQUIRED")
     private String productCode;
 
     @NotBlank(message = "FIELD_REQUIRED")

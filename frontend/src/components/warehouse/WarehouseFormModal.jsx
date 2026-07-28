@@ -95,10 +95,6 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
 
     const handleSubmit = async (closeAfterSave = true) => {
         // Validation
-        if (!isEdit && !formData.code.trim()) {
-            setErrorMsg('Mã kho là bắt buộc.');
-            return;
-        }
         if (!formData.name.trim()) {
             setErrorMsg('Tên kho là bắt buộc.');
             return;
@@ -143,20 +139,20 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
 
                 <div className={styles.formRow}>
                     {/* Mã kho */}
-                    <div className={styles.formGroup}>
-                        <label>Mã kho <span className={styles.required}>*</span></label>
-                        <input
-                            id="warehouse-code"
-                            type="text"
-                            className={styles.inputField}
-                            value={formData.code}
-                            onChange={(e) => handleChange('code', e.target.value)}
-                            disabled={isEdit} // Read-only khi chỉnh sửa
-                            autoFocus={!isEdit}
-                            maxLength={50}
-                        />
-                        {isEdit && <small className={styles.hint}>Mã kho không thể thay đổi sau khi tạo.</small>}
-                    </div>
+                    {isEdit && (
+                        <div className={styles.formGroup}>
+                            <label>Mã kho</label>
+                            <input
+                                id="warehouse-code"
+                                type="text"
+                                className={styles.inputField}
+                                value={formData.code}
+                                disabled={true}
+                                maxLength={50}
+                            />
+                            <small className={styles.hint}>Mã kho không thể thay đổi sau khi tạo.</small>
+                        </div>
+                    )}
 
                     {/* Tên kho */}
                     <div className={styles.formGroup}>
