@@ -262,7 +262,7 @@ function AssemblyOrderListPage() {
                                 currentOrders.map(item => {
                                     const status = STATUS_META[item.status] || { label: item.status || 'Chưa rõ', code: 'info' };
                                     return (
-                                        <tr key={item.id} onClick={() => navigate(`/assembly-orders/${item.id}?mode=view`)} style={{ cursor: 'pointer' }}>
+                                        <tr key={item.id} onClick={() => navigate(`/assembly-orders/${item.id}?mode=${item.status === 'DRAFT' ? 'edit' : 'view'}`)} style={{ cursor: 'pointer' }}>
                                             <td className={styles.textBlue} style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{item.orderCode}</td>
                                             <td>{TYPE_META[item.orderType] || item.orderType}</td>
                                             <td>{item.bomCode || item.bomName || '---'}</td>
@@ -279,7 +279,7 @@ function AssemblyOrderListPage() {
                                                     className="bi bi-eye"
                                                     style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }}
                                                     title="Xem chi tiết"
-                                                    onClick={(e) => { e.stopPropagation(); navigate(`/assembly-orders/${item.id}?mode=view`); }}
+                                                    onClick={(e) => { e.stopPropagation(); navigate(`/assembly-orders/${item.id}?mode=${item.status === 'DRAFT' ? 'edit' : 'view'}`); }}
                                                 ></i>
                                                 <i
                                                     className="bi bi-pencil"
