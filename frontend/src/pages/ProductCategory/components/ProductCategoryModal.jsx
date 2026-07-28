@@ -52,8 +52,10 @@ const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onErr
 
     const validate = () => {
         const newErrors = {};
-        if (!form.code.trim()) newErrors.code = 'Vui lòng nhập mã danh mục!';
-        else if (form.code.trim().length > 50) newErrors.code = 'Mã không được vượt quá 50 ký tự.';
+        if (isEditMode) {
+            if (!form.code.trim()) newErrors.code = 'Vui lòng nhập mã danh mục!';
+            else if (form.code.trim().length > 50) newErrors.code = 'Mã không được vượt quá 50 ký tự.';
+        }
 
         if (!form.name.trim()) newErrors.name = 'Vui lòng nhập tên danh mục!';
         else if (form.name.trim().length > 100) newErrors.name = 'Tên không được vượt quá 100 ký tự.';
@@ -135,20 +137,18 @@ const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onErr
                 )}
 
                 <div className={styles.formGrid}>
-                    <div className={`${styles.formGroup} ${styles.col6}`}>
-                        <label className={styles.formLabel}>Mã danh mục <span className={styles.required}>*</span></label>
-                        <input
-                            type="text"
-                            className={`${styles.input} ${errors.code ? styles.inputError : ''}`}
-                            name="code"
-                            value={form.code}
-                            onChange={handleChange}
-                            placeholder="Ví dụ: CPU..."
-                            maxLength={50}
-                            autoFocus
-                        />
-                        {errors.code && <span className={styles.errorMsg}>{errors.code}</span>}
-                    </div>
+                    {isEditMode && (
+                        <div className={`${styles.formGroup} ${styles.col6}`}>
+                            <label className={styles.formLabel}>Mã danh mục</label>
+                            <input
+                                type="text"
+                                className={styles.input}
+                                name="code"
+                                value={form.code}
+                                disabled={true}
+                            />
+                        </div>
+                    )}
 
                     <div className={`${styles.formGroup} ${styles.col6}`}>
                         <label className={styles.formLabel}>Tên danh mục <span className={styles.required}>*</span></label>

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import axiosClient from '../../api/axiosClient';
 import styles from './ProductPage.module.css';
 
@@ -33,7 +34,8 @@ const defaultVariantData = {
     salePrice: 0,
     manufacturerPartNumber: '',
     specsJson: '',
-    active: true
+    active: true,
+    warrantyMonths: 0
 };
 
 const getPageContent = (response) => {
@@ -207,6 +209,7 @@ const ProductPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [tempSearch, setTempSearch] = useState('');
     const [stockFilter, setStockFilter] = useState('ALL');
+    const [categoryFilter, setCategoryFilter] = useState('');
 
     const [page, setPage] = useState(0);
     const [size, setSize] = useState(20);
@@ -219,6 +222,33 @@ const ProductPage = () => {
     const [errorMsg, setErrorMsg] = useState('');
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
+
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', id: null, title: '', message: '' });
+
+    const handleConfirmDelete = async () => {
+        const { type, id } = confirmModal;
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        
+        if (type === 'PRODUCT') {
+            try {
+                await axiosClient.delete(`/products/${id}`);
+                fetchProducts();
+                fetchAllVariants();
+                showToast('success', 'Xóa sản phẩm thành công.');
+            } catch (error) {
+                console.error('Lỗi xóa sản phẩm:', error);
+                showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xóa sản phẩm.'));
+            }
+        } else if (type === 'SKU') {
+            try {
+                await axiosClient.delete(`/products/${selectedProduct.id}/variants/${id}`);
+                showToast('success', 'Xóa SKU thành công.');
+                await fetchVariants(selectedProduct.id);
+            } catch (error) {
+                showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xóa SKU.'));
+            }
+        }
+    };
     const [uploadingImage, setUploadingImage] = useState(false);
     const [showVariantModal, setShowVariantModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -236,6 +266,14 @@ const ProductPage = () => {
     const [showQuickAddCat, setShowQuickAddCat] = useState(false);
     const [quickCatForm, setQuickCatForm] = useState({ code: '', name: '' });
     const [savingCat, setSavingCat] = useState(false);
+    const [showQuickAddUnit, setShowQuickAddUnit] = useState(false);
+    const [quickUnitForm, setQuickUnitForm] = useState({ code: '', name: '' });
+    const [savingUnit, setSavingUnit] = useState(false);
+
+    const [showQuickAddBrand, setShowQuickAddBrand] = useState(false);
+    const [quickBrandForm, setQuickBrandForm] = useState({ code: '', name: '' });
+    const [savingBrand, setSavingBrand] = useState(false);
+
 
     const [specList, setSpecList] = useState([{ id: 1, key: '', value: '' }]);
     const [useRawJson, setUseRawJson] = useState(false);
@@ -302,7 +340,8 @@ const ProductPage = () => {
         try {
             setLoading(true);
             const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
-            const res = await axiosClient.get(`/products?page=${page}&size=${size}${searchQuery}`);
+            const categoryQuery = categoryFilter ? `&categoryId=${categoryFilter}` : '';
+            const res = await axiosClient.get(`/products?page=${page}&size=${size}${searchQuery}${categoryQuery}`);
             const content = res.data.content || [];
             setProducts(content);
             setTotalPages(res.data.totalPages || 0);
@@ -328,7 +367,7 @@ const ProductPage = () => {
             setLoading(false);
             setStockFilter('ALL');
         }
-    }, [page, size, searchTerm]);
+    }, [page, size, searchTerm, categoryFilter]);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -530,7 +569,7 @@ const ProductPage = () => {
     };
 
     const validateForm = () => {
-        if (!formData.productCode.trim()) return 'Mã sản phẩm không được để trống.';
+        if (isEdit && !formData.productCode.trim()) return 'Mã sản phẩm không được để trống.';
         if (!formData.productName.trim()) return 'Tên sản phẩm không được để trống.';
         if (!formData.categoryId && formData.productType !== 'Dịch vụ') return 'Vui lòng chọn danh mục.';
         if (!formData.unitId) return 'Vui lòng chọn đơn vị tính.';
@@ -617,18 +656,14 @@ const ProductPage = () => {
         setOpenDropdownId(null);
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này không?')) {
-            try {
-                await axiosClient.delete(`/products/${id}`);
-                fetchProducts();
-                fetchAllVariants();
-                showToast('success', 'Xóa sản phẩm thành công.');
-            } catch (error) {
-                console.error('Lỗi xóa sản phẩm:', error);
-                showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xóa sản phẩm.'));
-            }
-        }
+    const handleDelete = (id) => {
+        setConfirmModal({
+            isOpen: true,
+            type: 'PRODUCT',
+            id,
+            title: 'Xác nhận xóa',
+            message: 'Bạn có chắc chắn muốn xóa sản phẩm này không?'
+        });
         setOpenDropdownId(null);
     };
 
@@ -695,7 +730,8 @@ const ProductPage = () => {
             ...defaultVariantData,
             sku: product.productCode || '',
             variantName: product.productName || '',
-            salePrice: Number(product.salePrice || 0)
+            salePrice: Number(product.salePrice || 0),
+            warrantyMonths: Number(product.warrantyPeriodMonths || 0)
         });
         setSpecList([{ id: globalSpecIdCounter++, key: '', value: '' }]);
         setUseRawJson(false);
@@ -714,7 +750,8 @@ const ProductPage = () => {
             salePrice: Number(variant.salePrice || 0),
             manufacturerPartNumber: variant.manufacturerPartNumber || '',
             specsJson: variant.specsJson || '',
-            active: variant.active !== false
+            active: variant.active !== false,
+            warrantyMonths: Number(variant.warrantyMonths || 0)
         });
         setSpecList(parseSpecsToList(variant.specsJson));
         setUseRawJson(false);
@@ -726,7 +763,8 @@ const ProductPage = () => {
             ...defaultVariantData,
             sku: selectedProduct?.productCode || '',
             variantName: selectedProduct?.productName || '',
-            salePrice: Number(selectedProduct?.salePrice || 0)
+            salePrice: Number(selectedProduct?.salePrice || 0),
+            warrantyMonths: Number(selectedProduct?.warrantyPeriodMonths || 0)
         });
         setSpecList([{ id: globalSpecIdCounter++, key: '', value: '' }]);
         setUseRawJson(false);
@@ -760,7 +798,8 @@ const ProductPage = () => {
                 salePrice: Number(variantForm.salePrice || 0),
                 manufacturerPartNumber: variantForm.manufacturerPartNumber?.trim() || '',
                 specsJson: specsJsonPayload,
-                active: variantForm.active
+                active: variantForm.active,
+                warrantyMonths: Number(variantForm.warrantyMonths || 0)
             };
             if (variantForm.id) {
                 await axiosClient.put(`/products/${selectedProduct.id}/variants/${variantForm.id}`, payload);
@@ -778,15 +817,14 @@ const ProductPage = () => {
         }
     };
 
-    const deleteVariant = async (variantId) => {
-        if (!window.confirm('Bạn có chắc chắn muốn xóa SKU này không?')) return;
-        try {
-            await axiosClient.delete(`/products/${selectedProduct.id}/variants/${variantId}`);
-            showToast('success', 'Xóa SKU thành công.');
-            await fetchVariants(selectedProduct.id);
-        } catch (error) {
-            showToast('error', getErrorMessage(error, 'Có lỗi xảy ra khi xóa SKU.'));
-        }
+    const deleteVariant = (variantId) => {
+        setConfirmModal({
+            isOpen: true,
+            type: 'SKU',
+            id: variantId,
+            title: 'Xác nhận xóa',
+            message: 'Bạn có chắc chắn muốn xóa SKU này không?'
+        });
     };
 
     const buildTimestamp = () => {
@@ -860,6 +898,34 @@ const ProductPage = () => {
                     </button>
                 </div>
 
+                
+                <div className={styles.summaryCards}>
+                    <div 
+                        className={`${styles.summaryCard} ${stockFilter === 'LOW_STOCK' ? styles.activeCardWarning : ''}`}
+                        onClick={() => { setStockFilter(stockFilter === 'LOW_STOCK' ? 'ALL' : 'LOW_STOCK'); setPage(0); }}
+                    >
+                        <div className={styles.iconWarning}>
+                            <i className="bi bi-box-seam"></i>
+                        </div>
+                        <div className={styles.cardInfo}>
+                            <h3>{lowStockCount}</h3>
+                            <p>Sản phẩm sắp hết hàng</p>
+                        </div>
+                    </div>
+                    <div 
+                        className={`${styles.summaryCard} ${stockFilter === 'OUT_OF_STOCK' ? styles.activeCardDanger : ''}`}
+                        onClick={() => { setStockFilter(stockFilter === 'OUT_OF_STOCK' ? 'ALL' : 'OUT_OF_STOCK'); setPage(0); }}
+                    >
+                        <div className={styles.iconDanger}>
+                            <i className="bi bi-exclamation-triangle-fill"></i>
+                        </div>
+                        <div className={styles.cardInfo}>
+                            <h3>{outOfStockCount}</h3>
+                            <p>Sản phẩm hết hàng</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div className={styles.filterSection}>
                     <div className={styles.filterGroup}>
                         <div className={styles.filterField}>
@@ -874,22 +940,24 @@ const ProductPage = () => {
                             />
                         </div>
                         <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>TÌNH TRẠNG KHO</span>
+                            <span className={styles.filterLabel}>DANH MỤC</span>
                             <select
-                                className={styles.filterSelect}
-                                value={stockFilter}
-                                onChange={(e) => { setStockFilter(e.target.value); setPage(0); }}
+                                className={styles.filterInput}
+                                value={categoryFilter}
+                                onChange={(e) => { setCategoryFilter(e.target.value); setPage(0); }}
                             >
-                                <option value="ALL">Tất cả ({totalElements})</option>
-                                <option value="LOW_STOCK">Sắp hết hàng ({lowStockCount})</option>
-                                <option value="OUT_OF_STOCK">Hết hàng ({outOfStockCount})</option>
+                                <option value="">Tất cả danh mục</option>
+                                {categories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
                             </select>
                         </div>
+                        
                     </div>
                     <div className={styles.filterActions}>
                         <button
                             className={styles.iconBtn}
-                            onClick={() => { setTempSearch(''); setSearchTerm(''); setStockFilter('ALL'); setPage(0); }}
+                            onClick={() => { setTempSearch(''); setSearchTerm(''); setCategoryFilter(''); setStockFilter('ALL'); setPage(0); }}
                             title="Đặt lại bộ lọc"
                         >
                             <i className="bi bi-arrow-clockwise"></i>
@@ -1107,17 +1175,17 @@ const ProductPage = () => {
 
                                         {/* Row 2: Mã + (Danh mục OR Đơn vị tính chính for Dịch vụ) */}
                                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                                            <div className={styles.formField} style={{ width: '38%', flexShrink: 0 }}>
-                                                <label className={styles.fieldLabel}>Mã <span className="required">*</span></label>
-                                                <input
-                                                    type="text"
-                                                    className={styles.fieldInput}
-                                                    value={formData.productCode}
-                                                    onChange={(e) => setFormData(fd => ({ ...fd, productCode: e.target.value }))}
-                                                    disabled={isEdit}
-                                                    placeholder="VT00001"
-                                                />
-                                            </div>
+                                            {isEdit && (
+                                                <div className={styles.formField} style={{ width: '38%', flexShrink: 0 }}>
+                                                    <label className={styles.fieldLabel}>Mã</label>
+                                                    <input
+                                                        type="text"
+                                                        className={styles.fieldInput}
+                                                        value={formData.productCode}
+                                                        disabled={true}
+                                                    />
+                                                </div>
+                                            )}
 
                                             {formData.productType !== 'Dịch vụ' ? (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
@@ -1146,7 +1214,7 @@ const ProductPage = () => {
                                                 </div>
                                             ) : (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>Đơn vị tính chính</label>
+                                                    <label className={styles.fieldLabel}>Đơn vị tính</label>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
                                                         <select
                                                             className={styles.fieldInput}
@@ -1158,7 +1226,7 @@ const ProductPage = () => {
                                                                 <option key={u.id} value={u.id}>{u.name}</option>
                                                             ))}
                                                         </select>
-                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button">+</button>
+                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => setShowQuickAddUnit(v => !v)}>+</button>
                                                     </div>
                                                 </div>
                                             )}
@@ -1241,7 +1309,7 @@ const ProductPage = () => {
                                             {/* Đơn vị tính chính cho Hàng hóa / Thành phẩm */}
                                             {formData.productType !== 'Dịch vụ' && (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>Đơn vị tính chính</label>
+                                                    <label className={styles.fieldLabel}>Đơn vị tính</label>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
                                                         <select
                                                             className={styles.fieldInput}
@@ -1253,7 +1321,7 @@ const ProductPage = () => {
                                                                 <option key={u.id} value={u.id}>{u.name}</option>
                                                             ))}
                                                         </select>
-                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button">+</button>
+                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => setShowQuickAddUnit(v => !v)}>+</button>
                                                     </div>
                                                 </div>
                                             )}
@@ -1273,7 +1341,7 @@ const ProductPage = () => {
                                                                 <option key={b.id} value={b.id}>{b.name}</option>
                                                             ))}
                                                         </select>
-                                                        <button className={styles.addInlineBtn} title="Thêm nhanh thương hiệu" type="button">+</button>
+                                                        <button className={styles.addInlineBtn} title="Thêm nhanh thương hiệu" type="button" onClick={() => setShowQuickAddBrand(v => !v)}>+</button>
                                                     </div>
                                                 </div>
                                             )}
@@ -1326,6 +1394,125 @@ const ProductPage = () => {
                                                 </>
                                             )}
                                         </div>
+
+                                        
+                                        {/* Quick Add Unit Panel */}
+                                        {showQuickAddUnit && (
+                                            <div className={styles.quickAddPanel} style={{ marginBottom: '12px' }}>
+                                                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Mã ĐVT <span className="required">*</span></label>
+                                                        <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
+                                                            value={quickUnitForm.code} onChange={e => setQuickUnitForm(f => ({...f, code: e.target.value}))}
+                                                            placeholder="VD: DVT01" autoFocus
+                                                        />
+                                                    </div>
+                                                    <div style={{ flex: 2 }}>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên ĐVT <span className="required">*</span></label>
+                                                        <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
+                                                            value={quickUnitForm.name} onChange={e => setQuickUnitForm(f => ({...f, name: e.target.value}))}
+                                                            placeholder="Tên đơn vị tính"
+                                                            onKeyDown={async (e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    if (!quickUnitForm.code.trim() || !quickUnitForm.name.trim()) return;
+                                                                    setSavingUnit(true);
+                                                                    try {
+                                                                        const res = await axiosClient.post('/units', { code: quickUnitForm.code.trim().toUpperCase(), name: quickUnitForm.name.trim(), status: 'ACTIVE' });
+                                                                        const newObj = res.data?.data ?? res.data;
+                                                                        setUnits(prev => [...prev, newObj]);
+                                                                        setFormData(fd => ({ ...fd, unitId: newObj.id }));
+                                                                        setShowQuickAddUnit(false);
+                                                                        showToast('success', `Đã thêm ĐVT "${newObj.name}"`);
+                                                                    } catch (err) {
+                                                                        showToast('error', err.response?.data?.userMessage || 'Không thể thêm ĐVT.');
+                                                                    } finally { setSavingUnit(false); }
+                                                                }
+                                                                if (e.key === 'Escape') setShowQuickAddUnit(false);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                                    <button type="button" className={styles.quickCancelBtn} onClick={() => setShowQuickAddUnit(false)}>Hủy</button>
+                                                    <button type="button" className={styles.quickSaveBtn} disabled={savingUnit || !quickUnitForm.code.trim() || !quickUnitForm.name.trim()}
+                                                        onClick={async () => {
+                                                            setSavingUnit(true);
+                                                            try {
+                                                                const res = await axiosClient.post('/units', { code: quickUnitForm.code.trim().toUpperCase(), name: quickUnitForm.name.trim(), status: 'ACTIVE' });
+                                                                const newObj = res.data?.data ?? res.data;
+                                                                setUnits(prev => [...prev, newObj]);
+                                                                setFormData(fd => ({ ...fd, unitId: newObj.id }));
+                                                                setShowQuickAddUnit(false);
+                                                                showToast('success', `Đã thêm ĐVT "${newObj.name}"`);
+                                                            } catch (err) {
+                                                                showToast('error', err.response?.data?.userMessage || 'Không thể thêm ĐVT.');
+                                                            } finally { setSavingUnit(false); }
+                                                        }}>
+                                                        {savingUnit ? <i className="fas fa-spinner fa-spin"></i> : 'Lưu'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Quick Add Brand Panel */}
+                                        {showQuickAddBrand && (
+                                            <div className={styles.quickAddPanel} style={{ marginBottom: '12px' }}>
+                                                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Mã TH <span className="required">*</span></label>
+                                                        <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
+                                                            value={quickBrandForm.code} onChange={e => setQuickBrandForm(f => ({...f, code: e.target.value}))}
+                                                            placeholder="VD: TH01" autoFocus
+                                                        />
+                                                    </div>
+                                                    <div style={{ flex: 2 }}>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên TH <span className="required">*</span></label>
+                                                        <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
+                                                            value={quickBrandForm.name} onChange={e => setQuickBrandForm(f => ({...f, name: e.target.value}))}
+                                                            placeholder="Tên thương hiệu"
+                                                            onKeyDown={async (e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    if (!quickBrandForm.code.trim() || !quickBrandForm.name.trim()) return;
+                                                                    setSavingBrand(true);
+                                                                    try {
+                                                                        const res = await axiosClient.post('/brands', { code: quickBrandForm.code.trim().toUpperCase(), name: quickBrandForm.name.trim(), status: 'ACTIVE' });
+                                                                        const newObj = res.data?.data ?? res.data;
+                                                                        setBrands(prev => [...prev, newObj]);
+                                                                        setFormData(fd => ({ ...fd, brandId: newObj.id }));
+                                                                        setShowQuickAddBrand(false);
+                                                                        showToast('success', `Đã thêm thương hiệu "${newObj.name}"`);
+                                                                    } catch (err) {
+                                                                        showToast('error', err.response?.data?.userMessage || 'Không thể thêm thương hiệu.');
+                                                                    } finally { setSavingBrand(false); }
+                                                                }
+                                                                if (e.key === 'Escape') setShowQuickAddBrand(false);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                                    <button type="button" className={styles.quickCancelBtn} onClick={() => setShowQuickAddBrand(false)}>Hủy</button>
+                                                    <button type="button" className={styles.quickSaveBtn} disabled={savingBrand || !quickBrandForm.code.trim() || !quickBrandForm.name.trim()}
+                                                        onClick={async () => {
+                                                            setSavingBrand(true);
+                                                            try {
+                                                                const res = await axiosClient.post('/brands', { code: quickBrandForm.code.trim().toUpperCase(), name: quickBrandForm.name.trim(), status: 'ACTIVE' });
+                                                                const newObj = res.data?.data ?? res.data;
+                                                                setBrands(prev => [...prev, newObj]);
+                                                                setFormData(fd => ({ ...fd, brandId: newObj.id }));
+                                                                setShowQuickAddBrand(false);
+                                                                showToast('success', `Đã thêm thương hiệu "${newObj.name}"`);
+                                                            } catch (err) {
+                                                                showToast('error', err.response?.data?.userMessage || 'Không thể thêm thương hiệu.');
+                                                            } finally { setSavingBrand(false); }
+                                                        }}>
+                                                        {savingBrand ? <i className="fas fa-spinner fa-spin"></i> : 'Lưu'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {/* Row 4: Hàng hóa -> Tồn kho tối thiểu + Giá bán, Thành phẩm -> none, Dịch vụ -> none */}
                                         {formData.productType === 'Hàng hóa' && (
@@ -1383,20 +1570,6 @@ const ProductPage = () => {
                                             />
                                         </div>
 
-                                        {/* Tình trạng giảm thuế */}
-                                        <div className={styles.formField} style={{ marginTop: '12px', width: '50%' }}>
-                                            <label className={styles.fieldLabel}>Tình trạng giảm thuế</label>
-                                            <select
-                                                className={styles.fieldInput}
-                                                value={formData.taxReductionStatus}
-                                                onChange={(e) => setFormData(fd => ({ ...fd, taxReductionStatus: e.target.value }))}
-                                            >
-                                                <option value="NORMAL">Chưa xác định / Bình thường</option>
-                                                <option value="KCT">Không chịu thuế (KCT)</option>
-                                                <option value="REDUCED">Được giảm thuế</option>
-                                            </select>
-                                        </div>
-
                                         {/* Checkboxes: Serial, Lot */}
                                         {formData.productType !== 'Dịch vụ' && (
                                             <div className={styles.checkboxGroup} style={{ marginTop: '16px', display: 'flex', gap: '20px' }}>
@@ -1407,14 +1580,6 @@ const ProductPage = () => {
                                                         onChange={(e) => setFormData(fd => ({ ...fd, trackSerial: e.target.checked }))}
                                                     />
                                                     <span>Quản lý theo Serial</span>
-                                                </label>
-                                                <label className={styles.checkboxLabel}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.trackLot}
-                                                        onChange={(e) => setFormData(fd => ({ ...fd, trackLot: e.target.checked }))}
-                                                    />
-                                                    <span>Quản lý theo Lô/Hạn sử dụng</span>
                                                 </label>
                                             </div>
                                         )}
@@ -1562,10 +1727,10 @@ const ProductPage = () => {
                             <div className="misa-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
                                 <button className="btn-misa-cancel" onClick={() => setShowModal(false)}>Hủy</button>
                                 <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button className="btn-misa-draft" onClick={() => handleSave(true)}>Cất</button>
-                                    <button className="btn-misa-save" onClick={() => handleSave(false)}>
-                                        <i className="fas fa-plus-circle" style={{ marginRight: '6px' }}></i>Cất và Thêm
+                                    <button className="btn-misa-draft" onClick={() => handleSave(false)}>
+                                        <i className="fas fa-plus-circle" style={{ marginRight: '6px' }}></i>Lưu & Thêm tiếp
                                     </button>
+                                    <button className="btn-misa-save" onClick={() => handleSave(true)}>Lưu</button>
                                 </div>
                             </div>
                         </div>
@@ -1641,6 +1806,20 @@ const ProductPage = () => {
                                             className="misa-input"
                                         />
                                     </div>
+                                    <div className="misa-form-group">
+                                        <label>Thời hạn bảo hành (tháng)</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={variantForm.warrantyMonths}
+                                            onChange={(event) => setVariantForm({ ...variantForm, warrantyMonths: Number(event.target.value) })}
+                                            className="misa-input"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="misa-form-row">
                                     <div className="misa-form-group">
                                         <label>Trạng thái</label>
                                         <label className={styles.checkboxLabel} style={{ minHeight: 34 }}>
@@ -1777,7 +1956,23 @@ const ProductPage = () => {
                     </div>
                 )}
             </div>
+        
+            <Toast
+                isVisible={toast.isVisible}
+                type={toast.type}
+                message={toast.message}
+                onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
+            />
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                isDanger={true}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+            />
         </AdminLayout>
+
     );
 };
 

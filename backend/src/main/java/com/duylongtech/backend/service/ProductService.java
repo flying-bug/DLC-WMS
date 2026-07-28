@@ -65,10 +65,11 @@ public class ProductService {
     private final SerialNumberRepository serialNumberRepository;
     private final AssemblyBomRepository assemblyBomRepository;
     private final AssemblyOrderRepository assemblyOrderRepository;
+    private final CodeGeneratorService codeGeneratorService;
 
-    public Page<ProductResponse> getProducts(int page, int size, String search) {
+    public Page<ProductResponse> getProducts(int page, int size, String search, Long categoryId) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        Page<Product> productPage = productRepository.searchProducts(search, pageable);
+        Page<Product> productPage = productRepository.searchProducts(search, categoryId, pageable);
         List<Long> productIds = productPage.getContent().stream().map(Product::getId).toList();
         java.util.Map<Long, BigDecimal> stockMap = new java.util.HashMap<>();
         if (!productIds.isEmpty()) {
@@ -93,6 +94,9 @@ public class ProductService {
 
     @Transactional
     public ProductResponse createProduct(ProductRequest dto) {
+        if (dto.getProductCode() == null || dto.getProductCode().isBlank()) {
+            dto.setProductCode(codeGeneratorService.generateCode("products", "product_code", "SP", 5));
+        }
         if (productRepository.findByProductCode(dto.getProductCode()).isPresent()) {
             throw new BusinessException("Mã hàng hóa '" + dto.getProductCode() + "' đã tồn tại.");
         }
@@ -189,7 +193,7 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public byte[] exportProductsToExcel(String search, String exporterName) {
-        List<Product> products = productRepository.searchProducts(search, Pageable.unpaged()).getContent();
+        List<Product> products = productRepository.searchProducts(search, null, Pageable.unpaged()).getContent();
         List<Long> productIds = products.stream().map(Product::getId).toList();
         java.util.Map<Long, BigDecimal> stockMap = new java.util.HashMap<>();
         if (!productIds.isEmpty()) {
@@ -407,6 +411,7 @@ public class ProductService {
                 .costPrice(BigDecimal.ZERO)
                 .salePrice(resolveMoney(dto.getSalePrice()))
                 .active(dto.getActive() != null ? dto.getActive() : true)
+                .warrantyMonths(dto.getWarrantyPeriodMonths())
                 .build();
         productVariantRepository.save(variant);
     }
@@ -455,6 +460,7 @@ public class ProductService {
                 .manufacturerPartNumber(variant.getManufacturerPartNumber())
                 .specsJson(variant.getSpecsJson())
                 .active(variant.getActive())
+                .warrantyMonths(variant.getWarrantyMonths())
                 .createdAt(variant.getCreatedAt())
                 .updatedAt(variant.getUpdatedAt())
                 .build();

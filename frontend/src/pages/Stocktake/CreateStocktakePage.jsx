@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
 import Select from 'react-select';
+import * as XLSX from 'xlsx';
 import styles from './CreateStocktakePage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 
@@ -13,10 +14,11 @@ function CreateStocktakePage() {
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
+  const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState(() => ({
     purpose: 'Kiểm kê vật tư hàng hóa định kỳ',
-    code: `KKK${Math.floor(10000 + Math.random() * 90000)}`,
+    code: '',
     warehouseId: searchParams.get('warehouseId') || 'all',
     toDate: searchParams.get('toDate') || new Date().toISOString().split('T')[0],
     createdDate: new Date().toISOString().slice(0, 16),
@@ -198,12 +200,141 @@ function CreateStocktakePage() {
     }
   };
 
+  const handleExportExcel = () => {
+    if (lines.length === 0) {
+      showToast('warning', 'Không có dữ liệu vật tư hàng hóa để xuất');
+      return;
+    }
+    const exportData = lines.map((l, index) => ({
+      'STT': index + 1,
+      'MÃ HÀNG': l.itemCode,
+      'SKU': l.sku,
+      'TÊN HÀNG HÓA': l.itemName,
+      'ĐVT': l.unit,
+      'SỔ SÁCH': l.bookQty,
+      'KIỂM KÊ THỰC TẾ': l.countQty !== undefined ? l.countQty : '',
+      'TỐT 100%': l.good100 !== undefined ? l.good100 : '',
+      'KÉM CẤP': l.bad !== undefined ? l.bad : '',
+      'HỎNG/MẤT': l.lost !== undefined ? l.lost : '',
+      'GHI CHÚ': ''
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "KiemKe");
+    XLSX.writeFile(wb, `Kiem_Ke_VTHH_${formData.code}_${new Date().getTime()}.xlsx`);
+  };
+
+  const handleImportExcel = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        
+        if (data && data.length > 0) {
+          let updatedCount = 0;
+          setLines(prev => {
+            const newLines = [...prev];
+            data.forEach(row => {
+              const sku = row['SKU'];
+              const countQty = row['KIỂM KÊ THỰC TẾ'];
+              if (sku && countQty !== undefined && countQty !== '') {
+                const idx = newLines.findIndex(l => l.sku === String(sku));
+                if (idx !== -1) {
+                  const countNum = Number(countQty);
+                  const diff = countNum - newLines[idx].bookQty;
+                  newLines[idx] = {
+                    ...newLines[idx],
+                    countQty: countNum,
+                    diffQty: diff,
+                    good100: countNum,
+                    bad: row['KÉM CẤP'] ? Number(row['KÉM CẤP']) : 0,
+                    lost: row['HỎNG/MẤT'] ? Number(row['HỎNG/MẤT']) : 0,
+                    action: diff !== 0 ? 'Xử lý chênh lệch' : 'Không xử lý'
+                  };
+                  updatedCount++;
+                }
+              }
+            });
+            return newLines;
+          });
+          showToast('success', `Đã nhập kết quả kiểm kê cho ${updatedCount} mặt hàng từ Excel`);
+        } else {
+          showToast('warning', 'File Excel không có dữ liệu hợp lệ');
+        }
+      } catch (error) {
+        console.error(error);
+        showToast('error', 'Lỗi khi đọc file Excel');
+      }
+      e.target.value = null; // reset file input
+    };
+    reader.readAsBinaryString(file);
+  };
+
   const handleCancel = () => {
     navigate('/stocktakes');
   };
 
-  const handleSaveAndClose = () => {
-    navigate('/stocktakes', { state: { toastMessage: 'Lưu và Đóng thành công!', toastType: 'success' } });
+  const buildPayload = () => ({
+    stocktakeCode: formData.code,
+    warehouseId: formData.warehouseId === 'all' ? null : Number(formData.warehouseId),
+    purpose: formData.purpose,
+    stocktakeDate: formData.createdDate ? formData.createdDate.split('T')[0] : null,
+    conclusion: formData.conclusion,
+    status: 'DRAFT',
+    lines: lines.map(l => ({
+      variantId: l.variantId,
+      bookQty: Number(l.bookQty || 0),
+      countQty: Number(l.countQty || 0),
+      diffQty: Number(l.diffQty || 0),
+      goodQty: Number(l.good100 || 0),
+      badQty: Number(l.bad || 0),
+      lostQty: Number(l.lost || 0),
+      action: l.action
+    })),
+    participants: participants.map(p => ({
+      fullName: p.name,
+      title: p.title,
+      represent: p.represent
+    }))
+  });
+
+  const handleDraft = async () => {
+    try {
+      const payload = buildPayload();
+      if (!payload.warehouseId) {
+         showToast('error', 'Vui lòng chọn kho để kiểm kê');
+         return;
+      }
+      const response = await stocktakeApi.createStocktake(payload);
+      navigate(`/stocktakes/${response.data.data.id}`, { state: { toastMessage: 'Lưu nháp thành công!', toastType: 'success' } });
+    } catch (err) {
+      console.error(err);
+      showToast('error', err.response?.data?.userMessage || 'Có lỗi xảy ra khi lưu nháp');
+    }
+  };
+
+  const handleSaveAndClose = async () => {
+    try {
+      const payload = buildPayload();
+      if (!payload.warehouseId) {
+         showToast('error', 'Vui lòng chọn kho để kiểm kê');
+         return;
+      }
+      const response = await stocktakeApi.createStocktake(payload);
+      if (formData.isProcessed) {
+         await stocktakeApi.postStocktake(response.data.data.id);
+      }
+      navigate('/stocktakes', { state: { toastMessage: 'Lưu và Đóng thành công!', toastType: 'success' } });
+    } catch (err) {
+      console.error(err);
+      showToast('error', err.response?.data?.userMessage || 'Có lỗi xảy ra khi lưu');
+    }
   };
 
   // Navigation for Export/Import Slips
@@ -297,7 +428,7 @@ function CreateStocktakePage() {
           <div className={styles.formGridRight}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Số phiếu kiểm kê</label>
-              <input type="text" className={styles.formInput} value={formData.code} disabled />
+              <input type="text" className={styles.formInput} value={formData.code} disabled placeholder="Tự động sinh" />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Ngày kiểm kê</label>
@@ -425,10 +556,20 @@ function CreateStocktakePage() {
                 Kiểm kê kèm Giá trị
               </label>
               <div className={styles.toolbarActions}>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  accept=".xlsx, .xls"
+                  onChange={handleImportExcel}
+                />
                 <button className={styles.btnOutline} onClick={() => fetchStockData(formData.warehouseId)}>
                   <i className="bi bi-arrow-clockwise"></i> Lấy lại số tồn
                 </button>
-                <button className={styles.btnOutline} onClick={() => fetchStockData(formData.warehouseId)}>
+                <button className={styles.btnOutline} onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+                  <i className="bi bi-upload"></i> Nhập từ Excel
+                </button>
+                <button className={styles.btnOutline} onClick={handleExportExcel} disabled={lines.length === 0}>
                   <i className="bi bi-download"></i> Tải danh sách VTHH
                 </button>
               </div>
@@ -646,13 +787,10 @@ function CreateStocktakePage() {
             <button className={`${styles.btnFooter} ${styles.btnFooterCancel}`} onClick={handleCancel}>Hủy bỏ</button>
           </div>
           <div className={styles.footerRight}>
-            <button className={`${styles.btnFooter} ${styles.btnFooterDraft}`} onClick={() => showToast('info', 'Đã lưu nháp bảng kiểm kê!')}>
+            <button className={`${styles.btnFooter} ${styles.btnFooterDraft}`} onClick={handleDraft}>
               <i className="bi bi-box-arrow-in-down"></i> Lưu tạm
             </button>
-            <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} onClick={() => {
-              setIsSaved(true);
-              showToast('success', 'Lưu bảng kiểm kê thành công!');
-            }}>
+            <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} onClick={handleDraft}>
               <i className="bi bi-check-circle"></i> Lưu kiểm kê
             </button>
             <button className={`${styles.btnFooter} ${styles.btnFooterPost}`} onClick={handleSaveAndClose}>

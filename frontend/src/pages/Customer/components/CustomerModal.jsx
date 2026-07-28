@@ -151,19 +151,19 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
                 )}
                 
                 <div className={styles.formGrid}>
-                    <div className={`${styles.formGroup} ${styles.col6}`}>
-                        <label className={styles.formLabel}>Mã khách hàng</label>
-                        <input 
-                            type="text" 
-                            className={`${styles.input} ${errors.code ? styles.inputError : ''}`} 
-                            name="code"
-                            value={form.code}
-                            onChange={handleChange}
-                            placeholder="Tự động sinh nếu để trống" 
-                            disabled={isEditMode}
-                        />
-                        {errors.code && <span className={styles.errorMsg}>{errors.code}</span>}
-                    </div>
+                    {isEditMode && (
+                        <div className={`${styles.formGroup} ${styles.col6}`}>
+                            <label className={styles.formLabel}>Mã khách hàng</label>
+                            <input 
+                                type="text" 
+                                className={`${styles.input} ${errors.code ? styles.inputError : ''}`} 
+                                name="code"
+                                value={form.code}
+                                disabled={true}
+                            />
+                            {errors.code && <span className={styles.errorMsg}>{errors.code}</span>}
+                        </div>
+                    )}
 
                     <div className={`${styles.formGroup} ${styles.col6}`}>
                         <label className={styles.formLabel}>Nhóm khách hàng</label>

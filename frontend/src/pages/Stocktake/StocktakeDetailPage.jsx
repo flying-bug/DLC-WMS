@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
+import * as XLSX from 'xlsx';
 import styles from './CreateStocktakePage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 
@@ -12,6 +13,7 @@ function StocktakeDetailPage() {
 
   const [warehouses, setWarehouses] = useState([]);
   const [loadingStock, setLoadingStock] = useState(false);
+  const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     purpose: 'Kiểm kê vật tư hàng hóa định kỳ',
@@ -37,42 +39,57 @@ function StocktakeDetailPage() {
     { name: 'Nguyễn Văn A', title: 'Thủ kho', represent: 'Kho chính' }
   ]);
 
-  const fetchStockData = async (selectedWhId) => {
-    setLoadingStock(true);
+  const fetchStocktakeData = async () => {
     try {
-      const response = await stocktakeApi.getProducts({ size: 1000 });
-      const data = response?.data?.data?.content || response?.data?.data || response?.data || [];
-      const productList = Array.isArray(data) ? data : [];
-
-      if (productList.length > 0) {
-        const formattedLines = productList.map((item, idx) => {
-          const bookQty = Number(item.stockQty || item.quantityOnHand || item.quantity || 10);
-          return {
-            id: item.id || idx + 1,
-            variantId: item.id,
-            itemCode: item.productCode || `VT00${idx + 1}`,
-            sku: item.sku || `SKU-${idx + 1}`,
-            itemName: item.productName ? `${item.productName} ${item.variantName ? `(${item.variantName})` : ''}` : item.name || `Sản phẩm ${idx + 1}`,
-            unit: item.unitName || 'Cái',
-            bookQty: bookQty,
-            countQty: bookQty,
-            diffQty: 0,
-            good100: bookQty,
-            bad: 0,
-            lost: 0,
-            action: 'Không xử lý'
-          };
+      setLoadingStock(true);
+      const res = await stocktakeApi.getStocktakeDetail(id);
+      const data = res?.data?.data || res?.data;
+      if (data) {
+        setFormData({
+          purpose: data.purpose || '',
+          code: data.stocktakeCode,
+          warehouseId: String(data.warehouseId),
+          toDate: data.stocktakeDate || new Date().toISOString().split('T')[0],
+          createdDate: data.createdAt ? new Date(data.createdAt).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+          conclusion: data.conclusion || '',
+          isProcessed: data.status === 'POSTED',
+          isValueStocktake: false,
+          status: data.status,
+          referenceImportId: data.referenceImportId,
+          referenceExportId: data.referenceExportId
         });
-        setLines(formattedLines);
-      } else {
-        setLines([
-          { id: 1, itemCode: 'VT001', sku: 'SKU-BP-001', itemName: 'Bàn phím cơ Logitech K845', unit: 'Cái', bookQty: 15, countQty: 15, diffQty: 0, good100: 15, bad: 0, lost: 0, action: 'Không xử lý' },
-          { id: 2, itemCode: 'VT002', sku: 'SKU-CHUOT-002', itemName: 'Chuột máy tính Kingston', unit: 'Cái', bookQty: 20, countQty: 18, diffQty: -2, good100: 18, bad: 0, lost: 0, action: 'Xử lý chênh lệch' },
-          { id: 3, itemCode: 'VT003', sku: 'SKU-CPU-003', itemName: 'CPU Intel Core i7-12700K', unit: 'Cái', bookQty: 5, countQty: 6, diffQty: 1, good100: 6, bad: 0, lost: 0, action: 'Xử lý chênh lệch' }
-        ]);
+        
+        if (data.lines) {
+           setLines(data.lines.map(l => ({
+             id: l.id,
+             variantId: l.variantId,
+             itemCode: l.itemCode,
+             sku: l.sku,
+             itemName: l.itemName,
+             unit: l.unit,
+             bookQty: l.bookQty,
+             countQty: l.countQty,
+             diffQty: l.diffQty,
+             good100: l.goodQty,
+             bad: l.badQty,
+             lost: l.lostQty,
+             action: l.action
+           })));
+        }
+
+        if (data.participants) {
+           setParticipants(data.participants.map(p => ({
+             name: p.fullName,
+             title: p.title,
+             represent: p.represent
+           })));
+        }
+        
+        setIsSaved(data.status === 'POSTED');
       }
     } catch (err) {
-      console.error('Failed to load stock data', err);
+      console.error(err);
+      showToast('error', 'Không tải được chi tiết phiếu kiểm kê');
     } finally {
       setLoadingStock(false);
     }
@@ -89,8 +106,8 @@ function StocktakeDetailPage() {
       }
     };
     loadWarehouses();
-    fetchStockData(formData.warehouseId);
-  }, []);
+    fetchStocktakeData();
+  }, [id]);
 
 
 
@@ -136,12 +153,154 @@ function StocktakeDetailPage() {
     setLines(prev => prev.filter((_, idx) => idx !== index));
   };
 
+  const handleExportExcel = () => {
+    if (lines.length === 0) {
+      showToast('warning', 'Không có dữ liệu vật tư hàng hóa để xuất');
+      return;
+    }
+    const exportData = lines.map((l, index) => ({
+      'STT': index + 1,
+      'MÃ HÀNG': l.itemCode,
+      'SKU': l.sku,
+      'TÊN HÀNG HÓA': l.itemName,
+      'ĐVT': l.unit,
+      'SỔ SÁCH': l.bookQty,
+      'KIỂM KÊ THỰC TẾ': l.countQty !== undefined ? l.countQty : '',
+      'TỐT 100%': l.good100 !== undefined ? l.good100 : '',
+      'KÉM CẤP': l.bad !== undefined ? l.bad : '',
+      'HỎNG/MẤT': l.lost !== undefined ? l.lost : '',
+      'GHI CHÚ': ''
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "KiemKe");
+    XLSX.writeFile(wb, `Kiem_Ke_VTHH_${formData.code}_${new Date().getTime()}.xlsx`);
+  };
+
+  const handleImportExcel = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        
+        if (data && data.length > 0) {
+          let updatedCount = 0;
+          setLines(prev => {
+            const newLines = [...prev];
+            data.forEach(row => {
+              const sku = row['SKU'];
+              const countQty = row['KIỂM KÊ THỰC TẾ'];
+              if (sku && countQty !== undefined && countQty !== '') {
+                const idx = newLines.findIndex(l => l.sku === String(sku));
+                if (idx !== -1) {
+                  const countNum = Number(countQty);
+                  const diff = countNum - newLines[idx].bookQty;
+                  newLines[idx] = {
+                    ...newLines[idx],
+                    countQty: countNum,
+                    diffQty: diff,
+                    good100: countNum,
+                    bad: row['KÉM CẤP'] ? Number(row['KÉM CẤP']) : 0,
+                    lost: row['HỎNG/MẤT'] ? Number(row['HỎNG/MẤT']) : 0,
+                    action: diff !== 0 ? 'Xử lý chênh lệch' : 'Không xử lý'
+                  };
+                  updatedCount++;
+                }
+              }
+            });
+            return newLines;
+          });
+          showToast('success', `Đã nhập kết quả kiểm kê cho ${updatedCount} mặt hàng từ Excel`);
+        } else {
+          showToast('warning', 'File Excel không có dữ liệu hợp lệ');
+        }
+      } catch (error) {
+        console.error(error);
+        showToast('error', 'Lỗi khi đọc file Excel');
+      }
+      e.target.value = null; // reset file input
+    };
+    reader.readAsBinaryString(file);
+  };
+
   const handleCancel = () => {
     navigate('/stocktakes');
   };
 
-  const handleSaveAndClose = () => {
-    navigate('/stocktakes', { state: { toastMessage: 'Cập nhật bảng kiểm kê thành công!', toastType: 'success' } });
+  const buildPayload = () => ({
+    stocktakeCode: formData.code,
+    warehouseId: formData.warehouseId === 'all' ? null : Number(formData.warehouseId),
+    purpose: formData.purpose,
+    stocktakeDate: formData.createdDate ? formData.createdDate.split('T')[0] : null,
+    conclusion: formData.conclusion,
+    status: formData.status || 'DRAFT',
+    lines: lines.map(l => ({
+      variantId: l.variantId,
+      bookQty: Number(l.bookQty || 0),
+      countQty: Number(l.countQty || 0),
+      diffQty: Number(l.diffQty || 0),
+      goodQty: Number(l.good100 || 0),
+      badQty: Number(l.bad || 0),
+      lostQty: Number(l.lost || 0),
+      action: l.action
+    })),
+    participants: participants.map(p => ({
+      fullName: p.name,
+      title: p.title,
+      represent: p.represent
+    }))
+  });
+
+  const handleSave = async () => {
+    try {
+      const payload = buildPayload();
+      await stocktakeApi.updateStocktake(id, payload);
+      setIsSaved(true);
+      fetchStocktakeData();
+      showToast('success', 'Lưu bảng kiểm kê thành công!');
+    } catch (err) {
+       console.error(err);
+       showToast('error', err.response?.data?.userMessage || 'Lưu thất bại');
+    }
+  };
+
+  const handleSaveAndClose = async () => {
+    try {
+      const payload = buildPayload();
+      await stocktakeApi.updateStocktake(id, payload);
+      if (formData.isProcessed) {
+         await stocktakeApi.postStocktake(id);
+      }
+      navigate('/stocktakes', { state: { toastMessage: 'Cập nhật bảng kiểm kê thành công!', toastType: 'success' } });
+    } catch (err) {
+       console.error(err);
+       showToast('error', err.response?.data?.userMessage || 'Cập nhật thất bại');
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!window.confirm("Bạn có chắc chắn muốn hoàn thành phiếu kiểm kê này? Các phiếu xuất/nhập xử lý chênh lệch sẽ được tự động tạo và bạn sẽ không thể sửa đổi phiếu này nữa.")) {
+      return;
+    }
+    try {
+      const payload = buildPayload();
+      // Lưu lại thay đổi trước khi hoàn thành
+      await stocktakeApi.updateStocktake(id, payload);
+      // Gọi API xử lý chênh lệch và đổi trạng thái
+      await stocktakeApi.postStocktake(id);
+      showToast('success', 'Hoàn thành phiếu kiểm kê thành công!');
+      // Tải lại dữ liệu (chuyển sang chế độ view)
+      fetchStocktakeData();
+    } catch (err) {
+       console.error(err);
+       showToast('error', err.response?.data?.userMessage || 'Hoàn thành thất bại');
+    }
   };
 
   const handleCreateExportSlip = () => {
@@ -150,15 +309,21 @@ function StocktakeDetailPage() {
       showToast('warning', 'Không có sản phẩm nào bị thiếu/hỏng để lập phiếu xuất kho xử lý!');
       return;
     }
-    navigate('/inventory/export/create', {
+    navigate('/export-slips/create', {
       state: {
-        reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
-        items: diffLackLines.map(l => ({
-          variantId: l.variantId,
-          sku: l.sku,
-          productName: l.itemName,
-          quantity: Math.abs(Number(l.diffQty))
-        }))
+        stocktakeData: {
+          id: formData.id,
+          code: formData.code,
+          warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
+          reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
+          lines: diffLackLines.map(l => ({
+            variantId: l.variantId,
+            sku: l.sku,
+            productName: l.itemName,
+            quantity: Math.abs(Number(l.diffQty)),
+            note: `Hàng thiếu từ kiểm kê ${formData.code}`
+          }))
+        }
       }
     });
   };
@@ -169,15 +334,21 @@ function StocktakeDetailPage() {
       showToast('warning', 'Không có sản phẩm nào bị thừa để lập phiếu nhập kho điều chỉnh!');
       return;
     }
-    navigate('/inventory/import/create', {
+    navigate('/import-history/create', {
       state: {
-        reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
-        items: diffSurplusLines.map(l => ({
-          variantId: l.variantId,
-          sku: l.sku,
-          productName: l.itemName,
-          quantity: Number(l.diffQty)
-        }))
+        stocktakeData: {
+          id: formData.id,
+          code: formData.code,
+          warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
+          reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
+          lines: diffSurplusLines.map(l => ({
+            variantId: l.variantId,
+            sku: l.sku,
+            productName: l.itemName,
+            quantity: Number(l.diffQty),
+            note: `Hàng thừa từ kiểm kê ${formData.code}`
+          }))
+        }
       }
     });
   };
@@ -330,6 +501,26 @@ function StocktakeDetailPage() {
             </div>
           </div>
 
+          {!isSaved && (
+            <div className={styles.detailToolbar} style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+              <div className={styles.toolbarActions} style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  accept=".xlsx, .xls"
+                  onChange={handleImportExcel}
+                />
+                <button className={styles.btnOutline} onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+                  <i className="bi bi-upload"></i> Nhập từ Excel
+                </button>
+                <button className={styles.btnOutline} onClick={handleExportExcel} disabled={lines.length === 0}>
+                  <i className="bi bi-download"></i> Tải danh sách VTHH
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className={styles.tableContainer}>
             <table className={styles.table}>
               <thead>
@@ -477,12 +668,16 @@ function StocktakeDetailPage() {
         <div className={styles.pageFooterView}>
           <div className={styles.footerViewLeft}>
             <button className={styles.btnViewIcon} onClick={handleCancel} title="Quay lại danh sách"><i className="bi bi-arrow-left"></i></button>
-            <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Tạo phiếu xuất kho cho hàng thiếu/hỏng">
-              <i className="bi bi-box-arrow-up"></i> Lập phiếu xuất
-            </button>
-            <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Tạo phiếu nhập kho cho hàng thừa">
-              <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
-            </button>
+            {lines.some(l => Number(l.diffQty || 0) < 0) && (
+              <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Tạo phiếu xuất kho cho hàng thiếu/hỏng">
+                <i className="bi bi-box-arrow-up"></i> Lập phiếu xuất
+              </button>
+            )}
+            {lines.some(l => Number(l.diffQty || 0) > 0) && (
+              <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Tạo phiếu nhập kho cho hàng thừa">
+                <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
+              </button>
+            )}
             <button className={styles.btnViewPrimary} onClick={() => setIsSaved(false)}>
               <i className="bi bi-pencil"></i> Sửa lại
             </button>
@@ -499,14 +694,14 @@ function StocktakeDetailPage() {
             <button className={`${styles.btnFooter} ${styles.btnFooterCancel}`} onClick={handleCancel}>Hủy bỏ</button>
           </div>
           <div className={styles.footerRight}>
-            <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} onClick={() => {
-              setIsSaved(true);
-              showToast('success', 'Lưu bảng kiểm kê thành công!');
-            }}>
+            <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} onClick={handleSave}>
               <i className="bi bi-check-circle"></i> Lưu lại
             </button>
             <button className={`${styles.btnFooter} ${styles.btnFooterPost}`} onClick={handleSaveAndClose}>
-              <i className="bi bi-printer"></i> Lưu và Đóng
+              <i className="bi bi-box-arrow-right"></i> Lưu và Đóng
+            </button>
+            <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
+              <i className="bi bi-check2-all"></i> Hoàn thành
             </button>
           </div>
         </div>

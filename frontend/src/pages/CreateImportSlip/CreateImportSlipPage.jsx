@@ -97,6 +97,7 @@ function CreateImportSlipPage() {
   const location = useLocation();
   const voiceData = location.state?.voiceData || null;
   const assemblyData = location.state?.assemblyData || null;
+  const stocktakeData = location.state?.stocktakeData || null;
   const returnUrl = location.state?.returnUrl || null;
   const searchParams = new URLSearchParams(location.search);
   const initialType = searchParams.get('type')?.toUpperCase() || 'PURCHASE';
@@ -113,7 +114,7 @@ function CreateImportSlipPage() {
 
   const [form, setForm] = useState(() => ({
     docCode: '',
-    warehouseId: assemblyData?.warehouseId || '',
+    warehouseId: assemblyData?.warehouseId || stocktakeData?.warehouseId || '',
     partnerId: '',
     partnerName: '',
     customerId: '',
@@ -123,11 +124,11 @@ function CreateImportSlipPage() {
     purchaser: '',
     attachedDoc: '',
     docDate: today(),
-    note: assemblyData ? `Nhập thành phẩm phục vụ Lệnh lắp ráp/tháo dỡ ${assemblyData.code}` : '',
+    note: assemblyData ? `Nhập thành phẩm phục vụ Lệnh lắp ráp/tháo dỡ ${assemblyData.code}` : stocktakeData ? stocktakeData.reason : '',
     status: 'DRAFT',
-    referenceType: assemblyData ? 'ASSEMBLY_ORDER' : '',
-    referenceId: assemblyData ? assemblyData.id : '',
-    referenceCode: assemblyData ? assemblyData.code : '',
+    referenceType: assemblyData ? 'ASSEMBLY_ORDER' : stocktakeData ? 'STOCKTAKE' : '',
+    referenceId: assemblyData ? assemblyData.id : stocktakeData ? stocktakeData.id : '',
+    referenceCode: assemblyData ? assemblyData.code : stocktakeData ? stocktakeData.code : '',
   }));
   const [items, setItems] = useState(() => {
     if (assemblyData && assemblyData.lines && assemblyData.lines.length > 0) {
@@ -137,6 +138,16 @@ function CreateImportSlipPage() {
         quantity: comp.quantity || 1,
         price: comp.price || 0,
         note: `BOM cho Lệnh ${assemblyData.code}`,
+        isNew: false
+      }));
+    }
+    if (stocktakeData && stocktakeData.lines && stocktakeData.lines.length > 0) {
+      return stocktakeData.lines.map(line => ({
+        ...emptyLine(),
+        variantId: String(line.variantId),
+        quantity: line.quantity || 1,
+        price: line.price || 0,
+        note: line.note || `Hàng thừa từ kiểm kê ${stocktakeData.code}`,
         isNew: false
       }));
     }

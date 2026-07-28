@@ -110,11 +110,12 @@ function CreateExportSlipPage({ mode: propMode }) {
   const [selectedAssemblyOrder, setSelectedAssemblyOrder] = useState(null);
 
   const assemblyData = location.state?.assemblyData || null;
+  const stocktakeData = location.state?.stocktakeData || null;
   const returnUrl = location.state?.returnUrl || null;
 
   const [form, setForm] = useState(() => ({
     docCode: exportMode === 'USAGE' ? `XKSD-${Date.now()}` : exportMode === 'ASSEMBLY' ? `XKLR-${Date.now()}` : `EXP-${Date.now()}`,
-    warehouseId: assemblyData?.warehouseId || '',
+    warehouseId: assemblyData?.warehouseId || stocktakeData?.warehouseId || '',
     partnerId: '',
     salespersonId: '',
     customerAddress: '',
@@ -122,10 +123,10 @@ function CreateExportSlipPage({ mode: propMode }) {
     receiverPhone: '',
     receiverAddress: '',
     docDate: today(),
-    note: assemblyData ? `Xuất linh kiện phục vụ Lệnh lắp ráp/tháo dỡ ${assemblyData.code}` : '',
-    referenceType: assemblyData ? 'ASSEMBLY_ORDER' : '',
-    referenceId: assemblyData ? assemblyData.id : '',
-    referenceCode: assemblyData ? assemblyData.code : '',
+    note: assemblyData ? `Xuất linh kiện phục vụ Lệnh lắp ráp/tháo dỡ ${assemblyData.code}` : stocktakeData ? stocktakeData.reason : '',
+    referenceType: assemblyData ? 'ASSEMBLY_ORDER' : stocktakeData ? 'STOCKTAKE' : '',
+    referenceId: assemblyData ? assemblyData.id : stocktakeData ? stocktakeData.id : '',
+    referenceCode: assemblyData ? assemblyData.code : stocktakeData ? stocktakeData.code : '',
     attachedDocs: '',
   }));
 
@@ -137,6 +138,15 @@ function CreateExportSlipPage({ mode: propMode }) {
         quantity: comp.quantity || 1,
         price: comp.price || 0,
         note: `BOM cho Lệnh ${assemblyData.code}`,
+      }));
+    }
+    if (stocktakeData && stocktakeData.lines && stocktakeData.lines.length > 0) {
+      return stocktakeData.lines.map(line => ({
+        ...emptyLine(),
+        variantId: String(line.variantId),
+        quantity: line.quantity || 1,
+        price: line.price || 0,
+        note: line.note || `Hàng thiếu từ kiểm kê ${stocktakeData.code}`,
       }));
     }
     return [{ ...emptyLine(), isNew: false }];
