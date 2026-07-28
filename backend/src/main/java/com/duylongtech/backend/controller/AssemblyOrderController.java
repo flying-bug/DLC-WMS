@@ -181,6 +181,25 @@ public class AssemblyOrderController {
         }
     }
 
+    @PatchMapping("/assembly-orders/{id}/note")
+    @Operation(summary = "Update assembly order note")
+    @PreAuthorize("hasAuthority('assembly:edit')")
+    public ApiResponse<AssemblyOrderResponse> updateOrderNote(
+            @PathVariable Long id,
+            @RequestBody AssemblyOrderRequest request,
+            HttpServletRequest servletRequest) {
+        String ip = getClientIp(servletRequest);
+        String actor = getCurrentUser();
+        try {
+            AssemblyOrderResponse updated = assemblyOrderService.updateNote(id, request);
+            auditLogService.logEvent(actor, "UPDATE", "AssemblyOrderNote", id, "SUCCESS", "Cập nhật ghi chú Lệnh: " + updated.getOrderCode(), ip, null);
+            return ApiResponse.success(updated);
+        } catch (Exception e) {
+            auditLogService.logEvent(actor, "UPDATE", "AssemblyOrderNote", id, "FAILED", "Cập nhật ghi chú thất bại: " + e.getMessage(), ip, null);
+            throw e;
+        }
+    }
+
     @PostMapping("/assembly-orders/{id}/inventory-documents")
     @Operation(summary = "Generate inventory document for assembly order")
     @PreAuthorize("hasAuthority('assembly:edit')")
