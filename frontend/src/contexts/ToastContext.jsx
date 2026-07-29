@@ -4,6 +4,7 @@ import styles from '../components/ui/Toast/Toast.module.css';
 
 const ToastContext = createContext(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useToast = () => {
     const context = useContext(ToastContext);
     if (!context) {
