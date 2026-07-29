@@ -84,6 +84,15 @@ function CreateStocktakePage() {
 
   useEffect(() => {
     const loadMasterData = async () => {
+      stocktakeApi.getNextCode()
+        .then(res => {
+          const code = res?.data?.data || res?.data;
+          if (code && typeof code === 'string') {
+            setFormData(prev => ({ ...prev, code: prev.code || code }));
+          }
+        })
+        .catch(err => console.error('Failed to load next stocktake code', err));
+
       try {
         const [whRes, prodRes] = await Promise.all([
           stocktakeApi.getWarehouses(),

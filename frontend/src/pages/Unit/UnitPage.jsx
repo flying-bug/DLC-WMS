@@ -226,8 +226,8 @@ const UnitPage = () => {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th style={{ minWidth: '220px' }}>Tên Đơn Vị Tính</th>
-                                <th style={{ minWidth: '150px' }}>Mô Tả</th>
+                                <th style={{ width: '220px' }}>Tên Đơn Vị Tính</th>
+                                <th style={{ width: '180px' }}>Mô Tả</th>
                                 <th style={{ width: '140px' }}>Trạng Thái</th>
                                 <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
                             </tr>

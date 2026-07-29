@@ -214,47 +214,72 @@
 /* Filter Section */
 .filterSection {
   background: var(--color-white);
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   margin-bottom: 24px;
   border: 1px solid var(--color-border);
   gap: 16px;
-}
-
-.filterGroup {
-  display: flex;
-  gap: 24px;
   flex-wrap: wrap;
 }
 
-.filterField {
+.searchAndPopover {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 1;
 }
 
-.filterLabel {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text-muted-2);
-  text-transform: uppercase;
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 260px;
+  max-width: 380px;
+  flex: 1;
 }
 
-.filterInput, .filterSelect {
+.searchBox i:first-child {
+  position: absolute;
+  left: 12px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 8px 36px 8px 36px;
   border: 1px solid var(--color-border-strong);
-  border-radius: 4px;
-  padding: 8px 12px;
+  border-radius: 6px;
   font-size: 14px;
   outline: none;
-  min-width: 200px;
   color: var(--color-text-strong);
+  height: 38px;
+  transition: border-color 0.2s ease;
 }
 
-.filterInput:focus, .filterSelect:focus {
+.searchInput:focus {
   border-color: var(--color-primary);
+}
+
+.clearSearchBtn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+}
+
+.clearSearchBtn:hover {
+  color: var(--color-danger);
 }
 
 .btnOutline {
@@ -308,7 +333,7 @@
 
 .table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1600px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -571,6 +596,31 @@
 
 .textCenter {
   text-align: center !important;
+}
+
+/* Bulk Toolbar */
+.bulkActionsToolbar {
+  background-color: #f0f9ff;
+  border-radius: 8px;
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #bae6fd;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bulkText {
+  font-weight: 600;
+  color: #0369a1;
+  font-size: 14px;
 }
 
 .detailFooter {

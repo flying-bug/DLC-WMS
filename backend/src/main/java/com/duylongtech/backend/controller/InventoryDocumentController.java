@@ -40,6 +40,13 @@ public class InventoryDocumentController {
         return org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
+    @GetMapping("/next-code")
+    @Operation(summary = "Get next export slip code")
+    @PreAuthorize("hasAuthority('export:view') or hasAuthority('export:add')")
+    public ApiResponse<String> getNextExportCode() {
+        return ApiResponse.success(inventoryDocumentService.generateNextExportCode());
+    }
+
     @GetMapping("/history")
     @Operation(summary = "View export slip history")
     @PreAuthorize("hasAuthority('export:view')")

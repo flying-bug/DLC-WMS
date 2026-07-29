@@ -6,6 +6,10 @@ export const getTransferHistory = (params = {}) => {
   return axiosClient.get(`${TRANSFER_BASE}`, { params });
 };
 
+export const getNextCode = () => {
+  return axiosClient.get(`${TRANSFER_BASE}/next-code`);
+};
+
 export const getTransferDetail = (id) => {
   return axiosClient.get(`${TRANSFER_BASE}/${id}`);
 };

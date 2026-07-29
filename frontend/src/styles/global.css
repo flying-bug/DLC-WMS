@@ -5,6 +5,8 @@
 }
 
 :root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --sidebar-width: 248px;
   font-family: var(--font-sans);
   font-size: 14px; /* Base font size cho admin dashboard */
   line-height: 1.5;
@@ -432,16 +434,19 @@ html, body, #root {
   [class*="tableContainer"], [class*="tableView"] {
     width: 100% !important;
     max-width: 100% !important;
-    overflow-x: auto !important;
+    overflow: hidden !important;
   }
 
   [class*="pagination"] {
     min-width: 0 !important;
     width: 100% !important;
-    flex-direction: column !important;
-    gap: var(--space-3, 12px) !important;
-    align-items: center !important;
-    padding: var(--space-3, 12px) !important;
+    flex-direction: row;
+    gap: var(--space-3, 12px);
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-top: 1px solid var(--color-border);
+    background-color: var(--color-white);
   }
 
   /* Modal System Mobile Bottom Sheet */
@@ -467,3 +472,59 @@ html, body, #root {
     width: 80vw !important;
   }
 }
+
+/* ── Fixed Bottom Action Bar Global Dark Theme & Dynamic Sidebar Offset ── */
+[class*="fixedFooter"],
+[class*="pageFooter"],
+[class*="bottomBar"],
+[class*="pageFooterView"],
+[class*="actionsBar"] {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: var(--sidebar-width, 248px) !important;
+  right: 0 !important;
+  background-color: #1e1f24 !important;
+  border-top: 1px solid #2d3238 !important;
+  color: #f4f4f5 !important;
+  z-index: 100 !important;
+  transition: left 0.3s ease !important;
+}
+
+@media (max-width: 991px) {
+  [class*="fixedFooter"],
+  [class*="pageFooter"],
+  [class*="bottomBar"],
+  [class*="pageFooterView"],
+  [class*="actionsBar"] {
+    left: 0 !important;
+  }
+}
+
+/* Button contrast overrides inside dark fixed footers */
+:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) .btn-misa-cancel,
+:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnFooterCancel"],
+:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnCancel"] {
+  background-color: #27272a !important;
+  border: 1px solid #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) .btn-misa-cancel:hover,
+:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnFooterCancel"]:hover,
+:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnCancel"]:hover {
+  background-color: #3f3f46 !important;
+  border-color: #52525b !important;
+  color: #ffffff !important;
+}
+
+:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) .btn-misa-draft,
+:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnFooterDraft"] {
+  background-color: transparent !important;
+  border: 1px solid #0284c7 !important;
+  color: #38bdf8 !important;
+}
+
+:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) .btn-misa-draft:hover,
+:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnFooterDraft"]:hover {
+  background-color: rgba(56, 189, 248, 0.15) !important;
+}

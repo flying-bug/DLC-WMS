@@ -38,9 +38,47 @@ public class StockTransferServiceImpl implements StockTransferService {
     private InventoryBalanceRepository inventoryBalanceRepository;
 
     @Autowired
+    private ProductVariantRepository productVariantRepository;
+
+    @Autowired
     private InventoryDocumentService inventoryDocumentService;
 
+    @Autowired
+    private com.duylongtech.backend.service.CodeGeneratorService codeGeneratorService;
+
+    @Override
+    @Transactional(readOnly = true)
+    public String generateNextTransferCode() {
+        return codeGeneratorService.generateCode("stock_transfers", "transfer_code", "CK-", 5);
+    }
+
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private BigDecimal resolveTransferUnitCost(Long warehouseId, Long variantId, BigDecimal providedCost) {
+        if (providedCost != null && providedCost.compareTo(BigDecimal.ZERO) > 0) {
+            return providedCost;
+        }
+        if (warehouseId != null && variantId != null) {
+            InventoryBalance balance = inventoryBalanceRepository
+                    .findByWarehouseAndVariantForUpdate(warehouseId, variantId, "GOOD")
+                    .orElse(null);
+            if (balance != null && balance.getAverageCost() != null && balance.getAverageCost().compareTo(BigDecimal.ZERO) > 0) {
+                return balance.getAverageCost();
+            }
+        }
+        if (variantId != null) {
+            ProductVariant variant = productVariantRepository.findById(variantId).orElse(null);
+            if (variant != null) {
+                if (variant.getCostPrice() != null && variant.getCostPrice().compareTo(BigDecimal.ZERO) > 0) {
+                    return variant.getCostPrice();
+                }
+                if (variant.getSalePrice() != null && variant.getSalePrice().compareTo(BigDecimal.ZERO) > 0) {
+                    return variant.getSalePrice();
+                }
+            }
+        }
+        return BigDecimal.ZERO;
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -74,7 +112,7 @@ public class StockTransferServiceImpl implements StockTransferService {
 
         String transferCode = requestDTO.getTransferCode();
         if (transferCode == null || transferCode.trim().isEmpty()) {
-            transferCode = "CK-" + System.currentTimeMillis();
+            transferCode = generateNextTransferCode();
         }
 
         StockTransfer stockTransfer = StockTransfer.builder()
@@ -98,11 +136,12 @@ public class StockTransferServiceImpl implements StockTransferService {
                 }
             }
 
+            BigDecimal unitCost = resolveTransferUnitCost(requestDTO.getFromWarehouseId(), lineDTO.getVariantId(), lineDTO.getUnitCost());
             StockTransferLine line = StockTransferLine.builder()
                     .stockTransfer(stockTransfer)
                     .variantId(lineDTO.getVariantId())
                     .quantity(lineDTO.getQuantity())
-                    .unitCost(lineDTO.getUnitCost() != null ? lineDTO.getUnitCost() : BigDecimal.ZERO)
+                    .unitCost(unitCost)
                     .serialNumbersText(serialsJson)
                     .note(lineDTO.getNote())
                     .build();
@@ -153,11 +192,12 @@ public class StockTransferServiceImpl implements StockTransferService {
                 }
             }
 
+            BigDecimal unitCost = resolveTransferUnitCost(requestDTO.getFromWarehouseId(), lineDTO.getVariantId(), lineDTO.getUnitCost());
             StockTransferLine line = StockTransferLine.builder()
                     .stockTransfer(stockTransfer)
                     .variantId(lineDTO.getVariantId())
                     .quantity(lineDTO.getQuantity())
-                    .unitCost(lineDTO.getUnitCost() != null ? lineDTO.getUnitCost() : BigDecimal.ZERO)
+                    .unitCost(unitCost)
                     .serialNumbersText(serialsJson)
                     .note(lineDTO.getNote())
                     .build();
@@ -197,7 +237,23 @@ public class StockTransferServiceImpl implements StockTransferService {
             throw new BusinessException(SystemMessage.INV_INVALID_STATE);
         }
 
-        createAndPostImport(stockTransfer, userId);
+        java.util.Map<Long, BigDecimal> exportedCosts = new java.util.HashMap<>();
+        List<InventoryDocumentResponse> exports = inventoryDocumentService.getExportHistory(
+                null, null, null, "POSTED", stockTransfer.getFromWarehouseId(),
+                InventoryDocumentService.ISSUE_PURPOSE_TRANSFER_OUT, "STOCK_TRANSFER", stockTransfer.getId()
+        );
+        if (exports != null && !exports.isEmpty()) {
+            InventoryDocumentResponse exportDoc = exports.get(0);
+            if (exportDoc.getLines() != null) {
+                for (com.duylongtech.backend.dto.response.InventoryDocumentLineResponse l : exportDoc.getLines()) {
+                    if (l.getUnitCost() != null && l.getUnitCost().compareTo(BigDecimal.ZERO) > 0) {
+                        exportedCosts.put(l.getVariantId(), l.getUnitCost());
+                    }
+                }
+            }
+        }
+
+        createAndPostImport(stockTransfer, exportedCosts, userId);
 
         stockTransfer.setStatus("POSTED");
         stockTransfer = stockTransferRepository.save(stockTransfer);
@@ -206,11 +262,11 @@ public class StockTransferServiceImpl implements StockTransferService {
     }
 
     private void processInventoryForTransfer(StockTransfer stockTransfer, Long userId) {
-        createAndPostExport(stockTransfer, userId);
-        createAndPostImport(stockTransfer, userId);
+        java.util.Map<Long, BigDecimal> exportedCosts = createAndPostExport(stockTransfer, userId);
+        createAndPostImport(stockTransfer, exportedCosts, userId);
     }
 
-    private void createAndPostExport(StockTransfer stockTransfer, Long userId) {
+    private java.util.Map<Long, BigDecimal> createAndPostExport(StockTransfer stockTransfer, Long userId) {
         InventoryDocumentRequest exportReq = new InventoryDocumentRequest();
         exportReq.setWarehouseId(stockTransfer.getFromWarehouseId());
         exportReq.setDocDate(java.time.LocalDate.now());
@@ -224,6 +280,8 @@ public class StockTransferServiceImpl implements StockTransferService {
         for (StockTransferLine line : stockTransfer.getLines()) {
             BigDecimal qty = line.getQuantity();
             if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            BigDecimal unitCost = resolveTransferUnitCost(stockTransfer.getFromWarehouseId(), line.getVariantId(), line.getUnitCost());
 
             List<String> serials = new ArrayList<>();
             if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isEmpty()) {
@@ -241,23 +299,33 @@ public class StockTransferServiceImpl implements StockTransferService {
                     lineReq.setVariantId(line.getVariantId());
                     lineReq.setQuantityOut(BigDecimal.ONE);
                     lineReq.setSerialNumberId(serial.getId());
-                    lineReq.setUnitCost(line.getUnitCost());
+                    lineReq.setUnitCost(unitCost);
                     exportReq.getLines().add(lineReq);
                 }
             } else {
                 InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
                 lineReq.setVariantId(line.getVariantId());
                 lineReq.setQuantityOut(qty);
-                lineReq.setUnitCost(line.getUnitCost());
+                lineReq.setUnitCost(unitCost);
                 exportReq.getLines().add(lineReq);
             }
         }
         
         InventoryDocumentResponse created = inventoryDocumentService.createExport(exportReq);
-        inventoryDocumentService.postExport(created.getId());
+        InventoryDocumentResponse posted = inventoryDocumentService.postExport(created.getId());
+
+        java.util.Map<Long, BigDecimal> costByVariant = new java.util.HashMap<>();
+        if (posted != null && posted.getLines() != null) {
+            for (com.duylongtech.backend.dto.response.InventoryDocumentLineResponse l : posted.getLines()) {
+                if (l.getUnitCost() != null && l.getUnitCost().compareTo(BigDecimal.ZERO) > 0) {
+                    costByVariant.put(l.getVariantId(), l.getUnitCost());
+                }
+            }
+        }
+        return costByVariant;
     }
 
-    private void createAndPostImport(StockTransfer stockTransfer, Long userId) {
+    private void createAndPostImport(StockTransfer stockTransfer, java.util.Map<Long, BigDecimal> exportedCosts, Long userId) {
         InventoryDocumentRequest importReq = new InventoryDocumentRequest();
         importReq.setWarehouseId(stockTransfer.getToWarehouseId());
         importReq.setDocDate(java.time.LocalDate.now());
@@ -272,6 +340,16 @@ public class StockTransferServiceImpl implements StockTransferService {
             BigDecimal qty = line.getQuantity();
             if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) continue;
 
+            BigDecimal unitCost = exportedCosts != null ? exportedCosts.get(line.getVariantId()) : null;
+            if (unitCost == null || unitCost.compareTo(BigDecimal.ZERO) <= 0) {
+                unitCost = resolveTransferUnitCost(stockTransfer.getFromWarehouseId(), line.getVariantId(), line.getUnitCost());
+            }
+
+            if (line.getUnitCost() == null || line.getUnitCost().compareTo(BigDecimal.ZERO) <= 0) {
+                line.setUnitCost(unitCost);
+                stockTransferLineRepository.save(line);
+            }
+
             List<String> serials = new ArrayList<>();
             if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isEmpty()) {
                 try {
@@ -282,7 +360,7 @@ public class StockTransferServiceImpl implements StockTransferService {
             InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
             lineReq.setVariantId(line.getVariantId());
             lineReq.setQuantityIn(qty);
-            lineReq.setUnitCost(line.getUnitCost());
+            lineReq.setUnitCost(unitCost);
             if (!serials.isEmpty()) {
                 lineReq.setSerialNumbers(serials);
             }

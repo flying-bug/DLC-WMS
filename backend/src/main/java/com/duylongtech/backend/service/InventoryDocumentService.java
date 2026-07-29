@@ -147,7 +147,6 @@ public class InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse createExport(InventoryDocumentRequest req) {
         validateCreateRequest(req);
-        validateExportInventoryBalance(req.getWarehouseId(), req.getLines());
         InventoryDocument doc = buildBaseDocument(req, EXPORT_DOC_TYPE, resolveCreateDocCode(req.getDocCode()));
         for (int i = 0; i < req.getLines().size(); i++) {
             doc.getLines().add(toExportLineEntity(doc, req.getLines().get(i), i));
@@ -168,7 +167,6 @@ public class InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse updateExport(Long id, InventoryDocumentRequest req) {
         validateUpdateRequest(req);
-        validateExportInventoryBalance(req.getWarehouseId(), req.getLines());
         InventoryDocument doc = findExportOrThrow(id);
         ensureEditable(doc);
         updateBaseDocument(id, doc, req, "Mã phiếu xuất kho đã tồn tại", false);
@@ -202,9 +200,22 @@ public class InventoryDocumentService {
         for (InventoryDocumentLine line : doc.getLines()) {
             BigDecimal qtyToExport = line.getQuantityOut();
             SerialNumber serialNumber = null;
-            if (line.getSerialNumberId() != null) {
-                serialNumber = serialNumberRepository.findById(line.getSerialNumberId())
+            Long targetSerialId = line.getSerialNumberId();
+            if (targetSerialId == null && line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
+                List<String> serials = parseSerialNumbers(line.getSerialNumbersText());
+                if (!serials.isEmpty()) {
+                    String firstSerial = serials.get(0);
+                    serialNumber = serialNumberRepository.findBySerialNumber(firstSerial).orElse(null);
+                    if (serialNumber != null) {
+                        line.setSerialNumberId(serialNumber.getId());
+                    }
+                }
+            } else if (targetSerialId != null) {
+                serialNumber = serialNumberRepository.findById(targetSerialId)
                         .orElseThrow(() -> new BusinessException("Khong tim thay serial can xuat"));
+            }
+
+            if (serialNumber != null) {
                 validateExportSerial(doc, line, serialNumber, qtyToExport);
             }
             InventoryBalance balance = inventoryBalanceRepository
@@ -248,13 +259,20 @@ public class InventoryDocumentService {
                 remainingQty = remainingQty.subtract(qtyFromLayer);
             }
 
-            if (remainingQty.compareTo(ZERO) > 0) {
+            if (remainingQty.compareTo(ZERO) > 0 || totalCost.compareTo(ZERO) <= 0) {
                 ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
-                BigDecimal fallbackCost = (balance != null && balance.getAverageCost() != null
-                        && balance.getAverageCost().compareTo(ZERO) > 0)
+                BigDecimal fallbackCost = (line.getUnitCost() != null && line.getUnitCost().compareTo(ZERO) > 0)
+                        ? line.getUnitCost()
+                        : ((balance != null && balance.getAverageCost() != null && balance.getAverageCost().compareTo(ZERO) > 0)
                                 ? balance.getAverageCost()
-                                : (variant != null && variant.getCostPrice() != null ? variant.getCostPrice() : ZERO);
-                totalCost = totalCost.add(remainingQty.multiply(fallbackCost));
+                                : (variant != null && variant.getCostPrice() != null && variant.getCostPrice().compareTo(ZERO) > 0
+                                        ? variant.getCostPrice()
+                                        : (variant != null && variant.getSalePrice() != null ? variant.getSalePrice() : ZERO)));
+                if (totalCost.compareTo(ZERO) <= 0) {
+                    totalCost = qtyToExport.multiply(fallbackCost);
+                } else if (remainingQty.compareTo(ZERO) > 0) {
+                    totalCost = totalCost.add(remainingQty.multiply(fallbackCost));
+                }
                 remainingQty = ZERO;
             }
 
@@ -542,6 +560,10 @@ public class InventoryDocumentService {
             return;
         }
 
+        if (serial == null || serial.getId() == null) {
+            return; // Phiếu bảo hành phải gắn với Serial Number cụ thể
+        }
+
         // Lấy số tháng bảo hành: ưu tiên line -> variant -> product
         Integer warrantyMonths = line.getWarrantyMonths();
         if (warrantyMonths == null || warrantyMonths <= 0) {
@@ -563,11 +585,9 @@ public class InventoryDocumentService {
         }
 
         // Kiểm tra idempotency nếu có serial: tránh tạo trùng khi retry
-        if (serial != null && serial.getId() != null) {
-            boolean alreadyExists = warrantyRepository.existsBySerialNumberId(serial.getId());
-            if (alreadyExists) {
-                return;
-            }
+        boolean alreadyExists = warrantyRepository.existsBySerialNumberId(serial.getId());
+        if (alreadyExists) {
+            return;
         }
 
         LocalDate startDate = doc.getDocDate() != null ? doc.getDocDate() : LocalDate.now();
@@ -576,7 +596,7 @@ public class InventoryDocumentService {
 
         Warranty warranty = Warranty.builder()
                 .warrantyCode(warrantyCode)
-                .serialNumberId(serial != null ? serial.getId() : null)
+                .serialNumberId(serial.getId())
                 .partnerId(doc.getPartnerId())
                 .salesOrderId(doc.getSalesOrderId())
                 .startDate(startDate)
@@ -763,22 +783,44 @@ public class InventoryDocumentService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public String generateNextExportCode() {
+        Optional<InventoryDocument> lastDoc = inventoryDocumentRepository
+                .findTopByDocCodeStartingWithOrderByDocCodeDesc("XK");
+        if (lastDoc.isPresent()) {
+            String lastCode = lastDoc.get().getDocCode();
+            try {
+                String digits = lastCode.replaceAll("^XK-?", "");
+                int lastNum = Integer.parseInt(digits);
+                return String.format("XK%05d", lastNum + 1);
+            } catch (NumberFormatException e) {
+                return "XK00001";
+            }
+        }
+        return "XK00001";
+    }
+
+    @Transactional(readOnly = true)
+    public String generateNextImportCode() {
+        Optional<InventoryDocument> lastDoc = inventoryDocumentRepository
+                .findTopByDocCodeStartingWithOrderByDocCodeDesc("NK");
+        if (lastDoc.isPresent()) {
+            String lastCode = lastDoc.get().getDocCode();
+            try {
+                String digits = lastCode.replaceAll("^NK-?", "");
+                int lastNum = Integer.parseInt(digits);
+                return String.format("NK%05d", lastNum + 1);
+            } catch (NumberFormatException e) {
+                return "NK00001";
+            }
+        }
+        return "NK00001";
+    }
+
     private String resolveCreateDocCode(String requestedCode) {
         String docCode = trimToNull(requestedCode);
         if (docCode == null) {
-            Optional<InventoryDocument> lastDoc = inventoryDocumentRepository
-                    .findTopByDocCodeStartingWithOrderByDocCodeDesc("XK-");
-            if (lastDoc.isPresent()) {
-                String lastCode = lastDoc.get().getDocCode();
-                try {
-                    int lastNum = Integer.parseInt(lastCode.substring(3));
-                    docCode = String.format("XK-%05d", lastNum + 1);
-                } catch (NumberFormatException e) {
-                    docCode = "XK-" + System.currentTimeMillis();
-                }
-            } else {
-                docCode = "XK-00001";
-            }
+            docCode = generateNextExportCode();
         }
         if (inventoryDocumentRepository.existsByDocCode(docCode)) {
             throw new BusinessException("Mã phiếu xuất kho đã tồn tại");
@@ -789,19 +831,7 @@ public class InventoryDocumentService {
     private String resolveCreateImportDocCode(String requestedCode) {
         String docCode = trimToNull(requestedCode);
         if (docCode == null) {
-            Optional<InventoryDocument> lastDoc = inventoryDocumentRepository
-                    .findTopByDocCodeStartingWithOrderByDocCodeDesc("NK");
-            if (lastDoc.isPresent()) {
-                String lastCode = lastDoc.get().getDocCode();
-                try {
-                    int lastNum = Integer.parseInt(lastCode.substring(2));
-                    docCode = String.format("NK%05d", lastNum + 1);
-                } catch (NumberFormatException e) {
-                    docCode = "NK" + System.currentTimeMillis();
-                }
-            } else {
-                docCode = "NK00001";
-            }
+            docCode = generateNextImportCode();
         }
         if (inventoryDocumentRepository.existsByDocCode(docCode)) {
             throw new BusinessException("Mã phiếu nhập kho đã tồn tại");
@@ -834,6 +864,16 @@ public class InventoryDocumentService {
             }
         }
 
+        Long serialNumberId = lr.getSerialNumberId();
+        if (serialNumberId == null && lr.getSerialNumbers() != null && !lr.getSerialNumbers().isEmpty()) {
+            String firstSerial = lr.getSerialNumbers().get(0);
+            if (firstSerial != null && !firstSerial.trim().isEmpty()) {
+                serialNumberId = serialNumberRepository.findBySerialNumber(firstSerial.trim())
+                        .map(SerialNumber::getId)
+                        .orElse(null);
+            }
+        }
+
         return InventoryDocumentLine.builder()
                 .inventoryDocument(doc)
                 .variantId(lr.getVariantId())
@@ -845,7 +885,7 @@ public class InventoryDocumentService {
                 .vatPercent(vatRate)
                 .lineAmount(lineAmount)
                 .lotBatchId(lr.getLotBatchId())
-                .serialNumberId(lr.getSerialNumberId())
+                .serialNumberId(serialNumberId)
                 .serialNumbersText(formatSerialNumbers(lr.getSerialNumbers()))
                 .warrantyMonths(warrantyMonths)
                 .note(lr.getNote())
