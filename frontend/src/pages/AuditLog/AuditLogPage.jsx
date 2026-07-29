@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
 import { exportToExcel } from '../../utils/excelExport';
+import Pagination from '../../components/ui/Pagination/Pagination';
+import { useToast } from '../../contexts/ToastContext';
 import styles from './AuditLogPage.module.css';
 
 const formatDateTime = (isoString) => {
@@ -105,6 +107,7 @@ const formatDetailValue = (value) => {
 
 function AuditLogPage() {
     const navigate = useNavigate();
+    const { showToast } = useToast();
 
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -161,11 +164,15 @@ function AuditLogPage() {
     }, [page, size, debouncedSearch, selectedModule, fromDateInput, toDateInput]);
 
     useEffect(() => {
-         
+
         fetchLogs();
     }, [fetchLogs]);
 
     const handleExport = () => {
+        if (!logs || logs.length === 0) {
+            showToast('warning', 'Không có dữ liệu để xuất.');
+            return;
+        }
         const headers = ['Thời gian', 'Người dùng', 'Thao tác', 'Phân hệ', 'Địa chỉ IP'];
         const data = logs.map(log => [
             formatDateTime(log.timestamp),
@@ -175,6 +182,7 @@ function AuditLogPage() {
             log.ipAddress || ''
         ]);
         exportToExcel(headers, data, 'Nhat_ky_he_thong');
+        showToast('success', 'Xuất Excel thành công.');
     };
 
     const handlePageChange = (newPage) => {
@@ -213,18 +221,15 @@ function AuditLogPage() {
         <div className={styles.page}>
             <header className={styles.header}>
                 <div className={styles.headerLeft}>
-                    <div className={styles.brandName}>Duy Long Computer</div>
+                    <div className={styles.brandName} style={{ cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>Duy Long Computer</div>
                     <nav className={styles.navLinks}>
                         <a onClick={() => navigate('/users')} className={styles.navLink}>Quản lý người dùng</a>
                         <a onClick={() => navigate('/audit-log')} className={styles.navLinkActive}>Nhật ký hệ thống</a>
-                        <a onClick={() => navigate('/operations')} className={styles.navLink}>Operations Center</a>
+                        <a onClick={() => navigate('/operations')} className={styles.navLink}>Trung tâm vận hành</a>
                     </nav>
                 </div>
                 <div className={styles.headerRight}>
-                    <button className={styles.bellBtn}>
-                        <i className="bi bi-bell" />
-                        <span className={styles.bellDot}></span>
-                    </button>
+
                     <div className={styles.userInfoContainer}>
                         <UserProfileDropdown />
                     </div>
@@ -239,63 +244,67 @@ function AuditLogPage() {
                     </div>
                 </div>
 
-                <div className={styles.filterContainer}>
-                    <div className={styles.filterGroup}>
-                        <label>Khoảng thời gian</label>
-                        <div className={styles.dateRangeFields}>
-                            <div className={styles.dateField}>
-                                <span>Từ ngày</span>
-                                <input
-                                    type="date"
-                                    value={fromDateInput}
-                                    onChange={(e) => { setFromDateInput(e.target.value); setPage(0); }}
-                                />
-                            </div>
-                            <div className={styles.dateField}>
-                                <span>Đến ngày</span>
-                                <input
-                                    type="date"
-                                    value={toDateInput}
-                                    onChange={(e) => { setToDateInput(e.target.value); setPage(0); }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                    <div className={styles.filterGroup}>
-                        <label>Phân hệ</label>
-                        <div className={styles.inputWrapper}>
-                            <select
-                                value={selectedModule}
-                                onChange={(e) => { setSelectedModule(e.target.value); setPage(0); }}
-                            >
-                                <option value="">Tất cả</option>
-                                <option value="Auth">Xác thực</option>
-                                <option value="Account">Tài khoản</option>
-                                <option value="Permission">Phân quyền</option>
-                                <option value="Product">Sản phẩm</option>
-                                <option value="Unit">Đơn vị tính</option>
-                                <option value="ExportSlip">Phiếu xuất kho</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div className={styles.filterGroup}>
-                        <label>Người dùng / Tìm kiếm</label>
-                        <div className={styles.inputWrapper}>
-                            <i className="bi bi-person-bounding-box"></i>
+                <div className={styles.filterSection}>
+                    <div className={styles.searchAndPopover}>
+                        <div className={styles.searchBox}>
+                            <i className="bi bi-search"></i>
                             <input
                                 type="text"
+                                className={styles.searchInput}
                                 placeholder="Tìm tên, nội dung hoặc ID..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => { setSearchTerm(e.target.value); }}
                             />
+                            {searchTerm && (
+                                <button className={styles.clearSearchBtn} onClick={() => { setSearchTerm(''); setDebouncedSearch(''); setPage(0); }}>
+                                    <i className="bi bi-x-circle-fill"></i>
+                                </button>
+                            )}
                         </div>
                     </div>
-                    <div className={styles.filterAction}>
-                        <button className={styles.btnSearch} onClick={() => { setDebouncedSearch(searchTerm); setPage(0); }}>
-                            <i className="bi bi-search"></i> Tra cứu
+
+                    <div className={styles.filterSelectGroup}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Từ:</span>
+                            <input
+                                type="date"
+                                className={styles.filterSelect}
+                                value={fromDateInput}
+                                onChange={(e) => { setFromDateInput(e.target.value); setPage(0); }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Đến:</span>
+                            <input
+                                type="date"
+                                className={styles.filterSelect}
+                                value={toDateInput}
+                                onChange={(e) => { setToDateInput(e.target.value); setPage(0); }}
+                            />
+                        </div>
+                        <select
+                            className={styles.filterSelect}
+                            value={selectedModule}
+                            onChange={(e) => { setSelectedModule(e.target.value); setPage(0); }}
+                        >
+                            <option value="">Tất cả phân hệ</option>
+                            <option value="Auth">Xác thực</option>
+                            <option value="Account">Tài khoản</option>
+                            <option value="Permission">Phân quyền</option>
+                            <option value="Product">Sản phẩm</option>
+                            <option value="Unit">Đơn vị tính</option>
+                            <option value="ExportSlip">Phiếu xuất kho</option>
+                        </select>
+                    </div>
+
+                    <div className={styles.filterActions}>
+                        <button className={styles.iconBtn} onClick={() => {
+                            setSearchTerm(''); setDebouncedSearch(''); setFromDateInput(''); setToDateInput(''); setSelectedModule(''); setPage(0);
+                        }} title="Làm mới">
+                            <i className="bi bi-arrow-clockwise"></i>
                         </button>
-                        <button className={styles.btnSearch} onClick={handleExport} style={{ marginLeft: '10px', backgroundColor: '#10b981' }}>
-                            <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                        <button className={styles.iconBtn} onClick={handleExport} title="Xuất Excel">
+                            <i className="bi bi-file-earmark-excel"></i>
                         </button>
                     </div>
                 </div>
@@ -354,30 +363,14 @@ function AuditLogPage() {
                         </tbody>
                     </table>
 
-                    <div className={styles.pagination}>
-                        <div className={styles.totalInfo}>Tổng số: <b>{totalElements}</b> bản ghi</div>
-                        <div className={styles.pageControls}>
-                            <select value={size} onChange={(e) => { setSize(Number(e.target.value)); setPage(0); }}>
-                                <option value={10}>10 bản ghi trên 1 trang</option>
-                                <option value={20}>20 bản ghi trên 1 trang</option>
-                                <option value={30}>30 bản ghi trên 1 trang</option>
-                                <option value={50}>50 bản ghi trên 1 trang</option>
-                            </select>
-                            <span
-                                className={`${styles.pageBtn} ${page === 0 ? styles.disabled : ''}`}
-                                onClick={() => page > 0 && handlePageChange(page - 1)}
-                            >
-                                Trước
-                            </span>
-                            <span className={styles.currentPage}>{page + 1}</span>
-                            <span
-                                className={`${styles.pageBtn} ${page >= totalPages - 1 ? styles.disabled : ''}`}
-                                onClick={() => page < totalPages - 1 && handlePageChange(page + 1)}
-                            >
-                                Sau
-                            </span>
-                        </div>
-                    </div>
+                    <Pagination
+                        page={page}
+                        totalPages={totalPages}
+                        totalElements={totalElements}
+                        size={size}
+                        onPageChange={handlePageChange}
+                        onSizeChange={(s) => { setSize(s); setPage(0); }}
+                    />
                 </div>
             </main>
 

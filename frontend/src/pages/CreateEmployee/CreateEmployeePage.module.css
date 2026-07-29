@@ -404,18 +404,17 @@
 .actionsBar {
     position: fixed;
     bottom: 0;
-    left: var(--sidebar-width, 248px);
+    left: 0;
     right: 0;
-    background: #1e1f24;
-    border-top: 1px solid #2d3238;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
     padding: 16px 40px;
     display: flex;
     justify-content: flex-end;
     align-items: center;
     gap: 16px;
     z-index: 40;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
-    transition: left 0.3s ease;
+    box-shadow: var(--shadow-card-soft);
 }
 
 .actionsContainer {

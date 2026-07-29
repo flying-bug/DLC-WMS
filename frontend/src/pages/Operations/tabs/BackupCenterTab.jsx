@@ -4,6 +4,8 @@ import {
     uploadBackupToDrive, restoreBackup, getDownloadUrl,
     getBackupSchedule, saveBackupSchedule
 } from '../../../api/backupApi';
+import { useToast } from '../../../contexts/ToastContext';
+import ConfirmModal from '../../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './BackupCenterTab.module.css';
 
 const STATUS_CONFIG = {
@@ -69,9 +71,10 @@ function BackupCenterTab() {
     const [backups, setBackups] = useState([]);
     const [loading, setLoading] = useState(false);
     const [actionLoading, setActionLoading] = useState({});
-    const [msg, setMsg] = useState({ text: '', type: '' });
+    const { showToast } = useToast();
     const [restoreTarget, setRestoreTarget] = useState(null);
     const [restoreLoading, setRestoreLoading] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
 
     // Schedule state
     const [schedule, setSchedule] = useState({
@@ -80,18 +83,13 @@ function BackupCenterTab() {
     });
     const [schedLoading, setSchedLoading] = useState(false);
 
-    const showMsg = (text, type = 'success') => {
-        setMsg({ text, type });
-        setTimeout(() => setMsg({ text: '', type: '' }), 4000);
-    };
-
     const fetchBackups = useCallback(async () => {
         setLoading(true);
         try {
             const res = await listBackups();
             if (res.success) setBackups(res.data || []);
         } catch (e) {
-            showMsg('Không thể tải danh sách backup.', 'error');
+            showToast('error', 'Thao tác thất bại.');
         } finally {
             setLoading(false);
         }
@@ -113,33 +111,34 @@ function BackupCenterTab() {
 
     const handleCreateBackup = async () => {
         setActionLoading(p => ({ ...p, create: true }));
-        showMsg('', '');
         try {
             const res = await createBackup();
             if (res.success) {
-                showMsg(`✅ Backup thành công: ${res.data.filename} (${res.data.fileSizeFormatted})`);
+                showToast('success', 'Thêm mới thành công.');
                 fetchBackups();
             } else {
-                showMsg('❌ ' + res.userMessage, 'error');
+                showToast('error', 'Thao tác thất bại.');
             }
         } catch {
-            showMsg('❌ Backup thất bại.', 'error');
+            showToast('error', 'Thao tác thất bại.');
         } finally {
             setActionLoading(p => ({ ...p, create: false }));
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Bạn có chắc muốn xóa backup này?')) return;
+    const handleDelete = async () => {
+        if (!deleteTarget) return;
+        const id = deleteTarget;
         setActionLoading(p => ({ ...p, [id + '_del']: true }));
         try {
             const res = await deleteBackup(id);
-            if (res.success) { showMsg('Đã xóa backup.'); fetchBackups(); }
-            else showMsg('❌ ' + res.userMessage, 'error');
+            if (res.success) { showToast('success', 'Xóa thành công.'); fetchBackups(); }
+            else showToast('error', 'Thao tác thất bại.');
         } catch {
-            showMsg('❌ Xóa thất bại.', 'error');
+            showToast('error', 'Thao tác thất bại.');
         } finally {
             setActionLoading(p => ({ ...p, [id + '_del']: false }));
+            setDeleteTarget(null);
         }
     };
 
@@ -148,11 +147,11 @@ function BackupCenterTab() {
         try {
             const res = await uploadBackupToDrive(id);
             if (res.success) {
-                showMsg('☁️ Upload Google Drive thành công!');
+                showToast('success', 'Cập nhật thành công.');
                 fetchBackups();
-            } else showMsg('❌ ' + res.userMessage, 'error');
+            } else showToast('error', 'Thao tác thất bại.');
         } catch {
-            showMsg('❌ Upload thất bại.', 'error');
+            showToast('error', 'Thao tác thất bại.');
         } finally {
             setActionLoading(p => ({ ...p, [id + '_drv']: false }));
         }
@@ -169,7 +168,7 @@ function BackupCenterTab() {
                 link.download = `backup_${id}.sql.gz`;
                 link.click();
             })
-            .catch(() => showMsg('❌ Tải file thất bại.', 'error'));
+            .catch(() => showToast('error', 'Thao tác thất bại.'));
     };
 
     const handleRestoreConfirm = async (id) => {
@@ -177,12 +176,12 @@ function BackupCenterTab() {
         try {
             const res = await restoreBackup(id);
             if (res.success) {
-                showMsg('✅ Restore hoàn tất!');
+                showToast('success', 'Khôi phục thành công.');
                 setRestoreTarget(null);
                 fetchBackups();
-            } else showMsg('❌ ' + res.userMessage, 'error');
+            } else showToast('error', 'Thao tác thất bại.');
         } catch {
-            showMsg('❌ Restore thất bại.', 'error');
+            showToast('error', 'Thao tác thất bại.');
         } finally {
             setRestoreLoading(false);
             setRestoreTarget(null);
@@ -193,10 +192,10 @@ function BackupCenterTab() {
         setSchedLoading(true);
         try {
             const res = await saveBackupSchedule(schedule);
-            if (res.success) showMsg('✅ Lịch backup đã lưu.');
-            else showMsg('❌ ' + res.userMessage, 'error');
+            if (res.success) showToast('success', 'Lưu thành công.');
+            else showToast('error', 'Thao tác thất bại.');
         } catch {
-            showMsg('❌ Lưu lịch thất bại.', 'error');
+            showToast('error', 'Thao tác thất bại.');
         } finally {
             setSchedLoading(false);
         }
@@ -221,12 +220,6 @@ function BackupCenterTab() {
                     {actionLoading.create ? 'Đang tạo...' : 'Tạo Backup mới'}
                 </button>
             </div>
-
-            {msg.text && (
-                <div className={`${styles.msgBar} ${msg.type === 'error' ? styles.msgError : styles.msgSuccess}`}>
-                    {msg.text}
-                </div>
-            )}
 
             {/* Sub-tabs */}
             <div className={styles.subTabs}>
@@ -307,7 +300,7 @@ function BackupCenterTab() {
                                                     </button>
                                                     <button
                                                         className={`${styles.actionBtn} ${styles.deleteBtn}`}
-                                                        onClick={() => handleDelete(b.id)}
+                                                        onClick={() => setDeleteTarget(b.id)}
                                                         disabled={actionLoading[b.id + '_del']}
                                                         title="Xóa"
                                                     >
@@ -436,6 +429,17 @@ function BackupCenterTab() {
                     loading={restoreLoading}
                 />
             )}
+
+            <ConfirmModal
+                isOpen={!!deleteTarget}
+                title="Xác nhận xóa bản sao lưu"
+                message="Bạn có chắc chắn muốn xóa bản sao lưu này không? Hành động này không thể hoàn tác."
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteTarget(null)}
+                confirmText="Xóa"
+                cancelText="Hủy"
+                isDanger={true}
+            />
         </div>
     );
 }

@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
+import { useToast } from '../contexts/ToastContext';
+import ConfirmModal from '../components/ui/ConfirmModal/ConfirmModal';
 import { exportToExcel } from '../utils/excelExport';
 import styles from './UsersPage.module.css';
 import UserProfileDropdown from '../components/ui/UserProfileDropdown/UserProfileDropdown';
 import EmployeeDrawer from '../components/ui/EmployeeDrawer/EmployeeDrawer';
+import Pagination from '../components/ui/Pagination/Pagination';
 import { USER_EVENT } from '../auth/session';
 
 function UsersPage() {
@@ -14,6 +17,17 @@ function UsersPage() {
     const [usersData, setUsersData] = useState([]);
     const [activeMenuId, setActiveMenuId] = useState(null);
     const [loading, setLoading] = useState(false);
+    const { showToast } = useToast();
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, user: null, isLocking: false });
+
+    // Filter states
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+    const [roleFilter, setRoleFilter] = useState('');
+
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
 
     const mapUserToUi = (u) => {
         const isSuperAdmin = u.roles && u.roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
@@ -49,7 +63,8 @@ function UsersPage() {
             name: u.fullName,
             initials,
             avatarColorClass,
-            code: u.userCode || '(Chưa cấp)',
+            code: u.userCode || u.username || '(Chưa cấp)',
+            username: u.username,
             department,
             departmentShort,
             position,
@@ -86,9 +101,7 @@ function UsersPage() {
     };
 
     useEffect(() => {
-         
         fetchUsers();
-         
     }, []);
 
     useEffect(() => {
@@ -140,32 +153,36 @@ function UsersPage() {
         navigate(`/users/${userId}/permissions`);
     };
 
-    const handleToggleLock = async (e, user) => {
+    const openConfirmModal = (e, user) => {
         e.stopPropagation();
         setActiveMenuId(null);
-        const isLocking = user.status === 'APPROVED';
+        setConfirmModal({
+            isOpen: true,
+            user: user,
+            isLocking: user.status === 'APPROVED'
+        });
+    };
+
+    const executeToggleLock = async () => {
+        if (!confirmModal.user) return;
+        const { user, isLocking } = confirmModal;
         const nextStatus = isLocking ? 'INACTIVE' : 'APPROVED';
-        const confirmed = window.confirm(
-            isLocking
-                ? `Bạn chắc chắn muốn khóa tài khoản ${user.name}?`
-                : `Bạn chắc chắn muốn mở khóa tài khoản ${user.name}?`
-        );
-        if (!confirmed) {
-            return;
-        }
 
         try {
             await axiosClient.put(`/users/${user.id}/status`, null, {
                 params: { status: nextStatus }
             });
             await fetchUsers();
+            showToast('success', isLocking ? 'Khóa tài khoản thành công.' : 'Cập nhật thành công.');
         } catch (error) {
             console.error('Lỗi thay đổi trạng thái tài khoản:', error);
             const message =
                 error.response?.data?.userMessage ||
                 error.response?.data?.message ||
-                'Có lỗi xảy ra khi thay đổi trạng thái tài khoản.';
-            alert(message);
+                'Thao tác thất bại.';
+            showToast('error', message);
+        } finally {
+            setConfirmModal({ isOpen: false, user: null, isLocking: false });
         }
     };
 
@@ -177,20 +194,32 @@ function UsersPage() {
 
     const handleSaveUser = async (updatedData) => {
         try {
-            // Update info and roles
             const targetRoleCode = updatedData.systemRole === 'admin' ? 'SUPER_ADMIN' : 'STAFF';
             await axiosClient.put(`/users/${updatedData.id}`, {
+                username: updatedData.username || updatedData.code,
                 fullName: updatedData.name,
                 email: updatedData.email,
                 phone: (updatedData.phone || '').replace(/[\s.-]/g, ''),
+                idCard: updatedData.idCard === 'Chưa cập nhật' ? 'Chưa cập nhật' : updatedData.idCard,
+                dob: updatedData.dob === 'Chưa cập nhật' ? null : updatedData.dob,
+                gender: updatedData.gender === 'Chưa cập nhật' ? null : updatedData.gender,
+                startDate: updatedData.startDate === 'Chưa cập nhật' ? null : updatedData.startDate,
+                position: updatedData.position === 'Chưa xác định' ? null : updatedData.position,
+                department: updatedData.department === 'Chưa xác định' ? null : updatedData.department,
+                address: updatedData.address === 'Chưa cập nhật' ? null : updatedData.address,
+                status: updatedData.status,
                 roles: [targetRoleCode]
             });
-
             await fetchUsers();
+            showToast('success', 'Cập nhật thành công.');
             setIsDrawerOpen(false);
         } catch (error) {
-            console.error('Lỗi lưu thông tin nhân viên:', error);
-            alert('Có lỗi xảy ra khi cập nhật thông tin nhân viên.');
+            console.error('Lỗi cập nhật user:', error);
+            const message =
+                error.response?.data?.userMessage ||
+                error.response?.data?.message ||
+                'Thao tác thất bại.';
+            showToast('error', message);
             throw error;
         }
     };
@@ -209,33 +238,67 @@ function UsersPage() {
         exportToExcel(headers, data, 'Danh_sach_nguoi_dung');
     };
 
-    // Calculate dynamic stats
+    // Derived Data
+    const filteredUsers = usersData.filter(u => {
+        const matchSearch = searchTerm ?
+            (u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                u.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                u.email.toLowerCase().includes(searchTerm.toLowerCase())) : true;
+
+        const matchStatus = statusFilter ? u.status === statusFilter : true;
+        const matchRole = roleFilter ? (roleFilter === 'SUPER_ADMIN' ? u.roles.includes('SUPER_ADMIN') : !u.roles.includes('SUPER_ADMIN')) : true;
+
+        return matchSearch && matchStatus && matchRole;
+    });
+
+    // Pagination Logic
+    const totalItems = filteredUsers.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    const startIndex = (currentPage - 1) * pageSize;
+    const paginatedUsers = filteredUsers.slice(startIndex, startIndex + pageSize);
+
+    const getPageNumbers = () => {
+        const pages = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            if (currentPage <= 4) {
+                for (let i = 1; i <= 5; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            } else if (currentPage >= totalPages - 3) {
+                pages.push(1);
+                pages.push('...');
+                for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+            } else {
+                pages.push(1);
+                pages.push('...');
+                for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            }
+        }
+        return pages;
+    };
+
     const totalStaff = usersData.length;
     const activeStaff = usersData.filter(u => u.status === 'APPROVED').length;
     const inactiveStaff = usersData.filter(u => u.status === 'INACTIVE').length;
-    const pendingStaff = usersData.filter(u => u.status !== 'APPROVED' && u.status !== 'INACTIVE').length;
 
     return (
         <div className={styles.page}>
             {/* Top Header */}
             <header className={styles.header}>
                 <div className={styles.headerLeft}>
-                    <div className={styles.brandName}>Duy Long Computer</div>
+                    <div className={styles.brandName} style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>Duy Long Computer</div>
                     <nav className={styles.navLinks}>
                         <a onClick={() => navigate('/users')} className={styles.navLinkActive}>Quản lý người dùng</a>
                         <a onClick={() => navigate('/audit-log')} className={styles.navLink}>Nhật ký hệ thống</a>
-                        <a onClick={() => navigate('/operations')} className={styles.navLink}>Operations Center</a>
+                        <a onClick={() => navigate('/operations')} className={styles.navLink}>Trung tâm vận hành</a>
                     </nav>
                 </div>
                 <div className={styles.headerRight}>
-                    <div className={styles.searchBar}>
-                        <i className="bi bi-search" />
-                        <input type="text" placeholder="Tìm kiếm hệ thống..." />
-                    </div>
-                    <button className={styles.bellBtn}>
-                        <i className="bi bi-bell" />
-                        <span className={styles.bellDot}></span>
-                    </button>
+
                     <div className={styles.userInfoContainer}>
                         <UserProfileDropdown />
                     </div>
@@ -249,8 +312,8 @@ function UsersPage() {
                         <h1 className={styles.pageTitle}>Quản lý tài khoản & Phân quyền</h1>
                         <p className={styles.pageSubtitle}>Quản lý vai trò, quyền hạn và trạng thái của nhân viên Duy Long Computer.</p>
                     </div>
-                    <button className={styles.btnAdd} onClick={() => navigate('/users/create')}>
-                        <i className="bi bi-person-plus" /> Thêm thành viên
+                    <button className="btnPrimary" onClick={() => navigate('/users/create')}>
+                        <i className="bi bi-person-plus" /> Thêm nhân viên
                     </button>
                 </div>
 
@@ -270,13 +333,7 @@ function UsersPage() {
                             <span className={`${styles.statValue} ${styles.textGreen}`}>{activeStaff}</span>
                         </div>
                     </div>
-                    <div className={styles.statCard}>
-                        <div className={`${styles.statIcon} ${styles.iconOrange}`}><i className="bi bi-person-lines-fill" /></div>
-                        <div className={styles.statInfo}>
-                            <span className={styles.statLabel}>CHỜ PHÊ DUYỆT</span>
-                            <span className={`${styles.statValue} ${styles.textOrange}`}>{pendingStaff}</span>
-                        </div>
-                    </div>
+
                     <div className={styles.statCard}>
                         <div className={`${styles.statIcon} ${styles.iconRed}`}><i className="bi bi-person-x-fill" /></div>
                         <div className={styles.statInfo}>
@@ -288,17 +345,43 @@ function UsersPage() {
 
                 {/* Table Container */}
                 <div className={styles.tableContainer}>
-                    <div className={styles.tableToolbar}>
-                        <div className={styles.tableSearch}>
-                            <i className="bi bi-search" />
-                            <input type="text" placeholder="Tìm kiếm theo tên, mã hoặc email..." />
+                    <div className={styles.filterSection}>
+                        <div className={styles.searchAndPopover}>
+                            <div className={styles.searchBox}>
+                                <i className="bi bi-search" />
+                                <input
+                                    type="text"
+                                    className={styles.searchInput}
+                                    placeholder="Nhập tên, mã nhân viên hoặc email..."
+                                    value={searchTerm}
+                                    onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                />
+                                {searchTerm && (
+                                    <button className={styles.clearSearchBtn} onClick={() => { setSearchTerm(''); setCurrentPage(1); }}>
+                                        <i className="bi bi-x-circle-fill"></i>
+                                    </button>
+                                )}
+                            </div>
+                            <div className={styles.filterSelectGroup}>
+                                <select
+                                    className={styles.filterSelect}
+                                    value={statusFilter}
+                                    onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                                >
+                                    <option value="">Trạng thái</option>
+                                    <option value="APPROVED">Đang hoạt động</option>
+                                    <option value="INACTIVE">Đã khóa</option>
+                                </select>
+                            </div>
                         </div>
-                        <button className={styles.btnFilter} onClick={handleExport} style={{ marginRight: '10px' }}>
-                            <i className="bi bi-file-earmark-excel" /> Xuất Excel
-                        </button>
-                        <button className={styles.btnFilter}>
-                            <i className="bi bi-funnel" /> Bộ lọc
-                        </button>
+                        <div className={styles.filterActions}>
+                            <button className={styles.iconBtn} onClick={() => { setSearchTerm(''); setStatusFilter(''); setRoleFilter(''); setCurrentPage(1); }} title="Làm mới">
+                                <i className="bi bi-arrow-clockwise" />
+                            </button>
+                            <button className={styles.iconBtn} onClick={handleExport} title="Xuất Excel">
+                                <i className="bi bi-file-earmark-excel" />
+                            </button>
+                        </div>
                     </div>
 
                     <table className={styles.table}>
@@ -306,10 +389,9 @@ function UsersPage() {
                             <tr>
                                 <th>AVATAR</th>
                                 <th>HỌ VÀ TÊN</th>
-                                <th>MÃ NHÂN VIÊN</th>
+                                <th>TÀI KHOẢN NHÂN VIÊN</th>
                                 <th>BỘ PHẬN</th>
                                 <th>VAI TRÒ</th>
-
                                 <th>TRẠNG THÁI</th>
                                 <th>THAO TÁC</th>
                             </tr>
@@ -317,21 +399,27 @@ function UsersPage() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="8" style={{ textAlign: 'center', padding: '20px' }}>Đang tải dữ liệu...</td>
+                                    <td colSpan="7" style={{ textAlign: 'center', padding: '30px' }}>Đang tải dữ liệu...</td>
                                 </tr>
-                            ) : usersData.length === 0 ? (
+                            ) : paginatedUsers.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" style={{ textAlign: 'center', padding: '20px' }}>Không có người dùng nào.</td>
+                                    <td colSpan="7" style={{ padding: '40px 0' }}>
+                                        <div className="emptyState">
+                                            <div className="emptyIcon">
+                                                <i className="bi bi-folder-x"></i>
+                                            </div>
+                                            <div className="emptyText">Không tìm thấy dữ liệu</div>
+                                        </div>
+                                    </td>
                                 </tr>
                             ) : (
-                                usersData.map((user) => (
+                                paginatedUsers.map((user) => (
                                     <tr key={user.id} className={styles.tableRow} onClick={() => handleRowClick(user)}>
                                         <td><div className={`${styles.avatarCircle} ${user.avatarColorClass}`}>{user.initials}</div></td>
                                         <td><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: 'var(--color-text-subtle)' }}>{user.email}</span></td>
                                         <td>{user.code}</td>
                                         <td>{user.departmentShort}</td>
                                         <td><span className={`${styles.roleBadge} ${user.roleClass}`}>{user.roleBadge}</span></td>
-
                                         <td><span className={`${styles.statusBadge} ${user.statusClass}`}><i className="bi bi-circle-fill"></i> {user.statusLabel}</span></td>
                                         <td className={styles.actionCell}>
                                             <button
@@ -351,7 +439,7 @@ function UsersPage() {
                                                             <i className="bi bi-shield-lock"></i> Phân quyền chức năng
                                                         </div>
                                                     )}
-                                                    <div className={`${styles.actionMenuItem} ${user.status === 'APPROVED' ? styles.actionMenuItemDanger : styles.actionMenuItemSuccess}`} onClick={(e) => handleToggleLock(e, user)}>
+                                                    <div className={`${styles.actionMenuItem} ${user.status === 'APPROVED' ? styles.actionMenuItemDanger : styles.actionMenuItemSuccess}`} onClick={(e) => openConfirmModal(e, user)}>
                                                         <i className={`bi ${user.status === 'APPROVED' ? 'bi-lock' : 'bi-unlock'}`}></i>
                                                         {user.status === 'APPROVED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
                                                     </div>
@@ -364,27 +452,36 @@ function UsersPage() {
                         </tbody>
                     </table>
 
-                    {/* Pagination */}
-                    <div className={styles.pagination}>
-                        <div className={styles.pageInfo}>Hiển thị 1 đến {usersData.length} của {usersData.length} bản ghi</div>
-                        <div className={styles.pageControls}>
-                            <button className={styles.pageBtn}><i className="bi bi-chevron-left" /></button>
-                            <button className={`${styles.pageBtn} ${styles.pageBtnActive}`}>1</button>
-                            <button className={styles.pageBtn}><i className="bi bi-chevron-right" /></button>
-                        </div>
-                    </div>
+                    <Pagination
+                        page={currentPage - 1}
+                        totalPages={totalPages}
+                        totalElements={totalItems}
+                        size={pageSize}
+                        onPageChange={(p) => setCurrentPage(p + 1)}
+                        onSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
+                    />
                 </div>
             </main>
 
             <EmployeeDrawer
                 isOpen={isDrawerOpen}
                 onClose={() => setIsDrawerOpen(false)}
-                user={selectedUser}
                 onSave={handleSaveUser}
+                user={selectedUser}
+            />
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.isLocking ? "Xác nhận khóa tài khoản" : "Xác nhận mở khóa tài khoản"}
+                message={confirmModal.isLocking ? `Bạn chắc chắn muốn khóa tài khoản ${confirmModal.user?.name}?` : `Bạn chắc chắn muốn mở khóa tài khoản ${confirmModal.user?.name}?`}
+                onConfirm={executeToggleLock}
+                onCancel={() => setConfirmModal({ isOpen: false, user: null, isLocking: false })}
+                confirmText={confirmModal.isLocking ? "Khóa" : "Mở khóa"}
+                cancelText="Hủy"
+                isDanger={confirmModal.isLocking}
             />
         </div>
     );
 }
 
 export default UsersPage;
-

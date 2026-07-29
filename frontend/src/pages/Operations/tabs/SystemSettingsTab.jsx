@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getSystemSettings, saveSystemSettings, uploadServiceAccount, testDriveConnection } from '../../../api/backupApi';
+import { useToast } from '../../../contexts/ToastContext';
 import styles from './SystemSettingsTab.module.css';
 
 function SystemSettingsTab() {
@@ -17,13 +18,8 @@ function SystemSettingsTab() {
     const [saving, setSaving] = useState(false);
     const [testing, setTesting] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [msg, setMsg] = useState({ text: '', type: '' });
+    const { showToast } = useToast();
     const fileInputRef = useRef(null);
-
-    const showMsg = (text, type = 'success') => {
-        setMsg({ text, type });
-        setTimeout(() => setMsg({ text: '', type: '' }), 4000);
-    };
 
     useEffect(() => {
         const fetch = async () => {
@@ -41,10 +37,10 @@ function SystemSettingsTab() {
         setSaving(true);
         try {
             const res = await saveSystemSettings(settings);
-            if (res.success) showMsg('✅ Cài đặt đã được lưu thành công!');
-            else showMsg('❌ ' + res.userMessage, 'error');
+            if (res.success) showToast('success', 'Cập nhật thành công.');
+            else showToast('error', 'Thao tác thất bại.');
         } catch {
-            showMsg('❌ Lưu thất bại.', 'error');
+            showToast('error', 'Thao tác thất bại.');
         } finally {
             setSaving(false);
         }
@@ -57,12 +53,12 @@ function SystemSettingsTab() {
             await saveSystemSettings(settings);
             const res = await testDriveConnection();
             if (res.success && res.data?.connected) {
-                showMsg('✅ Kết nối Google Drive thành công!');
+                showToast('success', 'Cập nhật thành công.');
             } else {
-                showMsg('❌ ' + (res.userMessage || 'Kết nối thất bại.'), 'error');
+                showToast('error', 'Thao tác thất bại.');
             }
         } catch {
-            showMsg('❌ Không thể kiểm tra kết nối.', 'error');
+            showToast('error', 'Thao tác thất bại.');
         } finally {
             setTesting(false);
         }
@@ -75,13 +71,13 @@ function SystemSettingsTab() {
         try {
             const res = await uploadServiceAccount(file);
             if (res.success) {
-                showMsg(`✅ Service Account "${res.data.filename}" đã được tải lên!`);
+                showToast('success', 'Cập nhật thành công.');
                 setSettings(s => ({ ...s, driveConfigured: true }));
             } else {
-                showMsg('❌ ' + res.userMessage, 'error');
+                showToast('error', 'Thao tác thất bại.');
             }
         } catch {
-            showMsg('❌ Upload thất bại.', 'error');
+            showToast('error', 'Thao tác thất bại.');
         } finally {
             setUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -110,12 +106,6 @@ function SystemSettingsTab() {
                     {saving ? 'Đang lưu...' : 'Lưu tất cả'}
                 </button>
             </div>
-
-            {msg.text && (
-                <div className={`${styles.msgBar} ${msg.type === 'error' ? styles.msgError : styles.msgSuccess}`}>
-                    {msg.text}
-                </div>
-            )}
 
             <div className={styles.settingsGrid}>
                 {/* ── Storage Config ─────────────────────────────────────────── */}

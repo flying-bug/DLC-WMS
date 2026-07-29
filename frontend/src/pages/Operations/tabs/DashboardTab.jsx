@@ -60,10 +60,10 @@ function DashboardTab() {
         try {
             const res = await createBackup();
             if (res.success) {
-                setBackupMsg(`✅ Backup thành công: ${res.data.filename} (${res.data.fileSizeFormatted})`);
+                setBackupMsg(`✅ Sao lưu thành công: ${res.data.filename} (${res.data.fileSizeFormatted})`);
                 fetchHealth();
             } else {
-                setBackupMsg('❌ ' + (res.userMessage || 'Backup thất bại.'));
+                setBackupMsg('❌ ' + (res.userMessage || 'Sao lưu thất bại.'));
             }
         } catch (e) {
             setBackupMsg('❌ Không thể kết nối backend.');
@@ -95,7 +95,7 @@ function DashboardTab() {
             <div className={styles.pageHeader}>
                 <div>
                     <h1 className={styles.pageTitle}>
-                        <i className="bi bi-grid-1x2-fill" /> System Dashboard
+                        <i className="bi bi-grid-1x2-fill" /> Tổng quan hệ thống
                     </h1>
                     <p className={styles.pageSubtitle}>Tổng quan sức khỏe hệ thống theo thời gian thực</p>
                 </div>
@@ -109,7 +109,7 @@ function DashboardTab() {
                         disabled={backingUp}
                     >
                         <i className={backingUp ? 'bi bi-hourglass-split' : 'bi bi-database-add'} />
-                        {backingUp ? 'Đang backup...' : 'Backup Now'}
+                        {backingUp ? 'Đang sao lưu...' : 'Sao lưu ngay'}
                     </button>
                 </div>
             </div>
@@ -135,14 +135,14 @@ function DashboardTab() {
                 <StatCard
                     icon="bi bi-server"
                     iconColor="#6366f1"
-                    label="Database Size"
+                    label="Kích thước Database"
                     value={h.dbSizeFormatted}
                     sub={`${h.tableCount} bảng dữ liệu`}
                 />
                 <StatCard
                     icon="bi bi-memory"
                     iconColor="#8b5cf6"
-                    label="JVM Memory"
+                    label="Bộ nhớ JVM"
                     value={`${h.jvmUsedMb} MB`}
                     sub={`Tổng: ${h.jvmTotalMb} MB`}
                     percent={h.jvmUsedPercent}
@@ -150,7 +150,7 @@ function DashboardTab() {
                 <StatCard
                     icon="bi bi-hdd-fill"
                     iconColor="#06b6d4"
-                    label="Disk Usage"
+                    label="Dung lượng ổ đĩa"
                     value={`${h.diskUsedGb} GB`}
                     sub={`Tổng: ${h.diskTotalGb} GB · Trống: ${h.diskFreeGb} GB`}
                     percent={h.diskUsedPercent}
@@ -158,7 +158,7 @@ function DashboardTab() {
                 <StatCard
                     icon="bi bi-archive-fill"
                     iconColor="#10b981"
-                    label="Total Backups"
+                    label="Tổng số bản sao lưu"
                     value={`${h.totalBackupFiles} files`}
                     sub={`Dung lượng: ${h.totalBackupSizeFormatted}`}
                 />
@@ -168,7 +168,7 @@ function DashboardTab() {
             <div className={styles.backupPanel}>
                 <div className={styles.backupPanelHeader}>
                     <i className="bi bi-clock-history" />
-                    <h2>Lịch sử Backup gần nhất</h2>
+                    <span>Lịch sử sao lưu gần nhất</span>
                 </div>
                 <div className={styles.backupPanelBody}>
                     {h.lastBackupFilename ? (
@@ -197,7 +197,7 @@ function DashboardTab() {
                     ) : (
                         <div className={styles.noBackup}>
                             <i className="bi bi-database-x" />
-                            <p>Chưa có backup nào. Hãy tạo backup đầu tiên!</p>
+                            <p>Chưa có bản sao lưu nào. Hãy tạo bản sao lưu đầu tiên!</p>
                         </div>
                     )}
                 </div>

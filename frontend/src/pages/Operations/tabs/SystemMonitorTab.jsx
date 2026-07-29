@@ -69,7 +69,7 @@ function SystemMonitorTab() {
             <div className={styles.pageHeader}>
                 <div>
                     <h1 className={styles.pageTitle}>
-                        <i className="bi bi-activity" /> System Monitor
+                        <i className="bi bi-activity" /> Giám sát hệ thống
                     </h1>
                     <p className={styles.pageSubtitle}>Theo dõi tài nguyên và nhật ký hệ thống</p>
                 </div>
@@ -78,9 +78,9 @@ function SystemMonitorTab() {
             {/* Sub-tabs */}
             <div className={styles.subTabs}>
                 {[
-                    { id: 'resources', label: 'Resource Usage',    icon: 'bi bi-cpu' },
-                    { id: 'services',  label: 'Service Status',    icon: 'bi bi-hdd-network' },
-                    { id: 'logs',      label: 'Application Logs',  icon: 'bi bi-file-text' },
+                    { id: 'resources', label: 'Sử dụng tài nguyên',    icon: 'bi bi-cpu' },
+                    { id: 'services',  label: 'Trạng thái dịch vụ',    icon: 'bi bi-hdd-network' },
+                    { id: 'logs',      label: 'Nhật ký ứng dụng',  icon: 'bi bi-file-text' },
                 ].map(t => (
                     <button
                         key={t.id}
@@ -107,7 +107,7 @@ function SystemMonitorTab() {
                             <div className={styles.resourceCard}>
                                 <div className={styles.resourceCardHeader}>
                                     <i className="bi bi-memory" style={{ color: '#8b5cf6' }} />
-                                    <span>JVM Memory</span>
+                                    <span>Bộ nhớ JVM</span>
                                     <div className={styles.liveTag}><i className="bi bi-circle-fill" />LIVE</div>
                                 </div>
                                 <div className={styles.gaugeBig}>
@@ -130,21 +130,21 @@ function SystemMonitorTab() {
                                     </svg>
                                     <div className={styles.donutCenter}>
                                         <span className={styles.donutPct}>{health.jvmUsedPercent}%</span>
-                                        <span className={styles.donutLabel}>Used</span>
+                                        <span className={styles.donutLabel}>Đã dùng</span>
                                     </div>
                                 </div>
-                                <GaugeBar label="Used"  value={health.jvmUsedMb}  max={health.jvmTotalMb} unit=" MB" color="#6366f1" />
-                                <GaugeBar label="Free"  value={health.jvmFreeMb}  max={health.jvmTotalMb} unit=" MB" color="#10b981" />
+                                <GaugeBar label="Đã dùng"  value={health.jvmUsedMb}  max={health.jvmTotalMb} unit=" MB" color="#6366f1" />
+                                <GaugeBar label="Trống"  value={health.jvmFreeMb}  max={health.jvmTotalMb} unit=" MB" color="#10b981" />
                             </div>
 
                             <div className={styles.resourceCard}>
                                 <div className={styles.resourceCardHeader}>
                                     <i className="bi bi-hdd-fill" style={{ color: '#06b6d4' }} />
-                                    <span>Disk (Backup Dir)</span>
+                                    <span>Ổ đĩa (Thư mục Backup)</span>
                                     <div className={styles.liveTag}><i className="bi bi-circle-fill" />LIVE</div>
                                 </div>
-                                <GaugeBar label="Used"  value={health.diskUsedGb}  max={health.diskTotalGb} unit=" GB" color="#06b6d4" />
-                                <GaugeBar label="Free"  value={health.diskFreeGb}  max={health.diskTotalGb} unit=" GB" color="#10b981" />
+                                <GaugeBar label="Đã dùng"  value={health.diskUsedGb}  max={health.diskTotalGb} unit=" GB" color="#06b6d4" />
+                                <GaugeBar label="Trống"  value={health.diskFreeGb}  max={health.diskTotalGb} unit=" GB" color="#10b981" />
                                 <div className={styles.diskPercent}>
                                     <span style={{ color: health.diskUsedPercent > 80 ? '#ef4444' : '#94a3b8' }}>
                                         {health.diskUsedPercent}% dung lượng đã dùng
@@ -155,23 +155,23 @@ function SystemMonitorTab() {
                             <div className={styles.resourceCard}>
                                 <div className={styles.resourceCardHeader}>
                                     <i className="bi bi-server" style={{ color: '#10b981' }} />
-                                    <span>Database</span>
+                                    <span>Cơ sở dữ liệu</span>
                                 </div>
                                 <div className={styles.dbMetrics}>
                                     <div className={styles.dbMetricItem}>
-                                        <span className={styles.dbMetricLabel}>DB Size</span>
+                                        <span className={styles.dbMetricLabel}>Kích thước DB</span>
                                         <span className={styles.dbMetricVal}>{health.dbSizeFormatted}</span>
                                     </div>
                                     <div className={styles.dbMetricItem}>
-                                        <span className={styles.dbMetricLabel}>Tables</span>
+                                        <span className={styles.dbMetricLabel}>Số bảng</span>
                                         <span className={styles.dbMetricVal}>{health.tableCount}</span>
                                     </div>
                                     <div className={styles.dbMetricItem}>
-                                        <span className={styles.dbMetricLabel}>Version</span>
+                                        <span className={styles.dbMetricLabel}>Phiên bản</span>
                                         <span className={styles.dbMetricVal}>{health.dbVersion}</span>
                                     </div>
                                     <div className={styles.dbMetricItem}>
-                                        <span className={styles.dbMetricLabel}>Status</span>
+                                        <span className={styles.dbMetricLabel}>Trạng thái</span>
                                         <span className={`${styles.dbMetricVal} ${health.dbOnline ? styles.dbOnline : styles.dbOffline}`}>
                                             {health.dbOnline ? '● ONLINE' : '● OFFLINE'}
                                         </span>

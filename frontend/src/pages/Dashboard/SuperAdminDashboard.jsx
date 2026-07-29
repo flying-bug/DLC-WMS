@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './SuperAdminDashboard.module.css';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
+import Toast from '../../components/ui/Toast/Toast';
 
 const SESSION_INFO = {
     loginTime: '45:12',
@@ -9,6 +11,7 @@ const SESSION_INFO = {
 
 function SuperAdminDashboard() {
     const navigate = useNavigate();
+    const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
 
     const ACTION_CARDS = [
         {
@@ -34,6 +37,15 @@ function SuperAdminDashboard() {
             title: 'Xem nhật ký hệ thống',
             description: 'Kiểm tra lịch sử thao tác, nhật ký đăng nhập và các thay đổi dữ liệu quan trọng trong kho.',
             route: '/audit-log',
+        },
+        {
+            id: 'operations',
+            iconClass: 'bi bi-speedometer2',
+            iconWrapperClass: styles.cardIconGreen,
+            iconColorStyle: { color: 'var(--color-success, #22c55e)' },
+            title: 'Trung tâm điều hành',
+            description: 'Giám sát hoạt động kho, tiến độ đơn hàng và hiệu suất nhân viên theo thời gian thực.',
+            route: '/operations',
         },
     ];
 
@@ -73,7 +85,11 @@ function SuperAdminDashboard() {
                     </div>
 
                     {/* Bell */}
-                    <button className={styles.bellBtn} aria-label="Thông báo">
+                    <button 
+                        className={styles.bellBtn} 
+                        aria-label="Thông báo"
+                        onClick={() => setToast({ isVisible: true, type: 'info', message: 'Tính năng thông báo đang được phát triển.' })}
+                    >
                         <i className="bi bi-bell" style={{ fontSize: '17px' }} />
                     </button>
 
@@ -133,6 +149,14 @@ function SuperAdminDashboard() {
                     © 2026 Duy Long Computer &nbsp;·&nbsp; Warehouse Management System v2.4
                 </div>
             </footer>
+
+            {toast.isVisible && (
+                <Toast
+                    type={toast.type}
+                    message={toast.message}
+                    onClose={() => setToast({ ...toast, isVisible: false })}
+                />
+            )}
         </div>
     );
 }

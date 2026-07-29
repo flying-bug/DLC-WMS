@@ -36,8 +36,15 @@ function UserProfileDropdown({ voiceEnabled, onToggleVoice }) {
         };
 
         const handleUserUpdated = (event) => {
-            if (event.detail?.user) {
-                setProfile(event.detail.user);
+            const updatedUser = event.detail?.user;
+            if (updatedUser) {
+                setProfile((prev) => {
+                    if (prev && prev.id === updatedUser.id) {
+                        // User is updating themselves, fetch full detail to get avatarUrl etc.
+                        fetchProfile();
+                    }
+                    return prev;
+                });
             } else {
                 fetchProfile();
             }
@@ -89,7 +96,7 @@ function UserProfileDropdown({ voiceEnabled, onToggleVoice }) {
                     </div>
                     {isSA && (
                         <div className={styles.dropdownItem} onClick={(e) => { e.stopPropagation(); navigate('/operations'); setIsDropdownOpen(false); }}>
-                            <i className="bi bi-hdd-network" /> Operations Center (Backup DB)
+                            <i className="bi bi-hdd-network" /> Trung tâm vận hành (Backup DB)
                         </div>
                     )}
                     <div className={styles.dropdownDivider} />

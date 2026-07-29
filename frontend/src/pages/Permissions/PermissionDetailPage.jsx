@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
+import { useToast } from '../../contexts/ToastContext';
 import styles from './PermissionDetailPage.module.css';
 
 function PermissionDetailPage() {
@@ -9,6 +10,7 @@ function PermissionDetailPage() {
     const { id } = useParams();
     const [user, setUser] = useState(null);
     const [activeCategory, setActiveCategory] = useState('warehouse');
+    const { showToast } = useToast();
 
     // Initial state matching the UC list
     const [permissions, setPermissions] = useState({
@@ -51,8 +53,8 @@ function PermissionDetailPage() {
                 if (userData) {
                     const hasStaff = userData.roles && userData.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF');
                     if (!hasStaff) {
-                        alert("Chỉ tài khoản Nhân viên (STAFF) mới được phép phân quyền động.");
-                        navigate('/users');
+                        showToast('error', "Chỉ tài khoản Nhân viên (STAFF) mới được phép phân quyền động.");
+                        setTimeout(() => navigate('/users'), 1500);
                         return;
                     }
                     setPermissions(prev => {
@@ -108,6 +110,7 @@ function PermissionDetailPage() {
                 }
             } catch (error) {
                 console.error("Lỗi lấy thông tin phân quyền:", error);
+                showToast('error', 'Có lỗi xảy ra. Vui lòng thử lại.');
             }
         };
 
@@ -156,11 +159,11 @@ function PermissionDetailPage() {
             });
 
             await axiosClient.put(`/users/${id}/permissions`, tickedCodes);
-            alert('Cập nhật phân quyền thành công!');
-            navigate('/users');
+            showToast('success', 'Phân quyền thành công.');
+            setTimeout(() => navigate('/users'), 1500);
         } catch (error) {
             console.error('Lỗi lưu phân quyền:', error);
-            alert('Có lỗi xảy ra khi lưu phân quyền.');
+            showToast('error', 'Thao tác thất bại.');
         }
     };
 
@@ -197,7 +200,7 @@ function PermissionDetailPage() {
     );
 
     const renderTableBody = () => {
-        switch(activeCategory) {
+        switch (activeCategory) {
             case 'warehouse':
                 return (
                     <>
@@ -337,8 +340,8 @@ function PermissionDetailPage() {
 
             {/* Footer Actions */}
             <div className={styles.footer}>
-                <button className={styles.btnCancel} onClick={() => navigate('/users')}>Hủy</button>
-                <button className={styles.btnSave} onClick={handleSave}>
+                <button className="btnDefault" onClick={() => navigate('/users')}>Hủy</button>
+                <button className="btnPrimary" onClick={handleSave}>
                     <i className="bi bi-save"></i> Lưu thay đổi
                 </button>
             </div>
