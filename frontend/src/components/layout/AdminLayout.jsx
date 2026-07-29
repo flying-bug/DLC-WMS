@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { getAuthRole } from '../../auth/session';
 import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
@@ -16,6 +16,10 @@ const AdminLayout = ({ children }) => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
         return localStorage.getItem('dlc_sidebar_collapsed') === 'true';
     });
+
+    useEffect(() => {
+        document.documentElement.style.setProperty('--sidebar-width', isSidebarCollapsed ? '68px' : '248px');
+    }, [isSidebarCollapsed]);
     const [voiceEnabled, setVoiceEnabled] = useState(() => {
         return localStorage.getItem('dlc_voice_enabled') !== 'false';
     });

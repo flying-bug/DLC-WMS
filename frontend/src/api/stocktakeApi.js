@@ -6,6 +6,10 @@ export const getStocktakes = (params = {}) => {
   return axiosClient.get(STOCKTAKE_BASE, { params });
 };
 
+export const getNextCode = () => {
+  return axiosClient.get(`${STOCKTAKE_BASE}/next-code`);
+};
+
 export const getStocktakeDetail = (id) => {
   return axiosClient.get(`${STOCKTAKE_BASE}/${id}`);
 };

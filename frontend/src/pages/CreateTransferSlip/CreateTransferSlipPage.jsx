@@ -95,7 +95,7 @@ function CreateTransferSlipPage() {
   const [scanLoading, setScanLoading] = useState(false);
 
   const [form, setForm] = useState(() => ({
-    transferCode: `CK-${Date.now()}`,
+    transferCode: '',
     fromWarehouseId: '',
     toWarehouseId: '',
     transferDate: today(),
@@ -129,13 +129,11 @@ function CreateTransferSlipPage() {
     }
     const fetchSourceInventory = async () => {
       try {
-        const res = await warehouseApi.getWarehouseInventory(form.fromWarehouseId);
-        const invList = res?.data?.data || [];
+        const res = await exportApi.getInventoryBalance({ warehouseId: form.fromWarehouseId });
+        const list = pageContent(unwrap(res));
         const invMap = new Map();
-        invList.forEach(item => {
-          if (item.variantId) {
-            invMap.set(String(item.variantId), item.availableQuantity);
-          }
+        list.forEach(b => {
+          if (b.variantId) invMap.set(String(b.variantId), Number(b.totalQuantity || 0));
         });
         setSourceInventory(invMap);
       } catch (err) {
@@ -148,6 +146,13 @@ function CreateTransferSlipPage() {
 
   useEffect(() => {
     const loadLookups = async () => {
+      transferApi.getNextCode()
+        .then(res => {
+          const code = unwrap(res);
+          if (code) setForm(prev => ({ ...prev, transferCode: prev.transferCode || code }));
+        })
+        .catch(err => console.error('Failed to load next transferCode', err));
+
       const [warehouseRes, productRes] = await Promise.allSettled([
         transferApi.getWarehouses({ size: 100 }),
         transferApi.getProducts({ size: 100 }),
@@ -295,10 +300,8 @@ function CreateTransferSlipPage() {
           price: scanResult.costPrice || 0,
           note: scanResult.serialNumber ? `Serial: ${scanResult.serialNumber}` : '',
         };
-        if (prev.length === 1 && !prev[0].variantId) {
-          return [serialLine];
-        }
-        return [...prev, serialLine];
+        const basePrev = prev.filter(item => Boolean(item.variantId));
+        return [...basePrev, serialLine];
       }
 
       const existingIndex = prev.findIndex(item => String(item.variantId) === String(scanResult.variantId) && !item.serialNumberId);
@@ -315,10 +318,8 @@ function CreateTransferSlipPage() {
         quantity: 1,
         price: scanResult.costPrice || 0,
       };
-      if (prev.length === 1 && !prev[0].variantId) {
-        return [barcodeLine];
-      }
-      return [...prev, barcodeLine];
+      const basePrev = prev.filter(item => Boolean(item.variantId));
+      return [...basePrev, barcodeLine];
     });
   };
 

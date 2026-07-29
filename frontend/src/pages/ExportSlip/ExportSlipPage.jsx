@@ -10,6 +10,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
+import { printExportSlip } from '../../utils/printExportSlip';
 import styles from './ExportSlipPage.module.css';
 
 const DEFAULT_COLUMNS = {
@@ -297,192 +298,17 @@ function ExportSlipPage() {
     return pages;
   };
 
-  const handlePrintSlip = (slip, isImport = true) => {
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) {
-      showToast('error', 'Trình duyệt chặn cửa sổ popup. Vui lòng cho phép popup để in phiếu.');
-      return;
-    }
+  const handlePrintSlip = (slip, isImport = false) => {
+    const customer = customerById.get(slip.partnerId) || customerById.get(slip.customerId) || {};
+    const warehouseName = warehouseById.get(slip.warehouseId)?.name || '';
 
-    const escapeHtml = (unsafe) => {
-      if (!unsafe) return '';
-      return String(unsafe)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    };
-
-    const typeTitle = isImport ? 'NHẬP KHO' : 'XUẤT KHO';
-    const partnerTitle = isImport ? 'Nhà cung cấp / Đối tác' : 'Khách hàng';
-    const warehouseTitle = isImport ? 'Kho nhập' : 'Kho xuất';
-    const lines = slip.lines || [];
-
-    let rowsHtml = '';
-    lines.forEach((line, index) => {
-      const product = productById.get(line.variantId);
-      const sku = product?.sku || `SKU #${line.variantId}`;
-      const name = variantLabel(product) || 'Sản phẩm';
-      const unit = product?.unitName || '';
-      const qty = Number(isImport ? line.quantityIn : line.quantityOut || 0);
-      const price = Number(line.unitCost || line.unitPrice || 0);
-      const amount = qty * price;
-      const vatPercent = Number(line.vatPercent ?? line.vatRate ?? 0);
-      const vatAmount = amount * (vatPercent / 100);
-      const serials = line.serialNumbers && line.serialNumbers.length > 0 ? line.serialNumbers.join(', ') : 'Không có';
-
-      rowsHtml += `
-        <tr>
-          <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${index + 1}</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(sku)}</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(name)}</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(unit)}</td>
-          <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${qty.toLocaleString('vi-VN')}</td>
-          <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${price.toLocaleString('vi-VN')} đ</td>
-          <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${vatPercent}%</td>
-          <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${vatAmount.toLocaleString('vi-VN')} đ</td>
-          <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">${amount.toLocaleString('vi-VN')} đ</td>
-          <td style="border: 1px solid #ddd; padding: 8px; font-size: 11px;">${escapeHtml(serials)}</td>
-        </tr>
-      `;
+    printExportSlip(slip, {
+      customer,
+      warehouseName,
+      productById,
+      userById,
+      isImport,
     });
-
-    const partnerName = isImport
-      ? ((!slip.issuePurpose || slip.issuePurpose === 'PURCHASE') ? (supplierById.get(slip.partnerId)?.name || 'Chưa chọn')
-        : slip.issuePurpose === 'PRODUCTION' ? (assemblyOrderById.get(slip.referenceId)?.orderCode || 'Chưa chọn')
-        : (customerById.get(slip.partnerId)?.name || 'Chưa chọn'))
-      : (customerById.get(slip.partnerId)?.name || 'Chưa chọn');
-
-    const warehouseName = warehouseById.get(slip.warehouseId)?.name || `Kho #${slip.warehouseId}`;
-    const salesperson = slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || 'Chưa rõ';
-    const slipDate = slip.docDate ? new Date(slip.docDate).toLocaleDateString('vi-VN') : '';
-
-    const htmlContent = `
-      <html>
-        <head>
-          <title>In phiếu ${escapeHtml(slip.docCode)}</title>
-          <style>
-            body { font-family: 'Segoe UI', Arial, sans-serif; color: #333; margin: 20px; line-height: 1.4; }
-            .header-table { width: 100%; margin-bottom: 30px; }
-            .title { text-align: center; font-size: 22px; font-weight: bold; margin-bottom: 5px; }
-            .subtitle { text-align: center; font-size: 14px; font-style: italic; margin-bottom: 20px; }
-            .info-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
-            .info-table td { padding: 6px 0; font-size: 14px; }
-            .main-table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; }
-            .main-table th { background-color: #f5f5f5; border: 1px solid #ddd; padding: 10px 8px; font-size: 13px; font-weight: bold; }
-            .total-row td { font-weight: bold; background-color: #fafafa; }
-            .signatures { width: 100%; margin-top: 40px; }
-            .signatures td { text-align: center; width: 25%; font-size: 14px; padding-top: 10px; }
-            .sign-space { height: 80px; }
-          </style>
-        </head>
-        <body>
-          <table class="header-table">
-            <tr>
-              <td style="width: 50%;">
-                <strong style="font-size: 16px;">DLC COMPUTER</strong><br/>
-                <span style="font-size: 12px; color: #666;">Hệ thống quản lý kho WMS</span>
-              </td>
-              <td style="width: 50%; text-align: right; font-size: 13px;">
-                Số phiếu: <strong>${escapeHtml(slip.docCode)}</strong><br/>
-                Ngày lập: ${escapeHtml(slipDate)}
-              </td>
-            </tr>
-          </table>
-
-          <div class="title">PHIẾU ${escapeHtml(typeTitle)} KHO</div>
-          <div class="subtitle">Liên 1: Lưu trữ - Liên 2: Bàn giao</div>
-
-          <table class="info-table">
-            <tr>
-              <td style="width: 15%;"><strong>${escapeHtml(partnerTitle)}:</strong></td>
-              <td style="width: 50%;">${escapeHtml(partnerName)}</td>
-              <td style="width: 15%;"><strong>${escapeHtml(warehouseTitle)}:</strong></td>
-              <td style="width: 20%;">${escapeHtml(warehouseName)}</td>
-            </tr>
-            <tr>
-              <td><strong>Người giao/nhận:</strong></td>
-              <td>${escapeHtml(slip.recipientName || 'Chưa rõ')}</td>
-              <td><strong>Nhân viên:</strong></td>
-              <td>${escapeHtml(salesperson)}</td>
-            </tr>
-            <tr>
-              <td><strong>Ghi chú:</strong></td>
-              <td colspan="3">${escapeHtml(slip.note || 'Không có')}</td>
-            </tr>
-          </table>
-
-          <table class="main-table">
-            <thead>
-              <tr>
-                <th style="width: 5%;">STT</th>
-                <th style="width: 12%;">Mã sản phẩm</th>
-                <th>Tên sản phẩm</th>
-                <th style="width: 8%;">ĐVT</th>
-                <th style="width: 10%;">Số lượng</th>
-                <th style="width: 10%;">Đơn giá</th>
-                <th style="width: 7%;">% VAT</th>
-                <th style="width: 10%;">Tiền VAT</th>
-                <th style="width: 12%;">Thành tiền</th>
-                <th style="width: 14%;">Số Serial</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rowsHtml}
-              <tr class="total-row">
-                <td colspan="4" style="text-align: right; border: 1px solid #ddd; padding: 10px;">Tổng tiền hàng:</td>
-                <td style="text-align: center; border: 1px solid #ddd; padding: 10px;">${sumQuantity(slip.lines).toLocaleString('vi-VN')}</td>
-                <td style="border: 1px solid #ddd; padding: 10px;"></td>
-                <td style="text-align: right; border: 1px solid #ddd; padding: 10px;">${sumSubtotal(slip.lines).toLocaleString('vi-VN')} đ</td>
-                <td colspan="3" style="border: 1px solid #ddd; padding: 10px;"></td>
-              </tr>
-              <tr class="total-row">
-                <td colspan="8" style="text-align: right; border: 1px solid #ddd; padding: 10px;">Tiền VAT:</td>
-                <td style="text-align: right; border: 1px solid #ddd; padding: 10px;">${sumVat(slip.lines).toLocaleString('vi-VN')} đ</td>
-                <td style="border: 1px solid #ddd; padding: 10px;"></td>
-              </tr>
-              <tr class="total-row">
-                <td colspan="8" style="text-align: right; border: 1px solid #ddd; padding: 10px; color: #d32f2f;">Tổng thanh toán:</td>
-                <td style="text-align: right; border: 1px solid #ddd; padding: 10px; color: #d32f2f;">${(sumSubtotal(slip.lines) + sumVat(slip.lines)).toLocaleString('vi-VN')} đ</td>
-                <td style="border: 1px solid #ddd; padding: 10px;"></td>
-              </tr>
-            </tbody>
-          </table>
-
-          <table class="signatures">
-            <tr>
-              <td><strong>Người giao hàng</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, ghi rõ họ tên)</span></td>
-              <td><strong>Người nhận hàng</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, ghi rõ họ tên)</span></td>
-              <td><strong>Thủ kho</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, đóng dấu)</span></td>
-              <td><strong>Người lập phiếu</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, ghi rõ họ tên)</span></td>
-            </tr>
-            <tr class="sign-space">
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-            </tr>
-            <tr>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td>${salesperson}</td>
-            </tr>
-          </table>
-
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            }
-          </script>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
   };
 
   return (
@@ -553,94 +379,102 @@ function ExportSlipPage() {
           </div>
         </div>
 
+        {selectedIds.length > 0 && (
+          <div className={styles.bulkActionsToolbar}>
+            <div className={styles.bulkText}>Đã chọn {selectedIds.length} phiếu xuất</div>
+          </div>
+        )}
+
         <div className={styles.tableContainer}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th style={{ width: '40px', textAlign: 'center' }}>
-                  <input type="checkbox" className={styles.checkbox} checked={rows.length > 0 && selectedIds.length === rows.length} onChange={handleSelectAll} />
-                </th>
-                {columns.date && <th style={{ width: '120px' }}>Ngày Xuất</th>}
-                {columns.docCode && <th style={{ width: '150px' }}>Số Phiếu</th>}
-                {columns.issuePurpose && <th style={{ width: '150px' }}>Loại Phiếu</th>}
-                {columns.partner && <th style={{ width: '200px' }}>Khách Hàng / LSX</th>}
-                {columns.warehouse && <th style={{ width: '120px' }}>Kho Xuất</th>}
-                {columns.salesperson && <th style={{ width: '150px' }}>Nhân viên xuất hàng</th>}
-                {columns.recipient && <th style={{ width: '150px' }}>Người nhận hàng</th>}
-                {columns.vat && <th className={styles.textRight} style={{ width: '110px' }}>Tiền VAT</th>}
-                {columns.total && <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>}
-                {columns.note && <th style={{ width: '180px' }}>Ghi Chú</th>}
-                {columns.status && <th style={{ width: '120px' }}>Trạng Thái</th>}
-                <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedRows.length > 0 ? paginatedRows.map(slip => (
-                <tr key={slip.id} className={selectedSlip?.id === slip.id ? styles.activeRow : ''} onClick={() => setSelectedSlip(slip)} style={{ cursor: 'pointer' }}>
-                  <td style={{ textAlign: 'center' }}><input type="checkbox" className={styles.checkbox} checked={selectedIds.includes(slip.id)} onChange={(event) => handleSelectRow(event, slip.id)} onClick={(event) => event.stopPropagation()} /></td>
-                  {columns.date && <td>{slip.date}</td>}
-                  {columns.docCode && (
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <a
-                        href="#"
-                        className={styles.link}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          setSelectedSlip(slip);
-                        }}
-                      >
-                        {slip.docCode}
-                      </a>
-                    </td>
-                  )}
-                  {columns.issuePurpose && <td>{slip.issuePurposeLabel}</td>}
-                  {columns.partner && <td>{slip.partner}</td>}
-                  {columns.warehouse && <td>{slip.warehouse}</td>}
-                  {columns.salesperson && <td>{slip.salespersonName}</td>}
-                  {columns.recipient && <td>{slip.recipientName}</td>}
-                  {columns.vat && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.vat}</td>}
-                  {columns.total && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.total}</td>}
-                  {columns.note && (
-                    <td style={{ maxWidth: '180px' }}>
-                      <div className={styles.tooltipContainer}>
-                        <span className={styles.noteText}>{slip.note || 'Không có ghi chú'}</span>
-                        {slip.note && <span className={styles.tooltipText}>{slip.note}</span>}
-                      </div>
-                    </td>
-                  )}
-                  {columns.status && (
-                    <td>
-                      <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
-                        slip.statusCode === 'info' ? styles.badgeInfo :
-                          slip.statusCode === 'warning' ? styles.badgeWarning :
-                            styles.badgeDanger
-                        }`}>
-                        {slip.statusLabel}
-                      </span>
-                    </td>
-                  )}
-                  <td className={styles.textCenter}>
-                    <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(event) => { event.stopPropagation(); setSelectedSlip(slip); }}></i>
-                    <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu xuất kho" onClick={(event) => {
-                      event.stopPropagation();
-                      if (slip.status !== 'DRAFT') {
-                        showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm.');
-                      } else {
-                        navigate(`/export-slips/${slip.id}/edit`);
-                      }
-                    }}></i>
-                  </td>
-                </tr>
-              )) : (
+          <div style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
+            <table className={styles.table}>
+              <thead>
                 <tr>
-                  <td colSpan="9" className={styles.textCenter}>
-                    {loading ? 'Đang tải dữ liệu...' : 'Không tìm thấy phiếu xuất nào'}
-                  </td>
+                  <th style={{ width: '40px', textAlign: 'center' }}>
+                    <input type="checkbox" className={styles.checkbox} checked={rows.length > 0 && selectedIds.length === rows.length} onChange={handleSelectAll} />
+                  </th>
+                  {columns.date && <th style={{ width: '120px' }}>Ngày Xuất</th>}
+                  {columns.docCode && <th style={{ width: '150px' }}>Số Phiếu</th>}
+                  {columns.issuePurpose && <th style={{ width: '150px' }}>Loại Phiếu</th>}
+                  {columns.partner && <th style={{ width: '200px' }}>Khách Hàng / LSX</th>}
+                  {columns.warehouse && <th style={{ width: '120px' }}>Kho Xuất</th>}
+                  {columns.salesperson && <th style={{ width: '150px' }}>Nhân viên xuất hàng</th>}
+                  {columns.recipient && <th style={{ width: '150px' }}>Người nhận hàng</th>}
+                  {columns.vat && <th className={styles.textRight} style={{ width: '110px' }}>Tiền VAT</th>}
+                  {columns.total && <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>}
+                  {columns.note && <th style={{ width: '180px' }}>Ghi Chú</th>}
+                  {columns.status && <th style={{ width: '120px' }}>Trạng Thái</th>}
+                  <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paginatedRows.length > 0 ? paginatedRows.map(slip => (
+                  <tr key={slip.id} className={selectedSlip?.id === slip.id ? styles.activeRow : ''} onClick={() => setSelectedSlip(slip)} style={{ cursor: 'pointer' }}>
+                    <td style={{ textAlign: 'center' }}><input type="checkbox" className={styles.checkbox} checked={selectedIds.includes(slip.id)} onChange={(event) => handleSelectRow(event, slip.id)} onClick={(event) => event.stopPropagation()} /></td>
+                    {columns.date && <td>{slip.date}</td>}
+                    {columns.docCode && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <a
+                          href="#"
+                          className={styles.link}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setSelectedSlip(slip);
+                          }}
+                        >
+                          {slip.docCode}
+                        </a>
+                      </td>
+                    )}
+                    {columns.issuePurpose && <td>{slip.issuePurposeLabel}</td>}
+                    {columns.partner && <td>{slip.partner}</td>}
+                    {columns.warehouse && <td>{slip.warehouse}</td>}
+                    {columns.salesperson && <td>{slip.salespersonName}</td>}
+                    {columns.recipient && <td>{slip.recipientName}</td>}
+                    {columns.vat && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.vat}</td>}
+                    {columns.total && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.total}</td>}
+                    {columns.note && (
+                      <td style={{ maxWidth: '180px' }}>
+                        <div className={styles.tooltipContainer}>
+                          <span className={styles.noteText}>{slip.note || 'Không có ghi chú'}</span>
+                          {slip.note && <span className={styles.tooltipText}>{slip.note}</span>}
+                        </div>
+                      </td>
+                    )}
+                    {columns.status && (
+                      <td>
+                        <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
+                          slip.statusCode === 'info' ? styles.badgeInfo :
+                            slip.statusCode === 'warning' ? styles.badgeWarning :
+                              styles.badgeDanger
+                          }`}>
+                          {slip.statusLabel}
+                        </span>
+                      </td>
+                    )}
+                    <td className={styles.textCenter}>
+                      <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(event) => { event.stopPropagation(); setSelectedSlip(slip); }}></i>
+                      <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu xuất kho" onClick={(event) => {
+                        event.stopPropagation();
+                        if (slip.status !== 'DRAFT') {
+                          showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm.');
+                        } else {
+                          navigate(`/export-slips/${slip.id}/edit`);
+                        }
+                      }}></i>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="9" className={styles.textCenter}>
+                      {loading ? 'Đang tải dữ liệu...' : 'Không tìm thấy phiếu xuất nào'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

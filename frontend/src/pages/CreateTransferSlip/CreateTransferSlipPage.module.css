@@ -405,19 +405,20 @@
 .actionLinkGray:hover { color: #475569; }
 
 .fixedFooter {
-  position: absolute;
+  position: fixed;
   bottom: 0;
-  left: 0;
+  left: var(--sidebar-width, 248px);
   right: 0;
   height: 68px;
-  background-color: white;
-  border-top: 1px solid #e5e7eb;
+  background-color: #1e1f24;
+  border-top: 1px solid #2d3238;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.2);
   z-index: 10;
+  transition: left 0.3s ease;
 }
 
 .footerLeft, .footerRight {

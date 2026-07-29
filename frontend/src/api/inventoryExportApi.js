@@ -6,6 +6,10 @@ export const getExportHistory = (params = {}) => {
   return axiosClient.get(`${EXPORT_BASE}/history`, { params });
 };
 
+export const getNextCode = () => {
+  return axiosClient.get(`${EXPORT_BASE}/next-code`);
+};
+
 export const getExportDetail = (id) => {
   return axiosClient.get(`${EXPORT_BASE}/${id}`);
 };

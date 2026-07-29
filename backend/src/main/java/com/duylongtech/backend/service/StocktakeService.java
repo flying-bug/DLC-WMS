@@ -34,6 +34,11 @@ public class StocktakeService {
     private final InventoryDocumentService inventoryDocumentService;
 
     @Transactional(readOnly = true)
+    public String generateNextStocktakeCode() {
+        return codeGeneratorService.generateCode("stocktakes", "stocktake_code", "KK", 6);
+    }
+
+    @Transactional(readOnly = true)
     public Page<StocktakeResponse> searchStocktakes(String stocktakeCode, String status, LocalDate fromDate, LocalDate toDate, Pageable pageable) {
         String normalizedCode = stocktakeCode != null && !stocktakeCode.trim().isEmpty() ? stocktakeCode.trim() : null;
         String normalizedStatus = status != null && !status.trim().isEmpty() ? status.trim() : null;

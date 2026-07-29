@@ -8,6 +8,8 @@ import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import AssemblyOrderSelectionModal from '../CreateImportSlip/components/AssemblyOrderSelectionModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
+import { printExportSlip } from '../../utils/printExportSlip';
 import Select from 'react-select';
 import axiosClient from '../../api/axiosClient';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
@@ -110,13 +112,15 @@ function CreateExportSlipPage({ mode: propMode }) {
 
   const [showAssemblyModal, setShowAssemblyModal] = useState(false);
   const [selectedAssemblyOrder, setSelectedAssemblyOrder] = useState(null);
+  const [savedSlip, setSavedSlip] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const assemblyData = location.state?.assemblyData || null;
   const stocktakeData = location.state?.stocktakeData || null;
   const returnUrl = location.state?.returnUrl || null;
 
   const [form, setForm] = useState(() => ({
-    docCode: exportMode === 'USAGE' ? `XKSD-${Date.now()}` : exportMode === 'ASSEMBLY' ? `XKLR-${Date.now()}` : `EXP-${Date.now()}`,
+    docCode: '',
     warehouseId: assemblyData?.warehouseId || stocktakeData?.warehouseId || '',
     partnerId: '',
     salespersonId: '',
@@ -161,11 +165,6 @@ function CreateExportSlipPage({ mode: propMode }) {
 
   const handleSwitchMode = (newMode) => {
     setExportMode(newMode);
-    setForm(prev => ({
-      ...prev,
-      docCode: newMode === 'USAGE' ? `XKSD-${Date.now()}` : newMode === 'ASSEMBLY' ? `XKLR-${Date.now()}` : `EXP-${Date.now()}`,
-      note: '',
-    }));
   };
 
   useEffect(() => {
@@ -178,6 +177,13 @@ function CreateExportSlipPage({ mode: propMode }) {
 
   useEffect(() => {
     const loadLookups = async () => {
+      exportApi.getNextCode()
+        .then(res => {
+          const code = unwrap(res);
+          if (code) setForm(prev => ({ ...prev, docCode: prev.docCode || code }));
+        })
+        .catch(err => console.error('Failed to load next export docCode', err));
+
       const [warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
         exportApi.getWarehouses({ size: 100 }),
         exportApi.getProducts({ size: 100 }),
@@ -217,6 +223,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   }, []);
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
+  const userById = useMemo(() => new Map(users.map(user => [String(user.id), user])), [users]);
 
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
@@ -397,8 +404,10 @@ function CreateExportSlipPage({ mode: propMode }) {
           return newItems;
         }
 
+        const basePrev = prev.filter(item => Boolean(item.variantId));
+
         return [
-          ...prev,
+          ...basePrev,
           {
             ...emptyLine(),
             variantId: scanResult.variantId,
@@ -486,19 +495,28 @@ function CreateExportSlipPage({ mode: propMode }) {
         await exportApi.postExportSlip(createdId);
       }
 
-      const msgSuffix = hasOutOfStock ? ' (Lưu ý: Có sản phẩm xuất vượt tồn kho)' : '';
-      
-      if (returnUrl) {
-          showToast(hasOutOfStock ? 'warning' : 'success', (shouldPost ? 'Lưu và ghi sổ phiếu xuất kho thành công!' : 'Lưu tạm phiếu xuất kho thành công!') + msgSuffix);
-          setTimeout(() => navigate(returnUrl), 1000);
-      } else {
-          navigate('/export-slips', {
-            state: {
-              toastMessage: (shouldPost ? 'Lưu và ghi sổ phiếu xuất kho thành công!' : 'Lưu tạm phiếu xuất kho thành công!') + msgSuffix,
-              toastType: hasOutOfStock ? 'warning' : 'success'
-            }
-          });
-      }
+      const fullSlipData = {
+        ...created,
+        docCode: created?.docCode || form.docCode,
+        docDate: form.docDate,
+        status: shouldPost ? 'POSTED' : status,
+        lines: items.map(item => ({
+          ...item,
+          quantityOut: item.quantity,
+          unitPrice: item.price,
+          variantName: productById.get(String(item.variantId))?.variantName || productById.get(String(item.variantId))?.name,
+          sku: productById.get(String(item.variantId))?.sku,
+          unitName: productById.get(String(item.variantId))?.unitName,
+          warrantyMonths: productById.get(String(item.variantId))?.warrantyMonths,
+        })),
+        customerName: form.customerName || customers.find(c => String(c.id) === String(form.partnerId))?.name,
+        customerAddress: form.customerAddress,
+        partnerName: form.customerName || customers.find(c => String(c.id) === String(form.partnerId))?.name,
+        salespersonName: users.find(u => String(u.id) === String(form.salespersonId))?.fullName,
+      };
+
+      setSavedSlip(fullSlipData);
+      setShowSuccessModal(true);
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || err.message || 'Không lưu được phiếu xuất kho');
     } finally {
@@ -987,6 +1005,28 @@ function CreateExportSlipPage({ mode: propMode }) {
           initialSerials={selectedSerialItem.serialNumbers || []}
         />
       )}
+
+      <SuccessPrintModal
+        isOpen={showSuccessModal}
+        title={savedSlip?.status === 'POSTED' || savedSlip?.statusCode === 'POSTED' ? 'Lưu & ghi sổ phiếu xuất kho thành công!' : 'Lưu tạm phiếu xuất kho thành công!'}
+        message="Phiếu xuất kho đã được ghi nhận vào hệ thống thành công. Bạn có thể in phiếu ngay bây giờ."
+        docCode={savedSlip?.docCode}
+        printBtnText="In phiếu xuất kho"
+        onPrint={() => {
+          const customer = customers.find(c => String(c.id) === String(savedSlip?.partnerId || form.partnerId)) || {};
+          const warehouseName = warehouses.find(w => String(w.id) === String(savedSlip?.warehouseId || form.warehouseId))?.name || '';
+          printExportSlip(savedSlip || {}, {
+            customer,
+            warehouseName,
+            productById,
+            userById,
+            isImport: false
+          });
+        }}
+        onViewList={() => navigate(returnUrl || '/export-slips')}
+        onCreateNew={() => window.location.reload()}
+        onClose={() => navigate(returnUrl || '/export-slips')}
+      />
 
       <Toast
         isVisible={toast.isVisible}

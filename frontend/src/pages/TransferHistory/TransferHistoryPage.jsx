@@ -409,106 +409,108 @@ function TransferHistoryPage() {
         </div>
 
         <div className={styles.tableContainer}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th style={{ width: '40px', textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    className={styles.checkbox}
-                    checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length}
-                    onChange={handleSelectAll}
-                  />
-                </th>
-                {columns.date && <th style={{ width: '130px' }}>Ngày Ghi Nhận</th>}
-                {columns.transferCode && <th style={{ width: '160px' }}>Số Phiếu</th>}
-                {columns.fromWarehouse && <th style={{ width: '150px' }}>Kho Xuất</th>}
-                {columns.toWarehouse && <th style={{ width: '150px' }}>Kho Nhập</th>}
-                {columns.quantity && <th className={styles.textCenter} style={{ width: '120px' }}>Số Lượng</th>}
-                {columns.status && <th style={{ width: '140px' }}>Trạng Thái</th>}
-                <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && paginatedRows.length === 0 ? (
+          <div style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
+            <table className={styles.table}>
+              <thead>
                 <tr>
-                  <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
-                    <div className={styles.emptyState}>Đang tải dữ liệu...</div>
-                  </td>
+                  <th style={{ width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      className={styles.checkbox}
+                      checked={paginatedRows.length > 0 && selectedIds.length === paginatedRows.length}
+                      onChange={handleSelectAll}
+                    />
+                  </th>
+                  {columns.date && <th style={{ width: '130px' }}>Ngày Ghi Nhận</th>}
+                  {columns.transferCode && <th style={{ width: '160px' }}>Số Phiếu</th>}
+                  {columns.fromWarehouse && <th style={{ width: '150px' }}>Kho Xuất</th>}
+                  {columns.toWarehouse && <th style={{ width: '150px' }}>Kho Nhập</th>}
+                  {columns.quantity && <th className={styles.textCenter} style={{ width: '120px' }}>Số Lượng</th>}
+                  {columns.status && <th style={{ width: '140px' }}>Trạng Thái</th>}
+                  <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
                 </tr>
-              ) : paginatedRows.length === 0 ? (
-                <tr>
-                  <td colSpan="8">
-                    <div className={styles.emptyState}>
-                      <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                      <div className={styles.emptyText}>Không tìm thấy phiếu chuyển nào</div>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedRows.map(slip => (
-                  <tr key={slip.id}>
-                    <td style={{ textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        className={styles.checkbox}
-                        checked={selectedIds.includes(slip.id)}
-                        onChange={(e) => handleSelectRow(e, slip.id)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </td>
-                    {columns.date && <td>{slip.date}</td>}
-                    {columns.transferCode && (
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <a
-                          href="#"
-                          className={styles.link}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setSelectedSlip(slip);
-                          }}
-                        >
-                          {slip.transferCode}
-                        </a>
-                      </td>
-                    )}
-                    {columns.fromWarehouse && <td>{slip.fromWarehouse}</td>}
-                    {columns.toWarehouse && <td>{slip.toWarehouse}</td>}
-                    {columns.quantity && <td className={styles.textCenter}>{slip.quantity.toLocaleString('vi-VN')}</td>}
-                    {columns.status && (
-                      <td>
-                        <span className={`${styles.badge} ${
-                          slip.statusCode === 'success' ? styles.badgeSuccess :
-                          slip.statusCode === 'info' ? styles.badgeInfo :
-                          slip.statusCode === 'warning' ? styles.badgeWarning :
-                          styles.badgeDanger
-                        }`}>
-                          {slip.statusLabel}
-                        </span>
-                      </td>
-                    )}
-                    <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
-                      <i 
-                        className="bi bi-eye" 
-                        style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
-                        title="Xem chi tiết" 
-                        onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}
-                      ></i>
-                      {(slip.status === 'DRAFT' || slip.status === 'SUBMITTED') && (
-                        <i 
-                          className="bi bi-pencil" 
-                          style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} 
-                          title="Chỉnh sửa" 
-                          onClick={(e) => { e.stopPropagation(); navigate(`/transfer-history/${slip.id}/edit`); }}
-                        ></i>
-                      )}
+              </thead>
+              <tbody>
+                {loading && paginatedRows.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
+                      <div className={styles.emptyState}>Đang tải dữ liệu...</div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : paginatedRows.length === 0 ? (
+                  <tr>
+                    <td colSpan="8">
+                      <div className={styles.emptyState}>
+                        <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
+                        <div className={styles.emptyText}>Không tìm thấy phiếu chuyển nào</div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedRows.map(slip => (
+                    <tr key={slip.id}>
+                      <td style={{ textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          className={styles.checkbox}
+                          checked={selectedIds.includes(slip.id)}
+                          onChange={(e) => handleSelectRow(e, slip.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </td>
+                      {columns.date && <td>{slip.date}</td>}
+                      {columns.transferCode && (
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <a
+                            href="#"
+                            className={styles.link}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSelectedSlip(slip);
+                            }}
+                          >
+                            {slip.transferCode}
+                          </a>
+                        </td>
+                      )}
+                      {columns.fromWarehouse && <td>{slip.fromWarehouse}</td>}
+                      {columns.toWarehouse && <td>{slip.toWarehouse}</td>}
+                      {columns.quantity && <td className={styles.textCenter}>{slip.quantity.toLocaleString('vi-VN')}</td>}
+                      {columns.status && (
+                        <td>
+                          <span className={`${styles.badge} ${
+                            slip.statusCode === 'success' ? styles.badgeSuccess :
+                            slip.statusCode === 'info' ? styles.badgeInfo :
+                            slip.statusCode === 'warning' ? styles.badgeWarning :
+                            styles.badgeDanger
+                          }`}>
+                            {slip.statusLabel}
+                          </span>
+                        </td>
+                      )}
+                      <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
+                        <i 
+                          className="bi bi-eye" 
+                          style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
+                          title="Xem chi tiết" 
+                          onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}
+                        ></i>
+                        {(slip.status === 'DRAFT' || slip.status === 'SUBMITTED') && (
+                          <i 
+                            className="bi bi-pencil" 
+                            style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} 
+                            title="Chỉnh sửa" 
+                            onClick={(e) => { e.stopPropagation(); navigate(`/transfer-history/${slip.id}/edit`); }}
+                          ></i>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

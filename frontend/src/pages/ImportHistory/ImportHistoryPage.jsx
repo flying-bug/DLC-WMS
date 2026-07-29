@@ -553,109 +553,111 @@ function ImportHistoryPage() {
         )}
 
         <div className={styles.tableContainer}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th style={{ width: '40px', textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    className={styles.checkbox}
-                    checked={rows.length > 0 && selectedIds.length === rows.length}
-                    onChange={handleSelectAll}
-                  />
-                </th>
-                {columns.date && <th style={{ width: '120px' }}>Ngày Nhập</th>}
-                {columns.docCode && <th style={{ width: '150px' }}>Số Phiếu</th>}
-                {columns.issuePurpose && <th style={{ width: '150px' }}>Loại Phiếu</th>}
-                {columns.partner && <th style={{ width: '200px' }}>Đối tác / Tham chiếu</th>}
-                {columns.warehouse && <th style={{ width: '120px' }}>Kho Nhập</th>}
-                {columns.purchaser && <th style={{ width: '150px' }}>Nhân viên mua hàng</th>}
-                {columns.deliverer && <th style={{ width: '150px' }}>Người giao hàng</th>}
-                {columns.vat && <th className={styles.textRight} style={{ width: '110px' }}>Tiền VAT</th>}
-                {columns.total && <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>}
-                {columns.note && <th style={{ width: '180px' }}>Ghi Chú</th>}
-                {columns.status && <th style={{ width: '120px' }}>Trạng Thái</th>}
-                <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedRows.length > 0 ? paginatedRows.map(slip => (
-                <tr key={slip.id} className={selectedSlip?.id === slip.id ? styles.activeRow : ''} onClick={() => setSelectedSlip(slip)} style={{ cursor: 'pointer' }}>
-                  <td style={{ textAlign: 'center' }}>
+          <div style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th style={{ width: '40px', textAlign: 'center' }}>
                     <input
                       type="checkbox"
                       className={styles.checkbox}
-                      checked={selectedIds.includes(slip.id)}
-                      onChange={(e) => handleSelectRow(e, slip.id)}
-                      onClick={(e) => e.stopPropagation()}
+                      checked={rows.length > 0 && selectedIds.length === rows.length}
+                      onChange={handleSelectAll}
                     />
-                  </td>
-                  {columns.date && <td>{slip.date}</td>}
-                  {columns.docCode && (
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <a
-                        href="#"
-                        className={styles.link}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelectedSlip(slip);
-                        }}
-                      >
-                        {slip.docCode}
-                      </a>
+                  </th>
+                  {columns.date && <th style={{ width: '120px' }}>Ngày Nhập</th>}
+                  {columns.docCode && <th style={{ width: '150px' }}>Số Phiếu</th>}
+                  {columns.issuePurpose && <th style={{ width: '150px' }}>Loại Phiếu</th>}
+                  {columns.partner && <th style={{ width: '200px' }}>Đối tác / Tham chiếu</th>}
+                  {columns.warehouse && <th style={{ width: '120px' }}>Kho Nhập</th>}
+                  {columns.purchaser && <th style={{ width: '150px' }}>Nhân viên mua hàng</th>}
+                  {columns.deliverer && <th style={{ width: '150px' }}>Người giao hàng</th>}
+                  {columns.vat && <th className={styles.textRight} style={{ width: '110px' }}>Tiền VAT</th>}
+                  {columns.total && <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>}
+                  {columns.note && <th style={{ width: '180px' }}>Ghi Chú</th>}
+                  {columns.status && <th style={{ width: '120px' }}>Trạng Thái</th>}
+                  <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedRows.length > 0 ? paginatedRows.map(slip => (
+                  <tr key={slip.id} className={selectedSlip?.id === slip.id ? styles.activeRow : ''} onClick={() => setSelectedSlip(slip)} style={{ cursor: 'pointer' }}>
+                    <td style={{ textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={selectedIds.includes(slip.id)}
+                        onChange={(e) => handleSelectRow(e, slip.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     </td>
-                  )}
-                  {columns.issuePurpose && <td>{slip.issuePurposeLabel}</td>}
-                  {columns.partner && <td>{slip.partner}</td>}
-                  {columns.warehouse && <td>{slip.warehouse}</td>}
-                  {columns.purchaser && <td>{slip.purchaserName}</td>}
-                  {columns.deliverer && <td>{slip.delivererName}</td>}
-                  {columns.vat && <td className={`${styles.money} ${styles.textRight}`}>{slip.vat}</td>}
-                  {columns.total && <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>}
-                  {columns.note && (
-                    <td style={{ maxWidth: '180px' }}>
-                      <div className={styles.tooltipContainer}>
-                        <span className={styles.noteText}>{slip.note || 'Không có ghi chú'}</span>
-                        {slip.note && <span className={styles.tooltipText}>{slip.note}</span>}
+                    {columns.date && <td>{slip.date}</td>}
+                    {columns.docCode && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <a
+                          href="#"
+                          className={styles.link}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedSlip(slip);
+                          }}
+                        >
+                          {slip.docCode}
+                        </a>
+                      </td>
+                    )}
+                    {columns.issuePurpose && <td>{slip.issuePurposeLabel}</td>}
+                    {columns.partner && <td>{slip.partner}</td>}
+                    {columns.warehouse && <td>{slip.warehouse}</td>}
+                    {columns.purchaser && <td>{slip.purchaserName}</td>}
+                    {columns.deliverer && <td>{slip.delivererName}</td>}
+                    {columns.vat && <td className={`${styles.money} ${styles.textRight}`}>{slip.vat}</td>}
+                    {columns.total && <td className={`${styles.money} ${styles.textRight}`}>{slip.total}</td>}
+                    {columns.note && (
+                      <td style={{ maxWidth: '180px' }}>
+                        <div className={styles.tooltipContainer}>
+                          <span className={styles.noteText}>{slip.note || 'Không có ghi chú'}</span>
+                          {slip.note && <span className={styles.tooltipText}>{slip.note}</span>}
+                        </div>
+                      </td>
+                    )}
+                    {columns.status && (
+                      <td>
+                        <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
+                            slip.statusCode === 'info' ? styles.badgeInfo :
+                              slip.statusCode === 'warning' ? styles.badgeWarning :
+                                styles.badgeDanger
+                          }`}>
+                          {slip.statusLabel}
+                        </span>
+                      </td>
+                    )}
+                    <td className={styles.textCenter}>
+                      <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}></i>
+                      <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu nhập kho" onClick={(e) => {
+                        e.stopPropagation();
+                        if (slip.status !== 'DRAFT') {
+                          showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm.');
+                        } else {
+                          navigate(`/import-slips/${slip.id}/edit`);
+                        }
+                      }}></i>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="8">
+                      <div className={styles.emptyState}>
+                        <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
+                        <div className={styles.emptyText}>{loading ? 'Đang tải dữ liệu...' : 'Không tìm thấy phiếu nhập nào'}</div>
                       </div>
                     </td>
-                  )}
-                  {columns.status && (
-                    <td>
-                      <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
-                          slip.statusCode === 'info' ? styles.badgeInfo :
-                            slip.statusCode === 'warning' ? styles.badgeWarning :
-                              styles.badgeDanger
-                        }`}>
-                        {slip.statusLabel}
-                      </span>
-                    </td>
-                  )}
-                  <td className={styles.textCenter}>
-                    <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}></i>
-                    <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu nhập kho" onClick={(e) => {
-                      e.stopPropagation();
-                      if (slip.status !== 'DRAFT') {
-                        showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm.');
-                      } else {
-                        navigate(`/import-slips/${slip.id}/edit`);
-                      }
-                    }}></i>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan="8">
-                    <div className={styles.emptyState}>
-                      <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
-                      <div className={styles.emptyText}>{loading ? 'Đang tải dữ liệu...' : 'Không tìm thấy phiếu nhập nào'}</div>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

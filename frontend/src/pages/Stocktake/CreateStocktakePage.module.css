@@ -276,17 +276,19 @@
 .pageFooter {
   position: fixed;
   bottom: 0;
-  left: 250px; /* Adjust for sidebar */
+  left: var(--sidebar-width, 248px);
   right: 0;
   height: 64px;
-  background-color: #fff;
-  border-top: 1px solid #e2e8f0;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.02);
+  background-color: #1e1f24;
+  border-top: 1px solid #2d3238;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
   z-index: 100;
+  transition: left 0.3s ease;
+  color: #f4f4f5;
 }
 
 .footerLeft {
@@ -315,39 +317,40 @@
 }
 
 .btnFooterCancel {
-  background-color: #fff;
-  color: #475569;
-  border: 1px solid #cbd5e1;
+  background-color: #27272a;
+  color: #f4f4f5;
+  border: 1px solid #3f3f46;
 }
 .btnFooterCancel:hover {
-  background-color: #f8fafc;
+  background-color: #3f3f46;
+  border-color: #52525b;
 }
 
 .btnFooterDraft {
-  background-color: #fff;
-  color: #0284c7;
+  background-color: transparent;
+  color: #38bdf8;
   border: 1px solid #0284c7;
 }
 .btnFooterDraft:hover {
-  background-color: #f0f9ff;
+  background-color: rgba(56, 189, 248, 0.15);
 }
 
 .btnFooterSave {
-  background-color: #6ea8d6;
+  background-color: #0284c7;
   color: #fff;
-  border: 1px solid #6ea8d6;
+  border: 1px solid #0284c7;
 }
 .btnFooterSave:hover {
-  background-color: #5899cb;
+  background-color: #0369a1;
 }
 
 .btnFooterPost {
-  background-color: #7fc87d;
+  background-color: #16a34a;
   color: #fff;
-  border: 1px solid #7fc87d;
+  border: 1px solid #16a34a;
 }
 .btnFooterPost:hover {
-  background-color: #6eb96c;
+  background-color: #15803d;
 }
 
 /* Responsive sidebar offset */
@@ -361,16 +364,18 @@
 .pageFooterView {
   position: fixed;
   bottom: 0;
-  left: 250px; /* Adjust for sidebar */
+  left: var(--sidebar-width, 248px);
   right: 0;
   height: 56px;
-  background-color: #38393d;
+  background-color: #1e1f24;
+  border-top: 1px solid #2d3238;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 16px;
   z-index: 100;
   color: #e2e8f0;
+  transition: left 0.3s ease;
 }
 
 @media (max-width: 991px) {

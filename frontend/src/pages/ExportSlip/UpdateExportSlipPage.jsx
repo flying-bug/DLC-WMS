@@ -6,6 +6,8 @@ import * as exportApi from '../../api/inventoryExportApi';
 import CustomerModal from '../Customer/components/CustomerModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
+import { printExportSlip } from '../../utils/printExportSlip';
 import Select from 'react-select';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import styles from './UpdateExportSlipPage.module.css';
@@ -100,6 +102,8 @@ function UpdateExportSlipPage() {
   const [toast, setToast] = useState({ isVisible: false, type: 'error', message: '' });
   const [showConfirm, setShowConfirm] = useState(false);
   const [serialModalItemId, setSerialModalItemId] = useState(null);
+  const [savedSlip, setSavedSlip] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [form, setForm] = useState({
     docCode: '',
     warehouseId: '',
@@ -210,6 +214,7 @@ function UpdateExportSlipPage() {
   const selectedCustomer = useMemo(() => customers.find(c => String(c.id) === String(form.partnerId)), [customers, form.partnerId]);
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
+  const userById = useMemo(() => new Map(users.map(user => [String(user.id), user])), [users]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
@@ -375,10 +380,8 @@ function UpdateExportSlipPage() {
         serialNumbers: serial ? [serial] : []
       };
       
-      if (prev.length === 1 && !prev[0].variantId) {
-        return [newLine];
-      }
-      return [...prev, newLine];
+      const basePrev = prev.filter(item => Boolean(item.variantId));
+      return [...basePrev, newLine];
     });
   };
 
@@ -460,7 +463,29 @@ function UpdateExportSlipPage() {
       if (shouldPost) {
         await exportApi.postExportSlip(id);
       }
-      navigate('/export-slips', { state: { toastMessage: shouldPost ? 'Ghi sổ phiếu xuất kho thành công!' : 'Cập nhật phiếu xuất kho thành công!', toastType: 'success' } });
+
+      const fullSlipData = {
+        id,
+        docCode: form.docCode,
+        docDate: form.docDate,
+        status: shouldPost ? 'POSTED' : status,
+        lines: items.map(item => ({
+          ...item,
+          quantityOut: item.quantity,
+          unitPrice: item.price,
+          variantName: productById.get(String(item.variantId))?.variantName || productById.get(String(item.variantId))?.name,
+          sku: productById.get(String(item.variantId))?.sku,
+          unitName: productById.get(String(item.variantId))?.unitName,
+          warrantyMonths: productById.get(String(item.variantId))?.warrantyMonths,
+        })),
+        customerName: form.customerName || customers.find(c => String(c.id) === String(form.partnerId))?.name,
+        customerAddress: form.customerAddress,
+        partnerName: form.customerName || customers.find(c => String(c.id) === String(form.partnerId))?.name,
+        salespersonName: users.find(u => String(u.id) === String(form.salespersonId))?.fullName,
+      };
+
+      setSavedSlip(fullSlipData);
+      setShowSuccessModal(true);
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không cập nhật được phiếu xuất kho');
     } finally {
@@ -812,6 +837,27 @@ function UpdateExportSlipPage() {
           initialSerials={selectedSerialItem.serialNumbers || []}
         />
       )}
+      <SuccessPrintModal
+        isOpen={showSuccessModal}
+        title={savedSlip?.status === 'POSTED' || savedSlip?.statusCode === 'POSTED' ? 'Ghi sổ phiếu xuất kho thành công!' : 'Cập nhật phiếu xuất kho thành công!'}
+        message="Phiếu xuất kho đã được lưu và cập nhật thành công. Bạn có thể in phiếu ngay bây giờ."
+        docCode={savedSlip?.docCode || form.docCode}
+        printBtnText="In phiếu xuất kho"
+        onPrint={() => {
+          const customer = customers.find(c => String(c.id) === String(savedSlip?.partnerId || form.partnerId)) || {};
+          const warehouseName = warehouses.find(w => String(w.id) === String(savedSlip?.warehouseId || form.warehouseId))?.name || '';
+          printExportSlip(savedSlip || {}, {
+            customer,
+            warehouseName,
+            productById,
+            userById,
+            isImport: false
+          });
+        }}
+        onViewList={() => navigate('/export-slips')}
+        onClose={() => navigate('/export-slips')}
+      />
+
       <Toast
         isVisible={toast.isVisible}
         message={toast.message}

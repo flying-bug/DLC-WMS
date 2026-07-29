@@ -12,6 +12,8 @@ import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ManageSerialModal from './ManageSerialModal';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
+import { printExportSlip } from '../../utils/printExportSlip';
 import Select from 'react-select';
 import axiosClient from '../../api/axiosClient';
 import styles from './CreateImportSlipPage.module.css';
@@ -111,6 +113,8 @@ function CreateImportSlipPage() {
   const [serialModalItemId, setSerialModalItemId] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [savedSlip, setSavedSlip] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [form, setForm] = useState(() => ({
     docCode: '',
@@ -163,6 +167,13 @@ function CreateImportSlipPage() {
 
   useEffect(() => {
     const loadLookups = async () => {
+      importApi.getNextCode()
+        .then(res => {
+          const code = unwrap(res);
+          if (code) setForm(prev => ({ ...prev, docCode: prev.docCode || code }));
+        })
+        .catch(err => console.error('Failed to load next import docCode', err));
+
       const [warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes] = await Promise.allSettled([
         importApi.getWarehouses({ size: 100 }),
         importApi.getSuppliers(),
@@ -209,6 +220,8 @@ function CreateImportSlipPage() {
     };
     loadLookups();
   }, []);
+
+  const userById = useMemo(() => new Map(users.map(user => [String(user.id), user])), [users]);
 
   // ── Voice Data auto-fill ──────────────────────────────────
   useEffect(() => {
@@ -409,14 +422,28 @@ function CreateImportSlipPage() {
       if (shouldPost && createdId) {
         await importApi.postImportSlip(createdId);
       }
-      if (returnUrl) {
-        showToast('success', shouldPost ? 'Ghi sổ phiếu nhập kho thành công!' : 'Tạo phiếu nhập kho thành công!');
-        setTimeout(() => navigate(returnUrl), 1000);
-      } else if (status === 'DRAFT' && createdId) {
-        navigate(`/import-slips/${createdId}/edit`, { state: { toastMessage: 'Lưu tạm phiếu nhập kho thành công!', toastType: 'success' } });
-      } else {
-        navigate('/import-history', { state: { toastMessage: shouldPost ? 'Ghi sổ phiếu nhập kho thành công!' : 'Tạo phiếu nhập kho thành công!', toastType: 'success' } });
-      }
+      const fullSlipData = {
+        ...created,
+        docCode: created?.docCode || form.docCode,
+        docDate: form.docDate,
+        status: shouldPost ? 'POSTED' : status,
+        lines: items.map(item => ({
+          ...item,
+          quantityIn: item.quantity,
+          unitCost: item.price,
+          unitPrice: item.price,
+          variantName: productById.get(String(item.variantId))?.variantName || productById.get(String(item.variantId))?.name,
+          sku: productById.get(String(item.variantId))?.sku,
+          unitName: productById.get(String(item.variantId))?.unitName,
+          warrantyMonths: productById.get(String(item.variantId))?.warrantyMonths,
+        })),
+        partnerName: form.partnerName || suppliers.find(s => String(s.id) === String(form.partnerId))?.name,
+        purchaserName: users.find(u => String(u.id) === String(form.purchaser))?.fullName,
+        delivererName: form.deliverer,
+      };
+
+      setSavedSlip(fullSlipData);
+      setShowSuccessModal(true);
     } catch (err) {
       if (createdId) {
         navigate('/import-history', { state: { toastMessage: 'Đã tạo phiếu nhưng Ghi sổ thất bại: ' + (err.response?.data?.userMessage || err.message), toastType: 'warning' } });
@@ -932,6 +959,28 @@ function CreateImportSlipPage() {
         }}
         onCancel={() => setShowConfirm(false)}
       />
+      <SuccessPrintModal
+        isOpen={showSuccessModal}
+        title={savedSlip?.status === 'POSTED' || savedSlip?.statusCode === 'POSTED' ? 'Lưu & ghi sổ phiếu nhập kho thành công!' : 'Lưu tạm phiếu nhập kho thành công!'}
+        message="Phiếu nhập kho đã được ghi nhận vào hệ thống thành công. Bạn có thể in phiếu ngay bây giờ."
+        docCode={savedSlip?.docCode || form.docCode}
+        printBtnText="In phiếu nhập kho"
+        onPrint={() => {
+          const supplier = suppliers.find(s => String(s.id) === String(savedSlip?.partnerId || form.partnerId)) || {};
+          const warehouseName = warehouses.find(w => String(w.id) === String(savedSlip?.warehouseId || form.warehouseId))?.name || '';
+          printExportSlip(savedSlip || {}, {
+            customer: supplier,
+            warehouseName,
+            productById,
+            userById,
+            isImport: true
+          });
+        }}
+        onViewList={() => navigate(returnUrl || '/import-history')}
+        onCreateNew={() => window.location.reload()}
+        onClose={() => navigate(returnUrl || '/import-history')}
+      />
+
       <Toast
         isVisible={toast.isVisible}
         message={toast.message}

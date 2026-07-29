@@ -24,6 +24,15 @@ public class StockTransferController {
     // A dummy userId for demonstration. In a real app, you would get this from Spring Security Context.
     private final Long currentUserId = 1L;
 
+    @GetMapping("/next-code")
+    public ResponseEntity<com.duylongtech.backend.dto.response.ApiResponse<String>> getNextTransferCode() {
+        String nextCode = stockTransferService.generateNextTransferCode();
+        return ResponseEntity.ok(com.duylongtech.backend.dto.response.ApiResponse.<String>builder()
+                .success(true)
+                .data(nextCode)
+                .build());
+    }
+
     @GetMapping
     public ResponseEntity<List<StockTransferResponseDTO>> getTransferHistory(
             @RequestParam(required = false) String transferCode,

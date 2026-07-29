@@ -38,6 +38,13 @@ public class ImportDocumentController {
         return org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
+    @GetMapping("/next-code")
+    @Operation(summary = "Get next import slip code")
+    @PreAuthorize("hasAuthority('import:view') or hasAuthority('import:add') or hasAuthority('export:view')")
+    public ApiResponse<String> getNextImportCode() {
+        return ApiResponse.success(inventoryDocumentService.generateNextImportCode());
+    }
+
     @GetMapping("/history")
     @Operation(summary = "View import slip history")
     @PreAuthorize("hasAuthority('import:view') or hasAuthority('export:view')")

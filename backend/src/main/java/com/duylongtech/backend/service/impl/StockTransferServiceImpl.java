@@ -43,6 +43,15 @@ public class StockTransferServiceImpl implements StockTransferService {
     @Autowired
     private InventoryDocumentService inventoryDocumentService;
 
+    @Autowired
+    private com.duylongtech.backend.service.CodeGeneratorService codeGeneratorService;
+
+    @Override
+    @Transactional(readOnly = true)
+    public String generateNextTransferCode() {
+        return codeGeneratorService.generateCode("stock_transfers", "transfer_code", "CK-", 5);
+    }
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private BigDecimal resolveTransferUnitCost(Long warehouseId, Long variantId, BigDecimal providedCost) {
@@ -103,7 +112,7 @@ public class StockTransferServiceImpl implements StockTransferService {
 
         String transferCode = requestDTO.getTransferCode();
         if (transferCode == null || transferCode.trim().isEmpty()) {
-            transferCode = "CK-" + System.currentTimeMillis();
+            transferCode = generateNextTransferCode();
         }
 
         StockTransfer stockTransfer = StockTransfer.builder()

@@ -598,6 +598,31 @@
   text-align: center !important;
 }
 
+/* Bulk Toolbar */
+.bulkActionsToolbar {
+  background-color: #f0f9ff;
+  border-radius: 8px;
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #bae6fd;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bulkText {
+  font-weight: 600;
+  color: #0369a1;
+  font-size: 14px;
+}
+
 .detailFooter {
   display: flex;
   justify-content: space-between;

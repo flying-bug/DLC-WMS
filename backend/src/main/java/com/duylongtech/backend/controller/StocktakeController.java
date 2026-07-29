@@ -23,6 +23,16 @@ public class StocktakeController {
 
     private final StocktakeService stocktakeService;
 
+    @GetMapping("/next-code")
+    public ResponseEntity<ApiResponse<String>> getNextStocktakeCode() {
+        String nextCode = stocktakeService.generateNextStocktakeCode();
+        return ResponseEntity.ok(ApiResponse.<String>builder()
+                .success(true)
+                .data(nextCode)
+                .userMessage("Lấy mã phiếu kiểm kê tiếp theo thành công")
+                .build());
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<Page<StocktakeResponse>>> searchStocktakes(
             @RequestParam(required = false) String stocktakeCode,
