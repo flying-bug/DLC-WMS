@@ -110,6 +110,7 @@ function AppRouter() {
                     <Route path="/repairs" element={<RepairListPage />} />
                     <Route path="/repairs/create" element={<RepairFormPage />} />
                     <Route path="/repairs/:id" element={<RepairFormPage />} />
+                    <Route path="/repairs/:id/edit" element={<RepairFormPage />} />
                     <Route path="/assembly-boms" element={<AssemblyBomPage />} />
                     <Route path="/assembly-boms/create" element={<AssemblyBomFormPage />} />
                     <Route path="/assembly-boms/:id" element={<AssemblyBomFormPage />} />

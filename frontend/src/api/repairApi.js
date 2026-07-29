@@ -22,6 +22,10 @@ export const addRepairLine = (id, data) => {
     return axiosClient.post(`${REPAIR_BASE}/${id}/lines`, data);
 };
 
+export const updateRepairLine = (id, lineId, data) => {
+    return axiosClient.put(`${REPAIR_BASE}/${id}/lines/${lineId}`, data);
+};
+
 export const deleteRepairLine = (id, lineId) => {
     return axiosClient.delete(`${REPAIR_BASE}/${id}/lines/${lineId}`);
 };
