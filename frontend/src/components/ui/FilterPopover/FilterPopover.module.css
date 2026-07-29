@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: var(--color-white);
+  background-color: var(--color-surface);
   border: 1px solid var(--color-border-strong);
   color: var(--color-text-strong);
   padding: 8px 14px;
@@ -20,7 +20,7 @@
 }
 
 .triggerBtn:hover {
-  background-color: var(--color-bg-subtle);
+  background-color: var(--color-bg-control-hover);
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
@@ -33,7 +33,7 @@
 
 .badge {
   background-color: var(--color-primary);
-  color: var(--color-white);
+  color: #ffffff;
   border-radius: 10px;
   padding: 2px 7px;
   font-size: 11px;
@@ -53,9 +53,9 @@
   left: 0;
   z-index: 1000;
   width: 360px;
-  background: var(--color-white);
+  background: var(--color-surface);
   border-radius: 8px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-dropdown);
   border: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
@@ -144,7 +144,7 @@
   border-radius: 6px;
   font-size: 13px;
   color: var(--color-text-strong);
-  background-color: var(--color-white);
+  background-color: var(--color-surface);
   outline: none;
   transition: border-color 0.2s ease;
 }
@@ -160,7 +160,7 @@
   align-items: center;
   padding: 12px 16px;
   border-top: 1px solid var(--color-border);
-  background-color: var(--color-bg-subtle);
+  background-color: var(--color-bg-soft);
   border-bottom-left-radius: 8px;
   border-bottom-right-radius: 8px;
 }
@@ -177,14 +177,14 @@
 }
 
 .resetBtn:hover {
-  background-color: var(--color-white);
+  background-color: var(--color-bg-hover);
   color: var(--color-danger);
   border-color: var(--color-danger);
 }
 
 .applyBtn {
-  background-color: #2e7d32; /* MISA green or primary */
-  color: #fff;
+  background-color: var(--color-primary);
+  color: #ffffff;
   border: none;
   padding: 7px 18px;
   border-radius: 6px;
@@ -198,5 +198,5 @@
 }
 
 .applyBtn:hover {
-  background-color: #1b5e20;
+  background-color: var(--color-primary-hover);
 }

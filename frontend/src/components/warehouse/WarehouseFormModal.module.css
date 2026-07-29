@@ -1,4 +1,4 @@
-﻿.modalOverlay {
+.modalOverlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -12,11 +12,11 @@
 }
 
 .modalContent {
-  background-color: white;
+  background-color: var(--color-surface, #ffffff);
   border-radius: 8px;
   width: 500px;
   max-width: 90vw;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-modal, 0 4px 6px rgba(0, 0, 0, 0.1));
   display: flex;
   flex-direction: column;
 }
