@@ -34,5 +34,11 @@ public class RepairLineRequest {
     private Boolean isWarrantyCovered;
     private Boolean isFreeWarranty;
 
+    private BigDecimal doneQuantity;
+    private Boolean isUsed;
+
+    private java.time.LocalDate dateScheduled;
+    private java.time.LocalDate deadline;
+
     private String note;
 }

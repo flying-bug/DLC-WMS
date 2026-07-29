@@ -26,6 +26,8 @@ public class RepairResponse {
     // Sản phẩm/thiết bị
     private Long productId;
     private String productName;
+    private Integer productQuantity;
+    private String productUnit;
 
     // Kho thực hiện lệnh sửa chữa
     private Long warehouseId;
@@ -49,6 +51,7 @@ public class RepairResponse {
     // Mô tả
     private String issueDescription;
     private String diagnosisNote;
+    private String internalNotes;
     private String solutionDescription;
 
     // Bảo hành

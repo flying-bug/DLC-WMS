@@ -156,6 +156,10 @@ public class RepairWorkflowService {
                         line.getQuantity(), available);
                 throw new BusinessException(SystemMessage.REP_INSUFFICIENT_INVENTORY);
             }
+
+            // Thực hiện tăng số lượng giữ chỗ (Reserved)
+            balance.setQuantityReserved(balance.getQuantityReserved().add(line.getQuantity()));
+            inventoryBalanceRepository.save(balance);
         }
 
         // Tạo phiếu xuất kho Draft (Reserve) để giữ chỗ linh kiện
@@ -266,21 +270,41 @@ public class RepairWorkflowService {
 
         // Trừ tồn kho thực tế cho từng dòng
         Long warehouseId = reserveDoc.getWarehouseId();
-        for (InventoryDocumentLine line : reserveDoc.getLines()) {
+        List<RepairLine> addLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), "ADD");
+        java.util.Map<Long, RepairLine> variantToLineMap = addLines.stream()
+                .collect(java.util.stream.Collectors.toMap(RepairLine::getComponentVariantId, l -> l, (a, b) -> a));
+
+        for (InventoryDocumentLine docLine : reserveDoc.getLines()) {
+            RepairLine rLine = variantToLineMap.get(docLine.getVariantId());
+            BigDecimal requestedQty = docLine.getQuantityOut(); // Original quantity reserved
+            BigDecimal actualDoneQty = (rLine != null && rLine.getDoneQuantity() != null && Boolean.TRUE.equals(rLine.getIsUsed())) 
+                                        ? rLine.getDoneQuantity() : BigDecimal.ZERO;
+
+            // Cập nhật lại phiếu xuất kho theo số lượng thực tế sử dụng
+            docLine.setQuantityOut(actualDoneQty);
+            docLine.setLineAmount(docLine.getUnitPrice().multiply(actualDoneQty));
+
             InventoryBalance balance;
-            if (line.getSerialNumberId() != null) {
+            if (docLine.getSerialNumberId() != null) {
                 balance = inventoryBalanceRepository.findByWarehouseVariantSerialForUpdate(
-                        warehouseId, line.getVariantId(), line.getSerialNumberId(), "GOOD").orElse(null);
+                        warehouseId, docLine.getVariantId(), docLine.getSerialNumberId(), "GOOD").orElse(null);
             } else {
                 balance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
-                        warehouseId, line.getVariantId(), "GOOD").orElse(null);
+                        warehouseId, docLine.getVariantId(), "GOOD").orElse(null);
             }
-            if (balance != null && line.getQuantityOut() != null) {
-                BigDecimal newQty = balance.getQuantityOnHand().subtract(line.getQuantityOut());
+            
+            if (balance != null) {
+                // Giảm tồn kho thực tế theo actualDoneQty
+                BigDecimal newQty = balance.getQuantityOnHand().subtract(actualDoneQty);
                 if (newQty.compareTo(BigDecimal.ZERO) < 0) {
                     throw new BusinessException(SystemMessage.INV_NOT_ENOUGH_STOCK);
                 }
                 balance.setQuantityOnHand(newQty);
+                
+                // Giảm số lượng đã giữ chỗ (Reserved) theo requestedQty ban đầu
+                BigDecimal newReserved = balance.getQuantityReserved().subtract(requestedQty);
+                balance.setQuantityReserved(newReserved.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : newReserved);
+                
                 inventoryBalanceRepository.save(balance);
             }
         }
@@ -380,14 +404,32 @@ public class RepairWorkflowService {
             throw new BusinessException(SystemMessage.REP_CANNOT_CANCEL);
         }
 
-        // Nếu đã tạo phiếu Reserve -> hủy phiếu đó
+        // Nếu đã tạo phiếu Reserve -> hủy phiếu đó và giải phóng tồn kho đã giữ
         String docCode = "REP-EX-" + repair.getRepairCode();
         inventoryDocumentRepository.findByDocCode(docCode)
                 .filter(d -> "DRAFT".equals(d.getStatus()))
                 .ifPresent(doc -> {
                     doc.setStatus("CANCELLED");
                     inventoryDocumentRepository.save(doc);
-                    log.info("[Repair {}] Đã hủy phiếu Reserve {}", repair.getRepairCode(), docCode);
+                    
+                    // Giải phóng quantityReserved
+                    for (InventoryDocumentLine line : doc.getLines()) {
+                        InventoryBalance balance;
+                        if (line.getSerialNumberId() != null) {
+                            balance = inventoryBalanceRepository.findByWarehouseVariantSerialForUpdate(
+                                    doc.getWarehouseId(), line.getVariantId(), line.getSerialNumberId(), "GOOD").orElse(null);
+                        } else {
+                            balance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
+                                    doc.getWarehouseId(), line.getVariantId(), "GOOD").orElse(null);
+                        }
+                        if (balance != null && line.getQuantityOut() != null) {
+                            BigDecimal newReserved = balance.getQuantityReserved().subtract(line.getQuantityOut());
+                            balance.setQuantityReserved(newReserved.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : newReserved);
+                            inventoryBalanceRepository.save(balance);
+                        }
+                    }
+                    
+                    log.info("[Repair {}] Đã hủy phiếu Reserve {} và giải phóng giữ chỗ", repair.getRepairCode(), docCode);
                 });
     }
 

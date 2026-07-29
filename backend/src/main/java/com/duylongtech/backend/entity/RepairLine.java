@@ -39,6 +39,10 @@ public class RepairLine {
     @Column(nullable = false, precision = 15, scale = 4)
     private BigDecimal quantity;
 
+    @Column(name = "done_quantity", precision = 15, scale = 4)
+    @Builder.Default
+    private BigDecimal doneQuantity = BigDecimal.ZERO;
+
     @Column(name = "unit_price", nullable = false, precision = 15, scale = 2)
     @Builder.Default
     private BigDecimal unitPrice = BigDecimal.ZERO;
@@ -50,6 +54,16 @@ public class RepairLine {
     @Column(name = "is_free_warranty", nullable = false)
     @Builder.Default
     private Boolean isFreeWarranty = false;
+
+    @Column(name = "is_used", nullable = false)
+    @Builder.Default
+    private Boolean isUsed = false;
+
+    @Column(name = "date_scheduled")
+    private java.time.LocalDate dateScheduled;
+
+    @Column(name = "deadline")
+    private java.time.LocalDate deadline;
 
     @Column(columnDefinition = "TEXT")
     private String note;

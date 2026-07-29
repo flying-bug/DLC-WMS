@@ -113,6 +113,16 @@ public class RepairController {
         return ApiResponse.success(repairService.updateRepair(id, request));
     }
 
+    @PatchMapping("/{id}/internal-notes")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Cập nhật ghi chú nội bộ")
+    public ApiResponse<RepairResponse> updateInternalNotes(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> payload
+    ) {
+        return ApiResponse.success(repairService.updateInternalNotes(id, payload.get("notes")));
+    }
+
     // =========================================================================
     // 2. Manage Repair Lines (Linh kiện)
     // =========================================================================
@@ -144,6 +154,19 @@ public class RepairController {
     public ApiResponse<Void> deleteRepairLine(@PathVariable Long id, @PathVariable Long lineId) {
         repairService.deleteRepairLine(id, lineId);
         return ApiResponse.success();
+    }
+
+    @PutMapping("/{id}/lines/{lineId}")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Cập nhật dòng linh kiện trong lệnh sửa chữa"
+    )
+    public ApiResponse<RepairLineResponse> updateRepairLine(
+            @PathVariable Long id,
+            @PathVariable Long lineId,
+            @RequestBody RepairLineRequest request
+    ) {
+        return ApiResponse.success(repairService.updateRepairLine(id, lineId, request));
     }
 
     // =========================================================================

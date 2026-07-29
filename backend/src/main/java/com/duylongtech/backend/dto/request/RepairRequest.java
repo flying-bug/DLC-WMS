@@ -22,6 +22,9 @@ public class RepairRequest {
     @NotNull(message = "productId là bắt buộc")
     private Long productId;
 
+    private Integer productQuantity;
+    private String productUnit;
+
     /** Kho thực hiện lệnh sửa chữa */
     private Long warehouseId;
 
@@ -36,6 +39,9 @@ public class RepairRequest {
 
     /** Ghi chú chẩn đoán */
     private String diagnosisNote;
+
+    /** Ghi chú nội bộ */
+    private String internalNotes;
 
     /** Có trong hạn bảo hành không */
     private Boolean underWarranty;

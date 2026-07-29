@@ -41,6 +41,13 @@ public class Repair {
     @Column(name = "product_id")
     private Long productId;
 
+    @Column(name = "product_quantity")
+    @Builder.Default
+    private Integer productQuantity = 1;
+
+    @Column(name = "product_unit", length = 50)
+    private String productUnit;
+
     // Kho thực hiện lệnh sửa chữa
     @Column(name = "warehouse_id")
     private Long warehouseId;
@@ -76,6 +83,10 @@ public class Repair {
     // Ghi chú chẩn đoán
     @Column(name = "diagnosis_note", columnDefinition = "TEXT")
     private String diagnosisNote;
+
+    // Ghi chú nội bộ
+    @Column(name = "internal_notes", columnDefinition = "TEXT")
+    private String internalNotes;
 
     // Mô tả giải pháp
     @Column(name = "solution_description", columnDefinition = "TEXT")
