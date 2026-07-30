@@ -56,7 +56,7 @@
 
 .btnOutline {
   border: 1px solid var(--color-border-strong);
-  background: var(--color-white);
+  background: var(--color-surface);
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
@@ -69,12 +69,12 @@
 }
 
 .btnOutline:hover {
-  background-color: var(--color-bg);
+  background-color: var(--color-bg-hover);
 }
 
 /* Filter Section */
 .filterSection {
-  background: var(--color-white);
+  background: var(--color-surface);
   padding: 16px 20px;
   border-radius: 8px;
   display: flex;
@@ -113,6 +113,7 @@
   outline: none;
   min-width: 200px;
   color: var(--color-text-strong);
+  background-color: var(--color-surface-muted, var(--color-bg-soft));
 }
 
 .filterInput:focus, .filterSelect:focus {
@@ -128,7 +129,7 @@
 
 /* Table */
 .tableContainer {
-  background: var(--color-white);
+  background: var(--color-surface);
   border-radius: 8px;
   border: 1px solid var(--color-border);
   overflow: auto;
@@ -143,7 +144,7 @@
 }
 
 .table th {
-  background-color: var(--color-bg-subtle);
+  background-color: var(--color-surface-muted, var(--color-bg-subtle));
   padding: 14px 16px;
   text-align: left;
   font-size: 12px;
@@ -175,7 +176,7 @@
 }
 
 .table tr:hover {
-  background-color: var(--table-header-bg);
+  background-color: var(--color-bg-hover, var(--table-header-bg));
 }
 
 .table tr:last-child td {
@@ -223,21 +224,21 @@
 }
 
 .statusActive {
-  background-color: rgba(34, 197, 94, 0.1);
-  color: #15803d;
+  background-color: var(--color-success-bg, rgba(34, 197, 94, 0.1));
+  color: var(--color-success-strong, #15803d);
 }
 
 .statusActive .statusDot {
-  background-color: #22c55e;
+  background-color: var(--color-success, #22c55e);
 }
 
 .statusStopped {
-  background-color: rgba(239, 68, 68, 0.1);
-  color: #b91c1c;
+  background-color: var(--color-danger-bg, rgba(239, 68, 68, 0.1));
+  color: var(--color-danger-strong, #b91c1c);
 }
 
 .statusStopped .statusDot {
-  background-color: #ef4444;
+  background-color: var(--color-danger, #ef4444);
 }
 
 /* Empty State */
@@ -265,7 +266,7 @@
 
 .iconBtn {
   border: 1px solid var(--color-border-strong);
-  background: var(--color-white);
+  background: var(--color-surface);
   width: 38px;
   height: 38px;
   border-radius: 4px;
@@ -290,7 +291,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
-  background-color: var(--color-white);
+  background-color: var(--color-surface);
   border-top: 1px solid var(--color-border);
 }
 
@@ -352,8 +353,8 @@
 }
 
 .pageNumber.active:focus {
-  background-color: var(--color-white);
-  color: var(--color-text, #1e293b);
+  background-color: var(--color-surface);
+  color: var(--color-text-strong);
   border: 1px solid var(--color-primary);
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
 }
@@ -372,4 +373,6 @@
   border: 1px solid var(--color-border);
   border-radius: 4px;
   outline: none;
+  background-color: var(--color-surface-muted, var(--color-bg-soft));
+  color: var(--color-text-strong);
 }

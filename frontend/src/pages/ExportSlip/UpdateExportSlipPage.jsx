@@ -8,6 +8,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
 import { printExportSlip } from '../../utils/printExportSlip';
+import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import Select from 'react-select';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import styles from './UpdateExportSlipPage.module.css';
@@ -132,6 +133,17 @@ function UpdateExportSlipPage() {
         .catch(err => console.error('Failed to load balances', err));
     }
   }, [form.warehouseId]);
+
+  const inventoryMap = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(inventoryBalances)) {
+      inventoryBalances.forEach(b => {
+        if (b.variantId) map.set(String(b.variantId), Number(b.totalQuantity || 0));
+        else if (b.itemId) map.set(String(b.itemId), Number(b.totalQuantity || 0));
+      });
+    }
+    return map;
+  }, [inventoryBalances]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -686,18 +698,24 @@ function UpdateExportSlipPage() {
                         <tr key={item.localId}>
                           <td className={styles.textCenter}>{index + 1}</td>
                           <td>
-                            <Select
-                              options={products.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}` }))}
-                              value={products.find(p => String(p.id) === String(item.variantId)) ? { value: item.variantId, label: `${products.find(p => String(p.id) === String(item.variantId)).productName} - ${products.find(p => String(p.id) === String(item.variantId)).sku || products.find(p => String(p.id) === String(item.variantId)).productCode}` } : null}
-                              onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.value : '')}
+                            <ProductGridSelect
+                              products={products}
+                              inventoryMap={inventoryMap}
+                              value={item.variantId}
+                              onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+                              displayMode="name"
                               placeholder="Chọn hàng"
-                              isClearable
-                              styles={customSelectStyles}
-                              menuPortalTarget={document.body}
                             />
                           </td>
                           <td>
-                            {product?.sku || product?.productCode || ''}
+                            <ProductGridSelect
+                              products={products}
+                              inventoryMap={inventoryMap}
+                              value={item.variantId}
+                              onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+                              displayMode="code"
+                              placeholder="Chọn mã"
+                            />
                           </td>
                           <td>
                             {product?.unitName || ''}

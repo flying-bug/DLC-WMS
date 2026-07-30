@@ -6,7 +6,8 @@ import * as exportApi from '../../api/inventoryExportApi';
 import * as warehouseApi from '../../api/warehouseApi';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
-import Select from 'react-select';
+import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
+import Toast from '../../components/ui/Toast/Toast';
 import styles from './CreateTransferSlipPage.module.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -89,6 +90,9 @@ function UpdateTransferSlipPage() {
   const [products, setProducts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState({ isVisible: false, type: 'error', message: '' });
+  const showToast = (type, message) => setToast({ isVisible: true, type, message });
+  const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
   
   const [scanCode, setScanCode] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
@@ -342,9 +346,9 @@ function UpdateTransferSlipPage() {
   const submit = async (status) => {
     if (!isFormValid) {
       if (form.fromWarehouseId === form.toWarehouseId) {
-         setError('Kho xuất và kho nhập phải khác nhau.');
+         showToast('error', 'Kho xuất và kho nhập phải khác nhau.');
       } else {
-         setError('Vui lòng điền đầy đủ thông tin kho, ngày chuyển và ít nhất một mặt hàng.');
+         showToast('error', 'Vui lòng điền đầy đủ thông tin kho, ngày chuyển và ít nhất một mặt hàng.');
       }
       return;
     }
@@ -354,19 +358,18 @@ function UpdateTransferSlipPage() {
     for (const line of payload.lines) {
       const product = productById.get(String(line.variantId));
       if (product?.trackSerial && line.serialNumbers.length !== line.quantity) {
-        setError(`Mặt hàng ${product.sku || product.productName} có theo dõi Serial. Số lượng quét (${line.serialNumbers.length}) chưa khớp với số lượng chuyển (${line.quantity}).`);
+        showToast('error', `Mặt hàng ${product.sku || product.productName} có theo dõi Serial. Số lượng quét (${line.serialNumbers.length}) chưa khớp với số lượng chuyển (${line.quantity}).`);
         return;
       }
     }
     
     setSaving(true);
-    setError('');
     try {
       payload.status = status;
       await transferApi.updateTransferSlip(id, payload);
       navigate('/transfer-history');
     } catch (err) {
-      setError(err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không lưu được phiếu chuyển kho');
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không lưu được phiếu chuyển kho');
     } finally {
       setSaving(false);
     }
@@ -381,8 +384,6 @@ function UpdateTransferSlipPage() {
               <i className="bi bi-arrow-left"></i> Cập nhật phiếu chuyển kho {form.transferCode ? form.transferCode : ''}
             </a>
           </div>
-
-          {error && <div className={styles.card} style={{ color: '#b91c1c', marginBottom: '20px' }}>{error}</div>}
 
           <div className={styles.topGrid}>
             <div className={styles.card}>
@@ -518,18 +519,23 @@ function UpdateTransferSlipPage() {
                       <tr key={item.localId}>
                         <td>{index + 1}</td>
                         <td>
-                          {product?.sku || product?.productCode || ''}
+                          <ProductGridSelect
+                            products={products}
+                            inventoryMap={sourceInventory}
+                            value={item.variantId}
+                            onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+                            displayMode="code"
+                            placeholder="Chọn mã"
+                          />
                         </td>
                         <td>
-                          <Select
-                            options={products.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}`, nameOnly: p.productName }))}
-                            value={product ? { value: product.id, label: `${product.productName} - ${product.sku || product.productCode}`, nameOnly: product.productName } : null}
-                            onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.value : '')}
+                          <ProductGridSelect
+                            products={products}
+                            inventoryMap={sourceInventory}
+                            value={item.variantId}
+                            onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+                            displayMode="name"
                             placeholder="Chọn hàng"
-                            isClearable
-                            formatOptionLabel={(option, { context }) => context === 'value' ? option.nameOnly : option.label}
-                            styles={customSelectStyles}
-                            menuPortalTarget={document.body}
                           />
                         </td>
                         <td>{product?.unitName || ''}</td>
@@ -616,6 +622,12 @@ function UpdateTransferSlipPage() {
         onSelect={(doc) => {
           setForm(prev => ({ ...prev, referenceType: doc.type, referenceId: doc.id, referenceCode: doc.code }));
         }}
+      />
+      <Toast
+        isVisible={toast.isVisible}
+        type={toast.type}
+        message={toast.message}
+        onClose={hideToast}
       />
     </AdminLayout>
   );
