@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styles from './WarehouseFormModal.module.css';
 
 /**
@@ -12,6 +12,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
         code: '',
         name: '',
         address: '',
+        type: 'STANDARD',
         status: 'APPROVED',
     });
     const [errorMsg, setErrorMsg] = useState('');
@@ -27,11 +28,12 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                     code: initialData.code || '',
                     name: initialData.name || '',
                     address: initialData.address || '',
+                    type: initialData.type || 'STANDARD',
                     status: initialData.status || 'APPROVED',
                     version: initialData.version,
                 });
             } else {
-                setFormData({ code: '', name: '', address: '', status: 'APPROVED', version: null });
+                setFormData({ code: '', name: '', address: '', type: 'STANDARD', status: 'APPROVED', version: null });
             }
             setErrorMsg('');
             setAddressSuggestions([]);
@@ -132,7 +134,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
             await onSave(dataToSave);
             
             if (!closeAfterSave) {
-                setFormData({ code: '', name: '', address: '', status: 'APPROVED', version: null });
+                setFormData({ code: '', name: '', address: '', type: 'STANDARD', status: 'APPROVED', version: null });
                 setErrorMsg('');
             }
         } catch (error) {
@@ -212,6 +214,20 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                                     </div>
                                 )}
                             </div>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label>Loại kho</label>
+                            <select
+                                className={styles.selectField}
+                                value={formData.type}
+                                onChange={(e) => handleChange('type', e.target.value)}
+                                disabled={saving}
+                            >
+                                <option value="STANDARD">Kho tiêu chuẩn</option>
+                                <option value="SCRAP">Kho phế liệu (SCRAP)</option>
+                                <option value="TRANSIT">Kho trung chuyển</option>
+                            </select>
                         </div>
 
                         <div className={styles.formGroup}>
