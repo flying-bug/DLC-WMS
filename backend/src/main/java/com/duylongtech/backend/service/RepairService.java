@@ -16,6 +16,7 @@ import com.duylongtech.backend.entity.SerialNumber;
 import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.PartnerRepository;
+import com.duylongtech.backend.repository.ProductRepository;
 import com.duylongtech.backend.repository.ProductVariantRepository;
 import com.duylongtech.backend.repository.RepairFeeRepository;
 import com.duylongtech.backend.repository.RepairLineRepository;
@@ -55,12 +56,13 @@ public class RepairService {
 
     private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "QUOTATION");
     private static final Set<String> VALID_INVOICE_METHODS = Set.of("none", "b4repair", "after_repair");
-    private static final Set<String> VALID_ACTION_TYPES = Set.of("ADD", "REMOVE", "RECYCLE");
+    private static final Set<String> VALID_ACTION_TYPES = Set.of("ADD", "REMOVE");
 
     private final RepairRepository repairRepository;
     private final RepairLineRepository repairLineRepository;
     private final RepairFeeRepository repairFeeRepository;
     private final PartnerRepository partnerRepository;
+    private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final SerialNumberRepository serialNumberRepository;
     private final UserRepository userRepository;
@@ -73,10 +75,10 @@ public class RepairService {
     // =====================================================================
 
     @Transactional(readOnly = true)
-    public Page<RepairResponse> getRepairs(String keyword, String status, int page, int size) {
+    public Page<RepairResponse> getRepairs(String keyword, String status, LocalDate fromDate, LocalDate toDate, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1));
         String normalizedStatus = trimToNull(status) != null ? status.trim().toUpperCase() : null;
-        return repairRepository.searchRepairs(trimToNull(keyword), normalizedStatus, pageable)
+        return repairRepository.searchRepairs(trimToNull(keyword), normalizedStatus, fromDate, toDate, pageable)
                 .map(this::toSummaryResponse);
     }
 
@@ -117,6 +119,7 @@ public class RepairService {
                 .underWarranty(request.getUnderWarranty() != null ? request.getUnderWarranty() : false)
                 .repairWarrantyEndDate(request.getRepairWarrantyEndDate())
                 .invoiceMethod(resolveInvoiceMethod(request.getInvoiceMethod()))
+                .responsiblePerson(trimToNull(request.getResponsiblePerson()))
                 .totalAmount(BigDecimal.ZERO)
                 .note(trimToNull(request.getNote()))
                 .createdBy(currentUserId)
@@ -163,7 +166,13 @@ public class RepairService {
         }
         if (request.getRepairWarrantyEndDate() != null) repair.setRepairWarrantyEndDate(request.getRepairWarrantyEndDate());
         if (request.getInvoiceMethod() != null) repair.setInvoiceMethod(resolveInvoiceMethod(request.getInvoiceMethod()));
+        if (request.getResponsiblePerson() != null) repair.setResponsiblePerson(trimToNull(request.getResponsiblePerson()));
         if (request.getNote() != null) repair.setNote(trimToNull(request.getNote()));
+
+        if (repair.getExpectedDate() != null && repair.getReceivedDate() != null 
+                && repair.getExpectedDate().isBefore(repair.getReceivedDate())) {
+            throw new BusinessException("Ngày dự kiến không thể nhỏ hơn ngày tiếp nhận.");
+        }
 
         Repair saved = repairRepository.save(repair);
 
@@ -244,35 +253,33 @@ public class RepairService {
             throw new BusinessException(SystemMessage.REP_LINE_NOT_FOUND);
         }
 
-        if (request.getQuantity() != null) {
-            line.setQuantity(request.getQuantity());
+        boolean isUnderRepair = "UNDER_REPAIR".equals(repair.getRepairStatus());
+        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus()) && !isUnderRepair) {
+            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
         }
-        if (request.getDoneQuantity() != null) {
-            line.setDoneQuantity(request.getDoneQuantity());
-        }
-        if (request.getIsUsed() != null) {
-            line.setIsUsed(request.getIsUsed());
-        }
-        if (request.getActionType() != null) {
-            line.setActionType(request.getActionType().toUpperCase());
-        }
-        if (request.getUnitPrice() != null) {
-            line.setUnitPrice(request.getUnitPrice());
-        }
-        if (request.getIsFreeWarranty() != null) {
-            line.setIsFreeWarranty(request.getIsFreeWarranty());
-            if (Boolean.TRUE.equals(request.getIsFreeWarranty())) {
-                line.setUnitPrice(BigDecimal.ZERO);
+
+        if (isUnderRepair) {
+            // Chỉ cho phép cập nhật doneQuantity và isUsed khi đang UNDER_REPAIR
+            if (request.getDoneQuantity() != null) line.setDoneQuantity(request.getDoneQuantity());
+            if (request.getIsUsed() != null) line.setIsUsed(request.getIsUsed());
+            if (request.getSerialNumberId() != null) line.setSerialNumberId(request.getSerialNumberId() == -1 ? null : request.getSerialNumberId());
+        } else {
+            // Trạng thái DRAFT hoặc QUOTATION cho phép sửa toàn bộ
+            if (request.getQuantity() != null) line.setQuantity(request.getQuantity());
+            if (request.getDoneQuantity() != null) line.setDoneQuantity(request.getDoneQuantity());
+            if (request.getIsUsed() != null) line.setIsUsed(request.getIsUsed());
+            if (request.getActionType() != null) line.setActionType(request.getActionType().toUpperCase());
+            if (request.getUnitPrice() != null) line.setUnitPrice(request.getUnitPrice());
+            if (request.getIsFreeWarranty() != null) {
+                line.setIsFreeWarranty(request.getIsFreeWarranty());
+                if (Boolean.TRUE.equals(request.getIsFreeWarranty())) {
+                    line.setUnitPrice(BigDecimal.ZERO);
+                }
             }
-        }
-        if (request.getDateScheduled() != null) {
-            line.setDateScheduled(request.getDateScheduled());
-        }
-        if (request.getDeadline() != null) {
-            line.setDeadline(request.getDeadline());
-        }
-        if (request.getNote() != null) {
-            line.setNote(trimToNull(request.getNote()));
+            if (request.getDateScheduled() != null) line.setDateScheduled(request.getDateScheduled());
+            if (request.getDeadline() != null) line.setDeadline(request.getDeadline());
+            if (request.getNote() != null) line.setNote(trimToNull(request.getNote()));
+            if (request.getSerialNumberId() != null) line.setSerialNumberId(request.getSerialNumberId() == -1 ? null : request.getSerialNumberId());
         }
 
         repairLineRepository.save(line);
@@ -375,11 +382,19 @@ public class RepairService {
 
         BigDecimal lineTotal = lines.stream()
                 .filter(l -> "ADD".equals(l.getActionType())) // Chỉ tính dòng ADD vào chi phí
-                .map(l -> l.getUnitPrice().multiply(l.getQuantity()))
+                .map(l -> {
+                    BigDecimal qty;
+                    if ("UNDER_REPAIR".equals(repair.getRepairStatus()) || "DONE".equals(repair.getRepairStatus())) {
+                        qty = (l.getDoneQuantity() != null && Boolean.TRUE.equals(l.getIsUsed())) ? l.getDoneQuantity() : BigDecimal.ZERO;
+                    } else {
+                        qty = l.getQuantity() != null ? l.getQuantity() : BigDecimal.ZERO;
+                    }
+                    return l.getUnitPrice().multiply(qty);
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal feeTotal = fees.stream()
-                .map(RepairFee::getFeeAmount)
+                .map(f -> f.getFeeAmount().multiply(f.getQuantity() != null ? f.getQuantity() : BigDecimal.ONE))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         repair.setTotalAmount(lineTotal.add(feeTotal));
@@ -435,6 +450,7 @@ public class RepairService {
                 .solutionDescription(repair.getSolutionDescription())
                 .underWarranty(repair.getUnderWarranty())
                 .invoiceMethod(repair.getInvoiceMethod())
+                .responsiblePerson(repair.getResponsiblePerson())
                 .totalAmount(repair.getTotalAmount())
                 .createdBy(repair.getCreatedBy())
                 .createdAt(repair.getCreatedAt())
@@ -465,6 +481,28 @@ public class RepairService {
             } catch (Exception ignored) { /* best-effort */ }
         }
 
+        // Resolve product name (best effort)
+        String productName = null;
+        if (repair.getProductId() != null) {
+            try {
+                var prodOpt = productRepository.findById(repair.getProductId());
+                if (prodOpt.isPresent()) {
+                    productName = prodOpt.get().getProductName();
+                }
+            } catch (Exception ignored) { /* best-effort */ }
+        }
+
+        // Resolve main serial number (best effort)
+        String serialNumber = null;
+        if (repair.getSerialNumberId() != null) {
+            try {
+                var snOpt = serialNumberRepository.findById(repair.getSerialNumberId());
+                if (snOpt.isPresent()) {
+                    serialNumber = snOpt.get().getSerialNumber();
+                }
+            } catch (Exception ignored) { /* best-effort */ }
+        }
+
         return RepairResponse.builder()
                 .id(repair.getId())
                 .repairCode(repair.getRepairCode())
@@ -472,10 +510,12 @@ public class RepairService {
                 .partnerName(partnerName)
                 .partnerPhone(partnerPhone)
                 .productId(repair.getProductId())
+                .productName(productName)
                 .productQuantity(repair.getProductQuantity())
                 .productUnit(repair.getProductUnit())
                 .warehouseId(repair.getWarehouseId())
                 .serialNumberId(repair.getSerialNumberId())
+                .serialNumber(serialNumber)
                 .warrantyId(repair.getWarrantyId())
                 .receivedDate(repair.getReceivedDate())
                 .expectedDate(repair.getExpectedDate())
@@ -488,6 +528,7 @@ public class RepairService {
                 .solutionDescription(repair.getSolutionDescription())
                 .underWarranty(repair.getUnderWarranty())
                 .invoiceMethod(repair.getInvoiceMethod())
+                .responsiblePerson(repair.getResponsiblePerson())
                 .totalAmount(repair.getTotalAmount())
                 .note(repair.getNote())
                 .createdBy(repair.getCreatedBy())
@@ -504,7 +545,10 @@ public class RepairService {
         // Resolve component name (best effort)
         String componentName = null;
         String componentSku = null;
-        if (line.getComponentVariantId() != null) {
+        if (line.getComponentVariant() != null) {
+            componentName = line.getComponentVariant().getVariantName();
+            componentSku = line.getComponentVariant().getSku();
+        } else if (line.getComponentVariantId() != null) {
             try {
                 var variantOpt = productVariantRepository.findById(line.getComponentVariantId());
                 if (variantOpt.isPresent()) {
@@ -529,18 +573,17 @@ public class RepairService {
         BigDecimal availableQty = BigDecimal.ZERO;
         try {
             Long warehouseId = line.getRepair() != null && line.getRepair().getWarehouseId() != null ? line.getRepair().getWarehouseId() : 1L; // Fallback to 1L if needed, though best to rely on proper config
-            InventoryBalance balance;
             if (line.getSerialNumberId() != null) {
-                balance = inventoryBalanceRepository.findByWarehouseVariantSerial(
+                InventoryBalance balance = inventoryBalanceRepository.findByWarehouseVariantSerial(
                         warehouseId, line.getComponentVariantId(), line.getSerialNumberId(), "GOOD").orElse(null);
+                if (balance != null) {
+                    availableQty = balance.getQuantityOnHand().subtract(balance.getQuantityReserved());
+                }
             } else {
-                balance = inventoryBalanceRepository.findByWarehouseAndVariant(
-                        warehouseId, line.getComponentVariantId(), "GOOD").orElse(null);
+                availableQty = inventoryBalanceRepository.sumAvailableQuantityByWarehouseAndVariant(
+                        warehouseId, line.getComponentVariantId(), "GOOD");
             }
-            if (balance != null) {
-                availableQty = balance.getQuantityOnHand().subtract(balance.getQuantityReserved());
-                if (availableQty.compareTo(BigDecimal.ZERO) < 0) availableQty = BigDecimal.ZERO;
-            }
+            if (availableQty.compareTo(BigDecimal.ZERO) < 0) availableQty = BigDecimal.ZERO;
         } catch (Exception ignored) {}
 
         BigDecimal lineAmount = line.getUnitPrice().multiply(line.getQuantity());
@@ -598,6 +641,10 @@ public class RepairService {
         if (request.getProductId() == null) {
             throw new BusinessException("productId là bắt buộc");
         }
+        if (request.getExpectedDate() != null && request.getReceivedDate() != null 
+                && request.getExpectedDate().isBefore(request.getReceivedDate())) {
+            throw new BusinessException("Ngày dự kiến không thể nhỏ hơn ngày tiếp nhận.");
+        }
     }
 
     private void validateLineRequest(RepairLineRequest request) {
@@ -605,7 +652,7 @@ public class RepairService {
             throw new BusinessException("componentVariantId là bắt buộc");
         }
         if (!VALID_ACTION_TYPES.contains(request.getActionType().toUpperCase())) {
-            throw new BusinessException("actionType phải là ADD, REMOVE, hoặc RECYCLE");
+            throw new BusinessException("actionType phải là ADD hoặc REMOVE");
         }
         if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException("quantity phải lớn hơn 0");

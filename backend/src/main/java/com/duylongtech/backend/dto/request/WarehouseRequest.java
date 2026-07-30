@@ -22,5 +22,7 @@ public class WarehouseRequest {
 
     private String status;
 
+    private String type;
+
     private Long version;
 }

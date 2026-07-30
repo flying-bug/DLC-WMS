@@ -32,16 +32,20 @@ public interface RepairRepository extends JpaRepository<Repair, Long> {
                 :keyword IS NULL
                 OR LOWER(r.repairCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
               )
+              AND (CAST(:fromDate AS date) IS NULL OR r.receivedDate >= :fromDate)
+              AND (CAST(:toDate AS date) IS NULL OR r.receivedDate <= :toDate)
             ORDER BY r.createdAt DESC
             """)
     Page<Repair> searchRepairs(@Param("keyword") String keyword,
                                @Param("status") String status,
+                               @Param("fromDate") java.time.LocalDate fromDate,
+                               @Param("toDate") java.time.LocalDate toDate,
                                Pageable pageable);
 
     /**
      * Lấy chi tiết lệnh kèm lines và fees (dùng khi cần đọc toàn bộ).
      */
-    @EntityGraph(attributePaths = {"repairLines", "warranty"})
+    @EntityGraph(attributePaths = {"repairLines", "repairLines.componentVariant", "warranty"})
     @Query("SELECT r FROM Repair r WHERE r.id = :id")
     Optional<Repair> findWithDetailsById(@Param("id") Long id);
 
@@ -52,10 +56,7 @@ public interface RepairRepository extends JpaRepository<Repair, Long> {
     @Query("SELECT r FROM Repair r WHERE r.id = :id")
     Optional<Repair> findByIdForUpdate(@Param("id") Long id);
 
-    // Backward compat với RepairTicketService cũ
-    @EntityGraph(attributePaths = {"warranty", "warranty.partner", "warranty.serialNumber", "warranty.serialNumber.variant"})
-    @Query("SELECT r FROM Repair r WHERE r.id = :id")
-    Optional<Repair> findWithDetailsForTicketById(@Param("id") Long id);
+
 
     /**
      * Lấy số thứ tự lớn nhất của mã dạng SC-XXXXX để sinh mã tiếp theo.

@@ -58,10 +58,12 @@ public class RepairController {
     public ApiResponse<Page<RepairResponse>> getRepairs(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate fromDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate toDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return ApiResponse.success(repairService.getRepairs(keyword, status, page, size));
+        return ApiResponse.success(repairService.getRepairs(keyword, status, fromDate, toDate, page, size));
     }
 
     @GetMapping("/check-code")

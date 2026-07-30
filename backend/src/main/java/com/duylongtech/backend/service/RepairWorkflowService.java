@@ -5,6 +5,7 @@ import com.duylongtech.backend.dto.response.RepairResponse;
 import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.*;
+import com.duylongtech.backend.repository.ProductVariantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -62,6 +63,9 @@ public class RepairWorkflowService {
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
     private final RepairService repairService;
+    private final ProductVariantRepository productVariantRepository;
+    private final InventoryDocumentService inventoryDocumentService;
+    private final SerialNumberRepository serialNumberRepository;
 
     /**
      * Chuyển trạng thái chính.
@@ -156,76 +160,35 @@ public class RepairWorkflowService {
                         line.getQuantity(), available);
                 throw new BusinessException(SystemMessage.REP_INSUFFICIENT_INVENTORY);
             }
-
-            // Thực hiện tăng số lượng giữ chỗ (Reserved)
-            balance.setQuantityReserved(balance.getQuantityReserved().add(line.getQuantity()));
-            inventoryBalanceRepository.save(balance);
         }
 
-        // Tạo phiếu xuất kho Draft (Reserve) để giữ chỗ linh kiện
-        createReserveInventoryDocument(repair, addLines, warehouseId);
-        log.info("[Repair {}] Đã tạo phiếu xuất kho Reserve thành công", repair.getRepairCode());
+        log.info("[Repair {}] Xác nhận lệnh sửa chữa thành công, tồn kho hợp lệ", repair.getRepairCode());
     }
 
-    /**
-     * Tạo phiếu xuất kho trạng thái DRAFT để "giữ chỗ" linh kiện.
-     * Phiếu này sẽ được POST (ghi sổ) khi lệnh chuyển sang DONE.
-     */
-    private void createReserveInventoryDocument(Repair repair, List<RepairLine> addLines, Long warehouseId) {
-        Long currentUserId = resolveCurrentUserId();
-        String docCode = "REP-EX-" + repair.getRepairCode();
-
-        // Tránh tạo trùng nếu gọi lại
-        if (inventoryDocumentRepository.existsByDocCode(docCode)) {
-            log.warn("[Repair {}] Phiếu xuất kho Reserve {} đã tồn tại, bỏ qua tạo mới", repair.getRepairCode(), docCode);
-            return;
-        }
-
-        InventoryDocument reserveDoc = InventoryDocument.builder()
-                .docCode(docCode)
-                .docType(REPAIR_DOC_TYPE_EXPORT)
-                .issuePurpose("REPAIR")
-                .referenceType("REPAIR")
-                .referenceId(repair.getId())
-                .warehouseId(warehouseId)
-                .partnerId(repair.getPartnerId())
-                .docDate(LocalDate.now())
-                .status("DRAFT") // Draft = Reserve (giữ chỗ chưa trừ kho thực tế)
-                .note("Phiếu xuất linh kiện sửa chữa - Lệnh " + repair.getRepairCode())
-                .createdBy(currentUserId)
-                .build();
-
-        // Thêm các dòng linh kiện
-        for (RepairLine line : addLines) {
-            InventoryDocumentLine docLine = InventoryDocumentLine.builder()
-                    .inventoryDocument(reserveDoc)
-                    .variantId(line.getComponentVariantId())
-                    .quantityIn(BigDecimal.ZERO)
-                    .quantityOut(line.getQuantity())
-                    .unitCost(BigDecimal.ZERO) // Giá vốn sẽ được FIFO tính khi POST
-                    .unitPrice(line.getUnitPrice())
-                    .lineAmount(line.getUnitPrice().multiply(line.getQuantity()))
-                    .serialNumberId(line.getSerialNumberId())
-                    .note("Linh kiện sửa chữa: " + (line.getNote() != null ? line.getNote() : ""))
-                    .build();
-            reserveDoc.getLines().add(docLine);
-        }
-
-        inventoryDocumentRepository.save(reserveDoc);
-        log.info("[Repair {}] Tạo phiếu Reserve {} thành công với {} dòng linh kiện",
-                repair.getRepairCode(), docCode, addLines.size());
-    }
 
     // =====================================================================
     // DONE: Ghi sổ phiếu kho + Sinh Scrap + (stub) Sinh Invoice
     // =====================================================================
 
     private void handleDone(Repair repair) {
-        Long warehouseId = resolveRepairWarehouseId(repair);
-        String docCode = "REP-EX-" + repair.getRepairCode();
+        // 0. Validate: linh kiện ADD, isUsed=true, trackSerial=true phải có serialNumberId
+        List<RepairLine> allAddLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), "ADD");
+        for (RepairLine line : allAddLines) {
+            if (!Boolean.TRUE.equals(line.getIsUsed())) continue;
+            // Lấy variant -> product -> trackSerial
+            productVariantRepository.findById(line.getComponentVariantId()).ifPresent(variant -> {
+                if (Boolean.TRUE.equals(variant.getProduct().getTrackSerial()) && line.getSerialNumberId() == null) {
+                    String variantName = variant.getProduct().getProductName() + " (" + variant.getSku() + ")";
+                    throw new BusinessException(
+                        String.format(SystemMessage.REP_SERIAL_REQUIRED.getMessage(), variantName));
+                }
+            });
+        }
 
         // 1. Post phiếu xuất kho linh kiện ADD (nếu có)
-        postReserveDocument(repair, docCode);
+        if (!allAddLines.isEmpty()) {
+            createFinalInventoryDocuments(repair, allAddLines);
+        }
 
         // 2. Sinh phiếu nhập kho Scrap cho linh kiện REMOVE (nếu có)
         List<RepairLine> removeLines = repairLineRepository.findByRepairIdAndActionType(
@@ -235,7 +198,6 @@ public class RepairWorkflowService {
         }
 
         // 3. Stub: Sinh Invoice nếu invoice_method != 'none'
-        // Trong Phase 2 chưa có InvoiceService, sẽ implement ở Phase tiếp theo
         if (!"none".equals(repair.getInvoiceMethod()) && repair.getTotalAmount().compareTo(BigDecimal.ZERO) > 0) {
             log.info("[Repair {}] Invoice method: {} - Total: {}. Invoice generation stub (sẽ implement ở Phase 3)",
                     repair.getRepairCode(), repair.getInvoiceMethod(), repair.getTotalAmount());
@@ -244,72 +206,70 @@ public class RepairWorkflowService {
     }
 
     /**
-     * Chuyển phiếu xuất kho Reserve từ DRAFT -> POSTED (trừ kho thực tế).
-     * Sử dụng cơ chế FIFO từ InventoryDocumentService.
-     * Trong implementation này, ta trực tiếp cập nhật InventoryBalance để giảm tồn kho.
+     * Tạo và POST trực tiếp phiếu xuất kho (trừ kho thực tế) cho các linh kiện ADD.
      */
-    private void postReserveDocument(Repair repair, String docCode) {
-        InventoryDocument reserveDoc = inventoryDocumentRepository
-                .findByDocCode(docCode)
-                .orElse(null);
+    private void createFinalInventoryDocuments(Repair repair, List<RepairLine> addLines) {
+        Long warehouseId = resolveRepairWarehouseId(repair);
+        Long currentUserId = resolveCurrentUserId();
+        String docCode = "REP-EX-" + repair.getRepairCode();
 
-        if (reserveDoc == null) {
-            log.warn("[Repair {}] Không tìm thấy phiếu Reserve {}, bỏ qua post kho", repair.getRepairCode(), docCode);
+        if (inventoryDocumentRepository.existsByDocCode(docCode)) {
+            log.warn("[Repair {}] Phiếu xuất kho {} đã tồn tại", repair.getRepairCode(), docCode);
             return;
         }
 
-        if ("POSTED".equals(reserveDoc.getStatus())) {
-            log.info("[Repair {}] Phiếu {} đã được POST, bỏ qua", repair.getRepairCode(), docCode);
-            return;
-        }
+        InventoryDocument exportDoc = InventoryDocument.builder()
+                .docCode(docCode)
+                .docType(REPAIR_DOC_TYPE_EXPORT)
+                .issuePurpose("REPAIR")
+                .referenceType("REPAIR")
+                .referenceId(repair.getId())
+                .warehouseId(warehouseId)
+                .partnerId(repair.getPartnerId())
+                .docDate(LocalDate.now())
+                .status("DRAFT") // Lưu tạm trước khi post
+                .note("Phiếu xuất linh kiện sửa chữa - Lệnh " + repair.getRepairCode())
+                .createdBy(currentUserId)
+                .build();
 
-        // Chuyển trạng thái phiếu -> POSTED
-        reserveDoc.setStatus("POSTED");
-        reserveDoc.setPostedAt(LocalDateTime.now());
-        inventoryDocumentRepository.save(reserveDoc);
-
-        // Trừ tồn kho thực tế cho từng dòng
-        Long warehouseId = reserveDoc.getWarehouseId();
-        List<RepairLine> addLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), "ADD");
-        java.util.Map<Long, RepairLine> variantToLineMap = addLines.stream()
-                .collect(java.util.stream.Collectors.toMap(RepairLine::getComponentVariantId, l -> l, (a, b) -> a));
-
-        for (InventoryDocumentLine docLine : reserveDoc.getLines()) {
-            RepairLine rLine = variantToLineMap.get(docLine.getVariantId());
-            BigDecimal requestedQty = docLine.getQuantityOut(); // Original quantity reserved
-            BigDecimal actualDoneQty = (rLine != null && rLine.getDoneQuantity() != null && Boolean.TRUE.equals(rLine.getIsUsed())) 
+        for (RepairLine rLine : addLines) {
+            BigDecimal actualDoneQty = (rLine.getDoneQuantity() != null && Boolean.TRUE.equals(rLine.getIsUsed())) 
                                         ? rLine.getDoneQuantity() : BigDecimal.ZERO;
-
-            // Cập nhật lại phiếu xuất kho theo số lượng thực tế sử dụng
-            docLine.setQuantityOut(actualDoneQty);
-            docLine.setLineAmount(docLine.getUnitPrice().multiply(actualDoneQty));
-
-            InventoryBalance balance;
-            if (docLine.getSerialNumberId() != null) {
-                balance = inventoryBalanceRepository.findByWarehouseVariantSerialForUpdate(
-                        warehouseId, docLine.getVariantId(), docLine.getSerialNumberId(), "GOOD").orElse(null);
-            } else {
-                balance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
-                        warehouseId, docLine.getVariantId(), "GOOD").orElse(null);
-            }
             
-            if (balance != null) {
-                // Giảm tồn kho thực tế theo actualDoneQty
-                BigDecimal newQty = balance.getQuantityOnHand().subtract(actualDoneQty);
-                if (newQty.compareTo(BigDecimal.ZERO) < 0) {
-                    throw new BusinessException(SystemMessage.INV_NOT_ENOUGH_STOCK);
-                }
-                balance.setQuantityOnHand(newQty);
-                
-                // Giảm số lượng đã giữ chỗ (Reserved) theo requestedQty ban đầu
-                BigDecimal newReserved = balance.getQuantityReserved().subtract(requestedQty);
-                balance.setQuantityReserved(newReserved.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : newReserved);
-                
-                inventoryBalanceRepository.save(balance);
+            if (actualDoneQty.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            String serialNumbersText = null;
+            if (rLine.getSerialNumberId() != null) {
+                serialNumbersText = serialNumberRepository.findById(rLine.getSerialNumberId())
+                        .map(SerialNumber::getSerialNumber)
+                        .orElse(null);
             }
+
+            InventoryDocumentLine docLine = InventoryDocumentLine.builder()
+                    .inventoryDocument(exportDoc)
+                    .variantId(rLine.getComponentVariantId())
+                    .quantityIn(BigDecimal.ZERO)
+                    .quantityOut(actualDoneQty)
+                    .unitCost(BigDecimal.ZERO)
+                    .unitPrice(rLine.getUnitPrice())
+                    .lineAmount(rLine.getUnitPrice().multiply(actualDoneQty))
+                    .serialNumberId(rLine.getSerialNumberId())
+                    .serialNumbersText(serialNumbersText)
+                    .note("Linh kiện sửa chữa: " + (rLine.getNote() != null ? rLine.getNote() : ""))
+                    .build();
+            exportDoc.getLines().add(docLine);
         }
 
-        log.info("[Repair {}] Đã POST phiếu xuất kho {} thành công", repair.getRepairCode(), docCode);
+        if (!exportDoc.getLines().isEmpty()) {
+            InventoryDocument savedDoc = inventoryDocumentRepository.save(exportDoc);
+            try {
+                inventoryDocumentService.postExport(savedDoc.getId());
+                log.info("[Repair {}] Đã tạo và POST phiếu xuất kho {} thành công qua InventoryDocumentService", repair.getRepairCode(), docCode);
+            } catch (Exception e) {
+                log.error("[Repair {}] Lỗi khi POST phiếu xuất kho {}: {}", repair.getRepairCode(), docCode, e.getMessage());
+                throw new BusinessException("Lỗi khi ghi sổ phiếu xuất linh kiện: " + e.getMessage());
+            }
+        }
     }
 
     /**
@@ -340,13 +300,19 @@ public class RepairWorkflowService {
                 .warehouseId(scrapWarehouseId)
                 .partnerId(repair.getPartnerId())
                 .docDate(LocalDate.now())
-                .status("POSTED") // Trực tiếp POSTED - nhập ngay vào kho Scrap
-                .postedAt(LocalDateTime.now())
+                .status("DRAFT") // Lưu tạm trước khi post
                 .note("Phiếu nhập kho phế liệu - Lệnh sửa chữa " + repair.getRepairCode())
                 .createdBy(currentUserId)
                 .build();
 
         for (RepairLine line : removeLines) {
+            String serialNumbersText = null;
+            if (line.getSerialNumberId() != null) {
+                serialNumbersText = serialNumberRepository.findById(line.getSerialNumberId())
+                        .map(SerialNumber::getSerialNumber)
+                        .orElse(null);
+            }
+
             InventoryDocumentLine scrapLine = InventoryDocumentLine.builder()
                     .inventoryDocument(scrapDoc)
                     .variantId(line.getComponentVariantId())
@@ -356,43 +322,22 @@ public class RepairWorkflowService {
                     .unitPrice(BigDecimal.ZERO)
                     .lineAmount(BigDecimal.ZERO)
                     .serialNumberId(line.getSerialNumberId())
+                    .serialNumbersText(serialNumbersText)
                     .note("Linh kiện tháo ra từ lệnh sửa " + repair.getRepairCode())
                     .build();
             scrapDoc.getLines().add(scrapLine);
         }
 
-        inventoryDocumentRepository.save(scrapDoc);
-
-        // Cập nhật tồn kho Scrap
-        for (RepairLine line : removeLines) {
-            InventoryBalance scrapBalance;
-            if (line.getSerialNumberId() != null) {
-                scrapBalance = inventoryBalanceRepository.findByWarehouseVariantSerialForUpdate(
-                        scrapWarehouseId, line.getComponentVariantId(), line.getSerialNumberId(), "GOOD").orElse(null);
-            } else {
-                scrapBalance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
-                        scrapWarehouseId, line.getComponentVariantId(), "GOOD").orElse(null);
+        if (!scrapDoc.getLines().isEmpty()) {
+            InventoryDocument savedDoc = inventoryDocumentRepository.save(scrapDoc);
+            try {
+                inventoryDocumentService.postImport(savedDoc.getId());
+                log.info("[Repair {}] Đã tạo và POST phiếu Scrap {} thành công qua InventoryDocumentService", repair.getRepairCode(), scrapDocCode);
+            } catch (Exception e) {
+                log.error("[Repair {}] Lỗi khi POST phiếu Scrap {}: {}", repair.getRepairCode(), scrapDocCode, e.getMessage());
+                throw new BusinessException("Lỗi khi ghi sổ phiếu Scrap: " + e.getMessage());
             }
-
-            if (scrapBalance == null) {
-                scrapBalance = InventoryBalance.builder()
-                        .warehouseId(scrapWarehouseId)
-                        .variantId(line.getComponentVariantId())
-                        .serialNumberId(line.getSerialNumberId())
-                        .stockStatus("GOOD")
-                        .quantityOnHand(BigDecimal.ZERO)
-                        .quantityReserved(BigDecimal.ZERO)
-                        .averageCost(BigDecimal.ZERO)
-                        .updatedAt(LocalDateTime.now())
-                        .build();
-            }
-            scrapBalance.setQuantityOnHand(scrapBalance.getQuantityOnHand().add(line.getQuantity()));
-            scrapBalance.setUpdatedAt(LocalDateTime.now());
-            inventoryBalanceRepository.save(scrapBalance);
         }
-
-        log.info("[Repair {}] Đã tạo phiếu Scrap {} với {} dòng linh kiện tháo ra",
-                repair.getRepairCode(), scrapDocCode, removeLines.size());
     }
 
     // =====================================================================
@@ -403,34 +348,8 @@ public class RepairWorkflowService {
         if ("DONE".equals(repair.getRepairStatus())) {
             throw new BusinessException(SystemMessage.REP_CANNOT_CANCEL);
         }
-
-        // Nếu đã tạo phiếu Reserve -> hủy phiếu đó và giải phóng tồn kho đã giữ
-        String docCode = "REP-EX-" + repair.getRepairCode();
-        inventoryDocumentRepository.findByDocCode(docCode)
-                .filter(d -> "DRAFT".equals(d.getStatus()))
-                .ifPresent(doc -> {
-                    doc.setStatus("CANCELLED");
-                    inventoryDocumentRepository.save(doc);
-                    
-                    // Giải phóng quantityReserved
-                    for (InventoryDocumentLine line : doc.getLines()) {
-                        InventoryBalance balance;
-                        if (line.getSerialNumberId() != null) {
-                            balance = inventoryBalanceRepository.findByWarehouseVariantSerialForUpdate(
-                                    doc.getWarehouseId(), line.getVariantId(), line.getSerialNumberId(), "GOOD").orElse(null);
-                        } else {
-                            balance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
-                                    doc.getWarehouseId(), line.getVariantId(), "GOOD").orElse(null);
-                        }
-                        if (balance != null && line.getQuantityOut() != null) {
-                            BigDecimal newReserved = balance.getQuantityReserved().subtract(line.getQuantityOut());
-                            balance.setQuantityReserved(newReserved.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : newReserved);
-                            inventoryBalanceRepository.save(balance);
-                        }
-                    }
-                    
-                    log.info("[Repair {}] Đã hủy phiếu Reserve {} và giải phóng giữ chỗ", repair.getRepairCode(), docCode);
-                });
+        // Với luồng mới, không có phiếu DRAFT, không giữ chỗ -> Không cần rollback inventory
+        log.info("[Repair {}] Hủy lệnh sửa chữa", repair.getRepairCode());
     }
 
     // =====================================================================
@@ -445,12 +364,7 @@ public class RepairWorkflowService {
         if (repair != null && repair.getWarehouseId() != null) {
             return repair.getWarehouseId();
         }
-        return warehouseRepository.findAll().stream()
-                .filter(w -> "APPROVED".equals(w.getStatus()))
-                .filter(w -> !"SCRAP".equalsIgnoreCase(w.getCode()))
-                .findFirst()
-                .map(Warehouse::getId)
-                .orElseThrow(() -> new BusinessException(SystemMessage.WH_NOT_FOUND));
+        throw new BusinessException(SystemMessage.WH_NOT_FOUND);
     }
 
     /**

@@ -63,6 +63,9 @@ public class RepairResponse {
     // Tài chính
     private BigDecimal totalAmount;
 
+    // Kỹ thuật viên phụ trách
+    private String responsiblePerson;
+
     // Ghi chú
     private String note;
 

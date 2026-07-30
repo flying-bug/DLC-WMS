@@ -116,7 +116,10 @@ public class Repair {
     @Builder.Default
     private BigDecimal repairCost = BigDecimal.ZERO;
 
-    // Ghi chú chung
+    // Người chịu trách nhiệm (Kỹ thuật viên)
+    @Column(name = "responsible_person", length = 255)
+    private String responsiblePerson;
+
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
