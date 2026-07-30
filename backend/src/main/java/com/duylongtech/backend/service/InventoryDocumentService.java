@@ -97,9 +97,14 @@ public class InventoryDocumentService {
             throw new BusinessException("warehouseId là bắt buộc");
         }
 
-        return serialNumberRepository.findBySerialNumber(code)
-                .map(serial -> resolveSerialScan(serial, req.getWarehouseId(), code))
-                .orElseGet(() -> resolveVariantScan(code));
+        List<SerialNumber> serials = serialNumberRepository.findBySerialNumber(code);
+        if (serials.size() > 1) {
+            throw new BusinessException("Mã serial tồn tại trên nhiều sản phẩm, vui lòng chọn mẫu sản phẩm trước");
+        }
+        if (serials.size() == 1) {
+            return resolveSerialScan(serials.get(0), req.getWarehouseId(), code);
+        }
+        return resolveVariantScan(code);
     }
 
     @Transactional(readOnly = true)
@@ -205,7 +210,7 @@ public class InventoryDocumentService {
                 List<String> serials = parseSerialNumbers(line.getSerialNumbersText());
                 if (!serials.isEmpty()) {
                     String firstSerial = serials.get(0);
-                    serialNumber = serialNumberRepository.findBySerialNumber(firstSerial).orElse(null);
+                    serialNumber = serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), firstSerial).orElse(null);
                     if (serialNumber != null) {
                         line.setSerialNumberId(serialNumber.getId());
                     }
@@ -621,7 +626,7 @@ public class InventoryDocumentService {
         }
 
         for (String serialValue : serialValues) {
-            Optional<SerialNumber> existingOpt = serialNumberRepository.findBySerialNumber(serialValue);
+            Optional<SerialNumber> existingOpt = serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), serialValue);
             if (existingOpt.isPresent()) {
                 if (ISSUE_PURPOSE_TRANSFER_IN.equals(doc.getIssuePurpose())) {
                     SerialNumber serial = existingOpt.get();
@@ -868,7 +873,7 @@ public class InventoryDocumentService {
         if (serialNumberId == null && lr.getSerialNumbers() != null && !lr.getSerialNumbers().isEmpty()) {
             String firstSerial = lr.getSerialNumbers().get(0);
             if (firstSerial != null && !firstSerial.trim().isEmpty()) {
-                serialNumberId = serialNumberRepository.findBySerialNumber(firstSerial.trim())
+                serialNumberId = serialNumberRepository.findByVariantIdAndSerialNumber(lr.getVariantId(), firstSerial.trim())
                         .map(SerialNumber::getId)
                         .orElse(null);
             }

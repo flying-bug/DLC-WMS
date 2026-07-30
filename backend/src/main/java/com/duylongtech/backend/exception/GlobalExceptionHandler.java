@@ -87,6 +87,10 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error("ERR400", "Không thể xóa bản ghi này do dữ liệu đang được liên kết với các bản ghi khác trong hệ thống."));
         }
+        if (msg.contains("duplicate entry") && msg.contains("serial_numbers")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("ERR400", "Số Serial đã tồn tại trong hệ thống. Vui lòng kiểm tra lại."));
+        }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error("ERR400", "Lỗi ràng buộc dữ liệu: " + causeMsg));
     }
