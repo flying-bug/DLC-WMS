@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "SERIAL_NUMBERS")
+@Table(name = "SERIAL_NUMBERS", uniqueConstraints = {@UniqueConstraint(columnNames = {"variant_id", "serial_number"})})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -30,7 +30,7 @@ public class SerialNumber {
     @JoinColumn(name = "variant_id", insertable = false, updatable = false)
     private ProductVariant variant;
 
-    @Column(name = "serial_number", nullable = false, unique = true, length = 100)
+    @Column(name = "serial_number", nullable = false, length = 100)
     private String serialNumber;
 
     @Column(name = "status", nullable = false, length = 30)
