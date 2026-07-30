@@ -12,6 +12,7 @@ import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import Select from 'react-select';
 import styles from './UpdateImportSlipPage.module.css';
 
@@ -156,15 +157,34 @@ function UpdateImportSlipPage() {
           handleFormChange('customerId', newlyAdded.id);
         }
       }
-      showToast('success', 'Thêm mới khách hàng thành công!');
-    } catch (err) {
-      console.error(err);
     } finally {
       if (!isContinue) {
         setShowCustomerDrawer(false);
       }
     }
   };
+
+  const [inventoryMap, setInventoryMap] = useState(new Map());
+
+  useEffect(() => {
+    if (!form.warehouseId) {
+      setInventoryMap(new Map());
+      return;
+    }
+    exportApi.getInventoryBalance({ warehouseId: form.warehouseId })
+      .then(res => {
+        const list = pageContent(unwrap(res));
+        const invMap = new Map();
+        list.forEach(b => {
+          if (b.variantId) invMap.set(String(b.variantId), Number(b.totalQuantity || 0));
+        });
+        setInventoryMap(invMap);
+      })
+      .catch(err => {
+        console.error('Failed to load inventory balance', err);
+        setInventoryMap(new Map());
+      });
+  }, [form.warehouseId]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -678,19 +698,25 @@ function UpdateImportSlipPage() {
                         <tr key={item.localId}>
                           <td className={styles.textCenter}>{index + 1}</td>
                           <td>
-                            <Select
-                              options={filteredProducts.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}`, nameOnly: p.productName }))}
-                              value={product ? { value: product.id, label: `${product.productName} - ${product.sku || product.productCode}`, nameOnly: product.productName } : null}
-                              onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.value : '')}
+                            <ProductGridSelect
+                              products={filteredProducts}
+                              inventoryMap={inventoryMap}
+                              value={item.variantId}
+                              onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+                              displayMode="name"
                               placeholder="Chọn hàng"
-                              isClearable
-                              formatOptionLabel={(option, { context }) => context === 'value' ? option.nameOnly : option.label}
-                              autoFocus={item.isNew}
-                              styles={customSelectStyles}
-                              menuPortalTarget={document.body}
                             />
                           </td>
-                          <td>{product?.sku || product?.productCode || ''}</td>
+                          <td>
+                            <ProductGridSelect
+                              products={filteredProducts}
+                              inventoryMap={inventoryMap}
+                              value={item.variantId}
+                              onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+                              displayMode="code"
+                              placeholder="Chọn mã"
+                            />
+                          </td>
                           <td>{product?.unitName || ''}</td>
                           <td align="right">
                             <input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />

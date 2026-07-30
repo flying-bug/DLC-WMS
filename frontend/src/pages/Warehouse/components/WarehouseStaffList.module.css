@@ -213,7 +213,7 @@
 
 /* Filter Section */
 .filterSection {
-  background: var(--color-white);
+  background: var(--color-surface);
   padding: 16px 20px;
   border-radius: 8px;
   display: flex;
@@ -251,6 +251,7 @@
   outline: none;
   min-width: 200px;
   color: var(--color-text-strong);
+  background-color: var(--color-surface-muted, var(--color-bg-soft));
 }
 
 .filterInput:focus, .filterSelect:focus {
@@ -266,7 +267,7 @@
 
 .btnOutline {
   border: 1px solid var(--color-border-strong);
-  background: var(--color-white);
+  background: var(--color-surface);
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
@@ -284,7 +285,7 @@
 
 .iconBtn {
   border: 1px solid var(--color-border-strong);
-  background: var(--color-white);
+  background: var(--color-surface);
   width: 38px;
   height: 38px;
   border-radius: 4px;
@@ -305,7 +306,7 @@
 
 /* Table */
 .tableContainer {
-  background: var(--color-white);
+  background: var(--color-surface);
   border-radius: 8px;
   border: 1px solid var(--color-border);
   overflow-x: auto;
