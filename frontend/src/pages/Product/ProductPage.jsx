@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import PrintBarcodeModal from '../../components/ui/PrintBarcodeModal/PrintBarcodeModal';
 import axiosClient from '../../api/axiosClient';
 import styles from './ProductPage.module.css';
 
@@ -218,6 +219,7 @@ const ProductPage = () => {
 
     const [showModal, setShowModal] = useState(false);
     const [isEdit, setIsEdit] = useState(false);
+    const [printBarcodeProduct, setPrintBarcodeProduct] = useState(null);
     const [formData, setFormData] = useState(defaultFormData);
     const [errorMsg, setErrorMsg] = useState('');
     const [openDropdownId, setOpenDropdownId] = useState(null);
@@ -1041,6 +1043,12 @@ const ProductPage = () => {
                                                 style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }}
                                                 title="Sửa sản phẩm"
                                                 onClick={() => handleOpenEdit(item)}
+                                            ></i>
+                                            <i
+                                                className="bi bi-upc-scan"
+                                                style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }}
+                                                title="In mã vạch"
+                                                onClick={() => setPrintBarcodeProduct(item)}
                                             ></i>
                                             <i
                                                 className="bi bi-gear"
@@ -1970,6 +1978,12 @@ const ProductPage = () => {
                 isDanger={true}
                 onConfirm={handleConfirmDelete}
                 onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+            />
+            
+            <PrintBarcodeModal
+                isOpen={!!printBarcodeProduct}
+                onClose={() => setPrintBarcodeProduct(null)}
+                product={printBarcodeProduct}
             />
         </AdminLayout>
 

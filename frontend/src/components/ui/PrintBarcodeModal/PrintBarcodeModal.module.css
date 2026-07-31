@@ -1,0 +1,154 @@
+.modalContainer {
+    width: 950px !important;
+    max-width: 95vw !important;
+    display: flex;
+    flex-direction: column;
+}
+
+.modalBody {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    padding: 24px;
+    gap: 24px;
+    background-color: #f8fafc;
+    align-items: start;
+}
+
+.configSection {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border: 1px solid #e2e8f0;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.formGroup label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.checkboxGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #334155;
+}
+
+.checkboxLabel input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-primary, #2563eb);
+    cursor: pointer;
+}
+
+.previewSection {
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    border: 1px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    max-height: calc(90vh - 96px);
+}
+
+.previewHeader {
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 16px;
+    font-size: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.previewBox {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    background: #f1f5f9;
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 24px;
+    min-height: 250px;
+    max-height: calc(90vh - 180px);
+    overflow-y: auto;
+    overflow-x: auto;
+    gap: 16px;
+}
+
+/* Print Styles */
+@media screen {
+    .printWrapper {
+        display: none !important;
+    }
+}
+
+@media print {
+    .printWrapper {
+        display: block !important;
+    }
+
+    body * {
+        visibility: hidden;
+    }
+
+    .printContainer,
+    .printContainer * {
+        visibility: visible;
+    }
+
+    .printContainer {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    .a4Print {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px; /* Khoảng cách giữa các tem */
+        padding: 10mm; /* Lề tờ giấy A4 */
+        justify-content: flex-start;
+        align-content: flex-start;
+    }
+
+    .a4Item {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 5px;
+    }
+
+    .pageBreak {
+        page-break-after: always;
+    }
+
+    @page {
+        margin: 0;
+    }
+}
