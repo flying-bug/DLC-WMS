@@ -103,7 +103,7 @@ function CreateImportSlipPage() {
   const stocktakeData = location.state?.stocktakeData || null;
   const returnUrl = location.state?.returnUrl || null;
   const searchParams = new URLSearchParams(location.search);
-  const initialType = searchParams.get('type')?.toUpperCase() || 'PURCHASE';
+  const initialType = searchParams.get('type')?.toUpperCase() || (stocktakeData ? 'OTHER' : 'PURCHASE');
 
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);

@@ -7,6 +7,8 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import PrintBarcodeModal from '../../components/ui/PrintBarcodeModal/PrintBarcodeModal';
 import axiosClient from '../../api/axiosClient';
 import styles from './ProductPage.module.css';
+import * as XLSX from 'xlsx';
+
 
 const defaultFormData = {
     id: null,
@@ -230,7 +232,7 @@ const ProductPage = () => {
     const handleConfirmDelete = async () => {
         const { type, id } = confirmModal;
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        
+
         if (type === 'PRODUCT') {
             try {
                 await axiosClient.delete(`/products/${id}`);
@@ -282,10 +284,192 @@ const ProductPage = () => {
 
     const [outOfStockCount, setOutOfStockCount] = useState(0);
     const [lowStockCount, setLowStockCount] = useState(0);
+    const [importing, setImporting] = useState(false);
+    const fileInputRef = useRef(null);
 
     const showToast = (type, message) => {
         setToast({ isVisible: true, type, message });
     };
+
+    const handleDownloadTemplate = () => {
+        const sampleData = [
+            {
+                'Mã sản phẩm': 'SP000001',
+                'Tên sản phẩm': 'Dell OptiPlex 7010 SFF',
+                'Loại sản phẩm': 'Hàng hóa',
+                'Danh mục': 'Máy tính đồng bộ',
+                'Thương hiệu': 'Dell',
+                'Đơn vị tính': 'Bộ',
+                'Giá bán (VNĐ)': 12500000,
+                'Cảnh báo hết hàng': 5,
+                'Bảo hành (tháng)': 24,
+                'Quản lý Serial (Có/Không)': 'Có',
+                'Mô tả': 'Máy tính đồng bộ Intel Core i5 12500, 16GB RAM, 512GB SSD'
+            },
+            {
+                'Mã sản phẩm': 'SP000002',
+                'Tên sản phẩm': 'RAM Kingston Fury Beast 16GB DDR4 3200MHz',
+                'Loại sản phẩm': 'Hàng hóa',
+                'Danh mục': 'RAM',
+                'Thương hiệu': 'Kingston',
+                'Đơn vị tính': 'Thanh',
+                'Giá bán (VNĐ)': 950000,
+                'Cảnh báo hết hàng': 10,
+                'Bảo hành (tháng)': 36,
+                'Quản lý Serial (Có/Không)': 'Không',
+                'Mô tả': 'Bộ nhớ RAM 16GB bus 3200MHz tản nhiệt đen'
+            }
+        ];
+
+        const worksheet = XLSX.utils.json_to_sheet(sampleData);
+        worksheet['!cols'] = [
+            { wch: 15 },
+            { wch: 45 },
+            { wch: 15 },
+            { wch: 25 },
+            { wch: 18 },
+            { wch: 12 },
+            { wch: 18 },
+            { wch: 18 },
+            { wch: 18 },
+            { wch: 25 },
+            { wch: 50 }
+        ];
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Mau_Nhap_Hang_Hoa');
+        XLSX.writeFile(workbook, 'DLC_WMS_Mau_Nhap_Hang_Hoa.xlsx');
+    };
+
+    const handleImportExcel = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                setImporting(true);
+                const bstr = evt.target.result;
+                const wb = XLSX.read(bstr, { type: 'binary' });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const rawData = XLSX.utils.sheet_to_json(ws);
+
+                if (!rawData || rawData.length === 0) {
+                    showToast('warning', 'File Excel không có dữ liệu');
+                    setImporting(false);
+                    return;
+                }
+
+                let createdCount = 0;
+                let updatedCount = 0;
+                let failCount = 0;
+                const errors = [];
+
+                // Fetch current products list to check existing codes/ids for Upsert
+                let existingProductsList = products;
+                try {
+                    const allProdRes = await axiosClient.get('/products?page=0&size=5000');
+                    existingProductsList = allProdRes.data?.content || products;
+                } catch (e) {
+                    console.warn('Không thể lấy danh sách sản phẩm đầy đủ để kiểm tra trùng mã:', e);
+                }
+
+                for (let i = 0; i < rawData.length; i++) {
+                    const row = rawData[i];
+                    const productName = row['Tên sản phẩm'] || row['Ten san pham'] || row['Name'] || row['Product Name'];
+                    if (!productName || !String(productName).trim()) {
+                        continue;
+                    }
+
+                    const productCode = row['Mã sản phẩm'] || row['Ma san pham'] || row['Code'] || '';
+                    const productTypeRaw = row['Loại sản phẩm'] || row['Loai san pham'] || 'Hàng hóa';
+                    const categoryNameRaw = row['Danh mục'] || row['Danh muc'] || row['Category'] || '';
+                    const brandNameRaw = row['Thương hiệu'] || row['Thuong hieu'] || row['Brand'] || '';
+                    const unitNameRaw = row['Đơn vị tính'] || row['Don vi tinh'] || row['Unit'] || '';
+                    const salePrice = Number(row['Giá bán (VNĐ)'] || row['Giá bán'] || row['Price'] || 0);
+                    const minStockQty = Number(row['Cảnh báo hết hàng'] || row['Tồn tối thiểu'] || 0);
+                    const warrantyMonths = Number(row['Bảo hành (tháng)'] || row['Bảo hành'] || 0);
+                    const trackSerialRaw = String(row['Quản lý Serial (Có/Không)'] || row['Quản lý Serial'] || row['Serial'] || '').toLowerCase();
+                    const description = row['Mô tả'] || row['Mo ta'] || '';
+
+                    const matchedCat = categories.find(c =>
+                        (c.name && c.name.toLowerCase() === String(categoryNameRaw).trim().toLowerCase()) ||
+                        (c.code && c.code.toLowerCase() === String(categoryNameRaw).trim().toLowerCase())
+                    );
+
+                    const matchedBrand = brands.find(b =>
+                        (b.name && b.name.toLowerCase() === String(brandNameRaw).trim().toLowerCase()) ||
+                        (b.code && b.code.toLowerCase() === String(brandNameRaw).trim().toLowerCase())
+                    );
+
+                    const matchedUnit = units.find(u =>
+                        (u.name && u.name.toLowerCase() === String(unitNameRaw).trim().toLowerCase()) ||
+                        (u.code && u.code.toLowerCase() === String(unitNameRaw).trim().toLowerCase())
+                    );
+
+                    let productType = 'Hàng hóa';
+                    if (String(productTypeRaw).includes('Thành phẩm')) productType = 'Thành phẩm';
+                    if (String(productTypeRaw).includes('Dịch vụ')) productType = 'Dịch vụ';
+
+                    const trackSerial = trackSerialRaw.includes('có') || trackSerialRaw.includes('co') || trackSerialRaw === '1' || trackSerialRaw === 'true';
+
+                    const trimmedCode = productCode ? String(productCode).trim() : '';
+
+                    // Check if product already exists by code
+                    const existingProduct = trimmedCode ? existingProductsList.find(p => p.productCode && p.productCode.toLowerCase() === trimmedCode.toLowerCase()) : null;
+
+                    const payload = {
+                        productCode: trimmedCode || undefined,
+                        productName: String(productName).trim(),
+                        productType: productType,
+                        categoryId: matchedCat ? matchedCat.id : null,
+                        brandId: matchedBrand ? matchedBrand.id : null,
+                        unitId: matchedUnit ? matchedUnit.id : null,
+                        salePrice: salePrice >= 0 ? salePrice : 0,
+                        minStockQty: minStockQty >= 0 ? minStockQty : 0,
+                        warrantyPeriodMonths: warrantyMonths >= 0 ? warrantyMonths : 0,
+                        trackSerial: trackSerial,
+                        description: description,
+                        active: true
+                    };
+
+                    try {
+                        if (existingProduct) {
+                            // GHI ĐÈ / CẬP NHẬT sản phẩm đã tồn tại
+                            await axiosClient.put(`/products/${existingProduct.id}`, payload);
+                            updatedCount++;
+                        } else {
+                            // THÊM MỚI sản phẩm chưa tồn tại
+                            await axiosClient.post('/products', payload);
+                            createdCount++;
+                        }
+                    } catch (err) {
+                        failCount++;
+                        const msg = err.response?.data?.userMessage || err.message;
+                        errors.push(`Dòng ${i + 2} (${productName}): ${msg}`);
+                    }
+                }
+
+                if (createdCount > 0 || updatedCount > 0) {
+                    showToast('success', `Đã xử lý Excel: Thêm mới ${createdCount} sản phẩm, Cập nhật ghi đè ${updatedCount} sản phẩm thành công!`);
+                    fetchProducts();
+                }
+                if (failCount > 0) {
+                    showToast('error', `${failCount} sản phẩm bị lỗi: ${errors.slice(0, 3).join('; ')}`);
+                }
+
+            } catch (err) {
+                console.error('Lỗi đọc file Excel:', err);
+                showToast('error', 'Lỗi khi đọc file Excel. Vui lòng kiểm tra lại định dạng file.');
+            } finally {
+                setImporting(false);
+                if (e.target) e.target.value = null;
+            }
+        };
+        reader.readAsBinaryString(file);
+    };
+
 
     const getErrorMessage = (error, fallback) => (
         error.response?.data?.userMessage ||
@@ -895,14 +1079,76 @@ const ProductPage = () => {
             <div className={styles.pageBody}>
                 <div className={styles.pageTitleContainer}>
                     <h1 className={styles.pageTitle}>Hàng hóa, dịch vụ</h1>
-                    <button className={styles.btnPrimary} onClick={handleOpenAdd}>
-                        <i className="bi bi-plus"></i> Thêm mới
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            accept=".xlsx, .xls"
+                            onChange={handleImportExcel}
+                            style={{ display: 'none' }}
+                        />
+                        <button
+                            type="button"
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '8px 14px',
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '6px',
+                                color: '#475569',
+                                fontSize: '13px',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                            }}
+                            onClick={handleDownloadTemplate}
+                            title="Tải file mẫu Excel (.xlsx) chuẩn cấu trúc để điền dữ liệu"
+                        >
+                            <i className="bi bi-file-earmark-arrow-down" style={{ color: '#16a34a' }}></i> Tải file mẫu Excel
+                        </button>
+                        <button
+                            type="button"
+                            disabled={importing}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '8px 14px',
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '6px',
+                                color: '#475569',
+                                fontSize: '13px',
+                                fontWeight: 500,
+                                cursor: importing ? 'not-allowed' : 'pointer',
+                                opacity: importing ? 0.7 : 1,
+                                transition: 'all 0.15s ease'
+                            }}
+                            onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                            title="Tải tệp Excel chứa danh sách hàng hóa để nhập số lượng lớn vào hệ thống"
+                        >
+                            {importing ? (
+                                <>
+                                    <i className="fas fa-spinner fa-spin" style={{ color: '#2563eb' }}></i> Đang nhập...
+                                </>
+                            ) : (
+                                <>
+                                    <i className="bi bi-file-earmark-arrow-up" style={{ color: '#2563eb' }}></i> Nhập từ Excel
+                                </>
+                            )}
+                        </button>
+                        <button className={styles.btnPrimary} onClick={handleOpenAdd}>
+                            <i className="bi bi-plus"></i> Thêm mới
+                        </button>
+                    </div>
                 </div>
 
-                
+
+
                 <div className={styles.summaryCards}>
-                    <div 
+                    <div
                         className={`${styles.summaryCard} ${stockFilter === 'LOW_STOCK' ? styles.activeCardWarning : ''}`}
                         onClick={() => { setStockFilter(stockFilter === 'LOW_STOCK' ? 'ALL' : 'LOW_STOCK'); setPage(0); }}
                     >
@@ -914,7 +1160,7 @@ const ProductPage = () => {
                             <p>Sản phẩm sắp hết hàng</p>
                         </div>
                     </div>
-                    <div 
+                    <div
                         className={`${styles.summaryCard} ${stockFilter === 'OUT_OF_STOCK' ? styles.activeCardDanger : ''}`}
                         onClick={() => { setStockFilter(stockFilter === 'OUT_OF_STOCK' ? 'ALL' : 'OUT_OF_STOCK'); setPage(0); }}
                     >
@@ -954,7 +1200,7 @@ const ProductPage = () => {
                                 ))}
                             </select>
                         </div>
-                        
+
                     </div>
                     <div className={styles.filterActions}>
                         <button
@@ -1078,45 +1324,45 @@ const ProductPage = () => {
 
                 <div className={styles.pagination}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span>Hiển thị</span>
-                            <select
-                                className="misa-select"
-                                style={{ width: '70px', height: '32px', padding: '0 8px' }}
-                                value={size}
-                                onChange={(e) => { setSize(Number(e.target.value)); setPage(0); }}
-                            >
-                                <option value={10}>10</option>
-                                <option value={20}>20</option>
-                                <option value={50}>50</option>
-                                <option value={100}>100</option>
-                            </select>
-                            <span>trên tổng số {totalElements} bản ghi</span>
-                        </div>
-
-                        {totalPages > 1 && (
-                            <div className={styles.pageControls}>
-                                <button
-                                    disabled={page === 0}
-                                    onClick={() => setPage(p => Math.max(0, p - 1))}
-                                    className={styles.pageBtn}
-                                >
-                                    <i className="bi bi-chevron-left"></i>
-                                    <span>Trước</span>
-                                </button>
-                                <span className={styles.pageNumber} style={{ width: 'auto', padding: '0 8px', fontWeight: 'bold' }}>
-                                    Trang {page + 1} / {totalPages}
-                                </span>
-                                <button
-                                    disabled={page >= totalPages - 1}
-                                    onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                                    className={styles.pageBtn}
-                                >
-                                    <span>Sau</span>
-                                    <i className="bi bi-chevron-right"></i>
-                                </button>
-                            </div>
-                        )}
+                        <span>Hiển thị</span>
+                        <select
+                            className="misa-select"
+                            style={{ width: '70px', height: '32px', padding: '0 8px' }}
+                            value={size}
+                            onChange={(e) => { setSize(Number(e.target.value)); setPage(0); }}
+                        >
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                        </select>
+                        <span>trên tổng số {totalElements} bản ghi</span>
                     </div>
+
+                    {totalPages > 1 && (
+                        <div className={styles.pageControls}>
+                            <button
+                                disabled={page === 0}
+                                onClick={() => setPage(p => Math.max(0, p - 1))}
+                                className={styles.pageBtn}
+                            >
+                                <i className="bi bi-chevron-left"></i>
+                                <span>Trước</span>
+                            </button>
+                            <span className={styles.pageNumber} style={{ width: 'auto', padding: '0 8px', fontWeight: 'bold' }}>
+                                Trang {page + 1} / {totalPages}
+                            </span>
+                            <button
+                                disabled={page >= totalPages - 1}
+                                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                                className={styles.pageBtn}
+                            >
+                                <span>Sau</span>
+                                <i className="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    )}
+                </div>
 
                 {showModal && (
                     <div className="misa-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
@@ -1403,7 +1649,7 @@ const ProductPage = () => {
                                             )}
                                         </div>
 
-                                        
+
                                         {/* Quick Add Unit Panel */}
                                         {showQuickAddUnit && (
                                             <div className={styles.quickAddPanel} style={{ marginBottom: '12px' }}>
@@ -1411,14 +1657,14 @@ const ProductPage = () => {
                                                     <div style={{ flex: 1 }}>
                                                         <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Mã ĐVT <span className="required">*</span></label>
                                                         <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
-                                                            value={quickUnitForm.code} onChange={e => setQuickUnitForm(f => ({...f, code: e.target.value}))}
+                                                            value={quickUnitForm.code} onChange={e => setQuickUnitForm(f => ({ ...f, code: e.target.value }))}
                                                             placeholder="VD: DVT01" autoFocus
                                                         />
                                                     </div>
                                                     <div style={{ flex: 2 }}>
                                                         <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên ĐVT <span className="required">*</span></label>
                                                         <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
-                                                            value={quickUnitForm.name} onChange={e => setQuickUnitForm(f => ({...f, name: e.target.value}))}
+                                                            value={quickUnitForm.name} onChange={e => setQuickUnitForm(f => ({ ...f, name: e.target.value }))}
                                                             placeholder="Tên đơn vị tính"
                                                             onKeyDown={async (e) => {
                                                                 if (e.key === 'Enter') {
@@ -1470,14 +1716,14 @@ const ProductPage = () => {
                                                     <div style={{ flex: 1 }}>
                                                         <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Mã TH <span className="required">*</span></label>
                                                         <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
-                                                            value={quickBrandForm.code} onChange={e => setQuickBrandForm(f => ({...f, code: e.target.value}))}
+                                                            value={quickBrandForm.code} onChange={e => setQuickBrandForm(f => ({ ...f, code: e.target.value }))}
                                                             placeholder="VD: TH01" autoFocus
                                                         />
                                                     </div>
                                                     <div style={{ flex: 2 }}>
                                                         <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên TH <span className="required">*</span></label>
                                                         <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
-                                                            value={quickBrandForm.name} onChange={e => setQuickBrandForm(f => ({...f, name: e.target.value}))}
+                                                            value={quickBrandForm.name} onChange={e => setQuickBrandForm(f => ({ ...f, name: e.target.value }))}
                                                             placeholder="Tên thương hiệu"
                                                             onKeyDown={async (e) => {
                                                                 if (e.key === 'Enter') {
@@ -1964,7 +2210,7 @@ const ProductPage = () => {
                     </div>
                 )}
             </div>
-        
+
             <Toast
                 isVisible={toast.isVisible}
                 type={toast.type}

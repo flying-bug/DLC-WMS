@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "STOCKTAKE_LINES")
@@ -45,4 +47,9 @@ public class StocktakeLine {
 
     @Column(name = "action", length = 100)
     private String action;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "stocktakeLine", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<StocktakeLineSerial> serials = new ArrayList<>();
 }
+

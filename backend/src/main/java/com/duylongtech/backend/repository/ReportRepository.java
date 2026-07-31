@@ -29,6 +29,7 @@ public class ReportRepository {
                         "u.name AS unitName, " +
                         "w.code AS warehouseCode, " +
                         "w.name AS warehouseName, " +
+                        "p.track_serial AS trackSerial, " +
                         "SUM(ib.quantity_on_hand) AS totalQuantity, " +
                         "SUM(ib.quantity_on_hand * ib.average_cost) AS totalValue " +
                         "FROM inventory_balances ib " +
@@ -50,7 +51,7 @@ public class ReportRepository {
             params.add("%" + search + "%");
         }
 
-        sql.append(" GROUP BY pv.sku, pv.id, pv.variant_name, u.name, w.code, w.name ");
+        sql.append(" GROUP BY pv.sku, pv.id, pv.variant_name, u.name, w.code, w.name, p.track_serial ");
         sql.append(" ORDER BY w.code, pv.sku ");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> InventoryBalanceReportResponse.builder()
@@ -63,8 +64,10 @@ public class ReportRepository {
                 .totalValue(rs.getBigDecimal("totalValue"))
                 .variantId(rs.getLong("variantId"))
                 .sku(rs.getString("sku"))
+                .trackSerial(rs.getBoolean("trackSerial"))
                 .build(), params.toArray());
     }
+
 
     // 2. Stock Ledger Report
     public List<StockLedgerReportResponse> getStockLedgerReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {

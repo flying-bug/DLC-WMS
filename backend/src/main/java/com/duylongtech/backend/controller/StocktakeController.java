@@ -14,7 +14,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import com.duylongtech.backend.entity.SerialNumber;
 import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/stocktakes")
@@ -22,6 +24,7 @@ import java.time.LocalDate;
 public class StocktakeController {
 
     private final StocktakeService stocktakeService;
+
 
     @GetMapping("/next-code")
     public ResponseEntity<ApiResponse<String>> getNextStocktakeCode() {
@@ -32,6 +35,19 @@ public class StocktakeController {
                 .userMessage("Lấy mã phiếu kiểm kê tiếp theo thành công")
                 .build());
     }
+
+    @GetMapping("/available-serials")
+    public ResponseEntity<ApiResponse<List<SerialNumber>>> getAvailableSerials(
+            @RequestParam Long warehouseId,
+            @RequestParam Long variantId) {
+        List<SerialNumber> serials = stocktakeService.getAvailableSerials(warehouseId, variantId);
+        return ResponseEntity.ok(ApiResponse.<List<SerialNumber>>builder()
+                .success(true)
+                .data(serials)
+                .userMessage("Lấy danh sách Serial khả dụng thành công")
+                .build());
+    }
+
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<StocktakeResponse>>> searchStocktakes(

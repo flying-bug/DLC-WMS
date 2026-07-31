@@ -182,18 +182,18 @@ function ImportHistoryPage() {
   }, [filters.docCode, filters.fromDate, filters.toDate, filters.status, filters.warehouseId, filters.issuePurpose]);
 
   useEffect(() => {
-     
+
     loadLookups();
   }, [loadLookups]);
 
   useEffect(() => {
-     
+
     loadSlips();
   }, [loadSlips]);
 
   useEffect(() => {
     if (location.state?.toastMessage) {
-       
+
       showToast(location.state.toastType || 'success', location.state.toastMessage);
       navigate(location.pathname, { replace: true, state: {} });
     }
@@ -342,7 +342,7 @@ function ImportHistoryPage() {
     const partnerName = isImport
       ? ((!slip.issuePurpose || slip.issuePurpose === 'PURCHASE') ? (supplierById.get(slip.partnerId)?.name || 'Chưa chọn')
         : slip.issuePurpose === 'PRODUCTION' ? (assemblyOrderById.get(slip.referenceId)?.orderCode || 'Chưa chọn')
-        : (customerById.get(slip.partnerId)?.name || 'Chưa chọn'))
+          : (customerById.get(slip.partnerId)?.name || 'Chưa chọn'))
       : (customerById.get(slip.partnerId)?.name || 'Chưa chọn');
 
     const warehouseName = warehouseById.get(slip.warehouseId)?.name || `Kho #${slip.warehouseId}`;
@@ -625,9 +625,9 @@ function ImportHistoryPage() {
                     {columns.status && (
                       <td>
                         <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
-                            slip.statusCode === 'info' ? styles.badgeInfo :
-                              slip.statusCode === 'warning' ? styles.badgeWarning :
-                                styles.badgeDanger
+                          slip.statusCode === 'info' ? styles.badgeInfo :
+                            slip.statusCode === 'warning' ? styles.badgeWarning :
+                              styles.badgeDanger
                           }`}>
                           {slip.statusLabel}
                         </span>
@@ -662,10 +662,10 @@ function ImportHistoryPage() {
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>Hiển thị</span>
-              <select 
-                className="misa-select" 
-                style={{ width: '70px', height: '32px', padding: '0 8px' }} 
-                value={pageSize} 
+              <select
+                className="misa-select"
+                style={{ width: '70px', height: '32px', padding: '0 8px' }}
+                value={pageSize}
                 onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
               >
                 <option value={10}>10</option>
@@ -675,11 +675,11 @@ function ImportHistoryPage() {
               </select>
               <span>trên tổng số {totalItems} bản ghi</span>
             </div>
-            
+
             {totalPages > 1 && (
               <div className={styles.pageControls}>
-                <button 
-                  disabled={currentPage === 1} 
+                <button
+                  disabled={currentPage === 1}
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   className={styles.pageBtn}
                 >
@@ -711,8 +711,8 @@ function ImportHistoryPage() {
                         }}
                       />
                     ) : (
-                      <span 
-                        key={idx} 
+                      <span
+                        key={idx}
                         className={`${styles.pageNumber} ${num === '...' ? styles.dots : ''}`}
                         onClick={() => num !== '...' && setCurrentPage(num)}
                       >
@@ -722,8 +722,8 @@ function ImportHistoryPage() {
                   ))}
                 </div>
 
-                <button 
-                  disabled={currentPage === totalPages} 
+                <button
+                  disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   className={styles.pageBtn}
                 >
@@ -799,7 +799,7 @@ function ImportHistoryPage() {
                       <div className={styles.detailItem}>
                         <span className={styles.detailLabel}>Kèm chứng từ</span>
                         <span className={styles.detailValue} style={{ color: 'var(--color-primary)', cursor: 'pointer' }}>
-                           <i className="bi bi-link-45deg"></i> {selectedSlip.referenceCode || selectedSlip.referenceId}
+                          <i className="bi bi-link-45deg"></i> {selectedSlip.referenceCode || selectedSlip.referenceId}
                         </span>
                       </div>
                     )}
@@ -851,8 +851,8 @@ function ImportHistoryPage() {
                           <td className={styles.textRight}>{money(Number(line.quantityIn || 0) * Number(line.unitCost || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>
                           <td className={styles.textRight}>{money(line.lineAmount)}</td>
                           <td style={{ maxWidth: '200px', wordWrap: 'break-word', whiteSpace: 'normal' }}>
-                            {line.serialNumbers && line.serialNumbers.length > 0 
-                              ? line.serialNumbers.join(', ') 
+                            {line.serialNumbers && line.serialNumbers.length > 0
+                              ? line.serialNumbers.join(', ')
                               : <span style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '13px' }}>Không có</span>}
                           </td>
                         </tr>

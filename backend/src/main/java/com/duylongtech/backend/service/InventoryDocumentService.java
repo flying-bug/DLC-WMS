@@ -30,6 +30,8 @@ import com.duylongtech.backend.repository.UserRepository;
 import com.duylongtech.backend.repository.ProductRepository;
 import com.duylongtech.backend.repository.AssemblyOrderRepository;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
+import com.duylongtech.backend.repository.StocktakeRepository;
+import com.duylongtech.backend.entity.Stocktake;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,11 +70,13 @@ public class InventoryDocumentService {
     public static final String ISSUE_PURPOSE_INVENTORY_ADJUSTMENT = "INVENTORY_ADJUSTMENT"; // Xử lý chênh lệch kiểm kê
 
     // Tập hợp các mục đích hợp lệ khi người dùng tạo phiếu xuất thủ công
-    private static final Set<String> VALID_MANUAL_EXPORT_PURPOSES = Set.of(ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE, ISSUE_PURPOSE_ASSEMBLY);
+    private static final Set<String> VALID_MANUAL_EXPORT_PURPOSES = Set.of(ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE,
+            ISSUE_PURPOSE_ASSEMBLY);
 
     // Tập hợp các mục đích hợp lệ toàn bộ (bắt cả nội bộ và người dùng)
     private static final Set<String> VALID_ALL_EXPORT_PURPOSES = Set.of(
-            ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE, ISSUE_PURPOSE_ASSEMBLY, ISSUE_PURPOSE_TRANSFER_OUT, ISSUE_PURPOSE_INVENTORY_ADJUSTMENT);
+            ISSUE_PURPOSE_SALES, ISSUE_PURPOSE_USAGE, ISSUE_PURPOSE_ASSEMBLY, ISSUE_PURPOSE_TRANSFER_OUT,
+            ISSUE_PURPOSE_INVENTORY_ADJUSTMENT);
 
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
@@ -87,6 +91,7 @@ public class InventoryDocumentService {
     private final ProductRepository productRepository;
     private final AssemblyOrderRepository assemblyOrderRepository;
     private final AssemblyBomRepository assemblyBomRepository;
+    private final StocktakeRepository stocktakeRepository;
 
     @Transactional(readOnly = true)
     public ScanResolveResponse resolveExportScan(ScanResolveRequest req) {
@@ -157,7 +162,9 @@ public class InventoryDocumentService {
         for (int i = 0; i < req.getLines().size(); i++) {
             doc.getLines().add(toExportLineEntity(doc, req.getLines().get(i), i));
         }
-        return toResponse(inventoryDocumentRepository.save(doc));
+        InventoryDocument saved = inventoryDocumentRepository.save(doc);
+        syncStocktakeReference(saved);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -167,7 +174,36 @@ public class InventoryDocumentService {
         for (int i = 0; i < req.getLines().size(); i++) {
             doc.getLines().add(toImportLineEntity(doc, req.getLines().get(i), i));
         }
-        return toResponse(inventoryDocumentRepository.save(doc));
+        InventoryDocument saved = inventoryDocumentRepository.save(doc);
+        syncStocktakeReference(saved);
+        return toResponse(saved);
+    }
+
+    private void syncStocktakeReference(InventoryDocument doc) {
+        if ("STOCKTAKE".equals(doc.getReferenceType()) && doc.getReferenceId() != null) {
+            stocktakeRepository.findById(doc.getReferenceId()).ifPresent(stocktake -> {
+                if (IMPORT_DOC_TYPE.equals(doc.getDocType())) {
+                    stocktake.setReferenceImportId(doc.getId());
+                } else if (EXPORT_DOC_TYPE.equals(doc.getDocType())) {
+                    stocktake.setReferenceExportId(doc.getId());
+                }
+
+                if ("POSTED".equals(doc.getStatus())) {
+                    boolean hasSurplus = stocktake.getLines().stream()
+                            .anyMatch(l -> l.getDiffQty() != null && l.getDiffQty().compareTo(BigDecimal.ZERO) > 0);
+                    boolean hasShortage = stocktake.getLines().stream()
+                            .anyMatch(l -> l.getDiffQty() != null && l.getDiffQty().compareTo(BigDecimal.ZERO) < 0);
+
+                    boolean importDone = !hasSurplus || stocktake.getReferenceImportId() != null;
+                    boolean exportDone = !hasShortage || stocktake.getReferenceExportId() != null;
+
+                    if (importDone && exportDone) {
+                        stocktake.setStatus("POSTED");
+                    }
+                }
+                stocktakeRepository.save(stocktake);
+            });
+        }
     }
 
     @Transactional
@@ -209,11 +245,13 @@ public class InventoryDocumentService {
             BigDecimal qtyToExport = line.getQuantityOut();
             SerialNumber serialNumber = null;
             Long targetSerialId = line.getSerialNumberId();
-            if (targetSerialId == null && line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
+            if (targetSerialId == null && line.getSerialNumbersText() != null
+                    && !line.getSerialNumbersText().isBlank()) {
                 List<String> serials = parseSerialNumbers(line.getSerialNumbersText());
                 if (!serials.isEmpty()) {
                     String firstSerial = serials.get(0);
-                    serialNumber = serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), firstSerial).orElse(null);
+                    serialNumber = serialNumberRepository
+                            .findByVariantIdAndSerialNumber(line.getVariantId(), firstSerial).orElse(null);
                     if (serialNumber != null) {
                         line.setSerialNumberId(serialNumber.getId());
                     }
@@ -271,11 +309,15 @@ public class InventoryDocumentService {
                 ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
                 BigDecimal fallbackCost = (line.getUnitCost() != null && line.getUnitCost().compareTo(ZERO) > 0)
                         ? line.getUnitCost()
-                        : ((balance != null && balance.getAverageCost() != null && balance.getAverageCost().compareTo(ZERO) > 0)
-                                ? balance.getAverageCost()
-                                : (variant != null && variant.getCostPrice() != null && variant.getCostPrice().compareTo(ZERO) > 0
-                                        ? variant.getCostPrice()
-                                        : (variant != null && variant.getSalePrice() != null ? variant.getSalePrice() : ZERO)));
+                        : ((balance != null && balance.getAverageCost() != null
+                                && balance.getAverageCost().compareTo(ZERO) > 0)
+                                        ? balance.getAverageCost()
+                                        : (variant != null && variant.getCostPrice() != null
+                                                && variant.getCostPrice().compareTo(ZERO) > 0
+                                                        ? variant.getCostPrice()
+                                                        : (variant != null && variant.getSalePrice() != null
+                                                                ? variant.getSalePrice()
+                                                                : ZERO)));
                 if (totalCost.compareTo(ZERO) <= 0) {
                     totalCost = qtyToExport.multiply(fallbackCost);
                 } else if (remainingQty.compareTo(ZERO) > 0) {
@@ -322,7 +364,9 @@ public class InventoryDocumentService {
         doc.setStatus("POSTED");
         doc.setPostedAt(LocalDateTime.now());
         doc.setUpdatedAt(LocalDateTime.now());
-        return toResponse(inventoryDocumentRepository.save(doc));
+        InventoryDocument savedExport = inventoryDocumentRepository.save(doc);
+        syncStocktakeReference(savedExport);
+        return toResponse(savedExport);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -392,7 +436,9 @@ public class InventoryDocumentService {
         savedDoc.setStatus("POSTED");
         savedDoc.setPostedAt(LocalDateTime.now());
         savedDoc.setUpdatedAt(LocalDateTime.now());
-        return toResponse(inventoryDocumentRepository.save(savedDoc));
+        InventoryDocument savedImport = inventoryDocumentRepository.save(savedDoc);
+        syncStocktakeReference(savedImport);
+        return toResponse(savedImport);
     }
 
     private InventoryDocument buildBaseDocument(InventoryDocumentRequest req, String docType, String docCode) {
@@ -586,6 +632,9 @@ public class InventoryDocumentService {
      * (tránh duplicate khi gọi lại postExport do lỗi retry).
      */
     private com.duylongtech.backend.dto.request.WarrantyLineRequest generateWarrantyLineIfNeeded(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial) {
+        // Chỉ tự động sinh phiếu bảo hành khi mục đích là SALES (Xuất kho bán hàng)
+        // USAGE (Xuất sử dụng nội bộ) và TRANSFER_EXPORT (Chuyển kho) đều KHÔNG sinh
+        // bảo hành
         if (doc.getIssuePurpose() == null || !ISSUE_PURPOSE_SALES.equalsIgnoreCase(doc.getIssuePurpose().trim())) {
             return null;
         }
@@ -636,7 +685,8 @@ public class InventoryDocumentService {
         }
 
         for (String serialValue : serialValues) {
-            Optional<SerialNumber> existingOpt = serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), serialValue);
+            Optional<SerialNumber> existingOpt = serialNumberRepository
+                    .findByVariantIdAndSerialNumber(line.getVariantId(), serialValue);
             if (existingOpt.isPresent()) {
                 if (ISSUE_PURPOSE_TRANSFER_IN.equals(doc.getIssuePurpose())) {
                     SerialNumber serial = existingOpt.get();
@@ -883,7 +933,8 @@ public class InventoryDocumentService {
         if (serialNumberId == null && lr.getSerialNumbers() != null && !lr.getSerialNumbers().isEmpty()) {
             String firstSerial = lr.getSerialNumbers().get(0);
             if (firstSerial != null && !firstSerial.trim().isEmpty()) {
-                serialNumberId = serialNumberRepository.findByVariantIdAndSerialNumber(lr.getVariantId(), firstSerial.trim())
+                serialNumberId = serialNumberRepository
+                        .findByVariantIdAndSerialNumber(lr.getVariantId(), firstSerial.trim())
                         .map(SerialNumber::getId)
                         .orElse(null);
             }

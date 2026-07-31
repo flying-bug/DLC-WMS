@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as importApi from '../../api/inventoryImportApi';
 import * as customerApi from '../../api/customerApi';
@@ -94,7 +94,9 @@ const emptyLine = () => ({
 
 function UpdateImportSlipPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
+  const returnUrl = location.state?.returnUrl || null;
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -377,7 +379,7 @@ function UpdateImportSlipPage() {
       <div className={styles.pageBody}>
         <div className={styles.pageHeader}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/import-history'); }}>
+            <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/import-history'); }}>
               <i className="bi bi-arrow-left"></i> Sửa phiếu nhập kho {form.docCode ? form.docCode : ''}
             </a>
             <span style={{ color: '#d1d5db', fontSize: '20px' }}>|</span>

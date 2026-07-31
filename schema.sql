@@ -566,6 +566,18 @@ CREATE TABLE `STOCKTAKE_LINES` (
   CONSTRAINT `chk_stocktake_cnt_qty` CHECK (`counted_quantity` >= 0.0000)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE `STOCKTAKE_LINE_SERIALS` (
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `stocktake_line_id` BIGINT UNSIGNED NOT NULL,
+  `serial_number_id` BIGINT UNSIGNED NULL,
+  `serial_number` VARCHAR(100) NOT NULL,
+  `scan_status` VARCHAR(30) NOT NULL DEFAULT 'MATCHED',
+  `note` VARCHAR(255) NULL,
+  CONSTRAINT `fk_stl_serial_line` FOREIGN KEY (`stocktake_line_id`) REFERENCES `STOCKTAKE_LINES` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_stl_serial_id` FOREIGN KEY (`serial_number_id`) REFERENCES `SERIAL_NUMBERS` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 -- ====================================================================
 -- PHÂN HỆ 8: DỊCH VỤ SAU BÁN HÀNG (WARRANTY & REPAIRS)
 -- ====================================================================

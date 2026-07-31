@@ -58,34 +58,37 @@ function StocktakeDetailPage() {
           referenceImportId: data.referenceImportId,
           referenceExportId: data.referenceExportId
         });
-        
+
         if (data.lines) {
-           setLines(data.lines.map(l => ({
-             id: l.id,
-             variantId: l.variantId,
-             itemCode: l.itemCode,
-             sku: l.sku,
-             itemName: l.itemName,
-             unit: l.unit,
-             bookQty: l.bookQty,
-             countQty: l.countQty,
-             diffQty: l.diffQty,
-             good100: l.goodQty,
-             bad: l.badQty,
-             lost: l.lostQty,
-             action: l.action
-           })));
+          setLines(data.lines.map(l => ({
+            id: l.id,
+            variantId: l.variantId,
+            itemCode: l.itemCode,
+            sku: l.sku,
+            itemName: l.itemName,
+            unit: l.unit,
+            trackSerial: Boolean(l.trackSerial),
+            bookQty: l.bookQty,
+            countQty: l.countQty,
+            diffQty: l.diffQty,
+            good100: l.goodQty,
+            bad: l.badQty,
+            lost: l.lostQty,
+            action: l.action,
+            serials: l.serials || []
+          })));
         }
 
+
         if (data.participants) {
-           setParticipants(data.participants.map(p => ({
-             name: p.fullName,
-             title: p.title,
-             represent: p.represent
-           })));
+          setParticipants(data.participants.map(p => ({
+            name: p.fullName,
+            title: p.title,
+            represent: p.represent
+          })));
         }
-        
-        setIsSaved(data.status === 'POSTED');
+
+        setIsSaved(true);
       }
     } catch (err) {
       console.error(err);
@@ -188,7 +191,7 @@ function StocktakeDetailPage() {
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
-        
+
         if (data && data.length > 0) {
           let updatedCount = 0;
           setLines(prev => {
@@ -265,8 +268,8 @@ function StocktakeDetailPage() {
       fetchStocktakeData();
       showToast('success', 'Lưu bảng kiểm kê thành công!');
     } catch (err) {
-       console.error(err);
-       showToast('error', err.response?.data?.userMessage || 'Lưu thất bại');
+      console.error(err);
+      showToast('error', err.response?.data?.userMessage || 'Lưu thất bại');
     }
   };
 
@@ -275,31 +278,31 @@ function StocktakeDetailPage() {
       const payload = buildPayload();
       await stocktakeApi.updateStocktake(id, payload);
       if (formData.isProcessed) {
-         await stocktakeApi.postStocktake(id);
+        await stocktakeApi.postStocktake(id);
       }
       navigate('/stocktakes', { state: { toastMessage: 'Cập nhật bảng kiểm kê thành công!', toastType: 'success' } });
     } catch (err) {
-       console.error(err);
-       showToast('error', err.response?.data?.userMessage || 'Cập nhật thất bại');
+      console.error(err);
+      showToast('error', err.response?.data?.userMessage || 'Cập nhật thất bại');
     }
   };
 
   const handleComplete = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn hoàn thành phiếu kiểm kê này? Các phiếu xuất/nhập xử lý chênh lệch sẽ được tự động tạo và bạn sẽ không thể sửa đổi phiếu này nữa.")) {
+    if (!window.confirm("Bạn có chắc chắn muốn xử lý phiếu kiểm kê này? Số liệu kiểm kê sẽ được chốt và bạn có thể tạo phiếu Nhập/Xuất kho để điều chỉnh chênh lệch.")) {
       return;
     }
     try {
       const payload = buildPayload();
-      // Lưu lại thay đổi trước khi hoàn thành
+      // Lưu lại thay đổi trước khi xử lý
       await stocktakeApi.updateStocktake(id, payload);
-      // Gọi API xử lý chênh lệch và đổi trạng thái
+      // Gọi API xử lý đổi trạng thái
       await stocktakeApi.postStocktake(id);
-      showToast('success', 'Hoàn thành phiếu kiểm kê thành công!');
+      showToast('success', 'Xử lý phiếu kiểm kê thành công!');
       // Tải lại dữ liệu (chuyển sang chế độ view)
       fetchStocktakeData();
     } catch (err) {
-       console.error(err);
-       showToast('error', err.response?.data?.userMessage || 'Hoàn thành thất bại');
+      console.error(err);
+      showToast('error', err.response?.data?.userMessage || 'Xử lý thất bại');
     }
   };
 
@@ -309,10 +312,11 @@ function StocktakeDetailPage() {
       showToast('warning', 'Không có sản phẩm nào bị thiếu/hỏng để lập phiếu xuất kho xử lý!');
       return;
     }
-    navigate('/export-slips/create', {
+    navigate('/export-slips/create?type=OTHER', {
       state: {
+        returnUrl: `/stocktakes/${id}`,
         stocktakeData: {
-          id: formData.id,
+          id: id || formData.id,
           code: formData.code,
           warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
           reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
@@ -334,10 +338,11 @@ function StocktakeDetailPage() {
       showToast('warning', 'Không có sản phẩm nào bị thừa để lập phiếu nhập kho điều chỉnh!');
       return;
     }
-    navigate('/import-history/create', {
+    navigate('/import-history/create?type=OTHER', {
       state: {
+        returnUrl: `/stocktakes/${id}`,
         stocktakeData: {
-          id: formData.id,
+          id: id || formData.id,
           code: formData.code,
           warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
           reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
@@ -372,8 +377,10 @@ function StocktakeDetailPage() {
               Chi tiết Bảng kiểm kê {formData.code}
             </h1>
           </button>
-          {formData.isProcessed && (
+          {formData.isProcessed ? (
             <div className={styles.processedStamp}>Đã xử lý chênh lệch</div>
+          ) : (
+            <div className={styles.processedStamp} style={{ backgroundColor: '#f59e0b', borderColor: '#d97706' }}>Chờ xử lý chênh lệch</div>
           )}
         </div>
 
@@ -668,19 +675,41 @@ function StocktakeDetailPage() {
         <div className={styles.pageFooterView}>
           <div className={styles.footerViewLeft}>
             <button className={styles.btnViewIcon} onClick={handleCancel} title="Quay lại danh sách"><i className="bi bi-arrow-left"></i></button>
-            {lines.some(l => Number(l.diffQty || 0) < 0) && (
-              <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Tạo phiếu xuất kho cho hàng thiếu/hỏng">
-                <i className="bi bi-box-arrow-up"></i> Lập phiếu xuất
-              </button>
+            {formData.isProcessed ? (
+              <>
+                {formData.referenceExportId && (
+                  <button className={styles.btnViewOutline} onClick={() => navigate(`/export-slips/${formData.referenceExportId}/edit`, { state: { returnUrl: `/stocktakes/${id}` } })}>
+                    <i className="bi bi-box-arrow-up"></i> Xem phiếu xuất
+                  </button>
+                )}
+                {formData.referenceImportId && (
+                  <button className={styles.btnViewOutline} onClick={() => navigate(`/import-slips/${formData.referenceImportId}/edit`, { state: { returnUrl: `/stocktakes/${id}` } })}>
+                    <i className="bi bi-box-arrow-in-down"></i> Xem phiếu nhập
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <button className={styles.btnViewPrimary} onClick={() => setIsSaved(false)}>
+                  <i className="bi bi-pencil"></i> Sửa
+                </button>
+                {lines.some(l => Number(l.diffQty || 0) < 0) && (
+                  <button className={styles.btnViewOutline} onClick={handleCreateExportSlip} title="Tạo phiếu xuất kho cho hàng thiếu/hỏng">
+                    <i className="bi bi-box-arrow-up"></i> Lập phiếu xuất
+                  </button>
+                )}
+                {lines.some(l => Number(l.diffQty || 0) > 0) && (
+                  <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Tạo phiếu nhập kho cho hàng thừa">
+                    <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
+                  </button>
+                )}
+                {!lines.some(l => Number(l.diffQty || 0) !== 0) && (
+                  <button className={styles.btnViewPrimary} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
+                    <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
+                  </button>
+                )}
+              </>
             )}
-            {lines.some(l => Number(l.diffQty || 0) > 0) && (
-              <button className={styles.btnViewOutline} onClick={handleCreateImportSlip} title="Tạo phiếu nhập kho cho hàng thừa">
-                <i className="bi bi-box-arrow-in-down"></i> Lập phiếu nhập
-              </button>
-            )}
-            <button className={styles.btnViewPrimary} onClick={() => setIsSaved(false)}>
-              <i className="bi bi-pencil"></i> Sửa lại
-            </button>
           </div>
           <div className={styles.footerViewRight}>
             <button className={styles.btnViewText} onClick={() => window.print()}>
@@ -700,9 +729,11 @@ function StocktakeDetailPage() {
             <button className={`${styles.btnFooter} ${styles.btnFooterPost}`} onClick={handleSaveAndClose}>
               <i className="bi bi-box-arrow-right"></i> Lưu và Đóng
             </button>
-            <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
-              <i className="bi bi-check2-all"></i> Hoàn thành
-            </button>
+            {!lines.some(l => Number(l.diffQty || 0) !== 0) && (
+              <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }} onClick={handleComplete}>
+                <i className="bi bi-check2-all"></i> Hoàn thành kiểm kê
+              </button>
+            )}
           </div>
         </div>
       )}
