@@ -61,15 +61,18 @@ function CreateStocktakePage() {
             sku: item.sku || `SKU-${idx + 1}`,
             itemName: item.itemName || `Sản phẩm ${idx + 1}`,
             unit: item.unitName || 'Cái',
+            trackSerial: Boolean(item.trackSerial),
             bookQty: bookQty,
             countQty: bookQty,
             diffQty: 0,
             good100: bookQty,
             bad: 0,
             lost: 0,
-            action: 'Không xử lý'
+            action: 'Không xử lý',
+            serials: []
           };
         });
+
         setLines(formattedLines);
       } else {
         setLines([]);
@@ -182,6 +185,125 @@ function CreateStocktakePage() {
     ]);
   };
 
+  // Serial Modal State & Logic
+  const [serialModal, setSerialModal] = useState({
+    isOpen: false,
+    lineIndex: null,
+    loading: false,
+    scanInput: '',
+    systemSerials: [],
+    scannedList: []
+  });
+
+  const openSerialModal = async (lineIdx) => {
+    const line = lines[lineIdx];
+    if (!line || !line.variantId || !formData.warehouseId || formData.warehouseId === 'all') {
+      showToast('error', 'Vui lòng chọn Kho và Sản phẩm trước khi quét Serial');
+      return;
+    }
+
+    setSerialModal({
+      isOpen: true,
+      lineIndex: lineIdx,
+      loading: true,
+      scanInput: '',
+      systemSerials: [],
+      scannedList: line.serials ? [...line.serials] : []
+    });
+
+    try {
+      const res = await stocktakeApi.getAvailableSerials(formData.warehouseId, line.variantId);
+      const sysSerials = res?.data?.data || res?.data || [];
+      const sysList = Array.isArray(sysSerials) ? sysSerials : [];
+
+      let initialScanned = line.serials ? [...line.serials] : [];
+      if (initialScanned.length === 0 && sysList.length > 0) {
+        initialScanned = sysList.map(s => ({
+          serialNumberId: s.id,
+          serialNumber: s.serialNumber,
+          scanStatus: 'MATCHED'
+        }));
+      }
+
+      setSerialModal(prev => ({
+        ...prev,
+        loading: false,
+        systemSerials: sysList,
+        scannedList: initialScanned
+      }));
+    } catch (err) {
+      console.error('Failed to load available serials', err);
+      setSerialModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleScanSerialSubmit = (e) => {
+    if (e) e.preventDefault();
+    const code = serialModal.scanInput.trim();
+    if (!code) return;
+
+    const exists = serialModal.scannedList.find(s => s.serialNumber.toLowerCase() === code.toLowerCase());
+    if (exists) {
+      showToast('warning', `Serial ${code} đã được quét trước đó`);
+      setSerialModal(prev => ({ ...prev, scanInput: '' }));
+      return;
+    }
+
+    const sysMatch = serialModal.systemSerials.find(s => s.serialNumber.toLowerCase() === code.toLowerCase());
+    const newEntry = {
+      serialNumberId: sysMatch ? sysMatch.id : null,
+      serialNumber: sysMatch ? sysMatch.serialNumber : code,
+      scanStatus: sysMatch ? 'MATCHED' : 'UNEXPECTED'
+    };
+
+    setSerialModal(prev => ({
+      ...prev,
+      scanInput: '',
+      scannedList: [...prev.scannedList, newEntry]
+    }));
+  };
+
+  const handleRemoveScannedSerial = (serialNum) => {
+    setSerialModal(prev => ({
+      ...prev,
+      scannedList: prev.scannedList.filter(s => s.serialNumber !== serialNum)
+    }));
+  };
+
+  const handleSaveSerialModal = () => {
+    if (serialModal.lineIndex === null) return;
+    const idx = serialModal.lineIndex;
+
+    const scannedSet = new Set(serialModal.scannedList.map(s => s.serialNumber.toLowerCase()));
+    const missingSerials = serialModal.systemSerials
+      .filter(s => !scannedSet.has(s.serialNumber.toLowerCase()))
+      .map(s => ({
+        serialNumberId: s.id,
+        serialNumber: s.serialNumber,
+        scanStatus: 'MISSING'
+      }));
+
+    const finalSerials = [...serialModal.scannedList, ...missingSerials];
+    const validCount = serialModal.scannedList.length;
+
+    setLines(prev => prev.map((line, lIdx) => {
+      if (lIdx !== idx) return line;
+      const diff = validCount - line.bookQty;
+      return {
+        ...line,
+        countQty: validCount,
+        diffQty: diff,
+        good100: validCount,
+        bad: 0,
+        lost: missingSerials.length,
+        action: diff !== 0 ? 'Xử lý chênh lệch' : 'Không xử lý',
+        serials: finalSerials
+      };
+    }));
+
+    setSerialModal({ isOpen: false, lineIndex: null, loading: false, scanInput: '', systemSerials: [], scannedList: [] });
+  };
+
   const handleProductSelect = (index, variantId) => {
     const selectedProduct = products.find(p => String(p.id) === String(variantId));
     if (!selectedProduct) return;
@@ -194,7 +316,9 @@ function CreateStocktakePage() {
         itemCode: selectedProduct.productCode || `VT-${selectedProduct.id}`,
         sku: selectedProduct.sku || `SKU-${selectedProduct.id}`,
         itemName: selectedProduct.productName ? `${selectedProduct.productName} ${selectedProduct.variantName ? `(${selectedProduct.variantName})` : ''}` : selectedProduct.name,
-        unit: selectedProduct.unitName || 'Cái'
+        unit: selectedProduct.unitName || 'Cái',
+        trackSerial: Boolean(selectedProduct.trackSerial || selectedProduct.product?.trackSerial),
+        serials: []
       };
     }));
   };
@@ -208,6 +332,7 @@ function CreateStocktakePage() {
       setLines([]);
     }
   };
+
 
   const handleExportExcel = () => {
     if (lines.length === 0) {
@@ -304,8 +429,15 @@ function CreateStocktakePage() {
       goodQty: Number(l.good100 || 0),
       badQty: Number(l.bad || 0),
       lostQty: Number(l.lost || 0),
-      action: l.action
+      action: l.action,
+      serials: l.serials ? l.serials.map(s => ({
+        serialNumberId: s.serialNumberId,
+        serialNumber: s.serialNumber,
+        scanStatus: s.scanStatus,
+        note: s.note
+      })) : []
     })),
+
     participants: participants.map(p => ({
       fullName: p.name,
       title: p.title,
@@ -624,7 +756,14 @@ function CreateStocktakePage() {
                           styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
                         />
                       ) : (
-                        line.itemName
+                        <span>
+                          {line.itemName}
+                          {line.trackSerial && (
+                            <span className={styles.serialBadge}>
+                              <i className="bi bi-upc-scan"></i> Serial
+                            </span>
+                          )}
+                        </span>
                       )}
                     </td>
                     <td>{line.unit}</td>
@@ -632,6 +771,14 @@ function CreateStocktakePage() {
                     <td className={styles.numberCol}>
                       {isSaved ? (
                         line.countQty
+                      ) : line.trackSerial ? (
+                        <button
+                          type="button"
+                          className={styles.btnScanSerial}
+                          onClick={() => openSerialModal(idx)}
+                        >
+                          <i className="bi bi-upc-scan"></i> {line.countQty} Quét Serial
+                        </button>
                       ) : (
                         <input
                           type="number"
@@ -648,6 +795,7 @@ function CreateStocktakePage() {
                         />
                       )}
                     </td>
+
                     <td className={styles.numberCol} style={{
                       fontWeight: 700,
                       color: Number(line.diffQty) > 0 ? '#16a34a' : Number(line.diffQty) < 0 ? '#dc2626' : '#64748b'
@@ -799,12 +947,112 @@ function CreateStocktakePage() {
             <button className={`${styles.btnFooter} ${styles.btnFooterDraft}`} onClick={handleDraft}>
               <i className="bi bi-box-arrow-in-down"></i> Lưu tạm
             </button>
-            <button className={`${styles.btnFooter} ${styles.btnFooterSave}`} onClick={handleDraft}>
-              <i className="bi bi-check-circle"></i> Lưu kiểm kê
-            </button>
             <button className={`${styles.btnFooter} ${styles.btnFooterPost}`} onClick={handleSaveAndClose}>
-              <i className="bi bi-printer"></i> Lưu và Đóng
+              <i className="bi bi-box-arrow-right"></i> Lưu tạm và Đóng
             </button>
+          </div>
+        </div>
+      )}
+
+      {serialModal.isOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.serialModalCard}>
+            <div className={styles.modalHeader}>
+              <h3>
+                <i className="bi bi-upc-scan" style={{ marginRight: '8px', color: '#0284c7' }}></i>
+                Kiểm kê Serial - {lines[serialModal.lineIndex]?.itemName} (SKU: {lines[serialModal.lineIndex]?.sku})
+              </h3>
+              <button className={styles.modalCloseBtn} onClick={() => setSerialModal({ ...serialModal, isOpen: false })}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <form onSubmit={handleScanSerialSubmit} className={styles.scanInputRow}>
+                <input
+                  type="text"
+                  className={styles.scanInput}
+                  placeholder="Quét mã vạch hoặc nhập mã Serial rồi nhấn Enter..."
+                  value={serialModal.scanInput}
+                  onChange={(e) => setSerialModal({ ...serialModal, scanInput: e.target.value })}
+                  autoFocus
+                />
+                <button type="submit" className={styles.btnScanSerial} style={{ padding: '0 20px', fontSize: '14px' }}>
+                  <i className="bi bi-plus-circle"></i> Thêm Serial
+                </button>
+              </form>
+
+              <div className={styles.badgeRow}>
+                <div className={`${styles.badgeStat} ${styles.badgeBook}`}>
+                  Tồn hệ thống: {lines[serialModal.lineIndex]?.bookQty || 0}
+                </div>
+                <div className={`${styles.badgeStat} ${styles.badgeMatch}`}>
+                  Khớp: {serialModal.scannedList.filter(s => s.scanStatus === 'MATCHED').length}
+                </div>
+                <div className={`${styles.badgeStat} ${styles.badgeMissing}`}>
+                  Thiếu: {
+                    serialModal.systemSerials.filter(sys => 
+                      !serialModal.scannedList.some(s => s.serialNumber.toLowerCase() === sys.serialNumber.toLowerCase())
+                    ).length
+                  }
+                </div>
+                <div className={`${styles.badgeStat} ${styles.badgeUnexpected}`}>
+                  Thừa / Lạ: {serialModal.scannedList.filter(s => s.scanStatus === 'UNEXPECTED').length}
+                </div>
+              </div>
+
+              <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+                <table className={styles.table} style={{ margin: 0 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '10%', textAlign: 'center' }}>STT</th>
+                      <th style={{ width: '50%' }}>MÃ SERIAL</th>
+                      <th style={{ width: '30%', textAlign: 'center' }}>TRẠNG THÁI</th>
+                      {!isSaved && <th style={{ width: '10%', textAlign: 'center' }}>XÓA</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {serialModal.scannedList.map((s, sIdx) => (
+                      <tr key={sIdx}>
+                        <td style={{ textAlign: 'center' }}>{sIdx + 1}</td>
+                        <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>{s.serialNumber}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          {s.scanStatus === 'MATCHED' && <span style={{ color: '#16a34a', fontWeight: 600 }}><i className="bi bi-check-circle-fill"></i> Khớp</span>}
+                          {s.scanStatus === 'UNEXPECTED' && <span style={{ color: '#d97706', fontWeight: 600 }}><i className="bi bi-exclamation-triangle-fill"></i> Thừa / Lạ</span>}
+                        </td>
+                        {!isSaved && (
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}
+                              onClick={() => handleRemoveScannedSerial(s.serialNumber)}
+                            >
+                              <i className="bi bi-trash"></i>
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                    {serialModal.scannedList.length === 0 && (
+                      <tr>
+                        <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>
+                          Chưa có Serial nào được quét. Vui lòng sử dụng máy quét hoặc nhập ở trên.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button type="button" className={styles.btnOutline} onClick={() => setSerialModal({ ...serialModal, isOpen: false })}>
+                Hủy
+              </button>
+              <button type="button" className={styles.btnScanSerial} onClick={handleSaveSerialModal}>
+                Xác nhận kết quả đếm ({serialModal.scannedList.length})
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -815,6 +1063,7 @@ function CreateStocktakePage() {
         message={toast.message}
         onClose={() => setToast({ ...toast, isVisible: false })}
       />
+
     </AdminLayout>
   );
 }

@@ -34,6 +34,12 @@ export const getProducts = (params = {}) => {
   return axiosClient.get('/products/variants', { params });
 };
 
+export const getAvailableSerials = (warehouseId, variantId) => {
+  return axiosClient.get(`${STOCKTAKE_BASE}/available-serials`, { params: { warehouseId, variantId } });
+};
+
 export const getInventoryReport = (params = {}) => {
   return axiosClient.get('/reports/inventory-balance', { params });
 };
+
+

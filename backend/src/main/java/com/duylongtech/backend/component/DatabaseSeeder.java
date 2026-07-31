@@ -299,122 +299,16 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void seedBusinessData() {
-        // Seed Đơn vị tính
-        Unit caiUnit = seedUnitIfNotFound("Cái");
-        Unit lanUnit = seedUnitIfNotFound("Lần");
+        // Seed Đơn vị tính cơ bản (nếu CSDL rỗng)
+        seedUnitIfNotFound("Cái");
         seedUnitIfNotFound("Bộ");
+        seedUnitIfNotFound("Lần");
 
-        // Seed Thương hiệu
-        Brand dellBrand = seedBrandIfNotFound("DELL", "Dell", "Hãng máy tính Hoa Kỳ", "18008182", "support@dell.com");
-        Brand genericBrand = seedBrandIfNotFound("GENERIC", "Khác", "Nhà sản xuất khác", null, null);
-        Brand asusBrand = seedBrandIfNotFound("ASUS", "ASUS", "Linh kiện máy tính & Laptop", "18006588", "hotline@asus.com.vn");
-        Brand samsungBrand = seedBrandIfNotFound("SAMSUNG", "Samsung", "Thiết bị lưu trữ & Màn hình", "1800588889", "support@samsung.com");
-        Brand gigabyteBrand = seedBrandIfNotFound("GIGABYTE", "Gigabyte", "Bo mạch chủ & Card đồ họa", "02838389389", "sales@gigabyte.com.vn");
-        Brand ciscoBrand = seedBrandIfNotFound("CISCO", "Cisco", "Thiết bị mạng cao cấp", "180012345", "info@cisco.com");
-        Brand logitechBrand = seedBrandIfNotFound("LOGITECH", "Logitech", "Phụ kiện Gaming & Văn phòng", "02873006000", "support@logitech.com");
-        Brand intelBrand = seedBrandIfNotFound("INTEL", "Intel", "Bộ vi xử lý", "18001090", "support@intel.com");
-        Brand amdBrand = seedBrandIfNotFound("AMD", "AMD", "Bộ vi xử lý & Card đồ họa", null, "support@amd.com");
-        Brand hpBrand = seedBrandIfNotFound("HP", "HP", "Máy in & Laptop doanh nghiệp", "1800585850", "support@hp.com");
-        Brand lenovoBrand = seedBrandIfNotFound("LENOVO", "Lenovo", "Laptop & Máy chủ", "18001096", "support@lenovo.com");
-
-        // Seed Danh mục sản phẩm
-        ProductCategory computerCategory = seedCategoryIfNotFound("MAY_TINH", "Máy tính", null);
-        ProductCategory serviceCategory = seedCategoryIfNotFound("DICH_VU", "Dịch vụ", null);
-        ProductCategory laptopCategory = seedCategoryIfNotFound("LAPTOP", "Máy tính xách tay", computerCategory.getId());
-        ProductCategory componentCategory = seedCategoryIfNotFound("LINH_KIEN", "Linh kiện máy tính", computerCategory.getId());
-        ProductCategory storageCategory = seedCategoryIfNotFound("LUU_TRU", "Thiết bị lưu trữ", componentCategory.getId());
-        ProductCategory networkCategory = seedCategoryIfNotFound("THIET_BI_MANG", "Thiết bị mạng", componentCategory.getId());
-        ProductCategory gamingCategory = seedCategoryIfNotFound("GAMING_GEAR", "Gaming Gear", computerCategory.getId());
-
-        // Seed Sản phẩm (Hàng hóa, dịch vụ) khớp hình ảnh mẫu
-        Product p1 = productRepository.findByProductCode("CPMH").orElse(null);
-        if (p1 == null) {
-            p1 = Product.builder()
-                    .productCode("CPMH")
-                    .productName("Chi phí mua hàng")
-                    .productType("Dịch vụ")
-                    .brand(genericBrand)
-                    .category(serviceCategory)
-                    .unit(lanUnit)
-                    .stockQty(BigDecimal.ZERO)
-                    .stockValue(BigDecimal.ZERO)
-                    .active(true)
-                    .taxReductionStatus("Chưa xác định")
-                    .build();
-            p1 = productRepository.save(p1);
-        }
-
-        Product p2 = productRepository.findByProductCode("VT00001").orElse(null);
-        if (p2 == null) {
-            p2 = Product.builder()
-                    .productCode("VT00001")
-                    .productName("Bánh Bông")
-                    .productType("Hàng hóa")
-                    .brand(genericBrand)
-                    .category(computerCategory)
-                    .unit(caiUnit)
-                    .stockQty(new BigDecimal("700.0000"))
-                    .stockValue(new BigDecimal("10500000.00"))
-                    .active(true)
-                    .taxReductionStatus("Chưa xác định")
-                    .build();
-            p2 = productRepository.save(p2);
-        }
-        ProductVariant v2 = seedVariantIfNotFound(p2, "VT00001", "Bánh Bông", new BigDecimal("15000.00"), new BigDecimal("20000.00"));
-
-        Product p3 = productRepository.findByProductCode("VT00002").orElse(null);
-        if (p3 == null) {
-            p3 = Product.builder()
-                    .productCode("VT00002")
-                    .productName("Máy tính")
-                    .productType("Hàng hóa")
-                    .brand(dellBrand)
-                    .category(computerCategory)
-                    .unit(caiUnit)
-                    .stockQty(new BigDecimal("247.0000"))
-                    .stockValue(new BigDecimal("3500000000.00"))
-                    .active(true)
-                    .taxReductionStatus("Chưa xác định")
-                    .imageUrl("https://picsum.photos/id/1/200/120") // Placeholder image
-                    .build();
-            p3 = productRepository.save(p3);
-        }
-        ProductVariant v3 = seedVariantIfNotFound(p3, "VT00002", "Máy tính", new BigDecimal("14170040.4858"), new BigDecimal("18000000.00"));
-
-        Product p4 = productRepository.findByProductCode("VT00004").orElse(null);
-        if (p4 == null) {
-            p4 = Product.builder()
-                    .productCode("VT00004")
-                    .productName("Hiếu")
-                    .productType("Thành phẩm")
-                    .brand(genericBrand)
-                    .category(computerCategory)
-                    .unit(caiUnit)
-                    .stockQty(new BigDecimal("450.0000"))
-                    .stockValue(new BigDecimal("4500000.00"))
-                    .active(true)
-                    .taxReductionStatus("Chưa xác định")
-                    .build();
-            p4 = productRepository.save(p4);
-        }
-        ProductVariant v4 = seedVariantIfNotFound(p4, "VT00004", "Hiếu", new BigDecimal("10000.00"), new BigDecimal("15000.00"));
-
-        // Seed inventory balances for Kho chính (code K01) and Kho phụ (code K02)
-        Warehouse k1 = warehouseRepository.findByCodeIgnoreCase("K01").orElse(null);
-        Warehouse k2 = warehouseRepository.findByCodeIgnoreCase("K02").orElse(null);
-
-        if (k1 != null && k2 != null) {
-            // Seed for K01 (Kho chính)
-            seedInventoryBalanceIfNotFound(k1.getId(), v3.getId(), new BigDecimal("150.0000"), new BigDecimal("14170040.4858"));
-            seedInventoryBalanceIfNotFound(k1.getId(), v2.getId(), new BigDecimal("500.0000"), new BigDecimal("15000.0000"));
-            seedInventoryBalanceIfNotFound(k1.getId(), v4.getId(), new BigDecimal("300.0000"), new BigDecimal("10000.0000"));
-
-            // Seed for K02 (Kho phụ)
-            seedInventoryBalanceIfNotFound(k2.getId(), v3.getId(), new BigDecimal("97.0000"), new BigDecimal("14170040.4858"));
-            seedInventoryBalanceIfNotFound(k2.getId(), v2.getId(), new BigDecimal("200.0000"), new BigDecimal("15000.0000"));
-            seedInventoryBalanceIfNotFound(k2.getId(), v4.getId(), new BigDecimal("150.0000"), new BigDecimal("10000.0000"));
-        }
+        // Seed Thương hiệu cơ bản (nếu CSDL rỗng)
+        seedBrandIfNotFound("DELL", "Dell", "Hãng máy tính Hoa Kỳ", "18008182", "support@dell.com");
+        seedBrandIfNotFound("GENERIC", "Khác", "Nhà sản xuất khác", null, null);
     }
+
 
     private void seedAuditLogs() {
         if (auditLogRepository.count() == 0) {

@@ -5,6 +5,7 @@ import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
 import com.duylongtech.backend.dto.request.StocktakeRequest;
 import com.duylongtech.backend.dto.response.StocktakeResponse;
 import com.duylongtech.backend.dto.response.StocktakeLineResponse;
+import com.duylongtech.backend.dto.response.StocktakeLineSerialResponse;
 import com.duylongtech.backend.dto.response.StocktakeParticipantResponse;
 import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.exception.BusinessException;
@@ -32,6 +33,7 @@ public class StocktakeService {
     private final ProductVariantRepository productVariantRepository;
     private final WarehouseRepository warehouseRepository;
     private final InventoryDocumentService inventoryDocumentService;
+    private final SerialNumberRepository serialNumberRepository;
 
     @Transactional(readOnly = true)
     public String generateNextStocktakeCode() {
@@ -39,10 +41,12 @@ public class StocktakeService {
     }
 
     @Transactional(readOnly = true)
-    public Page<StocktakeResponse> searchStocktakes(String stocktakeCode, String status, LocalDate fromDate, LocalDate toDate, Pageable pageable) {
+    public Page<StocktakeResponse> searchStocktakes(String stocktakeCode, String status, LocalDate fromDate,
+            LocalDate toDate, Pageable pageable) {
         String normalizedCode = stocktakeCode != null && !stocktakeCode.trim().isEmpty() ? stocktakeCode.trim() : null;
         String normalizedStatus = status != null && !status.trim().isEmpty() ? status.trim() : null;
-        Page<Stocktake> page = stocktakeRepository.searchStocktakes(normalizedCode, normalizedStatus, fromDate, toDate, pageable);
+        Page<Stocktake> page = stocktakeRepository.searchStocktakes(normalizedCode, normalizedStatus, fromDate, toDate,
+                pageable);
         return page.map(this::toResponse);
     }
 
@@ -53,11 +57,19 @@ public class StocktakeService {
         return toResponse(stocktake);
     }
 
+    @Transactional(readOnly = true)
+    public List<SerialNumber> getAvailableSerials(Long warehouseId, Long variantId) {
+        if (warehouseId == null || variantId == null) {
+            return new ArrayList<>();
+        }
+        return serialNumberRepository.findByWarehouseIdAndVariantIdAndStatus(warehouseId, variantId, "AVAILABLE");
+    }
+
     @Transactional
     public StocktakeResponse createStocktake(StocktakeRequest req) {
         validateRequest(req);
         String docCode = resolveDocCode(req.getStocktakeCode());
-        
+
         Stocktake stocktake = Stocktake.builder()
                 .stocktakeCode(docCode)
                 .warehouseId(req.getWarehouseId())
@@ -67,9 +79,9 @@ public class StocktakeService {
                 .status("DRAFT")
                 .createdBy(req.getCreatedBy())
                 .build();
-                
+
         mapLinesAndParticipants(stocktake, req);
-        
+
         return toResponse(stocktakeRepository.save(stocktake));
     }
 
@@ -78,7 +90,7 @@ public class StocktakeService {
         validateRequest(req);
         Stocktake stocktake = stocktakeRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
-                
+
         if (!"DRAFT".equals(stocktake.getStatus())) {
             throw new BusinessException("Chỉ có thể cập nhật phiếu lưu tạm");
         }
@@ -93,15 +105,16 @@ public class StocktakeService {
 
         stocktake.setWarehouseId(req.getWarehouseId());
         stocktake.setPurpose(req.getPurpose());
-        stocktake.setStocktakeDate(req.getStocktakeDate() != null ? req.getStocktakeDate() : stocktake.getStocktakeDate());
+        stocktake.setStocktakeDate(
+                req.getStocktakeDate() != null ? req.getStocktakeDate() : stocktake.getStocktakeDate());
         stocktake.setConclusion(req.getConclusion());
         stocktake.setCreatedBy(req.getCreatedBy());
 
         stocktake.getLines().clear();
         stocktake.getParticipants().clear();
-        
+
         mapLinesAndParticipants(stocktake, req);
-        
+
         return toResponse(stocktakeRepository.save(stocktake));
     }
 
@@ -114,76 +127,38 @@ public class StocktakeService {
             throw new BusinessException("Chỉ phiếu lưu tạm mới có thể xử lý chênh lệch");
         }
 
-        // Tách các dòng thừa và thiếu
-        List<InventoryDocumentLineRequest> surplusLines = new ArrayList<>();
-        List<InventoryDocumentLineRequest> shortageLines = new ArrayList<>();
-
         for (StocktakeLine line : stocktake.getLines()) {
-            if ("Xử lý chênh lệch".equals(line.getAction())) {
-                BigDecimal diff = line.getDiffQty();
-                if (diff.compareTo(BigDecimal.ZERO) > 0) {
-                    InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
-                    lineReq.setVariantId(line.getVariantId());
-                    lineReq.setQuantityIn(diff);
-                    lineReq.setUnitCost(BigDecimal.ZERO);
-                    lineReq.setNote("Nhập bổ sung hàng thừa theo phiếu kiểm kê " + stocktake.getStocktakeCode() + " (+ " + diff + ")");
-                    surplusLines.add(lineReq);
-                } else if (diff.compareTo(BigDecimal.ZERO) < 0) {
-                    InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();
-                    lineReq.setVariantId(line.getVariantId());
-                    lineReq.setQuantityOut(diff.abs());
-                    
-                    StringBuilder detailNote = new StringBuilder("Xuất giảm hàng thiếu theo phiếu kiểm kê ")
-                            .append(stocktake.getStocktakeCode())
-                            .append(" (-").append(diff.abs()).append(")");
-                    
-                    List<String> details = new ArrayList<>();
-                    if (line.getLostQty() != null && line.getLostQty().compareTo(BigDecimal.ZERO) > 0) {
-                        details.add("Hỏng/Mất: " + line.getLostQty());
+            // Process serial updates if available
+            if (line.getSerials() != null && !line.getSerials().isEmpty()) {
+                for (StocktakeLineSerial sLine : line.getSerials()) {
+                    if ("MISSING".equals(sLine.getScanStatus())) {
+                        if (sLine.getSerialNumberId() != null) {
+                            serialNumberRepository.findById(sLine.getSerialNumberId()).ifPresent(sn -> {
+                                sn.setStatus("LOST");
+                                serialNumberRepository.save(sn);
+                            });
+                        }
+                    } else if ("UNEXPECTED".equals(sLine.getScanStatus())) {
+                        Optional<SerialNumber> existingOpt = serialNumberRepository
+                                .findByVariantIdAndSerialNumber(line.getVariantId(), sLine.getSerialNumber());
+                        if (existingOpt.isPresent()) {
+                            SerialNumber sn = existingOpt.get();
+                            sn.setWarehouseId(stocktake.getWarehouseId());
+                            sn.setStatus("AVAILABLE");
+                            serialNumberRepository.save(sn);
+                        } else {
+                            SerialNumber newSn = SerialNumber.builder()
+                                    .variantId(line.getVariantId())
+                                    .warehouseId(stocktake.getWarehouseId())
+                                    .serialNumber(sLine.getSerialNumber())
+                                    .status("AVAILABLE")
+                                    .importedAt(LocalDateTime.now())
+                                    .build();
+                            serialNumberRepository.save(newSn);
+                        }
                     }
-                    if (line.getBadQty() != null && line.getBadQty().compareTo(BigDecimal.ZERO) > 0) {
-                        details.add("Kém cấp: " + line.getBadQty());
-                    }
-                    if (!details.isEmpty()) {
-                        detailNote.append(" [").append(String.join(", ", details)).append("]");
-                    }
-                    
-                    lineReq.setNote(detailNote.toString());
-                    shortageLines.add(lineReq);
                 }
             }
-        }
-
-        // Tạo phiếu nhập kho cho hàng thừa
-        if (!surplusLines.isEmpty()) {
-            InventoryDocumentRequest importReq = new InventoryDocumentRequest();
-            importReq.setWarehouseId(stocktake.getWarehouseId());
-            importReq.setDocDate(LocalDate.now());
-            importReq.setIssuePurpose(InventoryDocumentService.ISSUE_PURPOSE_INVENTORY_ADJUSTMENT);
-            importReq.setReferenceType("STOCKTAKE");
-            importReq.setReferenceId(stocktake.getId());
-            importReq.setNote("Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê " + stocktake.getStocktakeCode());
-            importReq.setCreatedBy(processedBy != null ? processedBy : stocktake.getCreatedBy());
-            importReq.setLines(surplusLines);
-            importReq.setStatus("DRAFT"); // Lưu nháp chờ duyệt thủ công
-            var importDoc = inventoryDocumentService.createImport(importReq);
-            stocktake.setReferenceImportId(importDoc.getId());
-        }
-
-        // Tạo phiếu xuất kho cho hàng thiếu
-        if (!shortageLines.isEmpty()) {
-            InventoryDocumentRequest exportReq = new InventoryDocumentRequest();
-            exportReq.setWarehouseId(stocktake.getWarehouseId());
-            exportReq.setDocDate(LocalDate.now());
-            exportReq.setIssuePurpose(InventoryDocumentService.ISSUE_PURPOSE_INVENTORY_ADJUSTMENT);
-            exportReq.setReferenceType("STOCKTAKE");
-            exportReq.setReferenceId(stocktake.getId());
-            exportReq.setNote("Phiếu xuất kho xử lý chênh lệch kiểm kê " + stocktake.getStocktakeCode());
-            exportReq.setCreatedBy(processedBy != null ? processedBy : stocktake.getCreatedBy());
-            exportReq.setLines(shortageLines);
-            exportReq.setStatus("DRAFT"); // Lưu nháp chờ duyệt thủ công
-            var exportDoc = inventoryDocumentService.createExport(exportReq);
-            stocktake.setReferenceExportId(exportDoc.getId());
         }
 
         stocktake.setStatus("POSTED");
@@ -191,10 +166,14 @@ public class StocktakeService {
     }
 
     private void validateRequest(StocktakeRequest req) {
-        if (req == null) throw new BusinessException("Dữ liệu không hợp lệ");
-        if (req.getWarehouseId() == null) throw new BusinessException("Kho kiểm kê là bắt buộc");
-        if (req.getLines() == null || req.getLines().isEmpty()) throw new BusinessException("Phiếu kiểm kê phải có ít nhất một dòng");
-        if (req.getCreatedBy() == null) throw new BusinessException("Người tạo là bắt buộc");
+        if (req == null)
+            throw new BusinessException("Dữ liệu không hợp lệ");
+        if (req.getWarehouseId() == null)
+            throw new BusinessException("Kho kiểm kê là bắt buộc");
+        if (req.getLines() == null || req.getLines().isEmpty())
+            throw new BusinessException("Phiếu kiểm kê phải có ít nhất một dòng");
+        if (req.getCreatedBy() == null)
+            throw new BusinessException("Người tạo là bắt buộc");
     }
 
     private String resolveDocCode(String requestedCode) {
@@ -211,7 +190,7 @@ public class StocktakeService {
     private void mapLinesAndParticipants(Stocktake stocktake, StocktakeRequest req) {
         if (req.getLines() != null) {
             req.getLines().forEach(lineReq -> {
-                stocktake.getLines().add(StocktakeLine.builder()
+                StocktakeLine line = StocktakeLine.builder()
                         .stocktake(stocktake)
                         .variantId(lineReq.getVariantId())
                         .bookQty(lineReq.getBookQty())
@@ -221,7 +200,21 @@ public class StocktakeService {
                         .badQty(lineReq.getBadQty())
                         .lostQty(lineReq.getLostQty())
                         .action(lineReq.getAction())
-                        .build());
+                        .build();
+
+                if (lineReq.getSerials() != null && !lineReq.getSerials().isEmpty()) {
+                    lineReq.getSerials().forEach(sReq -> {
+                        line.getSerials().add(StocktakeLineSerial.builder()
+                                .stocktakeLine(line)
+                                .serialNumberId(sReq.getSerialNumberId())
+                                .serialNumber(sReq.getSerialNumber())
+                                .scanStatus(sReq.getScanStatus() != null ? sReq.getScanStatus() : "MATCHED")
+                                .note(sReq.getNote())
+                                .build());
+                    });
+                }
+
+                stocktake.getLines().add(line);
             });
         }
         if (req.getParticipants() != null) {
@@ -245,13 +238,31 @@ public class StocktakeService {
         List<StocktakeLineResponse> lineResponses = entity.getLines().stream().map(line -> {
             ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
             Product product = variant != null ? variant.getProduct() : null;
+
+            List<StocktakeLineSerialResponse> serialResponses = line.getSerials().stream()
+                    .map(s -> StocktakeLineSerialResponse.builder()
+                            .id(s.getId())
+                            .serialNumberId(s.getSerialNumberId())
+                            .serialNumber(s.getSerialNumber())
+                            .scanStatus(s.getScanStatus())
+                            .note(s.getNote())
+                            .build())
+                    .collect(Collectors.toList());
+
+            Boolean trackSerial = (product != null && Boolean.TRUE.equals(product.getTrackSerial()));
+
             return StocktakeLineResponse.builder()
                     .id(line.getId())
                     .variantId(line.getVariantId())
-                    .itemCode(product != null ? product.getProductCode() : (variant != null ? "VT-" + variant.getId() : null))
+                    .itemCode(product != null ? product.getProductCode()
+                            : (variant != null ? "VT-" + variant.getId() : null))
                     .sku(variant != null ? variant.getSku() : null)
-                    .itemName(product != null ? product.getProductName() + (variant.getVariantName() != null ? " (" + variant.getVariantName() + ")" : "") : null)
+                    .itemName(product != null
+                            ? product.getProductName()
+                                    + (variant.getVariantName() != null ? " (" + variant.getVariantName() + ")" : "")
+                            : null)
                     .unit(product != null && product.getUnit() != null ? product.getUnit().getName() : null)
+                    .trackSerial(trackSerial)
                     .bookQty(line.getBookQty())
                     .countQty(line.getCountQty())
                     .diffQty(line.getDiffQty())
@@ -259,17 +270,18 @@ public class StocktakeService {
                     .badQty(line.getBadQty())
                     .lostQty(line.getLostQty())
                     .action(line.getAction())
+                    .serials(serialResponses)
                     .build();
         }).collect(Collectors.toList());
 
-        List<StocktakeParticipantResponse> participantResponses = entity.getParticipants().stream().map(p ->
-                StocktakeParticipantResponse.builder()
+        List<StocktakeParticipantResponse> participantResponses = entity.getParticipants().stream()
+                .map(p -> StocktakeParticipantResponse.builder()
                         .id(p.getId())
                         .fullName(p.getFullName())
                         .title(p.getTitle())
                         .represent(p.getRepresent())
-                        .build()
-        ).collect(Collectors.toList());
+                        .build())
+                .collect(Collectors.toList());
 
         return StocktakeResponse.builder()
                 .id(entity.getId())

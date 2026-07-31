@@ -17,9 +17,9 @@ public class InventoryBalanceReportResponse {
     private String unitName;
     private BigDecimal totalQuantity;
     private BigDecimal totalValue;
-    // We can add a map for warehouse-specific quantities if needed, but standard is just total per warehouse for the flat list.
     private String warehouseCode;
     private String warehouseName;
     private Long variantId;
     private String sku;
+    private Boolean trackSerial;
 }

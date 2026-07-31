@@ -194,18 +194,18 @@ function ExportSlipPage() {
   }, [filters.docCode, filters.fromDate, filters.toDate, filters.status, filters.warehouseId, filters.issuePurpose]);
 
   useEffect(() => {
-     
+
     loadLookups();
   }, [loadLookups]);
 
   useEffect(() => {
-     
+
     loadSlips();
   }, [loadSlips]);
 
   useEffect(() => {
     if (location.state?.toastMessage) {
-       
+
       showToast(location.state.toastType || 'success', location.state.toastMessage);
       navigate(location.pathname, { replace: true, state: {} });
     }
@@ -606,7 +606,7 @@ function ExportSlipPage() {
                       <div className={styles.detailItem}>
                         <span className={styles.detailLabel}>Kèm chứng từ</span>
                         <span className={styles.detailValue} style={{ color: 'var(--color-primary)', cursor: 'pointer' }}>
-                           <i className="bi bi-link-45deg"></i> {selectedSlip.referenceCode || selectedSlip.referenceId}
+                          <i className="bi bi-link-45deg"></i> {selectedSlip.referenceCode || selectedSlip.referenceId}
                         </span>
                       </div>
                     )}

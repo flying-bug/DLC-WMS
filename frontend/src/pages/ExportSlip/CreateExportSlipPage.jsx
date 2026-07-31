@@ -94,7 +94,10 @@ function CreateExportSlipPage({ mode: propMode }) {
   const location = useLocation();
 
   const searchParams = new URLSearchParams(location.search);
-  const initialType = propMode || searchParams.get('type')?.toUpperCase() || 'SALE';
+  const assemblyData = location.state?.assemblyData || null;
+  const stocktakeData = location.state?.stocktakeData || null;
+  const returnUrl = location.state?.returnUrl || null;
+  const initialType = propMode || searchParams.get('type')?.toUpperCase() || (stocktakeData ? 'OTHER' : 'SALE');
 
   const [exportMode, setExportMode] = useState(initialType);
   const [warehouses, setWarehouses] = useState([]);
@@ -115,10 +118,6 @@ function CreateExportSlipPage({ mode: propMode }) {
   const [selectedAssemblyOrder, setSelectedAssemblyOrder] = useState(null);
   const [savedSlip, setSavedSlip] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-
-  const assemblyData = location.state?.assemblyData || null;
-  const stocktakeData = location.state?.stocktakeData || null;
-  const returnUrl = location.state?.returnUrl || null;
 
   const [form, setForm] = useState(() => ({
     docCode: '',
@@ -445,7 +444,7 @@ function CreateExportSlipPage({ mode: propMode }) {
 
   const buildPayload = (status) => ({
     docCode: form.docCode || undefined,
-    issuePurpose: exportMode === 'SALE' ? 'SALES' : exportMode === 'USAGE' ? 'USAGE' : exportMode === 'ASSEMBLY' ? 'ASSEMBLY' : undefined,
+    issuePurpose: exportMode === 'SALE' ? 'SALES' : exportMode === 'USAGE' ? 'USAGE' : exportMode === 'ASSEMBLY' ? 'ASSEMBLY' : (form.referenceType === 'STOCKTAKE' ? 'INVENTORY_ADJUSTMENT' : 'USAGE'),
     warehouseId: Number(form.warehouseId),
     partnerId: form.partnerId ? Number(form.partnerId) : null,
     salespersonId: (!isNaN(Number(form.salespersonId)) && String(form.salespersonId).trim() !== '') ? Number(form.salespersonId) : null,
@@ -552,12 +551,14 @@ function CreateExportSlipPage({ mode: propMode }) {
               value={[
                 { value: 'SALE', label: 'Xuất kho bán hàng' },
                 { value: 'USAGE', label: 'Xuất kho cho sử dụng' },
-                { value: 'ASSEMBLY', label: 'Xuất kho lắp ráp' }
+                { value: 'ASSEMBLY', label: 'Xuất kho lắp ráp' },
+                { value: 'OTHER', label: 'Khác' }
               ].find(o => o.value === exportMode)}
               options={[
                 { value: 'SALE', label: 'Xuất kho bán hàng' },
                 { value: 'USAGE', label: 'Xuất kho cho sử dụng' },
-                { value: 'ASSEMBLY', label: 'Xuất kho lắp ráp' }
+                { value: 'ASSEMBLY', label: 'Xuất kho lắp ráp' },
+                { value: 'OTHER', label: 'Khác' }
               ]}
               onChange={(option) => handleSwitchMode(option.value)}
               styles={{
@@ -675,6 +676,33 @@ function CreateExportSlipPage({ mode: propMode }) {
                         <i className="bi bi-search" style={{ fontSize: '16px', color: 'var(--color-primary)' }}></i>
                       </button>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* MODE 4: OTHER (Khác) */}
+              {exportMode === 'OTHER' && (
+                <div className="misa-form-row">
+                  <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                    <label className="misa-label">Người nhận / Đối tượng</label>
+                    <input
+                      type="text"
+                      className="misa-input"
+                      value={form.receiverName}
+                      onChange={(e) => handleFormChange('receiverName', e.target.value)}
+                      placeholder="Nhập đối tượng nhận / lý do..."
+                    />
+                  </div>
+                  <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                    <label className="misa-label">Chứng từ tham chiếu</label>
+                    <input
+                      type="text"
+                      className="misa-input"
+                      readOnly
+                      value={form.referenceCode || ''}
+                      placeholder="Không có"
+                      style={{ backgroundColor: '#f3f4f6' }}
+                    />
                   </div>
                 </div>
               )}

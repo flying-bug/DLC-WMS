@@ -6,29 +6,22 @@ function StocktakeInitModal({ onClose, warehouses = [] }) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     warehouseId: 'all',
-    toDate: new Date().toISOString().split('T')[0],
-    isDetailBy: false,
-    detailByField: 'serial'
+    toDate: new Date().toISOString().split('T')[0]
   });
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: value
     }));
   };
 
   const handleSubmit = () => {
-    // Navigate to create page with query parameters
     const params = new URLSearchParams({
       warehouseId: formData.warehouseId,
       toDate: formData.toDate,
     });
-
-    if (formData.isDetailBy) {
-      params.append('detailBy', formData.detailByField);
-    }
 
     navigate(`/stocktakes/create?${params.toString()}`);
   };
@@ -38,7 +31,9 @@ function StocktakeInitModal({ onClose, warehouses = [] }) {
       <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
 
         <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitle}>Kiểm kê vật tư hàng hóa <i className="bi bi-question-circle" style={{ fontSize: '15px', color: '#94a3b8' }}></i></h3>
+          <h3 className={styles.modalTitle}>
+            Kiểm kê vật tư hàng hóa <i className="bi bi-question-circle" style={{ fontSize: '15px', color: '#94a3b8' }}></i>
+          </h3>
           <i className={`bi bi-x-lg ${styles.closeIcon}`} onClick={onClose}></i>
         </div>
 
@@ -51,7 +46,7 @@ function StocktakeInitModal({ onClose, warehouses = [] }) {
               value={formData.warehouseId}
               onChange={handleChange}
             >
-              <option value="all">Tất cả</option>
+              <option value="all">Tất cả kho</option>
               {warehouses.map(wh => (
                 <option key={wh.id} value={wh.id}>{wh.name}</option>
               ))}
@@ -69,31 +64,21 @@ function StocktakeInitModal({ onClose, warehouses = [] }) {
             />
           </div>
 
-          <div className={styles.checkboxGroup}>
-            <label className={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                className={styles.checkbox}
-                name="isDetailBy"
-                checked={formData.isDetailBy}
-                onChange={handleChange}
-              />
-              Chi tiết theo
-            </label>
-          </div>
-
-          <div className={styles.fieldGroup}>
-            <select
-              className={styles.selectControl}
-              name="detailByField"
-              value={formData.detailByField}
-              onChange={handleChange}
-              disabled={!formData.isDetailBy}
-            >
-              <option value="serial">Serial Number (S/N)</option>
-              <option value="supplier">Nhà cung cấp</option>
-              <option value="slot">Số Lô</option>
-            </select>
+          <div style={{
+            marginTop: '12px',
+            padding: '10px 12px',
+            backgroundColor: '#e0f2fe',
+            borderRadius: '6px',
+            fontSize: '12.5px',
+            color: '#0369a1',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '8px'
+          }}>
+            <i className="bi bi-info-circle-fill" style={{ fontSize: '14px', marginTop: '1px' }}></i>
+            <div>
+              Hệ thống tự động kích hoạt chế độ <strong>Quét Serial</strong> đối với các hàng hóa có cấu hình Quản lý Serial (<code>track_serial = true</code>).
+            </div>
           </div>
         </div>
 

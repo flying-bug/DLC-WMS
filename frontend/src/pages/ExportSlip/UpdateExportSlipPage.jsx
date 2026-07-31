@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -88,7 +88,9 @@ const emptyLine = () => ({
 
 function UpdateExportSlipPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
+  const returnUrl = location.state?.returnUrl || null;
   const [loading, setLoading] = useState(true);
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
@@ -513,7 +515,7 @@ function UpdateExportSlipPage() {
   return (
     <AdminLayout>
       <div className={styles.pageHeader}>
-        <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/export-slips'); }}>
+        <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/export-slips'); }}>
           <i className="bi bi-arrow-left"></i> Cập nhật phiếu xuất kho {form.docCode ? form.docCode : ''}
         </a>
       </div>

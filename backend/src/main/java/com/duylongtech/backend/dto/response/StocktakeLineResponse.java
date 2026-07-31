@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -18,6 +19,7 @@ public class StocktakeLineResponse {
     private String sku;
     private String itemName;
     private String unit;
+    private Boolean trackSerial;
     private BigDecimal bookQty;
     private BigDecimal countQty;
     private BigDecimal diffQty;
@@ -25,4 +27,6 @@ public class StocktakeLineResponse {
     private BigDecimal badQty;
     private BigDecimal lostQty;
     private String action;
+    private List<StocktakeLineSerialResponse> serials;
 }
+
