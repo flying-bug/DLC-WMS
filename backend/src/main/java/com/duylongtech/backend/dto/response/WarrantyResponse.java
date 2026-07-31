@@ -36,5 +36,8 @@ public class WarrantyResponse {
         private String repairCode;
         private LocalDate receivedDate;
         private String repairStatus;
+        private String issueDescription;
+        private java.math.BigDecimal totalAmount;
+        private String responsiblePerson;
     }
 }

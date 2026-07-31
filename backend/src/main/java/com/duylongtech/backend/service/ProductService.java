@@ -456,7 +456,7 @@ public class ProductService {
                 .barcode(variant.getBarcode())
                 .variantName(variant.getVariantName())
                 .costPrice(variant.getCostPrice())
-                .salePrice(variant.getSalePrice())
+                .salePrice((variant.getSalePrice() == null || variant.getSalePrice().compareTo(BigDecimal.ZERO) == 0) && product != null ? product.getSalePrice() : variant.getSalePrice())
                 .manufacturerPartNumber(variant.getManufacturerPartNumber())
                 .specsJson(variant.getSpecsJson())
                 .active(variant.getActive())

@@ -16,16 +16,15 @@ const STATUS_LABELS = {
 
 const REPAIR_STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
-  SUBMITTED: { label: 'Chờ duyệt', code: 'warning' },
-  APPROVED: { label: 'Đã duyệt', code: 'success' },
-  POSTED: { label: 'Hoàn tất', code: 'success' },
-  CANCELLED: { label: 'Đã hủy', code: 'danger' },
-  RECEIVED: { label: 'Đã tiếp nhận', code: 'info' },
-  REPAIRING: { label: 'Đang sửa', code: 'warning' }
+  CONFIRMED: { label: 'Xác nhận', code: 'primary' },
+  UNDER_REPAIR: { label: 'Đang sửa', code: 'warning' },
+  DONE: { label: 'Hoàn tất', code: 'success' },
+  CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('vi-VN') : 'Chưa có');
+const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 
 function WarrantyDetailPage() {
   const { id } = useParams();
@@ -153,33 +152,48 @@ function WarrantyDetailPage() {
                 <h3>Lịch sử sửa chữa</h3>
               </div>
               <div className={styles.cardBody} style={{ padding: '0' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ padding: '12px 24px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>Mã phiếu</th>
-                      <th style={{ padding: '12px 24px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>Ngày tiếp nhận</th>
-                      <th style={{ padding: '12px 24px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase' }}>Trạng thái</th>
-                    </tr>
-                  </thead>
+                <div className="table-responsive">
+                  <table className="misa-table" style={{ width: '100%' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ minWidth: '100px' }}>Mã phiếu</th>
+                        <th style={{ minWidth: '120px' }}>Ngày tiếp nhận</th>
+                        <th style={{ minWidth: '120px' }}>Trạng thái</th>
+                        <th style={{ minWidth: '200px' }}>Mô tả lỗi</th>
+                        <th style={{ minWidth: '150px' }}>KTV Phụ trách</th>
+                        <th style={{ minWidth: '120px', textAlign: 'right' }}>Chi phí (VNĐ)</th>
+                      </tr>
+                    </thead>
                   <tbody>
                     {repairs.length > 0 ? (
                       repairs.map(repair => {
                         const rStatus = REPAIR_STATUS_LABELS[repair.repairStatus] || { label: repair.repairStatus || 'Không rõ' };
                         return (
-                          <tr key={repair.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                            <td style={{ padding: '12px 24px' }}>
-                              <span style={{ color: 'var(--color-primary)', cursor: 'pointer', fontWeight: '500' }} onClick={() => navigate(`/repairs/${repair.id}`)}>
+                          <tr key={repair.id} className="cursor-pointer hover-highlight" onClick={() => navigate(`/repairs/${repair.id}`)}>
+                            <td>
+                              <span style={{ color: 'var(--color-primary)', fontWeight: '500' }}>
                                 {repair.repairCode}
                               </span>
                             </td>
-                            <td style={{ padding: '12px 24px' }}>{formatDate(repair.receivedDate)}</td>
-                            <td style={{ padding: '12px 24px' }}>{rStatus.label}</td>
+                            <td>{formatDate(repair.receivedDate)}</td>
+                            <td>
+                              <span style={{
+                                padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500', display: 'inline-block',
+                                backgroundColor: rStatus.code === 'success' ? '#dcfce7' : rStatus.code === 'danger' ? '#fee2e2' : rStatus.code === 'warning' ? '#fef3c7' : '#dbeafe',
+                                color: rStatus.code === 'success' ? '#166534' : rStatus.code === 'danger' ? '#991b1b' : rStatus.code === 'warning' ? '#92400e' : '#1e40af'
+                              }}>
+                                {rStatus.label}
+                              </span>
+                            </td>
+                            <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={repair.issueDescription || ''}>{repair.issueDescription || 'Chưa ghi nhận'}</td>
+                            <td>{repair.responsiblePerson || 'Chưa phân công'}</td>
+                            <td style={{ textAlign: 'right', fontWeight: '500' }}>{money(repair.totalAmount)}</td>
                           </tr>
                         );
                       })
                     ) : (
                       <tr>
-                        <td colSpan="3" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                        <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
                           Sản phẩm chưa từng được sửa chữa
                         </td>
                       </tr>
@@ -189,8 +203,9 @@ function WarrantyDetailPage() {
               </div>
             </div>
           </div>
+        </div>
 
-          <div>
+        <div>
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <i className="bi bi-person"></i>

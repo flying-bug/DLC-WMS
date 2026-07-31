@@ -16,6 +16,7 @@ import com.duylongtech.backend.entity.SerialNumber;
 import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.PartnerRepository;
+import com.duylongtech.backend.repository.ProductRepository;
 import com.duylongtech.backend.repository.ProductVariantRepository;
 import com.duylongtech.backend.repository.RepairFeeRepository;
 import com.duylongtech.backend.repository.RepairLineRepository;
@@ -25,8 +26,10 @@ import com.duylongtech.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import com.duylongtech.backend.repository.InventoryBalanceRepository;
+import com.duylongtech.backend.entity.InventoryBalance;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,21 +62,23 @@ public class RepairService {
     private final RepairLineRepository repairLineRepository;
     private final RepairFeeRepository repairFeeRepository;
     private final PartnerRepository partnerRepository;
+    private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final SerialNumberRepository serialNumberRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
     private final CodeGeneratorService codeGeneratorService;
+    private final InventoryBalanceRepository inventoryBalanceRepository;
 
     // =====================================================================
     // READ Operations
     // =====================================================================
 
     @Transactional(readOnly = true)
-    public Page<RepairResponse> getRepairs(String keyword, String status, int page, int size) {
+    public Page<RepairResponse> getRepairs(String keyword, String status, LocalDate fromDate, LocalDate toDate, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.max(size, 1));
         String normalizedStatus = trimToNull(status) != null ? status.trim().toUpperCase() : null;
-        return repairRepository.searchRepairs(trimToNull(keyword), normalizedStatus, pageable)
+        return repairRepository.searchRepairs(trimToNull(keyword), normalizedStatus, fromDate, toDate, pageable)
                 .map(this::toSummaryResponse);
     }
 
@@ -101,6 +106,8 @@ public class RepairService {
                 .repairCode(repairCode)
                 .partnerId(request.getPartnerId())
                 .productId(request.getProductId())
+                .productQuantity(request.getProductQuantity() != null ? request.getProductQuantity() : 1)
+                .productUnit(trimToNull(request.getProductUnit()))
                 .warehouseId(request.getWarehouseId())
                 .serialNumberId(request.getSerialNumberId())
                 .warrantyId(request.getWarrantyId())
@@ -112,6 +119,7 @@ public class RepairService {
                 .underWarranty(request.getUnderWarranty() != null ? request.getUnderWarranty() : false)
                 .repairWarrantyEndDate(request.getRepairWarrantyEndDate())
                 .invoiceMethod(resolveInvoiceMethod(request.getInvoiceMethod()))
+                .responsiblePerson(trimToNull(request.getResponsiblePerson()))
                 .totalAmount(BigDecimal.ZERO)
                 .note(trimToNull(request.getNote()))
                 .createdBy(currentUserId)
@@ -139,6 +147,8 @@ public class RepairService {
 
         if (request.getPartnerId() != null) repair.setPartnerId(request.getPartnerId());
         if (request.getProductId() != null) repair.setProductId(request.getProductId());
+        if (request.getProductQuantity() != null) repair.setProductQuantity(request.getProductQuantity());
+        if (request.getProductUnit() != null) repair.setProductUnit(trimToNull(request.getProductUnit()));
         if (request.getWarehouseId() != null) repair.setWarehouseId(request.getWarehouseId());
         if (request.getSerialNumberId() != null) repair.setSerialNumberId(request.getSerialNumberId());
         if (request.getWarrantyId() != null) repair.setWarrantyId(request.getWarrantyId());
@@ -146,6 +156,7 @@ public class RepairService {
         if (request.getExpectedDate() != null) repair.setExpectedDate(request.getExpectedDate());
         if (request.getIssueDescription() != null) repair.setIssueDescription(trimToNull(request.getIssueDescription()));
         if (request.getDiagnosisNote() != null) repair.setDiagnosisNote(trimToNull(request.getDiagnosisNote()));
+        if (request.getInternalNotes() != null) repair.setInternalNotes(trimToNull(request.getInternalNotes()));
         if (request.getUnderWarranty() != null) {
             repair.setUnderWarranty(request.getUnderWarranty());
             // Nếu chuyển thành under_warranty -> recalculate prices
@@ -155,7 +166,13 @@ public class RepairService {
         }
         if (request.getRepairWarrantyEndDate() != null) repair.setRepairWarrantyEndDate(request.getRepairWarrantyEndDate());
         if (request.getInvoiceMethod() != null) repair.setInvoiceMethod(resolveInvoiceMethod(request.getInvoiceMethod()));
+        if (request.getResponsiblePerson() != null) repair.setResponsiblePerson(trimToNull(request.getResponsiblePerson()));
         if (request.getNote() != null) repair.setNote(trimToNull(request.getNote()));
+
+        if (repair.getExpectedDate() != null && repair.getReceivedDate() != null 
+                && repair.getExpectedDate().isBefore(repair.getReceivedDate())) {
+            throw new BusinessException("Ngày dự kiến không thể nhỏ hơn ngày tiếp nhận.");
+        }
 
         Repair saved = repairRepository.save(repair);
 
@@ -165,6 +182,16 @@ public class RepairService {
         );
 
         return toDetailResponse(repairRepository.findWithDetailsById(saved.getId()).orElse(saved));
+    }
+
+    @Transactional
+    public RepairResponse updateInternalNotes(Long id, String notes) {
+        Repair repair = repairRepository.findWithDetailsById(id)
+                .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
+
+        repair.setInternalNotes(trimToNull(notes));
+        Repair saved = repairRepository.save(repair);
+        return toDetailResponse(saved);
     }
 
     // =====================================================================
@@ -198,9 +225,13 @@ public class RepairService {
                 .componentVariantId(request.getComponentVariantId())
                 .actionType(request.getActionType().toUpperCase())
                 .quantity(request.getQuantity())
+                .doneQuantity(request.getDoneQuantity() != null ? request.getDoneQuantity() : BigDecimal.ZERO)
                 .unitPrice(unitPrice)
                 .isFreeWarranty(isFreeWarranty)
+                .isUsed(Boolean.TRUE.equals(request.getIsUsed()))
                 .serialNumberId(request.getSerialNumberId())
+                .dateScheduled(request.getDateScheduled())
+                .deadline(request.getDeadline())
                 .note(trimToNull(request.getNote()))
                 .build();
 
@@ -208,6 +239,53 @@ public class RepairService {
         recalculateTotalAmount(repair);
 
         return toLineResponse(saved);
+    }
+
+    @Transactional
+    public RepairLineResponse updateRepairLine(Long repairId, Long lineId, RepairLineRequest request) {
+        Repair repair = repairRepository.findWithDetailsById(repairId)
+                .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
+
+        RepairLine line = repairLineRepository.findById(lineId)
+                .orElseThrow(() -> new BusinessException(SystemMessage.REP_LINE_NOT_FOUND));
+
+        if (!line.getRepair().getId().equals(repairId)) {
+            throw new BusinessException(SystemMessage.REP_LINE_NOT_FOUND);
+        }
+
+        boolean isUnderRepair = "UNDER_REPAIR".equals(repair.getRepairStatus());
+        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus()) && !isUnderRepair) {
+            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
+        }
+
+        if (isUnderRepair) {
+            // Chỉ cho phép cập nhật doneQuantity và isUsed khi đang UNDER_REPAIR
+            if (request.getDoneQuantity() != null) line.setDoneQuantity(request.getDoneQuantity());
+            if (request.getIsUsed() != null) line.setIsUsed(request.getIsUsed());
+            if (request.getSerialNumberId() != null) line.setSerialNumberId(request.getSerialNumberId() == -1 ? null : request.getSerialNumberId());
+        } else {
+            // Trạng thái DRAFT hoặc QUOTATION cho phép sửa toàn bộ
+            if (request.getQuantity() != null) line.setQuantity(request.getQuantity());
+            if (request.getDoneQuantity() != null) line.setDoneQuantity(request.getDoneQuantity());
+            if (request.getIsUsed() != null) line.setIsUsed(request.getIsUsed());
+            if (request.getActionType() != null) line.setActionType(request.getActionType().toUpperCase());
+            if (request.getUnitPrice() != null) line.setUnitPrice(request.getUnitPrice());
+            if (request.getIsFreeWarranty() != null) {
+                line.setIsFreeWarranty(request.getIsFreeWarranty());
+                if (Boolean.TRUE.equals(request.getIsFreeWarranty())) {
+                    line.setUnitPrice(BigDecimal.ZERO);
+                }
+            }
+            if (request.getDateScheduled() != null) line.setDateScheduled(request.getDateScheduled());
+            if (request.getDeadline() != null) line.setDeadline(request.getDeadline());
+            if (request.getNote() != null) line.setNote(trimToNull(request.getNote()));
+            if (request.getSerialNumberId() != null) line.setSerialNumberId(request.getSerialNumberId() == -1 ? null : request.getSerialNumberId());
+        }
+
+        repairLineRepository.save(line);
+        recalculateTotalAmount(repair);
+
+        return toLineResponse(line);
     }
 
     @Transactional
@@ -304,11 +382,19 @@ public class RepairService {
 
         BigDecimal lineTotal = lines.stream()
                 .filter(l -> "ADD".equals(l.getActionType())) // Chỉ tính dòng ADD vào chi phí
-                .map(l -> l.getUnitPrice().multiply(l.getQuantity()))
+                .map(l -> {
+                    BigDecimal qty;
+                    if ("UNDER_REPAIR".equals(repair.getRepairStatus()) || "DONE".equals(repair.getRepairStatus())) {
+                        qty = (l.getDoneQuantity() != null && Boolean.TRUE.equals(l.getIsUsed())) ? l.getDoneQuantity() : BigDecimal.ZERO;
+                    } else {
+                        qty = l.getQuantity() != null ? l.getQuantity() : BigDecimal.ZERO;
+                    }
+                    return l.getUnitPrice().multiply(qty);
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal feeTotal = fees.stream()
-                .map(RepairFee::getFeeAmount)
+                .map(f -> f.getFeeAmount().multiply(f.getQuantity() != null ? f.getQuantity() : BigDecimal.ONE))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         repair.setTotalAmount(lineTotal.add(feeTotal));
@@ -349,6 +435,8 @@ public class RepairService {
                 .repairCode(repair.getRepairCode())
                 .partnerId(repair.getPartnerId())
                 .productId(repair.getProductId())
+                .productQuantity(repair.getProductQuantity())
+                .productUnit(repair.getProductUnit())
                 .warehouseId(repair.getWarehouseId())
                 .serialNumberId(repair.getSerialNumberId())
                 .warrantyId(repair.getWarrantyId())
@@ -357,8 +445,12 @@ public class RepairService {
                 .completedDate(repair.getCompletedDate())
                 .repairStatus(repair.getRepairStatus())
                 .issueDescription(repair.getIssueDescription())
+                .diagnosisNote(repair.getDiagnosisNote())
+                .internalNotes(repair.getInternalNotes())
+                .solutionDescription(repair.getSolutionDescription())
                 .underWarranty(repair.getUnderWarranty())
                 .invoiceMethod(repair.getInvoiceMethod())
+                .responsiblePerson(repair.getResponsiblePerson())
                 .totalAmount(repair.getTotalAmount())
                 .createdBy(repair.getCreatedBy())
                 .createdAt(repair.getCreatedAt())
@@ -389,6 +481,28 @@ public class RepairService {
             } catch (Exception ignored) { /* best-effort */ }
         }
 
+        // Resolve product name (best effort)
+        String productName = null;
+        if (repair.getProductId() != null) {
+            try {
+                var prodOpt = productRepository.findById(repair.getProductId());
+                if (prodOpt.isPresent()) {
+                    productName = prodOpt.get().getProductName();
+                }
+            } catch (Exception ignored) { /* best-effort */ }
+        }
+
+        // Resolve main serial number (best effort)
+        String serialNumber = null;
+        if (repair.getSerialNumberId() != null) {
+            try {
+                var snOpt = serialNumberRepository.findById(repair.getSerialNumberId());
+                if (snOpt.isPresent()) {
+                    serialNumber = snOpt.get().getSerialNumber();
+                }
+            } catch (Exception ignored) { /* best-effort */ }
+        }
+
         return RepairResponse.builder()
                 .id(repair.getId())
                 .repairCode(repair.getRepairCode())
@@ -396,8 +510,12 @@ public class RepairService {
                 .partnerName(partnerName)
                 .partnerPhone(partnerPhone)
                 .productId(repair.getProductId())
+                .productName(productName)
+                .productQuantity(repair.getProductQuantity())
+                .productUnit(repair.getProductUnit())
                 .warehouseId(repair.getWarehouseId())
                 .serialNumberId(repair.getSerialNumberId())
+                .serialNumber(serialNumber)
                 .warrantyId(repair.getWarrantyId())
                 .receivedDate(repair.getReceivedDate())
                 .expectedDate(repair.getExpectedDate())
@@ -406,9 +524,11 @@ public class RepairService {
                 .repairStatus(repair.getRepairStatus())
                 .issueDescription(repair.getIssueDescription())
                 .diagnosisNote(repair.getDiagnosisNote())
+                .internalNotes(repair.getInternalNotes())
                 .solutionDescription(repair.getSolutionDescription())
                 .underWarranty(repair.getUnderWarranty())
                 .invoiceMethod(repair.getInvoiceMethod())
+                .responsiblePerson(repair.getResponsiblePerson())
                 .totalAmount(repair.getTotalAmount())
                 .note(repair.getNote())
                 .createdBy(repair.getCreatedBy())
@@ -425,7 +545,10 @@ public class RepairService {
         // Resolve component name (best effort)
         String componentName = null;
         String componentSku = null;
-        if (line.getComponentVariantId() != null) {
+        if (line.getComponentVariant() != null) {
+            componentName = line.getComponentVariant().getVariantName();
+            componentSku = line.getComponentVariant().getSku();
+        } else if (line.getComponentVariantId() != null) {
             try {
                 var variantOpt = productVariantRepository.findById(line.getComponentVariantId());
                 if (variantOpt.isPresent()) {
@@ -446,6 +569,23 @@ public class RepairService {
             } catch (Exception ignored) { /* best-effort */ }
         }
 
+        // Calculate available quantity
+        BigDecimal availableQty = BigDecimal.ZERO;
+        try {
+            Long warehouseId = line.getRepair() != null && line.getRepair().getWarehouseId() != null ? line.getRepair().getWarehouseId() : 1L; // Fallback to 1L if needed, though best to rely on proper config
+            if (line.getSerialNumberId() != null) {
+                InventoryBalance balance = inventoryBalanceRepository.findByWarehouseVariantSerial(
+                        warehouseId, line.getComponentVariantId(), line.getSerialNumberId(), "GOOD").orElse(null);
+                if (balance != null) {
+                    availableQty = balance.getQuantityOnHand().subtract(balance.getQuantityReserved());
+                }
+            } else {
+                availableQty = inventoryBalanceRepository.sumAvailableQuantityByWarehouseAndVariant(
+                        warehouseId, line.getComponentVariantId(), "GOOD");
+            }
+            if (availableQty.compareTo(BigDecimal.ZERO) < 0) availableQty = BigDecimal.ZERO;
+        } catch (Exception ignored) {}
+
         BigDecimal lineAmount = line.getUnitPrice().multiply(line.getQuantity());
 
         return RepairLineResponse.builder()
@@ -456,11 +596,16 @@ public class RepairService {
                 .componentSku(componentSku)
                 .actionType(line.getActionType())
                 .quantity(line.getQuantity())
+                .availableQuantity(availableQty)
+                .doneQuantity(line.getDoneQuantity())
+                .isUsed(line.getIsUsed())
                 .unitPrice(line.getUnitPrice())
                 .lineAmount(lineAmount)
                 .isFreeWarranty(line.getIsFreeWarranty())
                 .serialNumberId(line.getSerialNumberId())
                 .serialNumber(serialNum)
+                .dateScheduled(line.getDateScheduled())
+                .deadline(line.getDeadline())
                 .note(line.getNote())
                 .createdAt(line.getCreatedAt())
                 .updatedAt(line.getUpdatedAt())
@@ -495,6 +640,10 @@ public class RepairService {
         }
         if (request.getProductId() == null) {
             throw new BusinessException("productId là bắt buộc");
+        }
+        if (request.getExpectedDate() != null && request.getReceivedDate() != null 
+                && request.getExpectedDate().isBefore(request.getReceivedDate())) {
+            throw new BusinessException("Ngày dự kiến không thể nhỏ hơn ngày tiếp nhận.");
         }
     }
 
