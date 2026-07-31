@@ -292,7 +292,7 @@ public class StockTransferServiceImpl implements StockTransferService {
 
             if (!serials.isEmpty()) {
                 for (String sCode : serials) {
-                    SerialNumber serial = serialNumberRepository.findBySerialNumber(sCode)
+                    SerialNumber serial = serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), sCode)
                             .orElseThrow(() -> new BusinessException("Không tìm thấy Serial: " + sCode));
                     
                     InventoryDocumentLineRequest lineReq = new InventoryDocumentLineRequest();

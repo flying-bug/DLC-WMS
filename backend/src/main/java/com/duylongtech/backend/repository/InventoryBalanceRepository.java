@@ -22,6 +22,9 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
     @Query("SELECT b FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.variantId = :variantId AND b.serialNumberId IS NULL AND b.lotBatchId IS NULL AND b.stockStatus = :stockStatus")
     Optional<InventoryBalance> findByWarehouseAndVariantForUpdate(@Param("warehouseId") Long warehouseId, @Param("variantId") Long variantId, @Param("stockStatus") String stockStatus);
 
+    @Query("SELECT b FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.variantId = :variantId AND b.serialNumberId IS NULL AND b.lotBatchId IS NULL AND b.stockStatus = :stockStatus")
+    Optional<InventoryBalance> findByWarehouseAndVariant(@Param("warehouseId") Long warehouseId, @Param("variantId") Long variantId, @Param("stockStatus") String stockStatus);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.variantId = :variantId AND b.serialNumberId IS NULL AND b.lotBatchId IS NULL")
     List<InventoryBalance> findByWarehouseAndVariantForUpdate(@Param("warehouseId") Long warehouseId, @Param("variantId") Long variantId);
@@ -32,6 +35,12 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
                                                                      @Param("variantId") Long variantId,
                                                                      @Param("serialNumberId") Long serialNumberId,
                                                                      @Param("stockStatus") String stockStatus);
+
+    @Query("SELECT b FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.variantId = :variantId AND b.serialNumberId = :serialNumberId AND b.stockStatus = :stockStatus")
+    Optional<InventoryBalance> findByWarehouseVariantSerial(@Param("warehouseId") Long warehouseId,
+                                                            @Param("variantId") Long variantId,
+                                                            @Param("serialNumberId") Long serialNumberId,
+                                                            @Param("stockStatus") String stockStatus);
 
     boolean existsByWarehouseId(Long warehouseId);
 
@@ -48,6 +57,10 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
 
     @Query("SELECT v.product.id, COALESCE(SUM(b.quantityOnHand), 0) FROM InventoryBalance b JOIN ProductVariant v ON v.id = b.variantId WHERE v.product.id IN :productIds AND b.serialNumberId IS NULL GROUP BY v.product.id")
     List<Object[]> sumQuantityOnHandByProductIds(@Param("productIds") List<Long> productIds);
+
+    @Query("SELECT COALESCE(SUM(b.quantityOnHand - b.quantityReserved), 0) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.variantId = :variantId AND b.stockStatus = :stockStatus")
+    java.math.BigDecimal sumAvailableQuantityByWarehouseAndVariant(@Param("warehouseId") Long warehouseId, @Param("variantId") Long variantId, @Param("stockStatus") String stockStatus);
+
 
     @Query("""
             SELECT

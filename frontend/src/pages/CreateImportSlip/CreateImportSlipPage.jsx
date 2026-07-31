@@ -14,6 +14,7 @@ import ManageSerialModal from './ManageSerialModal';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
 import { printExportSlip } from '../../utils/printExportSlip';
+import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import Select from 'react-select';
 import axiosClient from '../../api/axiosClient';
 import styles from './CreateImportSlipPage.module.css';
@@ -164,6 +165,27 @@ function CreateImportSlipPage() {
   const [showCustomerDrawer, setShowCustomerDrawer] = useState(false);
   const [showAssemblyOrderModal, setShowAssemblyOrderModal] = useState(false);
   const [showReferenceModal, setShowReferenceModal] = useState(false);
+  const [inventoryMap, setInventoryMap] = useState(new Map());
+
+  useEffect(() => {
+    if (!form.warehouseId) {
+      setInventoryMap(new Map());
+      return;
+    }
+    exportApi.getInventoryBalance({ warehouseId: form.warehouseId })
+      .then(res => {
+        const list = pageContent(unwrap(res));
+        const invMap = new Map();
+        list.forEach(b => {
+          if (b.variantId) invMap.set(String(b.variantId), Number(b.totalQuantity || 0));
+        });
+        setInventoryMap(invMap);
+      })
+      .catch(err => {
+        console.error('Failed to load inventory balance', err);
+        setInventoryMap(new Map());
+      });
+  }, [form.warehouseId]);
 
   useEffect(() => {
     const loadLookups = async () => {
@@ -787,18 +809,24 @@ function CreateImportSlipPage() {
                     return (
                       <tr key={item.localId}>
                         <td>{index + 1}</td>
-                        <td>{product?.sku || product?.productCode || ''}</td>
                         <td>
-                          <Select
-                            options={filteredProducts.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}`, nameOnly: p.productName }))}
-                            value={product ? { value: product.id, label: `${product.productName} - ${product.sku || product.productCode}`, nameOnly: product.productName } : null}
-                            onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.value : '')}
+                          <ProductGridSelect
+                            products={filteredProducts}
+                            inventoryMap={inventoryMap}
+                            value={item.variantId}
+                            onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+                            displayMode="code"
+                            placeholder="Chọn mã"
+                          />
+                        </td>
+                        <td>
+                          <ProductGridSelect
+                            products={filteredProducts}
+                            inventoryMap={inventoryMap}
+                            value={item.variantId}
+                            onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+                            displayMode="name"
                             placeholder="Chọn hàng"
-                            isClearable
-                            formatOptionLabel={(option, { context }) => context === 'value' ? option.nameOnly : option.label}
-                            autoFocus={item.isNew}
-                            styles={customSelectStyles}
-                            menuPortalTarget={document.body}
                           />
                         </td>
                         <td>{product?.unitName || ''}</td>

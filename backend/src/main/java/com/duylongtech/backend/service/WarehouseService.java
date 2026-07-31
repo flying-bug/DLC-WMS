@@ -60,7 +60,7 @@ public class WarehouseService {
                 .code(request.getCode())
                 .name(request.getName())
                 .address(request.getAddress())
-                .type("STANDARD") // Cố định theo spec
+                .type(request.getType() != null && !request.getType().isBlank() ? request.getType() : "STANDARD")
                 .status("APPROVED")
                 .creator(creator)
                 .build();
@@ -144,11 +144,14 @@ public class WarehouseService {
             throw new org.springframework.orm.ObjectOptimisticLockingFailureException(Warehouse.class, id);
         }
 
-        // Chỉ cho phép sửa name, address, status. Code và Type là read-only.
+        // Chỉ cho phép sửa name, address, status, type. Code là read-only.
         warehouse.setName(request.getName());
         warehouse.setAddress(request.getAddress());
         if (request.getStatus() != null) {
             warehouse.setStatus(request.getStatus());
+        }
+        if (request.getType() != null && !request.getType().isBlank()) {
+            warehouse.setType(request.getType());
         }
 
         // Set updater

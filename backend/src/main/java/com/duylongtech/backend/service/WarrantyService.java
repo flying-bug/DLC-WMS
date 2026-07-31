@@ -78,6 +78,9 @@ public class WarrantyService {
                 .repairCode(repair.getRepairCode())
                 .receivedDate(repair.getReceivedDate())
                 .repairStatus(repair.getRepairStatus())
+                .issueDescription(repair.getIssueDescription())
+                .totalAmount(repair.getTotalAmount())
+                .responsiblePerson(repair.getResponsiblePerson())
                 .build();
     }
 
