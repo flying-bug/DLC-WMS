@@ -368,11 +368,11 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                 <div className={styles.footer}>
                     {isEditMode ? (
                         <>
-                            <button className={styles.btnCancel} onClick={handleCancel}>Hủy</button>
-                            <button className={styles.btnSave} onClick={handleInitialSave} disabled={saving}>Lưu thay đổi</button>
+                            <button className="btnDefault" onClick={handleCancel}>Hủy</button>
+                            <button className="btnPrimary" onClick={handleInitialSave} disabled={saving}>Lưu thay đổi</button>
                         </>
                     ) : (
-                        <button className={styles.btnCancel} onClick={() => setIsEditMode(true)}>Chỉnh sửa</button>
+                        <button className="btnDefault" onClick={() => setIsEditMode(true)}>Chỉnh sửa</button>
                     )}
                 </div>
             </div>
@@ -391,8 +391,8 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                             Bạn đang cấp Toàn quyền quản lý hệ thống cho nhân viên <strong>{formData.name}</strong>. Người này sẽ có quyền xem, sửa, xóa mọi dữ liệu và thay đổi cấu hình hệ thống. Bạn có chắc chắn muốn thực hiện không?
                         </p>
                         <div className={styles.modalActions}>
-                            <button className={styles.btnCancel} onClick={() => setShowConfirmModal(false)}>Hủy</button>
-                            <button className={`${styles.btnSave} ${styles.btnDanger}`} onClick={handleConfirmAdmin} disabled={saving}>Xác nhận cấp quyền</button>
+                            <button className="btnDefault" onClick={() => setShowConfirmModal(false)}>Hủy</button>
+                            <button className="btnDanger" onClick={handleConfirmAdmin} disabled={saving}>Xác nhận cấp quyền</button>
                         </div>
                     </div>
                 ) : (
@@ -407,8 +407,8 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                             Bạn đã chọn vai trò Người sử dụng hệ thống. Hệ thống sẽ chuyển sang màn hình thiết lập quyền hạn chi tiết cho từng chức năng. Bạn có muốn tiếp tục không?
                         </p>
                         <div className={styles.modalActions}>
-                            <button className={styles.btnCancel} onClick={() => setShowConfirmModal(false)}>Hủy</button>
-                            <button className={styles.btnSave} onClick={handleConfirmUser} disabled={saving}>Tiếp tục</button>
+                            <button className="btnDefault" onClick={() => setShowConfirmModal(false)}>Hủy</button>
+                            <button className="btnPrimary" onClick={handleConfirmUser} disabled={saving}>Tiếp tục</button>
                         </div>
                     </div>
                 )}

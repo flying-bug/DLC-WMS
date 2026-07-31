@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Modal from '../Modal/Modal';
+import Toast from '../Toast/Toast';
 import styles from './QuickAddPartnerModal.module.css';
 
 function QuickAddPartnerModal({ isOpen, onClose, type = 'customer', onSave }) {
@@ -11,6 +12,7 @@ function QuickAddPartnerModal({ isOpen, onClose, type = 'customer', onSave }) {
     email: '',
   });
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
 
   if (!isOpen) return null;
 
@@ -24,7 +26,7 @@ function QuickAddPartnerModal({ isOpen, onClose, type = 'customer', onSave }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name) {
-      alert('Vui lòng nhập tên.');
+      setToast({ isVisible: true, type: 'error', message: 'Vui lòng nhập tên đối tác.' });
       return;
     }
     setSaving(true);
@@ -33,7 +35,7 @@ function QuickAddPartnerModal({ isOpen, onClose, type = 'customer', onSave }) {
       setFormData({ code: '', name: '', phone: '', address: '', email: '' });
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.userMessage || 'Có lỗi xảy ra.');
+      setToast({ isVisible: true, type: 'error', message: error.response?.data?.userMessage || 'Có lỗi xảy ra.' });
     } finally {
       setSaving(false);
     }
@@ -74,6 +76,14 @@ function QuickAddPartnerModal({ isOpen, onClose, type = 'customer', onSave }) {
           </button>
         </div>
       </form>
+
+      {toast.isVisible && (
+          <Toast
+              type={toast.type}
+              message={toast.message}
+              onClose={() => setToast({ ...toast, isVisible: false })}
+          />
+      )}
     </Modal>
   );
 }

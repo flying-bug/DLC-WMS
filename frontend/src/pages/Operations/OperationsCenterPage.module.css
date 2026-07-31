@@ -12,60 +12,49 @@
 .header {
     height: 60px;
     background: var(--color-surface);
-    backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--color-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 24px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    flex-shrink: 0;
+    gap: 20px;
 }
 
 .headerLeft {
     display: flex;
     align-items: center;
     height: 100%;
-    gap: 0;
+    min-width: 0;
 }
 
 .brandName {
-    font-size: 17px;
-    font-weight: 800;
+    font-size: 18px;
+    font-weight: 700;
     color: var(--color-primary);
-    margin-right: 28px;
-    letter-spacing: -0.3px;
+    margin-right: 32px;
 }
 
 .navLinks {
     display: flex;
     align-items: center;
     height: 100%;
-    gap: 4px;
+    gap: 24px;
 }
 
 .navLink, .navLinkActive {
     height: 100%;
     display: flex;
     align-items: center;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--color-text-muted-2);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-muted);
     text-decoration: none;
     position: relative;
-    padding: 0 14px;
-    cursor: pointer;
-    transition: color 0.2s;
-    border-radius: 0;
+    padding: 0 4px;
 }
-
-.navLink:hover { color: var(--color-text-heading); }
 
 .navLinkActive {
     color: var(--color-primary);
-    font-weight: 600;
 }
 
 .navLinkActive::after {
@@ -74,161 +63,143 @@
     bottom: -1px;
     left: 0;
     width: 100%;
-    height: 2px;
-    background: var(--brand-gradient);
-    border-radius: 2px 2px 0 0;
+    height: 3px;
+    background-color: var(--color-primary);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
 }
 
 .headerRight {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 20px;
+    min-width: 0;
 }
 
-.headerBadge {
+.searchBar {
     display: flex;
     align-items: center;
-    gap: 6px;
-    background: var(--color-primary-soft);
-    border: 1px solid var(--color-border-strong);
-    border-radius: 20px;
-    padding: 4px 12px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--color-primary);
-    letter-spacing: 0.8px;
+    background: var(--color-surface-muted);
+    border-radius: 6px;
+    padding: 8px 12px;
+    width: 280px;
+    max-width: 34vw;
+    border: 1px solid var(--color-border);
 }
 
-.headerBadge i { font-size: 12px; }
+.searchBar i {
+    color: var(--color-text-subtle);
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+.searchBar input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 13px;
+    width: 100%;
+    color: var(--color-text-strong);
+}
+
+.searchBar input::placeholder {
+    color: var(--color-text-subtle);
+}
+
+.bellBtn {
+    background: none;
+    border: none;
+    position: relative;
+    color: var(--color-text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.bellDot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    background-color: var(--color-danger);
+    border: 2px solid var(--color-surface);
+    border-radius: 50%;
+}
 
 .userInfoContainer {
+    display: flex;
+    align-items: center;
     border-left: 1px solid var(--color-border);
-    padding-left: 16px;
+    padding-left: 20px;
 }
 
-/* ─── Main Layout ────────────────────────────────────────────────────────────── */
-.mainWrapper {
+/* ─── Main Content ───────────────────────────────────────────────────────────── */
+.main {
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+    min-width: 0;
     flex: 1;
-    display: flex;
-    overflow: hidden;
-    min-height: 0;
-}
-
-/* ─── Sidebar ────────────────────────────────────────────────────────────────── */
-.sidebar {
-    width: 240px;
-    flex-shrink: 0;
-    background: var(--sidebar-bg);
-    border-right: 1px solid var(--overlay-white-line);
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-    overflow-y: auto;
-}
-
-.sidebarHeader {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 20px 20px 16px;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--color-primary-bright);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-bottom: 1px solid var(--overlay-white-line);
-}
-
-.sidebarHeader i { font-size: 15px; }
-
-.sidebarNav {
-    flex: 1;
-    padding: 12px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.sidebarItem {
-    display: flex;
-    align-items: center;
-    gap: 12px;
     width: 100%;
-    padding: 11px 12px;
-    border: none;
-    border-radius: 10px;
-    background: transparent;
-    cursor: pointer;
-    text-align: left;
-    position: relative;
-    transition: all 0.2s ease;
-    color: var(--overlay-white-muted);
 }
 
-.sidebarItem:hover {
-    background: var(--overlay-white-hover);
-    color: var(--color-white);
-}
-
-.sidebarItemActive {
-    background: var(--overlay-white-active);
-    color: var(--color-white);
-}
-
-.sidebarIcon {
-    font-size: 16px;
-    flex-shrink: 0;
-    width: 20px;
-    text-align: center;
-}
-
-.sidebarItemActive .sidebarIcon { color: var(--color-primary-bright); }
-
-.sidebarText {
+.pageHeader {
     display: flex;
-    flex-direction: column;
-    gap: 1px;
-    flex: 1;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    gap: 20px;
 }
 
-.sidebarLabel {
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.2;
+.pageTitle {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin: 0 0 8px;
 }
 
-.sidebarDesc {
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.45);
-    line-height: 1.2;
+.pageSubtitle {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    margin: 0;
 }
 
-.sidebarItemActive .sidebarDesc { color: var(--color-primary-bright); opacity: 0.8; }
-
-.sidebarActiveBar {
-    position: absolute;
-    right: 0;
-    top: 20%;
-    bottom: 20%;
-    width: 3px;
-    background: var(--brand-gradient);
-    border-radius: 3px 0 0 3px;
+.tabsContainer {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--color-border);
 }
 
-.sidebarFooter {
-    padding: 16px 20px;
-    border-top: 1px solid var(--overlay-white-line);
+.tabBtn {
+    background: none;
+    border: none;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.35);
 }
 
-/* ─── Content Area ───────────────────────────────────────────────────────────── */
-.content {
+.tabBtn:hover {
+    color: var(--color-primary);
+}
+
+.tabBtnActive {
+    color: var(--color-primary);
+    border-bottom: 2px solid var(--color-primary);
+    font-weight: 600;
+}
+
+.tabContent {
     flex: 1;
-    overflow-y: auto;
-    padding: 28px 32px;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
 }

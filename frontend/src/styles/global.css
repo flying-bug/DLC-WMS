@@ -473,56 +473,125 @@ html, body, #root {
   }
 }
 
-/* ── Fixed Bottom Action Bar Global Dark Theme & Dynamic Sidebar Offset ── */
-[class*="fixedFooter"],
-[class*="pageFooter"],
-[class*="bottomBar"],
-[class*="pageFooterView"],
-[class*="actionsBar"] {
-  position: fixed !important;
-  bottom: 0 !important;
-  left: var(--sidebar-width, 248px) !important;
-  right: 0 !important;
-  background-color: #1e1f24 !important;
-  border-top: 1px solid #2d3238 !important;
-  color: #f4f4f5 !important;
-  z-index: 100 !important;
-  transition: left 0.3s ease !important;
+
+
+/* --- GLOBAL BUTTONS --- */
+.btnDefault {
+  background-color: white;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #4b5563;
+}
+.btnDefault:hover { background-color: #f9fafb; }
+.btnDefault:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btnPrimary {
+  background-color: var(--color-primary, #1d4ed8);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btnPrimary:hover { background-color: var(--color-primary-hover, #1e40af); }
+.btnPrimary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btnSuccess {
+  background-color: var(--color-success, #22c55e);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btnSuccess:hover { background-color: var(--color-success-hover, #16a34a); }
+.btnSuccess:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btnDanger {
+  background-color: var(--color-danger, #ef4444);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btnDanger:hover { background-color: #dc2626; }
+.btnDanger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* --- GLOBAL PAGINATION --- */
+.misa-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--color-text-muted-2, #64748b);
+  gap: 16px;
 }
 
-@media (max-width: 991px) {
-  [class*="fixedFooter"],
-  [class*="pageFooter"],
-  [class*="bottomBar"],
-  [class*="pageFooterView"],
-  [class*="actionsBar"] {
-    left: 0 !important;
-  }
+.misa-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-/* Button contrast overrides inside dark fixed footers */
-:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) .btn-misa-cancel,
-:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnFooterCancel"],
-:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnCancel"] {
-  background-color: #27272a !important;
-  border: 1px solid #3f3f46 !important;
-  color: #f4f4f5 !important;
+.misa-page-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-strong, #1e293b);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.misa-page-btn:disabled { color: #94a3b8; cursor: not-allowed; }
+
+
+.misa-page-numbers {
+  display: flex;
+  gap: 4px;
 }
 
-:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) .btn-misa-cancel:hover,
-:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnFooterCancel"]:hover,
-:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnCancel"]:hover {
-  background-color: #3f3f46 !important;
-  border-color: #52525b !important;
-  color: #ffffff !important;
+.misa-page-num {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  color: var(--color-text-regular, #334155);
 }
-
-:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) .btn-misa-draft,
-:is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnFooterDraft"] {
-  background-color: transparent !important;
-  border: 1px solid #0284c7 !important;
-  color: #38bdf8 !important;
+.misa-page-num:hover:not(.misa-page-active) {
+  background-color: #f1f5f9;
 }
+.misa-page-active {
+  background-color: rgba(14, 165, 233, 0.1);
+  color: var(--color-primary, #0ea5e9);
+  font-weight: 600;
+}
 
 :is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) .btn-misa-draft:hover,
 :is([class*="fixedFooter"], [class*="pageFooter"], [class*="bottomBar"], [class*="pageFooterView"], [class*="actionsBar"]) [class*="btnFooterDraft"]:hover {
@@ -637,3 +706,4 @@ html, body, #root {
   color: #f1f5f9 !important;
 }
 
+

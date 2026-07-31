@@ -38,15 +38,20 @@ public class BackupService {
     private final Environment env;
 
     private void ensureNativePasswordAuth(String user, String pass) {
-        try {
-            entityManager.createNativeQuery("ALTER USER '" + user + "'@'%' IDENTIFIED WITH mysql_native_password BY '" + pass + "'").executeUpdate();
-            entityManager.createNativeQuery("FLUSH PRIVILEGES").executeUpdate();
-        } catch (Exception e) {
-            try {
-                entityManager.createNativeQuery("ALTER USER '" + user + "'@'localhost' IDENTIFIED WITH mysql_native_password BY '" + pass + "'").executeUpdate();
-                entityManager.createNativeQuery("FLUSH PRIVILEGES").executeUpdate();
-            } catch (Exception ignored) {}
-        }
+        org.hibernate.Session session = entityManager.unwrap(org.hibernate.Session.class);
+        session.doWork(connection -> {
+            try (java.sql.Statement stmt = connection.createStatement()) {
+                try {
+                    stmt.executeUpdate("ALTER USER '" + user + "'@'%' IDENTIFIED WITH mysql_native_password BY '" + pass + "'");
+                    stmt.executeUpdate("FLUSH PRIVILEGES");
+                } catch (Exception e) {
+                    try {
+                        stmt.executeUpdate("ALTER USER '" + user + "'@'localhost' IDENTIFIED WITH mysql_native_password BY '" + pass + "'");
+                        stmt.executeUpdate("FLUSH PRIVILEGES");
+                    } catch (Exception ignored) {}
+                }
+            }
+        });
     }
 
 
@@ -131,7 +136,15 @@ public class BackupService {
         pb.redirectErrorStream(false);
 
 
-        Process process = pb.start();
+        Process process;
+        try {
+            process = pb.start();
+        } catch (IOException e) {
+            if (e.getMessage().contains("CreateProcess error=2") || e.getMessage().contains("No such file or directory") || e.getMessage().contains("Cannot run program")) {
+                throw new RuntimeException("Lỗi: Không tìm thấy công cụ 'mysqldump' trên máy chủ. Vui lòng cài đặt MySQL/MariaDB Tools hoặc kiểm tra biến môi trường PATH.");
+            }
+            throw new RuntimeException("Lỗi khi khởi chạy tiến trình sao lưu: " + e.getMessage());
+        }
 
         long rawSize = 0;
         // Stream mysqldump stdout → GZIP file

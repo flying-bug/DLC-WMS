@@ -11,8 +11,12 @@ export function printExportSlip(slip, options = {}) {
 
   const printWindow = window.open('', '_blank', 'width=900,height=800');
   if (!printWindow) {
-    alert('Trình duyệt đã chặn cửa sổ in (popup). Vui lòng cho phép mở popup để in phiếu.');
-    return;
+    if (options.onError) {
+        options.onError('Trình duyệt đã chặn cửa sổ in (popup). Vui lòng cho phép mở popup để in phiếu.');
+    } else {
+        console.error('Trình duyệt đã chặn cửa sổ in (popup). Vui lòng cho phép mở popup để in phiếu.');
+    }
+    return false;
   }
 
   const escapeHtml = (unsafe) => {

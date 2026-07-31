@@ -29,7 +29,7 @@ const SuperAdminLayout = ({ children }) => {
                             onClick={() => navigate('/operations')} 
                             className={currentPath.startsWith('/operations') ? styles.navLinkActive : styles.navLink}
                         >
-                            Operations Center
+                            Trung tâm vận hành
                         </a>
                     </nav>
                 </div>
