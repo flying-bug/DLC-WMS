@@ -293,7 +293,8 @@ function CreateExportSlipPage({ mode: propMode }) {
           ...item,
           variantId: value,
           serialNumbers: [],
-          price: selectedProduct ? Number(selectedProduct.salePrice || 0) : 0
+          price: selectedProduct ? Number(selectedProduct.salePrice || 0) : 0,
+          warrantyMonths: selectedProduct ? Number(selectedProduct.warrantyMonths || 0) : 0
         } : item);
       }
       return prev.map(item => item.localId === localId ? { ...item, [field]: value } : item);
@@ -425,6 +426,7 @@ function CreateExportSlipPage({ mode: propMode }) {
             scannedCode: scanResult.code,
             quantity: 1,
             price: scanResult.salePrice || 0,
+            warrantyMonths: scanResult.warrantyMonths || 0,
             serialNumbers: serial ? [serial] : []
           }
         ];
@@ -463,6 +465,7 @@ function CreateExportSlipPage({ mode: propMode }) {
       unitPrice: Number(item.price),
       vatRate: Number(item.vatPercent || 0),
       vatPercent: Number(item.vatPercent || 0),
+      warrantyMonths: Number(item.warrantyMonths || 0),
       serialNumbers: item.serialNumbers || [],
       note: item.note,
     })),
@@ -820,17 +823,18 @@ function CreateExportSlipPage({ mode: propMode }) {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ width: '50px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                  <th style={{ width: '12%' }}>Mã hàng</th>
-                  <th style={{ width: '22%' }}>{exportMode === 'ASSEMBLY' ? 'Tên linh kiện' : 'Tên hàng'}</th>
-                  <th style={{ width: '7%' }}>ĐVT</th>
-                  <th style={{ width: '7%' }} className={styles.textCenter}>Tồn kho</th>
-                  <th style={{ width: '8%' }} className={styles.textRight}>SL</th>
-                  <th style={{ width: '10%', textAlign: 'center' }}>Serial</th>
-                  <th style={{ width: '12%' }} className={styles.textRight}>Đơn giá</th>
-                  <th style={{ width: '12%' }} className={styles.textRight}>Thành tiền</th>
-                  <th style={{ width: '8%' }} className={styles.textRight}>Thuế GTGT</th>
-                  <th style={{ width: '50px', textAlign: 'center' }}></th>
+                  <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
+                  <th style={{ minWidth: '130px', width: '13%' }}>Mã hàng</th>
+                  <th style={{ minWidth: '200px', width: '22%' }}>{exportMode === 'ASSEMBLY' ? 'Tên linh kiện' : 'Tên hàng'}</th>
+                  <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                  <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn kho</th>
+                  <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
+                  <th style={{ minWidth: '80px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                  <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                  <th style={{ minWidth: '110px', width: '10%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>
+                  <th style={{ minWidth: '110px', width: '10%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>
+                  <th style={{ minWidth: '90px', width: '8%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thuế GTGT</th>
+                  <th style={{ width: '40px', textAlign: 'center' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -895,6 +899,9 @@ function CreateExportSlipPage({ mode: propMode }) {
                             </button>
                           )}
                         </div>
+                      </td>
+                      <td className={styles.textCenter}>
+                        <input type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '60px', margin: '0 auto', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(event) => handleItemChange(item.localId, 'warrantyMonths', event.target.value)} />
                       </td>
                       <td className={styles.textRight}>
                         <input type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} />
@@ -1015,11 +1022,19 @@ function CreateExportSlipPage({ mode: propMode }) {
       {serialModalItemId && selectedSerialProduct && (
         <ManageSerialModal
           isOpen={true}
-          onClose={() => setSerialModalItemId(null)}
-          onSave={handleSerialModalClose}
-          product={selectedSerialProduct}
-          quantity={Number(selectedSerialItem.quantity || 0)}
-          initialSerials={selectedSerialItem.serialNumbers || []}
+          onClose={(serials) => {
+            if (serials !== undefined) {
+              handleSerialModalClose(serials);
+            } else {
+              setSerialModalItemId(null);
+            }
+          }}
+          productName={selectedSerialProduct?.productName || selectedSerialProduct?.name || selectedSerialProduct?.sku}
+          targetQuantity={Number(selectedSerialItem?.quantity || 0)}
+          initialSerials={selectedSerialItem?.serialNumbers || []}
+          mode="export"
+          warehouseId={form.warehouseId}
+          variantId={selectedSerialProduct?.id}
         />
       )}
 

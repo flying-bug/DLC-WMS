@@ -460,7 +460,7 @@ public class ProductService {
                 .manufacturerPartNumber(variant.getManufacturerPartNumber())
                 .specsJson(variant.getSpecsJson())
                 .active(variant.getActive())
-                .warrantyMonths(variant.getWarrantyMonths())
+                .warrantyMonths((variant.getWarrantyMonths() == null || variant.getWarrantyMonths() <= 0) && product != null ? product.getWarrantyPeriodMonths() : variant.getWarrantyMonths())
                 .createdAt(variant.getCreatedAt())
                 .updatedAt(variant.getUpdatedAt())
                 .build();

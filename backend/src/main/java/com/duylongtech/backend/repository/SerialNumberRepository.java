@@ -1,11 +1,10 @@
 package com.duylongtech.backend.repository;
 
-import com.duylongtech.backend.entity.SerialNumber;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
+import com.duylongtech.backend.entity.SerialNumber;
 import java.util.Optional;
-import java.util.List;
 
 @Repository
 public interface SerialNumberRepository extends JpaRepository<SerialNumber, Long> {
@@ -13,4 +12,5 @@ public interface SerialNumberRepository extends JpaRepository<SerialNumber, Long
     Optional<SerialNumber> findByVariantIdAndSerialNumber(Long variantId, String serialNumber);
     List<SerialNumber> findBySerialNumberIn(List<String> serialNumbers);
     boolean existsByVariantIdIn(List<Long> variantIds);
+    List<SerialNumber> findByWarehouseIdAndVariantIdAndStatus(Long warehouseId, Long variantId, String status);
 }

@@ -452,9 +452,14 @@ public class CustomerService {
                         .build())
                 .toList();
 
+            String serials = w.getLines().stream()
+                .filter(l -> l.getSerialNumber() != null)
+                .map(l -> l.getSerialNumber().getSerialNumber())
+                .collect(java.util.stream.Collectors.joining(", "));
+
             return WarrantyHistoryResponse.builder()
                     .warrantyCode(w.getWarrantyCode())
-                    .serialNumber(w.getSerialNumber() != null ? w.getSerialNumber().getSerialNumber() : null)
+                    .serialNumber(serials.isEmpty() ? null : serials)
                     .startDate(w.getStartDate())
                     .endDate(w.getEndDate())
                     .warrantyStatus(w.getWarrantyStatus())

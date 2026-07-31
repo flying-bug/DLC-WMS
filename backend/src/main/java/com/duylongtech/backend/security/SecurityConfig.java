@@ -54,27 +54,27 @@ public class SecurityConfig {
         http.cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> 
-                    auth.dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC, DispatcherType.FORWARD).permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC, DispatcherType.FORWARD)
+                        .permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
-                            "/api/v1/auth/login", 
-                            "/api/v1/auth/login-google", 
-                            "/api/v1/auth/forgot-password/**",
-                            "/error",
-                            "/v3/api-docs",
-                            "/v3/api-docs/**",
-                            "/swagger-resources",
-                            "/swagger-resources/**",
-                            "/configuration/ui",
-                            "/configuration/security",
-                            "/swagger-ui/**",
-                            "/swagger-ui.html",
-                            "/webjars/**"
-                        ).permitAll()
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/login-google",
+                                "/api/v1/auth/forgot-password/**",
+                                "/error",
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+                                "/swagger-resources",
+                                "/swagger-resources/**",
+                                "/configuration/ui",
+                                "/configuration/security",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/webjars/**")
+                        .permitAll()
                         .requestMatchers("/api/v1/ai/**").authenticated()
-                        .anyRequest().authenticated()
-                );
+                        .anyRequest().authenticated());
 
         http.authenticationProvider(authenticationProvider());
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

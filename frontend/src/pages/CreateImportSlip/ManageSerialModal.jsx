@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import Modal from '../../components/ui/Modal/Modal';
 import styles from './ManageSerialModal.module.css';
+import { getAvailableSerials } from '../../api/warehouseApi';
 
-function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initialSerials = [] }) {
+function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initialSerials = [], mode = 'import', warehouseId, variantId }) {
   const [serials, setSerials] = useState([]);
+  const [availableSerials, setAvailableSerials] = useState([]);
+  const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [errorText, setErrorText] = useState('');
   const inputRef = useRef(null);
@@ -14,8 +17,20 @@ function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initi
       setSerials([...initialSerials]);
       setInputValue('');
       setErrorText('');
+      
+      if (mode === 'export' && warehouseId && variantId) {
+        setLoadingAvailable(true);
+        getAvailableSerials(warehouseId, variantId)
+          .then(res => {
+            if (res.data?.success) {
+              setAvailableSerials(res.data.data || []);
+            }
+          })
+          .catch(err => console.error("Error fetching available serials", err))
+          .finally(() => setLoadingAvailable(false));
+      }
     }
-  }, [isOpen, initialSerials]);
+  }, [isOpen, initialSerials, mode, warehouseId, variantId]);
 
   const handleAdd = () => {
     setErrorText('');
@@ -37,6 +52,13 @@ function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initi
     setTimeout(() => {
       if (inputRef.current) inputRef.current.focus();
     }, 10);
+  };
+
+  const handleSelectAvailable = (val) => {
+    setErrorText('');
+    if (serials.length >= targetQuantity) return;
+    if (serials.includes(val)) return;
+    setSerials([...serials, val]);
   };
 
   const handleRemove = (indexToRemove) => {
@@ -94,11 +116,52 @@ function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initi
           </div>
           {errorText && <div style={{ color: '#ef4444', fontSize: '13px', marginBottom: '20px', fontWeight: 500 }}>{errorText}</div>}
 
-          <div className={styles.sectionTitle}>CÁCH 2: QUÉT MÃ VẠCH</div>
-          <div className={styles.scanBox} style={{ opacity: isFull ? 0.6 : 1, cursor: isFull ? 'not-allowed' : 'pointer' }}>
-            <i className={`bi bi-upc-scan ${styles.scanIcon}`}></i>
-            <span className={styles.scanText}>{isFull ? "Đã hoàn thành" : "Bấm để bật Camera quét"}</span>
-          </div>
+          {mode === 'export' ? (
+            <>
+              <div className={styles.sectionTitle}>CÁCH 2: CHỌN TỪ KHO</div>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', maxHeight: '200px', overflowY: 'auto', padding: '8px', backgroundColor: '#f8fafc' }}>
+                {loadingAvailable ? (
+                  <div style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', padding: '16px' }}>Đang tải...</div>
+                ) : availableSerials.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {availableSerials.map(s => {
+                      const isSelected = serials.includes(s);
+                      return (
+                        <div 
+                          key={s} 
+                          onClick={() => !isSelected && handleSelectAvailable(s)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: isSelected ? '#dcfce7' : 'white',
+                            border: `1px solid ${isSelected ? '#86efac' : '#cbd5e1'}`,
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            color: isSelected ? '#166534' : '#334155',
+                            cursor: (isSelected || isFull) ? 'not-allowed' : 'pointer',
+                            opacity: (isFull && !isSelected) ? 0.6 : 1,
+                            fontWeight: isSelected ? 600 : 400
+                          }}
+                        >
+                          {s}
+                          {isSelected && <i className="bi bi-check2" style={{ marginLeft: '6px' }}></i>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', padding: '16px' }}>Không có Serial nào khả dụng trong kho</div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={styles.sectionTitle}>CÁCH 2: QUÉT MÃ VẠCH</div>
+              <div className={styles.scanBox} style={{ opacity: isFull ? 0.6 : 1, cursor: isFull ? 'not-allowed' : 'pointer' }}>
+                <i className={`bi bi-upc-scan ${styles.scanIcon}`}></i>
+                <span className={styles.scanText}>{isFull ? "Đã hoàn thành" : "Bấm để bật Camera quét"}</span>
+              </div>
+            </>
+          )}
         </div>
 
         <div className={styles.rightCol}>

@@ -11,11 +11,6 @@ import java.util.List;
 public class WarrantyResponse {
     private Long id;
     private String warrantyCode;
-    private Long serialNumberId;
-    private String serialNumber;
-    private String serialStatus;
-    private String sku;
-    private String productName;
     private Long partnerId;
     private String partnerName;
     private String partnerPhone;
@@ -28,6 +23,7 @@ public class WarrantyResponse {
     private String note;
     private Integer repairCount;
     private List<RepairSummary> repairs;
+    private List<WarrantyLineResponse> lines;
 
     @Data
     @Builder

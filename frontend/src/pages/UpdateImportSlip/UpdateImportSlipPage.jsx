@@ -243,6 +243,7 @@ function UpdateImportSlipPage() {
           quantity: line.quantityIn || 1,
           price: line.unitCost || 0,
           vatPercent: line.vatPercent ?? line.vatRate ?? 0,
+          warrantyMonths: line.warrantyMonths || 0,
           note: line.note || '',
           serialNumbers: line.serialNumbers || [],
           isNew: false,
@@ -284,7 +285,19 @@ function UpdateImportSlipPage() {
   };
 
   const handleItemChange = (localId, field, value) => {
-    setItems(prev => prev.map(item => item.localId === localId ? { ...item, [field]: value } : item));
+    setItems(prev => prev.map(item => {
+      if (item.localId !== localId) return item;
+      if (field === 'variantId') {
+        const product = products.find(p => String(p.id) === String(value));
+        return { 
+          ...item, 
+          [field]: value, 
+          serialNumbers: [],
+          warrantyMonths: product ? Number(product.warrantyMonths || 0) : 0
+        };
+      }
+      return { ...item, [field]: value };
+    }));
   };
 
   const addItem = () => {
@@ -321,6 +334,7 @@ function UpdateImportSlipPage() {
       unitCost: Number(item.price),
       unitPrice: Number(item.price),
       vatPercent: Number(item.vatPercent || 0),
+      warrantyMonths: Number(item.warrantyMonths || 0),
       serialNumbers: item.serialNumbers || [],
       note: item.note,
     })),
@@ -685,6 +699,7 @@ function UpdateImportSlipPage() {
                       <th>ĐVT</th>
                       <th style={{ textAlign: 'right' }}>SL</th>
                       <th style={{ textAlign: 'center' }}>Serial</th>
+                      <th style={{ textAlign: 'center' }}>BH (T)</th>
                       <th style={{ textAlign: 'right' }}>Đơn giá</th>
                       <th style={{ textAlign: 'right' }}>Thành tiền</th>
                       <th style={{ textAlign: 'right' }}>% thuế GTGT</th>
@@ -735,6 +750,9 @@ function UpdateImportSlipPage() {
                               )}
                             </div>
                           </td>
+                          <td align="center">
+                            <input type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(e) => handleItemChange(item.localId, 'warrantyMonths', e.target.value)} />
+                          </td>
                           <td align="right">
                             <input type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
                           </td>
@@ -753,7 +771,7 @@ function UpdateImportSlipPage() {
                     <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
                       <td colSpan="4" style={{ textAlign: 'right', padding: '12px' }}></td>
                       <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalQuantity)}</td>
-                      <td colSpan="2"></td>
+                      <td colSpan="3"></td>
                       <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>
                       <td colSpan="2"></td>
                     </tr>

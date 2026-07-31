@@ -19,13 +19,6 @@ public class Warranty {
     @Column(name = "warranty_code", nullable = false, unique = true, length = 50)
     private String warrantyCode;
 
-    @Column(name = "serial_number_id", nullable = false)
-    private Long serialNumberId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "serial_number_id", insertable = false, updatable = false)
-    private SerialNumber serialNumber;
-
     @Column(name = "partner_id", nullable = false)
     private Long partnerId;
 
@@ -47,4 +40,7 @@ public class Warranty {
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
+
+    @OneToMany(mappedBy = "warranty", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<WarrantyLine> lines = new java.util.ArrayList<>();
 }
