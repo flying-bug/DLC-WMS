@@ -38,6 +38,7 @@ public class WarehouseService {
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final UserRepository userRepository;
     private final CodeGeneratorService codeGeneratorService;
+    private final com.duylongtech.backend.repository.SerialNumberRepository serialNumberRepository;
 
     // ──────────────────────────────────────────────────────────
     // US1: Tạo mới kho
@@ -315,5 +316,13 @@ public class WarehouseService {
             throw new BusinessException(SystemMessage.WH_NOT_FOUND);
         }
         return inventoryBalanceRepository.findStockRowsForAiByWarehouseId(warehouseId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getAvailableSerials(Long warehouseId, Long variantId) {
+        return serialNumberRepository.findByWarehouseIdAndVariantIdAndStatus(warehouseId, variantId, "AVAILABLE")
+                .stream()
+                .map(com.duylongtech.backend.entity.SerialNumber::getSerialNumber)
+                .collect(java.util.stream.Collectors.toList());
     }
 }

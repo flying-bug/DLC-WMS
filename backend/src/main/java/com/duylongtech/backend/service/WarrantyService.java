@@ -46,18 +46,11 @@ public class WarrantyService {
 
     private WarrantyResponse toResponse(Warranty warranty, boolean includeRepairs) {
         Partner partner = warranty.getPartner();
-        SerialNumber serialNumber = warranty.getSerialNumber();
-        ProductVariant variant = serialNumber != null ? serialNumber.getVariant() : null;
         List<Repair> repairs = repairRepository.findByWarrantyId(warranty.getId());
 
-        return WarrantyResponse.builder()
+        WarrantyResponse.WarrantyResponseBuilder builder = WarrantyResponse.builder()
                 .id(warranty.getId())
                 .warrantyCode(warranty.getWarrantyCode())
-                .serialNumberId(warranty.getSerialNumberId())
-                .serialNumber(serialNumber != null ? serialNumber.getSerialNumber() : null)
-                .serialStatus(serialNumber != null ? serialNumber.getStatus() : null)
-                .sku(variant != null ? variant.getSku() : null)
-                .productName(variant != null ? variant.getVariantName() : null)
                 .partnerId(warranty.getPartnerId())
                 .partnerName(partner != null ? partner.getName() : null)
                 .partnerPhone(partner != null ? partner.getPhone() : null)
@@ -68,8 +61,41 @@ public class WarrantyService {
                 .endDate(warranty.getEndDate())
                 .warrantyStatus(warranty.getWarrantyStatus())
                 .repairCount(repairs.size())
-                .repairs(includeRepairs ? repairs.stream().map(this::toRepairSummary).toList() : null)
-                .build();
+                .repairs(includeRepairs ? repairs.stream().map(this::toRepairSummary).toList() : null);
+
+        if (warranty.getLines() != null && !warranty.getLines().isEmpty()) {
+            List<com.duylongtech.backend.dto.response.WarrantyLineResponse> lineResponses = warranty.getLines().stream().map(line -> {
+                com.duylongtech.backend.dto.response.WarrantyLineResponse.WarrantyLineResponseBuilder lineBuilder = com.duylongtech.backend.dto.response.WarrantyLineResponse.builder()
+                        .id(line.getId())
+                        .serialNumberId(line.getSerialNumberId())
+                        .productVariantId(line.getProductVariantId())
+                        .quantity(line.getQuantity())
+                        .startDate(line.getStartDate())
+                        .endDate(line.getEndDate())
+                        .warrantyStatus(line.getWarrantyStatus());
+
+                if (line.getSerialNumber() != null) {
+                    lineBuilder.serialNumber(line.getSerialNumber().getSerialNumber());
+                    if (line.getSerialNumber().getVariant() != null) {
+                        lineBuilder.sku(line.getSerialNumber().getVariant().getSku());
+                        lineBuilder.variantName(line.getSerialNumber().getVariant().getVariantName());
+                        if (line.getSerialNumber().getVariant().getVariantName() == null && line.getSerialNumber().getVariant().getProduct() != null) {
+                            lineBuilder.variantName(line.getSerialNumber().getVariant().getProduct().getProductName());
+                        }
+                    }
+                } else if (line.getProductVariant() != null) {
+                    lineBuilder.sku(line.getProductVariant().getSku());
+                    lineBuilder.variantName(line.getProductVariant().getVariantName());
+                    if (line.getProductVariant().getVariantName() == null && line.getProductVariant().getProduct() != null) {
+                        lineBuilder.variantName(line.getProductVariant().getProduct().getProductName());
+                    }
+                }
+                return lineBuilder.build();
+            }).collect(java.util.stream.Collectors.toList());
+            builder.lines(lineResponses);
+        }
+
+        return builder.build();
     }
 
     private WarrantyResponse.RepairSummary toRepairSummary(Repair repair) {

@@ -60,3 +60,10 @@ export const getWarehouseLogs = (id, params = {}) => {
 export const getWarehouseInventory = (id) => {
     return axiosClient.get(`${WAREHOUSE_BASE}/${id}/inventory`);
 };
+
+/**
+ * Lấy danh sách serial number còn trong kho
+ */
+export const getAvailableSerials = (warehouseId, variantId) => {
+    return axiosClient.get(`/warehouses/${warehouseId}/variants/${variantId}/serials`);
+};

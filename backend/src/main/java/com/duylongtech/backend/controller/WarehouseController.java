@@ -169,6 +169,12 @@ public class WarehouseController {
         return ResponseEntity.ok(ApiResponse.success(warehouseService.getWarehouseInventory(id)));
     }
 
+    @GetMapping("/{id}/variants/{variantId}/serials")
+    @PreAuthorize("hasAuthority('warehouse_master:view') or hasRole('MANAGER')")
+    public ResponseEntity<ApiResponse<List<String>>> getAvailableSerials(@PathVariable Long id, @PathVariable Long variantId) {
+        return ResponseEntity.ok(ApiResponse.success(warehouseService.getAvailableSerials(id, variantId)));
+    }
+
     // ──────────────────────────────────────────────────────────
     // US1: POST - Tạo mới kho
     // ──────────────────────────────────────────────────────────

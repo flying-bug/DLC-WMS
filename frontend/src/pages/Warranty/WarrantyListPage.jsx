@@ -111,8 +111,19 @@ function WarrantyListPage() {
   const rows = warranties.map(item => {
     const status = STATUS_LABELS[item.warrantyStatus] || { label: item.warrantyStatus || 'Không rõ', code: 'info' };
     const pName = item.partnerName || item.customerName || item.partner?.name || 'Khách lẻ';
-    const sCode = item.serialNumber || item.serialCode || item.serialNumberValue || item.serialNumber?.serialNo || item.serialNumber?.serialNumber || '';
-    const prdName = item.productName || item.variantName || item.serialNumber?.productName || item.serialNumber?.variant?.variantName || 'Chưa rõ';
+    
+    let sCode = '';
+    let prdName = 'Chưa rõ';
+    
+    if (item.lines && item.lines.length > 0) {
+      if (item.lines.length === 1) {
+        sCode = item.lines[0].serialNumber || '';
+        prdName = item.lines[0].variantName || item.lines[0].sku || 'Chưa rõ';
+      } else {
+        sCode = `[${item.lines.length} Serial]`;
+        prdName = `[${item.lines.length} Sản phẩm]`;
+      }
+    }
     
     return {
       ...item,

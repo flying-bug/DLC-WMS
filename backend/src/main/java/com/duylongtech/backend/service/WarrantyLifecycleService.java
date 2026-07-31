@@ -2,8 +2,11 @@ package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.WarrantyRequest;
 import com.duylongtech.backend.dto.request.WarrantyStatusRequest;
+import com.duylongtech.backend.dto.request.WarrantyLineRequest;
+import com.duylongtech.backend.dto.response.WarrantyLineResponse;
 import com.duylongtech.backend.dto.response.WarrantyResponse;
 import com.duylongtech.backend.entity.Warranty;
+import com.duylongtech.backend.entity.WarrantyLine;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.WarrantyRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +37,6 @@ public class WarrantyLifecycleService {
         validateRequest(request, null);
         Warranty warranty = Warranty.builder()
                 .warrantyCode(resolveCreateCode(request.getWarrantyCode()))
-                .serialNumberId(request.getSerialNumberId())
                 .partnerId(request.getPartnerId())
                 .salesOrderId(request.getSalesOrderId())
                 .startDate(request.getStartDate())
@@ -39,6 +44,10 @@ public class WarrantyLifecycleService {
                 .warrantyStatus(normalizeStatusOrDefault(request.getWarrantyStatus(), "APPROVED"))
                 .note(trimToNull(request.getNote()))
                 .build();
+        
+        List<WarrantyLine> lines = mapLines(request.getLines(), warranty);
+        warranty.setLines(lines);
+
         return toResponse(warrantyRepository.save(warranty));
     }
 
@@ -47,14 +56,33 @@ public class WarrantyLifecycleService {
         Warranty warranty = findWarrantyOrThrow(id);
         validateRequest(request, id);
         warranty.setWarrantyCode(resolveUpdateCode(id, request.getWarrantyCode(), warranty.getWarrantyCode()));
-        warranty.setSerialNumberId(request.getSerialNumberId());
         warranty.setPartnerId(request.getPartnerId());
         warranty.setSalesOrderId(request.getSalesOrderId());
         warranty.setStartDate(request.getStartDate());
         warranty.setEndDate(request.getEndDate());
         warranty.setWarrantyStatus(normalizeStatusOrDefault(request.getWarrantyStatus(), warranty.getWarrantyStatus()));
         warranty.setNote(trimToNull(request.getNote()));
+
+        warranty.getLines().clear();
+        warranty.getLines().addAll(mapLines(request.getLines(), warranty));
+
         return toResponse(warrantyRepository.save(warranty));
+    }
+
+    private List<WarrantyLine> mapLines(List<WarrantyLineRequest> lineRequests, Warranty warranty) {
+        if (lineRequests == null || lineRequests.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        return lineRequests.stream().map(req -> WarrantyLine.builder()
+                .warranty(warranty)
+                .serialNumberId(req.getSerialNumberId())
+                .productVariantId(req.getProductVariantId())
+                .quantity(req.getQuantity())
+                .startDate(req.getStartDate() != null ? req.getStartDate() : warranty.getStartDate())
+                .endDate(req.getEndDate() != null ? req.getEndDate() : warranty.getEndDate())
+                .warrantyStatus(normalizeStatusOrDefault(req.getWarrantyStatus(), warranty.getWarrantyStatus()))
+                .build()
+        ).collect(Collectors.toList());
     }
 
     @Transactional
@@ -83,15 +111,18 @@ public class WarrantyLifecycleService {
         if (request == null) {
             throw new BusinessException("Du lieu bao hanh la bat buoc");
         }
-        if (request.getSerialNumberId() == null) {
-            throw new BusinessException("Serial bao hanh la bat buoc");
+        if (request.getLines() == null || request.getLines().isEmpty()) {
+            throw new BusinessException("Phieu bao hanh phai co it nhat mot mat hang");
+        }
+        for (WarrantyLineRequest line : request.getLines()) {
+            if (line.getSerialNumberId() == null && (line.getProductVariantId() == null || line.getQuantity() == null)) {
+                throw new BusinessException("Phai cung cap Serial hoac SKU va so luong bao hanh cho moi mat hang");
+            }
         }
         if (request.getPartnerId() == null) {
             throw new BusinessException("Khach hang bao hanh la bat buoc");
         }
-        if (request.getSalesOrderId() == null) {
-            throw new BusinessException("Don ban hang lien quan la bat buoc");
-        }
+        // Don ban hang lien quan co the khong bat buoc neu xuat ban truc tiep (POS)
         if (request.getStartDate() == null || request.getEndDate() == null) {
             throw new BusinessException("Ngay bat dau va ngay het han bao hanh la bat buoc");
         }
@@ -114,17 +145,56 @@ public class WarrantyLifecycleService {
     }
 
     private WarrantyResponse toResponse(Warranty warranty) {
-        return WarrantyResponse.builder()
+        WarrantyResponse.WarrantyResponseBuilder builder = WarrantyResponse.builder()
                 .id(warranty.getId())
                 .warrantyCode(warranty.getWarrantyCode())
-                .serialNumberId(warranty.getSerialNumberId())
                 .partnerId(warranty.getPartnerId())
                 .salesOrderId(warranty.getSalesOrderId())
                 .startDate(warranty.getStartDate())
                 .endDate(warranty.getEndDate())
                 .warrantyStatus(warranty.getWarrantyStatus())
-                .note(warranty.getNote())
-                .build();
+                .note(warranty.getNote());
+
+        if (warranty.getPartner() != null) {
+            builder.partnerName(warranty.getPartner().getName());
+            builder.partnerPhone(warranty.getPartner().getPhone());
+            builder.partnerEmail(warranty.getPartner().getEmail());
+            builder.partnerAddress(warranty.getPartner().getAddress());
+        }
+
+        if (warranty.getLines() != null && !warranty.getLines().isEmpty()) {
+            List<WarrantyLineResponse> lineResponses = warranty.getLines().stream().map(line -> {
+                WarrantyLineResponse.WarrantyLineResponseBuilder lineBuilder = WarrantyLineResponse.builder()
+                        .id(line.getId())
+                        .serialNumberId(line.getSerialNumberId())
+                        .productVariantId(line.getProductVariantId())
+                        .quantity(line.getQuantity())
+                        .startDate(line.getStartDate())
+                        .endDate(line.getEndDate())
+                        .warrantyStatus(line.getWarrantyStatus());
+
+                if (line.getSerialNumber() != null) {
+                    lineBuilder.serialNumber(line.getSerialNumber().getSerialNumber());
+                    if (line.getSerialNumber().getVariant() != null) {
+                        lineBuilder.sku(line.getSerialNumber().getVariant().getSku());
+                        lineBuilder.variantName(line.getSerialNumber().getVariant().getVariantName());
+                        if (line.getSerialNumber().getVariant().getVariantName() == null && line.getSerialNumber().getVariant().getProduct() != null) {
+                            lineBuilder.variantName(line.getSerialNumber().getVariant().getProduct().getProductName());
+                        }
+                    }
+                } else if (line.getProductVariant() != null) {
+                    lineBuilder.sku(line.getProductVariant().getSku());
+                    lineBuilder.variantName(line.getProductVariant().getVariantName());
+                    if (line.getProductVariant().getVariantName() == null && line.getProductVariant().getProduct() != null) {
+                        lineBuilder.variantName(line.getProductVariant().getProduct().getProductName());
+                    }
+                }
+                return lineBuilder.build();
+            }).collect(Collectors.toList());
+            builder.lines(lineResponses);
+        }
+
+        return builder.build();
     }
 
     private String resolveCreateCode(String requestedCode) {

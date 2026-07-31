@@ -81,6 +81,7 @@ public class InventoryDocumentService {
     private final SerialNumberRepository serialNumberRepository;
     private final ProductVariantRepository productVariantRepository;
     private final WarrantyRepository warrantyRepository;
+    private final WarrantyLifecycleService warrantyLifecycleService;
     private final PartnerRepository partnerRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
@@ -202,6 +203,8 @@ public class InventoryDocumentService {
             throw new BusinessException("Chỉ phiếu xuất kho lưu tạm mới có thể ghi sổ");
         }
 
+        List<com.duylongtech.backend.dto.request.WarrantyLineRequest> warrantyLines = new java.util.ArrayList<>();
+
         for (InventoryDocumentLine line : doc.getLines()) {
             BigDecimal qtyToExport = line.getQuantityOut();
             SerialNumber serialNumber = null;
@@ -290,7 +293,30 @@ public class InventoryDocumentService {
                 updateExportedSerialBalance(doc, line, serialNumber, avgUnitCost);
             }
             // Tự động tạo phiếu bảo hành nếu line/sản phẩm có khai báo warrantyMonths > 0
-            generateWarrantyIfNeeded(doc, line, serialNumber);
+            com.duylongtech.backend.dto.request.WarrantyLineRequest wLine = generateWarrantyLineIfNeeded(doc, line, serialNumber);
+            if (wLine != null) {
+                warrantyLines.add(wLine);
+            }
+        }
+
+        if (!warrantyLines.isEmpty()) {
+            com.duylongtech.backend.dto.request.WarrantyRequest wReq = new com.duylongtech.backend.dto.request.WarrantyRequest();
+            wReq.setPartnerId(doc.getPartnerId());
+            wReq.setSalesOrderId(doc.getSalesOrderId());
+            wReq.setStartDate(doc.getDocDate() != null ? doc.getDocDate() : LocalDate.now());
+            
+            LocalDate maxEndDate = wReq.getStartDate();
+            for (com.duylongtech.backend.dto.request.WarrantyLineRequest wl : warrantyLines) {
+                if (wl.getEndDate().isAfter(maxEndDate)) {
+                    maxEndDate = wl.getEndDate();
+                }
+            }
+            wReq.setEndDate(maxEndDate);
+            wReq.setWarrantyStatus("APPROVED");
+            wReq.setNote("Phieu bao hanh tu dong tao tu phieu xuat kho " + doc.getDocCode());
+            wReq.setLines(warrantyLines);
+            
+            warrantyLifecycleService.createWarranty(wReq);
         }
 
         doc.setStatus("POSTED");
@@ -505,6 +531,7 @@ public class InventoryDocumentService {
                 .trackSerial(product != null ? product.getTrackSerial() : false)
                 .salePrice(variant.getSalePrice())
                 .costPrice(variant.getCostPrice())
+                .warrantyMonths((variant.getWarrantyMonths() == null || variant.getWarrantyMonths() <= 0) && product != null ? product.getWarrantyPeriodMonths() : variant.getWarrantyMonths())
                 .build();
     }
 
@@ -558,18 +585,11 @@ public class InventoryDocumentService {
      * Phiếu bảo hành sẽ không được tạo nếu serial đó đã có warranty tồn tại
      * (tránh duplicate khi gọi lại postExport do lỗi retry).
      */
-    private void generateWarrantyIfNeeded(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial) {
-        // Chỉ tự động sinh phiếu bảo hành khi mục đích là SALES (Xuất kho bán hàng)
-        // USAGE (Xuất sử dụng nội bộ) và TRANSFER_EXPORT (Chuyển kho) đều KHÔNG sinh bảo hành
+    private com.duylongtech.backend.dto.request.WarrantyLineRequest generateWarrantyLineIfNeeded(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial) {
         if (doc.getIssuePurpose() == null || !ISSUE_PURPOSE_SALES.equalsIgnoreCase(doc.getIssuePurpose().trim())) {
-            return;
+            return null;
         }
 
-        if (serial == null || serial.getId() == null) {
-            return; // Phiếu bảo hành phải gắn với Serial Number cụ thể
-        }
-
-        // Lấy số tháng bảo hành: ưu tiên line -> variant -> product
         Integer warrantyMonths = line.getWarrantyMonths();
         if (warrantyMonths == null || warrantyMonths <= 0) {
             ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
@@ -582,34 +602,24 @@ public class InventoryDocumentService {
         }
 
         if (warrantyMonths == null || warrantyMonths <= 0) {
-            return; // Sản phẩm này không có chính sách bảo hành
+            return null;
         }
 
         if (doc.getPartnerId() == null) {
-            return; // Không có khách hàng — không tạo bảo hành
-        }
-
-        // Kiểm tra idempotency nếu có serial: tránh tạo trùng khi retry
-        boolean alreadyExists = warrantyRepository.existsBySerialNumberId(serial.getId());
-        if (alreadyExists) {
-            return;
+            return null;
         }
 
         LocalDate startDate = doc.getDocDate() != null ? doc.getDocDate() : LocalDate.now();
         LocalDate endDate = startDate.plusMonths(warrantyMonths);
-        String warrantyCode = codeGeneratorService.generateCode("warranties", "warranty_code", "BH", 6);
 
-        Warranty warranty = Warranty.builder()
-                .warrantyCode(warrantyCode)
-                .serialNumberId(serial.getId())
-                .partnerId(doc.getPartnerId())
-                .salesOrderId(doc.getSalesOrderId())
-                .startDate(startDate)
-                .endDate(endDate)
-                .warrantyStatus("APPROVED")
-                .note("Phieu bao hanh tu dong tao tu phieu xuat kho " + doc.getDocCode())
-                .build();
-        warrantyRepository.save(warranty);
+        com.duylongtech.backend.dto.request.WarrantyLineRequest wLine = new com.duylongtech.backend.dto.request.WarrantyLineRequest();
+        wLine.setSerialNumberId(serial != null ? serial.getId() : null);
+        wLine.setProductVariantId(line.getVariantId());
+        wLine.setQuantity(serial != null ? BigDecimal.ONE : line.getQuantityOut());
+        wLine.setStartDate(startDate);
+        wLine.setEndDate(endDate);
+        wLine.setWarrantyStatus("APPROVED");
+        return wLine;
     }
 
     private void createImportedSerialsIfNeeded(InventoryDocument doc, InventoryDocumentLine line, BigDecimal unitCost) {
@@ -921,6 +931,7 @@ public class InventoryDocumentService {
                 .lotBatchId(lr.getLotBatchId())
                 .serialNumberId(lr.getSerialNumberId())
                 .serialNumbersText(formatSerialNumbers(lr.getSerialNumbers()))
+                .warrantyMonths(lr.getWarrantyMonths())
                 .note(lr.getNote())
                 .vatPercent(vatRate)
                 .build();

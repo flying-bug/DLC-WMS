@@ -22,4 +22,5 @@ public class ScanResolveResponse {
     private Boolean trackSerial;
     private BigDecimal salePrice;
     private BigDecimal costPrice;
+    private Integer warrantyMonths;
 }

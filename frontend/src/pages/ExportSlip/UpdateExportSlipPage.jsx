@@ -206,6 +206,7 @@ function UpdateExportSlipPage() {
             quantity: line.quantityOut || 1,
             price: line.unitPrice || 0,
             vatPercent: line.vatPercent ?? line.vatRate ?? 0,
+            warrantyMonths: line.warrantyMonths || 0,
             note: line.note || '',
             serialNumbers: line.serialNumbers || [],
             scannedCode: line.serialNumber || line.productCode || '',
@@ -288,7 +289,8 @@ function UpdateExportSlipPage() {
           ...item,
           variantId: value,
           serialNumbers: [],
-          price: selectedProduct ? Number(selectedProduct.salePrice || 0) : 0
+          price: selectedProduct ? Number(selectedProduct.salePrice || 0) : 0,
+          warrantyMonths: selectedProduct ? Number(selectedProduct.warrantyMonths || 0) : 0
         } : item);
       }
       return prev.map(item => item.localId === localId ? { ...item, [field]: value } : item);
@@ -347,6 +349,7 @@ function UpdateExportSlipPage() {
           barcode: scanResult.barcode,
           variantName: scanResult.productName,
           unitName: scanResult.unitName || '',
+          warrantyMonths: scanResult.warrantyMonths || 0,
           salePrice: scanResult.salePrice || 0,
           trackSerial: scanResult.trackSerial,
         },
@@ -389,6 +392,7 @@ function UpdateExportSlipPage() {
         scannedCode: scanResult.code,
         quantity: 1,
         price: scanResult.salePrice || 0,
+        warrantyMonths: scanResult.warrantyMonths || 0,
         serialNumbers: serial ? [serial] : []
       };
       
@@ -448,6 +452,7 @@ function UpdateExportSlipPage() {
       unitPrice: Number(item.price),
       vatRate: Number(item.vatPercent || 0),
       vatPercent: Number(item.vatPercent || 0),
+      warrantyMonths: Number(item.warrantyMonths || 0),
       serialNumbers: item.serialNumbers || [],
       note: item.note,
     })),
@@ -685,6 +690,7 @@ function UpdateExportSlipPage() {
                       <th style={{ width: '7%' }} className={styles.textCenter}>Tồn</th>
                       <th style={{ width: '8%' }} className={styles.textRight}>SL</th>
                       <th style={{ width: '10%', textAlign: 'center' }}>Serial</th>
+                      <th style={{ width: '8%', textAlign: 'center' }}>BH (T)</th>
                       <th style={{ width: '11%' }} className={styles.textRight}>Đơn giá</th>
                       <th style={{ width: '11%' }} className={styles.textRight}>Thành tiền</th>
                       <th style={{ width: '8%' }} className={styles.textRight}>% VAT</th>
@@ -754,6 +760,9 @@ function UpdateExportSlipPage() {
                                 </button>
                               )}
                             </div>
+                          </td>
+                          <td className={styles.textCenter}>
+                            <input type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '60px', margin: '0 auto', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(event) => handleItemChange(item.localId, 'warrantyMonths', event.target.value)} />
                           </td>
                           <td className={styles.textRight}>
                             <input type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} />

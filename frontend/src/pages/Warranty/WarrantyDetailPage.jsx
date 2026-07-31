@@ -55,10 +55,8 @@ function WarrantyDetailPage() {
   const pPhone = warranty?.partnerPhone || warranty?.customerPhone || warranty?.partner?.phone || 'Chưa có';
   const pEmail = warranty?.partnerEmail || warranty?.partner?.email || 'Chưa có';
   const pAddress = warranty?.partnerAddress || warranty?.partner?.address || 'Chưa có';
-
-  const sCode = warranty?.serialNumber || warranty?.serialCode || warranty?.serialNumberValue || warranty?.serialNumber?.serialNo || warranty?.serialNumber?.serialNumber || 'Chưa có';
-  const prdName = warranty?.productName || warranty?.variantName || warranty?.serialNumber?.productName || warranty?.serialNumber?.variant?.variantName || 'Chưa rõ';
-  const skuCode = warranty?.sku || warranty?.serialNumber?.sku || warranty?.serialNumber?.variant?.sku || 'Chưa có';
+  
+  const lines = warranty?.lines || [];
   
   const repairs = warranty?.repairs || warranty?.repairHistory || [];
   const statusInfo = STATUS_LABELS[warranty?.warrantyStatus] || { label: warranty?.warrantyStatus || 'Chưa rõ', code: 'info' };
@@ -119,18 +117,6 @@ function WarrantyDetailPage() {
                     <p>{warranty.warrantyCode || 'Chưa có'}</p>
                   </div>
                   <div className={styles.infoItem}>
-                    <label>Serial</label>
-                    <p style={{ color: 'var(--color-primary)', fontWeight: '600' }}>{sCode}</p>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <label>Sản phẩm</label>
-                    <p>{prdName}</p>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <label>Mã SKU</label>
-                    <p>{skuCode}</p>
-                  </div>
-                  <div className={styles.infoItem}>
                     <label>Ngày bắt đầu</label>
                     <p>{formatDate(warranty.startDate)}</p>
                   </div>
@@ -143,6 +129,38 @@ function WarrantyDetailPage() {
                     <p>{warranty.note || 'Không có ghi chú'}</p>
                   </div>
                 </div>
+                
+                {lines.length > 0 && (
+                  <div style={{ marginTop: '24px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: 'var(--color-text)' }}>Danh sách mặt hàng bảo hành</h4>
+                    <div className="table-responsive">
+                      <table className="misa-table" style={{ width: '100%' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ width: '40px', textAlign: 'center' }}>STT</th>
+                            <th>Mã SKU</th>
+                            <th>Sản phẩm</th>
+                            <th>Serial</th>
+                            <th style={{ textAlign: 'right' }}>Số lượng</th>
+                            <th>Hạn bảo hành</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lines.map((line, index) => (
+                            <tr key={line.id || index}>
+                              <td style={{ textAlign: 'center' }}>{index + 1}</td>
+                              <td>{line.sku || 'Chưa có'}</td>
+                              <td>{line.variantName || 'Chưa rõ'}</td>
+                              <td style={{ fontWeight: '500', color: 'var(--color-primary)' }}>{line.serialNumber || ''}</td>
+                              <td style={{ textAlign: 'right' }}>{line.quantity || 1}</td>
+                              <td>{formatDate(line.endDate)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
