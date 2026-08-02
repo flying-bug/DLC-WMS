@@ -194,7 +194,9 @@
     padding: 0 24px;
     border-bottom: 1px solid var(--color-border);
     box-shadow: var(--shadow-card-soft);
-    z-index: 5;
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 .topTabs {

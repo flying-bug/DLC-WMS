@@ -1,17 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './SuperAdminDashboard.module.css';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
 import Toast from '../../components/ui/Toast/Toast';
 
-const SESSION_INFO = {
-    loginTime: '45:12',
-    serverName: 'DL-HCM-01',
-};
-
 function SuperAdminDashboard() {
     const navigate = useNavigate();
     const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     const ACTION_CARDS = [
         {
@@ -56,15 +59,9 @@ function SuperAdminDashboard() {
                 {/* Brand */}
                 <div className={styles.headerBrand} onClick={() => navigate('/')}>
                     <div className={styles.headerLogoBox} aria-hidden="true">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                            stroke="var(--color-white)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                            <polyline points="9 22 9 12 15 12 15 22" />
-                        </svg>
+                        <img src="/dl-logo.png" alt="Duy Long Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     </div>
                     <span className={styles.headerBrandName}>Duy Long Computer</span>
-                    <span className={styles.headerDivider} aria-hidden="true" />
-                    <span className={styles.headerSubtitle}>Warehouse Management</span>
                 </div>
 
                 {/* Controls */}
@@ -138,15 +135,11 @@ function SuperAdminDashboard() {
                 <div className={styles.footerLeft}>
                     <span className={styles.footerItem}>
                         <i className={`bi bi-clock ${styles.footerItemIcon}`} aria-hidden="true" />
-                        Phiên đăng nhập: {SESSION_INFO.loginTime}
-                    </span>
-                    <span className={styles.footerItem}>
-                        <i className={`bi bi-server ${styles.footerItemIcon}`} aria-hidden="true" />
-                        Server: {SESSION_INFO.serverName}
+                        Giờ hiện tại: {currentTime.toLocaleTimeString('vi-VN')} {currentTime.toLocaleDateString('vi-VN')}
                     </span>
                 </div>
                 <div className={styles.footerRight}>
-                    © 2026 Duy Long Computer &nbsp;·&nbsp; Warehouse Management System v2.4
+                    © 2026 Duy Long Computer &nbsp;·&nbsp; Warehouse Management System v1.0
                 </div>
             </footer>
 

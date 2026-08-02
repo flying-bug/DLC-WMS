@@ -16,6 +16,10 @@
     justify-content: space-between;
     padding: 0 24px;
     gap: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .headerLeft {
@@ -26,7 +30,7 @@
 }
 
 .brandName {
-    font-size: 18px;
+    font-size: 15px;
     font-weight: 700;
     color: var(--color-primary, #0056b3);
     margin-right: 32px;
@@ -796,6 +800,7 @@
   outline: none;
   color: var(--color-text-strong);
   height: 38px;
+  box-sizing: border-box;
   transition: border-color 0.2s ease;
 }
 
@@ -833,6 +838,8 @@
   font-size: 14px;
   color: var(--color-text-strong);
   height: 38px;
+  min-width: 160px;
+  box-sizing: border-box;
   outline: none;
   background-color: var(--color-white);
 }
@@ -852,7 +859,8 @@
   background: var(--color-white);
   width: 38px;
   height: 38px;
-  border-radius: 4px;
+  box-sizing: border-box;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;

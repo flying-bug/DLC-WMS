@@ -246,7 +246,7 @@ function UsersPage() {
                 u.email.toLowerCase().includes(searchTerm.toLowerCase())) : true;
 
         const matchStatus = statusFilter ? u.status === statusFilter : true;
-        const matchRole = roleFilter ? (roleFilter === 'SUPER_ADMIN' ? u.roles.includes('SUPER_ADMIN') : !u.roles.includes('SUPER_ADMIN')) : true;
+        const matchRole = roleFilter ? (u.roles && u.roles.some(r => r === roleFilter || r === `ROLE_${roleFilter}`)) : true;
 
         return matchSearch && matchStatus && matchRole;
     });
@@ -290,11 +290,16 @@ function UsersPage() {
             {/* Top Header */}
             <header className={styles.header}>
                 <div className={styles.headerLeft}>
-                    <div className={styles.brandName} style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>Duy Long Computer</div>
+                    <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '10px', marginRight: '32px' }} onClick={() => navigate('/')}>
+                        <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <img src="/dl-logo.png" alt="Duy Long Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        </div>
+                        <div className={styles.brandName} style={{ margin: 0 }}>Duy Long Computer</div>
+                    </div>
                     <nav className={styles.navLinks}>
                         <a onClick={() => navigate('/users')} className={styles.navLinkActive}>Quản lý người dùng</a>
                         <a onClick={() => navigate('/audit-log')} className={styles.navLink}>Nhật ký hệ thống</a>
-                        <a onClick={() => navigate('/operations')} className={styles.navLink}>Trung tâm vận hành</a>
+                        <a onClick={() => navigate('/operations')} className={styles.navLink}>Trung tâm điều hành</a>
                     </nav>
                 </div>
                 <div className={styles.headerRight}>
@@ -356,13 +361,18 @@ function UsersPage() {
                                     value={searchTerm}
                                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                 />
-                                {searchTerm && (
-                                    <button className={styles.clearSearchBtn} onClick={() => { setSearchTerm(''); setCurrentPage(1); }}>
-                                        <i className="bi bi-x-circle-fill"></i>
-                                    </button>
-                                )}
                             </div>
                             <div className={styles.filterSelectGroup}>
+                                <select
+                                    className={styles.filterSelect}
+                                    value={roleFilter}
+                                    onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
+                                >
+                                    <option value="">Vai trò</option>
+                                    <option value="SUPER_ADMIN">Super Admin</option>
+                                    <option value="MANAGER">Quản lý</option>
+                                    <option value="STAFF">Nhân viên</option>
+                                </select>
                                 <select
                                     className={styles.filterSelect}
                                     value={statusFilter}
@@ -403,17 +413,17 @@ function UsersPage() {
                                 </tr>
                             ) : paginatedUsers.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" style={{ padding: '40px 0' }}>
-                                        <div className="emptyState">
-                                            <div className="emptyIcon">
+                                    <td colSpan="7" style={{ textAlign: 'center', padding: '50px 0' }}>
+                                        <div className={styles.emptyState}>
+                                            <div className={styles.emptyIcon}>
                                                 <i className="bi bi-folder-x"></i>
                                             </div>
-                                            <div className="emptyText">Không tìm thấy dữ liệu</div>
+                                            <div className={styles.emptyText}>Không tìm thấy dữ liệu</div>
                                         </div>
                                     </td>
                                 </tr>
                             ) : (
-                                paginatedUsers.map((user) => (
+                                paginatedUsers.map((user, index) => (
                                     <tr key={user.id} className={styles.tableRow} onClick={() => handleRowClick(user)}>
                                         <td><div className={`${styles.avatarCircle} ${user.avatarColorClass}`}>{user.initials}</div></td>
                                         <td><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: 'var(--color-text-subtle)' }}>{user.email}</span></td>
@@ -430,7 +440,7 @@ function UsersPage() {
                                             </button>
 
                                             {activeMenuId === user.id && (
-                                                <div className={styles.actionMenu}>
+                                                <div className={`${styles.actionMenu} ${index >= Math.max(paginatedUsers.length - 2, 2) ? styles.actionMenuUp : ''}`}>
                                                     <div className={styles.actionMenuItem} onClick={(e) => handleViewInfo(e, user)}>
                                                         <i className="bi bi-eye"></i> Xem thông tin chi tiết
                                                     </div>

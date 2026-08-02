@@ -35,6 +35,7 @@ public class BackupService {
     private final SystemSettingRepository settingRepo;
     private final BackupRecordRepository backupRecordRepo;
     private final GoogleDriveService driveService;
+    private final EmailService emailService;
     private final Environment env;
 
     private void ensureNativePasswordAuth(String user, String pass) {
@@ -187,6 +188,24 @@ public class BackupService {
             }
         }
 
+        // ── Auto Email notification if enabled ───────────────────────────────
+        if (settingBool("notify.email.enabled")) {
+            try {
+                String emailTo = setting("notify.email.to", "");
+                if (emailTo != null && !emailTo.isBlank()) {
+                    emailService.sendBackupNotificationEmail(
+                            emailTo,
+                            record.getFilename(),
+                            SystemHealthService.formatBytes(record.getFileSize()),
+                            true,
+                            null
+                    );
+                }
+            } catch (Exception e) {
+                log.warn("Auto email notification failed: {}", e.getMessage());
+            }
+        }
+
         return record;
     }
 
@@ -286,7 +305,35 @@ public class BackupService {
 
         record.setStatus(BackupRecord.BackupStatus.LOCAL);
         backupRecordRepo.save(record);
+        syncDiskBackupsWithDb();
         log.info("Database restored from: {}", record.getFilename());
+    }
+
+    public void syncDiskBackupsWithDb() {
+        try {
+            Path backupDir = ensureBackupDir();
+            if (!Files.exists(backupDir)) return;
+
+            try (var stream = Files.list(backupDir)) {
+                List<Path> files = stream.filter(p -> p.getFileName().toString().endsWith(".sql.gz")).toList();
+                for (Path filePath : files) {
+                    String fname = filePath.getFileName().toString();
+                    if (!backupRecordRepo.existsByFilename(fname)) {
+                        long size = Files.size(filePath);
+                        BackupRecord record = BackupRecord.builder()
+                                .filename(fname)
+                                .fileSize(size)
+                                .status(BackupRecord.BackupStatus.LOCAL)
+                                .createdBy("system")
+                                .note("Sao lưu sẵn trên ổ cứng")
+                                .build();
+                        backupRecordRepo.save(record);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Đồng bộ file backup từ ổ cứng bị lỗi: {}", e.getMessage());
+        }
     }
 
     // ─── Delete ────────────────────────────────────────────────────────────────
@@ -316,6 +363,7 @@ public class BackupService {
     // ─── List ──────────────────────────────────────────────────────────────────
 
     public List<BackupRecordDto> listBackups() {
+        syncDiskBackupsWithDb();
         return backupRecordRepo.findAllByOrderByCreatedAtDesc().stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());

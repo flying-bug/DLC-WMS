@@ -221,11 +221,16 @@ function AuditLogPage() {
         <div className={styles.page}>
             <header className={styles.header}>
                 <div className={styles.headerLeft}>
-                    <div className={styles.brandName} style={{ cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>Duy Long Computer</div>
+                    <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '10px', marginRight: '32px' }} onClick={() => navigate('/dashboard')}>
+                        <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <img src="/dl-logo.png" alt="Duy Long Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        </div>
+                        <div className={styles.brandName} style={{ margin: 0 }}>Duy Long Computer</div>
+                    </div>
                     <nav className={styles.navLinks}>
                         <a onClick={() => navigate('/users')} className={styles.navLink}>Quản lý người dùng</a>
                         <a onClick={() => navigate('/audit-log')} className={styles.navLinkActive}>Nhật ký hệ thống</a>
-                        <a onClick={() => navigate('/operations')} className={styles.navLink}>Trung tâm vận hành</a>
+                        <a onClick={() => navigate('/operations')} className={styles.navLink}>Trung tâm điều hành</a>
                     </nav>
                 </div>
                 <div className={styles.headerRight}>

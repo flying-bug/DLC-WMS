@@ -48,12 +48,18 @@ import CreateSalesOrderPage from '../pages/SalesOrder/CreateSalesOrderPage';
 import SalesOrderDetailPage from '../pages/SalesOrder/SalesOrderDetailPage';
 import PublicQuotePage from '../pages/PublicQuote/PublicQuotePage';
 
+// Helper to check valid token
+const isValidToken = () => {
+    const token = sessionStorage.getItem('token');
+    return token && token !== 'null' && token !== 'undefined' && token.trim() !== '';
+};
+
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
-    const token = sessionStorage.getItem('token');
+    const tokenValid = isValidToken();
     const userRole = sessionStorage.getItem('role');
 
-    if (!token) {
+    if (!tokenValid) {
         return <Navigate to="/login" replace />;
     }
 
@@ -66,11 +72,15 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
 // Wrapper for guest/public routes (redirects to dashboard if already logged in)
 const PublicRoute = () => {
-    const token = sessionStorage.getItem('token');
-    if (token) {
+    if (isValidToken()) {
         return <Navigate to="/dashboard" replace />;
     }
     return <Outlet />;
+};
+
+// Catch-all route component to redirect properly based on auth status
+const NotFoundRedirect = () => {
+    return <Navigate to={isValidToken() ? "/dashboard" : "/login"} replace />;
 };
 
 function AppRouter() {
@@ -148,7 +158,7 @@ function AppRouter() {
                 </Route>
 
                 {/* Catch-all Redirect */}
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                <Route path="*" element={<NotFoundRedirect />} />
             </Routes>
         </BrowserRouter>
     );

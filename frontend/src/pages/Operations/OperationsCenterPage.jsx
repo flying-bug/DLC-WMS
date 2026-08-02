@@ -53,8 +53,11 @@ function OperationsCenterPage() {
             {/* ── Top Header ─────────────────────────────────────────────────── */}
             <header className={styles.header}>
                 <div className={styles.headerLeft}>
-                    <div className={styles.brandName} style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => navigate('/dashboard')}>
-                        Duy Long Computer
+                    <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '10px', marginRight: '32px' }} onClick={() => navigate('/dashboard')}>
+                        <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <img src="/dl-logo.png" alt="Duy Long Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        </div>
+                        <div className={styles.brandName} style={{ margin: 0 }}>Duy Long Computer</div>
                     </div>
                     <nav className={styles.navLinks}>
                         <a onClick={() => navigate('/users')} className={styles.navLink}>
@@ -64,7 +67,7 @@ function OperationsCenterPage() {
                             Nhật ký hệ thống
                         </a>
                         <a className={styles.navLinkActive}>
-                            Trung tâm vận hành
+                            Trung tâm điều hành
                         </a>
                     </nav>
                 </div>
@@ -79,8 +82,8 @@ function OperationsCenterPage() {
             <main className={styles.main}>
                 <div className={styles.pageHeader}>
                     <div>
-                        <h1 className={styles.pageTitle}>Trung tâm vận hành</h1>
-                        <p className={styles.pageSubtitle}>Trung tâm vận hành, sao lưu và theo dõi trạng thái hệ thống.</p>
+                        <h1 className={styles.pageTitle}>Trung tâm điều hành</h1>
+                        <p className={styles.pageSubtitle}>Trung tâm điều hành, sao lưu và theo dõi trạng thái hệ thống.</p>
                     </div>
                 </div>
 

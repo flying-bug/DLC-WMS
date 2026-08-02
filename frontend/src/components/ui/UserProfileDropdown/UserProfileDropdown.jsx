@@ -94,11 +94,6 @@ function UserProfileDropdown({ voiceEnabled, onToggleVoice }) {
                     <div className={styles.dropdownItem} onClick={(e) => { e.stopPropagation(); navigate('/change-password'); setIsDropdownOpen(false); }}>
                         <i className="bi bi-shield-lock" /> Đổi mật khẩu
                     </div>
-                    {isSA && (
-                        <div className={styles.dropdownItem} onClick={(e) => { e.stopPropagation(); navigate('/operations'); setIsDropdownOpen(false); }}>
-                            <i className="bi bi-hdd-network" /> Trung tâm vận hành (Backup DB)
-                        </div>
-                    )}
                     <div className={styles.dropdownDivider} />
                     <div className={styles.themeSection} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.themeTitle}>

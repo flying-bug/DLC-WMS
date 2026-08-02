@@ -42,4 +42,42 @@ public class EmailService {
             throw new BusinessException("Lỗi khi gửi email: " + e.getMessage());
         }
     }
+
+    public void sendBackupNotificationEmail(String toEmail, String filename, String fileSizeFormatted, boolean isSuccess, String errorDetails) {
+        if (toEmail == null || toEmail.trim().isEmpty()) return;
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail, "DLC-WMS Backup System");
+            helper.setTo(toEmail.trim());
+
+            String statusText = isSuccess ? "THÀNH CÔNG" : "THẤT BẠI";
+            String statusColor = isSuccess ? "#28a745" : "#dc3545";
+
+            helper.setSubject("[DLC-WMS] Báo cáo Sao lưu Cơ sở dữ liệu - " + statusText);
+
+            String timeNow = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))
+                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
+
+            String htmlMsg = "<div style='font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px;'>"
+                    + "<h2 style='color: " + statusColor + "; text-align: center;'>Báo cáo Sao lưu Cơ sở dữ liệu</h2>"
+                    + "<p>Chào Quản trị viên,</p>"
+                    + "<p>Hệ thống vừa thực hiện sao lưu dữ liệu tự động với kết quả như sau:</p>"
+                    + "<ul style='line-height: 1.8;'>"
+                    + "<li><strong>Trạng thái:</strong> <span style='color: " + statusColor + "; font-weight: bold;'>" + statusText + "</span></li>"
+                    + "<li><strong>Tên file:</strong> " + filename + "</li>"
+                    + "<li><strong>Dung lượng:</strong> " + fileSizeFormatted + "</li>"
+                    + "<li><strong>Thời gian:</strong> " + timeNow + "</li>"
+                    + (isSuccess ? "" : "<li><strong>Chi tiết lỗi:</strong> " + errorDetails + "</li>")
+                    + "</ul>"
+                    + "<p style='margin-top: 20px;'>Trân trọng,<br/>Đội ngũ Quản trị DLC-WMS</p>"
+                    + "</div>";
+
+            helper.setText(htmlMsg, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Failed to send backup notification email: " + e.getMessage());
+        }
+    }
 }
