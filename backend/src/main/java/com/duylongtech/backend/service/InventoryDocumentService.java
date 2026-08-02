@@ -96,6 +96,7 @@ public class InventoryDocumentService {
     private final AssemblyBomRepository assemblyBomRepository;
     private final StocktakeRepository stocktakeRepository;
     private final SalesOrderRepository salesOrderRepository;
+    private final SalesOrderService salesOrderService;
 
     @Transactional(readOnly = true)
     public ScanResolveResponse resolveExportScan(ScanResolveRequest req) {
@@ -351,6 +352,10 @@ public class InventoryDocumentService {
             }
             if (serialsToExport.isEmpty()) {
                 generateWarrantyIfNeeded(doc, line, null);
+            }
+
+            if (doc.getSalesOrderId() != null) {
+                salesOrderService.fulfillReservation(doc.getSalesOrderId(), line.getVariantId(), doc.getWarehouseId(), qtyToExport);
             }
         }
         doc.setStatus("POSTED");
@@ -840,36 +845,45 @@ public class InventoryDocumentService {
 
     @Transactional(readOnly = true)
     public String generateNextExportCode() {
-        Optional<InventoryDocument> lastDoc = inventoryDocumentRepository
-                .findTopByDocCodeStartingWithOrderByDocCodeDesc("XK");
-        if (lastDoc.isPresent()) {
-            String lastCode = lastDoc.get().getDocCode();
+        java.util.List<String> allCodes = inventoryDocumentRepository.findAllExportDocCodes();
+        // Tìm cuối dãy liên tục: XK00001, XK00002, ... XK00013 → trả về XK00014
+        // Bỏ qua các mã nhảy cóc do người dùng nhập thủ công (vd: XK01200)
+        int expected = 1;
+        for (String code : allCodes) {
             try {
-                String digits = lastCode.replaceAll("^XK-?", "");
-                int lastNum = Integer.parseInt(digits);
-                return String.format("XK%05d", lastNum + 1);
-            } catch (NumberFormatException e) {
-                return "XK00001";
+                int num = Integer.parseInt(code.substring(2));
+                if (num != expected) break; // phát hiện khoảng trống, dừng
+                expected++;
+            } catch (NumberFormatException ignored) {
+                // bỏ qua mã không hợp lệ
             }
         }
-        return "XK00001";
+        String candidate = String.format("XK%05d", expected);
+        // Đảm bảo mã chưa tồn tại (dự phòng trường hợp race condition)
+        while (inventoryDocumentRepository.existsByDocCode(candidate)) {
+            candidate = String.format("XK%05d", ++expected);
+        }
+        return candidate;
     }
 
     @Transactional(readOnly = true)
     public String generateNextImportCode() {
-        Optional<InventoryDocument> lastDoc = inventoryDocumentRepository
-                .findTopByDocCodeStartingWithOrderByDocCodeDesc("NK");
-        if (lastDoc.isPresent()) {
-            String lastCode = lastDoc.get().getDocCode();
+        java.util.List<String> allCodes = inventoryDocumentRepository.findAllImportDocCodes();
+        int expected = 1;
+        for (String code : allCodes) {
             try {
-                String digits = lastCode.replaceAll("^NK-?", "");
-                int lastNum = Integer.parseInt(digits);
-                return String.format("NK%05d", lastNum + 1);
-            } catch (NumberFormatException e) {
-                return "NK00001";
+                int num = Integer.parseInt(code.substring(2));
+                if (num != expected) break;
+                expected++;
+            } catch (NumberFormatException ignored) {
+                // bỏ qua mã không hợp lệ
             }
         }
-        return "NK00001";
+        String candidate = String.format("NK%05d", expected);
+        while (inventoryDocumentRepository.existsByDocCode(candidate)) {
+            candidate = String.format("NK%05d", ++expected);
+        }
+        return candidate;
     }
 
     private String resolveCreateDocCode(String requestedCode) {
@@ -878,7 +892,7 @@ public class InventoryDocumentService {
             docCode = generateNextExportCode();
             while (inventoryDocumentRepository.existsByDocCode(docCode)) {
                 try {
-                    String digits = docCode.replaceAll("^XK-?", "");
+                    String digits = docCode.substring(2);
                     int nextNum = Integer.parseInt(digits) + 1;
                     docCode = String.format("XK%05d", nextNum);
                 } catch (Exception e) {
@@ -899,7 +913,7 @@ public class InventoryDocumentService {
             docCode = generateNextImportCode();
             while (inventoryDocumentRepository.existsByDocCode(docCode)) {
                 try {
-                    String digits = docCode.replaceAll("^NK-?", "");
+                    String digits = docCode.substring(2);
                     int nextNum = Integer.parseInt(digits) + 1;
                     docCode = String.format("NK%05d", nextNum);
                 } catch (Exception e) {
@@ -1145,7 +1159,7 @@ public class InventoryDocumentService {
         }
 
         InventoryDocument doc = new InventoryDocument();
-        doc.setDocCode(codeGeneratorService.generateCode("INVENTORY_DOCUMENTS", "doc_code", "EX", 5));
+        doc.setDocCode(resolveCreateDocCode(null));
         doc.setDocType(EXPORT_DOC_TYPE);
         doc.setDocDate(LocalDate.now());
         doc.setPartnerId(so.getPartnerId());

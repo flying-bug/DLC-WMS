@@ -48,6 +48,12 @@ public interface InventoryDocumentRepository extends JpaRepository<InventoryDocu
 
     Optional<InventoryDocument> findTopByDocCodeStartingWithOrderByDocCodeDesc(String prefix);
 
+    @Query(value = "SELECT doc_code FROM inventory_documents WHERE doc_code REGEXP '^XK[0-9]+$' ORDER BY CAST(SUBSTRING(doc_code, 3) AS UNSIGNED) ASC", nativeQuery = true)
+    java.util.List<String> findAllExportDocCodes();
+
+    @Query(value = "SELECT doc_code FROM inventory_documents WHERE doc_code REGEXP '^NK[0-9]+$' ORDER BY CAST(SUBSTRING(doc_code, 3) AS UNSIGNED) ASC", nativeQuery = true)
+    java.util.List<String> findAllImportDocCodes();
+
     @Query("SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END FROM InventoryDocument e WHERE e.warehouseId = :warehouseId OR e.sourceWarehouseId = :warehouseId")
     boolean existsByAnyWarehouseId(@Param("warehouseId") Long warehouseId);
 
