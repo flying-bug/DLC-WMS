@@ -96,6 +96,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   const searchParams = new URLSearchParams(location.search);
   const assemblyData = location.state?.assemblyData || null;
   const stocktakeData = location.state?.stocktakeData || null;
+  const soData = location.state?.soData || null;
   const returnUrl = location.state?.returnUrl || null;
   const initialType = propMode || searchParams.get('type')?.toUpperCase() || (stocktakeData ? 'OTHER' : 'SALE');
 
@@ -121,22 +122,33 @@ function CreateExportSlipPage({ mode: propMode }) {
 
   const [form, setForm] = useState(() => ({
     docCode: '',
-    warehouseId: assemblyData?.warehouseId || stocktakeData?.warehouseId || '',
-    partnerId: '',
-    salespersonId: '',
-    customerAddress: '',
-    receiverName: '',
-    receiverPhone: '',
-    receiverAddress: '',
+    warehouseId: soData?.warehouseId || assemblyData?.warehouseId || stocktakeData?.warehouseId || '',
+    partnerId: soData?.partnerId || '',
+    salespersonId: soData?.salespersonId || '',
+    customerAddress: soData?.partnerAddress || '',
+    receiverName: soData?.partnerName || '',
+    receiverPhone: soData?.partnerPhone || '',
+    receiverAddress: soData?.partnerAddress || '',
     docDate: today(),
-    note: assemblyData ? `Xuất linh kiện phục vụ Lệnh lắp ráp/tháo dỡ ${assemblyData.code}` : stocktakeData ? stocktakeData.reason : '',
-    referenceType: assemblyData ? 'ASSEMBLY_ORDER' : stocktakeData ? 'STOCKTAKE' : '',
-    referenceId: assemblyData ? assemblyData.id : stocktakeData ? stocktakeData.id : '',
-    referenceCode: assemblyData ? assemblyData.code : stocktakeData ? stocktakeData.code : '',
+    note: soData?.note || (assemblyData ? `Xuất linh kiện phục vụ Lệnh lắp ráp/tháo dỡ ${assemblyData.code}` : stocktakeData ? stocktakeData.reason : ''),
+    referenceType: soData ? 'SALES_ORDER' : (assemblyData ? 'ASSEMBLY_ORDER' : stocktakeData ? 'STOCKTAKE' : ''),
+    referenceId: soData?.soId || (assemblyData ? assemblyData.id : stocktakeData ? stocktakeData.id : ''),
+    referenceCode: soData?.soCode || (assemblyData ? assemblyData.code : stocktakeData ? stocktakeData.code : ''),
     attachedDocs: '',
   }));
 
   const [items, setItems] = useState(() => {
+    if (soData && soData.lines && soData.lines.length > 0) {
+      return soData.lines.map(l => ({
+        ...emptyLine(),
+        variantId: String(l.variantId),
+        quantity: l.quantity || 1,
+        price: l.price || 0,
+        vatPercent: l.vatPercent || 0,
+        warrantyMonths: l.warrantyMonths || 0,
+        note: l.note || '',
+      }));
+    }
     if (assemblyData && assemblyData.lines && assemblyData.lines.length > 0) {
       return assemblyData.lines.map(comp => ({
         ...emptyLine(),
@@ -212,7 +224,8 @@ function CreateExportSlipPage({ mode: propMode }) {
         const me = meRes.data?.data || meRes.data;
         if (me) {
           setCurrentUser(me);
-          setForm(prev => ({ ...prev, salespersonId: String(me.id) }));
+          // Chỉ điền NV xuất hàng bằng user hiện tại nếu chưa có từ SO
+          setForm(prev => ({ ...prev, salespersonId: prev.salespersonId || String(me.id) }));
         }
       } catch (err) {
         console.error('Failed to load me profile', err);
@@ -470,6 +483,7 @@ function CreateExportSlipPage({ mode: propMode }) {
     })),
     referenceType: form.referenceType || undefined,
     referenceId: form.referenceId || undefined,
+    salesOrderId: soData?.soId || undefined,
   });
 
   const submit = async (status, shouldPost = false) => {
@@ -573,6 +587,13 @@ function CreateExportSlipPage({ mode: propMode }) {
 
       <div className={styles.pageBody}>
         {error && <div className={styles.errorCard}>{error}</div>}
+
+        {soData && (
+          <div style={{ marginBottom: '12px', padding: '10px 16px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#1d4ed8' }}>
+            <i className="bi bi-link-45deg" style={{ fontSize: '16px' }} />
+            <span>Phiếu xuất được tạo từ đơn hàng <b>{soData.soCode}</b>. Thông tin đã được tự điền — bạn có thể điều chỉnh trước khi lưu.</span>
+          </div>
+        )}
 
         <div className={styles.topSection}>
           {/* CARD 1: Thông tin chung */}
@@ -1036,6 +1057,37 @@ function CreateExportSlipPage({ mode: propMode }) {
         }}
       />
 
+      {serialModalItemId && selectedSerialProduct && (
+        <ManageSerialModal
+          isOpen={true}
+          onClose={handleSerialModalClose}
+          productName={selectedSerialProduct.variantName || selectedSerialProduct.productName}
+          targetQuantity={Number(selectedSerialItem.quantity || 0)}
+          initialSerials={selectedSerialItem.serialNumbers || []}
+          mode="export"
+          warehouseId={form.warehouseId}
+          variantId={selectedSerialProduct.id}
+          onValidateSerial={async (serialValue) => {
+            try {
+              const response = await exportApi.resolveScan({
+                code: serialValue,
+                warehouseId: form.warehouseId,
+              });
+              const scanResult = unwrap(response);
+              if (!scanResult.serialNumber) {
+                throw new Error('Mã này không tồn tại hoặc không phải là serial.');
+              }
+              if (String(scanResult.variantId) !== String(selectedSerialProduct.id)) {
+                throw new Error('Serial này thuộc về sản phẩm khác.');
+              }
+              return true;
+            } catch (err) {
+              throw new Error(err.response?.data?.userMessage || err.message || 'Mã Serial không hợp lệ.');
+            }
+          }}
+        />
+      )}
+
       <ConfirmModal
         isOpen={showConfirm}
         title="Xác nhận ghi sổ"
@@ -1047,16 +1099,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         onCancel={() => setShowConfirm(false)}
       />
 
-      {serialModalItemId && selectedSerialProduct && (
-        <ManageSerialModal
-          isOpen={true}
-          onClose={() => setSerialModalItemId(null)}
-          onSave={handleSerialModalClose}
-          product={selectedSerialProduct}
-          quantity={Number(selectedSerialItem.quantity || 0)}
-          initialSerials={selectedSerialItem.serialNumbers || []}
-        />
-      )}
+
 
       <SuccessPrintModal
         isOpen={showSuccessModal}

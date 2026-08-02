@@ -864,9 +864,12 @@ function UpdateExportSlipPage() {
         <ManageSerialModal
           isOpen={true}
           onClose={handleSerialModalClose}
-          product={selectedSerialProduct}
-          quantity={Number(selectedSerialItem.quantity || 0)}
+          productName={selectedSerialProduct.variantName || selectedSerialProduct.productName}
+          targetQuantity={Number(selectedSerialItem.quantity || 0)}
           initialSerials={selectedSerialItem.serialNumbers || []}
+          mode="export"
+          warehouseId={form.warehouseId}
+          variantId={selectedSerialProduct.id}
           onValidateSerial={async (serialValue) => {
             try {
               const response = await exportApi.resolveScan({

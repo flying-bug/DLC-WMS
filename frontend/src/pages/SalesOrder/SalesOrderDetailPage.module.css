@@ -1,0 +1,264 @@
+.page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ── Breadcrumb ── */
+.breadcrumb {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+}
+.breadcrumbLink {
+  color: #2563eb;
+  cursor: pointer;
+}
+.breadcrumbLink:hover { text-decoration: underline; }
+
+/* ── Page Header ── */
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.docCode {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: 0.3px;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Buttons ── */
+.btnOutline {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.btnOutline:hover { background: var(--color-bg); }
+
+.btnSuccess {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: var(--color-success);
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--color-white);
+  cursor: pointer;
+  transition: background 0.15s;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.btnSuccess:hover { background: var(--color-success-dark); }
+
+.btnPrimary {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: var(--color-primary);
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--color-white);
+  cursor: pointer;
+  transition: background 0.15s;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.btnPrimary:hover { background: var(--color-primary-hover); }
+.btnPrimary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btnDanger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: var(--color-white);
+  border: 1px solid var(--color-danger);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--color-danger);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.btnDanger:hover { background: var(--status-danger-bg); }
+
+.btnSecondary {
+  padding: 7px 12px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── Info Grid ── */
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* ── Card ── */
+.card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.cardTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.infoRows { display: flex; flex-direction: column; gap: 8px; }
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.infoLabel {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.infoValue {
+  font-size: 13px;
+  color: #374151;
+  text-align: right;
+  word-break: break-word;
+}
+
+.highlight { color: #1d4ed8; font-weight: 600; }
+
+.totalRow {
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.totalValue {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+/* ── Table ── */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table thead tr { background: #f8fafc; }
+
+.table th {
+  padding: 9px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+  color: #475569;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #374151;
+}
+
+.table tbody tr:hover { background: #f8fafc; }
+
+.table tfoot td {
+  background: #fafbfc;
+  border-top: 2px solid #e2e8f0;
+  border-bottom: none;
+}
+
+.skuBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.resBadge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .infoGrid { grid-template-columns: 1fr; }
+  .pageHeader { flex-direction: column; align-items: flex-start; }
+}

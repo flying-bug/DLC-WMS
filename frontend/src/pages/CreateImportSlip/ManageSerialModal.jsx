@@ -3,7 +3,7 @@ import Modal from '../../components/ui/Modal/Modal';
 import styles from './ManageSerialModal.module.css';
 import { getAvailableSerials } from '../../api/warehouseApi';
 
-function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initialSerials = [] }) {
+function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initialSerials = [], mode = 'import', warehouseId, variantId, onValidateSerial }) {
   const [serials, setSerials] = useState([]);
   const [availableSerials, setAvailableSerials] = useState([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
