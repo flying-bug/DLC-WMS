@@ -1082,7 +1082,7 @@ function CreateExportSlipPage({ mode: propMode }) {
               }
               return true;
             } catch (err) {
-              throw new Error(err.response?.data?.userMessage || err.message || 'Mã Serial không hợp lệ.');
+              throw new Error(err.response?.data?.userMessage || err.message || 'Mã Serial không hợp lệ.', { cause: err });
             }
           }}
         />

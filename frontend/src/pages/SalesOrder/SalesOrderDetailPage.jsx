@@ -37,6 +37,7 @@ const RES_STATUS_CONFIG = {
 function SalesOrderDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [now] = useState(() => Date.now());
 
   const [so, setSo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -384,7 +385,7 @@ function SalesOrderDetailPage() {
                 <tbody>
                   {so.reservations.map((r, idx) => {
                     const rCfg = RES_STATUS_CONFIG[r.status] || { label: r.status, bg: '#f1f5f9', color: '#64748b' };
-                    const expiredSoon = r.status === 'HOLDING' && new Date(r.expiresAt) < new Date(Date.now() + 6 * 3600000);
+                    const expiredSoon = r.status === 'HOLDING' && new Date(r.expiresAt) < new Date(now + 6 * 3600000);
                     return (
                       <tr key={r.id || idx}>
                         <td><span className={styles.skuBadge}>{r.sku || `#${r.variantId}`}</span></td>
