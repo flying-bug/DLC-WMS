@@ -31,6 +31,7 @@ public class ReportRepository {
                         "w.name AS warehouseName, " +
                         "p.track_serial AS trackSerial, " +
                         "SUM(ib.quantity_on_hand) AS totalQuantity, " +
+                        "SUM(ib.quantity_reserved) AS totalReserved, " +
                         "SUM(ib.quantity_on_hand * ib.average_cost) AS totalValue " +
                         "FROM inventory_balances ib " +
                         "JOIN product_variants pv ON ib.variant_id = pv.id " +
@@ -61,6 +62,7 @@ public class ReportRepository {
                 .warehouseCode(rs.getString("warehouseCode"))
                 .warehouseName(rs.getString("warehouseName"))
                 .totalQuantity(rs.getBigDecimal("totalQuantity"))
+                .totalReserved(rs.getBigDecimal("totalReserved"))
                 .totalValue(rs.getBigDecimal("totalValue"))
                 .variantId(rs.getLong("variantId"))
                 .sku(rs.getString("sku"))

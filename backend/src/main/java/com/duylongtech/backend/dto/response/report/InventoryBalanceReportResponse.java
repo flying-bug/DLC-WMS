@@ -19,6 +19,7 @@ public class InventoryBalanceReportResponse {
     private BigDecimal totalValue;
     private String warehouseCode;
     private String warehouseName;
+    private BigDecimal totalReserved;
     private Long variantId;
     private String sku;
     private Boolean trackSerial;

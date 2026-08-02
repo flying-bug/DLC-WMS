@@ -1,0 +1,108 @@
+.pageWrapper {
+    min-height: 100vh;
+    background-color: #f1f5f9;
+    display: flex;
+    flex-direction: column;
+}
+
+.topBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.brand {
+    font-size: 20px;
+    font-weight: 700;
+    color: #002b6b;
+    letter-spacing: 1px;
+}
+
+.downloadBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #002b6b;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.downloadBtn:hover {
+    background-color: #001f4d;
+}
+
+.documentContainer {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+.printWrapper {
+    width: 210mm;
+    min-height: 297mm;
+    background: white;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+}
+
+.loadingContainer, .errorContainer {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8fafc;
+}
+
+.errorCard {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    text-align: center;
+    max-width: 400px;
+}
+
+.errorIcon {
+    font-size: 48px;
+    color: #ef4444;
+    margin-bottom: 16px;
+}
+
+.errorTitle {
+    color: #0f172a;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.errorMessage {
+    color: #64748b;
+    margin: 0;
+}
+
+/* Mobile Responsive */
+@media (max-width: 800px) {
+    .printWrapper {
+        width: 100%;
+        min-height: auto;
+        box-shadow: none;
+        /* Scale down to fit screen width roughly */
+        transform: scale(0.95);
+        transform-origin: top center;
+    }
+    .documentContainer {
+        padding: 20px 0;
+    }
+}

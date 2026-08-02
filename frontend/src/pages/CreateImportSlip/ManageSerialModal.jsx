@@ -3,21 +3,22 @@ import Modal from '../../components/ui/Modal/Modal';
 import styles from './ManageSerialModal.module.css';
 import { getAvailableSerials } from '../../api/warehouseApi';
 
-function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initialSerials = [], mode = 'import', warehouseId, variantId }) {
+function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initialSerials = [], mode = 'import', warehouseId, variantId, onValidateSerial }) {
   const [serials, setSerials] = useState([]);
   const [availableSerials, setAvailableSerials] = useState([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [errorText, setErrorText] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
-       
+
       setSerials([...initialSerials]);
       setInputValue('');
       setErrorText('');
-      
+
       if (mode === 'export' && warehouseId && variantId) {
         setLoadingAvailable(true);
         getAvailableSerials(warehouseId, variantId)
@@ -32,7 +33,7 @@ function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initi
     }
   }, [isOpen, initialSerials, mode, warehouseId, variantId]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     setErrorText('');
     const val = inputValue.trim();
     if (!val) return;
@@ -46,9 +47,21 @@ function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initi
       return;
     }
 
+    if (onValidateSerial) {
+      setIsValidating(true);
+      try {
+        await onValidateSerial(val);
+      } catch (err) {
+        setErrorText(err.message || 'Mã Serial không hợp lệ.');
+        setIsValidating(false);
+        return;
+      }
+      setIsValidating(false);
+    }
+
     setSerials([...serials, val]);
     setInputValue('');
-    
+
     setTimeout(() => {
       if (inputRef.current) inputRef.current.focus();
     }, 10);
@@ -88,10 +101,10 @@ function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initi
           <div className={styles.inputRow} style={{ marginBottom: errorText ? '12px' : '32px' }}>
             <div className={styles.inputWrapper}>
               <i className={`bi bi-keyboard ${styles.inputIcon}`}></i>
-              <input 
+              <input
                 ref={inputRef}
-                type="text" 
-                className={styles.serialInput} 
+                type="text"
+                className={styles.serialInput}
                 placeholder={isFull ? "Đã nhập đủ số lượng" : "Gõ Serial number..."}
                 value={inputValue}
                 onChange={(e) => {
@@ -105,13 +118,13 @@ function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initi
                 style={{ backgroundColor: isFull ? '#f3f4f6' : 'white' }}
               />
             </div>
-            <button 
-              className={styles.addBtn} 
+            <button
+              className={styles.addBtn}
               onClick={handleAdd}
-              disabled={isFull}
-              style={{ opacity: isFull ? 0.6 : 1, cursor: isFull ? 'not-allowed' : 'pointer' }}
+              disabled={isFull || isValidating}
+              style={{ opacity: (isFull || isValidating) ? 0.6 : 1, cursor: (isFull || isValidating) ? 'not-allowed' : 'pointer' }}
             >
-              Thêm
+              {isValidating ? '...' : 'Thêm'}
             </button>
           </div>
           {errorText && <div style={{ color: '#ef4444', fontSize: '13px', marginBottom: '20px', fontWeight: 500 }}>{errorText}</div>}
@@ -127,8 +140,8 @@ function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initi
                     {availableSerials.map(s => {
                       const isSelected = serials.includes(s);
                       return (
-                        <div 
-                          key={s} 
+                        <div
+                          key={s}
                           onClick={() => !isSelected && handleSelectAvailable(s)}
                           style={{
                             padding: '6px 12px',
@@ -171,8 +184,8 @@ function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initi
               <span className={styles.progressNumber}>{serials.length}</span> / {targetQuantity} Serial
             </div>
             <div className={styles.progressBarContainer}>
-              <div 
-                className={styles.progressBarFill} 
+              <div
+                className={styles.progressBarFill}
                 style={{ width: `${progressPercent}%` }}
               ></div>
             </div>
@@ -185,7 +198,7 @@ function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initi
                   <span className={styles.serialIndex}>{idx + 1}.</span>
                   <span className={styles.serialValue}>{serial}</span>
                 </div>
-                <button 
+                <button
                   onClick={() => handleRemove(idx)}
                   style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '16px' }}
                   onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}

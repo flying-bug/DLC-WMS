@@ -160,6 +160,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         java.util.Map<String, String[]> moduleActions = new java.util.LinkedHashMap<>();
         moduleActions.put("import", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("export", new String[]{"view", "add", "edit", "delete", "export", "print"});
+        moduleActions.put("sales_order", new String[]{"view", "add", "edit", "approve", "export", "print"});
         moduleActions.put("transfer", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("stocktake", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print"});
@@ -222,7 +223,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         roleRepository.findByCode("ROLE_STAFF").ifPresent(role -> {
             Set<PermissionEntity> staffPerms = new HashSet<>();
             for (PermissionEntity perm : allPerms) {
-                if (java.util.Arrays.asList("import", "export", "transfer", "stocktake", "assembly", "product", "report_balance").contains(perm.getModule())) {
+                if (java.util.Arrays.asList("import", "export", "sales_order", "transfer", "stocktake", "assembly", "product", "report_balance").contains(perm.getModule())) {
                     staffPerms.add(perm);
                 }
             }

@@ -8,6 +8,7 @@ import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.ScanResolveResponse;
 import com.duylongtech.backend.service.InventoryDocumentService;
 import com.duylongtech.backend.service.AuditLogService;
+import com.duylongtech.backend.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -24,6 +25,7 @@ public class InventoryDocumentController {
 
     private final InventoryDocumentService inventoryDocumentService;
     private final AuditLogService auditLogService;
+    private final UserRepository userRepository;
 
     private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
         String ipAddress = request.getHeader("X-Forwarded-For");
@@ -184,5 +186,31 @@ public class InventoryDocumentController {
             throw e;
         }
     }
+
+    // ─── Tạo phiếu xuất kho nhanh từ Sales Order đã duyệt ───────────────
+    @PostMapping("/from-sales-order/{soId}")
+    @Operation(summary = "Tạo draft phiếu xuất kho từ Sales Order đã duyệt")
+    @PreAuthorize("hasAuthority('export:add') or hasAuthority('sales_order:edit')")
+    public ApiResponse<InventoryDocumentResponse> createExportFromSalesOrder(
+            @PathVariable Long soId,
+            jakarta.servlet.http.HttpServletRequest servletRequest
+    ) {
+        String ip = getClientIp(servletRequest);
+        String actor = getCurrentUser();
+        try {
+            Long actorUserId = userRepository.findByUsername(actor)
+                    .map(u -> u.getId()).orElse(1L);
+
+            InventoryDocumentResponse created = inventoryDocumentService.createExportFromSalesOrder(soId, actorUserId);
+            auditLogService.logEvent(actor, "CREATE", "ExportSlip", created.getId(), "SUCCESS",
+                    "Tạo phiếu xuất từ SO ID " + soId + ": " + created.getDocCode(), ip, null);
+            return ApiResponse.success(created);
+        } catch (Exception e) {
+            auditLogService.logEvent(actor, "CREATE", "ExportSlip", null, "FAILED",
+                    "Tạo phiếu xuất từ SO ID " + soId + " thất bại: " + e.getMessage(), ip, null);
+            throw e;
+        }
+    }
 }
+
 

@@ -2,6 +2,7 @@ package com.duylongtech.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.math.BigDecimal;
 
 @Entity
@@ -30,12 +31,15 @@ public class SalesOrderLine {
     @JoinColumn(name = "variant_id", insertable = false, updatable = false)
     private ProductVariant variant;
 
-    @Column(name = "quantity", nullable = false)
+    @Column(name = "quantity", nullable = false, precision = 15, scale = 4)
     private BigDecimal quantity;
 
-    @Column(name = "unit_price", nullable = false)
+    @Column(name = "unit_price", nullable = false, precision = 15, scale = 4)
     private BigDecimal unitPrice;
 
-    @Column(name = "line_amount", nullable = false)
+    @Column(name = "line_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal lineAmount;
+
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
 }

@@ -189,6 +189,7 @@ function UpdateExportSlipPage() {
             docCode: detail.docCode || '',
             warehouseId: detail.warehouseId || '',
             partnerId: detail.partnerId || '',
+            salesOrderId: detail.salesOrderId || '',
             salespersonId: salespersonIdToSet,
             customerAddress: detail.customerAddress || '',
             receiverName: detail.recipientName || '',
@@ -197,6 +198,7 @@ function UpdateExportSlipPage() {
             docDate: detail.docDate || '',
             note: detail.note || '',
             status: detail.status || 'DRAFT',
+            issuePurpose: detail.issuePurpose || '',
             referenceType: detail.referenceType || '',
             referenceId: detail.referenceId || '',
             referenceCode: detail.referenceCode || (detail.referenceId ? `Tham chiếu #${detail.referenceId}` : ''),
@@ -270,10 +272,10 @@ function UpdateExportSlipPage() {
     setItems(prev => {
       if (field === 'quantity') {
         const quantity = Number(value || 0);
-        return prev.map(item => item.localId === localId ? { 
-            ...item, 
-            quantity: value, 
-            serialNumbers: item.serialNumbers?.slice(0, Math.max(0, quantity)) || [] 
+        return prev.map(item => item.localId === localId ? {
+          ...item,
+          quantity: value,
+          serialNumbers: item.serialNumbers?.slice(0, Math.max(0, quantity)) || []
         } : item);
       }
       if (field === 'variantId') {
@@ -369,7 +371,7 @@ function UpdateExportSlipPage() {
         const newItems = [...prev];
         const currentItem = newItems[existingIndex];
         const currentSerials = currentItem.serialNumbers || [];
-        
+
         if (serial && !currentSerials.includes(serial)) {
           const newSerials = [...currentSerials, serial];
           newItems[existingIndex] = {
@@ -383,7 +385,7 @@ function UpdateExportSlipPage() {
             quantity: Number(currentItem.quantity || 0) + 1
           };
         } else {
-           showToast('warning', `Serial ${serial} đã được quét trước đó.`);
+          showToast('warning', `Serial ${serial} đã được quét trước đó.`);
         }
         return newItems;
       }
@@ -397,7 +399,7 @@ function UpdateExportSlipPage() {
         warrantyMonths: scanResult.warrantyMonths || 0,
         serialNumbers: serial ? [serial] : []
       };
-      
+
       const basePrev = prev.filter(item => Boolean(item.variantId));
       return [...basePrev, newLine];
     });
@@ -458,6 +460,8 @@ function UpdateExportSlipPage() {
       serialNumbers: item.serialNumbers || [],
       note: item.note,
     })),
+    salesOrderId: form.salesOrderId || undefined,
+    issuePurpose: form.issuePurpose || undefined,
     referenceType: form.referenceType || undefined,
     referenceId: form.referenceId || undefined,
   });
@@ -585,15 +589,15 @@ function UpdateExportSlipPage() {
                       />
                     </div>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                    <label className="misa-label">Nhân viên xuất hàng</label>
-                    <input
-                      type="text"
-                      className="misa-input"
-                      value={users.find(u => String(u.id) === String(form.salespersonId)) ? (users.find(u => String(u.id) === String(form.salespersonId)).fullName || users.find(u => String(u.id) === String(form.salespersonId)).username) : 'Đang tải...'}
-                      readOnly
-                      style={{ backgroundColor: '#f3f4f6' }}
-                    />
-                  </div>
+                      <label className="misa-label">Nhân viên xuất hàng</label>
+                      <input
+                        type="text"
+                        className="misa-input"
+                        value={users.find(u => String(u.id) === String(form.salespersonId)) ? (users.find(u => String(u.id) === String(form.salespersonId)).fullName || users.find(u => String(u.id) === String(form.salespersonId)).username) : 'Đang tải...'}
+                        readOnly
+                        style={{ backgroundColor: '#f3f4f6' }}
+                      />
+                    </div>
                   </div>
 
                   <div className="misa-form-group" style={{ marginTop: '12px' }}>
@@ -686,8 +690,8 @@ function UpdateExportSlipPage() {
                   <thead>
                     <tr>
                       <th style={{ width: '50px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                      <th style={{ width: '22%' }}>Tên hàng</th>
                       <th style={{ width: '12%' }}>Mã hàng</th>
+                      <th style={{ width: '22%' }}>Tên hàng</th>
                       <th style={{ width: '7%' }}>ĐVT</th>
                       <th style={{ width: '7%' }} className={styles.textCenter}>Tồn</th>
                       <th style={{ width: '8%' }} className={styles.textRight}>SL</th>
@@ -711,18 +715,18 @@ function UpdateExportSlipPage() {
                               inventoryMap={inventoryMap}
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
-                              displayMode="name"
-                              placeholder="Chọn hàng"
+                              displayMode="code"
+                              placeholder="Chọn mã"
                             />
                           </td>
-                          <td>
+                          <td style={{ maxWidth: '300px' }}>
                             <ProductGridSelect
                               products={products}
                               inventoryMap={inventoryMap}
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
-                              displayMode="code"
-                              placeholder="Chọn mã"
+                              displayMode="name"
+                              placeholder="Chọn hàng"
                             />
                           </td>
                           <td>
@@ -859,11 +863,31 @@ function UpdateExportSlipPage() {
       {serialModalItemId && selectedSerialProduct && (
         <ManageSerialModal
           isOpen={true}
-          onClose={() => setSerialModalItemId(null)}
-          onSave={handleSerialModalClose}
-          product={selectedSerialProduct}
-          quantity={Number(selectedSerialItem.quantity || 0)}
+          onClose={handleSerialModalClose}
+          productName={selectedSerialProduct.variantName || selectedSerialProduct.productName}
+          targetQuantity={Number(selectedSerialItem.quantity || 0)}
           initialSerials={selectedSerialItem.serialNumbers || []}
+          mode="export"
+          warehouseId={form.warehouseId}
+          variantId={selectedSerialProduct.id}
+          onValidateSerial={async (serialValue) => {
+            try {
+              const response = await exportApi.resolveScan({
+                code: serialValue,
+                warehouseId: form.warehouseId,
+              });
+              const scanResult = unwrap(response);
+              if (!scanResult.serialNumber) {
+                throw new Error('Mã này không tồn tại hoặc không phải là serial.');
+              }
+              if (String(scanResult.variantId) !== String(selectedSerialProduct.id)) {
+                throw new Error('Serial này thuộc về sản phẩm khác.');
+              }
+              return true;
+            } catch (err) {
+              throw new Error(err.response?.data?.userMessage || err.message || 'Mã Serial không hợp lệ.', { cause: err });
+            }
+          }}
         />
       )}
       <SuccessPrintModal
