@@ -43,6 +43,10 @@ import CreateStocktakePage from '../pages/Stocktake/CreateStocktakePage';
 import StocktakeDetailPage from '../pages/Stocktake/StocktakeDetailPage';
 import ReportListPage from '../pages/Report/ReportListPage';
 import OperationsCenterPage from '../pages/Operations/OperationsCenterPage';
+import SalesOrderListPage from '../pages/SalesOrder/SalesOrderListPage';
+import CreateSalesOrderPage from '../pages/SalesOrder/CreateSalesOrderPage';
+import SalesOrderDetailPage from '../pages/SalesOrder/SalesOrderDetailPage';
+import PublicQuotePage from '../pages/PublicQuote/PublicQuotePage';
 
 // Wrapper for protected routes (requires token)
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -78,6 +82,9 @@ function AppRouter() {
                     <Route path={ROUTES.LOGIN} element={<LoginPage />} />
                     <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
                 </Route>
+
+                {/* Unrestricted Routes */}
+                <Route path="/quote/:token" element={<PublicQuotePage />} />
 
                 {/* Protected Routes for Authenticated Users */}
                 <Route element={<ProtectedRoute />}>
@@ -125,6 +132,10 @@ function AppRouter() {
                     <Route path="/stocktakes/:id/edit" element={<CreateStocktakePage />} />
                     <Route path="/ai-chat" element={<AiChatPage />} />
                     <Route path="/reports" element={<ReportListPage />} />
+                    <Route path="/sales-orders" element={<SalesOrderListPage />} />
+                    <Route path="/sales-orders/create" element={<CreateSalesOrderPage />} />
+                    <Route path="/sales-orders/:id" element={<SalesOrderDetailPage />} />
+                    <Route path="/sales-orders/:id/edit" element={<CreateSalesOrderPage />} />
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}

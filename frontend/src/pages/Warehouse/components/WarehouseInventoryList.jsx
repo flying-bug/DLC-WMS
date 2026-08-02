@@ -32,20 +32,27 @@ const WarehouseInventoryList = ({ warehouseId }) => {
     };
 
     useEffect(() => {
-         
+
         fetchInventory();
-         
+
     }, [warehouseId]);
 
-    // Lọc dữ liệu theo search query
+    const [showBackorderedOnly, setShowBackorderedOnly] = useState(false);
+
+    // Lọc dữ liệu theo search query và toggle
     const filteredInventory = inventory.filter(item => {
         const query = search.toLowerCase();
-        return (
+        const matchesSearch = (
             (item.productCode && item.productCode.toLowerCase().includes(query)) ||
             (item.productName && item.productName.toLowerCase().includes(query)) ||
             (item.sku && item.sku.toLowerCase().includes(query)) ||
             (item.variantName && item.variantName.toLowerCase().includes(query))
         );
+
+        if (showBackorderedOnly) {
+            return matchesSearch && item.availableQuantity < 0;
+        }
+        return matchesSearch;
     });
 
     // Tính toán phân trang
@@ -60,9 +67,8 @@ const WarehouseInventoryList = ({ warehouseId }) => {
 
     // Reset trang hiện tại khi tìm kiếm thay đổi
     useEffect(() => {
-         
         setCurrentPage(1);
-    }, [search]);
+    }, [search, showBackorderedOnly]);
 
     return (
         <div className={styles.container}>
@@ -70,14 +76,22 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                 <div className={styles.filters}>
                     <div className={styles.searchWrapper}>
                         <i className="fas fa-search"></i>
-                        <input 
-                            type="text" 
-                            placeholder="Tìm theo mã hàng, tên, SKU..." 
+                        <input
+                            type="text"
+                            placeholder="Tìm theo mã hàng, tên, SKU..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className={styles.searchInput}
                         />
                     </div>
+                    <label className={styles.toggleFilter}>
+                        <input
+                            type="checkbox"
+                            checked={showBackorderedOnly}
+                            onChange={(e) => setShowBackorderedOnly(e.target.checked)}
+                        />
+                        <span>Hàng đang nợ</span>
+                    </label>
                 </div>
                 <button className={styles.btnRefresh} onClick={fetchInventory} title="Làm mới">
                     <i className="fas fa-sync-alt"></i> Tải lại
@@ -139,16 +153,16 @@ const WarehouseInventoryList = ({ warehouseId }) => {
 
             {totalPages > 1 && (
                 <div className={styles.pagination}>
-                    <button 
-                        disabled={currentPage === 1} 
+                    <button
+                        disabled={currentPage === 1}
                         onClick={() => handlePageChange(currentPage - 1)}
                         className={styles.pageBtn}
                     >
                         Trước
                     </button>
                     <span className={styles.pageInfo}>Trang {currentPage} / {totalPages}</span>
-                    <button 
-                        disabled={currentPage === totalPages} 
+                    <button
+                        disabled={currentPage === totalPages}
                         onClick={() => handlePageChange(currentPage + 1)}
                         className={styles.pageBtn}
                     >

@@ -271,10 +271,10 @@ function CreateExportSlipPage({ mode: propMode }) {
     setItems(prev => {
       if (field === 'quantity') {
         const quantity = Number(value || 0);
-        return prev.map(item => item.localId === localId ? { 
-            ...item, 
-            quantity: value, 
-            serialNumbers: item.serialNumbers?.slice(0, Math.max(0, quantity)) || [] 
+        return prev.map(item => item.localId === localId ? {
+          ...item,
+          quantity: value,
+          serialNumbers: item.serialNumbers?.slice(0, Math.max(0, quantity)) || []
         } : item);
       }
       if (field === 'variantId') {
@@ -396,7 +396,7 @@ function CreateExportSlipPage({ mode: propMode }) {
           const newItems = [...prev];
           const currentItem = newItems[existingIndex];
           const currentSerials = currentItem.serialNumbers || [];
-          
+
           if (serial && !currentSerials.includes(serial)) {
             const newSerials = [...currentSerials, serial];
             newItems[existingIndex] = {
@@ -410,7 +410,7 @@ function CreateExportSlipPage({ mode: propMode }) {
               quantity: Number(currentItem.quantity || 0) + 1
             };
           } else {
-             showToast('warning', `Serial ${serial} đã được quét trước đó.`);
+            showToast('warning', `Serial ${serial} đã được quét trước đó.`);
           }
           return newItems;
         }
@@ -489,13 +489,13 @@ function CreateExportSlipPage({ mode: propMode }) {
 
     let hasOutOfStock = false;
     for (const item of items) {
-        const product = productById.get(String(item.variantId));
-        if (product) {
-          const balance = inventoryBalances.find(b => String(b.variantId) === String(product.id) || String(b.itemCode) === String(product.productCode) || String(b.itemCode) === String(product.sku))?.totalQuantity || 0;
-          if (Number(item.quantity) > balance) {
-            hasOutOfStock = true;
-            break;
-          }
+      const product = productById.get(String(item.variantId));
+      if (product) {
+        const balance = inventoryBalances.find(b => String(b.variantId) === String(product.id) || String(b.itemCode) === String(product.productCode) || String(b.itemCode) === String(product.sku))?.totalQuantity || 0;
+        if (Number(item.quantity) > balance) {
+          hasOutOfStock = true;
+          break;
+        }
       }
     }
 
@@ -1050,19 +1050,11 @@ function CreateExportSlipPage({ mode: propMode }) {
       {serialModalItemId && selectedSerialProduct && (
         <ManageSerialModal
           isOpen={true}
-          onClose={(serials) => {
-            if (serials !== undefined) {
-              handleSerialModalClose(serials);
-            } else {
-              setSerialModalItemId(null);
-            }
-          }}
-          productName={selectedSerialProduct?.productName || selectedSerialProduct?.name || selectedSerialProduct?.sku}
-          targetQuantity={Number(selectedSerialItem?.quantity || 0)}
-          initialSerials={selectedSerialItem?.serialNumbers || []}
-          mode="export"
-          warehouseId={form.warehouseId}
-          variantId={selectedSerialProduct?.id}
+          onClose={() => setSerialModalItemId(null)}
+          onSave={handleSerialModalClose}
+          product={selectedSerialProduct}
+          quantity={Number(selectedSerialItem.quantity || 0)}
+          initialSerials={selectedSerialItem.serialNumbers || []}
         />
       )}
 

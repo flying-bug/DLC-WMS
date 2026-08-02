@@ -175,3 +175,29 @@
     color: #64748b;
     font-size: 14px;
 }
+
+.toggleFilter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.toggleFilter:hover {
+    background: #e2e8f0;
+}
+
+.toggleFilter input[type="checkbox"] {
+    accent-color: #dc2626;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}

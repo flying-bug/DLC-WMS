@@ -13,9 +13,15 @@
     "@react-oauth/google": "0.13.5",
     "axios": "^1.17.0",
     "bootstrap": "^5.3.8",
+<<<<<<< Updated upstream
     "qrcode.react": "^4.2.0",
     "react": "^19.2.6",
     "react-barcode": "^1.6.1",
+=======
+    "date-fns": "^4.4.0",
+    "react": "^19.2.6",
+    "react-datepicker": "^9.1.0",
+>>>>>>> Stashed changes
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.17.0",
     "react-select": "^5.10.2",

@@ -120,6 +120,14 @@ const AdminLayout = ({ children }) => {
                         <span>Thương hiệu</span>
                     </button>
                     <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/sales-orders') ? styles.active : ''}`}
+                        onClick={() => handleNavClick('/sales-orders')}
+                        type="button"
+                    >
+                        <i className="bi bi-cart3"></i>
+                        <span>Đơn bán hàng</span>
+                    </button>
+                    <button
                         className={`${styles.navItem} ${currentPath.startsWith('/assembly-orders') ? styles.active : ''}`}
                         onClick={() => handleNavClick('/assembly-orders')}
                         type="button"
@@ -215,6 +223,13 @@ const AdminLayout = ({ children }) => {
                             type="button"
                         >
                             Xuất kho
+                        </button>
+                        <button
+                            className={`${styles.tab} ${currentPath.startsWith('/sales-orders') ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/sales-orders')}
+                            type="button"
+                        >
+                            Đơn bán hàng
                         </button>
                         <button
                             className={`${styles.tab} ${currentPath.startsWith('/transfer-history') ? styles.activeTab : ''}`}
