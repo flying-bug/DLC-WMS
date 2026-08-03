@@ -225,13 +225,6 @@ const AdminLayout = ({ children }) => {
                             Xuất kho
                         </button>
                         <button
-                            className={`${styles.tab} ${currentPath.startsWith('/sales-orders') ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/sales-orders')}
-                            type="button"
-                        >
-                            Đơn bán hàng
-                        </button>
-                        <button
                             className={`${styles.tab} ${currentPath.startsWith('/transfer-history') ? styles.activeTab : ''}`}
                             onClick={() => navigate('/transfer-history')}
                             type="button"

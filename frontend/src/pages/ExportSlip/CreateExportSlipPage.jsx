@@ -616,7 +616,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                             value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: `${customers.find(c => String(c.id) === String(form.partnerId)).code || `KH#${form.partnerId}`} - ${customers.find(c => String(c.id) === String(form.partnerId)).name || ''}`, codeOnly: customers.find(c => String(c.id) === String(form.partnerId)).code || `KH#${form.partnerId}` } : null}
                             onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
                             formatOptionLabel={(option, { context }) => context === 'value' ? option.codeOnly : option.label}
-                            placeholder="Chọn Mã KH..."
+                            placeholder="Tìm kiếm và chọn Mã Khách hàng"
                             isClearable
                             styles={customSelectStyles}
                           />
@@ -634,14 +634,20 @@ function CreateExportSlipPage({ mode: propMode }) {
                         readOnly
                         value={customers.find(s => String(s.id) === String(form.partnerId))?.name || ''}
                         style={{ backgroundColor: '#f9fafb' }}
-                        placeholder="Tự động chọn theo Mã KH..."
+                        placeholder="Tìm kiếm và chọn Tên Khách hàng"
                       />
                     </div>
                   </div>
 
                   <div className="misa-form-group" style={{ marginTop: '12px' }}>
                     <label className="misa-label">Địa chỉ</label>
-                    <input type="text" className="misa-input" readOnly value={customers.find(s => String(s.id) === String(form.partnerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} placeholder="Tự động điền theo Khách hàng" />
+                    <input
+                      type="text"
+                      className="misa-input"
+                      value={form.customerAddress || ''}
+                      onChange={(e) => handleFormChange('customerAddress', e.target.value)}
+                      placeholder="Nhập địa chỉ giao hàng (có thể tuỳ chỉnh)..."
+                    />
                   </div>
                 </>
               )}
@@ -657,7 +663,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                         className="misa-input"
                         value={form.receiverName}
                         onChange={(e) => handleFormChange('receiverName', e.target.value)}
-                        placeholder="Nhập tên người nhận..."
+                        placeholder="Nhập tên người nhận"
                       />
                     </div>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
@@ -667,7 +673,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                         className="misa-input"
                         value={form.receiverAddress}
                         onChange={(e) => handleFormChange('receiverAddress', e.target.value)}
-                        placeholder="Nhập tên phòng ban..."
+                        placeholder="Nhập tên phòng ban"
                       />
                     </div>
                   </div>
@@ -685,7 +691,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                         className="misa-input"
                         readOnly
                         value={selectedAssemblyOrder?.orderCode || form.referenceCode || ''}
-                        placeholder="Nhấn biểu tượng bên cạnh để chọn lệnh..."
+                        placeholder="Nhấn chọn lệnh"
                         style={{ flex: 1, backgroundColor: '#f3f4f6', cursor: 'pointer' }}
                         onClick={() => setShowAssemblyModal(true)}
                       />
@@ -736,7 +742,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                     options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
                     value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
                     onChange={(selected) => handleFormChange('warehouseId', selected ? selected.value : '')}
-                    placeholder="Chọn kho xuất..."
+                    placeholder="Chọn kho xuất"
                     isClearable
                     styles={customSelectStyles}
                   />
@@ -762,7 +768,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                       className="misa-input"
                       value={form.receiverName || ''}
                       onChange={(e) => handleFormChange('receiverName', e.target.value)}
-                      placeholder="Nhập tên người nhận hàng..."
+                      placeholder="Nhập tên người nhận hàng"
                     />
                   </div>
                   <div className="misa-form-group" style={{ flex: '0 0 50%' }}></div>
@@ -777,7 +783,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                   value={form.note}
                   onChange={(e) => handleFormChange('note', e.target.value)}
                   style={{ minHeight: '60px' }}
-                  placeholder="Nhập ghi chú..."
+                  placeholder="Nhập ghi chú"
                 />
               </div>
 
@@ -814,7 +820,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                     style={{ marginTop: '8px' }}
                     value={form.attachedDocs || ''}
                     onChange={(e) => handleFormChange('attachedDocs', e.target.value)}
-                    placeholder="Số chứng từ đính kèm..."
+                    placeholder="Số chứng từ đính kèm"
                   />
                 )}
               </div>
@@ -855,7 +861,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                   style={{ paddingLeft: '36px', height: '34px' }}
                   value={scanCode}
                   onChange={(event) => setScanCode(event.target.value)}
-                  placeholder="Đặt con trỏ vào đây rồi quét mã..."
+                  placeholder="Đặt con trỏ vào đây rồi quét mã"
                   disabled={scanLoading}
                 />
               </div>
@@ -909,7 +915,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                           value={item.variantId}
                           onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
                           displayMode="name"
-                          placeholder="Chọn hàng hóa / linh kiện..."
+                          placeholder="Chọn hàng hóa / linh kiện"
                         />
                       </td>
                       <td>

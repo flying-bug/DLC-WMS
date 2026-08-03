@@ -27,7 +27,7 @@ const customSelectStyles = {
   menuPortal: base => ({ ...base, zIndex: 9999 }),
 };
 
-const emptyLine = () => ({ variantId: null, quantity: 1, unitPrice: 0, note: '' });
+const emptyLine = () => ({ variantId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, note: '' });
 
 function CreateSalesOrderPage() {
   const navigate = useNavigate();
@@ -47,6 +47,7 @@ function CreateSalesOrderPage() {
     soDate: today(),
     partnerId: null,
     warehouseId: null,
+    deliveryAddress: '',
     note: '',
     paymentDueDate: '',
   });
@@ -99,6 +100,7 @@ function CreateSalesOrderPage() {
           soDate: so.soDate,
           partnerId: so.partnerId,
           warehouseId: so.warehouseId,
+          deliveryAddress: so.deliveryAddress || so.partnerAddress || '',
           note: so.note || '',
           paymentDueDate: so.paymentDueDate || '',
         });
@@ -106,6 +108,9 @@ function CreateSalesOrderPage() {
           variantId: l.variantId,
           quantity: Number(l.quantity),
           unitPrice: Number(l.unitPrice),
+          unitName: l.unitName || '',
+          warrantyMonths: l.warrantyMonths || 0,
+          vatRate: l.vatRate || 0,
           note: l.note || '',
         })));
       } catch {
@@ -139,7 +144,14 @@ function CreateSalesOrderPage() {
     p.map((l, i) => i === idx ? { ...l, [field]: value } : l)
   );
 
-  const totalAmount = lines.reduce((sum, l) => sum + (Number(l.quantity) * Number(l.unitPrice)), 0);
+  const updateLineMultiple = (idx, updates) => setLines(p =>
+    p.map((l, i) => i === idx ? { ...l, ...updates } : l)
+  );
+
+  const totalQuantity = lines.reduce((sum, l) => sum + Number(l.quantity || 0), 0);
+  const subTotalAmount = lines.reduce((sum, l) => sum + (Number(l.quantity || 0) * Number(l.unitPrice || 0)), 0);
+  const totalVatAmount = lines.reduce((sum, l) => sum + (Number(l.quantity || 0) * Number(l.unitPrice || 0) * Number(l.vatRate || 0) / 100), 0);
+  const grandTotal = subTotalAmount + totalVatAmount;
 
   // ── Save ──
   const buildPayload = () => ({
@@ -148,11 +160,14 @@ function CreateSalesOrderPage() {
     paymentDueDate: form.paymentDueDate || undefined,
     partnerId: Number(form.partnerId),
     warehouseId: Number(form.warehouseId),
+    deliveryAddress: form.deliveryAddress || undefined,
     note: form.note || undefined,
     lines: lines.map(l => ({
       variantId: Number(l.variantId),
       quantity: Number(l.quantity),
       unitPrice: Number(l.unitPrice),
+      vatRate: Number(l.vatRate || 0),
+      warrantyMonths: Number(l.warrantyMonths || 0),
       note: l.note || undefined,
     })),
   });
@@ -161,7 +176,7 @@ function CreateSalesOrderPage() {
     if (!form.partnerId) { showToast('error', 'Vui lòng chọn khách hàng'); return false; }
     if (!form.warehouseId) { showToast('error', 'Vui lòng chọn kho'); return false; }
     if (!form.soDate) { showToast('error', 'Vui lòng nhập ngày lập'); return false; }
-    
+
     if (form.paymentDueDate) {
       if (form.paymentDueDate < form.soDate) {
         showToast('error', 'Hạn thanh toán không được nhỏ hơn ngày lập đơn');
@@ -222,6 +237,9 @@ function CreateSalesOrderPage() {
     value: v.id,
     label: `[${v.sku}] ${v.variantName || v.productName}`,
     salePrice: v.salePrice || 0,
+    unitName: v.unitName || 'Cái',
+    warrantyMonths: v.warrantyMonths || 0,
+    vatRate: v.vatPercent || v.vatRate || 0,
   }));
 
   return (
@@ -251,7 +269,7 @@ function CreateSalesOrderPage() {
               <div className={styles.leftPanel}>
                 <div className={styles.section}>
                   <div className={styles.sectionTitle}>
-                    <i className="bi bi-person" /> Thông tin khách hàng & kho
+                    <i className="bi bi-person" /> Thông tin khách hàng
                   </div>
 
                   <div className={styles.fieldRow}>
@@ -259,10 +277,28 @@ function CreateSalesOrderPage() {
                     <Select
                       options={customerOptions}
                       value={customerOptions.find(o => o.value === form.partnerId) || null}
-                      onChange={opt => setForm(p => ({ ...p, partnerId: opt?.value || null }))}
+                      onChange={opt => {
+                        const cust = customers.find(c => c.id === opt?.value);
+                        setForm(p => ({ 
+                          ...p, 
+                          partnerId: opt?.value || null,
+                          deliveryAddress: cust ? cust.address || '' : ''
+                        }));
+                      }}
                       placeholder="Chọn khách hàng..."
                       isClearable
                       styles={customSelectStyles}
+                    />
+                  </div>
+
+                  <div className={styles.fieldRow}>
+                    <label className={styles.label}>Địa chỉ giao hàng</label>
+                    <textarea
+                      className={styles.textarea}
+                      rows={2}
+                      value={form.deliveryAddress}
+                      onChange={e => setForm(p => ({ ...p, deliveryAddress: e.target.value }))}
+                      placeholder="Địa chỉ giao hàng..."
                     />
                   </div>
 
@@ -336,12 +372,20 @@ function CreateSalesOrderPage() {
                   {/* Summary box */}
                   <div className={styles.summaryBox}>
                     <div className={styles.summaryRow}>
-                      <span>Số dòng hàng:</span>
-                      <strong>{lines.length}</strong>
+                      <span>Tổng số lượng:</span>
+                      <strong>{totalQuantity}</strong>
+                    </div>
+                    <div className={styles.summaryRow}>
+                      <span>Tiền hàng:</span>
+                      <strong>{money(subTotalAmount)} đ</strong>
+                    </div>
+                    <div className={styles.summaryRow}>
+                      <span>Thuế VAT:</span>
+                      <strong>{money(totalVatAmount)} đ</strong>
                     </div>
                     <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
-                      <span>Tổng cộng:</span>
-                      <strong className={styles.totalAmount}>{money(totalAmount)} đ</strong>
+                      <span>Tổng thanh toán:</span>
+                      <strong className={styles.totalAmount}>{money(grandTotal)} đ</strong>
                     </div>
                   </div>
                 </div>
@@ -363,10 +407,13 @@ function CreateSalesOrderPage() {
                     <tr>
                       <th style={{ width: 40 }}>#</th>
                       <th>Sản phẩm</th>
-                      <th style={{ width: 110 }}>Số lượng</th>
-                      <th style={{ width: 150 }}>Đơn giá</th>
-                      <th style={{ width: 160, textAlign: 'right' }}>Thành tiền</th>
-                      <th style={{ width: 160 }}>Ghi chú dòng</th>
+                      <th style={{ width: 70 }}>ĐVT</th>
+                      <th style={{ width: 90 }}>Số lượng</th>
+                      <th style={{ width: 70 }}>BH (T)</th>
+                      <th style={{ width: 130 }}>Đơn giá</th>
+                      <th style={{ width: 140, textAlign: 'right' }}>Thành tiền</th>
+                      <th style={{ width: 80 }}>% VAT</th>
+                      <th style={{ width: 140 }}>Ghi chú dòng</th>
                       <th style={{ width: 40 }}></th>
                     </tr>
                   </thead>
@@ -383,8 +430,17 @@ function CreateSalesOrderPage() {
                               options={variantOptions}
                               value={variantOptions.find(o => o.value === line.variantId) || null}
                               onChange={opt => {
-                                updateLine(idx, 'variantId', opt?.value || null);
-                                if (opt?.salePrice) updateLine(idx, 'unitPrice', opt.salePrice);
+                                if (opt) {
+                                  updateLineMultiple(idx, {
+                                    variantId: opt.value,
+                                    unitPrice: opt.salePrice || 0,
+                                    unitName: opt.unitName || '',
+                                    warrantyMonths: opt.warrantyMonths || 0,
+                                    vatRate: opt.vatRate || 0
+                                  });
+                                } else {
+                                  updateLine(idx, 'variantId', null);
+                                }
                               }}
                               placeholder="Chọn sản phẩm..."
                               isClearable
@@ -397,6 +453,9 @@ function CreateSalesOrderPage() {
                                 Tồn khả dụng: {money(availableQty)}
                               </div>
                             )}
+                          </td>
+                          <td style={{ textAlign: 'center', color: '#475569', fontSize: 13 }}>
+                            {line.unitName || '—'}
                           </td>
                           <td>
                             <input
@@ -413,12 +472,31 @@ function CreateSalesOrderPage() {
                               type="number"
                               min="0"
                               className={styles.lineInput}
+                              value={line.warrantyMonths}
+                              onChange={e => updateLine(idx, 'warrantyMonths', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              className={styles.lineInput}
                               value={line.unitPrice}
                               onChange={e => updateLine(idx, 'unitPrice', e.target.value)}
                             />
                           </td>
                           <td style={{ textAlign: 'right', fontWeight: 600, color: '#1e40af' }}>
                             {money(lineTotal)} đ
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              className={styles.lineInput}
+                              value={line.vatRate}
+                              onChange={e => updateLine(idx, 'vatRate', e.target.value)}
+                            />
                           </td>
                           <td>
                             <input
@@ -442,13 +520,28 @@ function CreateSalesOrderPage() {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={4} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
-                        <strong>Tổng cộng:</strong>
+                      <td colSpan={8} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
+                        <strong>Tiền hàng:</strong>
                       </td>
-                      <td style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 15, color: '#1d4ed8' }}>
-                        {money(totalAmount)} đ
+                      <td colSpan={2} style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 15, color: '#1d4ed8' }}>
+                        {money(subTotalAmount)} đ
                       </td>
-                      <td colSpan={2} />
+                    </tr>
+                    <tr>
+                      <td colSpan={8} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
+                        <strong>Tiền thuế VAT:</strong>
+                      </td>
+                      <td colSpan={2} style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 15, color: '#dc2626' }}>
+                        {money(totalVatAmount)} đ
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan={8} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 15, color: '#0f172a' }}>
+                        <strong>Tổng cộng thanh toán:</strong>
+                      </td>
+                      <td colSpan={2} style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 16, color: '#16a34a' }}>
+                        {money(grandTotal)} đ
+                      </td>
                     </tr>
                   </tfoot>
                 </table>
