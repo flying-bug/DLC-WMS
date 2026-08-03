@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 @Service
@@ -19,22 +20,26 @@ public class BackupSchedulerService {
     private final BackupService backupService;
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+    private static final ZoneId VIETNAM_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    private String lastRunMinute = "";
 
     /**
-     * Runs every minute, checks if a scheduled backup should run now.
-     * This is simpler than Quartz and fits the use-case (1-min granularity is fine for nightly backups).
+     * Runs every 30 seconds, checks if a scheduled backup should run now in Vietnam timezone.
      */
-    @Scheduled(fixedDelay = 60_000) // every 60 seconds
+    @Scheduled(fixedDelay = 30_000)
     public void checkAndRunSchedule() {
         try {
             com.duylongtech.backend.dto.BackupScheduleDto schedule = backupService.getSchedule();
             if (!schedule.isEnabled()) return;
 
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);
             String nowTime = now.format(TIME_FMT); // "HH:mm"
-            String targetTime = schedule.getScheduleTime(); // "02:00"
+            String targetTime = schedule.getScheduleTime(); // e.g. "03:15"
 
             if (!nowTime.equals(targetTime)) return;
+
+            String currentMinuteKey = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH:mm"));
+            if (currentMinuteKey.equals(lastRunMinute)) return;
 
             boolean shouldRun = switch (schedule.getScheduleType().toUpperCase()) {
                 case "DAILY"   -> true;
@@ -44,7 +49,8 @@ public class BackupSchedulerService {
             };
 
             if (shouldRun) {
-                log.info("Scheduled backup triggered at {}", now);
+                lastRunMinute = currentMinuteKey;
+                log.info("Scheduled backup triggered at {} (Vietnam Time)", now);
                 backupService.createBackup("scheduler");
                 backupService.applyRetentionPolicy();
             }

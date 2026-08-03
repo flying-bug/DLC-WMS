@@ -2,6 +2,7 @@
 .page {
     min-height: 100vh;
     width: 100%;
+    background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('/login-bg.png') center/cover no-repeat;
     background-color: var(--color-bg);
     display: flex;
     flex-direction: column;
@@ -14,8 +15,10 @@
    ══════════════════════════════════════════ */
 .header {
     height: 56px;
-    background-color: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-border) 30%, transparent);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -39,8 +42,7 @@
 .headerLogoBox {
     width: 32px;
     height: 32px;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
-    border-radius: 8px;
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -157,19 +159,21 @@
 .welcomeTitle {
     font-size: 30px;
     font-weight: 700;
-    color: var(--color-text);
+    color: #ffffff;
     margin: 0 0 12px;
     letter-spacing: -0.5px;
     line-height: 1.2;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .welcomeSubtitle {
     font-size: 15px;
-    color: var(--color-text-muted);
+    color: rgba(255, 255, 255, 0.9);
     margin: 0;
     line-height: 1.6;
     max-width: 440px;
     overflow-wrap: anywhere;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 /* Action cards grid */
@@ -184,8 +188,10 @@
 
 /* Single action card */
 .actionCard {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border-card);
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid color-mix(in srgb, var(--color-border-card) 50%, transparent);
     border-radius: 16px;
     padding: 36px 28px;
     display: flex;
@@ -255,8 +261,8 @@
 /* ── FOOTER ── */
 .footer {
     height: 44px;
-    background: var(--color-surface);
-    border-top: 1px solid var(--color-border);
+    background: transparent;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -277,7 +283,7 @@
     align-items: center;
     gap: 6px;
     font-size: 12px;
-    color: var(--color-text-subtle);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .footerItemIcon {
@@ -286,7 +292,7 @@
 
 .footerRight {
     font-size: 12px;
-    color: var(--color-text-subtle);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* ── RESPONSIVE ── */

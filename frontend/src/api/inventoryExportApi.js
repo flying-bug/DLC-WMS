@@ -39,7 +39,7 @@ export const getCustomers = (params = {}) => {
 };
 
 export const getUsers = (params = {}) => {
-  return axiosClient.get('/users', { params });
+  return axiosClient.get('/users/search', { params });
 };
 
 export const getWarehouses = (params = {}) => {
