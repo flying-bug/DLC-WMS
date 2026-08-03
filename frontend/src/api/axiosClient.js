@@ -61,7 +61,7 @@ axiosClient.interceptors.response.use(
     },
     (error) => {
         const isLoginRequest = error.config?.url?.includes('/auth/login');
-        if (error.response && (error.response.status === 401 || error.response.status === 403) && !isLoginRequest) {
+        if (error.response && error.response.status === 401 && !isLoginRequest) {
             forceLogout(error.response?.data?.userMessage || 'Phiên đăng nhập của bạn đã hết hạn hoặc tài khoản đã bị khóa.');
         }
 
