@@ -54,10 +54,11 @@ public class ImportDocumentController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long warehouseId,
+            @RequestParam(required = false) String issuePurpose,
             @RequestParam(required = false) String referenceType,
             @RequestParam(required = false) Long referenceId
     ) {
-        return ApiResponse.success(inventoryDocumentService.getImportHistory(docCode, fromDate, toDate, status, warehouseId, referenceType, referenceId));
+        return ApiResponse.success(inventoryDocumentService.getImportHistory(docCode, fromDate, toDate, status, warehouseId, issuePurpose, referenceType, referenceId));
     }
 
     @GetMapping("/{id}")

@@ -36,6 +36,9 @@ public class RepairLine {
     @Column(name = "serial_number_id")
     private Long serialNumberId;
 
+    @Column(name = "serial_number_text", length = 255)
+    private String serialNumberText;
+
     @Column(nullable = false, precision = 15, scale = 4)
     private BigDecimal quantity;
 
