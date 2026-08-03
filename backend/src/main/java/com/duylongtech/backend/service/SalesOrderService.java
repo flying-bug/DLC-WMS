@@ -110,10 +110,32 @@ public class SalesOrderService {
         User actorUser = userRepository.findByUsername(actor)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy người dùng hiện tại"));
 
-        // Tính tổng tiền
-        BigDecimal totalAmount = request.getLines().stream()
-                .map(l -> l.getUnitPrice().multiply(l.getQuantity()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Tạo lines và tính tiền
+        BigDecimal subTotalAmount = BigDecimal.ZERO;
+        BigDecimal taxAmount = BigDecimal.ZERO;
+        List<SalesOrderLine> lines = request.getLines().stream().map(lr -> {
+            BigDecimal lineAmount = lr.getUnitPrice().multiply(lr.getQuantity());
+            BigDecimal vatRate = lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO;
+            BigDecimal vatAmount = lineAmount.multiply(vatRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            
+            return SalesOrderLine.builder()
+                    .salesOrderId(0L) // sẽ được set sau khi save
+                    .variantId(lr.getVariantId())
+                    .quantity(lr.getQuantity())
+                    .unitPrice(lr.getUnitPrice())
+                    .vatRate(vatRate)
+                    .vatAmount(vatAmount)
+                    .warrantyMonths(lr.getWarrantyMonths())
+                    .lineAmount(lineAmount)
+                    .note(lr.getNote())
+                    .build();
+        }).collect(Collectors.toList());
+
+        for (SalesOrderLine l : lines) {
+            subTotalAmount = subTotalAmount.add(l.getLineAmount());
+            taxAmount = taxAmount.add(l.getVatAmount());
+        }
+        BigDecimal totalAmount = subTotalAmount.add(taxAmount);
 
         SalesOrder so = SalesOrder.builder()
                 .partnerId(request.getPartnerId())
@@ -122,26 +144,16 @@ public class SalesOrderService {
                 .publicToken(java.util.UUID.randomUUID().toString())
                 .soDate(request.getSoDate())
                 .status("DRAFT")
+                .subTotalAmount(subTotalAmount)
+                .taxAmount(taxAmount)
                 .totalAmount(totalAmount)
                 .paidAmount(BigDecimal.ZERO)
                 .paymentStatus("UNPAID")
                 .paymentDueDate(request.getPaymentDueDate())
+                .deliveryAddress(request.getDeliveryAddress())
                 .note(request.getNote())
                 .createdBy(actorUser.getId())
                 .build();
-
-        // Tạo lines
-        List<SalesOrderLine> lines = request.getLines().stream().map(lr -> {
-            BigDecimal lineAmount = lr.getUnitPrice().multiply(lr.getQuantity());
-            return SalesOrderLine.builder()
-                    .salesOrderId(0L) // sẽ được set sau khi save
-                    .variantId(lr.getVariantId())
-                    .quantity(lr.getQuantity())
-                    .unitPrice(lr.getUnitPrice())
-                    .lineAmount(lineAmount)
-                    .note(lr.getNote())
-                    .build();
-        }).collect(Collectors.toList());
 
         so.setLines(new java.util.ArrayList<>());
         SalesOrder saved = salesOrderRepository.save(so);
@@ -182,25 +194,38 @@ public class SalesOrderService {
         so.setWarehouseId(request.getWarehouseId());
         so.setSoDate(request.getSoDate());
         so.setPaymentDueDate(request.getPaymentDueDate());
+        so.setDeliveryAddress(request.getDeliveryAddress());
         so.setNote(request.getNote());
 
         // Rebuild lines
         so.getLines().clear();
-        BigDecimal totalAmount = BigDecimal.ZERO;
+        BigDecimal subTotalAmount = BigDecimal.ZERO;
+        BigDecimal taxAmount = BigDecimal.ZERO;
+        
         for (SalesOrderRequest.SalesOrderLineRequest lr : request.getLines()) {
             BigDecimal lineAmount = lr.getUnitPrice().multiply(lr.getQuantity());
-            totalAmount = totalAmount.add(lineAmount);
+            BigDecimal vatRate = lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO;
+            BigDecimal vatAmount = lineAmount.multiply(vatRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            
+            subTotalAmount = subTotalAmount.add(lineAmount);
+            taxAmount = taxAmount.add(vatAmount);
+            
             SalesOrderLine line = SalesOrderLine.builder()
                     .salesOrderId(so.getId())
                     .variantId(lr.getVariantId())
                     .quantity(lr.getQuantity())
                     .unitPrice(lr.getUnitPrice())
+                    .vatRate(vatRate)
+                    .vatAmount(vatAmount)
+                    .warrantyMonths(lr.getWarrantyMonths())
                     .lineAmount(lineAmount)
                     .note(lr.getNote())
                     .build();
             so.getLines().add(line);
         }
-        so.setTotalAmount(totalAmount);
+        so.setSubTotalAmount(subTotalAmount);
+        so.setTaxAmount(taxAmount);
+        so.setTotalAmount(subTotalAmount.add(taxAmount));
 
         SalesOrder updated = salesOrderRepository.save(so);
         log.info("Cập nhật đơn bán hàng {} bởi {}", updated.getSoCode(), actor);
@@ -424,10 +449,13 @@ public class SalesOrderService {
                 .warehouseCode(so.getWarehouse() != null ? so.getWarehouse().getCode() : null)
                 .warehouseName(so.getWarehouse() != null ? so.getWarehouse().getName() : null)
                 .build();
+        r.setSubTotalAmount(so.getSubTotalAmount());
+        r.setTaxAmount(so.getTaxAmount());
         r.setTotalAmount(so.getTotalAmount());
         r.setPaidAmount(so.getPaidAmount());
         r.setPaymentStatus(so.getPaymentStatus());
         r.setPaymentDueDate(so.getPaymentDueDate());
+        r.setDeliveryAddress(so.getDeliveryAddress());
         r.setNote(so.getNote());
         r.setCreatedBy(so.getCreatedBy());
         r.setCreatedByName(so.getCreatedByUser() != null ? so.getCreatedByUser().getFullName() : null);
@@ -453,8 +481,12 @@ public class SalesOrderService {
                             .sku(sku)
                             .variantName(variantName)
                             .productCode(productCode)
+                            .unitName(line.getVariant() != null && line.getVariant().getProduct() != null && line.getVariant().getProduct().getUnit() != null ? line.getVariant().getProduct().getUnit().getName() : null)
                             .quantity(line.getQuantity())
                             .unitPrice(line.getUnitPrice())
+                            .vatRate(line.getVatRate())
+                            .vatAmount(line.getVatAmount())
+                            .warrantyMonths(line.getWarrantyMonths())
                             .lineAmount(line.getLineAmount())
                             .note(line.getNote())
                             .availableQuantity(available != null ? available : BigDecimal.ZERO)

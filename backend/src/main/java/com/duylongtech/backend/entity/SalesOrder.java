@@ -49,6 +49,14 @@ public class SalesOrder {
     @Column(name = "status", nullable = false, length = 30)
     private String status;
 
+    @Column(name = "sub_total_amount", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal subTotalAmount = BigDecimal.ZERO;
+
+    @Column(name = "tax_amount", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal taxAmount = BigDecimal.ZERO;
+
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalAmount;
 
@@ -62,6 +70,9 @@ public class SalesOrder {
 
     @Column(name = "payment_due_date")
     private LocalDate paymentDueDate;
+
+    @Column(name = "delivery_address", length = 500)
+    private String deliveryAddress;
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;

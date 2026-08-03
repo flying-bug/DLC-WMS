@@ -40,6 +40,15 @@ public class SalesOrderLine {
     @Column(name = "line_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal lineAmount;
 
+    @Column(name = "vat_rate", precision = 5, scale = 2)
+    private BigDecimal vatRate;
+
+    @Column(name = "vat_amount", precision = 15, scale = 2)
+    private BigDecimal vatAmount;
+
+    @Column(name = "warranty_months")
+    private Integer warrantyMonths;
+
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 }
