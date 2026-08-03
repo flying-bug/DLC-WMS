@@ -31,6 +31,8 @@ const EXPORT_PURPOSE_OPTIONS = [
   { value: 'SALES', label: 'Bán hàng' },
   { value: 'USAGE', label: 'Sử dụng nội bộ' },
   { value: 'ASSEMBLY', label: 'Xuất lắp ráp / tháo dỡ' },
+  { value: 'REPAIR', label: 'Xuất sửa chữa' },
+  { value: 'OTHER', label: 'Khác' }
 ];
 
 const STATUS_OPTIONS = [
@@ -60,7 +62,8 @@ const STATUS_LABELS = {
 const EXPORT_PURPOSE_LABELS = {
   SALES: 'Bán hàng',
   USAGE: 'Sử dụng nội bộ',
-  ASSEMBLY: 'Xuất lắp ráp / tháo dỡ'
+  ASSEMBLY: 'Xuất lắp ráp / tháo dỡ',
+  REPAIR: 'Xuất sửa chữa'
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -221,7 +224,7 @@ function ExportSlipPage() {
       const status = STATUS_LABELS[slip.status] || { label: slip.status || 'Không rõ', code: 'info' };
 
       let partnerLabel = 'Chưa chọn';
-      if (!slip.issuePurpose || slip.issuePurpose === 'SALES') {
+      if (!slip.issuePurpose || slip.issuePurpose === 'SALES' || slip.issuePurpose === 'REPAIR') {
         partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `Khách hàng #${slip.partnerId}` : 'Chưa chọn');
       } else if (slip.issuePurpose === 'ASSEMBLY') {
         partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');

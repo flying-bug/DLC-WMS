@@ -242,7 +242,7 @@ function AssemblyOrderFormPage() {
 
     const exportProgress = requiredExportsQty > 0 ? Math.min(100, (actualExports / requiredExportsQty) * 100) : 0;
     const importProgress = requiredImportsQty > 0 ? Math.min(100, (actualImports / requiredImportsQty) * 100) : 0;
-    
+
     const isReadyToComplete = actualExports >= requiredExportsQty && actualImports >= requiredImportsQty;
     const hasDrafts = linkedExports.some(s => s.status === 'DRAFT') || linkedImports.some(s => s.status === 'DRAFT');
     const disableComplete = saving || !isReadyToComplete || hasDrafts;
@@ -451,9 +451,9 @@ function AssemblyOrderFormPage() {
     const handleGenerateInventory = (documentType) => {
         if (!orderDetail || !orderDetail.id) return;
 
-        const targetPath = documentType === 'GOODS_ISSUE' ? '/export-slips/assembly' 
+        const targetPath = documentType === 'GOODS_ISSUE' ? '/export-slips/assembly'
             : documentType === 'SCRAP' ? '/import-history/create?type=SCRAP'
-            : '/import-history/create?type=PRODUCTION';
+                : '/import-history/create?type=PRODUCTION';
 
         const isAssembly = orderDetail.orderType !== 'DISASSEMBLY';
 
@@ -491,10 +491,10 @@ function AssemblyOrderFormPage() {
             }];
         } else if (isScrapItem) {
             lines = orderDetail.lines.map(l => ({
-                 variantId: l.componentVariantId,
-                 quantity: 1, // Default quantity
-                 price: l.salePrice || l.unitCost || 0
-             }));
+                variantId: l.componentVariantId,
+                quantity: 1, // Default quantity
+                price: l.salePrice || l.unitCost || 0
+            }));
         } else {
             // Document Type: GOODS_ISSUE cho Lắp ráp hoặc GOODS_RECEIPT cho tháo dỡ (Thành phần)
             const completedMap = {};
@@ -510,7 +510,7 @@ function AssemblyOrderFormPage() {
                 const required = Number(l.quantityRequired || 0);
                 const completed = completedMap[l.componentVariantId] || 0;
                 const remaining = Math.max(0, required - completed);
-                
+
                 return {
                     variantId: l.componentVariantId,
                     quantity: remaining,
@@ -691,11 +691,11 @@ function AssemblyOrderFormPage() {
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <label className="misa-label">Ghi chú</label>
                                         {!canEdit && orderDetail && orderDetail.status !== 'SUBMITTED' && orderDetail.status !== 'CANCELLED' && form.note !== orderDetail.note && (
-                                            <button 
-                                                className={styles.btnOutline} 
-                                                type="button" 
-                                                onClick={handleUpdateNote} 
-                                                disabled={savingNote} 
+                                            <button
+                                                className={styles.btnOutline}
+                                                type="button"
+                                                onClick={handleUpdateNote}
+                                                disabled={savingNote}
                                                 style={{ fontSize: '12px', padding: '2px 8px', height: '24px' }}
                                             >
                                                 {savingNote ? 'Đang lưu...' : 'Lưu ghi chú'}
@@ -766,11 +766,11 @@ function AssemblyOrderFormPage() {
                                                             }
                                                         });
                                                         const currentSelection = serialMappings[targetSerial]?.[vId] || '';
-                                                        
+
                                                         return (
                                                             <td key={vId} style={{ padding: '12px 16px' }}>
-                                                                <select 
-                                                                    className="misa-input" 
+                                                                <select
+                                                                    className="misa-input"
                                                                     value={currentSelection}
                                                                     onChange={(e) => handleMappingChange(targetSerial, vId, e.target.value)}
                                                                     disabled={orderDetail?.status !== 'APPROVED'}

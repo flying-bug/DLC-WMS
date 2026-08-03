@@ -31,6 +31,9 @@ const IMPORT_PURPOSE_OPTIONS = [
   { value: 'PURCHASE', label: 'Nhập mua hàng' },
   { value: 'STOCKTAKE_ADD', label: 'Hàng thừa từ kiểm kê' },
   { value: 'PRODUCTION', label: 'Lắp ráp / tháo dỡ' },
+  { value: 'RETURN', label: 'Hàng bán bị trả lại' },
+  { value: 'SCRAP', label: 'Nhập phế liệu (Sửa chữa)' },
+  { value: 'OTHER', label: 'Khác' }
 ];
 
 const STATUS_OPTIONS = [
@@ -61,6 +64,7 @@ const IMPORT_PURPOSE_LABELS = {
   PURCHASE: 'Mua hàng',
   RETURN: 'Hàng bán bị trả lại',
   PRODUCTION: 'Nhập kho sản xuất',
+  SCRAP: 'Nhập phế liệu',
   OTHER: 'Khác'
 };
 
@@ -210,7 +214,7 @@ function ImportHistoryPage() {
       let partnerLabel = 'Chưa chọn';
       if (!slip.issuePurpose || slip.issuePurpose === 'PURCHASE') {
         partnerLabel = supplierById.get(slip.partnerId)?.name || (slip.partnerId ? `NCC #${slip.partnerId}` : 'Chưa chọn');
-      } else if (slip.issuePurpose === 'RETURN') {
+      } else if (slip.issuePurpose === 'RETURN' || slip.issuePurpose === 'SCRAP') {
         partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `KH #${slip.partnerId}` : 'Chưa chọn');
       } else if (slip.issuePurpose === 'PRODUCTION') {
         partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');
@@ -771,15 +775,15 @@ function ImportHistoryPage() {
                       <span className={styles.detailLabel}>
                         {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && 'Nhà cung cấp'}
                         {selectedSlip.issuePurpose === 'PRODUCTION' && 'Lệnh sản xuất'}
-                        {selectedSlip.issuePurpose === 'RETURN' && 'Khách hàng'}
+                        {(selectedSlip.issuePurpose === 'RETURN' || selectedSlip.issuePurpose === 'SCRAP') && 'Khách hàng'}
                       </span>
                       <span className={styles.detailValue}>
                         {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && (supplierById.get(selectedSlip.partnerId)?.name || 'Chưa chọn')}
                         {selectedSlip.issuePurpose === 'PRODUCTION' && (assemblyOrderById.get(selectedSlip.referenceId)?.orderCode || 'Chưa chọn')}
-                        {selectedSlip.issuePurpose === 'RETURN' && (customerById.get(selectedSlip.partnerId)?.name || 'Chưa chọn')}
+                        {(selectedSlip.issuePurpose === 'RETURN' || selectedSlip.issuePurpose === 'SCRAP') && (customerById.get(selectedSlip.partnerId)?.name || 'Chưa chọn')}
                       </span>
                     </div>
-                    {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE' || selectedSlip.issuePurpose === 'PRODUCTION') && (
+                    {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE' || selectedSlip.issuePurpose === 'PRODUCTION' || selectedSlip.issuePurpose === 'SCRAP') && (
                       <div className={styles.detailItem}>
                         <span className={styles.detailLabel}>Người giao hàng</span>
                         <span className={styles.detailValue}>{selectedSlip.recipientName || 'Chưa có thông tin'}</span>
@@ -790,6 +794,7 @@ function ImportHistoryPage() {
                         {(!selectedSlip.issuePurpose || selectedSlip.issuePurpose === 'PURCHASE') && 'Nhân viên mua hàng'}
                         {selectedSlip.issuePurpose === 'PRODUCTION' && 'Nhân viên phụ trách'}
                         {selectedSlip.issuePurpose === 'RETURN' && 'Nhân viên bán hàng'}
+                        {selectedSlip.issuePurpose === 'SCRAP' && 'Nhân viên tiếp nhận'}
                       </span>
                       <span className={styles.detailValue}>
                         {selectedSlip.salespersonName || userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || (selectedSlip.salespersonId ? String(selectedSlip.salespersonId) : 'Chưa có thông tin')}

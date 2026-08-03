@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useReactToPrint } from 'react-to-print';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as repairApi from '../../api/repairApi';
@@ -12,6 +13,7 @@ import QuickProductModal from './components/QuickProductModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import RepairSerialModal from './components/RepairSerialModal';
+import RepairQuotationTemplate from './components/RepairQuotationTemplate';
 import styles from './RepairFormPage.module.css';
 
 const customSelectStyles = {
@@ -72,8 +74,27 @@ function RepairFormPage() {
       productName: line.componentVariant?.productName || line.componentName || line._label,
       warehouseId: repair?.warehouseId || (isNew ? formData.warehouseId : null),
       variantId: line.componentVariantId || line.variantId,
-      initialSerialObj: line.serialNumberId ? { serialNumber: line.serialNumber, serialNumberId: line.serialNumberId } : null
+      initialSerialObj: (line.serialNumberId || line.serialNumber) ? { serialNumber: line.serialNumber, serialNumberId: line.serialNumberId } : null,
+      actionType: line.actionType || 'ADD'
     });
+  };
+
+  const printRef = useRef(null);
+  const handlePrintQuote = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Bao-Gia-SC-${repair?.repairCode || 'REP'}`,
+  });
+
+  const handleCopyPublicLink = () => {
+    if (!repair) return;
+    if (!repair.publicToken) {
+        showToast('error', 'Lệnh sửa chữa này chưa có mã bảo mật (public token). Vui lòng lưu lại hoặc tải lại trang!');
+        return;
+    }
+    const link = `${window.location.origin}/repair-quote/${repair.publicToken}`;
+    navigator.clipboard.writeText(link)
+      .then(() => showToast('success', 'Đã copy link báo giá!'))
+      .catch(() => showToast('error', 'Không thể copy link'));
   };
 
   const closeSerialModal = (serialObj) => {
@@ -94,10 +115,13 @@ function RepairFormPage() {
         setPendingLines(updatedLines);
       } else {
         setRepair({ ...repair, lines: updatedLines });
-        handleUpdateLineField(line.id, line._key, 'serialNumberId', serialObj === null ? -1 : serialObj.serialNumberId);
+        repairApi.updateRepairLine(id, line.id, { 
+          serialNumberId: serialObj === null ? null : serialObj.serialNumberId,
+          serialNumber: serialObj === null ? null : serialObj.serialNumber
+        }).catch(() => loadData());
       }
     }
-    setSerialModalData({ isOpen: false, lineIndex: null, productName: '', warehouseId: null, variantId: null, initialSerialObj: null });
+    setSerialModalData({ isOpen: false, lineIndex: null, productName: '', warehouseId: null, variantId: null, initialSerialObj: null, actionType: 'ADD' });
   };
 
   const [showQuickProductModal, setShowQuickProductModal] = useState(false);
@@ -129,7 +153,7 @@ function RepairFormPage() {
   const [activeTab, setActiveTab] = useState('DETAILS');
   const [pendingLines, setPendingLines] = useState([]);
   const [pendingFees, setPendingFees] = useState([]);
-  const [serialModalData, setSerialModalData] = useState({ isOpen: false, lineIndex: null, productName: '', warehouseId: null, variantId: null, initialSerialObj: null });
+  const [serialModalData, setSerialModalData] = useState({ isOpen: false, lineIndex: null, productName: '', warehouseId: null, variantId: null, initialSerialObj: null, actionType: 'ADD' });
   const [addingType, setAddingType] = useState(null); // 'PART' or 'FEE'
   const [visibleColumns, setVisibleColumns] = useState({
     description: true,
@@ -308,7 +332,9 @@ function RepairFormPage() {
             quantity: Number(line.quantity),
             unitPrice: Number(line.unitPrice),
             isFreeWarranty: line.isFreeWarranty,
-            note: line.note || null
+            note: line.note || null,
+            serialNumber: line.serialNumber || null,
+            serialNumberId: line.serialNumberId || null
           });
         }
         for (const fee of pendingFees) {
@@ -347,14 +373,22 @@ function RepairFormPage() {
     if (status === 'DONE') {
       // Kiểm tra linh kiện có trackSerial nhưng chưa quét serial
       const missingSerial = (repair.lines || []).find(l => {
-        if (l.actionType !== 'ADD' || !l.isUsed) return false;
+        if (!l.isUsed) return false;
+        
         const variant = variants.find(v => String(v.id) === String(l.componentVariantId));
-        return variant?.trackSerial && !l.serialNumberId;
+        if (!variant?.trackSerial) return false;
+        
+        if (l.actionType === 'ADD') {
+          return !l.serialNumberId;
+        } else if (l.actionType === 'REMOVE') {
+          return !l.serialNumber;
+        }
+        return false;
       });
       if (missingSerial) {
         const variant = variants.find(v => String(v.id) === String(missingSerial.componentVariantId));
         const name = missingSerial.componentVariant?.productName || variant?.productName || missingSerial.componentName || 'Linh kiện';
-        showToast('error', `"${name}" quản lý theo Serial Number nhưng chưa được quét mã serial. Vui lòng quét serial trước khi hoàn tất.`);
+        showToast('error', `"${name}" quản lý theo Serial Number nhưng chưa được nhập/quét mã serial. Vui lòng hoàn thành trước khi kết thúc.`);
         return;
       }
 
@@ -391,7 +425,9 @@ function RepairFormPage() {
       quantity: Number(form.quantity),
       unitPrice: Number(form.unitPrice),
       isFreeWarranty: form.isFreeWarranty,
-      note: form.note || null
+      note: form.note || null,
+      serialNumber: form.serialNumber || null,
+      serialNumberId: form.serialNumberId || null
     };
     if (isNew) {
       const variant = variants.find(p => p.id === form.componentVariantId);
@@ -934,14 +970,18 @@ function RepairFormPage() {
                               const trackSerial = variant ? variant.trackSerial : false;
                               if (!trackSerial) return '-';
                               
-                              if ((isEditable || currentStatus === 'UNDER_REPAIR') && line.actionType === 'ADD') {
+                              if ((isEditable || currentStatus === 'UNDER_REPAIR') && (line.actionType === 'ADD' || line.actionType === 'REMOVE')) {
+                                const hasSerial = Boolean(line.serialNumberId || line.serialNumber);
+                                const btnStyle = hasSerial 
+                                  ? { padding: '2px 8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: '#22c55e', color: '#16a34a', backgroundColor: '#f0fdf4', border: '1px solid #22c55e', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap' }
+                                  : { padding: '2px 8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: '#f97316', color: '#ea580c', backgroundColor: '#fff7ed', border: '1px solid #f97316', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap' };
                                 return (
                                   <button 
                                     type="button"
                                     onClick={() => openSerialModal(line, idx)}
-                                    style={{ padding: '2px 8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: '#f97316', color: '#ea580c', backgroundColor: '#fff7ed', border: '1px solid #f97316', borderRadius: '4px', cursor: 'pointer' }}
+                                    style={btnStyle}
                                   >
-                                    <i className="bi bi-upc-scan"></i> {line.serialNumberId ? '1' : '0'} / {Number(line.doneQuantity || 0)}
+                                    <i className="bi bi-upc-scan"></i> {hasSerial ? '1' : '0'} / {Number(line.doneQuantity || 0)}
                                   </button>
                                 );
                               }
@@ -1052,9 +1092,37 @@ function RepairFormPage() {
           <div className={styles.footerRight}>
             {!isNew && repair && repair.repairStatus === 'DRAFT' && (
               <>
-
-                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px' }}>
+                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: '#3b82f6', borderColor: '#3b82f6' }} onClick={handlePrintQuote}>
+                  <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
+                </button>
+                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }} onClick={handleCopyPublicLink}>
+                  <i className="bi bi-link-45deg" style={{ marginRight: '4px' }}></i> Chia sẻ link
+                </button>
+                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('QUOTATION')} style={{ marginRight: '8px', backgroundColor: '#f59e0b', borderColor: '#f59e0b' }}>
+                  Gửi báo giá
+                </button>
+                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: '#10b981', borderColor: '#10b981' }}>
                   Xác nhận sửa chữa
+                </button>
+                <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: '#dc2626', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
+                  Hủy đơn
+                </button>
+              </>
+            )}
+
+            {!isNew && repair && repair.repairStatus === 'QUOTATION' && (
+              <>
+                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: '#3b82f6', borderColor: '#3b82f6' }} onClick={handlePrintQuote}>
+                  <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
+                </button>
+                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }} onClick={handleCopyPublicLink}>
+                  <i className="bi bi-link-45deg" style={{ marginRight: '4px' }}></i> Chia sẻ link
+                </button>
+                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: '#10b981', borderColor: '#10b981' }}>
+                  Xác nhận sửa chữa
+                </button>
+                <button className="btn-misa-cancel" style={{ marginRight: '8px', backgroundColor: '#fee2e2', color: '#dc2626', borderColor: '#f87171' }} disabled={saving} onClick={() => handleChangeStatus('CANCELLED')}>
+                  Hủy đơn
                 </button>
               </>
             )}
@@ -1092,8 +1160,12 @@ function RepairFormPage() {
           warehouseId={serialModalData.warehouseId}
           variantId={serialModalData.variantId}
           initialSerialObj={serialModalData.initialSerialObj}
+          actionType={serialModalData.actionType}
         />
       )}
+      <div style={{ display: 'none' }}>
+        <RepairQuotationTemplate ref={printRef} repair={repair} />
+      </div>
     </AdminLayout>
   );
 }

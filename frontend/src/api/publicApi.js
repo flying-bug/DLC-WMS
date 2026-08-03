@@ -11,3 +11,7 @@ const publicApiClient = axios.create({
 export const getPublicQuote = async (token) => {
     return await publicApiClient.get(`/api/v1/public/sales-orders/${token}/quote`);
 };
+
+export const getPublicRepairQuote = async (token) => {
+    return await publicApiClient.get(`/api/v1/public/repairs/${token}/quote`);
+};
