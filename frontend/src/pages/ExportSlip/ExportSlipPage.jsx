@@ -247,8 +247,17 @@ function ExportSlipPage() {
     });
 
   const handleExport = () => {
+    const dataToExport = selectedIds.length > 0 
+      ? rows.filter(r => selectedIds.includes(r.id)) 
+      : rows;
+
+    if (dataToExport.length === 0) {
+      showToast('warning', 'Không có dữ liệu để xuất Excel');
+      return;
+    }
+
     const headers = ['Ngày ghi nhận', 'Số chứng từ', 'Loại phiếu', 'Khách hàng / LSX', 'Kho xuất', 'Tổng tiền', 'Tiền VAT', 'Trạng thái'];
-    const data = rows.map(item => [
+    const data = dataToExport.map(item => [
       item.date,
       item.docCode,
       item.issuePurposeLabel,
@@ -260,6 +269,26 @@ function ExportSlipPage() {
     ]);
     exportToExcel(headers, data, 'Danh_sach_phieu_xuat_kho');
     showToast('success', 'Xuất Excel thành công!');
+  };
+
+  const handleBulkPrint = () => {
+    const slipsToPrint = selectedIds.length > 0 
+      ? slips.filter(s => selectedIds.includes(s.id))
+      : [];
+      
+    if (slipsToPrint.length === 0) {
+      showToast('warning', 'Vui lòng chọn phiếu để in');
+      return;
+    }
+
+    printExportSlip(slipsToPrint, {
+      customerById,
+      warehouseById,
+      productById,
+      userById,
+      isImport: false,
+      onError: (msg) => showToast('error', msg)
+    });
   };
 
   const handleSelectAll = (e) => {
@@ -382,11 +411,7 @@ function ExportSlipPage() {
           </div>
         </div>
 
-        {selectedIds.length > 0 && (
-          <div className={styles.bulkActionsToolbar}>
-            <div className={styles.bulkText}>Đã chọn {selectedIds.length} phiếu xuất</div>
-          </div>
-        )}
+
 
         <div className={styles.tableContainer}>
           <div style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
@@ -478,6 +503,32 @@ function ExportSlipPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Action Bar */}
+          {selectedIds.length > 0 && (
+            <div className={styles.actionBar}>
+              <div className={styles.actionBarContent}>
+                <span className={styles.actionText}>
+                  Đã chọn <strong>{selectedIds.length}</strong> phiếu
+                </span>
+                <div className={styles.actionButtons}>
+                  <button 
+                    className={styles.btnSecondary} 
+                    onClick={() => setSelectedIds([])}
+                    style={{ backgroundColor: 'white', color: '#64748b', borderColor: '#e2e8f0' }}
+                  >
+                    <i className="bi bi-x-circle"></i> Bỏ chọn
+                  </button>
+                  <button className={styles.btnSecondary} onClick={handleBulkPrint} style={{ backgroundColor: 'white', color: '#475569', borderColor: '#cbd5e1' }}>
+                    <i className="bi bi-printer"></i> In phiếu
+                  </button>
+                  <button className={styles.btnSecondary} onClick={handleExport} style={{ backgroundColor: 'white', color: '#16a34a', borderColor: '#bbf7d0' }}>
+                    <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
