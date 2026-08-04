@@ -83,6 +83,7 @@ public class InventoryDocumentService {
             ISSUE_PURPOSE_INVENTORY_ADJUSTMENT);
 
     private final InventoryDocumentRepository inventoryDocumentRepository;
+    private final com.duylongtech.backend.repository.InventoryDocumentLineRepository inventoryDocumentLineRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final InventoryCostLayerRepository inventoryCostLayerRepository;
     private final InventoryLedgerRepository inventoryLedgerRepository;
@@ -351,16 +352,43 @@ public class InventoryDocumentService {
 
             for (SerialNumber snObj : serialsToExport) {
                 updateExportedSerialBalance(doc, line, snObj, avgUnitCost);
-                generateWarrantyIfNeeded(doc, line, snObj);
+                com.duylongtech.backend.dto.request.WarrantyLineRequest wl = generateWarrantyLineIfNeeded(doc, line, snObj);
+                if (wl != null) warrantyLines.add(wl);
             }
             if (serialsToExport.isEmpty()) {
-                generateWarrantyIfNeeded(doc, line, null);
+                com.duylongtech.backend.dto.request.WarrantyLineRequest wl = generateWarrantyLineIfNeeded(doc, line, null);
+                if (wl != null) warrantyLines.add(wl);
             }
 
             if (doc.getSalesOrderId() != null) {
                 salesOrderService.fulfillReservation(doc.getSalesOrderId(), line.getVariantId(), doc.getWarehouseId(), qtyToExport);
             }
         }
+
+        if (!warrantyLines.isEmpty()) {
+            Warranty w = new Warranty();
+            w.setWarrantyCode(codeGeneratorService.generateCode("WARRANTIES", "warranty_code", "WAR", 5));
+            w.setPartnerId(doc.getPartnerId());
+            w.setSalesOrderId(doc.getSalesOrderId());
+            w.setStartDate(LocalDate.now());
+            LocalDate maxEndDate = warrantyLines.stream().map(com.duylongtech.backend.dto.request.WarrantyLineRequest::getEndDate).max(LocalDate::compareTo).orElse(LocalDate.now());
+            w.setEndDate(maxEndDate);
+            w.setWarrantyStatus("ACTIVE");
+            w.setNote("Tự động sinh từ phiếu xuất " + doc.getDocCode());
+            for (com.duylongtech.backend.dto.request.WarrantyLineRequest reqLine : warrantyLines) {
+                com.duylongtech.backend.entity.WarrantyLine wLine = new com.duylongtech.backend.entity.WarrantyLine();
+                wLine.setWarranty(w);
+                wLine.setProductVariantId(reqLine.getProductVariantId());
+                wLine.setSerialNumberId(reqLine.getSerialNumberId());
+                wLine.setQuantity(reqLine.getQuantity());
+                wLine.setStartDate(reqLine.getStartDate());
+                wLine.setEndDate(reqLine.getEndDate());
+                wLine.setWarrantyStatus(reqLine.getWarrantyStatus());
+                w.getLines().add(wLine);
+            }
+            warrantyRepository.save(w);
+        }
+
         doc.setStatus("POSTED");
         doc.setPostedAt(LocalDateTime.now());
         doc.setUpdatedAt(LocalDateTime.now());
@@ -967,6 +995,33 @@ public class InventoryDocumentService {
             }
         }
 
+        if (lr.getSerialNumbers() != null && !lr.getSerialNumbers().isEmpty()) {
+            for (String snValue : lr.getSerialNumbers()) {
+                if (snValue == null || snValue.trim().isEmpty()) continue;
+                SerialNumber snObj = serialNumberRepository.findByVariantIdAndSerialNumber(lr.getVariantId(), snValue.trim()).orElse(null);
+                if (snObj != null) {
+                    if (!"AVAILABLE".equals(snObj.getStatus())) {
+                        throw new BusinessException("Serial " + snValue + " không có sẵn trong kho (trạng thái: " + snObj.getStatus() + ")");
+                    }
+                    boolean isLocked = inventoryDocumentLineRepository.isSerialLockedInDrafts(snObj.getId(), doc.getId());
+                    if (isLocked) {
+                        throw new BusinessException("Serial " + snValue + " đang nằm trong một phiếu xuất nháp khác, vui lòng kiểm tra lại");
+                    }
+                }
+            }
+        } else if (serialNumberId != null) {
+            SerialNumber snObj = serialNumberRepository.findById(serialNumberId).orElse(null);
+            if (snObj != null) {
+                if (!"AVAILABLE".equals(snObj.getStatus())) {
+                    throw new BusinessException("Serial " + snObj.getSerialNumber() + " không có sẵn trong kho (trạng thái: " + snObj.getStatus() + ")");
+                }
+                boolean isLocked = inventoryDocumentLineRepository.isSerialLockedInDrafts(serialNumberId, doc.getId());
+                if (isLocked) {
+                    throw new BusinessException("Serial " + snObj.getSerialNumber() + " đang nằm trong một phiếu xuất nháp khác, vui lòng kiểm tra lại");
+                }
+            }
+        }
+
         return InventoryDocumentLine.builder()
                 .inventoryDocument(doc)
                 .variantId(lr.getVariantId())
@@ -1123,35 +1178,7 @@ public class InventoryDocumentService {
         return toResponse(doc, false);
     }
 
-    private void generateWarrantyIfNeeded(InventoryDocument doc, InventoryDocumentLine line, SerialNumber snObj) {
-        if (!ISSUE_PURPOSE_SALES.equals(doc.getIssuePurpose())) return;
-        ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
-        if (variant == null || variant.getProduct() == null) return;
-        if (variant.getProduct().getWarrantyPeriodMonths() != null && variant.getProduct().getWarrantyPeriodMonths() > 0) {
-            Warranty w = new Warranty();
-            w.setWarrantyCode(codeGeneratorService.generateCode("WARRANTIES", "warranty_code", "WAR", 5));
-            w.setPartnerId(doc.getPartnerId());
-            w.setSalesOrderId(doc.getSalesOrderId());
-            w.setStartDate(LocalDate.now());
-            w.setEndDate(LocalDate.now().plusMonths(variant.getProduct().getWarrantyPeriodMonths()));
-            w.setWarrantyStatus("ACTIVE");
-            w.setNote("Tự động sinh từ phiếu xuất " + doc.getDocCode());
-            
-            com.duylongtech.backend.entity.WarrantyLine wLine = new com.duylongtech.backend.entity.WarrantyLine();
-            wLine.setWarranty(w);
-            wLine.setProductVariantId(variant.getId());
-            if (snObj != null) {
-                wLine.setSerialNumberId(snObj.getId());
-            }
-            wLine.setQuantity(line.getQuantityOut());
-            wLine.setStartDate(w.getStartDate());
-            wLine.setEndDate(w.getEndDate());
-            wLine.setWarrantyStatus("ACTIVE");
-            w.getLines().add(wLine);
-            
-            warrantyRepository.save(w);
-        }
-    }
+
 
     @Transactional
     public InventoryDocumentResponse createExportFromSalesOrder(Long soId, Long actorUserId) {
