@@ -1178,6 +1178,11 @@ public class InventoryDocumentService {
             line.setQuantityOut(soLine.getQuantity());
             line.setQuantityIn(ZERO);
             line.setUnitCost(ZERO);
+            line.setUnitPrice(soLine.getUnitPrice());
+            line.setVatRate(soLine.getVatRate());
+            line.setVatPercent(soLine.getVatRate());
+            line.setWarrantyMonths(soLine.getWarrantyMonths());
+            line.setLineAmount(soLine.getLineAmount());
             line.setNote(soLine.getNote());
             doc.getLines().add(line);
         }

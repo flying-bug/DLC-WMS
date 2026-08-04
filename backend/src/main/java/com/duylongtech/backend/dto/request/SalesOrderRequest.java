@@ -24,6 +24,8 @@ public class SalesOrderRequest {
 
     private LocalDate paymentDueDate;
 
+    private String deliveryAddress;
+
     private String note;
 
     @NotNull
@@ -44,6 +46,10 @@ public class SalesOrderRequest {
         @NotNull
         @DecimalMin(value = "0.0000", message = "Đơn giá không được âm")
         private BigDecimal unitPrice;
+
+        private BigDecimal vatRate;
+
+        private Integer warrantyMonths;
 
         private String note;
     }

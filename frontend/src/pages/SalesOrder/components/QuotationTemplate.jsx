@@ -21,10 +21,10 @@ const QuotationTemplate = forwardRef(({ order }, ref) => {
         <div ref={ref} className={styles.printContainer}>
             <div className={styles.header}>
                 <div className={styles.companyInfo}>
-                    <h2>CÔNG TY TNHH DLC-WMS</h2>
-                    <p>Địa chỉ: 123 Đường Công Nghệ, Quận 1, TP. HCM</p>
-                    <p>Điện thoại: 0123.456.789 - Email: sales@dlcwms.vn</p>
-                    <p>Mã số thuế: 0123456789</p>
+                    <h2>CÔNG TY TNHH Duy Long</h2>
+                    <p>Địa chỉ: Số 59 Thịnh Liệt - Hoàng Mai - Hà Nội</p>
+                    <p>Điện thoại: 0392718888 - Email: Duylongcomputer@gmail.com</p>
+                    <p>Mã số thuế: 0103711414</p>
                 </div>
                 <div className={styles.quoteInfo}>
                     <p><strong>Ngày báo giá:</strong> {fmtDate(new Date())}</p>
@@ -39,48 +39,56 @@ const QuotationTemplate = forwardRef(({ order }, ref) => {
             </div>
 
             <div className={styles.customerSection}>
-                <p><strong>Khách hàng / Đơn vị:</strong> {order.customerName}</p>
-                {order.customerPhone && <p><strong>Điện thoại:</strong> {order.customerPhone}</p>}
-                {order.customerAddress && <p><strong>Địa chỉ:</strong> {order.customerAddress}</p>}
+                <p><strong>Khách hàng / Đơn vị:</strong> {order.partnerName || order.customerName}</p>
+                {(order.partnerPhone || order.customerPhone) && <p><strong>Điện thoại:</strong> {order.partnerPhone || order.customerPhone}</p>}
+                {(order.deliveryAddress || order.partnerAddress || order.customerAddress) && <p><strong>Địa chỉ:</strong> {order.deliveryAddress || order.partnerAddress || order.customerAddress}</p>}
             </div>
 
             <table className={styles.table}>
                 <thead>
                     <tr>
                         <th style={{ width: '5%' }}>STT</th>
-                        <th style={{ width: '40%' }}>Tên hàng hóa, dịch vụ</th>
-                        <th style={{ width: '10%' }}>ĐVT</th>
-                        <th style={{ width: '10%' }}>Số lượng</th>
-                        <th style={{ width: '15%' }}>Đơn giá</th>
-                        <th style={{ width: '20%' }}>Thành tiền</th>
+                        <th style={{ width: '35%' }}>Tên hàng hóa, dịch vụ</th>
+                        <th style={{ width: '8%' }}>ĐVT</th>
+                        <th style={{ width: '8%' }}>Số lượng</th>
+                        <th style={{ width: '7%' }}>BH (T)</th>
+                        <th style={{ width: '12%' }}>Đơn giá</th>
+                        <th style={{ width: '10%' }}>Thuế GTGT</th>
+                        <th style={{ width: '15%' }}>Thành tiền</th>
                     </tr>
                 </thead>
                 <tbody>
                     {order.lines && order.lines.map((line, idx) => {
-                        const lineTotal = line.quantity * line.salePrice;
+                        const lineAmount = line.lineAmount || (line.quantity * (line.unitPrice || line.salePrice || 0) * (1 + (line.vatRate || 0) / 100));
                         return (
                             <tr key={idx}>
                                 <td className={styles.textCenter}>{idx + 1}</td>
                                 <td>
                                     <strong>{line.variantName}</strong>
-                                    {line.variantCode && <div>Mã: {line.variantCode}</div>}
+                                    {(line.sku || line.variantCode) && <div>Mã: {line.sku || line.variantCode}</div>}
                                 </td>
-                                <td className={styles.textCenter}>{line.unit || 'Cái'}</td>
+                                <td className={styles.textCenter}>{line.unitName || line.unit || 'Cái'}</td>
                                 <td className={styles.textCenter}>{line.quantity}</td>
-                                <td className={styles.textRight}>{fmtCurrency(line.salePrice)}</td>
-                                <td className={styles.textRight}>{fmtCurrency(lineTotal)}</td>
+                                <td className={styles.textCenter}>{line.warrantyMonths || 0}</td>
+                                <td className={styles.textRight}>{fmtCurrency(line.unitPrice || line.salePrice)}</td>
+                                <td className={styles.textCenter}>{line.vatRate || 0}%</td>
+                                <td className={styles.textRight}>{fmtCurrency(lineAmount)}</td>
                             </tr>
                         );
                     })}
                 </tbody>
                 <tfoot>
                     <tr className={styles.totalRow}>
-                        <th colSpan="5">Cộng tiền hàng:</th>
-                        <th className={styles.textRight}>{fmtCurrency(totalAmount)}</th>
+                        <th colSpan="7">Cộng tiền hàng:</th>
+                        <th className={styles.textRight}>{fmtCurrency(order.subTotalAmount || 0)}</th>
                     </tr>
                     <tr className={styles.totalRow}>
-                        <th colSpan="5">Tổng cộng thanh toán (VNĐ):</th>
-                        <th className={styles.textRight}>{fmtCurrency(totalAmount)}</th>
+                        <th colSpan="7">Tiền thuế VAT:</th>
+                        <th className={styles.textRight}>{fmtCurrency(order.taxAmount || 0)}</th>
+                    </tr>
+                    <tr className={styles.totalRow}>
+                        <th colSpan="7">Tổng cộng thanh toán (VNĐ):</th>
+                        <th className={styles.textRight}>{fmtCurrency(order.totalAmount || 0)}</th>
                     </tr>
                 </tfoot>
             </table>

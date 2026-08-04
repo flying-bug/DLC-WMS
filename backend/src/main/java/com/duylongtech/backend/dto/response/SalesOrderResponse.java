@@ -28,10 +28,13 @@ public class SalesOrderResponse {
     private String warehouseCode;
     private String warehouseName;
 
+    private BigDecimal subTotalAmount;
+    private BigDecimal taxAmount;
     private BigDecimal totalAmount;
     private BigDecimal paidAmount;
     private String paymentStatus;
     private LocalDate paymentDueDate;
+    private String deliveryAddress;
     private String note;
 
     // Audit
@@ -57,6 +60,9 @@ public class SalesOrderResponse {
         private String unitName;
         private BigDecimal quantity;
         private BigDecimal unitPrice;
+        private BigDecimal vatRate;
+        private BigDecimal vatAmount;
+        private Integer warrantyMonths;
         private BigDecimal lineAmount;
         private String note;
         // Tồn kho khả dụng — dùng để hiển thị cảnh báo trên UI

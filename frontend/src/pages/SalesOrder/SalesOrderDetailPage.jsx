@@ -139,6 +139,7 @@ function SalesOrderDetailPage() {
             variantId: String(l.variantId),
             quantity: l.quantity || 1,
             price: l.unitPrice || l.price || 0,
+            unitName: l.unitName || '',
             vatPercent: l.vatRate || l.vatPercent || 0,
             warrantyMonths: l.warrantyMonths || 0,
             note: l.note || '',
@@ -189,7 +190,9 @@ function SalesOrderDetailPage() {
   }
 
   const statusCfg = STATUS_CONFIG[so.status] || { label: so.status, bg: '#f1f5f9', color: '#64748b', icon: 'bi-circle' };
-  const totalAmount = (so.lines || []).reduce((s, l) => s + Number(l.lineAmount || 0), 0);
+  const subTotalAmount = so.subTotalAmount || (so.lines || []).reduce((s, l) => s + Number(l.lineAmount || 0), 0);
+  const taxAmount = so.taxAmount || 0;
+  const totalAmount = so.totalAmount || (subTotalAmount + taxAmount);
 
   return (
     <AdminLayout>
@@ -297,6 +300,7 @@ function SalesOrderDetailPage() {
               <div className={styles.infoRow}><span className={styles.infoLabel}>Mã KH:</span><span className={styles.infoValue}>{so.partnerCode || '—'}</span></div>
               <div className={styles.infoRow}><span className={styles.infoLabel}>Tên KH:</span><span className={`${styles.infoValue} ${styles.highlight}`}>{so.partnerName || '—'}</span></div>
               <div className={styles.infoRow}><span className={styles.infoLabel}>Điện thoại:</span><span className={styles.infoValue}>{so.partnerPhone || '—'}</span></div>
+              <div className={styles.infoRow}><span className={styles.infoLabel}>Địa chỉ giao hàng:</span><span className={styles.infoValue}>{so.deliveryAddress || '—'}</span></div>
             </div>
           </div>
 
@@ -307,8 +311,16 @@ function SalesOrderDetailPage() {
               <div className={styles.infoRow}><span className={styles.infoLabel}>Kho:</span><span className={`${styles.infoValue} ${styles.highlight}`}>{so.warehouseName || '—'}</span></div>
               <div className={styles.infoRow}><span className={styles.infoLabel}>Hạn thanh toán:</span><span className={styles.infoValue}>{fmtDate(so.paymentDueDate)}</span></div>
               <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>Tiền hàng:</span>
+                <span className={styles.infoValue} style={{ fontWeight: 600 }}>{money(subTotalAmount)}</span>
+              </div>
+              <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>Thuế VAT:</span>
+                <span className={styles.infoValue} style={{ fontWeight: 600, color: '#dc2626' }}>{money(taxAmount)}</span>
+              </div>
+              <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Tổng cộng:</span>
-                <span className={styles.infoValue} style={{ fontWeight: 600 }}>{money(totalAmount)}</span>
+                <span className={styles.infoValue} style={{ fontWeight: 700, color: '#16a34a' }}>{money(totalAmount)}</span>
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Đã thanh toán:</span>
@@ -334,9 +346,12 @@ function SalesOrderDetailPage() {
                   <th>#</th>
                   <th>SKU</th>
                   <th>Tên sản phẩm</th>
+                  <th style={{ textAlign: 'center' }}>ĐVT</th>
                   <th style={{ textAlign: 'center' }}>Số lượng</th>
+                  <th style={{ textAlign: 'center' }}>BH (T)</th>
                   <th style={{ textAlign: 'right' }}>Đơn giá</th>
                   <th style={{ textAlign: 'right' }}>Thành tiền</th>
+                  <th style={{ textAlign: 'center' }}>% VAT</th>
                   <th>Ghi chú</th>
                 </tr>
               </thead>
@@ -346,18 +361,28 @@ function SalesOrderDetailPage() {
                     <td>{idx + 1}</td>
                     <td><span className={styles.skuBadge}>{line.sku || `#${line.variantId}`}</span></td>
                     <td>{line.variantName || '—'}</td>
+                    <td style={{ textAlign: 'center', color: '#475569' }}>{line.unitName || '—'}</td>
                     <td style={{ textAlign: 'center' }}>{Number(line.quantity).toLocaleString('vi-VN')}</td>
+                    <td style={{ textAlign: 'center' }}>{line.warrantyMonths || 0}</td>
                     <td style={{ textAlign: 'right' }}>{money(line.unitPrice)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 600, color: '#1d4ed8' }}>{money(line.lineAmount)}</td>
+                    <td style={{ textAlign: 'center' }}>{line.vatRate || 0}</td>
                     <td style={{ color: '#64748b' }}>{line.note || '—'}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Tổng cộng:</td>
-                  <td style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: '#1d4ed8', fontSize: 15 }}>{money(totalAmount)}</td>
-                  <td />
+                  <td colSpan={8} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Tiền hàng:</td>
+                  <td colSpan={2} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: '#1d4ed8', fontSize: 15 }}>{money(subTotalAmount)}</td>
+                </tr>
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Thuế VAT:</td>
+                  <td colSpan={2} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: '#dc2626', fontSize: 15 }}>{money(taxAmount)}</td>
+                </tr>
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Tổng thanh toán:</td>
+                  <td colSpan={2} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: '#16a34a', fontSize: 15 }}>{money(totalAmount)}</td>
                 </tr>
               </tfoot>
             </table>
