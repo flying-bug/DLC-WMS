@@ -499,14 +499,12 @@ function CreateImportSlipPage() {
                     { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
                     { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
                     { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
-                    { value: 'SCRAP', label: 'Nhập kho phế phẩm / Thu hồi' },
                     { value: 'OTHER', label: 'Khác' }
                   ].find(o => o.value === importType)}
                   options={[
                     { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
                     { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
                     { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
-                    { value: 'SCRAP', label: 'Nhập kho phế phẩm / Thu hồi' },
                     { value: 'OTHER', label: 'Khác' }
                   ]}
                   onChange={(option) => {

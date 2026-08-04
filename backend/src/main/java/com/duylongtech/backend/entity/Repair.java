@@ -33,6 +33,9 @@ public class Repair {
     @Column(name = "repair_code", nullable = false, unique = true, length = 50)
     private String repairCode;
 
+    @Column(name = "public_token", unique = true, length = 100)
+    private String publicToken;
+
     // Liên kết khách hàng (bắt buộc trước khi CONFIRMED)
     @Column(name = "partner_id", nullable = false)
     private Long partnerId;

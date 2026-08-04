@@ -230,6 +230,8 @@ public class RepairWorkflowService {
                 .status("DRAFT") // Lưu tạm trước khi post
                 .note("Phiếu xuất linh kiện sửa chữa - Lệnh " + repair.getRepairCode())
                 .createdBy(currentUserId)
+                .salespersonId(repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId)
+                .recipientName(repair.getResponsiblePerson())
                 .build();
 
         for (RepairLine rLine : addLines) {
@@ -238,11 +240,11 @@ public class RepairWorkflowService {
             
             if (actualDoneQty.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-            String serialNumbersText = null;
+            String serialNumbersText = rLine.getSerialNumberText();
             if (rLine.getSerialNumberId() != null) {
                 serialNumbersText = serialNumberRepository.findById(rLine.getSerialNumberId())
                         .map(SerialNumber::getSerialNumber)
-                        .orElse(null);
+                        .orElse(serialNumbersText);
             }
 
             InventoryDocumentLine docLine = InventoryDocumentLine.builder()
@@ -303,14 +305,16 @@ public class RepairWorkflowService {
                 .status("DRAFT") // Lưu tạm trước khi post
                 .note("Phiếu nhập kho phế liệu - Lệnh sửa chữa " + repair.getRepairCode())
                 .createdBy(currentUserId)
+                .salespersonId(repair.getCreatedBy() != null ? repair.getCreatedBy() : currentUserId)
+                .recipientName(repair.getResponsiblePerson())
                 .build();
 
         for (RepairLine line : removeLines) {
-            String serialNumbersText = null;
+            String serialNumbersText = line.getSerialNumberText();
             if (line.getSerialNumberId() != null) {
                 serialNumbersText = serialNumberRepository.findById(line.getSerialNumberId())
                         .map(SerialNumber::getSerialNumber)
-                        .orElse(null);
+                        .orElse(serialNumbersText);
             }
 
             InventoryDocumentLine scrapLine = InventoryDocumentLine.builder()

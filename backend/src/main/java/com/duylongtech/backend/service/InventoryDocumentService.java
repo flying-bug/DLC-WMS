@@ -34,6 +34,7 @@ import com.duylongtech.backend.entity.SalesOrder;
 import com.duylongtech.backend.entity.SalesOrderLine;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
 import com.duylongtech.backend.repository.StocktakeRepository;
+import com.duylongtech.backend.repository.RepairRepository;
 import com.duylongtech.backend.entity.Stocktake;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -96,6 +97,7 @@ public class InventoryDocumentService {
     private final AssemblyBomRepository assemblyBomRepository;
     private final StocktakeRepository stocktakeRepository;
     private final SalesOrderRepository salesOrderRepository;
+    private final RepairRepository repairRepository;
     private final SalesOrderService salesOrderService;
 
     @Transactional(readOnly = true)
@@ -142,16 +144,17 @@ public class InventoryDocumentService {
 
     @Transactional(readOnly = true)
     public List<InventoryDocumentResponse> getImportHistory(String docCode, LocalDate fromDate, LocalDate toDate,
-            String status, Long warehouseId, String referenceType, Long referenceId) {
+            String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId) {
         String normalizedDocCode = trimToNull(docCode);
         String normalizedStatus = normalizeOptionalStatus(status);
+        String normalizedIssuePurpose = normalizeOptionalReference(issuePurpose);
         String normalizedReferenceType = normalizeOptionalReference(referenceType);
         boolean noFilters = normalizedDocCode == null && fromDate == null && toDate == null && normalizedStatus == null
-                && warehouseId == null && normalizedReferenceType == null && referenceId == null;
+                && warehouseId == null && normalizedIssuePurpose == null && normalizedReferenceType == null && referenceId == null;
         List<InventoryDocument> docs = noFilters
                 ? inventoryDocumentRepository.findAllImports()
                 : inventoryDocumentRepository.searchImports(normalizedDocCode, fromDate, toDate, normalizedStatus,
-                        warehouseId, normalizedReferenceType, referenceId);
+                        warehouseId, normalizedIssuePurpose, normalizedReferenceType, referenceId);
         return docs.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
@@ -1240,6 +1243,9 @@ public class InventoryDocumentService {
             } else if ("SALES_ORDER".equals(doc.getReferenceType())) {
                 salesOrderRepository.findById(doc.getReferenceId())
                         .ifPresent(so -> r.setReferenceCode(so.getSoCode()));
+            } else if ("REPAIR".equals(doc.getReferenceType())) {
+                repairRepository.findById(doc.getReferenceId())
+                        .ifPresent(repair -> r.setReferenceCode(repair.getRepairCode()));
             }
         }
 

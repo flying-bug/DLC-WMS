@@ -23,6 +23,7 @@ public class RepairLineRequest {
     private String actionType; // "ADD" or "REMOVE"
 
     private Long serialNumberId;
+    private String serialNumber;
 
     @NotNull(message = "quantity là bắt buộc")
     @DecimalMin(value = "0.0001", message = "quantity phải lớn hơn 0")

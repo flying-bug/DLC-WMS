@@ -1,0 +1,126 @@
+.printContainer {
+  padding: 40px;
+  background-color: white;
+  color: #000;
+  font-family: 'Times New Roman', Times, serif, sans-serif;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 2px solid #002b6b;
+  padding-bottom: 15px;
+  margin-bottom: 30px;
+}
+
+.companyInfo h2 {
+  margin: 0;
+  color: #002b6b;
+  font-size: 24px;
+  text-transform: uppercase;
+}
+
+.companyInfo p {
+  margin: 4px 0 0;
+}
+
+.quoteInfo {
+  text-align: right;
+}
+
+.title {
+  text-align: center;
+  margin: 30px 0;
+}
+
+.title h1 {
+  margin: 0;
+  font-size: 28px;
+  text-transform: uppercase;
+  color: #002b6b;
+}
+
+.customerSection {
+  margin-bottom: 30px;
+}
+
+.customerSection p {
+  margin: 8px 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 30px;
+}
+
+.table th, .table td {
+  border: 1px solid #cbd5e1;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.table th {
+  background-color: #f1f5f9;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.table td {
+  vertical-align: top;
+}
+
+.textRight {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.textCenter {
+  text-align: center !important;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.totalRow th {
+  text-align: right;
+}
+
+.termsSection {
+  margin-bottom: 40px;
+  font-size: 13px;
+}
+
+.termsSection h4 {
+  margin-bottom: 10px;
+}
+
+.termsSection ul {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.signatureSection {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 50px;
+}
+
+.signatureBox {
+  text-align: center;
+}
+
+.signatureBox h4 {
+  margin: 0 0 80px;
+}
+
+@media print {
+  .printContainer {
+    display: block !important;
+    padding: 0;
+  }
+}

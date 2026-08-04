@@ -47,6 +47,7 @@ import SalesOrderListPage from '../pages/SalesOrder/SalesOrderListPage';
 import CreateSalesOrderPage from '../pages/SalesOrder/CreateSalesOrderPage';
 import SalesOrderDetailPage from '../pages/SalesOrder/SalesOrderDetailPage';
 import PublicQuotePage from '../pages/PublicQuote/PublicQuotePage';
+import PublicRepairQuotePage from '../pages/PublicQuote/PublicRepairQuotePage';
 
 // Helper to check valid token
 const isValidToken = () => {
@@ -95,6 +96,7 @@ function AppRouter() {
 
                 {/* Unrestricted Routes */}
                 <Route path="/quote/:token" element={<PublicQuotePage />} />
+                <Route path="/repair-quote/:token" element={<PublicRepairQuotePage />} />
 
                 {/* Protected Routes for Authenticated Users */}
                 <Route element={<ProtectedRoute />}>

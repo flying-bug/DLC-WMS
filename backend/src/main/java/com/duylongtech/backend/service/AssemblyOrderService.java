@@ -181,7 +181,7 @@ public class AssemblyOrderService {
         
         if ("SUBMITTED".equals(status)) {
             List<InventoryDocument> exports = inventoryDocumentRepository.searchExports(null, null, null, null, null, null, "ASSEMBLY_ORDER", id);
-            List<InventoryDocument> imports = inventoryDocumentRepository.searchImports(null, null, null, null, null, "ASSEMBLY_ORDER", id);
+            List<InventoryDocument> imports = inventoryDocumentRepository.searchImports(null, null, null, null, null, null, "ASSEMBLY_ORDER", id);
             
             boolean anyDraft = exports.stream().anyMatch(d -> "DRAFT".equals(d.getStatus())) ||
                                imports.stream().anyMatch(d -> "DRAFT".equals(d.getStatus()));

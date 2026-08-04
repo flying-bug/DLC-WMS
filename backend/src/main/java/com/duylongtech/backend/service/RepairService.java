@@ -89,6 +89,18 @@ public class RepairService {
         return toDetailResponse(repair);
     }
 
+    @Transactional(readOnly = true)
+    public RepairResponse getPublicQuoteByToken(String token) {
+        Repair repair = repairRepository.findByPublicTokenWithDetails(token)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy báo giá hoặc báo giá đã bị xóa"));
+        
+        if ("CANCELLED".equals(repair.getRepairStatus())) {
+            throw new BusinessException("Báo giá sửa chữa này đã bị hủy.");
+        }
+        
+        return toDetailResponse(repair);
+    }
+
     // =====================================================================
     // CREATE / UPDATE
     // =====================================================================
@@ -104,6 +116,7 @@ public class RepairService {
 
         Repair repair = Repair.builder()
                 .repairCode(repairCode)
+                .publicToken(java.util.UUID.randomUUID().toString())
                 .partnerId(request.getPartnerId())
                 .productId(request.getProductId())
                 .productQuantity(request.getProductQuantity() != null ? request.getProductQuantity() : 1)
@@ -230,6 +243,7 @@ public class RepairService {
                 .isFreeWarranty(isFreeWarranty)
                 .isUsed(Boolean.TRUE.equals(request.getIsUsed()))
                 .serialNumberId(request.getSerialNumberId())
+                .serialNumberText(request.getSerialNumber())
                 .dateScheduled(request.getDateScheduled())
                 .deadline(request.getDeadline())
                 .note(trimToNull(request.getNote()))
@@ -263,8 +277,10 @@ public class RepairService {
             if (request.getDoneQuantity() != null) line.setDoneQuantity(request.getDoneQuantity());
             if (request.getIsUsed() != null) line.setIsUsed(request.getIsUsed());
             if (request.getSerialNumberId() != null) line.setSerialNumberId(request.getSerialNumberId() == -1 ? null : request.getSerialNumberId());
+            if (request.getSerialNumber() != null) line.setSerialNumberText(request.getSerialNumber().isEmpty() ? null : request.getSerialNumber());
         } else {
             // Trạng thái DRAFT hoặc QUOTATION cho phép sửa toàn bộ
+            if (request.getComponentVariantId() != null) line.setComponentVariantId(request.getComponentVariantId());
             if (request.getQuantity() != null) line.setQuantity(request.getQuantity());
             if (request.getDoneQuantity() != null) line.setDoneQuantity(request.getDoneQuantity());
             if (request.getIsUsed() != null) line.setIsUsed(request.getIsUsed());
@@ -280,6 +296,7 @@ public class RepairService {
             if (request.getDeadline() != null) line.setDeadline(request.getDeadline());
             if (request.getNote() != null) line.setNote(trimToNull(request.getNote()));
             if (request.getSerialNumberId() != null) line.setSerialNumberId(request.getSerialNumberId() == -1 ? null : request.getSerialNumberId());
+            if (request.getSerialNumber() != null) line.setSerialNumberText(request.getSerialNumber().isEmpty() ? null : request.getSerialNumber());
         }
 
         repairLineRepository.save(line);
@@ -433,6 +450,7 @@ public class RepairService {
         return RepairResponse.builder()
                 .id(repair.getId())
                 .repairCode(repair.getRepairCode())
+                .publicToken(repair.getPublicToken())
                 .partnerId(repair.getPartnerId())
                 .productId(repair.getProductId())
                 .productQuantity(repair.getProductQuantity())
@@ -506,6 +524,7 @@ public class RepairService {
         return RepairResponse.builder()
                 .id(repair.getId())
                 .repairCode(repair.getRepairCode())
+                .publicToken(repair.getPublicToken())
                 .partnerId(repair.getPartnerId())
                 .partnerName(partnerName)
                 .partnerPhone(partnerPhone)
@@ -559,7 +578,7 @@ public class RepairService {
         }
 
         // Resolve serial number
-        String serialNum = null;
+        String serialNum = line.getSerialNumberText();
         if (line.getSerialNumberId() != null) {
             try {
                 var snOpt = serialNumberRepository.findById(line.getSerialNumberId());
