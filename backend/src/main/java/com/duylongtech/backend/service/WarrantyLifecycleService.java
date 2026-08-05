@@ -104,7 +104,7 @@ public class WarrantyLifecycleService {
             throw new BusinessException("ID bao hanh la bat buoc");
         }
         return warrantyRepository.findById(id)
-                .orElseThrow(() -> new BusinessException("Khong tim thay phieu bao hanh"));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu bảo hành"));
     }
 
     private void validateRequest(WarrantyRequest request, Long currentId) {

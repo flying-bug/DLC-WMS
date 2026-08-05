@@ -46,6 +46,21 @@ public class StockTransfer {
     @Column(name = "approved_by")
     private Long approvedBy;
 
+    @Column(name = "deliverer", length = 100)
+    private String deliverer;
+
+    @Column(name = "attached_document", length = 255)
+    private String attachedDocument;
+
+    @Column(name = "reference_id")
+    private Long referenceId;
+
+    @Column(name = "reference_type", length = 50)
+    private String referenceType;
+
+    @Column(name = "reference_code", length = 100)
+    private String referenceCode;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
