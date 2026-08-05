@@ -33,4 +33,16 @@ public class AssemblyBomLine {
 
     @Column(columnDefinition = "TEXT")
     private String note;
+
+    @Column(name = "unit_price", precision = 15, scale = 2)
+    private BigDecimal unitPrice;
+
+    @Column(name = "component_sku", length = 100)
+    private String componentSku;
+
+    @Column(name = "component_name", length = 255)
+    private String componentName;
+
+    @Column(name = "warranty_months")
+    private Integer warrantyMonths;
 }
