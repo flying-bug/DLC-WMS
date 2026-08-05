@@ -600,6 +600,9 @@ const ProductPage = () => {
         setWarrantyQty(0);
         setWarrantyUnit('Tháng');
         setErrorMsg('');
+        setShowQuickAddCat(false);
+        setShowQuickAddUnit(false);
+        setShowQuickAddBrand(false);
         setShowModal(true);
     };
 
@@ -656,6 +659,9 @@ const ProductPage = () => {
         setBomLines(loadedBomLines);
         setErrorMsg('');
         setActiveTab(product.productType === 'Thành phẩm' ? 'bom' : 'units');
+        setShowQuickAddCat(false);
+        setShowQuickAddUnit(false);
+        setShowQuickAddBrand(false);
         setShowModal(true);
         setOpenDropdownId(null);
     };
@@ -695,6 +701,9 @@ const ProductPage = () => {
 
         setErrorMsg('');
         setActiveTab(product.productType === 'Thành phẩm' ? 'bom' : 'units');
+        setShowQuickAddCat(false);
+        setShowQuickAddUnit(false);
+        setShowQuickAddBrand(false);
         setShowModal(true);
         setOpenDropdownId(null);
     };
@@ -1473,8 +1482,13 @@ const ProductPage = () => {
                                                             title="Thêm nhanh danh mục"
                                                             type="button"
                                                             onClick={() => {
-                                                                setShowQuickAddCat(v => !v);
-                                                                setQuickCatForm({ code: '', name: '' });
+                                                                const nextState = !showQuickAddCat;
+                                                                setShowQuickAddCat(nextState);
+                                                                if (nextState) {
+                                                                    setShowQuickAddUnit(false);
+                                                                    setShowQuickAddBrand(false);
+                                                                    setQuickCatForm({ code: '', name: '' });
+                                                                }
                                                             }}
                                                         >+</button>
                                                     </div>
@@ -1493,7 +1507,15 @@ const ProductPage = () => {
                                                                 <option key={u.id} value={u.id}>{u.name}</option>
                                                             ))}
                                                         </select>
-                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => setShowQuickAddUnit(v => !v)}>+</button>
+                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => {
+                                                            const nextState = !showQuickAddUnit;
+                                                            setShowQuickAddUnit(nextState);
+                                                            if (nextState) {
+                                                                setShowQuickAddCat(false);
+                                                                setShowQuickAddBrand(false);
+                                                                setQuickUnitForm({ code: '', name: '' });
+                                                            }
+                                                        }}>+</button>
                                                     </div>
                                                 </div>
                                             )}
@@ -1588,7 +1610,15 @@ const ProductPage = () => {
                                                                 <option key={u.id} value={u.id}>{u.name}</option>
                                                             ))}
                                                         </select>
-                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => setShowQuickAddUnit(v => !v)}>+</button>
+                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => {
+                                                            const nextState = !showQuickAddUnit;
+                                                            setShowQuickAddUnit(nextState);
+                                                            if (nextState) {
+                                                                setShowQuickAddCat(false);
+                                                                setShowQuickAddBrand(false);
+                                                                setQuickUnitForm({ code: '', name: '' });
+                                                            }
+                                                        }}>+</button>
                                                     </div>
                                                 </div>
                                             )}
@@ -1608,7 +1638,15 @@ const ProductPage = () => {
                                                                 <option key={b.id} value={b.id}>{b.name}</option>
                                                             ))}
                                                         </select>
-                                                        <button className={styles.addInlineBtn} title="Thêm nhanh thương hiệu" type="button" onClick={() => setShowQuickAddBrand(v => !v)}>+</button>
+                                                        <button className={styles.addInlineBtn} title="Thêm nhanh thương hiệu" type="button" onClick={() => {
+                                                            const nextState = !showQuickAddBrand;
+                                                            setShowQuickAddBrand(nextState);
+                                                            if (nextState) {
+                                                                setShowQuickAddCat(false);
+                                                                setShowQuickAddUnit(false);
+                                                                setQuickBrandForm({ code: '', name: '' });
+                                                            }
+                                                        }}>+</button>
                                                     </div>
                                                 </div>
                                             )}
