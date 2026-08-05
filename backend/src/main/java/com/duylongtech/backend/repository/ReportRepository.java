@@ -281,14 +281,16 @@ public class ReportRepository {
 
     // 5. Inventory Summary Report
     public List<InventorySummaryReportResponse> getInventorySummaryReport(Long warehouseId, LocalDateTime startDate, LocalDateTime endDate, String search) {
+        LocalDate targetDate = (startDate != null ? startDate.toLocalDate() : LocalDate.now()).minusDays(1);
+
         StringBuilder sql = new StringBuilder(
             "SELECT " +
             "w.name AS warehouseName, " +
             "p.product_code AS productCode, " +
             "p.product_name AS productName, " +
             "u.name AS unitName, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN l.quantity_in - l.quantity_out ELSE 0 END), 0) AS openingQuantity, " +
-            "COALESCE(SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN (l.quantity_in * l.unit_cost) - (l.quantity_out * l.unit_cost) ELSE 0 END), 0) AS openingValue, " +
+            "COALESCE(MAX(ids.closing_quantity), COALESCE(SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN l.quantity_in - l.quantity_out ELSE 0 END), 0)) AS openingQuantity, " +
+            "COALESCE(MAX(ids.closing_value), COALESCE(SUM(CASE WHEN l.movement_at < CAST(? AS DATETIME) THEN (l.quantity_in * l.unit_cost) - (l.quantity_out * l.unit_cost) ELSE 0 END), 0)) AS openingValue, " +
             "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_in ELSE 0 END), 0) AS receiptQuantity, " +
             "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_in * l.unit_cost ELSE 0 END), 0) AS receiptValue, " +
             "COALESCE(SUM(CASE WHEN l.movement_at >= CAST(? AS DATETIME) AND l.movement_at <= CAST(? AS DATETIME) THEN l.quantity_out ELSE 0 END), 0) AS issueQuantity, " +
@@ -298,6 +300,7 @@ public class ReportRepository {
             "JOIN units u ON p.unit_id = u.id " +
             "JOIN inventory_ledger l ON l.variant_id = pv.id " +
             "JOIN warehouses w ON l.warehouse_id = w.id " +
+            "LEFT JOIN inventory_daily_snapshots ids ON ids.snapshot_date = ? AND ids.warehouse_id = l.warehouse_id AND ids.variant_id = l.variant_id " +
             "WHERE 1=1 "
         );
         
@@ -312,6 +315,7 @@ public class ReportRepository {
         params.add(endDate);
         params.add(startDate);
         params.add(endDate);
+        params.add(targetDate);
 
         if (warehouseId != null) {
             sql.append(" AND l.warehouse_id = ? ");
