@@ -54,9 +54,12 @@ const WarehouseListPage = () => {
                 page: pageIndex - 1, // backend is 0-indexed
                 size: currentSize
             });
-            setWarehouses(res.data.data.content || []);
-            setTotalPages(res.data.data.totalPages || 0);
-            setTotalElements(res.data.data.totalElements || 0);
+            const payload = res.data.data || res.data;
+            // Handle both Spring Page object (has content) and normal Array
+            const content = payload.content || (Array.isArray(payload) ? payload : []);
+            setWarehouses(content);
+            setTotalPages(payload.totalPages || Math.ceil(content.length / currentSize) || 1);
+            setTotalElements(payload.totalElements || payload.totalItems || content.length || 0);
             setPage(pageIndex);
         } catch (error) {
             console.error("Lỗi fetch kho:", error);
