@@ -74,22 +74,31 @@ public class WarrantyService {
                         .endDate(line.getEndDate())
                         .warrantyStatus(line.getWarrantyStatus());
 
+                Long productId = null;
+                String productName = null;
+
                 if (line.getSerialNumber() != null) {
                     lineBuilder.serialNumber(line.getSerialNumber().getSerialNumber());
                     if (line.getSerialNumber().getVariant() != null) {
-                        lineBuilder.sku(line.getSerialNumber().getVariant().getSku());
-                        lineBuilder.variantName(line.getSerialNumber().getVariant().getVariantName());
-                        if (line.getSerialNumber().getVariant().getVariantName() == null && line.getSerialNumber().getVariant().getProduct() != null) {
-                            lineBuilder.variantName(line.getSerialNumber().getVariant().getProduct().getProductName());
+                        ProductVariant v = line.getSerialNumber().getVariant();
+                        lineBuilder.sku(v.getSku());
+                        lineBuilder.variantName(v.getVariantName());
+                        if (v.getProduct() != null) {
+                            productId = v.getProduct().getId();
+                            productName = v.getProduct().getProductName();
                         }
                     }
                 } else if (line.getProductVariant() != null) {
-                    lineBuilder.sku(line.getProductVariant().getSku());
-                    lineBuilder.variantName(line.getProductVariant().getVariantName());
-                    if (line.getProductVariant().getVariantName() == null && line.getProductVariant().getProduct() != null) {
-                        lineBuilder.variantName(line.getProductVariant().getProduct().getProductName());
+                    ProductVariant v = line.getProductVariant();
+                    lineBuilder.sku(v.getSku());
+                    lineBuilder.variantName(v.getVariantName());
+                    if (v.getProduct() != null) {
+                        productId = v.getProduct().getId();
+                        productName = v.getProduct().getProductName();
                     }
                 }
+                lineBuilder.productId(productId);
+                lineBuilder.productName(productName);
                 return lineBuilder.build();
             }).collect(java.util.stream.Collectors.toList());
             builder.lines(lineResponses);

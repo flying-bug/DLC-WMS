@@ -9,6 +9,7 @@ const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
   APPROVED: { label: 'Còn hiệu lực', code: 'success' },
   POSTED: { label: 'Đã ghi nhận', code: 'success' },
+  ACTIVE: { label: 'Còn hiệu lực', code: 'success' },
   CANCELLED: { label: 'Đã hủy', code: 'danger' },
   EXPIRED: { label: 'Hết hạn', code: 'warning' },
   VOIDED: { label: 'Không hợp lệ', code: 'danger' }
@@ -55,9 +56,9 @@ function WarrantyDetailPage() {
   const pPhone = warranty?.partnerPhone || warranty?.customerPhone || warranty?.partner?.phone || 'Chưa có';
   const pEmail = warranty?.partnerEmail || warranty?.partner?.email || 'Chưa có';
   const pAddress = warranty?.partnerAddress || warranty?.partner?.address || 'Chưa có';
-  
+
   const lines = warranty?.lines || [];
-  
+
   const repairs = warranty?.repairs || warranty?.repairHistory || [];
   const statusInfo = STATUS_LABELS[warranty?.warrantyStatus] || { label: warranty?.warrantyStatus || 'Chưa rõ', code: 'info' };
 
@@ -129,7 +130,7 @@ function WarrantyDetailPage() {
                     <p>{warranty.note || 'Không có ghi chú'}</p>
                   </div>
                 </div>
-                
+
                 {lines.length > 0 && (
                   <div style={{ marginTop: '24px' }}>
                     <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: 'var(--color-text)' }}>Danh sách mặt hàng bảo hành</h4>

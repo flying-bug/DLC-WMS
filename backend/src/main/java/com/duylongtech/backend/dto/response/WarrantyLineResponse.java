@@ -14,6 +14,8 @@ public class WarrantyLineResponse {
     private Long productVariantId;
     private String variantName;
     private String sku;
+    private Long productId;
+    private String productName;
     private BigDecimal quantity;
     private LocalDate startDate;
     private LocalDate endDate;
