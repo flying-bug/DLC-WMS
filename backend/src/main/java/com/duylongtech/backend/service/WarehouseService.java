@@ -92,8 +92,8 @@ public class WarehouseService {
     // ──────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public Page<WarehouseResponse> getWarehouses(String code, String name, String address, String status, Pageable pageable) {
-        Page<Warehouse> page = warehouseRepository.filterWarehouses(code, name, address, status, pageable);
+    public Page<WarehouseResponse> getWarehouses(String search, String status, Pageable pageable) {
+        Page<Warehouse> page = warehouseRepository.searchWarehouses(search, status, pageable);
         return page.map(this::mapToResponse);
     }
 

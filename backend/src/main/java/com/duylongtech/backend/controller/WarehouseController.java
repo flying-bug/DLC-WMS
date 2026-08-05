@@ -100,15 +100,13 @@ public class WarehouseController {
     @GetMapping
     @PreAuthorize("hasAuthority('warehouse_master:view') or hasRole('MANAGER')")
     public ResponseEntity<ApiResponse<Page<WarehouseResponse>>> getWarehouses(
-            @RequestParam(required = false) String code,
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String address,
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity
-                .ok(ApiResponse.success(warehouseService.getWarehouses(code, name, address, status, pageable)));
+                .ok(ApiResponse.success(warehouseService.getWarehouses(search, status, pageable)));
     }
 
     // ──────────────────────────────────────────────────────────

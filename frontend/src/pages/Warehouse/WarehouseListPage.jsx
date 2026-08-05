@@ -13,11 +13,7 @@ const WarehouseListPage = () => {
     const [loading, setLoading] = useState(false);
     
     // Các state bộ lọc
-    const [searchCode, setSearchCode] = useState('');
-    const [searchName, setSearchName] = useState('');
-    const [searchAddress, setSearchAddress] = useState('');
-
-    const [allWarehouses, setAllWarehouses] = useState([]);
+    const [searchKeyword, setSearchKeyword] = useState('');
 
     // Pagination
     const [page, setPage] = useState(1); // 1-indexed for UI
@@ -48,9 +44,7 @@ const WarehouseListPage = () => {
         setLoading(true);
         try {
             const res = await warehouseApi.getWarehouses({
-                code: searchCode || undefined,
-                name: searchName || undefined,
-                address: searchAddress || undefined,
+                search: searchKeyword || undefined,
                 page: pageIndex - 1, // backend is 0-indexed
                 size: currentSize
             });
@@ -75,38 +69,10 @@ const WarehouseListPage = () => {
         }, 500);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [page, size, searchCode, searchName, searchAddress]);
-
-    useEffect(() => {
-        const fetchAll = async () => {
-            try {
-                const res = await warehouseApi.getWarehouses({ size: 1000 });
-                setAllWarehouses(res.data.data.content || []);
-            } catch (err) {
-                console.error("Lỗi lấy danh sách tất cả kho:", err);
-            }
-        };
-        fetchAll();
-    }, []);
-
-    const handleFilter = () => {
-        if (page === 1) {
-            fetchWarehouses(1, size);
-        } else {
-            setPage(1);
-        }
-    };
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            handleFilter();
-        }
-    };
+    }, [page, size, searchKeyword]);
 
     const handleReload = () => {
-        setSearchCode('');
-        setSearchName('');
-        setSearchAddress('');
+        setSearchKeyword('');
         setSortConfig({ key: null, direction: 'asc' });
         setPage(1);
         // Will trigger useEffect because page might change, or if it doesn't we fetch directly:
@@ -212,9 +178,7 @@ const WarehouseListPage = () => {
     const handleExportExcel = async () => {
         try {
             const res = await warehouseApi.exportWarehouses({
-                code: searchCode || undefined,
-                name: searchName || undefined,
-                address: searchAddress || undefined
+                search: searchKeyword || undefined
             });
             
             const url = window.URL.createObjectURL(new Blob([res.data]));
@@ -263,51 +227,26 @@ const WarehouseListPage = () => {
 
                 {/* Filter Section */}
                 <div className={styles.filterSection}>
-                    <div className={styles.filterGroup}>
-                        <div className={styles.filterField}>
-                            <label className={styles.filterLabel}>Mã kho</label>
-                            <input 
-                                type="text" 
-                                className={styles.filterInput}
-                                placeholder="Ví dụ: K01, MK01..." 
-                                value={searchCode}
-                                onChange={(e) => {
-                                    setSearchCode(e.target.value);
-                                    setPage(1);
-                                }}
-                                onKeyDown={handleKeyDown}
-                            />
-                        </div>
-                        <div className={styles.filterField}>
-                            <label className={styles.filterLabel}>Tên kho</label>
-                            <select
-                                className={styles.filterInput}
-                                value={searchName}
-                                onChange={(e) => {
-                                    setSearchName(e.target.value);
-                                    setPage(1);
-                                }}
-                            >
-                                <option value="">Tất cả</option>
-                                {allWarehouses.map(w => (
-                                    <option key={w.id} value={w.name}>{w.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className={styles.filterField}>
-                            <label className={styles.filterLabel}>Địa chỉ</label>
-                            <input 
-                                type="text" 
-                                className={styles.filterInput}
-                                placeholder="Nhập địa chỉ" 
-                                value={searchAddress}
-                                onChange={(e) => {
-                                    setSearchAddress(e.target.value);
-                                    setPage(1);
-                                }}
-                                onKeyDown={handleKeyDown}
-                            />
-                        </div>
+                    <div className={styles.searchBox}>
+                        <i className="bi bi-search"></i>
+                        <input
+                            type="text"
+                            className={styles.searchInput}
+                            placeholder="Nhập từ khóa tìm kiếm mã kho, tên kho, địa chỉ..."
+                            value={searchKeyword}
+                            onChange={(e) => {
+                                setSearchKeyword(e.target.value);
+                                setPage(1);
+                            }}
+                        />
+                        {searchKeyword && (
+                            <button className={styles.clearSearchBtn} onClick={() => {
+                                setSearchKeyword('');
+                                setPage(1);
+                            }}>
+                                <i className="bi bi-x-circle-fill"></i>
+                            </button>
+                        )}
                     </div>
                     <div className={styles.filterActions}>
                         <button className={styles.iconBtn} onClick={handleReload} type="button" title="Làm mới">
@@ -315,9 +254,6 @@ const WarehouseListPage = () => {
                         </button>
                         <button className={styles.iconBtn} onClick={handleExportExcel} type="button" title="Xuất Excel">
                             <i className="bi bi-file-earmark-excel"></i>
-                        </button>
-                        <button className={styles.btnPrimary} onClick={handleFilter} type="button">
-                            <i className="bi bi-funnel"></i> Lọc dữ liệu
                         </button>
                     </div>
                 </div>

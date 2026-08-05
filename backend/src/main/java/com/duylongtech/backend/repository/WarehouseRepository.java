@@ -30,4 +30,11 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
                                      @Param("address") String address, 
                                      @Param("status") String status, 
                                      Pageable pageable);
+
+    @Query("SELECT w FROM Warehouse w WHERE " +
+           "(:search IS NULL OR :search = '' OR LOWER(w.code) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.address) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+           "(:status IS NULL OR :status = '' OR w.status = :status)")
+    Page<Warehouse> searchWarehouses(@Param("search") String search, 
+                                     @Param("status") String status, 
+                                     Pageable pageable);
 }
