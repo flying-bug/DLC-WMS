@@ -81,15 +81,20 @@ public class BackupService {
 
     // ─── Create Backup ─────────────────────────────────────────────────────────
 
+    // ─── Create Backup ─────────────────────────────────────────────────────────
+
     /**
-     * Runs mysqldump, gzips the output, saves a BackupRecord.
+     * Runs mysqldump, gzips (and optionally AES-256 encrypts) the output, saves a BackupRecord.
      * @param actor username of the SuperAdmin triggering this
      * @return the BackupRecord saved to DB
      */
     @Transactional
     public BackupRecord createBackup(String actor) throws Exception {
+        boolean encrypt = settingBool("backup.encrypt.enabled");
+        String encKey = setting("backup.encrypt.key", "");
+        
         String timestamp = LocalDateTime.now().format(FILENAME_FMT);
-        String filename  = "backup_" + timestamp + ".sql.gz";
+        String filename  = "backup_" + timestamp + (encrypt && !encKey.isBlank() ? ".sql.gz.enc" : ".sql.gz");
         Path   backupDir = ensureBackupDir();
         Path   outPath   = backupDir.resolve(filename);
 
@@ -99,7 +104,6 @@ public class BackupService {
         String dbPass = env.getProperty("spring.datasource.password", "123456");
 
         // Parse host, port, dbname from JDBC URL
-        // jdbc:mysql://host:port/dbname?params
         String host   = "localhost";
         String port   = "3306";
         String dbName = "duylongcomputer";
@@ -136,7 +140,6 @@ public class BackupService {
         );
         pb.redirectErrorStream(false);
 
-
         Process process;
         try {
             process = pb.start();
@@ -147,16 +150,30 @@ public class BackupService {
             throw new RuntimeException("Lỗi khi khởi chạy tiến trình sao lưu: " + e.getMessage());
         }
 
-        long rawSize = 0;
-        // Stream mysqldump stdout → GZIP file
+        // Stream mysqldump stdout → GZIP (and Cipher if AES enabled)
         try (InputStream sqlStream = process.getInputStream();
-             OutputStream fileOut  = Files.newOutputStream(outPath);
-             GZIPOutputStream gzip = new GZIPOutputStream(fileOut)) {
-            byte[] buf = new byte[8192];
-            int read;
-            while ((read = sqlStream.read(buf)) != -1) {
-                gzip.write(buf, 0, read);
-                rawSize += read;
+             OutputStream rawOut   = Files.newOutputStream(outPath)) {
+            
+            OutputStream finalOut = rawOut;
+            if (encrypt && !encKey.isBlank()) {
+                byte[] iv = new byte[16];
+                new java.security.SecureRandom().nextBytes(iv);
+                rawOut.write(iv); // Ghi 16-byte IV lên đầu file
+                
+                byte[] keyBytes = java.security.MessageDigest.getInstance("SHA-256")
+                        .digest(encKey.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                javax.crypto.spec.SecretKeySpec secretKey = new javax.crypto.spec.SecretKeySpec(keyBytes, "AES");
+                javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");
+                cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, secretKey, new javax.crypto.spec.IvParameterSpec(iv));
+                finalOut = new javax.crypto.CipherOutputStream(rawOut, cipher);
+            }
+            
+            try (GZIPOutputStream gzip = new GZIPOutputStream(finalOut)) {
+                byte[] buf = new byte[8192];
+                int read;
+                while ((read = sqlStream.read(buf)) != -1) {
+                    gzip.write(buf, 0, read);
+                }
             }
         }
 
@@ -173,7 +190,7 @@ public class BackupService {
                 .fileSize(fileSize)
                 .status(BackupRecord.BackupStatus.LOCAL)
                 .createdBy(actor)
-                .note("Backup thủ công")
+                .note(encrypt && !encKey.isBlank() ? "Backup mã hóa (AES-256)" : "Backup thủ công")
                 .build();
 
         record = backupRecordRepo.save(record);
@@ -243,7 +260,7 @@ public class BackupService {
     // ─── Restore ───────────────────────────────────────────────────────────────
 
     @Transactional
-    public void restoreBackup(Long id) throws Exception {
+    public void restoreBackup(Long id, String userEncryptionKey) throws Exception {
         BackupRecord record = backupRecordRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Backup không tồn tại: " + id));
 
@@ -252,6 +269,13 @@ public class BackupService {
 
         if (!Files.exists(filePath)) {
             throw new FileNotFoundException("File backup không tồn tại: " + record.getFilename());
+        }
+
+        boolean isEncryptedFile = record.getFilename().endsWith(".enc");
+
+        if (isEncryptedFile && (userEncryptionKey == null || userEncryptionKey.isBlank())) {
+            throw new com.duylongtech.backend.exception.BusinessException(
+                    "File sao lưu này được mã hóa bằng AES-256. Vui lòng nhập khoá mã hóa (Encryption Key) để giải mã trước khi khôi phục.");
         }
 
         String dbUrl  = env.getProperty("spring.datasource.url", "jdbc:mysql://localhost:3306/duylongcomputer");
@@ -273,7 +297,7 @@ public class BackupService {
 
         ensureNativePasswordAuth(dbUser, dbPass);
 
-        // Decompress GZIP and pipe to mysql / mariadb
+        // Decompress (and Cipher decrypt if encrypted) and pipe to mysql / mariadb
         String mysqlCmd = new File("/usr/bin/mariadb").exists() ? "/usr/bin/mariadb" : "mysql";
         ProcessBuilder pb = new ProcessBuilder(
                 mysqlCmd,
@@ -287,12 +311,37 @@ public class BackupService {
 
         Process process = pb.start();
 
-        try (java.util.zip.GZIPInputStream gzipIn =
-                     new java.util.zip.GZIPInputStream(Files.newInputStream(filePath));
-             OutputStream mysqlIn = process.getOutputStream()) {
-            byte[] buf = new byte[8192];
-            int read;
-            while ((read = gzipIn.read(buf)) != -1) mysqlIn.write(buf, 0, read);
+        try (InputStream fileIn = Files.newInputStream(filePath)) {
+            InputStream decryptedIn = fileIn;
+            
+            if (isEncryptedFile) {
+                byte[] iv = new byte[16];
+                int ivBytesRead = fileIn.read(iv);
+                if (ivBytesRead < 16) {
+                    throw new com.duylongtech.backend.exception.BusinessException("File mã hóa bị lỗi hoặc hỏng cấu trúc IV.");
+                }
+
+                byte[] keyBytes = java.security.MessageDigest.getInstance("SHA-256")
+                        .digest(userEncryptionKey.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                javax.crypto.spec.SecretKeySpec secretKey = new javax.crypto.spec.SecretKeySpec(keyBytes, "AES");
+                javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");
+                cipher.init(javax.crypto.Cipher.DECRYPT_MODE, secretKey, new javax.crypto.spec.IvParameterSpec(iv));
+                decryptedIn = new javax.crypto.CipherInputStream(fileIn, cipher);
+            }
+
+            try (java.util.zip.GZIPInputStream gzipIn = new java.util.zip.GZIPInputStream(decryptedIn);
+                 OutputStream mysqlIn = process.getOutputStream()) {
+                byte[] buf = new byte[8192];
+                int read;
+                while ((read = gzipIn.read(buf)) != -1) {
+                    mysqlIn.write(buf, 0, read);
+                }
+            } catch (Exception e) {
+                record.setStatus(BackupRecord.BackupStatus.FAILED);
+                backupRecordRepo.save(record);
+                throw new com.duylongtech.backend.exception.BusinessException(
+                        "Khóa giải mã (Encryption Key) không đúng hoặc file backup bị hỏng: " + e.getMessage());
+            }
         }
 
         int exitCode = process.waitFor();

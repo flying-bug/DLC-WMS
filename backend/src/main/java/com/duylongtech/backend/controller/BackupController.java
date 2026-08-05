@@ -87,9 +87,16 @@ public class BackupController {
 
     @PostMapping("/{id}/restore")
     @Operation(summary = "Restore database from a backup file")
-    public ApiResponse<Map<String, String>> restoreBackup(@PathVariable Long id) {
+    public ApiResponse<Map<String, String>> restoreBackup(
+            @PathVariable Long id,
+            @RequestParam(value = "encryptionKey", required = false) String encryptionKeyParam,
+            @RequestBody(required = false) Map<String, String> body) {
         try {
-            backupService.restoreBackup(id);
+            String key = encryptionKeyParam;
+            if ((key == null || key.isBlank()) && body != null) {
+                key = body.get("encryptionKey");
+            }
+            backupService.restoreBackup(id, key);
             return ApiResponse.success(Map.of("message", "Restore hoàn tất thành công."));
         } catch (Exception e) {
             return ApiResponse.error("RESTORE_FAILED", "Restore thất bại: " + e.getMessage());

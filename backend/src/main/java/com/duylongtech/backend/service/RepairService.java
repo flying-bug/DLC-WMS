@@ -93,11 +93,11 @@ public class RepairService {
     public RepairResponse getPublicQuoteByToken(String token) {
         Repair repair = repairRepository.findByPublicTokenWithDetails(token)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy báo giá hoặc báo giá đã bị xóa"));
-        
+
         if ("CANCELLED".equals(repair.getRepairStatus())) {
             throw new BusinessException("Báo giá sửa chữa này đã bị hủy.");
         }
-        
+
         return toDetailResponse(repair);
     }
 
@@ -110,8 +110,8 @@ public class RepairService {
         validateCreateRequest(request);
 
         Long currentUserId = resolveCurrentUserId();
-        String repairCode = trimToNull(request.getRepairCode()) != null 
-                ? trimToNull(request.getRepairCode()) 
+        String repairCode = trimToNull(request.getRepairCode()) != null
+                ? trimToNull(request.getRepairCode())
                 : generateRepairCode();
 
         Repair repair = Repair.builder()
@@ -182,7 +182,7 @@ public class RepairService {
         if (request.getResponsiblePerson() != null) repair.setResponsiblePerson(trimToNull(request.getResponsiblePerson()));
         if (request.getNote() != null) repair.setNote(trimToNull(request.getNote()));
 
-        if (repair.getExpectedDate() != null && repair.getReceivedDate() != null 
+        if (repair.getExpectedDate() != null && repair.getReceivedDate() != null
                 && repair.getExpectedDate().isBefore(repair.getReceivedDate())) {
             throw new BusinessException("Ngày dự kiến không thể nhỏ hơn ngày tiếp nhận.");
         }
@@ -447,16 +447,55 @@ public class RepairService {
     // =====================================================================
 
     private RepairResponse toSummaryResponse(Repair repair) {
+        // Resolve partner name (best effort)
+        String partnerName = null;
+        String partnerPhone = null;
+        if (repair.getPartnerId() != null) {
+            try {
+                var partnerOpt = partnerRepository.findById(repair.getPartnerId());
+                if (partnerOpt.isPresent()) {
+                    partnerName = partnerOpt.get().getName();
+                    partnerPhone = partnerOpt.get().getPhone();
+                }
+            } catch (Exception ignored) { /* best-effort */ }
+        }
+
+        // Resolve product name (best effort)
+        String productName = null;
+        if (repair.getProductId() != null) {
+            try {
+                var prodOpt = productRepository.findById(repair.getProductId());
+                if (prodOpt.isPresent()) {
+                    productName = prodOpt.get().getProductName();
+                }
+            } catch (Exception ignored) { /* best-effort */ }
+        }
+
+        // Resolve main serial number (best effort)
+        String serialNumber = null;
+        if (repair.getSerialNumberId() != null) {
+            try {
+                var snOpt = serialNumberRepository.findById(repair.getSerialNumberId());
+                if (snOpt.isPresent()) {
+                    serialNumber = snOpt.get().getSerialNumber();
+                }
+            } catch (Exception ignored) { /* best-effort */ }
+        }
+
         return RepairResponse.builder()
                 .id(repair.getId())
                 .repairCode(repair.getRepairCode())
                 .publicToken(repair.getPublicToken())
                 .partnerId(repair.getPartnerId())
+                .partnerName(partnerName)
+                .partnerPhone(partnerPhone)
                 .productId(repair.getProductId())
+                .productName(productName)
                 .productQuantity(repair.getProductQuantity())
                 .productUnit(repair.getProductUnit())
                 .warehouseId(repair.getWarehouseId())
                 .serialNumberId(repair.getSerialNumberId())
+                .serialNumber(serialNumber)
                 .warrantyId(repair.getWarrantyId())
                 .receivedDate(repair.getReceivedDate())
                 .expectedDate(repair.getExpectedDate())
@@ -660,7 +699,7 @@ public class RepairService {
         if (request.getProductId() == null) {
             throw new BusinessException("productId là bắt buộc");
         }
-        if (request.getExpectedDate() != null && request.getReceivedDate() != null 
+        if (request.getExpectedDate() != null && request.getReceivedDate() != null
                 && request.getExpectedDate().isBefore(request.getReceivedDate())) {
             throw new BusinessException("Ngày dự kiến không thể nhỏ hơn ngày tiếp nhận.");
         }

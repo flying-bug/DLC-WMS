@@ -110,12 +110,12 @@ function RepairFormPage() {
         line.serialNumberId = serialObj.serialNumberId;
         line.serialNumber = serialObj.serialNumber;
       }
-      
+
       if (isNew) {
         setPendingLines(updatedLines);
       } else {
         setRepair({ ...repair, lines: updatedLines });
-        repairApi.updateRepairLine(id, line.id, { 
+        repairApi.updateRepairLine(id, line.id, {
           serialNumberId: serialObj === null ? null : serialObj.serialNumberId,
           serialNumber: serialObj === null ? null : serialObj.serialNumber
         }).catch(() => loadData());
@@ -175,8 +175,34 @@ function RepairFormPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const [sourceWarranty, setSourceWarranty] = useState(null);
   const [codeError, setCodeError] = useState('');
   const codeCheckTimer = useRef(null);
+
+  const productOptions = useMemo(() => {
+    let list = products.filter(p => p.productType === 'Hàng hóa' || p.productType === 'Thành phẩm');
+    if (sourceWarranty && sourceWarranty.lines && sourceWarranty.lines.length > 0) {
+      const allowedIds = new Set();
+      sourceWarranty.lines.forEach(line => {
+        if (line.productId) {
+          allowedIds.add(Number(line.productId));
+        } else if (line.productVariantId) {
+          const matchV = variants.find(v => String(v.id) === String(line.productVariantId));
+          if (matchV && matchV.productId) allowedIds.add(Number(matchV.productId));
+        } else if (line.sku) {
+          const matchP = products.find(p => p.productCode === line.sku || p.sku === line.sku);
+          if (matchP) allowedIds.add(Number(matchP.id));
+        }
+      });
+      if (allowedIds.size > 0) {
+        list = list.filter(p => allowedIds.has(Number(p.id)));
+      }
+    }
+    return list.map(p => ({
+      value: p.id,
+      label: [p.productCode, p.productName].filter(Boolean).join(' - ')
+    }));
+  }, [products, sourceWarranty, variants]);
 
   const showToast = (type, message) => {
     setToast({ isVisible: true, type, message });
@@ -213,20 +239,45 @@ function RepairFormPage() {
         const searchParams = new URLSearchParams(location.search);
         const warrantyId = searchParams.get('warrantyId');
         let initialData = { repairCode: '' };
-        
+
         if (warrantyId) {
           try {
             const warRes = await warrantyApi.getWarrantyById(warrantyId);
             const wData = warRes?.data?.data || warRes?.data;
             if (wData) {
+              setSourceWarranty(wData);
               if (wData.partnerId) initialData.partnerId = wData.partnerId;
-              if (wData.serialNumberId) initialData.serialNumberId = wData.serialNumberId;
               initialData.warrantyId = warrantyId;
               initialData.underWarranty = true;
-              
-              if (wData.sku) {
-                const matchProd = fetchedProducts.find(p => p.productCode === wData.sku || p.sku === wData.sku);
-                if (matchProd) initialData.productId = matchProd.id;
+
+              const allowedProductIds = [];
+              const fetchedVariants = extractContent(varRes);
+              if (wData.lines && wData.lines.length > 0) {
+                wData.lines.forEach(line => {
+                  if (line.productId) {
+                    allowedProductIds.push(Number(line.productId));
+                  } else if (line.productVariantId) {
+                    const matchV = fetchedVariants.find(v => String(v.id) === String(line.productVariantId));
+                    if (matchV && matchV.productId) allowedProductIds.push(Number(matchV.productId));
+                  } else if (line.sku) {
+                    const matchP = fetchedProducts.find(p => p.productCode === line.sku || p.sku === line.sku);
+                    if (matchP) allowedProductIds.push(Number(matchP.id));
+                  }
+                });
+              }
+
+              if (allowedProductIds.length > 0) {
+                initialData.productId = allowedProductIds[0];
+                const matchedProd = fetchedProducts.find(p => Number(p.id) === Number(allowedProductIds[0]));
+                if (matchedProd && matchedProd.unitName) {
+                  initialData.productUnit = matchedProd.unitName;
+                }
+              }
+
+              if (wData.lines && wData.lines[0]?.serialNumberId) {
+                initialData.serialNumberId = wData.lines[0].serialNumberId;
+              } else if (wData.serialNumberId) {
+                initialData.serialNumberId = wData.serialNumberId;
               }
             }
           } catch (e) {
@@ -239,6 +290,15 @@ function RepairFormPage() {
         const data = res.data?.data;
         if (data) {
           setRepair(data);
+          if (data.warrantyId) {
+            try {
+              const warRes = await warrantyApi.getWarrantyById(data.warrantyId);
+              const wData = warRes?.data?.data || warRes?.data;
+              if (wData) setSourceWarranty(wData);
+            } catch (e) {
+              console.error('Failed to load warranty for edit repair', e);
+            }
+          }
           setFormData({
             repairCode: data.repairCode || '',
             partnerId: data.partnerId || '',
@@ -374,10 +434,10 @@ function RepairFormPage() {
       // Kiểm tra linh kiện có trackSerial nhưng chưa quét serial
       const missingSerial = (repair.lines || []).find(l => {
         if (!l.isUsed) return false;
-        
+
         const variant = variants.find(v => String(v.id) === String(l.componentVariantId));
         if (!variant?.trackSerial) return false;
-        
+
         if (l.actionType === 'ADD') {
           return !l.serialNumberId;
         } else if (l.actionType === 'REMOVE') {
@@ -521,22 +581,22 @@ function RepairFormPage() {
   const handleChangeLineVariant = async (lineId, key, variantId) => {
     if (!variantId) {
       if (isNew) {
-        setPendingLines(prev => prev.map(l => ((l.id && l.id === lineId) || (l._key && l._key === key)) ? { 
-          ...l, 
-          componentVariantId: null, 
-          _label: '', 
+        setPendingLines(prev => prev.map(l => ((l.id && l.id === lineId) || (l._key && l._key === key)) ? {
+          ...l,
+          componentVariantId: null,
+          _label: '',
           _unitName: '',
           _salePrice: 0,
-          unitPrice: 0 
+          unitPrice: 0
         } : l));
       } else {
         setRepair(prev => ({
           ...prev,
-          lines: prev.lines.map(l => l.id === lineId ? { 
-            ...l, 
+          lines: prev.lines.map(l => l.id === lineId ? {
+            ...l,
             componentVariantId: null,
             componentVariant: null,
-            unitPrice: 0 
+            unitPrice: 0
           } : l)
         }));
       }
@@ -547,30 +607,30 @@ function RepairFormPage() {
     if (!variant) return;
 
     if (isNew) {
-      setPendingLines(prev => prev.map(l => ((l.id && l.id === lineId) || (l._key && l._key === key)) ? { 
-        ...l, 
-        componentVariantId: variantId, 
-        _label: variant.productName, 
+      setPendingLines(prev => prev.map(l => ((l.id && l.id === lineId) || (l._key && l._key === key)) ? {
+        ...l,
+        componentVariantId: variantId,
+        _label: variant.productName,
         _unitName: variant.unitName,
         _salePrice: variant.salePrice,
-        unitPrice: l.isFreeWarranty ? 0 : variant.salePrice 
+        unitPrice: l.isFreeWarranty ? 0 : variant.salePrice
       } : l));
     } else {
       // Optimistic update
       const existingLine = repair.lines.find(l => l.id === lineId);
       const isFree = existingLine ? existingLine.isFreeWarranty : false;
-      
+
       setRepair(prev => ({
         ...prev,
-        lines: prev.lines.map(l => l.id === lineId ? { 
-          ...l, 
+        lines: prev.lines.map(l => l.id === lineId ? {
+          ...l,
           componentVariantId: variantId,
           componentVariant: { ...l.componentVariant, id: variantId, productName: variant.productName, unitName: variant.unitName, salePrice: variant.salePrice },
-          unitPrice: l.isFreeWarranty ? 0 : variant.salePrice 
+          unitPrice: l.isFreeWarranty ? 0 : variant.salePrice
         } : l)
       }));
       try {
-        await repairApi.updateRepairLine(id, lineId, { 
+        await repairApi.updateRepairLine(id, lineId, {
           componentVariantId: variantId,
           unitPrice: isFree ? 0 : variant.salePrice
         }); // backend expects these
@@ -583,7 +643,7 @@ function RepairFormPage() {
 
   const handleToggleGlobalWarranty = async (isChecked) => {
     handleFormChange('underWarranty', isChecked);
-    
+
     if (isNew) {
       setPendingLines(prev => prev.map(l => ({
         ...l,
@@ -633,8 +693,8 @@ function RepairFormPage() {
 
   const totalLinesAmount = lines.reduce((acc, l) => {
     if (l.isFreeWarranty || l.actionType !== 'ADD') return acc;
-    const qty = ['UNDER_REPAIR', 'DONE'].includes(currentStatus) 
-      ? (l.isUsed ? Number(l.doneQuantity || 0) : 0) 
+    const qty = ['UNDER_REPAIR', 'DONE'].includes(currentStatus)
+      ? (l.isUsed ? Number(l.doneQuantity || 0) : 0)
       : Number(l.quantity || 0);
     return acc + (qty * Number(l.unitPrice));
   }, 0);
@@ -691,8 +751,8 @@ function RepairFormPage() {
                   <label className="misa-label">Sản phẩm cần sửa <span className="required">*</span></label>
                   <Select
                     isDisabled={!isEditable}
-                    options={products.filter(p => p.productType === 'Hàng hóa' || p.productType === 'Thành phẩm').map(p => ({ value: p.id, label: [p.productCode, p.productName].filter(Boolean).join(' - ') }))}
-                    value={products.find(p => String(p.id) === String(formData.productId)) ? { value: formData.productId, label: [products.find(p => String(p.id) === String(formData.productId)).productCode, products.find(p => String(p.id) === String(formData.productId)).productName].filter(Boolean).join(' - ') } : null}
+                    options={productOptions}
+                    value={productOptions.find(opt => String(opt.value) === String(formData.productId)) || (products.find(p => String(p.id) === String(formData.productId)) ? { value: formData.productId, label: [products.find(p => String(p.id) === String(formData.productId)).productCode, products.find(p => String(p.id) === String(formData.productId)).productName].filter(Boolean).join(' - ') } : null)}
                     onChange={opt => {
                       handleFormChange('productId', opt ? opt.value : '');
                       if (opt) {
@@ -939,8 +999,8 @@ function RepairFormPage() {
                           <td align="right" style={{ fontWeight: '500' }}>
                             {(() => {
                               if (line.isFreeWarranty || line.actionType !== 'ADD') return money(0);
-                              const qty = ['UNDER_REPAIR', 'DONE'].includes(currentStatus) 
-                                ? (line.isUsed ? Number(line.doneQuantity || 0) : 0) 
+                              const qty = ['UNDER_REPAIR', 'DONE'].includes(currentStatus)
+                                ? (line.isUsed ? Number(line.doneQuantity || 0) : 0)
                                 : Number(line.quantity || 0);
                               return money(qty * Number(line.unitPrice));
                             })()}
@@ -969,14 +1029,14 @@ function RepairFormPage() {
                               const variant = variants.find(v => String(v.id) === String(line.componentVariantId));
                               const trackSerial = variant ? variant.trackSerial : false;
                               if (!trackSerial) return '-';
-                              
+
                               if ((isEditable || currentStatus === 'UNDER_REPAIR') && (line.actionType === 'ADD' || line.actionType === 'REMOVE')) {
                                 const hasSerial = Boolean(line.serialNumberId || line.serialNumber);
-                                const btnStyle = hasSerial 
+                                const btnStyle = hasSerial
                                   ? { padding: '2px 8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: '#22c55e', color: '#16a34a', backgroundColor: '#f0fdf4', border: '1px solid #22c55e', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap' }
                                   : { padding: '2px 8px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', borderColor: '#f97316', color: '#ea580c', backgroundColor: '#fff7ed', border: '1px solid #f97316', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap' };
                                 return (
-                                  <button 
+                                  <button
                                     type="button"
                                     onClick={() => openSerialModal(line, idx)}
                                     style={btnStyle}
@@ -1042,7 +1102,7 @@ function RepairFormPage() {
                           <td></td>
                         </tr>
                       ))}
-                      
+
                       {addingType === 'PART' && (
                         <NewInlineRow repair={repair} type="PART" variants={variants.filter(v => v.productType === 'Hàng hóa').map(v => ({ value: v.id, label: `${v.sku || v.productCode} - ${v.productName}`, unitName: v.unitName, salePrice: v.salePrice }))} onSave={handleSaveLine} onCancel={() => setAddingType(null)} underWarranty={formData.underWarranty} visibleColumns={visibleColumns} />
                       )}
@@ -1153,10 +1213,10 @@ function RepairFormPage() {
       {toast.isVisible && <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={() => setToast(prev => ({ ...prev, isVisible: false }))} />}
       <CustomerModal isOpen={isCustomerModalOpen} onClose={closeCustomerModal} onSaved={handleCustomerSaved} />
       {serialModalData.isOpen && (
-        <RepairSerialModal 
-          isOpen={serialModalData.isOpen} 
-          onClose={closeSerialModal} 
-          productName={serialModalData.productName} 
+        <RepairSerialModal
+          isOpen={serialModalData.isOpen}
+          onClose={closeSerialModal}
+          productName={serialModalData.productName}
           warehouseId={serialModalData.warehouseId}
           variantId={serialModalData.variantId}
           initialSerialObj={serialModalData.initialSerialObj}

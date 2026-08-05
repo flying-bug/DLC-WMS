@@ -32,9 +32,20 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final PartnerRepository partnerRepository;
     private final ProductVariantRepository productVariantRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @Override
     public void run(String... args) throws Exception {
+        // Ensure REPAIRS.serial_number_id is NULLable for devices without serial
+        try {
+            jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
+            jdbcTemplate.execute("ALTER TABLE REPAIRS MODIFY COLUMN serial_number_id BIGINT UNSIGNED NULL");
+            jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
+            System.out.println("✅ Successfully altered REPAIRS.serial_number_id to NULLABLE");
+        } catch (Exception e) {
+            System.err.println("❌ Failed to alter REPAIRS.serial_number_id: " + e.getMessage());
+        }
+
         // 1. Seed Roles (Chuẩn Spring Boot với tiền tố ROLE_)
         RoleEntity superAdminRole = createRoleIfNotFound("ROLE_SUPER_ADMIN", "Super Admin");
         RoleEntity managerRole = createRoleIfNotFound("ROLE_MANAGER", "Quản lý");

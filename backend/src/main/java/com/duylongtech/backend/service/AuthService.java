@@ -69,7 +69,8 @@ public class AuthService {
             String email = (String) response.get("email");
 
             com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
+                    .orElseGet(() -> userRepository.findByUsername(email)
+                            .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND)));
             
             if (!"APPROVED".equalsIgnoreCase(user.getStatus())) {
                 throw new BusinessException(SystemMessage.USER_LOCKED);

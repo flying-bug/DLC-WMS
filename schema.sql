@@ -605,7 +605,7 @@ CREATE TABLE `REPAIRS` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `warranty_id` BIGINT UNSIGNED NULL,
   `partner_id` BIGINT UNSIGNED NOT NULL,
-  `serial_number_id` BIGINT UNSIGNED NOT NULL,
+  `serial_number_id` BIGINT UNSIGNED NULL,
   `repair_code` VARCHAR(50) NOT NULL UNIQUE,
   `received_date` DATE NOT NULL,
   `completed_date` DATE NULL,
