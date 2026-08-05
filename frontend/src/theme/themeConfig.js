@@ -3,8 +3,8 @@ export const THEME_STORAGE_KEY = 'app-theme';
 export const THEMES = [
     { id: 'default', name: 'Mặc định', color: '#0075c0' },
     { id: 'emerald', name: 'Xanh lá', color: '#059669' },
-    { id: 'violet', name: 'Tím', color: '#7c3aed' },
-    { id: 'pink', name: 'Hồng', color: '#ec4899' },
+    { id: 'violet', name: 'Tím', color: '#ab82f2ff' },
+    { id: 'pink', name: 'Hồng', color: '#fc54a8ff' },
     { id: 'dark', name: 'Tối', color: '#0f1117' }
 ];
 

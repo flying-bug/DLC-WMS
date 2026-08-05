@@ -122,6 +122,11 @@ public class StockTransferServiceImpl implements StockTransferService {
                 .transferDate(requestDTO.getTransferDate() != null ? requestDTO.getTransferDate() : java.time.LocalDate.now())
                 .status(requestDTO.getStatus() != null ? requestDTO.getStatus() : "DRAFT")
                 .note(requestDTO.getNote())
+                .deliverer(requestDTO.getDeliverer())
+                .attachedDocument(requestDTO.getAttachedDocument())
+                .referenceId(requestDTO.getReferenceId())
+                .referenceType(requestDTO.getReferenceType())
+                .referenceCode(requestDTO.getReferenceCode())
                 .createdBy(userId)
                 .lines(new ArrayList<>())
                 .build();
@@ -178,6 +183,11 @@ public class StockTransferServiceImpl implements StockTransferService {
             stockTransfer.setStatus(requestDTO.getStatus());
         }
         stockTransfer.setNote(requestDTO.getNote());
+        stockTransfer.setDeliverer(requestDTO.getDeliverer());
+        stockTransfer.setAttachedDocument(requestDTO.getAttachedDocument());
+        stockTransfer.setReferenceId(requestDTO.getReferenceId());
+        stockTransfer.setReferenceType(requestDTO.getReferenceType());
+        stockTransfer.setReferenceCode(requestDTO.getReferenceCode());
 
         stockTransferLineRepository.deleteAll(stockTransfer.getLines());
         stockTransfer.getLines().clear();
@@ -414,6 +424,11 @@ public class StockTransferServiceImpl implements StockTransferService {
                 .transferDate(transfer.getTransferDate())
                 .status(transfer.getStatus())
                 .note(transfer.getNote())
+                .deliverer(transfer.getDeliverer())
+                .attachedDocument(transfer.getAttachedDocument())
+                .referenceId(transfer.getReferenceId())
+                .referenceType(transfer.getReferenceType())
+                .referenceCode(transfer.getReferenceCode())
                 .createdAt(transfer.getCreatedAt())
                 .lines(lines)
                 .build();

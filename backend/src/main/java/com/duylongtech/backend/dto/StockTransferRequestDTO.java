@@ -17,5 +17,10 @@ public class StockTransferRequestDTO {
     private LocalDate transferDate;
     private String note;
     private String status;
+    private String deliverer;
+    private String attachedDocument;
+    private Long referenceId;
+    private String referenceType;
+    private String referenceCode;
     private List<StockTransferLineDTO> lines;
 }

@@ -40,7 +40,7 @@ public class WarrantyService {
             throw new BusinessException("ID bao hanh la bat buoc");
         }
         Warranty warranty = warrantyRepository.findWithDetailsById(id)
-                .orElseThrow(() -> new BusinessException("Khong tim thay phieu bao hanh"));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu bảo hành"));
         return toResponse(warranty, true);
     }
 
