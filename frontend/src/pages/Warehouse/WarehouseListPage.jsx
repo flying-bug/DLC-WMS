@@ -52,8 +52,13 @@ const WarehouseListPage = () => {
             // Handle both Spring Page object (has content) and normal Array
             const content = payload.content || (Array.isArray(payload) ? payload : []);
             setWarehouses(content);
-            setTotalPages(payload.totalPages || Math.ceil(content.length / currentSize) || 1);
-            setTotalElements(payload.totalElements || payload.totalItems || content.length || 0);
+            
+            // Spring Boot 3 serialization uses payload.page.totalElements, older uses payload.totalElements
+            const totalPages = payload.page?.totalPages ?? payload.totalPages ?? Math.ceil(content.length / currentSize) ?? 1;
+            const totalElements = payload.page?.totalElements ?? payload.totalElements ?? payload.totalItems ?? content.length ?? 0;
+            
+            setTotalPages(totalPages);
+            setTotalElements(totalElements);
             setPage(pageIndex);
         } catch (error) {
             console.error("Lỗi fetch kho:", error);
