@@ -394,6 +394,12 @@
   border: 1px solid var(--color-info-border);
 }
 
+.badgeSecondary {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
 .badgeWarning {
   background-color: var(--status-warning-bg);
   color: var(--color-warning);

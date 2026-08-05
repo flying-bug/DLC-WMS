@@ -968,8 +968,48 @@ function CreateImportSlipPage() {
       <AssemblyOrderSelectionModal
         isOpen={showAssemblyOrderModal}
         onClose={() => setShowAssemblyOrderModal(false)}
-        onSelect={(assemblyOrder) => {
-          setForm(prev => ({ ...prev, assemblyOrderId: assemblyOrder.id, referenceCode: assemblyOrder.orderCode }));
+        onSelect={async (assemblyOrderSummary) => {
+          try {
+            const res = await assemblyOrderApi.getAssemblyOrderById(assemblyOrderSummary.id);
+            const order = res?.data?.data || res?.data || assemblyOrderSummary;
+            setForm(prev => ({
+               ...prev,
+               assemblyOrderId: order.id,
+               referenceType: 'ASSEMBLY_ORDER',
+               referenceId: order.id,
+               referenceCode: order.orderCode,
+               note: `Nhập kho từ lệnh ${order.orderCode}`
+            }));
+
+            const isAssembly = order.orderType !== 'DISASSEMBLY';
+            
+            if (importType === 'PRODUCTION' && isAssembly) {
+               if (order.targetVariantId || order.targetSku) {
+                   setItems([{
+                      ...emptyLine(),
+                      variantId: String(order.targetVariantId || ''),
+                      quantity: order.quantity || 1,
+                      price: order.targetPrice || 0,
+                      isNew: false
+                   }]);
+                   showToast('success', `Đã tải thành phẩm từ lệnh ${order.orderCode}`);
+               }
+            } else if (importType === 'SCRAP' && !isAssembly) {
+                if (order.lines && order.lines.length > 0) {
+                    setItems(order.lines.map(line => ({
+                        ...emptyLine(),
+                        variantId: String(line.componentVariantId || line.variantId || line.id),
+                        quantity: line.quantity || 1,
+                        price: line.price || 0,
+                        isNew: false
+                    })));
+                    showToast('success', `Đã tải ${order.lines.length} linh kiện tháo dỡ từ lệnh ${order.orderCode}`);
+                }
+            }
+          } catch(err) {
+              console.error(err);
+              showToast('error', 'Lỗi khi tải chi tiết lệnh');
+          }
           setShowAssemblyOrderModal(false);
         }}
         assemblyOrders={assemblyOrders}

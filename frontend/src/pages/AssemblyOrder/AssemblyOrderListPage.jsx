@@ -7,7 +7,8 @@ import * as warehouseApi from '../../api/warehouseApi';
 import styles from './AssemblyOrderListPage.module.css';
 
 const STATUS_META = {
-    DRAFT: { label: 'Lưu tạm', code: 'info' },
+    DRAFT: { label: 'Lưu tạm', code: 'secondary' },
+    APPROVED: { label: 'Đã duyệt', code: 'primary' },
     SUBMITTED: { label: 'Hoàn thành', code: 'success' }
 };
 

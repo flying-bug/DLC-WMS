@@ -18,9 +18,14 @@ function AssemblyBomPage() {
     const navigate = useNavigate();
     const [boms, setBoms] = useState([]);
     const [statusFilter, setStatusFilter] = useState('');
+    const [keywordFilter, setKeywordFilter] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    // Pagination states
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
 
     const loadBoms = useCallback(async () => {
         setLoading(true);
@@ -28,6 +33,7 @@ function AssemblyBomPage() {
         try {
             const response = await assemblyApi.getAssemblyBoms({ status: statusFilter || undefined });
             setBoms(listFrom(unwrap(response)));
+            setPage(1);
         } catch (err) {
             setBoms([]);
             setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách BOM.');
@@ -58,6 +64,49 @@ function AssemblyBomPage() {
         navigate(`/assembly-boms/${bom.id}`);
     };
 
+    const filteredBoms = useMemo(() => {
+        let result = boms;
+        if (keywordFilter) {
+            const lower = keywordFilter.toLowerCase();
+            result = result.filter(bom => 
+                (bom.bomCode && bom.bomCode.toLowerCase().includes(lower)) ||
+                (bom.bomName && bom.bomName.toLowerCase().includes(lower)) ||
+                (bom.productCode && bom.productCode.toLowerCase().includes(lower)) ||
+                (bom.productName && bom.productName.toLowerCase().includes(lower))
+            );
+        }
+        return result;
+    }, [boms, keywordFilter]);
+
+    // Client-side pagination logic
+    const totalElements = filteredBoms.length;
+    const totalPages = Math.ceil(totalElements / pageSize) || 1;
+    const currentBoms = filteredBoms.slice((page - 1) * pageSize, page * pageSize);
+
+    const getPageNumbers = () => {
+        const pages = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            if (page <= 4) {
+                for (let i = 1; i <= 5; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            } else if (page >= totalPages - 3) {
+                pages.push(1);
+                pages.push('...');
+                for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+            } else {
+                pages.push(1);
+                pages.push('...');
+                for (let i = page - 1; i <= page + 1; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            }
+        }
+        return pages;
+    };
+
     return (
         <AdminLayout>
             <div className={styles.page}>
@@ -81,11 +130,21 @@ function AssemblyBomPage() {
                     <div className={styles.detailItem}><span>Ngừng dùng</span><strong>{stats.inactive}</strong></div>
                 </div>
 
-                <div className={styles.toolbar}>
-                    <div className={styles.filterGrid}>
-                        <label className={styles.field}>
+                <div className={styles.toolbar} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                    <div className={styles.filterGrid} style={{ display: 'flex', gap: '16px', flex: 1, minWidth: '300px' }}>
+                        <label className={styles.field} style={{ flex: 2 }}>
+                            <span>Tìm kiếm (Mã/Tên BOM, Mã/Tên thành phẩm)</span>
+                            <input
+                                type="text"
+                                placeholder="Nhập từ khóa tìm kiếm..."
+                                value={keywordFilter}
+                                onChange={(e) => { setKeywordFilter(e.target.value); setPage(1); }}
+                                style={{ height: '38px' }}
+                            />
+                        </label>
+                        <label className={styles.field} style={{ flex: 1 }}>
                             <span>Trạng thái</span>
-                            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ height: '38px' }}>
                                 <option value="">Tất cả</option>
                                 <option value="APPROVED">Đã duyệt</option>
                                 <option value="DRAFT">Nháp</option>
@@ -93,11 +152,13 @@ function AssemblyBomPage() {
                             </select>
                         </label>
                     </div>
-                    <div className={styles.actions}>
-                        <button className={styles.secondaryButton} type="button" onClick={() => setStatusFilter('')}>Làm mới</button>
+                    <div className={styles.actions} style={{ margin: 0, paddingBottom: '2px' }}>
+                        <button className={styles.secondaryButton} type="button" onClick={() => { setStatusFilter(''); setKeywordFilter(''); setPage(1); }}>
+                            Làm mới
+                        </button>
                         <button className={styles.primaryButton} type="button" onClick={loadBoms}>
-                            <i className="bi bi-funnel"></i>
-                            Lọc dữ liệu
+                            <i className="bi bi-arrow-clockwise"></i>
+                            Tải lại
                         </button>
                     </div>
                 </div>
@@ -119,7 +180,7 @@ function AssemblyBomPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {boms.length > 0 ? boms.map((bom) => {
+                            {currentBoms.length > 0 ? currentBoms.map((bom) => {
                                 const status = STATUS_META[bom.status] || { label: bom.status || 'Chưa rõ', tone: 'info' };
                                 return (
                                     <tr key={bom.id} onClick={() => openEdit(bom)}>
@@ -143,6 +204,77 @@ function AssemblyBomPage() {
                             )}
                         </tbody>
                     </table>
+                    
+                    <div className={styles.pagination}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span>Hiển thị</span>
+                            <select
+                                className="misa-select"
+                                style={{ width: '70px', height: '32px', padding: '0 8px' }}
+                                value={pageSize}
+                                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                            >
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                            </select>
+                            <span>trên tổng số {totalElements} bản ghi</span>
+                        </div>
+
+                        {totalPages > 1 && (
+                            <div className={styles.pageControls}>
+                                <button
+                                    disabled={page === 1}
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    className={styles.pageBtn}
+                                >
+                                    <i className="bi bi-chevron-left"></i> Trước
+                                </button>
+
+                                <div className={styles.paginationNumbers}>
+                                    {getPageNumbers().map((num, idx) => (
+                                        num === page ? (
+                                            <input
+                                                key={idx}
+                                                className={`${styles.pageNumber} ${styles.active}`}
+                                                style={{ width: '36px', textAlign: 'center', padding: '0', border: 'none', outline: 'none', fontWeight: 'bold' }}
+                                                defaultValue={num}
+                                                onBlur={(e) => e.target.value = page}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        let p = parseInt(e.target.value, 10);
+                                                        if (!isNaN(p)) {
+                                                            p = Math.max(1, Math.min(totalPages, p));
+                                                            setPage(p);
+                                                            e.target.blur();
+                                                        } else {
+                                                            e.target.value = page;
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        ) : (
+                                            <span
+                                                key={idx}
+                                                className={`${styles.pageNumber} ${num === '...' ? styles.dots : ''}`}
+                                                onClick={() => num !== '...' && setPage(num)}
+                                            >
+                                                {num}
+                                            </span>
+                                        )
+                                    ))}
+                                </div>
+
+                                <button
+                                    disabled={page === totalPages}
+                                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                    className={styles.pageBtn}
+                                >
+                                    Sau <i className="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
             </div>

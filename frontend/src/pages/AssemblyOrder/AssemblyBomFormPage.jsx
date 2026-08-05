@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
+import Toast from '../../components/ui/Toast/Toast';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import axiosClient from '../../api/axiosClient';
 import styles from './AssemblyOrderPage.module.css';
@@ -9,7 +10,7 @@ import styles from './AssemblyOrderPage.module.css';
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
 
-const defaultBomLine = { componentVariantId: '', quantity: '1', note: '' };
+const defaultBomLine = { componentVariantId: '', categoryId: '', componentRole: '', quantity: '1', note: '' };
 
 const createDefaultForm = () => ({
     id: null,
@@ -29,24 +30,49 @@ function AssemblyBomFormPage() {
     const [products, setProducts] = useState([]);
     const [variants, setVariants] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
+    const [inventoryBalances, setInventoryBalances] = useState([]);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState(createDefaultForm());
+    
+    const showToast = (type, message) => {
+        setToast({ isVisible: true, type, message });
+        setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
+    };
+
+    const getStockInfo = (variantId) => {
+        if (!variantId) return { available: 0, total: 0 };
+        return inventoryBalances
+            .filter(b => String(b.variantId) === String(variantId))
+            .reduce((acc, b) => {
+                const total = Number(b.totalQuantity || 0);
+                const reserved = Number(b.totalReserved || 0);
+                return {
+                    total: acc.total + total,
+                    available: acc.available + (total - reserved)
+                };
+            }, { available: 0, total: 0 });
+    };
     
     // Variant Picker state
     const [pickingLineIndex, setPickingLineIndex] = useState(null);
     const [searchVariantQuery, setSearchVariantQuery] = useState('');
-    const [error, setError] = useState('');
 
     const loadLookups = useCallback(async () => {
         try {
-            const [productResponse, variantResponse] = await Promise.all([
+            setLoading(true);
+            const [productResponse, variantResponse, balanceResponse] = await Promise.all([
                 axiosClient.get('/products', { params: { page: 0, size: 500 } }),
-                axiosClient.get('/products/variants', { params: { page: 0, size: 1000 } })
+                axiosClient.get('/products/variants', { params: { page: 0, size: 1000 } }),
+                axiosClient.get('/reports/inventory-balance')
             ]);
             setProducts(listFrom(unwrap(productResponse)).filter((item) => item.active !== false));
             setVariants(listFrom(unwrap(variantResponse)).filter((item) => item.active !== false));
+            setInventoryBalances(unwrap(balanceResponse) || []);
         } catch (err) {
             setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách thành phẩm/SKU.');
+        } finally {
+            setLoading(false);
         }
     }, []);
 
@@ -64,7 +90,10 @@ function AssemblyBomFormPage() {
                 status: bom.status || 'APPROVED',
                 lines: bom.lines?.length ? bom.lines.map((line) => ({
                     componentVariantId: line.componentVariantId || '',
+                    categoryId: '',
+                    componentRole: line.componentRole || '',
                     quantity: String(Number(line.quantity || 1)),
+                    templateNote: line.note || '',
                     note: line.note || ''
                 })) : [{ ...defaultBomLine }]
             });
@@ -98,8 +127,11 @@ function AssemblyBomFormPage() {
                 if (templateLines && templateLines.length > 0) {
                     const newLines = templateLines.map(line => ({
                         componentVariantId: line.componentVariantId ? String(line.componentVariantId) : '',
+                        categoryId: line.categoryId ? String(line.categoryId) : '',
+                        componentRole: line.componentRole || '',
                         quantity: String(Number(line.quantity || 1)),
-                        note: line.note || ''
+                        templateNote: line.note || '',
+                        note: ''
                     }));
                     
                     setForm((current) => ({ ...current, lines: newLines }));
@@ -134,50 +166,52 @@ function AssemblyBomFormPage() {
         }));
     };
 
-    const validateForm = () => {
+    const getCleanedLines = () => form.lines.filter(line => line.componentRole || line.componentVariantId);
+
+    const validateForm = (cleanedLines) => {
         if (!form.productId) return 'Vui lòng chọn thành phẩm.';
         if (!form.bomName.trim()) return 'Vui lòng nhập tên BOM.';
         if (!form.versionNo || Number(form.versionNo) <= 0) return 'Phiên bản BOM phải lớn hơn 0.';
-        if (!form.lines.length) return 'BOM phải có ít nhất một linh kiện.';
-        for (let index = 0; index < form.lines.length; index += 1) {
-            const line = form.lines[index];
+        if (!cleanedLines.length) return 'BOM phải có ít nhất một linh kiện.';
+        for (let index = 0; index < cleanedLines.length; index += 1) {
+            const line = cleanedLines[index];
             if (!line.componentVariantId) return `Vui lòng chọn SKU linh kiện dòng ${index + 1}.`;
             if (!line.quantity || Number(line.quantity) <= 0) return `Định mức dòng ${index + 1} phải lớn hơn 0.`;
-            if (!Number.isInteger(Number(line.quantity))) return `Định mức dòng ${index + 1} phải là số nguyên.`;
         }
         return '';
     };
 
-    const buildPayload = () => ({
+    const buildPayload = (cleanedLines) => ({
         productId: Number(form.productId),
         bomCode: form.bomCode?.trim() || null,
         bomName: form.bomName?.trim(),
         versionNo: Number(form.versionNo),
         status: form.status,
-        lines: form.lines.map((line) => ({
+        lines: cleanedLines.map((line) => ({
             componentVariantId: Number(line.componentVariantId),
-            quantity: Number.parseInt(line.quantity, 10),
-            note: line.note?.trim() || null
+            quantity: Number.parseFloat(line.quantity),
+            note: line.note?.trim() || null,
+            componentRole: line.componentRole || null
         }))
     });
 
     const saveBom = async () => {
-        const validationMessage = validateForm();
+        const cleanedLines = getCleanedLines();
+        const validationMessage = validateForm(cleanedLines);
         if (validationMessage) {
-            setError(validationMessage);
+            showToast('error', validationMessage);
             return;
         }
         setSaving(true);
-        setError('');
         try {
             if (form.id) {
-                await assemblyApi.updateAssemblyBom(form.id, buildPayload());
+                await assemblyApi.updateAssemblyBom(form.id, buildPayload(cleanedLines));
             } else {
-                await assemblyApi.createAssemblyBom(buildPayload());
+                await assemblyApi.createAssemblyBom(buildPayload(cleanedLines));
             }
             navigate('/assembly-boms');
         } catch (err) {
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không lưu được BOM.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không lưu được BOM.');
             setSaving(false);
         }
     };
@@ -206,7 +240,6 @@ function AssemblyBomFormPage() {
                 </div>
 
                 <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid var(--color-border)', padding: '24px' }}>
-                    {error && <div className={styles.errorBox} style={{ marginBottom: '20px' }}>{error}</div>}
                     <div className={styles.formGrid}>
                         <label className={styles.field}>
                             <span>Thành phẩm</span>
@@ -256,12 +289,29 @@ function AssemblyBomFormPage() {
                                 return (
                                     <div key={index} className={styles.bomLineCard}>
                                         <div className={styles.bomLineHeader} style={{ flexDirection: 'column', justifyContent: 'center' }}>
-                                            <div>{index + 1}. {selectedVariant ? (selectedVariant.categoryName || 'Linh kiện') : 'Linh kiện'}</div>
-                                            {selectedVariant && selectedVariant.categoryDescription && (
-                                                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '4px', fontWeight: 'normal' }}>
-                                                    ({selectedVariant.categoryDescription})
-                                                </div>
-                                            )}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontWeight: 700, fontSize: '1rem', color: '#1f2937', textTransform: 'uppercase' }}>
+                                                    {index + 1}. {line.componentRole || (selectedVariant ? selectedVariant.categoryName : 'Linh kiện tùy chọn')}
+                                                </span>
+                                                {line.templateNote && (
+                                                    <span style={{ fontSize: '0.8rem', backgroundColor: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', fontWeight: 500, marginLeft: '6px', border: '1px dashed #f59e0b' }}>
+                                                        <i className="bi bi-pin-angle-fill" style={{ marginRight: '4px' }}></i>
+                                                        Yêu cầu: {line.templateNote}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', alignItems: 'flex-start' }}>
+                                                {selectedVariant && selectedVariant.categoryDescription && (
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 'normal' }}>
+                                                        ({selectedVariant.categoryDescription})
+                                                    </div>
+                                                )}
+                                                {line.componentRole && (
+                                                    <span style={{ fontSize: '0.65rem', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, textTransform: 'uppercase' }}>
+                                                        Bắt buộc
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         
                                         {selectedVariant ? (
@@ -278,8 +328,8 @@ function AssemblyBomFormPage() {
                                                         {selectedVariant.productName} {(selectedVariant.variantName && selectedVariant.variantName !== selectedVariant.productName) && `/ ${selectedVariant.variantName}`}
                                                     </div>
                                                     <div className={styles.bomItemMeta}>
-                                                        <span>Bảo hành: <strong>{selectedVariant.warranty || '36 Tháng'}</strong></span>
-                                                        <span className={styles.stockStatus}>Kho hàng: <strong>{Number(selectedVariant.stockQty || 0) > 0 ? 'Còn hàng' : 'Hết hàng'}</strong></span>
+                                                        <span>Bảo hành: <strong>{selectedVariant.warrantyQty != null ? `${selectedVariant.warrantyQty} Tháng` : 'Không bảo hành'}</strong></span>
+                                                        <span className={styles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(selectedVariant.id).available) > 0 ? '#16a34a' : '#dc2626' }}>{Math.max(0, getStockInfo(selectedVariant.id).available).toLocaleString('vi-VN')}</strong></span>
                                                         <span>Mã SP: <strong>{selectedVariant.sku}</strong></span>
                                                     </div>
                                                     <div className={styles.bomExtraFields}>
@@ -299,16 +349,30 @@ function AssemblyBomFormPage() {
                                                     </span>
                                                 </div>
                                                 <div className={styles.bomItemActions}>
-                                                    <button className={`${styles.bomActionBtn} ${styles.edit}`} type="button" title="Đổi linh kiện" onClick={() => setLineField(index, 'componentVariantId', '')}>
+                                                    <button className={`${styles.bomActionBtn} ${styles.edit}`} type="button" title="Đổi linh kiện" onClick={() => setPickingLineIndex(index)}>
                                                         <i className="bi bi-pencil-square"></i>
                                                     </button>
-                                                    <button className={`${styles.bomActionBtn} ${styles.delete}`} type="button" title="Xóa" onClick={() => removeLine(index)}>
-                                                        <i className="bi bi-trash"></i>
-                                                    </button>
+                                                    {!line.componentRole && (
+                                                        <button className={`${styles.bomActionBtn} ${styles.delete}`} type="button" title="Xóa" onClick={() => removeLine(index)}>
+                                                            <i className="bi bi-trash"></i>
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className={styles.bomEmptySlot}>
+                                            <div className={styles.bomEmptySlot} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '24px' }}>
+                                                {line.componentRole && (
+                                                    <div style={{ fontWeight: 600, color: '#4b5563', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <i className="bi bi-info-circle" style={{ color: '#3b82f6' }}></i>
+                                                        Cần chọn danh mục: <span style={{ color: '#1d4ed8' }}>{line.componentRole}</span>
+                                                        {line.templateNote && (
+                                                            <span style={{ marginLeft: '8px', color: '#92400e', backgroundColor: '#fef3c7', padding: '2px 6px', borderRadius: '4px', fontSize: '0.85rem' }}>
+                                                                <i className="bi bi-pin-angle-fill" style={{ marginRight: '4px' }}></i>
+                                                                Yêu cầu: {line.templateNote}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 <button
                                                     className={styles.chooseComponentBtn}
                                                     type="button"
@@ -316,9 +380,11 @@ function AssemblyBomFormPage() {
                                                 >
                                                     + Chọn linh kiện...
                                                 </button>
-                                                <button className={styles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeLine(index)}>
-                                                    <i className="bi bi-trash"></i>
-                                                </button>
+                                                {!line.componentRole && (
+                                                    <button className={styles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeLine(index)} style={{ position: 'absolute', right: '12px', top: '12px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                                                        <i className="bi bi-trash"></i>
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -345,11 +411,11 @@ function AssemblyBomFormPage() {
                 {pickingLineIndex !== null && (
                     <div className={styles.modalOverlay} style={{ zIndex: 1100 }}>
                         <div className={styles.modal} style={{ maxWidth: '800px', width: '90%' }}>
-                            <div className={styles.modalHeader}>
-                                <h2>Chọn linh kiện</h2>
-                                <button className={styles.iconButton} type="button" title="Đóng" onClick={() => { setPickingLineIndex(null); setSearchVariantQuery(''); }}>
-                                    <i className="bi bi-x-lg"></i>
+                            <div className={styles.modalHeader} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 24px', borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
+                                <button type="button" onClick={() => { setPickingLineIndex(null); setSearchVariantQuery(''); }} style={{ background: '#f3f4f6', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#4b5563', transition: 'all 0.2s' }} title="Quay lại danh sách BOM">
+                                    <i className="bi bi-arrow-left" style={{ fontSize: '18px' }}></i>
                                 </button>
+                                <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>Tìm kiếm & Chọn linh kiện</h2>
                             </div>
                             <div className={styles.modalBody} style={{ padding: 0 }}>
                                 <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)', background: '#f8fafc' }}>
@@ -365,6 +431,14 @@ function AssemblyBomFormPage() {
                                 </div>
                                 <div style={{ maxHeight: '60vh', overflowY: 'auto', background: '#fff' }}>
                                     {variants.filter(v => {
+                                        const parentProd = products.find(p => String(p.id) === String(v.productId));
+                                        const type = v.productType || (parentProd ? parentProd.productType : null);
+                                        if (type !== 'Hàng hóa') return false;
+
+                                        const line = form.lines[pickingLineIndex];
+                                        if (line && line.categoryId && String(v.categoryId) !== String(line.categoryId)) {
+                                            return false;
+                                        }
                                         if (!searchVariantQuery) return true;
                                         const q = searchVariantQuery.toLowerCase();
                                         return (v.sku || '').toLowerCase().includes(q) 
@@ -385,8 +459,8 @@ function AssemblyBomFormPage() {
                                                 </div>
                                                 <div className={styles.bomItemMeta}>
                                                     <span>Mã SP: <strong>{variant.sku}</strong></span>
-                                                    <span>Bảo hành: <strong>{variant.warranty || '36 Tháng'}</strong></span>
-                                                    <span className={styles.stockStatus}>Kho hàng: <strong>{Number(variant.stockQty || 0) > 0 ? 'Còn hàng' : 'Hết hàng'}</strong></span>
+                                                    <span>Bảo hành: <strong>{variant.warrantyQty != null ? `${variant.warrantyQty} Tháng` : 'Không bảo hành'}</strong></span>
+                                                    <span className={styles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(variant.id).available) > 0 ? '#16a34a' : '#dc2626' }}>{Math.max(0, getStockInfo(variant.id).available).toLocaleString('vi-VN')}</strong></span>
                                                 </div>
                                                 <div className={styles.variantPickerPrice}>
                                                     {Number(variant.salePrice || 0).toLocaleString('vi-VN')} đ
@@ -408,6 +482,14 @@ function AssemblyBomFormPage() {
                                         </div>
                                     ))}
                                     {variants.length > 0 && variants.filter(v => {
+                                        const parentProd = products.find(p => String(p.id) === String(v.productId));
+                                        const type = v.productType || (parentProd ? parentProd.productType : null);
+                                        if (type !== 'Hàng hóa') return false;
+
+                                        const line = form.lines[pickingLineIndex];
+                                        if (line && line.categoryId && String(v.categoryId) !== String(line.categoryId)) {
+                                            return false;
+                                        }
                                         if (!searchVariantQuery) return true;
                                         const q = searchVariantQuery.toLowerCase();
                                         return (v.sku || '').toLowerCase().includes(q) 
@@ -429,6 +511,15 @@ function AssemblyBomFormPage() {
                     </div>
                 )}
 
+
+
+                {toast.isVisible && (
+                    <Toast 
+                        type={toast.type}
+                        message={toast.message}
+                        onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
+                    />
+                )}
             </div>
         </AdminLayout>
     );
