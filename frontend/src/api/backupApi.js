@@ -35,8 +35,8 @@ export const deleteBackup = (id) =>
 export const uploadBackupToDrive = (id) =>
     axiosClient.post(`/backup/${id}/upload-drive`).then(r => r.data);
 
-export const restoreBackup = (id) =>
-    axiosClient.post(`/backup/${id}/restore`).then(r => r.data);
+export const restoreBackup = (id, encryptionKey) =>
+    axiosClient.post(`/backup/${id}/restore`, { encryptionKey }).then(r => r.data);
 
 export const getDownloadUrl = (id) => {
     const baseUrl = axiosClient.defaults.baseURL;

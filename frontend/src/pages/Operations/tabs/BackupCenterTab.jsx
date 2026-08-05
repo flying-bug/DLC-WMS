@@ -26,6 +26,8 @@ function formatDateTime(iso) {
 // ─── Restore Confirm Modal ────────────────────────────────────────────────────
 function RestoreConfirmModal({ record, onConfirm, onCancel, loading }) {
     const [input, setInput] = useState('');
+    const [encryptionKey, setEncryptionKey] = useState('');
+    const isEncrypted = record?.filename?.endsWith('.enc');
 
     return (
         <div className={styles.overlay} onClick={onCancel}>
@@ -39,6 +41,23 @@ function RestoreConfirmModal({ record, onConfirm, onCancel, loading }) {
                         <strong>⚠️ CẢNH BÁO:</strong> Thao tác này sẽ ghi đè toàn bộ dữ liệu hiện tại
                         bằng bản sao lưu <strong>{record?.filename}</strong>. Không thể hoàn tác!
                     </div>
+
+                    {isEncrypted && (
+                        <div style={{ marginBottom: '16px' }}>
+                            <p className={styles.confirmLabel} style={{ color: '#f59e0b', fontWeight: 600 }}>
+                                🔑 Bản sao lưu này được mã hóa (AES-256). Nhập khoá mã hóa (Encryption Key):
+                            </p>
+                            <input
+                                type="password"
+                                className={styles.confirmInput}
+                                value={encryptionKey}
+                                onChange={e => setEncryptionKey(e.target.value)}
+                                placeholder="Nhập khoá mã hóa (Encryption Key)..."
+                                style={{ borderColor: '#f59e0b' }}
+                            />
+                        </div>
+                    )}
+
                     <p className={styles.confirmLabel}>
                         Nhập <code>RESTORE</code> để xác nhận:
                     </p>
@@ -47,15 +66,15 @@ function RestoreConfirmModal({ record, onConfirm, onCancel, loading }) {
                         value={input}
                         onChange={e => setInput(e.target.value)}
                         placeholder="Nhập RESTORE..."
-                        autoFocus
+                        autoFocus={!isEncrypted}
                     />
                 </div>
                 <div className={styles.modalFooter}>
                     <button className={styles.cancelBtn} onClick={onCancel}>Hủy bỏ</button>
                     <button
                         className={styles.dangerBtn}
-                        onClick={() => onConfirm(record.id)}
-                        disabled={input !== 'RESTORE' || loading}
+                        onClick={() => onConfirm(record.id, encryptionKey)}
+                        disabled={input !== 'RESTORE' || (isEncrypted && !encryptionKey.trim()) || loading}
                     >
                         {loading ? <><i className="bi bi-hourglass-split" /> Đang restore...</> : 'Xác nhận Restore'}
                     </button>
@@ -171,17 +190,20 @@ function BackupCenterTab() {
             .catch(() => showToast('error', 'Thao tác thất bại.'));
     };
 
-    const handleRestoreConfirm = async (id) => {
+    const handleRestoreConfirm = async (id, encryptionKey) => {
         setRestoreLoading(true);
         try {
-            const res = await restoreBackup(id);
+            const res = await restoreBackup(id, encryptionKey);
             if (res.success) {
                 showToast('success', 'Khôi phục thành công.');
                 setRestoreTarget(null);
                 fetchBackups();
-            } else showToast('error', 'Thao tác thất bại.');
-        } catch {
-            showToast('error', 'Thao tác thất bại.');
+            } else {
+                showToast('error', res.message || 'Thao tác thất bại.');
+            }
+        } catch (err) {
+            const errMsg = err.response?.data?.message || 'Thao tác thất bại.';
+            showToast('error', errMsg);
         } finally {
             setRestoreLoading(false);
             setRestoreTarget(null);
