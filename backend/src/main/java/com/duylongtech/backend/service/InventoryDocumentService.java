@@ -88,6 +88,7 @@ public class InventoryDocumentService {
     private final InventoryCostLayerRepository inventoryCostLayerRepository;
     private final InventoryLedgerRepository inventoryLedgerRepository;
     private final SerialNumberRepository serialNumberRepository;
+    private final PartnerLedgerService partnerLedgerService;
     private final ProductVariantRepository productVariantRepository;
     private final WarrantyRepository warrantyRepository;
     private final WarrantyLifecycleService warrantyLifecycleService;
@@ -464,6 +465,25 @@ public class InventoryDocumentService {
         savedDoc.setUpdatedAt(LocalDateTime.now());
         InventoryDocument savedImport = inventoryDocumentRepository.save(savedDoc);
         syncStocktakeReference(savedImport);
+
+        // Ghi nhận tăng công nợ nhà cung cấp khi nhập kho
+        if (savedImport.getPartnerId() != null) {
+            BigDecimal totalImportValue = savedImport.getLines().stream()
+                    .map(l -> (l.getQuantityIn() != null ? l.getQuantityIn() : BigDecimal.ZERO)
+                            .multiply(l.getUnitCost() != null ? l.getUnitCost() : BigDecimal.ZERO))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            partnerLedgerService.recordLedger(
+                    savedImport.getPartnerId(),
+                    "INVENTORY_IMPORT",
+                    savedImport.getId(),
+                    savedImport.getDocCode(),
+                    totalImportValue,
+                    BigDecimal.ZERO,
+                    "Ghi nhận công nợ phiếu nhập kho " + savedImport.getDocCode()
+            );
+        }
+
         return toResponse(savedImport);
     }
 

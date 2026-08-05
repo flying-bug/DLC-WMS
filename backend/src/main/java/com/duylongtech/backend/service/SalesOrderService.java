@@ -30,6 +30,7 @@ public class SalesOrderService {
     private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final PartnerLedgerService partnerLedgerService;
 
     // =========================================================
     // QUERY
@@ -292,6 +293,17 @@ public class SalesOrderService {
         SalesOrder approved = salesOrderRepository.save(so);
         log.info("Duyệt đơn bán hàng {} bởi {}", approved.getSoCode(), actor);
 
+        // Ghi nhận tăng công nợ khách hàng trong sổ partner_ledger
+        partnerLedgerService.recordLedger(
+                approved.getPartnerId(),
+                "SALES_ORDER",
+                approved.getId(),
+                approved.getSoCode(),
+                approved.getTotalAmount(),
+                BigDecimal.ZERO,
+                "Ghi nhận công nợ đơn bán hàng " + approved.getSoCode()
+        );
+
         List<StockReservation> reservations = stockReservationRepository.findBySalesOrderId(id);
         return toDetailResponse(approved, reservations);
     }
@@ -416,6 +428,17 @@ public class SalesOrderService {
 
         salesOrderRepository.save(so);
         
+        // Ghi nhận thu tiền (giảm nợ khách hàng) trong sổ partner_ledger
+        partnerLedgerService.recordLedger(
+                so.getPartnerId(),
+                "PAYMENT_RECEIPT",
+                so.getId(),
+                so.getSoCode(),
+                BigDecimal.ZERO,
+                amount,
+                "Thanh toán cho đơn hàng " + so.getSoCode()
+        );
+
         auditLogService.logEvent(
                 actor,
                 "RECORD_PAYMENT",
