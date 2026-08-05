@@ -338,7 +338,7 @@ function CreateImportSlipPage() {
   };
 
   const removeItem = (localId) => {
-    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : prev);
+    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(), isNew: false }]);
   };
 
   const selectedSerialItem = items.find(item => item.localId === serialModalItemId);
