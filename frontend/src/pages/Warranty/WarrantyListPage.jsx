@@ -12,6 +12,7 @@ const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
   APPROVED: { label: 'Còn hiệu lực', code: 'success' },
   POSTED: { label: 'Đã ghi nhận', code: 'success' },
+  ACTIVE: { label: 'Còn hiệu lực', code: 'success' },
   CANCELLED: { label: 'Đã hủy', code: 'danger' },
   EXPIRED: { label: 'Hết hạn', code: 'warning' },
   VOIDED: { label: 'Không hợp lệ', code: 'danger' }
@@ -47,10 +48,10 @@ function WarrantyListPage() {
   const [warranties, setWarranties] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  
+
   const [selectedIds, setSelectedIds] = useState([]);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
@@ -111,20 +112,26 @@ function WarrantyListPage() {
   const rows = warranties.map(item => {
     const status = STATUS_LABELS[item.warrantyStatus] || { label: item.warrantyStatus || 'Không rõ', code: 'info' };
     const pName = item.partnerName || item.customerName || item.partner?.name || 'Khách lẻ';
-    
-    let sCode = '';
+
+    const validSerials = item.lines
+      ? item.lines.map(line => line.serialNumber).filter(s => s && String(s).trim() !== '')
+      : [];
+    const sCode = validSerials.length > 0
+      ? validSerials.join(', ')
+      : (item.serialNumber && String(item.serialNumber).trim() !== '' ? item.serialNumber : '-');
+
+    const productNames = item.lines
+      ? item.lines.map(line => line.variantName || line.productName || line.sku).filter(name => name && String(name).trim() !== '')
+      : [];
     let prdName = 'Chưa rõ';
-    
-    if (item.lines && item.lines.length > 0) {
-      if (item.lines.length === 1) {
-        sCode = item.lines[0].serialNumber || '';
-        prdName = item.lines[0].variantName || item.lines[0].sku || 'Chưa rõ';
-      } else {
-        sCode = `[${item.lines.length} Serial]`;
-        prdName = `[${item.lines.length} Sản phẩm]`;
-      }
+    if (productNames.length > 3) {
+      prdName = productNames.slice(0, 3).join(', ') + ', ...';
+    } else if (productNames.length > 0) {
+      prdName = productNames.join(', ');
+    } else if (item.productName || item.variantName) {
+      prdName = item.productName || item.variantName;
     }
-    
+
     return {
       ...item,
       displayPartnerName: pName,
@@ -352,10 +359,10 @@ function WarrantyListPage() {
                       </td>
                     )}
                     <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
-                      <i 
-                        className="bi bi-eye" 
-                        style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }} 
-                        title="Xem chi tiết" 
+                      <i
+                        className="bi bi-eye"
+                        style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }}
+                        title="Xem chi tiết"
                         onClick={(e) => { e.stopPropagation(); navigate(`/warranties/${item.id}`); }}
                       ></i>
                     </td>
@@ -466,9 +473,9 @@ function WarrantyListPage() {
           </Modal>
         )}
       </div>
-      
+
       {toast.isVisible && (
-        <Toast 
+        <Toast
           type={toast.type}
           message={toast.message}
           onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
