@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
+import Toast from '../../components/ui/Toast/Toast';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import Modal from '../../components/ui/Modal/Modal';
+import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
+import { exportToExcel } from '../../utils/excelExport';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import styles from './AssemblyOrderPage.module.css';
 
@@ -14,6 +19,24 @@ const STATUS_META = {
     INACTIVE: { label: 'Ngừng dùng', tone: 'danger' }
 };
 
+const COLUMN_OPTIONS = [
+    { id: 'bomCode', label: 'Mã cấu hình' },
+    { id: 'bomName', label: 'Tên cấu hình' },
+    { id: 'product', label: 'Thành phẩm' },
+    { id: 'version', label: 'Phiên bản' },
+    { id: 'itemCount', label: 'Số linh kiện' },
+    { id: 'status', label: 'Trạng thái' }
+];
+
+const DEFAULT_COLUMNS = {
+    bomCode: true,
+    bomName: true,
+    product: true,
+    version: true,
+    itemCount: true,
+    status: true
+};
+
 function AssemblyBomPage() {
     const navigate = useNavigate();
     const [boms, setBoms] = useState([]);
@@ -22,6 +45,20 @@ function AssemblyBomPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    const [columns, setColumns] = useState(() => {
+        const saved = localStorage.getItem('dlc_assembly_bom_columns');
+        return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+    });
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+    const toggleColumn = (colId) => {
+        setColumns(prev => {
+            const next = { ...prev, [colId]: !prev[colId] };
+            localStorage.setItem('dlc_assembly_bom_columns', JSON.stringify(next));
+            return next;
+        });
+    };
 
     // Pagination states
     const [page, setPage] = useState(1);
@@ -36,7 +73,7 @@ function AssemblyBomPage() {
             setPage(1);
         } catch (err) {
             setBoms([]);
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách BOM.');
+            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách cấu hình.');
         } finally {
             setLoading(false);
         }
@@ -78,6 +115,30 @@ function AssemblyBomPage() {
         return result;
     }, [boms, keywordFilter]);
 
+    const handleExport = () => {
+        if (filteredBoms.length === 0) {
+            setError('Không có dữ liệu để xuất Excel');
+            setTimeout(() => setError(''), 3000);
+            return;
+        }
+
+        const headers = COLUMN_OPTIONS.filter(c => columns[c.id]).map(c => c.label);
+        const data = filteredBoms.map(bom => {
+            const row = [];
+            if (columns.bomCode) row.push(bom.bomCode);
+            if (columns.bomName) row.push(bom.bomName);
+            if (columns.product) row.push(`${bom.productCode || ''} - ${bom.productName || ''}`.trim() || '---');
+            if (columns.version) row.push(Number(bom.versionNo || 0).toLocaleString('vi-VN'));
+            if (columns.itemCount) row.push(bom.lines ? bom.lines.length : 0);
+            if (columns.status) row.push(STATUS_META[bom.status]?.label || bom.status);
+            return row;
+        });
+
+        exportToExcel(headers, data, 'Danh_sach_BOM');
+        setSuccess('Xuất Excel thành công!');
+        setTimeout(() => setSuccess(''), 3000);
+    };
+
     // Client-side pagination logic
     const totalElements = filteredBoms.length;
     const totalPages = Math.ceil(totalElements / pageSize) || 1;
@@ -112,13 +173,13 @@ function AssemblyBomPage() {
             <div className={styles.page}>
                 <div className={styles.pageHeader}>
                     <div>
-                        <h1 className={styles.pageTitle}>Quản lý BOM</h1>
+                        <h1 className={styles.pageTitle}>Quản lý Cấu hình</h1>
                         <p className={styles.pageSubtitle}>Thiết lập định mức linh kiện cho thành phẩm trước khi lập lệnh lắp ráp hoặc tháo dỡ.</p>
                     </div>
                     <div className={styles.actions}>
                         <button className={styles.primaryButton} type="button" onClick={openCreate}>
                             <i className="bi bi-plus-lg"></i>
-                            Tạo BOM
+                            Tạo cấu hình
                         </button>
                     </div>
                 </div>
@@ -130,35 +191,58 @@ function AssemblyBomPage() {
                     <div className={styles.detailItem}><span>Ngừng dùng</span><strong>{stats.inactive}</strong></div>
                 </div>
 
-                <div className={styles.toolbar} style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                    <div className={styles.filterGrid} style={{ display: 'flex', gap: '16px', flex: 1, minWidth: '300px' }}>
-                        <label className={styles.field} style={{ flex: 2 }}>
-                            <span>Tìm kiếm (Mã/Tên BOM, Mã/Tên thành phẩm)</span>
+                <div className={styles.filterSection}>
+                    <div className={styles.searchAndPopover}>
+                        <div className={styles.searchBox}>
+                            <i className="bi bi-search"></i>
                             <input
                                 type="text"
-                                placeholder="Nhập từ khóa tìm kiếm..."
+                                className={styles.searchInput}
+                                placeholder="Nhập từ khóa tìm kiếm mã/tên cấu hình..."
                                 value={keywordFilter}
                                 onChange={(e) => { setKeywordFilter(e.target.value); setPage(1); }}
-                                style={{ height: '38px' }}
+                                onKeyDown={(e) => e.key === 'Enter' && loadBoms()}
                             />
-                        </label>
-                        <label className={styles.field} style={{ flex: 1 }}>
-                            <span>Trạng thái</span>
-                            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ height: '38px' }}>
-                                <option value="">Tất cả</option>
-                                <option value="APPROVED">Đã duyệt</option>
-                                <option value="DRAFT">Nháp</option>
-                                <option value="INACTIVE">Ngừng dùng</option>
-                            </select>
-                        </label>
+                            {keywordFilter && (
+                                <button className={styles.clearSearchBtn} onClick={() => { setKeywordFilter(''); setPage(1); }}>
+                                    <i className="bi bi-x-circle-fill"></i>
+                                </button>
+                            )}
+                        </div>
+
+                        <FilterPopover
+                            filters={{ status: statusFilter }}
+                            onApply={(newFilters) => { setStatusFilter(newFilters.status); setPage(1); }}
+                            onReset={() => { setStatusFilter(''); setPage(1); }}
+                            statusOptions={[
+                                { value: 'APPROVED', label: 'Đã duyệt' },
+                                { value: 'DRAFT', label: 'Nháp' },
+                                { value: 'INACTIVE', label: 'Ngừng dùng' }
+                            ]}
+                            showDateRange={false}
+                        />
                     </div>
-                    <div className={styles.actions} style={{ margin: 0, paddingBottom: '2px' }}>
-                        <button className={styles.secondaryButton} type="button" onClick={() => { setStatusFilter(''); setKeywordFilter(''); setPage(1); }}>
-                            Làm mới
-                        </button>
-                        <button className={styles.primaryButton} type="button" onClick={loadBoms}>
+                    <div className={styles.filterActions}>
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => { setStatusFilter(''); setKeywordFilter(''); setPage(1); }}
+                            title="Tải lại"
+                        >
                             <i className="bi bi-arrow-clockwise"></i>
-                            Tải lại
+                        </button>
+                        <button
+                            className={styles.iconBtn}
+                            onClick={handleExport}
+                            title="Xuất tệp Excel"
+                        >
+                            <i className="bi bi-file-earmark-excel"></i>
+                        </button>
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => setShowSettingsModal(true)}
+                            title="Thiết lập cột hiển thị"
+                        >
+                            <i className="bi bi-gear"></i>
                         </button>
                     </div>
                 </div>
@@ -170,12 +254,12 @@ function AssemblyBomPage() {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th>Mã BOM</th>
-                                <th>Tên BOM</th>
-                                <th>Thành phẩm</th>
-                                <th>Phiên bản</th>
-                                <th>Số linh kiện</th>
-                                <th>Trạng thái</th>
+                                {columns.bomCode && <th>Mã cấu hình</th>}
+                                {columns.bomName && <th>Tên cấu hình</th>}
+                                {columns.product && <th>Thành phẩm</th>}
+                                {columns.version && <th>Phiên bản</th>}
+                                {columns.itemCount && <th>Số linh kiện</th>}
+                                {columns.status && <th>Trạng thái</th>}
                                 <th></th>
                             </tr>
                         </thead>
@@ -184,12 +268,12 @@ function AssemblyBomPage() {
                                 const status = STATUS_META[bom.status] || { label: bom.status || 'Chưa rõ', tone: 'info' };
                                 return (
                                     <tr key={bom.id} onClick={() => openEdit(bom)}>
-                                        <td><span className={styles.linkText}>{bom.bomCode}</span></td>
-                                        <td>{bom.bomName}</td>
-                                        <td>{bom.productCode} - {bom.productName}</td>
-                                        <td>{Number(bom.versionNo || 0).toLocaleString('vi-VN')}</td>
-                                        <td>{bom.lines?.length || 0}</td>
-                                        <td><span className={`${styles.badge} ${styles[status.tone]}`}>{status.label}</span></td>
+                                        {columns.bomCode && <td><span className={styles.linkText}>{bom.bomCode}</span></td>}
+                                        {columns.bomName && <td>{bom.bomName}</td>}
+                                        {columns.product && <td>{bom.productCode} - {bom.productName}</td>}
+                                        {columns.version && <td>{Number(bom.versionNo || 0).toLocaleString('vi-VN')}</td>}
+                                        {columns.itemCount && <td>{bom.lines?.length || 0}</td>}
+                                        {columns.status && <td><span className={`${styles.badge} ${styles[status.tone]}`}>{status.label}</span></td>}
                                         <td>
                                             <button className={styles.iconButton} type="button" title="Sửa BOM" onClick={(event) => { event.stopPropagation(); openEdit(bom); }}>
                                                 <i className="bi bi-pencil"></i>
@@ -199,7 +283,7 @@ function AssemblyBomPage() {
                                 );
                             }) : (
                                 <tr>
-                                    <td className={styles.emptyCell} colSpan="7">{loading ? 'Đang tải danh sách BOM...' : 'Chưa có BOM phù hợp.'}</td>
+                                    <td className={styles.emptyCell} colSpan={Object.values(columns).filter(Boolean).length + 1}>{loading ? 'Đang tải danh sách cấu hình...' : 'Chưa có cấu hình phù hợp.'}</td>
                                 </tr>
                             )}
                         </tbody>
@@ -278,6 +362,40 @@ function AssemblyBomPage() {
                 </div>
 
             </div>
+            <Modal
+                isOpen={showSettingsModal}
+                onClose={() => setShowSettingsModal(false)}
+                ariaLabel="Thiết lập cột hiển thị"
+            >
+                <div className={styles.settingsModalHeader}>
+                    <h3>Thiết lập cột hiển thị</h3>
+                    <button className={styles.settingsModalCloseBtn} onClick={() => setShowSettingsModal(false)}>
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div className={styles.settingsModalBody}>
+                    <div className={styles.checkboxGrid}>
+                        {COLUMN_OPTIONS.map(col => (
+                            <label key={col.id} className={styles.checkboxLabel}>
+                                <input
+                                    type="checkbox"
+                                    checked={columns[col.id]}
+                                    onChange={() => toggleColumn(col.id)}
+                                />
+                                <span className={styles.checkboxText}>{col.label}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+                <div className={styles.settingsModalFooter}>
+                    <button className={styles.btnSecondary} onClick={() => setColumns(DEFAULT_COLUMNS)}>
+                        Đặt lại
+                    </button>
+                    <button className={styles.btnPrimary} onClick={() => setShowSettingsModal(false)}>
+                        Hoàn tất
+                    </button>
+                </div>
+            </Modal>
         </AdminLayout>
     );
 

@@ -1,6 +1,6 @@
 import axiosClient from './axiosClient';
 
-// ─── BOM APIs ────────────────────────────────────────────────────────────────
+// ─── cấu hình APIs ────────────────────────────────────────────────────────────────
 
 export const getAssemblyBoms = (params = {}) => {
     return axiosClient.get('/assembly-boms', { params });

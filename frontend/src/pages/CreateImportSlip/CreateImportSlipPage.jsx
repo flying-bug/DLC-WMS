@@ -142,7 +142,7 @@ function CreateImportSlipPage() {
         variantId: String(comp.variantId || comp.id),
         quantity: comp.quantity || 1,
         price: comp.price || 0,
-        note: `BOM cho Lệnh ${assemblyData.code}`,
+        note: `Cấu hình cho Lệnh ${assemblyData.code}`,
         isNew: false
       }));
     }
@@ -429,7 +429,7 @@ function CreateImportSlipPage() {
     if (!isFormValid) {
       if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho nhập.');
       if (importType === 'PURCHASE' && !form.partnerId) return showToast('error', 'Vui lòng chọn nhà cung cấp.');
-      if ((importType === 'PRODUCTION' || importType === 'SCRAP') && !form.assemblyOrderId) return showToast('error', 'Vui lòng chọn lệnh quản lý BOM.');
+      if ((importType === 'PRODUCTION' || importType === 'SCRAP') && !form.assemblyOrderId) return showToast('error', 'Vui lòng chọn lệnh quản lý cấu hình.');
       if (importType === 'RETURN' && !form.customerId) return showToast('error', 'Vui lòng chọn khách hàng.');
       if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày nhập kho.');
       const invalidVat = items.some(item => {

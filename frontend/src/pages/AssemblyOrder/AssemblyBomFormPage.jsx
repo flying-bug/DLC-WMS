@@ -5,12 +5,13 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import axiosClient from '../../api/axiosClient';
+import { exportBomToExcel } from '../../utils/bomExcelExport';
 import styles from './AssemblyOrderPage.module.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
 
-const defaultBomLine = { componentVariantId: '', categoryId: '', componentRole: '', quantity: '1', note: '' };
+const defaultBomLine = { componentVariantId: '', categoryId: '', componentRole: '', quantity: '1', note: '', unitPrice: '', componentSku: '', componentName: '', warrantyMonths: '' };
 
 const createDefaultForm = () => ({
     id: null,
@@ -26,7 +27,6 @@ function AssemblyBomFormPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const editing = Boolean(id);
-
     const [products, setProducts] = useState([]);
     const [variants, setVariants] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -34,6 +34,9 @@ function AssemblyBomFormPage() {
     const [inventoryBalances, setInventoryBalances] = useState([]);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState(createDefaultForm());
+
+    const isApproved = editing && form.status === 'APPROVED';
+    const canEdit = !isApproved;
     
     const showToast = (type, message) => {
         setToast({ isVisible: true, type, message });
@@ -70,7 +73,7 @@ function AssemblyBomFormPage() {
             setVariants(listFrom(unwrap(variantResponse)).filter((item) => item.active !== false));
             setInventoryBalances(unwrap(balanceResponse) || []);
         } catch (err) {
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách thành phẩm/SKU.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được danh sách thành phẩm/SKU.');
         } finally {
             setLoading(false);
         }
@@ -94,11 +97,15 @@ function AssemblyBomFormPage() {
                     componentRole: line.componentRole || '',
                     quantity: String(Number(line.quantity || 1)),
                     templateNote: line.note || '',
-                    note: line.note || ''
+                    note: line.note || '',
+                    unitPrice: line.unitPrice != null ? line.unitPrice : '',
+                    componentSku: line.componentSku || '',
+                    componentName: line.componentName || '',
+                    warrantyMonths: line.warrantyMonths != null ? line.warrantyMonths : ''
                 })) : [{ ...defaultBomLine }]
             });
         } catch (err) {
-            setError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được chi tiết BOM.');
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không tải được chi tiết cấu hình.');
         } finally {
             setLoading(false);
         }
@@ -131,7 +138,11 @@ function AssemblyBomFormPage() {
                         componentRole: line.componentRole || '',
                         quantity: String(Number(line.quantity || 1)),
                         templateNote: line.note || '',
-                        note: ''
+                        note: '',
+                        unitPrice: '',
+                        componentSku: '',
+                        componentName: '',
+                        warrantyMonths: ''
                     }));
                     
                     setForm((current) => ({ ...current, lines: newLines }));
@@ -170,9 +181,9 @@ function AssemblyBomFormPage() {
 
     const validateForm = (cleanedLines) => {
         if (!form.productId) return 'Vui lòng chọn thành phẩm.';
-        if (!form.bomName.trim()) return 'Vui lòng nhập tên BOM.';
-        if (!form.versionNo || Number(form.versionNo) <= 0) return 'Phiên bản BOM phải lớn hơn 0.';
-        if (!cleanedLines.length) return 'BOM phải có ít nhất một linh kiện.';
+        if (!form.bomName.trim()) return 'Vui lòng nhập tên cấu hình.';
+        if (!form.versionNo || Number(form.versionNo) <= 0) return 'Phiên bản cấu hình phải lớn hơn 0.';
+        if (!cleanedLines.length) return 'Cấu hình phải có ít nhất một linh kiện.';
         for (let index = 0; index < cleanedLines.length; index += 1) {
             const line = cleanedLines[index];
             if (!line.componentVariantId) return `Vui lòng chọn SKU linh kiện dòng ${index + 1}.`;
@@ -191,28 +202,81 @@ function AssemblyBomFormPage() {
             componentVariantId: Number(line.componentVariantId),
             quantity: Number.parseFloat(line.quantity),
             note: line.note?.trim() || null,
-            componentRole: line.componentRole || null
+            componentRole: line.componentRole || null,
+            unitPrice: line.unitPrice !== '' ? Number(line.unitPrice) : null,
+            componentSku: line.componentSku || null,
+            componentName: line.componentName || null,
+            warrantyMonths: line.warrantyMonths !== '' ? Number(line.warrantyMonths) : null
         }))
     });
 
-    const saveBom = async () => {
+    const saveBom = async (targetStatus = form.status, shouldNavigate = true) => {
         const cleanedLines = getCleanedLines();
         const validationMessage = validateForm(cleanedLines);
         if (validationMessage) {
             showToast('error', validationMessage);
-            return;
+            return false;
         }
         setSaving(true);
         try {
+            const payload = buildPayload(cleanedLines);
+            payload.status = targetStatus;
+            
+            let res;
             if (form.id) {
-                await assemblyApi.updateAssemblyBom(form.id, buildPayload(cleanedLines));
+                res = await assemblyApi.updateAssemblyBom(form.id, payload);
             } else {
-                await assemblyApi.createAssemblyBom(buildPayload(cleanedLines));
+                res = await assemblyApi.createAssemblyBom(payload);
             }
-            navigate('/assembly-boms');
-        } catch (err) {
-            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không lưu được BOM.');
+            
+            if (shouldNavigate) {
+                navigate('/assembly-boms');
+            } else {
+                if (res && res.data && res.data.data) {
+                    setForm(prev => ({ ...prev, id: res.data.data.id, bomCode: res.data.data.bomCode }));
+                }
+            }
             setSaving(false);
+            return true;
+        } catch (err) {
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không lưu được cấu hình.');
+            setSaving(false);
+            return false;
+        }
+    };
+
+    const handleExportExcel = async () => {
+        const cleanedLines = getCleanedLines();
+        if (cleanedLines.length === 0) {
+            showToast('warning', 'Không có linh kiện nào trong cấu hình để xuất.');
+            return;
+        }
+
+        // Tự động lưu nháp trước khi xuất Excel để tránh người dùng quên lưu
+        if (canEdit) {
+            const saved = await saveBom('DRAFT', false);
+            if (!saved) return;
+        }
+
+        const data = cleanedLines.map(line => {
+            const variant = variants.find(v => String(v.id) === String(line.componentVariantId));
+            const quantity = Number(line.quantity) || 0;
+            const price = line.unitPrice !== '' && line.unitPrice != null ? Number(line.unitPrice) : Number(variant?.salePrice || 0);
+            return {
+                sku: line.componentSku || variant?.sku || '---',
+                name: line.componentName || (variant ? `${variant.productName}${variant.variantName && variant.variantName !== variant.productName ? ' / ' + variant.variantName : ''}` : '---'),
+                warrantyMonths: line.warrantyMonths !== '' && line.warrantyMonths != null ? line.warrantyMonths : (variant?.warrantyMonths || 0),
+                quantity: quantity,
+                price: price,
+                amount: quantity * price
+            };
+        });
+
+        try {
+            await exportBomToExcel(data, form.bomCode);
+            showToast('success', 'Đã tải xuống file Excel cấu hình máy.');
+        } catch (error) {
+            showToast('error', 'Có lỗi khi tạo file Excel.');
         }
     };
 
@@ -220,7 +284,7 @@ function AssemblyBomFormPage() {
         return (
             <AdminLayout>
                 <div className={styles.page}>
-                    <div style={{ padding: '40px', textAlign: 'center' }}>Đang tải dữ liệu BOM...</div>
+                    <div style={{ padding: '40px', textAlign: 'center' }}>Đang tải dữ liệu cấu hình...</div>
                 </div>
             </AdminLayout>
         );
@@ -234,16 +298,27 @@ function AssemblyBomFormPage() {
                         <button className="btn-back" type="button" onClick={() => navigate('/assembly-boms')} style={{ marginBottom: 12, background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0 }}>
                             <i className="bi bi-arrow-left"></i> Quay lại
                         </button>
-                        <h1 className={styles.pageTitle}>{form.id ? 'Cập nhật BOM' : 'Tạo BOM'}</h1>
-                        <p className={styles.pageSubtitle}>Thiết lập cấu hình BOM định mức linh kiện cho thành phẩm.</p>
+                        <h1 className={styles.pageTitle}>{form.id ? 'Cập nhật cấu hình' : 'Tạo cấu hình'}</h1>
+                        <p className={styles.pageSubtitle}>Thiết lập cấu hình máy định mức linh kiện cho thành phẩm.</p>
                     </div>
                 </div>
 
                 <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid var(--color-border)', padding: '24px' }}>
+                    
+                    {!canEdit && (
+                        <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <i className="bi bi-shield-lock-fill" style={{ fontSize: '20px' }}></i>
+                            <div>
+                                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>Cấu hình đã được duyệt</h4>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>Cấu hình này đã được duyệt và đang có hiệu lực. Bạn không thể chỉnh sửa cấu hình này để đảm bảo tính nhất quán của dữ liệu. Nếu cần thay đổi cấu hình, vui lòng tạo phiên bản cấu hình mới.</p>
+                            </div>
+                        </div>
+                    )}
+
                     <div className={styles.formGrid}>
                         <label className={styles.field}>
-                            <span>Thành phẩm</span>
-                            <select value={form.productId} onChange={(event) => handleProductChange(event.target.value)}>
+                            <span>Thành phẩm <span style={{ color: 'red' }}>*</span></span>
+                            <select value={form.productId} onChange={(event) => handleProductChange(event.target.value)} disabled={!canEdit}>
                                 <option value="">Chọn thành phẩm</option>
                                 {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
                                     <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
@@ -251,24 +326,16 @@ function AssemblyBomFormPage() {
                             </select>
                         </label>
                         <label className={styles.field}>
-                            <span>Mã BOM</span>
-                            <input value={form.bomCode} onChange={(event) => setField('bomCode', event.target.value)} placeholder="Để trống để tự sinh mã" />
+                            <span>Mã cấu hình</span>
+                            <input value={form.bomCode} onChange={(event) => setField('bomCode', event.target.value)} placeholder="Để trống để tự sinh mã" disabled={!canEdit} />
                         </label>
                         <label className={styles.field}>
-                            <span>Tên BOM</span>
-                            <input value={form.bomName} onChange={(event) => setField('bomName', event.target.value)} placeholder="Ví dụ: Cấu hình PC văn phòng" />
+                            <span>Tên cấu hình <span style={{ color: 'red' }}>*</span></span>
+                            <input value={form.bomName} onChange={(event) => setField('bomName', event.target.value)} placeholder="Ví dụ: Cấu hình PC văn phòng" disabled={!canEdit} />
                         </label>
                         <label className={styles.field}>
                             <span>Phiên bản</span>
-                            <input className={styles.numberInput} inputMode="decimal" type="number" min="0.01" step="0.01" value={form.versionNo} onChange={(event) => setField('versionNo', event.target.value)} />
-                        </label>
-                        <label className={styles.field}>
-                            <span>Trạng thái</span>
-                            <select value={form.status} onChange={(event) => setField('status', event.target.value)}>
-                                <option value="DRAFT">Nháp</option>
-                                <option value="APPROVED">Đã duyệt</option>
-                                <option value="INACTIVE">Ngừng dùng</option>
-                            </select>
+                            <input className={styles.numberInput} inputMode="decimal" type="number" min="0.01" step="0.01" value={form.versionNo} onChange={(event) => setField('versionNo', event.target.value)} disabled={!canEdit} />
                         </label>
                     </div>
 
@@ -278,7 +345,8 @@ function AssemblyBomFormPage() {
                             <div className={styles.bomTotalCost}>
                                 Chi phí dự tính: {form.lines.reduce((sum, line) => {
                                     const v = variants.find(v => String(v.id) === String(line.componentVariantId));
-                                    return sum + (v ? Number(v.salePrice || 0) : 0) * Number(line.quantity || 0);
+                                    const price = line.unitPrice !== '' && line.unitPrice != null ? Number(line.unitPrice) : (v ? Number(v.salePrice || 0) : 0);
+                                    return sum + price * Number(line.quantity || 0);
                                 }, 0).toLocaleString('vi-VN')} đ
                             </div>
                         </div>
@@ -328,36 +396,48 @@ function AssemblyBomFormPage() {
                                                         {selectedVariant.productName} {(selectedVariant.variantName && selectedVariant.variantName !== selectedVariant.productName) && `/ ${selectedVariant.variantName}`}
                                                     </div>
                                                     <div className={styles.bomItemMeta}>
-                                                        <span>Bảo hành: <strong>{selectedVariant.warrantyQty != null ? `${selectedVariant.warrantyQty} Tháng` : 'Không bảo hành'}</strong></span>
+                                                        <span>Bảo hành: <strong>{selectedVariant.warrantyMonths > 0 ? `${selectedVariant.warrantyMonths} Tháng` : 'Không bảo hành'}</strong></span>
                                                         <span className={styles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(selectedVariant.id).available) > 0 ? '#16a34a' : '#dc2626' }}>{Math.max(0, getStockInfo(selectedVariant.id).available).toLocaleString('vi-VN')}</strong></span>
                                                         <span>Mã SP: <strong>{selectedVariant.sku}</strong></span>
                                                     </div>
                                                     <div className={styles.bomExtraFields}>
                                                         <label>
                                                             Ghi chú:
-                                                            <input type="text" className={styles.fullWidth} value={line.note} onChange={(event) => setLineField(index, 'note', event.target.value)} />
+                                                            <input type="text" className={styles.fullWidth} value={line.note} onChange={(event) => setLineField(index, 'note', event.target.value)} disabled={!canEdit} />
                                                         </label>
                                                     </div>
                                                 </div>
                                                 <div className={styles.bomItemPriceGroup}>
-                                                    <span className={styles.bomItemPrice}>{Number(selectedVariant.salePrice || 0).toLocaleString('vi-VN')}</span>
+                                                    <input 
+                                                        className={styles.bomItemQtyInput} 
+                                                        style={{ width: '110px', textAlign: 'right' }} 
+                                                        type="number" 
+                                                        min="0" 
+                                                        step="1" 
+                                                        value={line.unitPrice !== '' && line.unitPrice != null ? line.unitPrice : (selectedVariant?.salePrice || 0)} 
+                                                        onChange={(event) => setLineField(index, 'unitPrice', event.target.value)} 
+                                                        disabled={!canEdit} 
+                                                        title="Đơn giá" 
+                                                    /> <span style={{ fontSize: '0.85rem' }}>đ</span>
                                                     <span>x</span>
-                                                    <input className={styles.bomItemQtyInput} type="number" min="1" step="1" value={line.quantity} onChange={(event) => setLineField(index, 'quantity', event.target.value)} />
+                                                    <input className={styles.bomItemQtyInput} type="number" min="1" step="1" value={line.quantity} onChange={(event) => setLineField(index, 'quantity', event.target.value)} disabled={!canEdit} />
                                                     <span>=</span>
                                                     <span className={styles.bomItemTotal}>
-                                                        {(Number(selectedVariant.salePrice || 0) * Number(line.quantity || 0)).toLocaleString('vi-VN')}
+                                                        {(Number(line.unitPrice !== '' && line.unitPrice != null ? line.unitPrice : (selectedVariant?.salePrice || 0)) * Number(line.quantity || 0)).toLocaleString('vi-VN')}
                                                     </span>
                                                 </div>
-                                                <div className={styles.bomItemActions}>
-                                                    <button className={`${styles.bomActionBtn} ${styles.edit}`} type="button" title="Đổi linh kiện" onClick={() => setPickingLineIndex(index)}>
-                                                        <i className="bi bi-pencil-square"></i>
-                                                    </button>
-                                                    {!line.componentRole && (
-                                                        <button className={`${styles.bomActionBtn} ${styles.delete}`} type="button" title="Xóa" onClick={() => removeLine(index)}>
-                                                            <i className="bi bi-trash"></i>
+                                                {canEdit && (
+                                                    <div className={styles.bomItemActions}>
+                                                        <button className={`${styles.bomActionBtn} ${styles.edit}`} type="button" title="Đổi linh kiện" onClick={() => setPickingLineIndex(index)}>
+                                                            <i className="bi bi-pencil-square"></i>
                                                         </button>
-                                                    )}
-                                                </div>
+                                                        {!line.componentRole && (
+                                                            <button className={`${styles.bomActionBtn} ${styles.delete}`} type="button" title="Xóa" onClick={() => removeLine(index)}>
+                                                                <i className="bi bi-trash"></i>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         ) : (
                                             <div className={styles.bomEmptySlot} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '24px' }}>
@@ -373,14 +453,16 @@ function AssemblyBomFormPage() {
                                                         )}
                                                     </div>
                                                 )}
-                                                <button
-                                                    className={styles.chooseComponentBtn}
-                                                    type="button"
-                                                    onClick={() => setPickingLineIndex(index)}
-                                                >
-                                                    + Chọn linh kiện...
-                                                </button>
-                                                {!line.componentRole && (
+                                                {canEdit && (
+                                                    <button
+                                                        className={styles.chooseComponentBtn}
+                                                        type="button"
+                                                        onClick={() => setPickingLineIndex(index)}
+                                                    >
+                                                        + Chọn linh kiện...
+                                                    </button>
+                                                )}
+                                                {canEdit && !line.componentRole && (
                                                     <button className={styles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeLine(index)} style={{ position: 'absolute', right: '12px', top: '12px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>
                                                         <i className="bi bi-trash"></i>
                                                     </button>
@@ -391,20 +473,44 @@ function AssemblyBomFormPage() {
                                 );
                             })}
                             
-                            <div style={{ marginTop: 8 }}>
-                                <button className={styles.addBomLineBtn} type="button" onClick={addLine}>
-                                    <i className="bi bi-plus-circle"></i> Thêm linh kiện
-                                </button>
-                            </div>
+                            {canEdit && (
+                                <div style={{ marginTop: 8 }}>
+                                    <button className={styles.addBomLineBtn} type="button" onClick={addLine}>
+                                        <i className="bi bi-plus-circle"></i> Thêm linh kiện
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--color-border)' }}>
-                        <button className={styles.secondaryButton} type="button" onClick={() => navigate('/assembly-boms')}>Hủy</button>
-                        <button className={styles.primaryButton} type="button" onClick={saveBom} disabled={saving}>
-                            <i className="bi bi-save"></i>
-                            {saving ? 'Đang cất...' : 'Cất'}
-                        </button>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--color-border)' }}>
+                        <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-boms')}>{canEdit ? 'Hủy bỏ' : 'Đóng'}</button>
+                        
+                        <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
+                            <button className="btn-misa-cancel" style={{ border: '1px solid #10b981', color: '#10b981' }} type="button" onClick={handleExportExcel}>
+                                <i className="bi bi-file-earmark-excel"></i> Xuất Excel cấu hình
+                            </button>
+                            {canEdit && (
+                                <>
+                                    <button className="btn-misa-draft" type="button" onClick={() => saveBom('DRAFT')} disabled={saving}>
+                                        <i className="bi bi-save"></i> Lưu nháp
+                                    </button>
+                                    <button className="btn-misa-post" type="button" onClick={() => saveBom('APPROVED')} disabled={saving}>
+                                        <i className="bi bi-check-circle"></i>
+                                        {saving ? 'Đang lưu...' : 'Duyệt cấu hình (Lưu)'}
+                                    </button>
+                                </>
+                            )}
+                            {isApproved && (
+                                <button className="btn-misa-draft" style={{ backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }} type="button" onClick={() => {
+                                    if (window.confirm('Bạn có chắc chắn muốn ngừng sử dụng cấu hình này?')) {
+                                        saveBom('INACTIVE');
+                                    }
+                                }} disabled={saving}>
+                                    <i className="bi bi-x-circle"></i> Ngừng sử dụng
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -412,7 +518,7 @@ function AssemblyBomFormPage() {
                     <div className={styles.modalOverlay} style={{ zIndex: 1100 }}>
                         <div className={styles.modal} style={{ maxWidth: '800px', width: '90%' }}>
                             <div className={styles.modalHeader} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 24px', borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
-                                <button type="button" onClick={() => { setPickingLineIndex(null); setSearchVariantQuery(''); }} style={{ background: '#f3f4f6', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#4b5563', transition: 'all 0.2s' }} title="Quay lại danh sách BOM">
+                                <button type="button" onClick={() => { setPickingLineIndex(null); setSearchVariantQuery(''); }} style={{ background: '#f3f4f6', border: 'none', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#4b5563', transition: 'all 0.2s' }} title="Quay lại danh sách cấu hình">
                                     <i className="bi bi-arrow-left" style={{ fontSize: '18px' }}></i>
                                 </button>
                                 <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>Tìm kiếm & Chọn linh kiện</h2>
@@ -459,7 +565,7 @@ function AssemblyBomFormPage() {
                                                 </div>
                                                 <div className={styles.bomItemMeta}>
                                                     <span>Mã SP: <strong>{variant.sku}</strong></span>
-                                                    <span>Bảo hành: <strong>{variant.warrantyQty != null ? `${variant.warrantyQty} Tháng` : 'Không bảo hành'}</strong></span>
+                                                    <span>Bảo hành: <strong>{variant.warrantyMonths > 0 ? `${variant.warrantyMonths} Tháng` : 'Không bảo hành'}</strong></span>
                                                     <span className={styles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(variant.id).available) > 0 ? '#16a34a' : '#dc2626' }}>{Math.max(0, getStockInfo(variant.id).available).toLocaleString('vi-VN')}</strong></span>
                                                 </div>
                                                 <div className={styles.variantPickerPrice}>

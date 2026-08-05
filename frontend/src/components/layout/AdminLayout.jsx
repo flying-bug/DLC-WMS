@@ -141,7 +141,7 @@ const AdminLayout = ({ children }) => {
                         type="button"
                     >
                         <i className="fas fa-sitemap"></i>
-                        <span>Quản lý BOM</span>
+                        <span>Quản lý Cấu hình</span>
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/units') ? styles.active : ''}`}
@@ -250,7 +250,7 @@ const AdminLayout = ({ children }) => {
                             onClick={() => navigate('/assembly-boms')}
                             type="button"
                         >
-                            BOM
+                            Cấu hình
                         </button>
                         <button
                             className={`${styles.tab} ${currentPath.startsWith('/reports') ? styles.activeTab : ''}`}

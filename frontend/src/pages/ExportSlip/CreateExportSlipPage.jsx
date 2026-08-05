@@ -156,7 +156,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         variantId: String(comp.variantId || comp.id),
         quantity: comp.quantity || 1,
         price: comp.price || 0,
-        note: `BOM cho Lệnh ${assemblyData.code}`,
+        note: `Cấu hình cho Lệnh ${assemblyData.code}`,
       }));
     }
     if (stocktakeData && stocktakeData.lines && stocktakeData.lines.length > 0) {
@@ -349,7 +349,7 @@ function CreateExportSlipPage({ mode: propMode }) {
             variantId: String(comp.componentVariantId || comp.variantId || comp.id),
             quantity: comp.quantityNeeded || comp.quantityRequired || comp.quantity || 1,
             price: comp.price || 0,
-            note: `BOM cho Lắp ráp`,
+            note: `Cấu hình cho Lắp ráp`,
           }));
           setItems(loadedItems);
           showToast('success', `Đã tải ${loadedItems.length} linh kiện từ Lệnh lắp ráp ${order.orderCode}`);
