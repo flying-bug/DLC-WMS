@@ -8,6 +8,10 @@ import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import Toast from '../../components/ui/Toast/Toast';
+import { useToast } from '../../contexts/ToastContext';
+import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
+import { printTransferSlip } from '../../utils/printTransferSlip';
+import axiosClient from '../../api/axiosClient';
 import styles from './CreateTransferSlipPage.module.css';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -91,9 +95,9 @@ function CreateTransferSlipPage() {
   const [products, setProducts] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [toast, setToast] = useState({ isVisible: false, type: 'error', message: '' });
-  const showToast = (type, message) => setToast({ isVisible: true, type, message });
-  const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
+  const { showToast } = useToast();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [savedSlip, setSavedSlip] = useState(null);
   
   const [scanCode, setScanCode] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
@@ -169,9 +173,8 @@ function CreateTransferSlipPage() {
         }
       }
       if (productRes.status === 'fulfilled') {
-        const data = pageContent(unwrap(productRes.value));
-        setProducts(data);
-        setItems(prev => prev.map((item, index) => index === 0 && !item.variantId ? { ...item, variantId: data[0]?.id || '' } : item));
+        const prodData = pageContent(unwrap(productRes.value));
+        setProducts(prodData);
       }
     };
     loadLookups();
@@ -258,7 +261,7 @@ function CreateTransferSlipPage() {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, { ...emptyLine(), variantId: products[0]?.id || '' }]);
+    setItems(prev => [...prev, emptyLine()]);
   };
 
   const removeItem = (localId) => {
@@ -299,10 +302,11 @@ function CreateTransferSlipPage() {
           ...emptyLine(),
           variantId: scanResult.variantId,
           serialNumberId: scanResult.serialNumberId,
+          serialNumbers: scanResult.serialNumber ? [scanResult.serialNumber] : [scanResult.code],
           scannedCode: scanResult.serialNumber || scanResult.code,
           quantity: 1,
           price: scanResult.costPrice || 0,
-          note: scanResult.serialNumber ? `Serial: ${scanResult.serialNumber}` : '',
+          note: '',
         };
         const basePrev = prev.filter(item => Boolean(item.variantId));
         return [...basePrev, serialLine];
@@ -346,7 +350,7 @@ function CreateTransferSlipPage() {
       addScannedItem(unwrap(response));
       setScanCode('');
     } catch (err) {
-      setError(err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không tìm thấy mã vừa quét trong kho xuất');
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không tìm thấy mã vừa quét trong kho xuất');
     } finally {
       setScanLoading(false);
     }
@@ -359,6 +363,11 @@ function CreateTransferSlipPage() {
       toWarehouseId: Number(form.toWarehouseId),
       transferDate: form.transferDate,
       note: form.note,
+      deliverer: form.deliverer,
+      attachedDocument: form.attachedDocument,
+      referenceId: form.referenceId ? Number(form.referenceId) : undefined,
+      referenceType: form.referenceType,
+      referenceCode: form.referenceCode,
       lines: items.filter(isLineValid).map(item => ({
         variantId: Number(item.variantId),
         quantity: Number(item.quantity),
@@ -392,8 +401,30 @@ function CreateTransferSlipPage() {
     setSaving(true);
     try {
       payload.status = status;
-      await transferApi.createTransferSlip(payload);
-      navigate('/transfer-history');
+      const response = await transferApi.createTransferSlip(payload);
+      const created = unwrap(response);
+      const fullSlipData = {
+        ...created,
+        transferCode: created?.transferCode || form.transferCode,
+        transferDate: form.transferDate,
+        status: status,
+        lines: items.filter(isLineValid).map(item => ({
+          ...item,
+          quantity: Number(item.quantity),
+          unitCost: Number(item.price),
+          variantName: productById.get(String(item.variantId))?.variantName || productById.get(String(item.variantId))?.name,
+          sku: productById.get(String(item.variantId))?.sku,
+          unitName: productById.get(String(item.variantId))?.unitName,
+        })),
+        fromWarehouseId: form.fromWarehouseId,
+        toWarehouseId: form.toWarehouseId,
+        deliverer: form.deliverer,
+        note: form.note,
+        referenceCode: form.referenceCode,
+      };
+
+      setSavedSlip(fullSlipData);
+      setShowSuccessModal(true);
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không lưu được phiếu chuyển kho');
     } finally {
@@ -593,7 +624,7 @@ function CreateTransferSlipPage() {
                         <td>
                           <input type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={item.note} onChange={(e) => handleItemChange(item.localId, 'note', e.target.value)} />
                         </td>
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)}>
                             <i className="bi bi-trash"></i>
                           </button>
@@ -645,15 +676,48 @@ function CreateTransferSlipPage() {
       <ReferenceDocumentModal
         isOpen={showReferenceModal}
         onClose={() => setShowReferenceModal(false)}
-        onSelect={(doc) => {
-          setForm(prev => ({ ...prev, referenceType: doc.type, referenceId: doc.id, referenceCode: doc.code }));
+        onSelect={async (doc) => {
+          setForm(prev => ({ ...prev, referenceType: doc.referenceType, referenceId: doc.referenceId, referenceCode: doc.docCode }));
+          try {
+            let res;
+            if (doc.referenceType === 'IMPORT_SLIP') res = await axiosClient.get(`/imports/${doc.referenceId}`);
+            else if (doc.referenceType === 'EXPORT_SLIP') res = await axiosClient.get(`/exports/${doc.referenceId}`);
+            else if (doc.referenceType === 'STOCK_TRANSFER') res = await transferApi.getTransferDetail(doc.referenceId);
+            else if (doc.referenceType === 'STOCKTAKE') res = await axiosClient.get(`/stocktakes/${doc.referenceId}`);
+            
+            const detail = res?.data?.data || res?.data;
+            if (detail && detail.lines && detail.lines.length > 0) {
+              const newItems = detail.lines.map(line => ({
+                ...emptyLine(),
+                variantId: String(line.variantId || line.id),
+                quantity: line.quantity || line.quantityIn || line.quantityOut || line.actualQuantity || 1,
+                price: line.unitCost || line.unitPrice || line.price || 0,
+                isNew: false
+              }));
+              setItems(newItems);
+              showToast('success', 'Đã tải dữ liệu từ chứng từ tham chiếu.');
+            }
+          } catch (err) {
+            console.error('Error fetching reference document details', err);
+            showToast('error', 'Không thể lấy chi tiết chứng từ tham chiếu.');
+          }
         }}
       />
-      <Toast
-        isVisible={toast.isVisible}
-        type={toast.type}
-        message={toast.message}
-        onClose={hideToast}
+      <SuccessPrintModal
+        isOpen={showSuccessModal}
+        title={savedSlip?.status === 'POSTED' ? 'Lưu & ghi sổ phiếu chuyển kho thành công!' : 'Lưu tạm phiếu chuyển kho thành công!'}
+        message="Phiếu chuyển kho đã được ghi nhận vào hệ thống thành công. Bạn có thể in phiếu ngay bây giờ."
+        docCode={savedSlip?.transferCode || form.transferCode}
+        printBtnText="In phiếu chuyển kho"
+        onPrint={() => {
+          printTransferSlip(savedSlip || {}, {
+            warehouseById: new Map(warehouses.map(w => [String(w.id), w])),
+            productById,
+          });
+        }}
+        onViewList={() => navigate('/transfer-history')}
+        onCreateNew={() => window.location.reload()}
+        onClose={() => navigate('/transfer-history')}
       />
     </AdminLayout>
   );

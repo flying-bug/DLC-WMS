@@ -267,7 +267,7 @@ public class InventoryDocumentService {
                 }
             } else if (targetSerialId != null) {
                 SerialNumber snObj = serialNumberRepository.findById(targetSerialId)
-                        .orElseThrow(() -> new BusinessException("Khong tim thay serial can xuat"));
+                        .orElseThrow(() -> new BusinessException("Không tìm thấy serial cần xuất"));
                 serialsToExport.add(snObj);
             }
 
@@ -298,7 +298,7 @@ public class InventoryDocumentService {
             }
 
             if (balance == null) {
-                throw new BusinessException("Khong tim thay ton kho cho san pham " + line.getVariantId());
+                throw new BusinessException("Không tìm thấy tồn kho cho sản phẩm " + line.getVariantId());
             }
 
             if (balance.getQuantityOnHand().compareTo(qtyToExport) < 0) {
@@ -577,7 +577,7 @@ public class InventoryDocumentService {
     private ScanResolveResponse resolveVariantScan(String code) {
         ProductVariant variant = productVariantRepository.findByBarcode(code)
                 .or(() -> productVariantRepository.findBySku(code))
-                .orElseThrow(() -> new BusinessException("Khong tim thay SKU hoac serial cho ma: " + code));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy SKU hoặc serial cho mã: " + code));
         Product product = variant.getProduct();
         if (Boolean.TRUE.equals(product != null ? product.getTrackSerial() : null)) {
             throw new BusinessException("Sản phẩm quản lý serial, vui lòng quét serial của từng sản phẩm");
@@ -629,7 +629,7 @@ public class InventoryDocumentService {
                 .findByWarehouseVariantSerialForUpdate(doc.getWarehouseId(), line.getVariantId(), serial.getId(),
                         "GOOD")
                 .orElseThrow(
-                        () -> new BusinessException("Khong tim thay ton kho cho serial " + serial.getSerialNumber()));
+                        () -> new BusinessException("Không tìm thấy tồn kho cho serial " + serial.getSerialNumber()));
         if (serialBalance.getQuantityOnHand().compareTo(BigDecimal.ONE) < 0) {
             throw new BusinessException("Serial " + serial.getSerialNumber() + " không còn tồn kho");
         }
@@ -772,7 +772,7 @@ public class InventoryDocumentService {
             throw new BusinessException("ID phiếu xuất kho là bắt buộc");
         }
         return inventoryDocumentRepository.findExportByIdWithLines(id)
-                .orElseThrow(() -> new BusinessException("Khong tim thay phieu xuat kho"));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất kho"));
     }
 
     private InventoryDocument findImportOrThrow(Long id) {
@@ -780,7 +780,7 @@ public class InventoryDocumentService {
             throw new BusinessException("ID phiếu nhập kho là bắt buộc");
         }
         return inventoryDocumentRepository.findImportByIdWithLines(id)
-                .orElseThrow(() -> new BusinessException("Khong tim thay phieu nhap kho"));
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu nhập kho"));
     }
 
     private void validateCreateRequest(InventoryDocumentRequest req) {

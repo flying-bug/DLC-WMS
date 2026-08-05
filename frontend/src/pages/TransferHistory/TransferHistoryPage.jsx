@@ -3,10 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
+import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as transferApi from '../../api/stockTransferApi';
 import { exportToExcel } from '../../utils/excelExport';
+import { printTransferSlip } from '../../utils/printTransferSlip';
 import styles from './TransferHistoryPage.module.css';
 
 const DEFAULT_COLUMNS = {
@@ -48,13 +50,13 @@ function TransferHistoryPage() {
   const [slips, setSlips] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  
+
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
-  
+
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [filters, setFilters] = useState({ transferCode: location.state?.filterTransferCode || '', fromDate: '', toDate: '', status: '' });
@@ -191,139 +193,10 @@ function TransferHistoryPage() {
   };
 
   const handlePrintSlip = (slip) => {
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) {
-      showToast('error', 'Trình duyệt chặn cửa sổ popup. Vui lòng cho phép popup để in phiếu.');
-      return;
-    }
-
-    const escapeHtml = (unsafe) => {
-      if (!unsafe) return '';
-      return String(unsafe)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    };
-
-    const slipDate = formatDate(slip.transferDate);
-    const fromWarehouseName = warehouseById.get(slip.fromWarehouseId)?.name || 'Chưa rõ';
-    const toWarehouseName = warehouseById.get(slip.toWarehouseId)?.name || 'Chưa rõ';
-    const lines = slip.lines || [];
-
-    let rowsHtml = '';
-    lines.forEach((line, index) => {
-      const product = productById.get(line.variantId);
-      const name = variantLabel(product) || 'Chưa rõ';
-      const sku = product?.sku || `SKU #${line.variantId}`;
-      const unit = product?.unitName || '';
-      rowsHtml += `
-        <tr>
-          <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${index + 1}</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(sku)}</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(name)}</td>
-          <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${escapeHtml(unit)}</td>
-          <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${Number(line.quantity || 0).toLocaleString('vi-VN')}</td>
-          <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(line.note || '')}</td>
-        </tr>
-      `;
+    printTransferSlip(slip, {
+      warehouseById,
+      productById,
     });
-
-    const htmlContent = `
-      <html>
-        <head>
-          <title>In Phiếu Chuyển Kho</title>
-          <style>
-            body { font-family: 'Times New Roman', serif; margin: 20px; color: #000; }
-            .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .title { text-align: center; font-size: 22px; font-weight: bold; margin-top: 10px; margin-bottom: 5px; }
-            .subtitle { text-align: center; font-size: 14px; margin-bottom: 20px; font-style: italic; }
-            .info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 14px; }
-            .info-table td { padding: 4px; vertical-align: top; }
-            .main-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
-            .main-table th { border: 1px solid #000; padding: 8px; background-color: #f0f0f0; font-weight: bold; text-align: center; }
-            .signatures { width: 100%; margin-top: 40px; }
-            .signatures td { text-align: center; width: 33%; font-size: 14px; padding-top: 10px; }
-            .sign-space { height: 80px; }
-          </style>
-        </head>
-        <body>
-          <table class="header-table">
-            <tr>
-              <td style="width: 50%;">
-                <strong style="font-size: 16px;">DLC COMPUTER</strong><br/>
-                <span style="font-size: 12px; color: #666;">Hệ thống quản lý kho WMS</span>
-              </td>
-              <td style="width: 50%; text-align: right; font-size: 13px;">
-                Số phiếu: <strong>${escapeHtml(slip.transferCode)}</strong><br/>
-                Ngày lập: ${escapeHtml(slipDate)}
-              </td>
-            </tr>
-          </table>
-
-          <div class="title">PHIẾU CHUYỂN KHO</div>
-          <div class="subtitle">Liên 1: Lưu trữ - Liên 2: Bàn giao</div>
-
-          <table class="info-table">
-            <tr>
-              <td style="width: 15%;"><strong>Kho xuất:</strong></td>
-              <td style="width: 35%;">${escapeHtml(fromWarehouseName)}</td>
-              <td style="width: 15%;"><strong>Kho nhập:</strong></td>
-              <td style="width: 35%;">${escapeHtml(toWarehouseName)}</td>
-            </tr>
-            <tr>
-              <td><strong>Ghi chú:</strong></td>
-              <td colspan="3">${escapeHtml(slip.note || 'Không có')}</td>
-            </tr>
-          </table>
-
-          <table class="main-table">
-            <thead>
-              <tr>
-                <th style="width: 5%;">STT</th>
-                <th style="width: 15%;">Mã sản phẩm</th>
-                <th>Tên sản phẩm</th>
-                <th style="width: 10%;">ĐVT</th>
-                <th style="width: 15%;">Số lượng</th>
-                <th style="width: 20%;">Ghi chú</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rowsHtml}
-              <tr>
-                <td colspan="4" style="text-align: right; border: 1px solid #000; padding: 8px; font-weight: bold;">Tổng cộng:</td>
-                <td style="text-align: center; border: 1px solid #000; padding: 8px; font-weight: bold;">${sumQuantity(slip.lines).toLocaleString('vi-VN')}</td>
-                <td style="border: 1px solid #000; padding: 8px;"></td>
-              </tr>
-            </tbody>
-          </table>
-
-          <table class="signatures">
-            <tr>
-              <td><strong>Người lập phiếu</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, ghi rõ họ tên)</span></td>
-              <td><strong>Thủ kho xuất</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, đóng dấu)</span></td>
-              <td><strong>Thủ kho nhập</strong><br/><span style="font-size: 12px; font-style: italic;">(Ký, đóng dấu)</span></td>
-            </tr>
-            <tr class="sign-space">
-              <td></td>
-              <td></td>
-              <td></td>
-            </tr>
-          </table>
-
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            }
-          </script>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
   };
 
   return (
@@ -337,49 +210,35 @@ function TransferHistoryPage() {
         </div>
 
         <div className={styles.filterSection}>
-          <div className={styles.filterGroup}>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌM KIẾM</span>
+          <div className={styles.searchAndPopover}>
+            <div className={styles.searchBox}>
+              <i className="bi bi-search"></i>
               <input
                 type="text"
-                className={styles.filterInput}
-                placeholder="Mã phiếu..."
+                className={styles.searchInput}
+                placeholder="Nhập từ khóa tìm kiếm mã phiếu..."
                 value={filters.transferCode}
-                onChange={(e) => setFilters(prev => ({ ...prev, transferCode: e.target.value }))}
+                onChange={(event) => setFilters(prev => ({ ...prev, transferCode: event.target.value }))}
                 onKeyDown={(e) => { if (e.key === 'Enter') { setCurrentPage(1); loadSlips(); } }}
               />
+              {filters.transferCode && (
+                <button className={styles.clearSearchBtn} onClick={() => { setFilters(prev => ({ ...prev, transferCode: '' })); setCurrentPage(1); setTimeout(loadSlips, 0); }}>
+                  <i className="bi bi-x-circle-fill"></i>
+                </button>
+              )}
             </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TỪ NGÀY</span>
-              <input
-                type="date"
-                className={styles.filterInput}
-                value={filters.fromDate}
-                onChange={(e) => { setFilters(prev => ({ ...prev, fromDate: e.target.value })); setCurrentPage(1); }}
-              />
-            </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>ĐẾN NGÀY</span>
-              <input
-                type="date"
-                className={styles.filterInput}
-                value={filters.toDate}
-                onChange={(e) => { setFilters(prev => ({ ...prev, toDate: e.target.value })); setCurrentPage(1); }}
-              />
-            </div>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌNH TRẠNG</span>
-              <select
-                className={styles.filterSelect}
-                value={filters.status}
-                onChange={(e) => { setFilters(prev => ({ ...prev, status: e.target.value })); setCurrentPage(1); }}
-              >
-                <option value="">Tất cả</option>
-                <option value="DRAFT">Lưu tạm</option>
-                <option value="POSTED">Hoàn thành</option>
-              </select>
-            </div>
+
+            <FilterPopover
+              filters={filters}
+              onApply={(newFilters) => { setFilters(newFilters); setCurrentPage(1); setTimeout(loadSlips, 0); }}
+              onReset={() => { setFilters({ transferCode: '', fromDate: '', toDate: '', status: '' }); setCurrentPage(1); setTimeout(loadSlips, 0); }}
+              statusOptions={[
+                { value: 'DRAFT', label: 'Lưu tạm' },
+                { value: 'POSTED', label: 'Hoàn thành' },
+              ]}
+            />
           </div>
+
           <div className={styles.filterActions}>
             <button
               className={styles.iconBtn}
@@ -390,20 +249,17 @@ function TransferHistoryPage() {
             </button>
             <button
               className={styles.iconBtn}
-              onClick={() => setShowSettingsModal(true)}
-              title="Cấu hình hiển thị cột"
-            >
-              <i className="bi bi-gear"></i>
-            </button>
-            <button
-              className={styles.iconBtn}
               onClick={handleExport}
               title="Xuất tệp Excel"
             >
               <i className="bi bi-file-earmark-excel"></i>
             </button>
-            <button className={styles.btnPrimary} onClick={() => { setCurrentPage(1); loadSlips(); }}>
-              <i className="bi bi-funnel"></i> Lọc dữ liệu
+            <button
+              className={styles.iconBtn}
+              onClick={() => setShowSettingsModal(true)}
+              title="Cấu hình hiển thị cột"
+            >
+              <i className="bi bi-gear"></i>
             </button>
           </div>
         </div>
@@ -479,31 +335,35 @@ function TransferHistoryPage() {
                       {columns.quantity && <td className={styles.textCenter}>{slip.quantity.toLocaleString('vi-VN')}</td>}
                       {columns.status && (
                         <td>
-                          <span className={`${styles.badge} ${
-                            slip.statusCode === 'success' ? styles.badgeSuccess :
-                            slip.statusCode === 'info' ? styles.badgeInfo :
-                            slip.statusCode === 'warning' ? styles.badgeWarning :
-                            styles.badgeDanger
-                          }`}>
+                          <span className={`${styles.badge} ${slip.statusCode === 'success' ? styles.badgeSuccess :
+                              slip.statusCode === 'info' ? styles.badgeInfo :
+                                slip.statusCode === 'warning' ? styles.badgeWarning :
+                                  styles.badgeDanger
+                            }`}>
                             {slip.statusLabel}
                           </span>
                         </td>
                       )}
                       <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
-                        <i 
-                          className="bi bi-eye" 
-                          style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} 
-                          title="Xem chi tiết" 
+                        <i
+                          className="bi bi-eye"
+                          style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }}
+                          title="Xem chi tiết"
                           onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}
                         ></i>
-                        {(slip.status === 'DRAFT' || slip.status === 'SUBMITTED') && (
-                          <i 
-                            className="bi bi-pencil" 
-                            style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} 
-                            title="Chỉnh sửa" 
-                            onClick={(e) => { e.stopPropagation(); navigate(`/transfer-history/${slip.id}/edit`); }}
-                          ></i>
-                        )}
+                        <i
+                          className="bi bi-pencil"
+                          style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }}
+                          title="Chỉnh sửa"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (slip.status === 'DRAFT' || slip.status === 'SUBMITTED') {
+                              navigate(`/transfer-history/${slip.id}/edit`);
+                            } else {
+                              showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm.');
+                            }
+                          }}
+                        ></i>
                       </td>
                     </tr>
                   ))
@@ -695,9 +555,9 @@ function TransferHistoryPage() {
           </Modal>
         )}
       </div>
-      
+
       {toast.isVisible && (
-        <Toast 
+        <Toast
           type={toast.type}
           message={toast.message}
           onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}

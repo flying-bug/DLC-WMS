@@ -34,7 +34,7 @@ function readTriple(number, hasBorder) {
 
 export function numberToVietnameseWords(n) {
   let num = Math.floor(Math.abs(Number(n) || 0));
-  if (num === 0) return "Không đồng.";
+  if (num === 0) return "Không đồng";
 
   const units = ["", "nghìn", "triệu", "tỷ", "nghìn tỷ", "triệu tỷ"];
   let str = "";
@@ -51,8 +51,8 @@ export function numberToVietnameseWords(n) {
   }
 
   str = str.trim().replace(/\s+/g, ' ');
-  if (!str) return "Không đồng.";
+  if (!str) return "Không đồng";
 
   // Capitalize first letter
-  return str.charAt(0).toUpperCase() + str.slice(1) + " đồng.";
+  return str.charAt(0).toUpperCase() + str.slice(1) + " đồng";
 }
