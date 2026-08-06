@@ -9,32 +9,29 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Data
-public class SalesOrderRequest {
+public class PurchaseOrderRequest {
 
-    @NotNull(message = "Khách hàng không được để trống")
+    @NotNull(message = "Nhà cung cấp không được để trống")
     private Long partnerId;
 
-    @NotNull(message = "Kho không được để trống")
-    private Long warehouseId;
-
-    private String soCode;
+    private String poCode;
 
     @NotNull(message = "Ngày đặt hàng không được để trống")
-    private LocalDate soDate;
+    private LocalDate poDate;
 
     private LocalDate paymentDueDate;
 
-    private String deliveryAddress;
+    private LocalDate expectedDeliveryDate;
 
     private String note;
 
     @NotNull
     @NotEmpty(message = "Đơn hàng phải có ít nhất 1 dòng sản phẩm")
     @Valid
-    private List<SalesOrderLineRequest> lines;
+    private List<PurchaseOrderLineRequest> lines;
 
     @Data
-    public static class SalesOrderLineRequest {
+    public static class PurchaseOrderLineRequest {
 
         @NotNull(message = "Sản phẩm không được để trống")
         private Long variantId;
@@ -47,9 +44,7 @@ public class SalesOrderRequest {
         @DecimalMin(value = "0.0000", message = "Đơn giá không được âm")
         private BigDecimal unitPrice;
 
-        private BigDecimal vatRate;
-
-        private Integer warrantyMonths;
+        private BigDecimal vatRate; // % thuế VAT, mặc định 0
 
         private String note;
     }

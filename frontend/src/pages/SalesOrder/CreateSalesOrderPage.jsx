@@ -190,7 +190,11 @@ function CreateSalesOrderPage() {
 
     for (let i = 0; i < lines.length; i++) {
       if (!lines[i].variantId) { showToast('error', `Dòng ${i + 1}: chưa chọn sản phẩm`); return false; }
-      if (Number(lines[i].quantity) <= 0) { showToast('error', `Dòng ${i + 1}: số lượng phải > 0`); return false; }
+      const qty = Number(lines[i].quantity);
+      if (!Number.isInteger(qty) || qty <= 0) {
+        showToast('error', `Dòng ${i + 1}: số lượng phải là số nguyên lớn hơn 0`);
+        return false;
+      }
     }
     return true;
   };
@@ -460,7 +464,7 @@ function CreateSalesOrderPage() {
                           <td>
                             <input
                               type="number"
-                              min="0.0001"
+                              min="1"
                               step="1"
                               className={styles.lineInput}
                               value={line.quantity}

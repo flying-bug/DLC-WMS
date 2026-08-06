@@ -48,6 +48,9 @@ import CreateSalesOrderPage from '../pages/SalesOrder/CreateSalesOrderPage';
 import SalesOrderDetailPage from '../pages/SalesOrder/SalesOrderDetailPage';
 import PublicQuotePage from '../pages/PublicQuote/PublicQuotePage';
 import PublicRepairQuotePage from '../pages/PublicQuote/PublicRepairQuotePage';
+import PurchaseOrderListPage from '../pages/PurchaseOrder/PurchaseOrderListPage';
+import CreatePurchaseOrderPage from '../pages/PurchaseOrder/CreatePurchaseOrderPage';
+import PurchaseOrderDetailPage from '../pages/PurchaseOrder/PurchaseOrderDetailPage';
 
 // Helper to check valid token
 const isValidToken = () => {
@@ -148,6 +151,10 @@ function AppRouter() {
                     <Route path="/sales-orders/create" element={<CreateSalesOrderPage />} />
                     <Route path="/sales-orders/:id" element={<SalesOrderDetailPage />} />
                     <Route path="/sales-orders/:id/edit" element={<CreateSalesOrderPage />} />
+                    <Route path="/purchase-orders" element={<PurchaseOrderListPage />} />
+                    <Route path="/purchase-orders/create" element={<CreatePurchaseOrderPage />} />
+                    <Route path="/purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
+                    <Route path="/purchase-orders/:id/edit" element={<CreatePurchaseOrderPage />} />
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}

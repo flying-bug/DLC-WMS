@@ -101,9 +101,10 @@ function CreateImportSlipPage() {
   const voiceData = location.state?.voiceData || null;
   const assemblyData = location.state?.assemblyData || null;
   const stocktakeData = location.state?.stocktakeData || null;
+  const poData = location.state?.poData || null;
   const returnUrl = location.state?.returnUrl || null;
   const searchParams = new URLSearchParams(location.search);
-  const initialType = searchParams.get('type')?.toUpperCase() || (stocktakeData ? 'OTHER' : 'PURCHASE');
+  const initialType = searchParams.get('type')?.toUpperCase() || (stocktakeData ? 'OTHER' : (poData ? 'PURCHASE' : 'PURCHASE'));
 
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -120,22 +121,34 @@ function CreateImportSlipPage() {
   const [form, setForm] = useState(() => ({
     docCode: '',
     warehouseId: assemblyData?.warehouseId || stocktakeData?.warehouseId || '',
-    partnerId: '',
-    partnerName: '',
+    partnerId: poData?.partnerId || '',
+    partnerName: poData?.partnerName || '',
     customerId: '',
     customerName: '',
     assemblyOrderId: assemblyData?.id || '',
     deliverer: '',
     purchaser: '',
-    attachedDoc: '',
+    attachedDoc: poData ? `PO: ${poData.poCode}` : '',
     docDate: today(),
-    note: assemblyData ? `Nhập thành phẩm phục vụ Lệnh lắp ráp/tháo dỡ ${assemblyData.code}` : stocktakeData ? stocktakeData.reason : '',
+    note: assemblyData ? `Nhập thành phẩm phục vụ Lệnh lắp ráp/tháo dỡ ${assemblyData.code}` : stocktakeData ? stocktakeData.reason : (poData ? `Nhập hàng cho Đơn mua hàng ${poData.poCode}` : ''),
     status: 'DRAFT',
-    referenceType: assemblyData ? 'ASSEMBLY_ORDER' : stocktakeData ? 'STOCKTAKE' : '',
-    referenceId: assemblyData ? assemblyData.id : stocktakeData ? stocktakeData.id : '',
-    referenceCode: assemblyData ? assemblyData.code : stocktakeData ? stocktakeData.code : '',
+    referenceType: assemblyData ? 'ASSEMBLY_ORDER' : stocktakeData ? 'STOCKTAKE' : (poData ? 'PURCHASE_ORDER' : ''),
+    referenceId: assemblyData ? assemblyData.id : stocktakeData ? stocktakeData.id : (poData ? poData.id : ''),
+    referenceCode: assemblyData ? assemblyData.code : stocktakeData ? stocktakeData.code : (poData ? poData.poCode : ''),
+    purchaseOrderId: poData ? poData.id : '',
   }));
   const [items, setItems] = useState(() => {
+    if (poData && poData.lines && poData.lines.length > 0) {
+      return poData.lines.map(line => ({
+        ...emptyLine(),
+        variantId: String(line.variantId),
+        quantity: Number(line.quantity) || 1,
+        price: Number(line.unitPrice) || 0,
+        vatPercent: Number(line.vatRate) || 0,
+        note: line.note || '',
+        isNew: false
+      }));
+    }
     if (assemblyData && assemblyData.lines && assemblyData.lines.length > 0) {
       return assemblyData.lines.map(comp => ({
         ...emptyLine(),
@@ -378,7 +391,8 @@ function CreateImportSlipPage() {
     recipientName: importType === 'OTHER' ? form.otherObjectName : form.deliverer,
     salespersonId: (!isNaN(Number(form.purchaser)) && String(form.purchaser).trim() !== '') ? Number(form.purchaser) : null,
     referenceType: (importType === 'PRODUCTION' || importType === 'SCRAP') && form.assemblyOrderId ? 'ASSEMBLY_ORDER' : (form.referenceType || undefined),
-    referenceId: (importType === 'PRODUCTION' || importType === 'SCRAP') && form.assemblyOrderId ? Number(form.assemblyOrderId) : (form.referenceId || undefined),
+    referenceId: (importType === 'PRODUCTION' || importType === 'SCRAP') && form.assemblyOrderId ? Number(form.assemblyOrderId) : (form.referenceId ? Number(form.referenceId) : undefined),
+    purchaseOrderId: form.purchaseOrderId ? Number(form.purchaseOrderId) : undefined,
   });
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
