@@ -181,6 +181,16 @@
 }
 .btnEdit:hover { background: #eff6ff; }
 
+.btnPrimary {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 8px 16px; border-radius: 7px;
+  border: none; background: #6366f1; color: #fff;
+  font-size: 13px; cursor: pointer; font-weight: 600;
+  box-shadow: 0 1px 3px rgba(99,102,241,.3);
+  transition: all 0.15s;
+}
+.btnPrimary:hover { background: #4f46e5; }
+
 .btnApprove {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 8px 16px; border-radius: 7px;

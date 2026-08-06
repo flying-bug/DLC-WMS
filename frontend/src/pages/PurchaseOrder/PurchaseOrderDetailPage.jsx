@@ -4,9 +4,11 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as poApi from '../../api/purchaseOrderApi';
+import * as importApi from '../../api/inventoryImportApi';
 import styles from './PurchaseOrderDetailPage.module.css';
 
 const unwrap      = (res) => res?.data?.data ?? res?.data;
+const pageContent = (payload) => payload?.content ?? payload ?? [];
 const money       = (v)   => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
 const fmtDate     = (v)   => (v ? new Date(v).toLocaleDateString('vi-VN') : '—');
 const fmtDateTime = (v)   => (v ? new Date(v).toLocaleString('vi-VN') : '—');
@@ -29,6 +31,7 @@ function PurchaseOrderDetailPage() {
   const { id }   = useParams();
 
   const [po,              setPo]              = useState(null);
+  const [importSlips,     setImportSlips]     = useState([]);
   const [loading,         setLoading]         = useState(true);
   const [toast,           setToast]           = useState({ isVisible: false, type: 'info', message: '' });
   const [confirmApprove,  setConfirmApprove]  = useState(false);
@@ -52,7 +55,16 @@ function PurchaseOrderDetailPage() {
     }
   };
 
-  useEffect(() => { loadPo(); }, [id]);
+  const loadImportSlips = async () => {
+    try {
+      const res = await importApi.getImportHistory({ referenceType: 'PURCHASE_ORDER', referenceId: id });
+      setImportSlips(pageContent(unwrap(res)));
+    } catch (err) {
+      console.error('Failed to load import slips', err);
+    }
+  };
+
+  useEffect(() => { loadPo(); loadImportSlips(); }, [id]);
 
   const handleApprove = async () => {
     setConfirmApprove(false);
@@ -146,6 +158,11 @@ function PurchaseOrderDetailPage() {
             {po.status === 'DRAFT' && (
               <button className={styles.btnApprove} onClick={() => setConfirmApprove(true)}>
                 <i className="bi bi-check2-circle" /> Duyệt đơn
+              </button>
+            )}
+            {(po.status === 'APPROVED' || po.status === 'POSTED') && (
+              <button className={styles.btnPrimary} onClick={() => navigate('/import-history/create', { state: { poData: po } })}>
+                <i className="bi bi-box-seam" /> Tạo phiếu nhập
               </button>
             )}
             {(po.status === 'APPROVED' || po.status === 'POSTED') && po.paymentStatus !== 'PAID' && (
@@ -345,6 +362,54 @@ function PurchaseOrderDetailPage() {
             </table>
           </div>
         </div>
+        
+        {/* ── Linked Import Slips ── */}
+        {(po.status === 'APPROVED' || po.status === 'POSTED') && (
+          <div className={styles.card} style={{ marginTop: 20 }}>
+            <div className={styles.cardTitle}>
+              <i className="bi bi-box-arrow-in-down" /> Các phiếu nhập kho liên kết
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table className={styles.linesTable}>
+                <thead>
+                  <tr>
+                    <th>Mã phiếu nhập</th>
+                    <th>Ngày nhập</th>
+                    <th>Kho</th>
+                    <th>Người tạo</th>
+                    <th>Ghi chú</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importSlips.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: 24, color: '#94a3b8' }}>
+                        Chưa có phiếu nhập kho nào được tạo cho đơn hàng này
+                      </td>
+                    </tr>
+                  ) : (
+                    importSlips.map((slip) => (
+                      <tr key={slip.id}>
+                        <td>
+                          <span 
+                            style={{ fontWeight: 600, color: '#2563eb', cursor: 'pointer' }}
+                            onClick={() => navigate(`/import-history`)} // ideally go to detail page if available
+                          >
+                            {slip.docCode}
+                          </span>
+                        </td>
+                        <td>{fmtDateTime(slip.createdAt)}</td>
+                        <td>{slip.warehouseName || '—'}</td>
+                        <td>{slip.createdByName || `#${slip.createdBy}`}</td>
+                        <td style={{ color: '#64748b' }}>{slip.note || '—'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Payment Modal ── */}

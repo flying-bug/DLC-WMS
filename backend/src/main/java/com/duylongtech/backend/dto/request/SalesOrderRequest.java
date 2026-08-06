@@ -40,7 +40,7 @@ public class SalesOrderRequest {
         private Long variantId;
 
         @NotNull
-        @DecimalMin(value = "0.0001", message = "Số lượng phải lớn hơn 0")
+        @DecimalMin(value = "1", message = "Số lượng phải là số nguyên lớn hơn 0")
         private BigDecimal quantity;
 
         @NotNull
