@@ -65,8 +65,8 @@ public class PaymentServiceImpl implements PaymentService {
         PaymentTransaction saved = paymentTransactionRepository.save(transaction);
 
         String ledgerRefType = type.equals("RECEIPT") ? "PAYMENT_RECEIPT" : "PAYMENT_VOUCHER";
-        BigDecimal amountIn = type.equals("RECEIPT") ? BigDecimal.ZERO : request.getAmount();
-        BigDecimal amountOut = type.equals("RECEIPT") ? request.getAmount() : BigDecimal.ZERO;
+        BigDecimal amountIn = BigDecimal.ZERO;
+        BigDecimal amountOut = request.getAmount();
         
         String defaultNote = (type.equals("RECEIPT") ? "Lập phiếu thu tiền " : "Lập phiếu chi tiền ") + saved.getTransactionCode();
 

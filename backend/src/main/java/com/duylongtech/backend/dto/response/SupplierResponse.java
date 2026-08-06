@@ -58,4 +58,7 @@ public class SupplierResponse {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    /** Tổng nợ hiện tại. */
+    private BigDecimal currentDebt;
 }

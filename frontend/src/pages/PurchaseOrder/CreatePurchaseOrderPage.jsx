@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
+import SupplierModal from '../Supplier/components/SupplierModal';
 import * as poApi from '../../api/purchaseOrderApi';
 import styles from './CreatePurchaseOrderPage.module.css';
 
@@ -40,7 +41,8 @@ function CreatePurchaseOrderPage() {
 
   const [suppliers, setSuppliers] = useState([]);
   const [variants,  setVariants]  = useState([]);
-  const [loading,   setLoading]   = useState(false);
+  const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [saving,    setSaving]    = useState(false);
   const [toast,     setToast]     = useState({ isVisible: false, type: 'info', message: '' });
 
@@ -241,15 +243,22 @@ function CreatePurchaseOrderPage() {
 
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Nhà cung cấp <span className={styles.required}>*</span></label>
-                    <Select
-                      options={supplierOptions}
-                      value={supplierOptions.find(o => o.value === form.partnerId) || null}
-                      onChange={opt => setForm(p => ({ ...p, partnerId: opt?.value || null }))}
-                      placeholder="Chọn nhà cung cấp..."
-                      isClearable
-                      styles={customSelectStyles}
-                      menuPortalTarget={document.body}
-                    />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ flex: 1 }}>
+                        <Select
+                          options={supplierOptions}
+                          value={supplierOptions.find(o => o.value === form.partnerId) || null}
+                          onChange={opt => setForm(p => ({ ...p, partnerId: opt?.value || null }))}
+                          placeholder="Chọn nhà cung cấp..."
+                          isClearable
+                          styles={customSelectStyles}
+                          menuPortalTarget={document.body}
+                        />
+                      </div>
+                      <button type="button" onClick={() => setShowSupplierModal(true)} style={{ width: '38px', height: '38px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary)' }}></i>
+                      </button>
+                    </div>
                   </div>
 
                   <div className={styles.fieldRow}>
@@ -484,6 +493,16 @@ function CreatePurchaseOrderPage() {
         )}
       </div>
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
+
+      <SupplierModal 
+        isOpen={showSupplierModal}
+        onClose={() => setShowSupplierModal(false)}
+        onSuccess={(newSupplier) => {
+          setSuppliers(prev => [newSupplier, ...prev]);
+          setForm(prev => ({ ...prev, partnerId: newSupplier.id }));
+          setShowSupplierModal(false);
+        }}
+      />
     </AdminLayout>
   );
 }

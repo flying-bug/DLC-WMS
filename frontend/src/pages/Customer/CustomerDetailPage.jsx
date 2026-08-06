@@ -248,14 +248,9 @@ const CustomerDetailPage = () => {
                             <h2 className={styles.detailTitle}>Tổng quan tài chính</h2>
                         </div>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 24px 24px 24px' }}>
-                            <div style={{ marginBottom: '16px' }}>
-                                <div className={styles.detailLabel} style={{ marginBottom: '8px' }}>Tổng tiền khách đã trả</div>
-                                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-primary)' }}>{formatCurrency(receiptData.totalPaid)} ₫</h2>
-                            </div>
-                            <div style={{ borderTop: '1px solid var(--color-border)', margin: '16px 0' }}></div>
                             <div>
                                 <div className={styles.detailLabel} style={{ marginBottom: '8px' }}>Dư nợ hiện tại</div>
-                                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-danger)' }}>{formatCurrency(receiptData.currentDebt || 0)} ₫</h2>
+                                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-danger)' }}>{formatCurrency(customer?.currentDebt || 0)} ₫</h2>
                             </div>
                         </div>
                     </div>

@@ -6,7 +6,10 @@ import com.duylongtech.backend.dto.response.SupplierResponse;
 import com.duylongtech.backend.entity.Partner;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.PartnerRepository;
+import com.duylongtech.backend.repository.PartnerLedgerRepository;
+import com.duylongtech.backend.entity.PartnerLedger;
 import lombok.RequiredArgsConstructor;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +53,7 @@ public class SupplierService {
     private final PartnerRepository partnerRepository;
     private final AuditLogService   auditLogService;
     private final CodeGeneratorService codeGeneratorService;
+    private final PartnerLedgerRepository partnerLedgerRepository;
 
     // ─────────────────────────────────────────────────────────────────────────
     // READ
@@ -336,6 +340,12 @@ public class SupplierService {
      * Map Partner entity → SupplierResponse DTO.
      */
     private SupplierResponse toResponse(Partner partner) {
+        BigDecimal currentDebt = BigDecimal.ZERO;
+        Optional<PartnerLedger> latestLedger = partnerLedgerRepository.findTopByPartnerIdOrderByIdDesc(partner.getId());
+        if (latestLedger.isPresent()) {
+            currentDebt = latestLedger.get().getBalanceAfter();
+        }
+
         return SupplierResponse.builder()
                 .id(partner.getId())
                 .code(partner.getCode())
@@ -352,6 +362,7 @@ public class SupplierService {
                 .bankBeneficiaryName(partner.getBankBeneficiaryName())
                 .creditLimit(partner.getCreditLimit())
                 .paymentTermDays(partner.getPaymentTermDays())
+                .currentDebt(currentDebt)
                 .createdAt(partner.getCreatedAt())
                 .updatedAt(partner.getUpdatedAt())
                 .build();

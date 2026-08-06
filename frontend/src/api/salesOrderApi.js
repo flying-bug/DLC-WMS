@@ -26,6 +26,9 @@ export const cancelSalesOrder = (id) =>
 export const recordPayment = (id, amount) =>
   axiosClient.post(`${BASE}/${id}/payments`, { amount });
 
+export const sendQuoteEmail = (id, data) =>
+  axiosClient.post(`${BASE}/${id}/send-quote-email`, data);
+
 // Tạo draft phiếu xuất kho từ SO đã duyệt
 export const createExportFromSO = (soId) =>
   axiosClient.post(`/exports/from-sales-order/${soId}`);

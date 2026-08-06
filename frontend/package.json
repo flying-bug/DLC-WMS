@@ -24,6 +24,7 @@
     "react-router-dom": "^7.17.0",
     "react-select": "^5.10.2",
     "react-to-print": "^3.3.0",
+    "sweetalert2": "^11.26.25",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

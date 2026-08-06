@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @RestController
@@ -76,9 +77,12 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String partnerType) {
-        // Default to start of month and end of month if null
         if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        if (endDate == null) endDate = LocalDate.now().plusDays(1).atStartOfDay();
+        if (endDate == null) {
+            endDate = LocalDate.now().atTime(23, 59, 59);
+        } else if (endDate.toLocalTime().equals(LocalTime.MIDNIGHT)) {
+            endDate = endDate.with(LocalTime.MAX);
+        }
 
         return ResponseEntity.ok(ApiResponse.<List<DebtReportResponse>>builder()
                 .success(true)

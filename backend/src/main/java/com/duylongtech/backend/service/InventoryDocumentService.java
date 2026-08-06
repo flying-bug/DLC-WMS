@@ -35,6 +35,7 @@ import com.duylongtech.backend.entity.SalesOrderLine;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
 import com.duylongtech.backend.repository.StocktakeRepository;
 import com.duylongtech.backend.repository.RepairRepository;
+import com.duylongtech.backend.repository.PurchaseOrderRepository;
 import com.duylongtech.backend.entity.Stocktake;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -100,6 +101,7 @@ public class InventoryDocumentService {
     private final StocktakeRepository stocktakeRepository;
     private final SalesOrderRepository salesOrderRepository;
     private final RepairRepository repairRepository;
+    private final PurchaseOrderRepository purchaseOrderRepository;
     private final SalesOrderService salesOrderService;
 
     @Transactional(readOnly = true)
@@ -466,22 +468,26 @@ public class InventoryDocumentService {
         InventoryDocument savedImport = inventoryDocumentRepository.save(savedDoc);
         syncStocktakeReference(savedImport);
 
-        // Ghi nhận tăng công nợ nhà cung cấp khi nhập kho
+        // Ghi nhận tăng công nợ nhà cung cấp khi nhập kho (nếu không phải nhập từ Đơn mua hàng đã ghi nợ)
         if (savedImport.getPartnerId() != null) {
-            BigDecimal totalImportValue = savedImport.getLines().stream()
-                    .map(l -> (l.getQuantityIn() != null ? l.getQuantityIn() : BigDecimal.ZERO)
-                            .multiply(l.getUnitCost() != null ? l.getUnitCost() : BigDecimal.ZERO))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            boolean isRefPO = (savedImport.getReferenceType() != null && ("PURCHASE_ORDER".equalsIgnoreCase(savedImport.getReferenceType()) || "PO".equalsIgnoreCase(savedImport.getReferenceType())))
+                    || savedImport.getPurchaseOrderId() != null;
+            if (!isRefPO) {
+                BigDecimal totalImportValue = savedImport.getLines().stream()
+                        .map(l -> (l.getQuantityIn() != null ? l.getQuantityIn() : BigDecimal.ZERO)
+                                .multiply(l.getUnitCost() != null ? l.getUnitCost() : BigDecimal.ZERO))
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            partnerLedgerService.recordLedger(
-                    savedImport.getPartnerId(),
-                    "INVENTORY_IMPORT",
-                    savedImport.getId(),
-                    savedImport.getDocCode(),
-                    totalImportValue,
-                    BigDecimal.ZERO,
-                    "Ghi nhận công nợ phiếu nhập kho " + savedImport.getDocCode()
-            );
+                partnerLedgerService.recordLedger(
+                        savedImport.getPartnerId(),
+                        "INVENTORY_IMPORT",
+                        savedImport.getId(),
+                        savedImport.getDocCode(),
+                        totalImportValue,
+                        BigDecimal.ZERO,
+                        "Ghi nhận công nợ phiếu nhập kho " + savedImport.getDocCode()
+                );
+            }
         }
 
         return toResponse(savedImport);
@@ -1281,18 +1287,25 @@ public class InventoryDocumentService {
         }
 
         if (doc.getReferenceType() != null && doc.getReferenceId() != null) {
-            if ("ASSEMBLY_ORDER".equals(doc.getReferenceType())) {
+            String refType = doc.getReferenceType().trim().toUpperCase();
+            if ("ASSEMBLY_ORDER".equals(refType)) {
                 assemblyOrderRepository.findById(doc.getReferenceId())
                         .ifPresent(order -> r.setReferenceCode(order.getOrderCode()));
-            } else if ("BOM".equals(doc.getReferenceType())) {
+            } else if ("BOM".equals(refType)) {
                 assemblyBomRepository.findById(doc.getReferenceId())
                         .ifPresent(bom -> r.setReferenceCode(bom.getBomCode()));
-            } else if ("SALES_ORDER".equals(doc.getReferenceType())) {
+            } else if ("SALES_ORDER".equals(refType) || "SO".equals(refType)) {
                 salesOrderRepository.findById(doc.getReferenceId())
                         .ifPresent(so -> r.setReferenceCode(so.getSoCode()));
-            } else if ("REPAIR".equals(doc.getReferenceType())) {
+            } else if ("REPAIR".equals(refType)) {
                 repairRepository.findById(doc.getReferenceId())
                         .ifPresent(repair -> r.setReferenceCode(repair.getRepairCode()));
+            } else if ("STOCKTAKE".equals(refType) || "STOCK_TAKE".equals(refType) || "STOCKTAKE_ADJUSTMENT".equals(refType)) {
+                stocktakeRepository.findById(doc.getReferenceId())
+                        .ifPresent(st -> r.setReferenceCode(st.getStocktakeCode()));
+            } else if ("PURCHASE_ORDER".equals(refType) || "PO".equals(refType)) {
+                purchaseOrderRepository.findById(doc.getReferenceId())
+                        .ifPresent(po -> r.setReferenceCode(po.getPoCode()));
             }
         }
 

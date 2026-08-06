@@ -185,4 +185,27 @@ public class SalesOrderController {
             throw e;
         }
     }
+
+    // ─── POST: Gửi email báo giá ─────────────────────────────────────────
+    @PostMapping("/{id}/send-quote-email")
+    @Operation(summary = "Gửi email báo giá cho khách hàng")
+    @PreAuthorize("hasAuthority('sales_order:view') or hasAuthority('export:view')")
+    public ApiResponse<Void> sendQuoteEmail(
+            @PathVariable Long id,
+            @Valid @RequestBody com.duylongtech.backend.dto.request.EmailQuoteRequest req,
+            HttpServletRequest servletRequest
+    ) {
+        String actor = getCurrentUser();
+        String ip = getClientIp(servletRequest);
+        try {
+            salesOrderService.sendQuoteEmail(id, req);
+            auditLogService.logEvent(actor, "SEND_QUOTE_EMAIL", "SalesOrder", id, "SUCCESS",
+                    "Gửi email báo giá tới " + req.getToEmail(), ip, null);
+            return ApiResponse.success(null);
+        } catch (Exception e) {
+            auditLogService.logEvent(actor, "SEND_QUOTE_EMAIL", "SalesOrder", id, "FAILED",
+                    "Gửi email báo giá thất bại: " + e.getMessage(), ip, null);
+            throw e;
+        }
+    }
 }
