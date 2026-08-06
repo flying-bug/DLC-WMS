@@ -585,6 +585,18 @@
   text-align: center;
   font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.badgeStat:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.badgeActive {
+  border-color: #0284c7 !important;
+  box-shadow: 0 2px 4px rgba(2, 132, 199, 0.25);
 }
 .badgeBook { background-color: #f1f5f9; color: #334155; }
 .badgeMatch { background-color: #dcfce7; color: #15803d; }

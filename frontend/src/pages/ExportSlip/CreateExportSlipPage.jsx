@@ -5,6 +5,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
 import CustomerModal from '../Customer/components/CustomerModal';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
+import * as stocktakeApi from '../../api/stocktakeApi';
 import AssemblyOrderSelectionModal from '../CreateImportSlip/components/AssemblyOrderSelectionModal';
 import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import Toast from '../../components/ui/Toast/Toast';
@@ -1079,13 +1080,45 @@ function CreateExportSlipPage({ mode: propMode }) {
       <ReferenceDocumentModal
         isOpen={showReferenceModal}
         onClose={() => setShowReferenceModal(false)}
-        onSelect={(data) => {
+        onSelect={async (data) => {
           setForm(prev => ({
             ...prev,
             referenceType: data.referenceType,
             referenceId: data.referenceId,
             referenceCode: data.docCode
           }));
+          if (data.referenceType === 'STOCKTAKE' && data.referenceId) {
+            try {
+              const res = await stocktakeApi.getStocktakeDetail(data.referenceId);
+              const stData = res?.data?.data || res?.data;
+              if (stData) {
+                if (stData.warehouseId) {
+                  setForm(prev => ({ ...prev, warehouseId: String(stData.warehouseId) }));
+                }
+                const diffLackLines = (stData.lines || []).filter(l => Number(l.diffQty || 0) < 0);
+                if (diffLackLines.length > 0) {
+                  setItems(diffLackLines.map(l => {
+                    const rawSerials = l.serials || [];
+                    const missingSerials = rawSerials
+                      .filter(s => s.scanStatus === 'MISSING' || !s.scanStatus)
+                      .map(s => (typeof s === 'string' ? s : s.serialNumber))
+                      .filter(Boolean);
+                    const serialList = missingSerials.length > 0 ? missingSerials : rawSerials.map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean);
+                    return {
+                      ...emptyLine(),
+                      variantId: String(l.variantId),
+                      quantity: Math.abs(Number(l.diffQty)) || 1,
+                      price: 0,
+                      serialNumbers: serialList,
+                      note: `Hàng thiếu từ kiểm kê ${stData.stocktakeCode}`
+                    };
+                  }));
+                }
+              }
+            } catch (err) {
+              console.error('Failed to load stocktake reference detail', err);
+            }
+          }
         }}
       />
 
