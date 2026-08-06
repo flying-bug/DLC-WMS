@@ -1,0 +1,400 @@
+package com.duylongtech.backend.service;
+
+import com.duylongtech.backend.dto.request.PurchaseOrderRequest;
+import com.duylongtech.backend.dto.response.PurchaseOrderResponse;
+import com.duylongtech.backend.entity.*;
+import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.repository.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class PurchaseOrderService {
+
+    private final PurchaseOrderRepository purchaseOrderRepository;
+    private final PartnerRepository partnerRepository;
+    private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
+    private final PartnerLedgerService partnerLedgerService;
+
+    // =========================================================
+    // QUERY
+    // =========================================================
+
+    @Transactional(readOnly = true)
+    public List<PurchaseOrderResponse> getPurchaseOrders(
+            String keyword, String status, Long partnerId,
+            LocalDate fromDate, LocalDate toDate) {
+        return purchaseOrderRepository
+                .findAllWithFilters(keyword, status, partnerId, fromDate, toDate)
+                .stream()
+                .map(this::toSummaryResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public PurchaseOrderResponse getPurchaseOrderById(Long id) {
+        PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
+        return toDetailResponse(po);
+    }
+
+    public String generateNextPoCode() {
+        String prefix = "PO";
+        List<String> existing = purchaseOrderRepository.findCodesByPrefix(prefix + "%");
+        long max = 0;
+        for (String code : existing) {
+            if (code != null && code.length() > prefix.length()) {
+                try {
+                    long val = Long.parseLong(code.substring(prefix.length()));
+                    if (val > max) max = val;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return String.format("%s%04d", prefix, max + 1);
+    }
+
+    // =========================================================
+    // CREATE
+    // =========================================================
+
+    @Transactional
+    public PurchaseOrderResponse createPurchaseOrder(PurchaseOrderRequest request, String actor) {
+        // Validate nhà cung cấp
+        Partner supplier = partnerRepository.findById(request.getPartnerId())
+                .orElseThrow(() -> new BusinessException("Nhà cung cấp không tồn tại"));
+        if (!Boolean.TRUE.equals(supplier.getIsSupplier())) {
+            throw new BusinessException("Đối tác này không phải nhà cung cấp");
+        }
+
+        if (request.getPaymentDueDate() != null && request.getPaymentDueDate().isBefore(request.getPoDate())) {
+            throw new BusinessException("Hạn thanh toán không được nhỏ hơn ngày lập đơn");
+        }
+
+        // Tự sinh mã nếu chưa có
+        String poCode = (request.getPoCode() != null && !request.getPoCode().isBlank())
+                ? request.getPoCode() : generateNextPoCode();
+
+        if (purchaseOrderRepository.existsByPoCode(poCode)) {
+            throw new BusinessException("Mã đơn hàng '" + poCode + "' đã tồn tại");
+        }
+
+        User actorUser = userRepository.findByUsername(actor)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy người dùng hiện tại"));
+
+        // Tính toán lines
+        BigDecimal subTotalAmount = BigDecimal.ZERO;
+        BigDecimal taxAmount = BigDecimal.ZERO;
+
+        List<PurchaseOrderLine> lines = new ArrayList<>();
+        for (PurchaseOrderRequest.PurchaseOrderLineRequest lr : request.getLines()) {
+            BigDecimal lineAmount = lr.getUnitPrice().multiply(lr.getQuantity());
+            BigDecimal vatRate = lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO;
+            BigDecimal vatAmount = lineAmount.multiply(vatRate)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+            subTotalAmount = subTotalAmount.add(lineAmount);
+            taxAmount = taxAmount.add(vatAmount);
+
+            lines.add(PurchaseOrderLine.builder()
+                    .purchaseOrderId(0L) // sẽ set sau khi save
+                    .variantId(lr.getVariantId())
+                    .quantity(lr.getQuantity())
+                    .unitPrice(lr.getUnitPrice())
+                    .vatRate(vatRate)
+                    .vatAmount(vatAmount)
+                    .lineAmount(lineAmount)
+                    .note(lr.getNote())
+                    .build());
+        }
+
+        BigDecimal totalAmount = subTotalAmount.add(taxAmount);
+
+        PurchaseOrder po = PurchaseOrder.builder()
+                .partnerId(request.getPartnerId())
+                .poCode(poCode)
+                .poDate(request.getPoDate())
+                .status("DRAFT")
+                .subTotalAmount(subTotalAmount)
+                .taxAmount(taxAmount)
+                .totalAmount(totalAmount)
+                .paidAmount(BigDecimal.ZERO)
+                .paymentStatus("UNPAID")
+                .paymentDueDate(request.getPaymentDueDate())
+                .expectedDeliveryDate(request.getExpectedDeliveryDate())
+                .note(request.getNote())
+                .createdBy(actorUser.getId())
+                .build();
+
+        po.setLines(new ArrayList<>());
+        PurchaseOrder saved = purchaseOrderRepository.save(po);
+
+        final Long poId = saved.getId();
+        lines.forEach(l -> l.setPurchaseOrderId(poId));
+        saved.getLines().addAll(lines);
+        purchaseOrderRepository.save(saved);
+
+        log.info("Tạo đơn mua hàng {} bởi {}", saved.getPoCode(), actor);
+        return toSummaryResponse(saved);
+    }
+
+    // =========================================================
+    // UPDATE (chỉ khi DRAFT)
+    // =========================================================
+
+    @Transactional
+    public PurchaseOrderResponse updatePurchaseOrder(Long id, PurchaseOrderRequest request, String actor) {
+        PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
+
+        if (!"DRAFT".equals(po.getStatus())) {
+            throw new BusinessException(
+                    "Chỉ được sửa đơn ở trạng thái Nháp. Trạng thái hiện tại: " + po.getStatus());
+        }
+
+        if (request.getPaymentDueDate() != null && request.getPaymentDueDate().isBefore(request.getPoDate())) {
+            throw new BusinessException("Hạn thanh toán không được nhỏ hơn ngày lập đơn");
+        }
+
+        po.setPartnerId(request.getPartnerId());
+        po.setPoDate(request.getPoDate());
+        po.setPaymentDueDate(request.getPaymentDueDate());
+        po.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
+        po.setNote(request.getNote());
+
+        po.getLines().clear();
+        BigDecimal subTotalAmount = BigDecimal.ZERO;
+        BigDecimal taxAmount = BigDecimal.ZERO;
+
+        for (PurchaseOrderRequest.PurchaseOrderLineRequest lr : request.getLines()) {
+            BigDecimal lineAmount = lr.getUnitPrice().multiply(lr.getQuantity());
+            BigDecimal vatRate = lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO;
+            BigDecimal vatAmount = lineAmount.multiply(vatRate)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+            subTotalAmount = subTotalAmount.add(lineAmount);
+            taxAmount = taxAmount.add(vatAmount);
+
+            po.getLines().add(PurchaseOrderLine.builder()
+                    .purchaseOrderId(po.getId())
+                    .variantId(lr.getVariantId())
+                    .quantity(lr.getQuantity())
+                    .unitPrice(lr.getUnitPrice())
+                    .vatRate(vatRate)
+                    .vatAmount(vatAmount)
+                    .lineAmount(lineAmount)
+                    .note(lr.getNote())
+                    .build());
+        }
+
+        po.setSubTotalAmount(subTotalAmount);
+        po.setTaxAmount(taxAmount);
+        po.setTotalAmount(subTotalAmount.add(taxAmount));
+
+        PurchaseOrder updated = purchaseOrderRepository.save(po);
+        log.info("Cập nhật đơn mua hàng {} bởi {}", updated.getPoCode(), actor);
+        return toSummaryResponse(updated);
+    }
+
+    // =========================================================
+    // APPROVE — ghi nhận công nợ phải trả
+    // =========================================================
+
+    @Transactional
+    public PurchaseOrderResponse approvePurchaseOrder(Long id, String actor) {
+        PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
+
+        if (!"DRAFT".equals(po.getStatus())) {
+            throw new BusinessException(
+                    "Chỉ được duyệt đơn ở trạng thái Nháp. Trạng thái hiện tại: " + po.getStatus());
+        }
+
+        po.setStatus("APPROVED");
+        PurchaseOrder approved = purchaseOrderRepository.save(po);
+        log.info("Duyệt đơn mua hàng {} bởi {}", approved.getPoCode(), actor);
+
+        // Ghi nhận tăng công nợ phải trả (nhà cung cấp) vào sổ partner_ledger
+        partnerLedgerService.recordLedger(
+                approved.getPartnerId(),
+                "PURCHASE_ORDER",
+                approved.getId(),
+                approved.getPoCode(),
+                approved.getTotalAmount(),   // amountDebt  ← tăng nợ phải trả
+                BigDecimal.ZERO,             // amountReceipt
+                "Ghi nhận công nợ đơn mua hàng " + approved.getPoCode()
+        );
+
+        return toDetailResponse(approved);
+    }
+
+    // =========================================================
+    // CANCEL — rollback công nợ nếu đã APPROVED
+    // =========================================================
+
+    @Transactional
+    public PurchaseOrderResponse cancelPurchaseOrder(Long id, String actor) {
+        PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
+
+        if ("POSTED".equals(po.getStatus()) || "CANCELLED".equals(po.getStatus())) {
+            throw new BusinessException("Không thể hủy đơn ở trạng thái: " + po.getStatus());
+        }
+
+        boolean wasApproved = "APPROVED".equals(po.getStatus());
+        po.setStatus("CANCELLED");
+        PurchaseOrder cancelled = purchaseOrderRepository.save(po);
+        log.info("Hủy đơn mua hàng {} bởi {}", cancelled.getPoCode(), actor);
+
+        // Nếu đã APPROVED → rollback công nợ bằng cách ghi âm
+        if (wasApproved) {
+            partnerLedgerService.recordLedger(
+                    cancelled.getPartnerId(),
+                    "PURCHASE_ORDER_CANCEL",
+                    cancelled.getId(),
+                    cancelled.getPoCode(),
+                    BigDecimal.ZERO,
+                    cancelled.getTotalAmount(), // amountReceipt  ← giảm nợ phải trả
+                    "Hủy đơn mua hàng " + cancelled.getPoCode() + " — rollback công nợ"
+            );
+        }
+
+        return toSummaryResponse(cancelled);
+    }
+
+    // =========================================================
+    // RECORD PAYMENT — ghi nhận thanh toán (chi tiền)
+    // =========================================================
+
+    @Transactional
+    public PurchaseOrderResponse recordPayment(Long id, BigDecimal amount, String actor) {
+        PurchaseOrder po = purchaseOrderRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng"));
+
+        if ("CANCELLED".equals(po.getStatus())) {
+            throw new BusinessException("Không thể ghi nhận thanh toán cho đơn hàng đã hủy");
+        }
+        if ("DRAFT".equals(po.getStatus())) {
+            throw new BusinessException("Phải duyệt đơn trước khi ghi nhận thanh toán");
+        }
+
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("Số tiền thanh toán phải lớn hơn 0");
+        }
+
+        BigDecimal currentPaid = po.getPaidAmount() != null ? po.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal newPaid = currentPaid.add(amount);
+        if (newPaid.compareTo(po.getTotalAmount()) > 0) {
+            throw new BusinessException("Số tiền thanh toán vượt quá tổng giá trị đơn hàng");
+        }
+
+        po.setPaidAmount(newPaid);
+        if (newPaid.compareTo(po.getTotalAmount()) >= 0) {
+            po.setPaymentStatus("PAID");
+        } else if (newPaid.compareTo(BigDecimal.ZERO) > 0) {
+            po.setPaymentStatus("PARTIAL");
+        }
+
+        purchaseOrderRepository.save(po);
+
+        // Ghi nhận chi tiền (giảm nợ phải trả NCC) vào sổ partner_ledger
+        partnerLedgerService.recordLedger(
+                po.getPartnerId(),
+                "PAYMENT_VOUCHER",
+                po.getId(),
+                po.getPoCode(),
+                BigDecimal.ZERO,
+                amount,  // amountReceipt  ← chi tiền cho NCC
+                "Thanh toán cho đơn mua hàng " + po.getPoCode()
+        );
+
+        auditLogService.logEvent(
+                actor,
+                "RECORD_PAYMENT",
+                "PurchaseOrder",
+                po.getId(),
+                "SUCCESS",
+                "Ghi nhận thanh toán " + amount + " cho đơn mua hàng " + po.getPoCode(),
+                null,
+                null
+        );
+
+        // Reload với details
+        PurchaseOrder reloaded = purchaseOrderRepository.findByIdWithDetails(id).orElse(po);
+        return toDetailResponse(reloaded);
+    }
+
+    // =========================================================
+    // MAPPING
+    // =========================================================
+
+    private PurchaseOrderResponse toSummaryResponse(PurchaseOrder po) {
+        return PurchaseOrderResponse.builder()
+                .id(po.getId())
+                .poCode(po.getPoCode())
+                .poDate(po.getPoDate())
+                .status(po.getStatus())
+                .partnerId(po.getPartnerId())
+                .partnerCode(po.getPartner() != null ? po.getPartner().getCode() : null)
+                .partnerName(po.getPartner() != null ? po.getPartner().getName() : null)
+                .partnerPhone(po.getPartner() != null ? po.getPartner().getPhone() : null)
+                .subTotalAmount(po.getSubTotalAmount())
+                .taxAmount(po.getTaxAmount())
+                .totalAmount(po.getTotalAmount())
+                .paidAmount(po.getPaidAmount())
+                .paymentStatus(po.getPaymentStatus())
+                .paymentDueDate(po.getPaymentDueDate())
+                .expectedDeliveryDate(po.getExpectedDeliveryDate())
+                .note(po.getNote())
+                .createdBy(po.getCreatedBy())
+                .createdByName(po.getCreatedByUser() != null ? po.getCreatedByUser().getFullName() : null)
+                .createdAt(po.getCreatedAt())
+                .updatedAt(po.getUpdatedAt())
+                .build();
+    }
+
+    private PurchaseOrderResponse toDetailResponse(PurchaseOrder po) {
+        List<PurchaseOrderResponse.PurchaseOrderLineResponse> lineResponses = po.getLines().stream()
+                .map(line -> {
+                    ProductVariant variant = line.getVariant();
+                    String variantName = variant != null ? variant.getVariantName() : null;
+                    String sku = variant != null ? variant.getSku() : null;
+                    String productCode = (variant != null && variant.getProduct() != null)
+                            ? variant.getProduct().getProductCode() : null;
+                    String unitName = (variant != null && variant.getProduct() != null
+                            && variant.getProduct().getUnit() != null)
+                            ? variant.getProduct().getUnit().getName() : null;
+
+                    return PurchaseOrderResponse.PurchaseOrderLineResponse.builder()
+                            .id(line.getId())
+                            .variantId(line.getVariantId())
+                            .sku(sku)
+                            .variantName(variantName)
+                            .productCode(productCode)
+                            .unitName(unitName)
+                            .quantity(line.getQuantity())
+                            .unitPrice(line.getUnitPrice())
+                            .vatRate(line.getVatRate())
+                            .vatAmount(line.getVatAmount())
+                            .lineAmount(line.getLineAmount())
+                            .note(line.getNote())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        PurchaseOrderResponse response = toSummaryResponse(po);
+        response.setLines(lineResponses);
+        return response;
+    }
+}

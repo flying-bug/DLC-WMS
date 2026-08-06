@@ -128,6 +128,14 @@ const AdminLayout = ({ children }) => {
                         <span>Đơn bán hàng</span>
                     </button>
                     <button
+                        className={`${styles.navItem} ${currentPath.startsWith('/purchase-orders') ? styles.active : ''}`}
+                        onClick={() => handleNavClick('/purchase-orders')}
+                        type="button"
+                    >
+                        <i className="bi bi-bag-plus"></i>
+                        <span>Đơn mua hàng</span>
+                    </button>
+                    <button
                         className={`${styles.navItem} ${currentPath.startsWith('/assembly-orders') ? styles.active : ''}`}
                         onClick={() => handleNavClick('/assembly-orders')}
                         type="button"
