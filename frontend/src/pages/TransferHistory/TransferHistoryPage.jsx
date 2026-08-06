@@ -454,13 +454,13 @@ function TransferHistoryPage() {
               <div className={styles.modalHeader}>
                 <h2 className={styles.modalTitle}>
                   <i className={`bi bi-arrow-left-right ${styles.detailIcon}`}></i>
-                  {selectedSlip.transferCode}
+                  Chi tiết phiếu chuyển kho: {selectedSlip.transferCode}
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <button
                     onClick={() => handlePrintSlip(selectedSlip)}
-                    className={styles.btnSecondary}
-                    style={{ padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    className={styles.btnOutline}
+                    style={{ padding: '6px 12px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <i className="bi bi-printer"></i> In phiếu
                   </button>
@@ -470,25 +470,39 @@ function TransferHistoryPage() {
 
               <div className={styles.modalBody}>
                 <div className={styles.detailGrid}>
-                  <div className={styles.detailGroup} style={{ gridColumn: 'span 2' }}>
-                    <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Ghi chú</span>
-                      <span className={styles.detailValue}>{selectedSlip.note || 'Không có ghi chú'}</span>
+                  <div className={styles.infoGrid}>
+                    <div className={styles.infoBlock} style={{ gridColumn: 'span 2' }}>
+                      <span className={styles.infoLabel}>
+                        <i className="bi bi-chat-text"></i> Ghi chú
+                      </span>
+                      <span className={styles.infoValue} style={{ color: selectedSlip.note ? 'inherit' : '#9ca3af', fontStyle: selectedSlip.note ? 'normal' : 'italic' }}>
+                        {selectedSlip.note || 'Không có ghi chú'}
+                      </span>
                     </div>
                   </div>
 
                   <div className={styles.detailRight}>
                     <div className={styles.detailRightRow}>
-                      <span className={styles.detailRightLabel}>Ngày chuyển</span>
+                      <span className={styles.detailRightLabel}>
+                        <i className="bi bi-calendar3"></i> Ngày chuyển
+                      </span>
                       <span className={styles.detailRightValue}>{formatDate(selectedSlip.transferDate)}</span>
                     </div>
                     <div className={styles.detailRightRow}>
-                      <span className={styles.detailRightLabel}>Từ kho</span>
-                      <span className={`${styles.detailRightValue} ${styles.textBlue}`}>{warehouseById.get(selectedSlip.fromWarehouseId)?.name || `Kho #${selectedSlip.fromWarehouseId}`}</span>
+                      <span className={styles.detailRightLabel}>
+                        <i className="bi bi-box-arrow-right"></i> Từ kho
+                      </span>
+                      <span className={`${styles.detailRightValue} ${styles.textBlue}`}>
+                        {warehouseById.get(selectedSlip.fromWarehouseId)?.name || `Kho #${selectedSlip.fromWarehouseId}`}
+                      </span>
                     </div>
                     <div className={styles.detailRightRow}>
-                      <span className={styles.detailRightLabel}>Đến kho</span>
-                      <span className={`${styles.detailRightValue} ${styles.textBlue}`}>{warehouseById.get(selectedSlip.toWarehouseId)?.name || `Kho #${selectedSlip.toWarehouseId}`}</span>
+                      <span className={styles.detailRightLabel}>
+                        <i className="bi bi-box-arrow-in-right"></i> Đến kho
+                      </span>
+                      <span className={`${styles.detailRightValue} ${styles.textBlue}`}>
+                        {warehouseById.get(selectedSlip.toWarehouseId)?.name || `Kho #${selectedSlip.toWarehouseId}`}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -496,10 +510,10 @@ function TransferHistoryPage() {
                 <table className={styles.detailTable}>
                   <thead>
                     <tr>
-                      <th>STT</th>
-                      <th>Mã sản phẩm</th>
+                      <th style={{ width: '60px', textAlign: 'center' }}>STT</th>
+                      <th>Mã SP</th>
                       <th>Tên sản phẩm</th>
-                      <th>ĐVT</th>
+                      <th style={{ textAlign: 'center' }}>ĐVT</th>
                       <th className={styles.textCenter}>Số lượng chuyển</th>
                       <th>Ghi chú</th>
                     </tr>
@@ -510,11 +524,17 @@ function TransferHistoryPage() {
                       return (
                         <tr key={index}>
                           <td style={{ textAlign: 'center' }}>{index + 1}</td>
-                          <td className={styles.textBlue}>{product?.sku || `SKU #${line.variantId}`}</td>
-                          <td>{variantLabel(product) || 'Chưa có tên sản phẩm'}</td>
+                          <td className={styles.textBlue} style={{ fontWeight: '500' }}>{product?.sku || `SKU #${line.variantId}`}</td>
+                          <td style={{ fontWeight: '500' }}>{variantLabel(product) || 'Chưa có tên sản phẩm'}</td>
                           <td style={{ textAlign: 'center' }}>{product?.unitName || ''}</td>
-                          <td className={styles.textCenter}>{Number(line.quantity || 0).toLocaleString('vi-VN')}</td>
-                          <td>{line.note || ''}</td>
+                          <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(line.quantity || 0).toLocaleString('vi-VN')}</td>
+                          <td>
+                            {line.note ? (
+                              <span style={{ fontSize: '13px' }}>{line.note}</span>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '12px' }}>Không có</span>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -522,8 +542,10 @@ function TransferHistoryPage() {
                 </table>
 
                 <div className={styles.detailFooter}>
-                  <div className={styles.footerTotalLabel}>Tổng số lượng chuyển:</div>
-                  <div className={styles.footerTotal}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</div>
+                  <div className={styles.footerGroup}>
+                    <span className={styles.footerTotalLabel}>Tổng số lượng chuyển:</span>
+                    <span className={styles.footerQty}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</span>
+                  </div>
                 </div>
               </div>
             </div>
