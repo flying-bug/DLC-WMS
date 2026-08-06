@@ -439,39 +439,120 @@
     border-top: 1px solid var(--color-border, #e2e8f0);
 }
 
+/* Timeline styles */
+.timeline {
+    position: relative;
+    padding-left: 20px;
+    margin-top: 16px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--color-border, #e2e8f0);
+}
+
+.timelineItem {
+    position: relative;
+    margin-bottom: 24px;
+    padding-left: 24px;
+}
+
+.timelineItem:last-child {
+    margin-bottom: 0;
+}
+
+.timelineIcon {
+    position: absolute;
+    left: -24px;
+    top: -2px;
+    width: 32px;
+    height: 32px;
+    background-color: var(--color-surface, #fff);
+    border: 2px solid var(--color-border, #e2e8f0);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted, #64748b);
+    font-size: 14px;
+    z-index: 1;
+}
+
+.timelineContent {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 0;
+}
+
+.timelineHeader {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.timelineHeader strong {
+    color: var(--color-text-strong, #1e293b);
+    font-weight: 600;
+}
+
+.timelineAction {
+    color: var(--color-text-secondary, #475569);
+}
+
+.timelineDate {
+    color: var(--color-text-muted, #94a3b8);
+    font-size: 13px;
+    margin-left: auto;
+}
+
+.timelineDesc {
+    margin: 0 0 12px 0;
+    color: var(--color-text-secondary, #475569);
+    font-size: 14px;
+}
+
+/* Update changeList to look better inside timeline */
 .changeList {
     display: grid;
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 12px;
 }
 
 .changeItem {
     align-items: center;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: var(--color-bg-soft, #f8fafc);
+    border: 1px solid var(--color-border, #e2e8f0);
     border-radius: 6px;
     display: grid;
-    gap: 8px;
-    grid-template-columns: minmax(88px, 0.7fr) minmax(0, 1fr) auto minmax(0, 1fr);
-    padding: 8px 10px;
+    gap: 16px;
+    grid-template-columns: minmax(120px, max-content) minmax(0, 1fr) auto minmax(0, 1fr);
+    padding: 12px 16px;
 }
 
 .changeField {
-    color: #334155;
-    font-size: 0.8rem;
-    font-weight: 700;
+    color: var(--color-text-strong, #334155);
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .changeValue {
-    color: #475569;
-    font-size: 0.82rem;
+    color: var(--color-text-secondary, #475569);
+    font-size: 13px;
     min-width: 0;
     overflow-wrap: anywhere;
 }
 
 .changeArrow {
-    color: #64748b;
-    font-weight: 700;
+    color: var(--color-text-muted, #94a3b8);
+    font-size: 14px;
 }
 
 /* Responsive */

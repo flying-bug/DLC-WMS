@@ -100,15 +100,13 @@ public class WarehouseController {
     @GetMapping
     @PreAuthorize("hasAuthority('warehouse_master:view') or hasRole('MANAGER')")
     public ResponseEntity<ApiResponse<Page<WarehouseResponse>>> getWarehouses(
-            @RequestParam(required = false) String code,
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String address,
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity
-                .ok(ApiResponse.success(warehouseService.getWarehouses(code, name, address, status, pageable)));
+                .ok(ApiResponse.success(warehouseService.getWarehouses(search, status, pageable)));
     }
 
     // ──────────────────────────────────────────────────────────
@@ -118,14 +116,12 @@ public class WarehouseController {
     @GetMapping("/export")
     @PreAuthorize("hasAuthority('warehouse_master:export') or hasRole('MANAGER')")
     public ResponseEntity<byte[]> exportWarehouses(
-            @RequestParam(required = false) String code,
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String address,
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
             org.springframework.security.core.Authentication authentication) {
 
         String exporterName = authentication != null ? authentication.getName() : "System";
-        byte[] excelBytes = warehouseService.exportWarehousesToExcel(code, name, address, status, exporterName);
+        byte[] excelBytes = warehouseService.exportWarehousesToExcel(search, status, exporterName);
 
         org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
         String timestamp = java.time.LocalDateTime.now()

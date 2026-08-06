@@ -1,7 +1,7 @@
-﻿.page {
+.page {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    padding: 24px;
     min-width: 0;
 }
 
@@ -172,7 +172,6 @@
   background-color: var(--color-primary-hover);
 }
 
-.pageHeader,
 .toolbar,
 .formPanel,
 .detailGrid,
@@ -186,20 +185,21 @@
 .pageHeader {
     display: flex;
     justify-content: space-between;
-    gap: 16px;
-    padding: 18px 20px;
+    align-items: center;
+    margin-bottom: 24px;
 }
 
 .pageTitle {
-    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
     color: var(--color-text-strong);
-    font-size: 1.35rem;
 }
 
 .pageSubtitle {
-    margin: 6px 0 0;
+    font-size: 14px;
     color: var(--color-text-muted);
-    font-size: 0.92rem;
+    margin: 0;
 }
 
 .toolbar,
@@ -414,6 +414,7 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0;
     overflow: hidden;
+    margin-bottom: 24px;
 }
 
 .modalOverlay {

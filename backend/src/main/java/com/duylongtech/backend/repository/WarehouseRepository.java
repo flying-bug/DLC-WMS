@@ -20,14 +20,12 @@ public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
            "LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%'))")
     Page<Warehouse> searchByCodeOrName(@Param("search") String search, Pageable pageable);
 
+
+
     @Query("SELECT w FROM Warehouse w WHERE " +
-           "(:code IS NULL OR :code = '' OR LOWER(w.code) LIKE LOWER(CONCAT('%', :code, '%'))) AND " +
-           "(:name IS NULL OR :name = '' OR LOWER(w.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
-           "(:address IS NULL OR :address = '' OR LOWER(w.address) LIKE LOWER(CONCAT('%', :address, '%'))) AND " +
+           "(:search IS NULL OR :search = '' OR LOWER(w.code) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.name) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(w.address) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
            "(:status IS NULL OR :status = '' OR w.status = :status)")
-    Page<Warehouse> filterWarehouses(@Param("code") String code, 
-                                     @Param("name") String name, 
-                                     @Param("address") String address, 
+    Page<Warehouse> searchWarehouses(@Param("search") String search, 
                                      @Param("status") String status, 
                                      Pageable pageable);
 }

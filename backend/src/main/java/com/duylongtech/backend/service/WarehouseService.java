@@ -92,8 +92,8 @@ public class WarehouseService {
     // ──────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public Page<WarehouseResponse> getWarehouses(String code, String name, String address, String status, Pageable pageable) {
-        Page<Warehouse> page = warehouseRepository.filterWarehouses(code, name, address, status, pageable);
+    public Page<WarehouseResponse> getWarehouses(String search, String status, Pageable pageable) {
+        Page<Warehouse> page = warehouseRepository.searchWarehouses(search, status, pageable);
         return page.map(this::mapToResponse);
     }
 
@@ -229,8 +229,8 @@ public class WarehouseService {
     // ──────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public byte[] exportWarehousesToExcel(String code, String name, String address, String status, String exporterName) {
-        List<Warehouse> warehouses = warehouseRepository.filterWarehouses(code, name, address, status, Pageable.unpaged()).getContent();
+    public byte[] exportWarehousesToExcel(String search, String status, String exporterName) {
+        List<Warehouse> warehouses = warehouseRepository.searchWarehouses(search, status, Pageable.unpaged()).getContent();
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Danh Sách Kho");
