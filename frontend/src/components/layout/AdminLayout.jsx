@@ -77,7 +77,7 @@ const AdminLayout = ({ children }) => {
                         type="button"
                     >
                         <i className="fas fa-warehouse"></i>
-                        <span>Kho</span>
+                        <span>Quy trình</span>
                     </button>
                     <button
                         className={`${styles.navItem} ${currentPath.startsWith('/suppliers') ? styles.active : ''}`}

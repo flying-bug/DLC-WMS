@@ -158,17 +158,19 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                     <div className={styles.modalBody}>
                         {errorMsg && <div className={styles.errorAlert}>{errorMsg}</div>}
                         
-                        <div className={styles.formGroup}>
-                            <label>Mã kho</label>
-                            <input
-                                type="text"
-                                className={styles.inputField}
-                                placeholder="Để trống để hệ thống tự động sinh (VD: KHO001)"
-                                value={formData.code}
-                                onChange={(e) => handleChange('code', e.target.value)}
-                                disabled={saving}
-                            />
-                        </div>
+                        {isEdit && (
+                            <div className={styles.formGroup}>
+                                <label>Mã kho</label>
+                                <input
+                                    type="text"
+                                    className={styles.inputField}
+                                    placeholder="Để trống để hệ thống tự động sinh (VD: KHO001)"
+                                    value={formData.code}
+                                    onChange={(e) => handleChange('code', e.target.value)}
+                                    disabled={saving}
+                                />
+                            </div>
+                        )}
                         
                         <div className={styles.formGroup}>
                             <label>Tên kho <span className={styles.required}>*</span></label>
@@ -225,8 +227,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                                 disabled={saving}
                             >
                                 <option value="STANDARD">Kho tiêu chuẩn</option>
-                                <option value="SCRAP">Kho phế liệu (SCRAP)</option>
-                                <option value="TRANSIT">Kho trung chuyển</option>
+                                <option value="SCRAP">Kho phế liệu</option>
                             </select>
                         </div>
 

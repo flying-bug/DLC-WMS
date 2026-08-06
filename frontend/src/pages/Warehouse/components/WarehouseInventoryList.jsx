@@ -74,8 +74,8 @@ const WarehouseInventoryList = ({ warehouseId }) => {
         <div className={styles.container}>
             <div className={styles.toolbar}>
                 <div className={styles.filters}>
-                    <div className={styles.searchWrapper}>
-                        <i className="fas fa-search"></i>
+                    <div className={styles.searchBox}>
+                        <i className="bi bi-search"></i>
                         <input
                             type="text"
                             placeholder="Tìm theo mã hàng, tên, SKU..."
@@ -90,11 +90,12 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                             checked={showBackorderedOnly}
                             onChange={(e) => setShowBackorderedOnly(e.target.checked)}
                         />
+                        <span className={styles.switchSlider}></span>
                         <span>Hàng đang nợ</span>
                     </label>
                 </div>
-                <button className={styles.btnRefresh} onClick={fetchInventory} title="Làm mới">
-                    <i className="fas fa-sync-alt"></i> Tải lại
+                <button className={styles.iconBtn} onClick={fetchInventory} title="Làm mới">
+                    <i className="bi bi-arrow-clockwise"></i>
                 </button>
             </div>
 
@@ -140,7 +141,7 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                                                 {formatNumber(item.availableQuantity)}
                                             </span>
                                         </td>
-                                        <td style={{ textAlign: 'right', fontWeight: '500', color: 'var(--color-primary, #002b6b)' }}>
+                                        <td style={{ textAlign: 'right', fontWeight: '500' }}>
                                             {formatCurrency(item.inventoryValue)}
                                         </td>
                                     </tr>

@@ -10,6 +10,8 @@ const ProductGridSelect = ({
   placeholder = 'Chọn hàng',
   disabled = false,
   onAddNew,
+  hideStock = false,
+  fullWidthPopover = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -100,13 +102,17 @@ const ProductGridSelect = ({
     if (!selectedProduct) {
       return <span className={styles.placeholderText}>{placeholder}</span>;
     }
-    if (displayMode === 'code') {
-      const code = selectedProduct.sku || selectedProduct.productCode || `SP#${selectedProduct.id}`;
-      return <span className={styles.selectedText}>{code}</span>;
-    }
+    const code = selectedProduct.sku || selectedProduct.productCode || `SP#${selectedProduct.id}`;
     const name = selectedProduct.variantName && selectedProduct.variantName !== selectedProduct.productName
       ? `${selectedProduct.productName} - ${selectedProduct.variantName}`
       : selectedProduct.productName;
+
+    if (displayMode === 'code') {
+      return <span className={styles.selectedText}>{code}</span>;
+    }
+    if (displayMode === 'code-name') {
+      return <span className={styles.selectedText}>{code} - {name}</span>;
+    }
     return <span className={styles.selectedText}>{name}</span>;
   };
 
@@ -135,7 +141,7 @@ const ProductGridSelect = ({
       </div>
 
       {isOpen && (
-        <div className={styles.popover}>
+        <div className={styles.popover} style={fullWidthPopover ? { width: '100%', maxWidth: '100%' } : {}}>
           <div className={styles.searchHeader}>
             <i className={`bi bi-search ${styles.searchIcon}`}></i>
             <input
@@ -157,7 +163,7 @@ const ProductGridSelect = ({
                 <tr>
                   <th style={{ width: '130px' }}>Mã hàng</th>
                   <th>Tên hàng</th>
-                  <th style={{ width: '110px', textAlign: 'right' }}>Số lượng tồn</th>
+                  {!hideStock && <th style={{ width: '110px', textAlign: 'right' }}>Số lượng tồn</th>}
                 </tr>
               </thead>
               <tbody>
@@ -178,22 +184,24 @@ const ProductGridSelect = ({
                       >
                         <td className={styles.codeCell}>{code}</td>
                         <td className={styles.nameCell}>{name}</td>
-                        <td
-                          className={styles.stockCell}
-                          style={{
-                            textAlign: 'right',
-                            fontWeight: '500',
-                            color: stock <= 0 ? '#ef4444' : undefined,
-                          }}
-                        >
-                          {stock.toLocaleString('vi-VN')}
-                        </td>
+                        {!hideStock && (
+                          <td
+                            className={styles.stockCell}
+                            style={{
+                              textAlign: 'right',
+                              fontWeight: '500',
+                              color: stock <= 0 ? '#ef4444' : undefined,
+                            }}
+                          >
+                            {stock.toLocaleString('vi-VN')}
+                          </td>
+                        )}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan="3" className={styles.emptyCell}>
+                    <td colSpan={hideStock ? "2" : "3"} className={styles.emptyCell}>
                       Không tìm thấy hàng hóa phù hợp
                     </td>
                   </tr>
@@ -221,16 +229,18 @@ const ProductGridSelect = ({
               </span>
             </div>
 
-            <div className={styles.footerRight}>
-              <label className={styles.toggleSwitch}>
-                <input
-                  type="checkbox"
-                  checked={onlyInStock}
-                  onChange={(e) => setOnlyInStock(e.target.checked)}
-                />
-                <span>Chỉ hiển thị hàng hóa còn tồn</span>
-              </label>
-            </div>
+            {!hideStock && (
+              <div className={styles.footerRight}>
+                <label className={styles.toggleSwitch}>
+                  <input
+                    type="checkbox"
+                    checked={onlyInStock}
+                    onChange={(e) => setOnlyInStock(e.target.checked)}
+                  />
+                  <span>Chỉ hiển thị hàng hóa còn tồn</span>
+                </label>
+              </div>
+            )}
           </div>
         </div>
       )}

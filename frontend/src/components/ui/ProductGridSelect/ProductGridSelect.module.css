@@ -10,10 +10,11 @@
   justify-content: space-between;
   border: 1px solid var(--color-border-strong);
   border-radius: 6px;
-  padding: 0 8px;
+  padding: 4px 8px;
   background-color: var(--color-surface);
   cursor: pointer;
-  height: 32px;
+  min-height: 32px;
+  height: auto;
   width: 100%;
   min-width: 90px;
   font-size: 13px;
@@ -40,8 +41,8 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .selectedText {

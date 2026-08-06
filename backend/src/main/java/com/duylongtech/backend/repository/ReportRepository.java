@@ -397,11 +397,11 @@ public class ReportRepository {
                     "INNER JOIN partners pt ON pl.partner_id = pt.id";
                 return jdbcTemplate.queryForMap(sql);
             } catch (Exception e) {
-                // Fallback: estimate debt from PAYMENT_VOUCHERS (supplier) and PAYMENT_RECEIPTS (customer)
+                // Fallback: estimate debt from PAYMENT_TRANSACTIONS
                 try {
                     String fallbackSql = "SELECT " +
-                        "COALESCE((SELECT SUM(amount) FROM payment_receipts WHERE status = 'POSTED'), 0) AS totalCustomerDebt, " +
-                        "COALESCE((SELECT SUM(amount) FROM payment_vouchers WHERE status = 'POSTED'), 0) AS totalSupplierDebt";
+                        "COALESCE((SELECT SUM(amount) FROM payment_transactions WHERE status = 'POSTED' AND type = 'RECEIPT'), 0) AS totalCustomerDebt, " +
+                        "COALESCE((SELECT SUM(amount) FROM payment_transactions WHERE status = 'POSTED' AND type = 'VOUCHER'), 0) AS totalSupplierDebt";
                     return jdbcTemplate.queryForMap(fallbackSql);
                 } catch (Exception e2) {
                     // Final fallback: return zeros
