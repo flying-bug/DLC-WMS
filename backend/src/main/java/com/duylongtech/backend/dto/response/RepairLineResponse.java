@@ -33,8 +33,7 @@ public class RepairLineResponse {
     private Boolean isFreeWarranty;
     private Long serialNumberId;
     private String serialNumber;
-    private java.time.LocalDate dateScheduled;
-    private java.time.LocalDate deadline;
+
     private String note;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

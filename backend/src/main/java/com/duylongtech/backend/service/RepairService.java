@@ -54,7 +54,7 @@ import org.springframework.data.domain.PageRequest;
 @Slf4j
 public class RepairService {
 
-    private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "QUOTATION");
+    private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "QUOTATION", "CONFIRMED", "UNDER_REPAIR");
     private static final Set<String> VALID_INVOICE_METHODS = Set.of("none", "b4repair", "after_repair");
     private static final Set<String> VALID_ACTION_TYPES = Set.of("ADD", "REMOVE");
 
@@ -244,8 +244,7 @@ public class RepairService {
                 .isUsed(Boolean.TRUE.equals(request.getIsUsed()))
                 .serialNumberId(request.getSerialNumberId())
                 .serialNumberText(request.getSerialNumber())
-                .dateScheduled(request.getDateScheduled())
-                .deadline(request.getDeadline())
+
                 .note(trimToNull(request.getNote()))
                 .build();
 
@@ -292,8 +291,7 @@ public class RepairService {
                     line.setUnitPrice(BigDecimal.ZERO);
                 }
             }
-            if (request.getDateScheduled() != null) line.setDateScheduled(request.getDateScheduled());
-            if (request.getDeadline() != null) line.setDeadline(request.getDeadline());
+
             if (request.getNote() != null) line.setNote(trimToNull(request.getNote()));
             if (request.getSerialNumberId() != null) line.setSerialNumberId(request.getSerialNumberId() == -1 ? null : request.getSerialNumberId());
             if (request.getSerialNumber() != null) line.setSerialNumberText(request.getSerialNumber().isEmpty() ? null : request.getSerialNumber());
@@ -387,6 +385,41 @@ public class RepairService {
 
         repairFeeRepository.delete(fee);
         recalculateTotalAmount(repair);
+    }
+
+    @Transactional
+    public RepairFeeResponse updateRepairFee(Long repairId, Long feeId, RepairFeeRequest request) {
+        Repair repair = repairRepository.findWithDetailsById(repairId)
+                .orElseThrow(() -> new BusinessException(SystemMessage.REP_NOT_FOUND));
+
+        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus())) {
+            throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
+        }
+
+        RepairFee fee = repairFeeRepository.findById(feeId)
+                .orElseThrow(() -> new BusinessException(SystemMessage.REP_FEE_NOT_FOUND));
+
+        if (!fee.getRepair().getId().equals(repairId)) {
+            throw new BusinessException(SystemMessage.REP_FEE_NOT_FOUND);
+        }
+
+        if (request.getFeeAmount() != null) {
+            fee.setFeeAmount(request.getFeeAmount());
+        }
+        if (request.getIsFreeWarranty() != null) {
+            fee.setIsFreeWarranty(request.getIsFreeWarranty());
+            if (fee.getIsFreeWarranty()) {
+                fee.setFeeAmount(BigDecimal.ZERO);
+            }
+        }
+        if (request.getQuantity() != null) {
+            fee.setQuantity(request.getQuantity());
+        }
+
+        RepairFee saved = repairFeeRepository.save(fee);
+        recalculateTotalAmount(repair);
+
+        return toFeeResponse(saved);
     }
 
     // =====================================================================
@@ -662,8 +695,7 @@ public class RepairService {
                 .isFreeWarranty(line.getIsFreeWarranty())
                 .serialNumberId(line.getSerialNumberId())
                 .serialNumber(serialNum)
-                .dateScheduled(line.getDateScheduled())
-                .deadline(line.getDeadline())
+
                 .note(line.getNote())
                 .createdAt(line.getCreatedAt())
                 .updatedAt(line.getUpdatedAt())

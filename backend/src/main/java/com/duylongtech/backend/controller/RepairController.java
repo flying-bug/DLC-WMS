@@ -202,6 +202,19 @@ public class RepairController {
         return ApiResponse.success();
     }
 
+    @PutMapping("/{id}/fees/{feeId}")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(
+            summary = "Cập nhật dòng phí dịch vụ trong lệnh sửa chữa"
+    )
+    public ApiResponse<RepairFeeResponse> updateRepairFee(
+            @PathVariable Long id,
+            @PathVariable Long feeId,
+            @RequestBody RepairFeeRequest request
+    ) {
+        return ApiResponse.success(repairService.updateRepairFee(id, feeId, request));
+    }
+
     // =========================================================================
     // 4. Workflow: Chuyển trạng thái
     // =========================================================================

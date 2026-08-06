@@ -48,8 +48,8 @@ public class RepairWorkflowService {
     private static final Map<String, Set<String>> VALID_TRANSITIONS = Map.of(
             "DRAFT",       Set.of("QUOTATION", "CONFIRMED", "CANCELLED"),
             "QUOTATION",   Set.of("CONFIRMED", "DRAFT", "CANCELLED"),
-            "CONFIRMED",   Set.of("UNDER_REPAIR", "CANCELLED"),
-            "UNDER_REPAIR", Set.of("DONE", "CANCELLED"),
+            "CONFIRMED",   Set.of("UNDER_REPAIR", "QUOTATION", "CANCELLED"),
+            "UNDER_REPAIR", Set.of("DONE", "QUOTATION", "CANCELLED"),
             "DONE",        Set.of(),      // Terminal state
             "CANCELLED",   Set.of()       // Terminal state
     );

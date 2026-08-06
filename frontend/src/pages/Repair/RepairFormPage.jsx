@@ -14,6 +14,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import RepairSerialModal from './components/RepairSerialModal';
 import RepairQuotationTemplate from './components/RepairQuotationTemplate';
+import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import styles from './RepairFormPage.module.css';
 
 const customSelectStyles = {
@@ -34,8 +35,8 @@ const customSelectStyles = {
 };
 
 const STAGES = ['DRAFT', 'CONFIRMED', 'UNDER_REPAIR', 'DONE'];
-const STAGE_LABELS = { DRAFT: 'Nháp', CONFIRMED: 'Xác nhận', UNDER_REPAIR: 'Đang sửa', DONE: 'Hoàn tất' };
-const EDITABLE_STATUSES = ['DRAFT', 'QUOTATION'];
+const STAGE_LABELS = { DRAFT: 'Nháp', QUOTATION: 'Báo giá', CONFIRMED: 'Xác nhận', UNDER_REPAIR: 'Đang sửa', DONE: 'Hoàn tất', CANCELLED: 'Đã huỷ' };
+const EDITABLE_STATUSES = ['DRAFT', 'QUOTATION', 'CONFIRMED', 'UNDER_REPAIR'];
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 const today = () => new Date().toLocaleDateString('sv-SE');
 
@@ -95,6 +96,14 @@ function RepairFormPage() {
     navigator.clipboard.writeText(link)
       .then(() => showToast('success', 'Đã copy link báo giá!'))
       .catch(() => showToast('error', 'Không thể copy link'));
+  };
+
+  const handleGoBack = () => {
+    if (location.key !== 'default') {
+      navigate(-1);
+    } else {
+      navigate('/repairs');
+    }
   };
 
   const closeSerialModal = (serialObj) => {
@@ -157,29 +166,14 @@ function RepairFormPage() {
   const [addingType, setAddingType] = useState(null); // 'PART' or 'FEE'
   const [visibleColumns, setVisibleColumns] = useState({
     description: true,
-    serialNumber: true,
-    dateScheduled: false,
-    deadline: false
+    serialNumber: true
   });
-  const [showColumnDropdown, setShowColumnDropdown] = useState(false);
-  const columnDropdownRef = useRef(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (columnDropdownRef.current && !columnDropdownRef.current.contains(event.target)) {
-        setShowColumnDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const [sourceWarranty, setSourceWarranty] = useState(null);
   const [codeError, setCodeError] = useState('');
   const codeCheckTimer = useRef(null);
 
-  const productOptions = useMemo(() => {
+  const filteredProductsList = useMemo(() => {
     let list = products.filter(p => p.productType === 'Hàng hóa' || p.productType === 'Thành phẩm');
     if (sourceWarranty && sourceWarranty.lines && sourceWarranty.lines.length > 0) {
       const allowedIds = new Set();
@@ -198,11 +192,30 @@ function RepairFormPage() {
         list = list.filter(p => allowedIds.has(Number(p.id)));
       }
     }
-    return list.map(p => ({
-      value: p.id,
-      label: [p.productCode, p.productName].filter(Boolean).join(' - ')
-    }));
+    return list;
   }, [products, sourceWarranty, variants]);
+
+  const maxWarrantyQuantity = useMemo(() => {
+    if (!sourceWarranty || !sourceWarranty.lines || !formData.productId) return null;
+    let total = 0;
+    sourceWarranty.lines.forEach(line => {
+      let matches = false;
+      if (line.productId && Number(line.productId) === Number(formData.productId)) {
+        matches = true;
+      } else if (line.productVariantId) {
+        const matchV = variants.find(v => String(v.id) === String(line.productVariantId));
+        if (matchV && Number(matchV.productId) === Number(formData.productId)) matches = true;
+      } else if (line.sku) {
+        const matchP = products.find(p => p.productCode === line.sku || p.sku === line.sku);
+        if (matchP && Number(matchP.id) === Number(formData.productId)) matches = true;
+      }
+      if (matches) {
+        total += Number(line.quantity || 1);
+      }
+    });
+    return total > 0 ? total : null;
+    // eslint-disable-next-line
+  }, [sourceWarranty, formData.productId, variants, products]);
 
   const showToast = (type, message) => {
     setToast({ isVisible: true, type, message });
@@ -249,6 +262,8 @@ function RepairFormPage() {
               if (wData.partnerId) initialData.partnerId = wData.partnerId;
               initialData.warrantyId = warrantyId;
               initialData.underWarranty = true;
+              initialData.referenceId = wData.id || warrantyId;
+              initialData.referenceCode = wData.warrantyCode || `Bảo hành #${wData.id || warrantyId}`;
 
               const allowedProductIds = [];
               const fetchedVariants = extractContent(varRes);
@@ -290,13 +305,21 @@ function RepairFormPage() {
         const data = res.data?.data;
         if (data) {
           setRepair(data);
+          let refId = '';
+          let refCode = '';
           if (data.warrantyId) {
             try {
               const warRes = await warrantyApi.getWarrantyById(data.warrantyId);
               const wData = warRes?.data?.data || warRes?.data;
-              if (wData) setSourceWarranty(wData);
+              if (wData) {
+                setSourceWarranty(wData);
+                refId = wData.id || data.warrantyId;
+                refCode = wData.warrantyCode || `Bảo hành #${refId}`;
+              }
             } catch (e) {
               console.error('Failed to load warranty for edit repair', e);
+              refId = data.warrantyId;
+              refCode = `Bảo hành #${data.warrantyId}`;
             }
           }
           setFormData({
@@ -307,6 +330,7 @@ function RepairFormPage() {
             productUnit: data.productUnit || '',
             warehouseId: data.warehouseId || '',
             serialNumberId: data.serialNumberId || '',
+            warrantyId: data.warrantyId || null,
             issueDescription: data.issueDescription || '',
             solutionDescription: data.solutionDescription || '',
             underWarranty: !!data.underWarranty,
@@ -315,8 +339,8 @@ function RepairFormPage() {
             expectedDate: data.expectedDate || '',
             responsiblePerson: data.responsiblePerson || '',
             attachedDoc: '',
-            referenceId: '',
-            referenceCode: '',
+            referenceId: refId,
+            referenceCode: refCode,
             internalNotes: data.internalNotes || ''
           });
         }
@@ -357,6 +381,10 @@ function RepairFormPage() {
     if (!formData.productId) { showToast('error', 'Vui lòng chọn Sản phẩm cần sửa.'); return; }
     if (!formData.warehouseId) { showToast('error', 'Vui lòng chọn Kho thực hiện sửa chữa.'); return; }
     if (!formData.productQuantity || Number(formData.productQuantity) <= 0) { showToast('error', 'Số lượng sản phẩm phải lớn hơn 0.'); return; }
+    if (maxWarrantyQuantity !== null && Number(formData.productQuantity) > maxWarrantyQuantity) {
+      showToast('error', `Số lượng tối đa được phép bảo hành là ${maxWarrantyQuantity}.`);
+      return;
+    }
     if (!formData.responsiblePerson?.trim()) { showToast('error', 'Vui lòng điền Người chịu trách nhiệm (KTV).'); return; }
     if (!formData.issueDescription?.trim()) { showToast('error', 'Vui lòng điền Mô tả lỗi.'); return; }
 
@@ -456,12 +484,9 @@ function RepairFormPage() {
         l.actionType === 'ADD' && (Number(l.quantity) !== Number(l.doneQuantity) || !l.isUsed)
       );
       if (hasDiscrepancy) {
-        if (!window.confirm('Có sự chênh lệch giữa số lượng yêu cầu và thực tế sử dụng (hoặc chưa đánh dấu Đã sử dụng). Bạn có chắc chắn muốn kết thúc sửa chữa (Hệ thống sẽ trừ tồn kho theo số thực tế)?')) {
-          return;
-        }
+        showToast('error', 'Có sự chênh lệch giữa số lượng yêu cầu và thực tế. Vui lòng cập nhật số lượng hoặc đánh dấu Đã sử dụng trước khi kết thúc.');
+        return;
       }
-    } else {
-      if (!window.confirm(`Xác nhận chuyển trạng thái lệnh sửa chữa sang ${STAGE_LABELS[status]}?`)) return;
     }
 
     setSaving(true);
@@ -573,6 +598,23 @@ function RepairFormPage() {
         await repairApi.updateRepairLine(id, lineId, { [field]: value });
       } catch (err) {
         showToast('error', 'Cập nhật thất bại');
+        loadData(); // revert
+      }
+    }
+  };
+
+  const handleUpdateFeeField = async (feeId, key, field, value) => {
+    if (isNew) {
+      setPendingFees(prev => prev.map(f => ((f.id && f.id === feeId) || (f._key && f._key === key)) ? { ...f, [field]: value } : f));
+    } else {
+      setRepair(prev => ({
+        ...prev,
+        fees: prev.fees.map(f => f.id === feeId ? { ...f, [field]: value } : f)
+      }));
+      try {
+        await repairApi.updateRepairFee(id, feeId, { [field]: value });
+      } catch (err) {
+        showToast('error', 'Cập nhật dịch vụ thất bại');
         loadData(); // revert
       }
     }
@@ -708,7 +750,7 @@ function RepairFormPage() {
         <div className={styles.pageTitleContainer}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
-              onClick={() => navigate('/repairs')}
+              onClick={() => handleGoBack()}
               className={styles.iconBtn}
               title="Quay lại"
             >
@@ -716,7 +758,13 @@ function RepairFormPage() {
             </button>
             <h1 className={styles.pageTitle}>{isNew ? 'Thêm mới Lệnh sửa chữa' : `Lệnh sửa chữa: ${repair?.repairCode}`}</h1>
             {!isNew && (
-              <span className={`misa-badge ${currentStatus === 'DONE' ? 'misa-badge-success' : currentStatus === 'UNDER_REPAIR' ? 'misa-badge-warning' : 'misa-badge-primary'}`}>
+              <span className={`${styles.badge} ${
+                ['CONFIRMED', 'DONE'].includes(currentStatus) ? styles.badgeSuccess :
+                currentStatus === 'UNDER_REPAIR' ? styles.badgeWarning :
+                currentStatus === 'CANCELLED' ? styles.badgeDanger :
+                currentStatus === 'QUOTATION' ? styles.badgePrimary :
+                styles.badgeInfo
+              }`}>
                 {STAGE_LABELS[currentStatus]}
               </span>
             )}
@@ -749,23 +797,22 @@ function RepairFormPage() {
               <div className="misa-form-row" style={{ marginBottom: '8px' }}>
                 <div className="misa-form-group" style={{ flex: 1 }}>
                   <label className="misa-label">Sản phẩm cần sửa <span className="required">*</span></label>
-                  <Select
-                    isDisabled={!isEditable}
-                    options={productOptions}
-                    value={productOptions.find(opt => String(opt.value) === String(formData.productId)) || (products.find(p => String(p.id) === String(formData.productId)) ? { value: formData.productId, label: [products.find(p => String(p.id) === String(formData.productId)).productCode, products.find(p => String(p.id) === String(formData.productId)).productName].filter(Boolean).join(' - ') } : null)}
-                    onChange={opt => {
-                      handleFormChange('productId', opt ? opt.value : '');
-                      if (opt) {
-                        const selectedProduct = products.find(p => String(p.id) === String(opt.value));
-                        if (selectedProduct && selectedProduct.unitName) {
-                          handleFormChange('productUnit', selectedProduct.unitName);
-                        }
+                  <ProductGridSelect
+                    disabled={!isEditable}
+                    products={filteredProductsList}
+                    value={formData.productId}
+                    hideStock={true}
+                    fullWidthPopover={true}
+                    onChange={(selected) => {
+                      handleFormChange('productId', selected ? selected.id : '');
+                      if (selected && selected.unitName) {
+                        handleFormChange('productUnit', selected.unitName);
                       } else {
                         handleFormChange('productUnit', '');
                       }
                     }}
+                    displayMode="code-name"
                     placeholder="Chọn sản phẩm..."
-                    isClearable styles={customSelectStyles}
                   />
                 </div>
               </div>
@@ -783,7 +830,14 @@ function RepairFormPage() {
                 </div>
                 <div className="misa-form-group" style={{ flex: '1' }}>
                   <label className="misa-label">Số lượng <span className="required">*</span></label>
-                  <input type="number" min="1" className="misa-input" disabled={!isEditable} value={formData.productQuantity} onChange={e => handleFormChange('productQuantity', e.target.value)} />
+                  <input type="number" min="1" max={maxWarrantyQuantity || ''} className="misa-input" disabled={!isEditable} value={formData.productQuantity} onChange={e => {
+                    let val = e.target.value;
+                    if (val !== '' && maxWarrantyQuantity !== null && Number(val) > maxWarrantyQuantity) {
+                      val = maxWarrantyQuantity;
+                      showToast('warning', `Số lượng tối đa được phép bảo hành là ${maxWarrantyQuantity}`);
+                    }
+                    handleFormChange('productQuantity', val);
+                  }} />
                 </div>
                 <div className="misa-form-group" style={{ flex: '1' }}>
                   <label className="misa-label">Đơn vị</label>
@@ -815,15 +869,24 @@ function RepairFormPage() {
                 </div>
                 {formData.referenceId ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-                    <span style={{ color: 'var(--color-primary)', fontWeight: '500', cursor: 'pointer' }} onClick={() => { }}>
+                    <span 
+                      style={{ color: 'var(--color-primary)', fontWeight: '500', cursor: 'pointer' }} 
+                      onClick={() => window.open(`/warranties/${formData.referenceId}`, '_blank')}
+                      title="Xem chứng từ tham chiếu"
+                    >
                       <i className="bi bi-file-earmark-text"></i> {formData.referenceCode}
                     </span>
-                    <i
-                      className="bi bi-x-circle-fill"
-                      style={{ color: '#dc3545', cursor: 'pointer', fontSize: '14px' }}
-                      onClick={() => handleFormChange('referenceId', '')}
-                      title="Xóa tham chiếu"
-                    ></i>
+                    {isEditable && (
+                      <i
+                        className="bi bi-x-circle-fill"
+                        style={{ color: '#dc3545', cursor: 'pointer', fontSize: '14px' }}
+                        onClick={() => {
+                          handleFormChange('referenceId', '');
+                          handleFormChange('warrantyId', null);
+                        }}
+                        title="Xóa tham chiếu"
+                      ></i>
+                    )}
                   </div>
                 ) : (
                   <input type="text" className="misa-input" style={{ marginTop: '8px' }} disabled={!isEditable} placeholder="Số chứng từ đính kèm..." value={formData.attachedDoc} onChange={e => handleFormChange('attachedDoc', e.target.value)} />
@@ -863,28 +926,13 @@ function RepairFormPage() {
         {/* BẢNG HÀNG HÓA */}
         <div className={styles.card} style={{ marginTop: '16px' }}>
           <div className={styles.cardHeader}>
-            <div className={styles.tabs}>
-              <button className={`${styles.tabBtn} ${activeTab === 'DETAILS' ? styles.tabActive : ''}`} onClick={() => setActiveTab('DETAILS')}>Chi tiết lệnh</button>
-              <button className={`${styles.tabBtn} ${activeTab === 'NOTES' ? styles.tabActive : ''}`} onClick={() => setActiveTab('NOTES')}>Ghi chú nội bộ</button>
-            </div>
+            <i className="bi bi-list-check text-gray-500"></i>
+            <h3 className={styles.cardTitle}>Chi tiết linh kiện & dịch vụ</h3>
           </div>
           <div className={styles.tableContainer}>
-            {activeTab === 'NOTES' ? (
-              <div style={{ padding: '16px' }}>
-                <textarea
-                  className="misa-textarea"
-                  style={{ width: '100%', minHeight: '300px', fontSize: '14px', lineHeight: '1.5', padding: '12px' }}
-                  placeholder="Nhập ghi chú nội bộ..."
-                  value={formData.internalNotes || ''}
-                  onChange={(e) => handleFormChange('internalNotes', e.target.value)}
-                  onBlur={() => handleUpdateInternalNotes()}
-                ></textarea>
-              </div>
-            ) : (
-              <table className={styles.table}>
-                <thead>
-                  {activeTab === 'DETAILS' && (
-                    <tr>
+            <table className={styles.table}>
+              <thead>
+                <tr>
                       <th style={{ whiteSpace: 'nowrap' }}>Loại</th>
                       <th style={{ whiteSpace: 'nowrap' }}>Hạng mục (Linh kiện / Dịch vụ)</th>
                       {showRepairCols && isEditable && <th style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>Tồn kho</th>}
@@ -897,39 +945,12 @@ function RepairFormPage() {
                       <th style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>Bảo hành</th>
                       {visibleColumns.description && <th style={{ whiteSpace: 'nowrap' }}>Ghi chú</th>}
                       {showRepairCols && visibleColumns.serialNumber && <th style={{ whiteSpace: 'nowrap' }}>Serial</th>}
-                      {visibleColumns.dateScheduled && <th style={{ whiteSpace: 'nowrap' }}>Ngày dự kiến</th>}
-                      {visibleColumns.deadline && <th style={{ whiteSpace: 'nowrap' }}>Hạn chót</th>}
                       <th style={{ width: '80px', textAlign: 'center', whiteSpace: 'nowrap' }}>Thao tác</th>
-                      <th style={{ width: '40px', textAlign: 'center', position: 'relative' }}>
-                        <div ref={columnDropdownRef}>
-                          <button type="button" onClick={() => setShowColumnDropdown(!showColumnDropdown)} title="Tùy chọn cột" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                            <i className="bi bi-sliders"></i>
-                          </button>
-                          {showColumnDropdown && (
-                            <div style={{ position: 'absolute', top: '100%', right: 0, backgroundColor: '#fff', border: '1px solid #d1d5db', borderRadius: '4px', padding: '8px', zIndex: 10, minWidth: '150px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', textAlign: 'left', fontWeight: 'normal' }}>
-                              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', cursor: 'pointer', fontSize: '13px' }}>
-                                <input type="checkbox" checked={visibleColumns.description} onChange={(e) => setVisibleColumns(prev => ({ ...prev, description: e.target.checked }))} /> Ghi chú
-                              </label>
-                              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', cursor: 'pointer', fontSize: '13px' }}>
-                                <input type="checkbox" checked={visibleColumns.serialNumber} onChange={(e) => setVisibleColumns(prev => ({ ...prev, serialNumber: e.target.checked }))} /> Số Serial
-                              </label>
-                              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', cursor: 'pointer', fontSize: '13px' }}>
-                                <input type="checkbox" checked={visibleColumns.dateScheduled} onChange={(e) => setVisibleColumns(prev => ({ ...prev, dateScheduled: e.target.checked }))} /> Ngày dự kiến
-                              </label>
-                              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                                <input type="checkbox" checked={visibleColumns.deadline} onChange={(e) => setVisibleColumns(prev => ({ ...prev, deadline: e.target.checked }))} /> Hạn chót
-                              </label>
-                            </div>
-                          )}
-                        </div>
-                      </th>
+                      <th style={{ width: '40px', textAlign: 'center' }}></th>
                     </tr>
-                  )}
                 </thead>
                 <tbody>
-                  {activeTab === 'DETAILS' && (
-                    <>
-                      {lines.map((line, idx) => (
+                  {lines.map((line, idx) => (
                         <tr key={line.id || line._key}>
                           <td>
                             {isEditable ? (
@@ -993,7 +1014,7 @@ function RepairFormPage() {
                           )}
                           <td align="right">
                             {isEditable ? (
-                              <input type="number" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} value={line.isFreeWarranty ? 0 : line.unitPrice} onChange={(e) => handleUpdateLineField(line.id, line._key, 'unitPrice', e.target.value)} />
+                              <input type="text" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} value={line.isFreeWarranty ? 0 : money(line.unitPrice)} onChange={(e) => handleUpdateLineField(line.id, line._key, 'unitPrice', Number(e.target.value.replace(/\D/g, '')))} />
                             ) : money(line.unitPrice)}
                           </td>
                           <td align="right" style={{ fontWeight: '500' }}>
@@ -1048,20 +1069,7 @@ function RepairFormPage() {
                               return line.serialNumber || '';
                             })()}
                           </td>}
-                          {visibleColumns.dateScheduled && (
-                            <td>
-                              {isEditable ? (
-                                <input type="date" className="misa-input" style={{ padding: '2px 4px', height: '28px' }} value={line.dateScheduled || ''} onChange={(e) => handleUpdateLineField(line.id, line._key, 'dateScheduled', e.target.value)} />
-                              ) : line.dateScheduled}
-                            </td>
-                          )}
-                          {visibleColumns.deadline && (
-                            <td>
-                              {isEditable ? (
-                                <input type="date" className="misa-input" style={{ padding: '2px 4px', height: '28px' }} value={line.deadline || ''} onChange={(e) => handleUpdateLineField(line.id, line._key, 'deadline', e.target.value)} />
-                              ) : line.deadline}
-                            </td>
-                          )}
+
                           <td align="center">
                             {isEditable && (
                               <button className={styles.iconBtnDanger} onClick={() => handleDeleteLine(line.id, idx)}><i className="bi bi-trash"></i></button>
@@ -1085,15 +1093,20 @@ function RepairFormPage() {
                           {showRepairCols && <td align="right">-</td>}
                           <td>{fee.unitName}</td>
                           {showRepairCols && <td align="center">-</td>}
-                          <td align="right">{money(fee.feeAmount)}</td>
+                          <td align="right">
+                            {isEditable ? (
+                              <input type="text" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={fee.isFreeWarranty} value={fee.isFreeWarranty ? 0 : money(fee.feeAmount)} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'feeAmount', Number(e.target.value.replace(/\D/g, '')))} />
+                            ) : money(fee.feeAmount)}
+                          </td>
                           <td align="right" style={{ fontWeight: '500' }}>
                             {money((fee.isFreeWarranty ? 0 : Number(fee.quantity || 1) * Number(fee.feeAmount)))}
                           </td>
-                          <td align="center"><input type="checkbox" readOnly checked={fee.isFreeWarranty} /></td>
+                          <td align="center">
+                            <input type="checkbox" disabled={!isEditable} checked={fee.isFreeWarranty} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'isFreeWarranty', e.target.checked)} />
+                          </td>
                           {visibleColumns.description && <td>{fee.note}</td>}
                           {showRepairCols && visibleColumns.serialNumber && <td></td>}
-                          {visibleColumns.dateScheduled && <td></td>}
-                          {visibleColumns.deadline && <td></td>}
+
                           <td align="center">
                             {isEditable && (
                               <button className={styles.iconBtnDanger} onClick={() => handleDeleteFee(fee.id, idx)}><i className="bi bi-trash"></i></button>
@@ -1109,15 +1122,12 @@ function RepairFormPage() {
                       {addingType === 'FEE' && (
                         <NewInlineRow repair={repair} type="FEE" variants={products.filter(p => p.productType === 'Dịch vụ').map(v => ({ value: v.id, label: v.productName, unitName: v.unitName, salePrice: v.salePrice, productName: v.productName }))} onSave={handleSaveFee} onCancel={() => setAddingType(null)} underWarranty={formData.underWarranty} visibleColumns={visibleColumns} />
                       )}
-                    </>
-                  )}
                 </tbody>
               </table>
-            )}
           </div>
-          {isEditable && activeTab === 'DETAILS' && (
-            <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', backgroundColor: '#f9fafb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ padding: '16px', borderTop: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+            {isEditable && (
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
                 <button className={styles.btnOutlineBlue} onClick={() => setAddingType('PART')}>
                   <i className="bi bi-plus" style={{ fontSize: '18px' }}></i> Thêm linh kiện
                 </button>
@@ -1125,23 +1135,30 @@ function RepairFormPage() {
                   <i className="bi bi-plus" style={{ fontSize: '18px' }}></i> Thêm dịch vụ
                 </button>
               </div>
-              <div style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '15px' }}>
-                Tổng cộng toàn bộ đơn: <span style={{ color: '#017e84', marginLeft: '4px', fontSize: '18px' }}>{money(totalAmount)} đ</span>
+            )}
+            <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <label className="misa-label">Ghi chú nội bộ</label>
+                <textarea
+                  className="misa-textarea"
+                  style={{ width: '100%', minHeight: '80px', fontSize: '13px', padding: '8px', lineHeight: '1.5' }}
+                  placeholder="Ghi chú dành riêng cho nội bộ cửa hàng..."
+                  value={formData.internalNotes || ''}
+                  onChange={(e) => handleFormChange('internalNotes', e.target.value)}
+                  onBlur={() => handleUpdateInternalNotes()}
+                ></textarea>
+              </div>
+              <div style={{ width: '300px', textAlign: 'right', fontWeight: 'bold', fontSize: '15px', alignSelf: 'flex-end', marginBottom: '8px' }}>
+                Tổng cộng toàn bộ đơn:<br/>
+                <span style={{ color: '#017e84', fontSize: '24px', display: 'inline-block', marginTop: '4px' }}>{money(totalAmount)} đ</span>
               </div>
             </div>
-          )}
-          {!isEditable && activeTab === 'DETAILS' && (
-            <div style={{ padding: '12px 16px', borderTop: '1px solid #e5e7eb', backgroundColor: '#f9fafb', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-              <div style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '15px' }}>
-                Tổng cộng toàn bộ đơn: <span style={{ color: '#017e84', marginLeft: '4px', fontSize: '18px' }}>{money(totalAmount)} đ</span>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         <div className={styles.fixedFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => navigate('/repairs')} style={{ marginRight: '8px' }}>Hủy bỏ</button>
+            <button className="btn-misa-cancel" onClick={() => handleGoBack()} style={{ marginRight: '8px' }}>Hủy bỏ</button>
             {!isNew && currentStatus === 'DONE' && (
               <>
                 <button className="btn-misa-outline" onClick={() => navigate('/export-slips', { state: { filterDocCode: 'REP-EX-' + repair.repairCode } })} style={{ marginRight: '8px' }}><i className="bi bi-box-arrow-up-right"></i> Xem phiếu xuất kho</button>
@@ -1158,9 +1175,7 @@ function RepairFormPage() {
                 <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }} onClick={handleCopyPublicLink}>
                   <i className="bi bi-link-45deg" style={{ marginRight: '4px' }}></i> Chia sẻ link
                 </button>
-                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('QUOTATION')} style={{ marginRight: '8px', backgroundColor: '#f59e0b', borderColor: '#f59e0b' }}>
-                  Gửi báo giá
-                </button>
+
                 <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: '#10b981', borderColor: '#10b981' }}>
                   Xác nhận sửa chữa
                 </button>
@@ -1198,9 +1213,11 @@ function RepairFormPage() {
               </>
             )}
             {!isNew && repair && repair.repairStatus === 'UNDER_REPAIR' && (
-              <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('DONE')} style={{ marginRight: '8px' }}>
-                Kết thúc sửa chữa
-              </button>
+              <>
+                <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('DONE')} style={{ marginRight: '8px' }}>
+                  Kết thúc sửa chữa
+                </button>
+              </>
             )}
             {isEditable && (
               <button className="btn-misa-post" disabled={saving || !!codeError} onClick={handleSave}>
@@ -1284,7 +1301,7 @@ function NewInlineRow({ repair, type, variants, onSave, onCancel, underWarranty,
         <input type="checkbox" disabled />
       </td>
       <td>
-        <input type="number" className="misa-input" disabled={isFree} value={isFree ? 0 : form.unitPrice} onChange={e => setForm({ ...form, unitPrice: e.target.value })} style={{ padding: '2px 4px', height: '28px', width: '100px' }} />
+        <input type="text" className="misa-input" disabled={isFree} value={isFree ? 0 : money(form.unitPrice)} onChange={e => setForm({ ...form, unitPrice: Number(e.target.value.replace(/\D/g, '')) })} style={{ padding: '2px 4px', height: '28px', width: '100px', textAlign: 'right' }} />
       </td>
       <td align="right">{money((isFree || form.actionType !== 'ADD') ? 0 : form.quantity * form.unitPrice)}</td>
       <td align="center"><input type="checkbox" checked={form.isFreeWarranty} onChange={e => setForm({ ...form, isFreeWarranty: e.target.checked })} /></td>
@@ -1292,12 +1309,7 @@ function NewInlineRow({ repair, type, variants, onSave, onCancel, underWarranty,
         <td><input className="misa-input" value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="Ghi chú..." style={{ padding: '2px 4px', height: '28px' }} /></td>
       )}
       {visibleColumns.serialNumber && <td></td>}
-      {visibleColumns.dateScheduled && (
-        <td><input type="date" className="misa-input" value={form.dateScheduled || ''} onChange={e => setForm({ ...form, dateScheduled: e.target.value })} style={{ padding: '2px 4px', height: '28px' }} /></td>
-      )}
-      {visibleColumns.deadline && (
-        <td><input type="date" className="misa-input" value={form.deadline || ''} onChange={e => setForm({ ...form, deadline: e.target.value })} style={{ padding: '2px 4px', height: '28px' }} /></td>
-      )}
+
       <td align="center">
         <button className={styles.iconBtnDanger} onClick={onCancel} title="Xóa dòng">
           <i className="bi bi-trash"></i>
@@ -1338,7 +1350,7 @@ function NewInlineRow({ repair, type, variants, onSave, onCancel, underWarranty,
       <td>{form.unitName || '-'}</td>
       <td align="center"></td>
       <td align="right">
-        <input type="number" className="misa-input" disabled={isFree} style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} value={isFree ? 0 : form.feeAmount} onChange={e => setForm({ ...form, feeAmount: e.target.value })} />
+        <input type="text" className="misa-input" disabled={isFree} style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} value={isFree ? 0 : money(form.feeAmount)} onChange={e => setForm({ ...form, feeAmount: Number(e.target.value.replace(/\D/g, '')) })} />
       </td>
       <td align="right">
         {money(isFree ? 0 : (form.quantity || 1) * form.feeAmount)}
@@ -1350,8 +1362,7 @@ function NewInlineRow({ repair, type, variants, onSave, onCancel, underWarranty,
         <td><input type="text" className="misa-input" placeholder="Ghi chú" value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} style={{ padding: '2px 4px', height: '28px' }} /></td>
       )}
       {visibleColumns.serialNumber && <td></td>}
-      {visibleColumns.dateScheduled && <td></td>}
-      {visibleColumns.deadline && <td></td>}
+
       <td align="center">
         <button className={styles.iconBtnDanger} onClick={onCancel} title="Xóa dòng">
           <i className="bi bi-trash"></i>

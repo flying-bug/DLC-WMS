@@ -62,11 +62,7 @@ public class RepairLine {
     @Builder.Default
     private Boolean isUsed = false;
 
-    @Column(name = "date_scheduled")
-    private java.time.LocalDate dateScheduled;
 
-    @Column(name = "deadline")
-    private java.time.LocalDate deadline;
 
     @Column(columnDefinition = "TEXT")
     private String note;

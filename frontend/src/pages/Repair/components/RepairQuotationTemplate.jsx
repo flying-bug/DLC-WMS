@@ -15,7 +15,7 @@ const fmtDate = (dateStr) => {
 const RepairQuotationTemplate = forwardRef(({ repair }, ref) => {
     if (!repair) return null;
 
-    const lines = repair.lines || [];
+    const lines = (repair.lines || []).filter(l => l.actionType === 'ADD');
     const fees = repair.fees || [];
     const totalAmount = repair.totalAmount || 0;
 
