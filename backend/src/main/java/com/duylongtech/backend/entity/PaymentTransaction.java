@@ -6,19 +6,22 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "PAYMENT_VOUCHERS")
+@Table(name = "PAYMENT_TRANSACTIONS")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PaymentVoucher {
+public class PaymentTransaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "voucher_code", nullable = false, unique = true, length = 50)
-    private String voucherCode;
+    @Column(name = "transaction_code", nullable = false, unique = true, length = 50)
+    private String transactionCode;
+
+    @Column(name = "type", nullable = false, length = 20)
+    private String type; // RECEIPT or VOUCHER
 
     @Column(name = "partner_id", nullable = false)
     private Long partnerId;
