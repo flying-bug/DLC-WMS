@@ -352,6 +352,34 @@
     background-color: var(--color-primary-soft);
 }
 
+/* Group Border & Header Styling for Inventory Summary Report */
+.groupBorderLeft {
+    border-left: 2px solid #475569 !important;
+}
+
+.groupBorderRight {
+    border-right: 2px solid #475569 !important;
+}
+
+.summaryGroupHeader {
+    background-color: #cbd5e1 !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    font-size: 13px !important;
+    border-top: 2px solid #475569 !important;
+    border-bottom: 2px solid #475569 !important;
+    border-left: 2px solid #475569 !important;
+    border-right: 2px solid #475569 !important;
+}
+
+.fixedHeaderBold {
+    background-color: #e2e8f0 !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    font-size: 13px !important;
+    border: 1px solid #94a3b8 !important;
+}
+
 /* Specific Alignment and weights */
 .textLeft { text-align: left; }
 .textCenter { text-align: center; }

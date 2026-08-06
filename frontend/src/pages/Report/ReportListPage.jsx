@@ -533,41 +533,41 @@ const ReportListPage = () => {
                                             <table className={`${styles.reportTable} ${styles.summaryTable}`}>
                                                 <thead>
                                                     <tr>
-                                                        <th rowSpan="2">Kho</th>
-                                                        <th rowSpan="2">Mã hàng</th>
-                                                        <th rowSpan="2">Tên hàng</th>
-                                                        <th rowSpan="2">ĐVT</th>
-                                                        <th colSpan="2" className={styles.textCenter}>Tồn đầu kỳ</th>
-                                                        <th colSpan="2" className={styles.textCenter}>Nhập trong kỳ</th>
-                                                        <th colSpan="2" className={styles.textCenter}>Xuất trong kỳ</th>
-                                                        <th colSpan="2" className={styles.textCenter}>Tồn cuối kỳ</th>
+                                                        <th rowSpan="2" className={styles.fixedHeaderBold} style={{ whiteSpace: 'nowrap' }}>Kho</th>
+                                                        <th rowSpan="2" className={styles.fixedHeaderBold} style={{ whiteSpace: 'nowrap' }}>Mã hàng</th>
+                                                        <th rowSpan="2" className={styles.fixedHeaderBold}>Tên hàng</th>
+                                                        <th rowSpan="2" className={styles.fixedHeaderBold} style={{ whiteSpace: 'nowrap' }}>ĐVT</th>
+                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Tồn đầu kỳ</th>
+                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Nhập trong kỳ</th>
+                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Xuất trong kỳ</th>
+                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Tồn cuối kỳ</th>
                                                     </tr>
                                                     <tr>
-                                                        <th className={styles.textRight}>Số lượng</th>
-                                                        <th className={styles.textRight}>Giá trị</th>
-                                                        <th className={styles.textRight}>Số lượng</th>
-                                                        <th className={styles.textRight}>Giá trị</th>
-                                                        <th className={styles.textRight}>Số lượng</th>
-                                                        <th className={styles.textRight}>Giá trị</th>
-                                                        <th className={styles.textRight}>Số lượng</th>
-                                                        <th className={styles.textRight}>Giá trị</th>
+                                                        <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
+                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
+                                                        <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
+                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
+                                                        <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
+                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
+                                                        <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
+                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {reportData.map((item, idx) => (
                                                         <tr key={idx}>
-                                                            <td>{item.warehouseName || '-'}</td>
-                                                            <td className={styles.fontSemibold}>{item.productCode}</td>
-                                                            <td>{item.productName}</td>
-                                                            <td>{item.unitName || '-'}</td>
-                                                            <td className={styles.textRight}>{formatQuantity(item.openingQuantity)}</td>
-                                                            <td className={styles.textRight}>{formatCurrency(item.openingValue)}</td>
-                                                            <td className={styles.textRight}>{formatQuantity(item.receiptQuantity)}</td>
-                                                            <td className={styles.textRight}>{formatCurrency(item.receiptValue)}</td>
-                                                            <td className={styles.textRight}>{formatQuantity(item.issueQuantity)}</td>
-                                                            <td className={styles.textRight}>{formatCurrency(item.issueValue)}</td>
-                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: 'var(--misa-primary)' }}>{formatQuantity(item.endingQuantity)}</td>
-                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`}>{formatCurrency(item.endingValue)}</td>
+                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.warehouseName || '-'}</td>
+                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.productCode}</td>
+                                                            <td className={styles.fontSemibold}>{item.productName}</td>
+                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.unitName || '-'}</td>
+                                                            <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.openingQuantity)}</td>
+                                                            <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.openingValue)}</td>
+                                                            <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.receiptQuantity)}</td>
+                                                            <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.receiptValue)}</td>
+                                                            <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.issueQuantity)}</td>
+                                                            <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.issueValue)}</td>
+                                                            <td className={`${styles.textRight} ${styles.fontSemibold} ${styles.groupBorderLeft}`} style={{ color: 'var(--misa-primary)', whiteSpace: 'nowrap' }}>{formatQuantity(item.endingQuantity)}</td>
+                                                            <td className={`${styles.textRight} ${styles.fontSemibold} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.endingValue)}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
