@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import axiosClient from '../../api/axiosClient';
 import AdminLayout from '../../components/layout/AdminLayout';
 import styles from './AiChatPage.module.css';
@@ -51,6 +51,15 @@ function AiChatPage() {
     const [input, setInput] = useState('');
     const [isThinking, setIsThinking] = useState(false);
     const textareaRef = useRef(null);
+    const messagesEndRef = useRef(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages, isThinking]);
 
     const canSend = input.trim().length > 0 && !isThinking;
 
@@ -186,15 +195,19 @@ function AiChatPage() {
                                     key={message.id}
                                     className={`${styles.messageRow} ${message.role === 'user' ? styles.userRow : ''}`}
                                 >
-                                    <div className={styles.avatar} aria-hidden="true">
-                                        <i className={message.role === 'user' ? 'fas fa-user' : 'fas fa-robot'} />
-                                    </div>
-                                    <div className={styles.messageBubble}>
+                                    {message.role !== 'user' && (
+                                        <div className={styles.avatar} aria-hidden="true">
+                                            <i className="fas fa-robot" />
+                                        </div>
+                                    )}
+                                    <div className={styles.messageContentWrapper}>
                                         <div className={styles.messageMeta}>
-                                            <strong>{message.role === 'user' ? 'Bạn' : 'AI Assistant'}</strong>
+                                            {message.role !== 'user' && <strong>AI Assistant</strong>}
                                             <span>{message.time}</span>
                                         </div>
-                                        <p>{message.content}</p>
+                                        <div className={styles.messageBubble}>
+                                            <p>{message.content}</p>
+                                        </div>
                                     </div>
                                 </article>
                             ))}
@@ -204,13 +217,19 @@ function AiChatPage() {
                                     <div className={styles.avatar} aria-hidden="true">
                                         <i className="fas fa-robot" />
                                     </div>
-                                    <div className={`${styles.messageBubble} ${styles.typingBubble}`}>
-                                        <span />
-                                        <span />
-                                        <span />
+                                    <div className={styles.messageContentWrapper}>
+                                        <div className={styles.messageMeta}>
+                                            <strong>AI Assistant</strong>
+                                        </div>
+                                        <div className={`${styles.messageBubble} ${styles.typingBubble}`}>
+                                            <span />
+                                            <span />
+                                            <span />
+                                        </div>
                                     </div>
                                 </article>
                             )}
+                            <div ref={messagesEndRef} />
                         </div>
 
                         <form className={styles.composer} onSubmit={handleSubmit}>

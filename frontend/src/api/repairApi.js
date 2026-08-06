@@ -38,6 +38,10 @@ export const deleteRepairFee = (id, feeId) => {
     return axiosClient.delete(`${REPAIR_BASE}/${id}/fees/${feeId}`);
 };
 
+export const updateRepairFee = (id, feeId, data) => {
+    return axiosClient.put(`${REPAIR_BASE}/${id}/fees/${feeId}`, data);
+};
+
 export const updateRepairStatus = (id, statusData) => {
     return axiosClient.put(`${REPAIR_BASE}/${id}/status`, statusData);
 };

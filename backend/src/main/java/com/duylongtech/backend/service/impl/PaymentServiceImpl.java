@@ -3,12 +3,10 @@ package com.duylongtech.backend.service.impl;
 import com.duylongtech.backend.dto.request.PaymentRequest;
 import com.duylongtech.backend.dto.response.PaymentResponse;
 import com.duylongtech.backend.entity.Partner;
-import com.duylongtech.backend.entity.PaymentReceipt;
-import com.duylongtech.backend.entity.PaymentVoucher;
+import com.duylongtech.backend.entity.PaymentTransaction;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.PartnerRepository;
-import com.duylongtech.backend.repository.PaymentReceiptRepository;
-import com.duylongtech.backend.repository.PaymentVoucherRepository;
+import com.duylongtech.backend.repository.PaymentTransactionRepository;
 import com.duylongtech.backend.service.CodeGeneratorService;
 import com.duylongtech.backend.service.PartnerLedgerService;
 import com.duylongtech.backend.service.PaymentService;
@@ -19,17 +17,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PaymentServiceImpl implements PaymentService {
 
-    private final PaymentReceiptRepository paymentReceiptRepository;
-    private final PaymentVoucherRepository paymentVoucherRepository;
+    private final PaymentTransactionRepository paymentTransactionRepository;
     private final PartnerRepository partnerRepository;
     private final PartnerLedgerService partnerLedgerService;
     private final CodeGeneratorService codeGeneratorService;
@@ -37,64 +33,28 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentResponse createPaymentReceipt(PaymentRequest request) {
-        Partner partner = partnerRepository.findById(request.getPartnerId())
-                .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác với ID: " + request.getPartnerId()));
-
-        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("Số tiền thu phải lớn hơn 0");
-        }
-
-        String code = codeGeneratorService.generateCode("PAYMENT_RECEIPTS", "receipt_code", "PT", 5);
-
-        PaymentReceipt receipt = PaymentReceipt.builder()
-                .receiptCode(code)
-                .partnerId(partner.getId())
-                .amount(request.getAmount())
-                .status("POSTED")
-                .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "BANK_TRANSFER")
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        PaymentReceipt saved = paymentReceiptRepository.save(receipt);
-
-        // Ghi nhận vào Partner Ledger (Thu tiền = Giảm nợ)
-        partnerLedgerService.recordLedger(
-                partner.getId(),
-                "PAYMENT_RECEIPT",
-                saved.getId(),
-                saved.getReceiptCode(),
-                BigDecimal.ZERO,
-                request.getAmount(),
-                request.getNote() != null ? request.getNote() : "Lập phiếu thu tiền " + saved.getReceiptCode()
-        );
-
-        return PaymentResponse.builder()
-                .id(saved.getId())
-                .code(saved.getReceiptCode())
-                .partnerId(partner.getId())
-                .partnerName(partner.getName())
-                .amount(saved.getAmount())
-                .status(saved.getStatus())
-                .paymentMethod(saved.getPaymentMethod())
-                .type("RECEIPT")
-                .createdAt(saved.getCreatedAt())
-                .build();
+        return processPayment(request, "RECEIPT", "PAYMENT_TRANSACTIONS", "transaction_code", "PT");
     }
 
     @Override
     @Transactional
     public PaymentResponse createPaymentVoucher(PaymentRequest request) {
+        return processPayment(request, "VOUCHER", "PAYMENT_TRANSACTIONS", "transaction_code", "PC");
+    }
+
+    private PaymentResponse processPayment(PaymentRequest request, String type, String tableName, String codeCol, String prefix) {
         Partner partner = partnerRepository.findById(request.getPartnerId())
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác với ID: " + request.getPartnerId()));
 
         if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("Số tiền chi phải lớn hơn 0");
+            throw new BusinessException("Số tiền giao dịch phải lớn hơn 0");
         }
 
-        String code = codeGeneratorService.generateCode("PAYMENT_VOUCHERS", "voucher_code", "PC", 5);
+        String code = codeGeneratorService.generateCode(tableName, codeCol, prefix, 5);
 
-        PaymentVoucher voucher = PaymentVoucher.builder()
-                .voucherCode(code)
+        PaymentTransaction transaction = PaymentTransaction.builder()
+                .transactionCode(code)
+                .type(type)
                 .partnerId(partner.getId())
                 .amount(request.getAmount())
                 .status("POSTED")
@@ -102,28 +62,34 @@ public class PaymentServiceImpl implements PaymentService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        PaymentVoucher saved = paymentVoucherRepository.save(voucher);
+        PaymentTransaction saved = paymentTransactionRepository.save(transaction);
 
-        // Ghi nhận vào Partner Ledger (Chi tiền trả NCC = Giảm nợ phải trả)
+        String ledgerRefType = type.equals("RECEIPT") ? "PAYMENT_RECEIPT" : "PAYMENT_VOUCHER";
+        BigDecimal amountIn = type.equals("RECEIPT") ? BigDecimal.ZERO : request.getAmount();
+        BigDecimal amountOut = type.equals("RECEIPT") ? request.getAmount() : BigDecimal.ZERO;
+        
+        String defaultNote = (type.equals("RECEIPT") ? "Lập phiếu thu tiền " : "Lập phiếu chi tiền ") + saved.getTransactionCode();
+
+        // Ghi nhận vào Partner Ledger
         partnerLedgerService.recordLedger(
                 partner.getId(),
-                "PAYMENT_VOUCHER",
+                ledgerRefType,
                 saved.getId(),
-                saved.getVoucherCode(),
-                BigDecimal.ZERO,
-                request.getAmount(),
-                request.getNote() != null ? request.getNote() : "Lập phiếu chi tiền " + saved.getVoucherCode()
+                saved.getTransactionCode(),
+                amountIn,
+                amountOut,
+                request.getNote() != null ? request.getNote() : defaultNote
         );
 
         return PaymentResponse.builder()
                 .id(saved.getId())
-                .code(saved.getVoucherCode())
+                .code(saved.getTransactionCode())
                 .partnerId(partner.getId())
                 .partnerName(partner.getName())
                 .amount(saved.getAmount())
                 .status(saved.getStatus())
                 .paymentMethod(saved.getPaymentMethod())
-                .type("VOUCHER")
+                .type(saved.getType())
                 .createdAt(saved.getCreatedAt())
                 .build();
     }
@@ -134,37 +100,19 @@ public class PaymentServiceImpl implements PaymentService {
         Partner partner = partnerRepository.findById(partnerId)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác với ID: " + partnerId));
 
-        List<PaymentResponse> list = new ArrayList<>();
-
-        paymentReceiptRepository.findByPartnerIdOrderByCreatedAtDesc(partnerId).forEach(r -> 
-            list.add(PaymentResponse.builder()
-                    .id(r.getId())
-                    .code(r.getReceiptCode())
-                    .partnerId(partner.getId())
-                    .partnerName(partner.getName())
-                    .amount(r.getAmount())
-                    .status(r.getStatus())
-                    .paymentMethod(r.getPaymentMethod())
-                    .type("RECEIPT")
-                    .createdAt(r.getCreatedAt())
-                    .build())
-        );
-
-        paymentVoucherRepository.findByPartnerIdOrderByCreatedAtDesc(partnerId).forEach(v -> 
-            list.add(PaymentResponse.builder()
-                    .id(v.getId())
-                    .code(v.getVoucherCode())
-                    .partnerId(partner.getId())
-                    .partnerName(partner.getName())
-                    .amount(v.getAmount())
-                    .status(v.getStatus())
-                    .paymentMethod(v.getPaymentMethod())
-                    .type("VOUCHER")
-                    .createdAt(v.getCreatedAt())
-                    .build())
-        );
-
-        list.sort(Comparator.comparing(PaymentResponse::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())));
-        return list;
+        return paymentTransactionRepository.findByPartnerIdOrderByCreatedAtDesc(partnerId)
+                .stream()
+                .map(txn -> PaymentResponse.builder()
+                        .id(txn.getId())
+                        .code(txn.getTransactionCode())
+                        .partnerId(partner.getId())
+                        .partnerName(partner.getName())
+                        .amount(txn.getAmount())
+                        .status(txn.getStatus())
+                        .paymentMethod(txn.getPaymentMethod())
+                        .type(txn.getType())
+                        .createdAt(txn.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
     }
 }

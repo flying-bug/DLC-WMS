@@ -65,7 +65,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
             const elRect = dropdownRef.current.getBoundingClientRect();
             const spaceBelow = window.innerHeight - elRect.bottom;
             const spaceAbove = elRect.top;
-            
+
             setRect({
                 top: elRect.top,
                 bottom: elRect.bottom,
@@ -1994,19 +1994,19 @@ const ProductPage = () => {
                                                                             }}
                                                                         />
                                                                     </div>
-                                                                    <input 
-                                                                        type="text" 
-                                                                        placeholder="Ghi chú chi tiết (VD: Ổ chứa dữ liệu, Tản nhiệt nước...)" 
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder="Ghi chú chi tiết (VD: Ổ chứa dữ liệu, Tản nhiệt nước...)"
                                                                         value={line.note || ''}
                                                                         onChange={(e) => {
                                                                             const a = [...bomLines];
                                                                             a[idx].note = e.target.value;
                                                                             setBomLines(a);
                                                                         }}
-                                                                        style={{ 
-                                                                            width: '100%', border: 'none', borderBottom: '1px dashed #cbd5e1', 
-                                                                            padding: '4px 6px', fontSize: '12px', outline: 'none', 
-                                                                            background: 'transparent', color: '#4b5563', transition: 'border-color 0.2s' 
+                                                                        style={{
+                                                                            width: '100%', border: 'none', borderBottom: '1px dashed #cbd5e1',
+                                                                            padding: '4px 6px', fontSize: '12px', outline: 'none',
+                                                                            background: 'transparent', color: '#4b5563', transition: 'border-color 0.2s'
                                                                         }}
                                                                         onFocus={(e) => { e.target.style.borderBottom = '1px solid #3b82f6'; e.target.style.color = '#111827'; }}
                                                                         onBlur={(e) => { e.target.style.borderBottom = '1px dashed #cbd5e1'; e.target.style.color = '#4b5563'; }}

@@ -124,22 +124,18 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
     /**
      * Tính tổng tiền đã thu từ khách hàng (chỉ tính phiếu thu hoàn thành POSTED/APPROVED).
      */
-    @Query(value = "SELECT COALESCE(SUM(amount), 0) FROM PAYMENT_RECEIPTS " +
-           "WHERE partner_id = :customerId AND status IN ('POSTED', 'APPROVED')", 
+    @Query(value = "SELECT COALESCE(SUM(amount), 0) FROM PAYMENT_TRANSACTIONS " +
+           "WHERE partner_id = :customerId AND type = 'RECEIPT' AND status IN ('POSTED', 'APPROVED')", 
            nativeQuery = true)
     java.math.BigDecimal getTotalPaidByCustomerId(@Param("customerId") Long customerId);
 
     /**
      * Lấy lịch sử thu chi (UNION ALL giữa RECEIPTS và VOUCHERS).
      */
-    @Query(value = "SELECT receipt_code AS code, amount, status, payment_method AS paymentMethod, created_at AS createdAt, 'RECEIPT' AS type " +
-           "FROM PAYMENT_RECEIPTS WHERE partner_id = :customerId " +
-           "UNION ALL " +
-           "SELECT voucher_code AS code, amount, status, payment_method AS paymentMethod, created_at AS createdAt, 'VOUCHER' AS type " +
-           "FROM PAYMENT_VOUCHERS WHERE partner_id = :customerId " +
-           "ORDER BY createdAt DESC", 
-           countQuery = "SELECT (SELECT COUNT(*) FROM PAYMENT_RECEIPTS WHERE partner_id = :customerId) + " +
-                        "(SELECT COUNT(*) FROM PAYMENT_VOUCHERS WHERE partner_id = :customerId)",
+    @Query(value = "SELECT transaction_code AS code, amount, status, payment_method AS paymentMethod, created_at AS createdAt, type " +
+           "FROM PAYMENT_TRANSACTIONS WHERE partner_id = :customerId " +
+           "ORDER BY created_at DESC", 
+           countQuery = "SELECT COUNT(*) FROM PAYMENT_TRANSACTIONS WHERE partner_id = :customerId",
            nativeQuery = true)
     Page<Object[]> findPaymentHistoryByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
 }

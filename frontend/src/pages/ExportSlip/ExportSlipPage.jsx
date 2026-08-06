@@ -612,13 +612,13 @@ function ExportSlipPage() {
               <div className={styles.modalHeader}>
                 <h2 className={styles.modalTitle}>
                   <i className={`bi bi-receipt ${styles.detailIcon}`}></i>
-                  {selectedSlip.docCode}
+                  Chi tiết phiếu xuất kho: {selectedSlip.docCode}
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <button
                     onClick={() => handlePrintSlip(selectedSlip, false)}
-                    className={styles.btnSecondary}
-                    style={{ padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    className={styles.btnOutline}
+                    style={{ padding: '6px 12px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <i className="bi bi-printer"></i> In phiếu
                   </button>
@@ -637,111 +637,150 @@ function ExportSlipPage() {
 
               <div className={styles.modalBody}>
                 <div className={styles.detailGrid}>
-                  <div className={styles.detailGroup} style={{ gridColumn: 'span 2' }}>
-                    <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Khách hàng</span>
-                      <span className={styles.detailValue}>{customerById.get(selectedSlip.partnerId)?.name || (selectedSlip.partnerId ? `Khách hàng #${selectedSlip.partnerId}` : 'Chưa chọn')}</span>
-                    </div>
-                    <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Người nhận hàng</span>
-                      <span className={styles.detailValue}>{selectedSlip.recipientName || 'Chưa có thông tin'}</span>
-                    </div>
-                    <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Địa chỉ nhận hàng</span>
-                      <span className={styles.detailValue}>{selectedSlip.recipientAddress || 'Chưa có thông tin'}</span>
-                    </div>
-                    <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Nhân viên xuất hàng</span>
-                      <span className={styles.detailValue}>
-                        {selectedSlip.salespersonName || userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || (selectedSlip.salespersonId ? String(selectedSlip.salespersonId) : 'Chưa có thông tin')}
-                      </span>
-                    </div>
-                    {(selectedSlip.referenceType && selectedSlip.referenceId) && (
-                      <div className={styles.detailItem}>
-                        <span className={styles.detailLabel}>Kèm chứng từ</span>
-                        <span className={styles.detailValue} style={{ color: 'var(--color-primary)', cursor: 'pointer' }}>
-                          <i className="bi bi-link-45deg"></i> {selectedSlip.referenceCode || selectedSlip.referenceId}
+                  <div className={styles.infoGrid}>
+                    {(selectedSlip.partnerId || selectedSlip.issuePurpose === 'SALE') && (
+                      <div className={styles.infoBlock}>
+                        <span className={styles.infoLabel}>
+                          <i className="bi bi-person-hearts"></i> Khách hàng
+                        </span>
+                        <span className={styles.infoValue}>
+                          {customerById.get(selectedSlip.partnerId)?.name || (selectedSlip.partnerId ? `Khách hàng #${selectedSlip.partnerId}` : 'Chưa chọn')}
                         </span>
                       </div>
                     )}
-                    <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Lý do xuất</span>
-                      <span className={styles.detailValue}>{selectedSlip.note || 'Không có ghi chú'}</span>
+
+                    {selectedSlip.recipientName && (
+                      <div className={styles.infoBlock}>
+                        <span className={styles.infoLabel}>
+                          <i className="bi bi-person"></i> Người nhận hàng
+                        </span>
+                        <span className={styles.infoValue}>{selectedSlip.recipientName}</span>
+                      </div>
+                    )}
+                    
+                    {selectedSlip.recipientAddress && (
+                      <div className={styles.infoBlock}>
+                        <span className={styles.infoLabel}>
+                          <i className="bi bi-geo-alt"></i> Địa chỉ nhận hàng
+                        </span>
+                        <span className={styles.infoValue}>{selectedSlip.recipientAddress}</span>
+                      </div>
+                    )}
+
+                    <div className={styles.infoBlock}>
+                      <span className={styles.infoLabel}>
+                        <i className="bi bi-person-badge"></i>
+                        {selectedSlip.issuePurpose === 'SALE'
+                          ? 'Nhân viên bán hàng'
+                          : selectedSlip.issuePurpose === 'PRODUCTION'
+                          ? 'Nhân viên phụ trách'
+                          : 'Nhân viên lập phiếu'}
+                      </span>
+                      <span className={styles.infoValue}>
+                        {selectedSlip.salespersonName || userById.get(selectedSlip.salespersonId)?.fullName || userById.get(selectedSlip.salespersonId)?.username || (selectedSlip.salespersonId ? String(selectedSlip.salespersonId) : 'Quản Lý Hệ Thống')}
+                      </span>
                     </div>
+                    
+                    <div className={styles.infoBlock}>
+                      <span className={styles.infoLabel}>
+                        <i className="bi bi-chat-text"></i> Lý do xuất
+                      </span>
+                      <span className={styles.infoValue} style={{ color: selectedSlip.note ? 'inherit' : '#9ca3af', fontStyle: selectedSlip.note ? 'normal' : 'italic' }}>
+                        {selectedSlip.note || 'Không có ghi chú'}
+                      </span>
+                    </div>
+
+                    {(selectedSlip.referenceType && selectedSlip.referenceId) && (
+                      <div className={styles.infoBlock}>
+                        <span className={styles.infoLabel}>
+                          <i className="bi bi-link-45deg"></i> Kèm chứng từ
+                        </span>
+                        <span className={styles.infoValue} style={{ color: 'var(--color-primary)', cursor: 'pointer', display: 'inline-block', marginTop: '4px' }}>
+                          <span className={styles.serialBadge} style={{ cursor: 'pointer' }}>
+                            <i className="bi bi-box-arrow-up-right" style={{ marginRight: '4px' }}></i>
+                            {selectedSlip.referenceCode || selectedSlip.referenceId}
+                          </span>
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className={styles.detailRight}>
                     <div className={styles.detailRightRow}>
-                      <span className={styles.detailRightLabel}>Ngày chứng từ</span>
+                      <span className={styles.detailRightLabel}>
+                        <i className="bi bi-calendar3"></i> Ngày chứng từ
+                      </span>
                       <span className={styles.detailRightValue}>{formatDate(selectedSlip.docDate)}</span>
                     </div>
                     <div className={styles.detailRightRow}>
-                      <span className={styles.detailRightLabel}>Kho xuất</span>
-                      <span className={`${styles.detailRightValue} ${styles.textBlue}`}>{warehouseById.get(selectedSlip.warehouseId)?.name || `Kho #${selectedSlip.warehouseId}`}</span>
+                      <span className={styles.detailRightLabel}>
+                        <i className="bi bi-box-arrow-right"></i> Kho xuất
+                      </span>
+                      <span className={`${styles.detailRightValue} ${styles.textBlue}`}>
+                        {warehouseById.get(selectedSlip.warehouseId)?.name || `Kho #${selectedSlip.warehouseId}`}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table className={styles.detailTable}>
-                    <thead>
-                      <tr>
-                        <th>STT</th>
-                        <th>Mã hàng</th>
-                        <th>Tên hàng</th>
-                        <th>DVT</th>
-                        <th className={styles.textCenter}>Số lượng</th>
-                        <th className={styles.textRight}>Đơn giá</th>
-                        <th className={styles.textRight}>Giá xuất</th>
-                        <th className={styles.textRight}>% VAT</th>
-                        <th className={styles.textRight}>Tiền VAT</th>
-                        <th className={styles.textRight}>Thành tiền</th>
-                        <th>Số Serial</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(selectedSlip.lines || []).map((line, index) => {
-                        const product = productById.get(line.variantId);
-                        return (
-                          <tr key={line.id || index}>
-                            <td>{index + 1}</td>
-                            <td className={styles.textBlue}>{product?.sku || `SKU #${line.variantId}`}</td>
-                            <td>
-                              {variantLabel(product) || 'Chưa có tên sản phẩm'}
-                            </td>
-                            <td>{product?.unitName || ''}</td>
-                            <td className={styles.textCenter}>{Number(line.quantityOut || 0).toLocaleString('vi-VN')}</td>
-                            <td className={styles.textRight}>{money(line.unitCost || line.unitPrice)}</td>
-                            <td className={styles.textRight}>{money(line.unitPrice)}</td>
-                            <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>
-                            <td className={styles.textRight}>{money(Number(line.quantityOut || 0) * Number(line.unitPrice || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>
-                            <td className={styles.textRight}>{money(line.lineAmount)}</td>
-                            <td style={{ maxWidth: '200px', wordWrap: 'break-word', whiteSpace: 'normal' }}>
-                              {line.serialNumbers && line.serialNumbers.length > 0 && (
-                                <div style={{ marginTop: '6px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                                  {line.serialNumbers.map(serial => (
-                                    <span key={serial} style={{ fontSize: '11px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '2px 6px', color: '#475569' }}>
-                                      {serial}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                <table className={styles.detailTable}>
+                  <thead>
+                    <tr>
+                      <th>STT</th>
+                      <th>Mã hàng</th>
+                      <th>Tên hàng</th>
+                      <th>DVT</th>
+                      <th className={styles.textCenter}>Số lượng</th>
+                      <th className={styles.textRight}>Đơn giá</th>
+                      <th className={styles.textRight}>Giá xuất</th>
+                      <th className={styles.textRight}>% VAT</th>
+                      <th className={styles.textRight}>Tiền VAT</th>
+                      <th className={styles.textRight}>Thành tiền</th>
+                      <th>Số Serial</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedSlip.lines || []).map((line, index) => {
+                      const product = productById.get(line.variantId);
+                      return (
+                        <tr key={line.id || index}>
+                          <td>{index + 1}</td>
+                          <td className={styles.textBlue} style={{ fontWeight: '500' }}>{product?.sku || `SKU #${line.variantId}`}</td>
+                          <td style={{ fontWeight: '500' }}>
+                            {variantLabel(product) || 'Chưa có tên sản phẩm'}
+                          </td>
+                          <td>{product?.unitName || ''}</td>
+                          <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(line.quantityOut || 0).toLocaleString('vi-VN')}</td>
+                          <td className={styles.textRight}>{money(line.unitCost || line.unitPrice)}</td>
+                          <td className={styles.textRight}>{money(line.unitPrice)}</td>
+                          <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>
+                          <td className={styles.textRight}>{money(Number(line.quantityOut || 0) * Number(line.unitPrice || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>
+                          <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{money(line.lineAmount)}</td>
+                          <td style={{ maxWidth: '220px', wordWrap: 'break-word', whiteSpace: 'normal' }}>
+                            {line.serialNumbers && line.serialNumbers.length > 0 ? (
+                              <span style={{ fontSize: '13px', color: '#334155', fontWeight: '500' }}>
+                                {line.serialNumbers.join(', ')}
+                              </span>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontStyle: 'italic', fontSize: '12px' }}>Không có</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
 
                 <div className={styles.detailFooter}>
-                  <div className={styles.footerTotalLabel}>Tổng cộng hàng xuất:</div>
-                  <div className={styles.footerQty}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</div>
+                  <div className={styles.footerGroup}>
+                    <span className={styles.footerTotalLabel}>Tổng SL xuất:</span>
+                    <span className={styles.footerQty}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</span>
+                  </div>
                   <div style={{ flex: 1 }}></div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ marginBottom: '4px', fontSize: '13px' }}>Tổng tiền hàng: <strong>{money(sumSubtotal(selectedSlip.lines))}</strong></div>
-                    <div style={{ marginBottom: '4px', fontSize: '13px' }}>Tiền VAT: <strong>{money(sumVat(selectedSlip.lines))}</strong></div>
-                    <div style={{ fontSize: '16px', color: 'var(--color-primary)' }}>Tổng thanh toán: <strong>{money(sumSubtotal(selectedSlip.lines) + sumVat(selectedSlip.lines))}</strong></div>
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>Tổng tiền hàng: <strong>{money(sumSubtotal(selectedSlip.lines))}</strong></div>
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>Tiền VAT: <strong>{money(sumVat(selectedSlip.lines))}</strong></div>
+                    <div style={{ fontSize: '16px', color: 'var(--color-primary)', marginTop: '4px' }}>Tổng thanh toán: <strong>{money(sumSubtotal(selectedSlip.lines) + sumVat(selectedSlip.lines))}</strong></div>
                   </div>
                 </div>
               </div>
