@@ -14,6 +14,7 @@ const FilterPopover = ({
   partnerLabel = 'Khách hàng / Đối tác',
   staffLabel = 'Nhân viên',
   purposeLabel = 'Loại phiếu',
+  showDateRange = true,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [localFilters, setLocalFilters] = useState(filters);
@@ -104,41 +105,45 @@ const FilterPopover = ({
           </div>
 
           <div className={styles.body}>
-            {/* Field: Quick Date Presets */}
-            <div className={styles.formGroup}>
-              <label className={styles.label}>KHOẢNG THỜI GIAN</label>
-              <select
-                className={styles.select}
-                value={localFilters.preset || 'ALL'}
-                onChange={(e) => handlePresetChange(e.target.value)}
-              >
-                {DATE_PRESET_OPTIONS.map(opt => (
-                  <option key={opt.id} value={opt.id}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
+            {showDateRange && (
+              <>
+                {/* Field: Quick Date Presets */}
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>KHOẢNG THỜI GIAN</label>
+                  <select
+                    className={styles.select}
+                    value={localFilters.preset || 'ALL'}
+                    onChange={(e) => handlePresetChange(e.target.value)}
+                  >
+                    {DATE_PRESET_OPTIONS.map(opt => (
+                      <option key={opt.id} value={opt.id}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* Date Pickers */}
-            <div className={styles.row}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>TỪ NGÀY</label>
-                <input
-                  type="date"
-                  className={styles.input}
-                  value={localFilters.fromDate || ''}
-                  onChange={(e) => handleDateChange('fromDate', e.target.value)}
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>ĐẾN NGÀY</label>
-                <input
-                  type="date"
-                  className={styles.input}
-                  value={localFilters.toDate || ''}
-                  onChange={(e) => handleDateChange('toDate', e.target.value)}
-                />
-              </div>
-            </div>
+                {/* Date Pickers */}
+                <div className={styles.row}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>TỪ NGÀY</label>
+                    <input
+                      type="date"
+                      className={styles.input}
+                      value={localFilters.fromDate || ''}
+                      onChange={(e) => handleDateChange('fromDate', e.target.value)}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>ĐẾN NGÀY</label>
+                    <input
+                      type="date"
+                      className={styles.input}
+                      value={localFilters.toDate || ''}
+                      onChange={(e) => handleDateChange('toDate', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Purpose & Status */}
             <div className={styles.row}>

@@ -98,7 +98,7 @@ function CreateTransferSlipPage() {
   const { showToast } = useToast();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [savedSlip, setSavedSlip] = useState(null);
-  
+
   const [scanCode, setScanCode] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
 
@@ -114,7 +114,7 @@ function CreateTransferSlipPage() {
     referenceType: '',
     referenceCode: '',
   }));
-  
+
   const [items, setItems] = useState([emptyLine()]);
   const [sourceInventory, setSourceInventory] = useState(new Map());
   const [serialModalItemId, setSerialModalItemId] = useState(null);
@@ -228,18 +228,18 @@ function CreateTransferSlipPage() {
 
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0)), 0);
-  
+
   const isLineValid = (item) => {
     const quantity = Number(item.quantity || 0);
     return item.variantId && quantity > 0;
   };
-  
+
   const isFormValid = Boolean(
-    form.fromWarehouseId && 
-    form.toWarehouseId && 
+    form.fromWarehouseId &&
+    form.toWarehouseId &&
     form.fromWarehouseId !== form.toWarehouseId &&
-    form.transferDate && 
-    items.length && 
+    form.transferDate &&
+    items.length &&
     items.every(isLineValid)
   );
 
@@ -250,10 +250,10 @@ function CreateTransferSlipPage() {
   const handleItemChange = (localId, field, value) => {
     setItems(prev => prev.map(item => {
       if (item.localId !== localId) return item;
-      
+
       if (field === 'variantId') {
-         const product = productById.get(String(value));
-         return { ...item, [field]: value, price: product?.costPrice || 0 };
+        const product = productById.get(String(value));
+        return { ...item, [field]: value, price: product?.costPrice || 0 };
       }
 
       return { ...item, [field]: value };
@@ -265,9 +265,9 @@ function CreateTransferSlipPage() {
   };
 
   const removeItem = (localId) => {
-    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : prev);
+    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(), isNew: false }]);
   };
-  
+
   const ensureScannedProduct = (scanResult) => {
     setProducts(prev => {
       if (prev.some(product => String(product.id) === String(scanResult.variantId))) {
@@ -381,13 +381,13 @@ function CreateTransferSlipPage() {
   const submit = async (status) => {
     if (!isFormValid) {
       if (form.fromWarehouseId === form.toWarehouseId) {
-         showToast('error', 'Kho xuất và kho nhập phải khác nhau.');
+        showToast('error', 'Kho xuất và kho nhập phải khác nhau.');
       } else {
-         showToast('error', 'Vui lòng điền đầy đủ thông tin kho, ngày chuyển và ít nhất một mặt hàng.');
+        showToast('error', 'Vui lòng điền đầy đủ thông tin kho, ngày chuyển và ít nhất một mặt hàng.');
       }
       return;
     }
-    
+
     // Check trackSerial matches
     const payload = buildPayload();
     for (const line of payload.lines) {
@@ -397,7 +397,7 @@ function CreateTransferSlipPage() {
         return;
       }
     }
-    
+
     setSaving(true);
     try {
       payload.status = status;
@@ -684,7 +684,7 @@ function CreateTransferSlipPage() {
             else if (doc.referenceType === 'EXPORT_SLIP') res = await axiosClient.get(`/exports/${doc.referenceId}`);
             else if (doc.referenceType === 'STOCK_TRANSFER') res = await transferApi.getTransferDetail(doc.referenceId);
             else if (doc.referenceType === 'STOCKTAKE') res = await axiosClient.get(`/stocktakes/${doc.referenceId}`);
-            
+
             const detail = res?.data?.data || res?.data;
             if (detail && detail.lines && detail.lines.length > 0) {
               const newItems = detail.lines.map(line => ({

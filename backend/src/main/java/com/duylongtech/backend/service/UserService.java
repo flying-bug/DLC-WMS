@@ -215,7 +215,7 @@ public class UserService {
     public void updatePermissions(Long id, List<String> permissionCodes) {
         User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         boolean isStaff = user.getRoles() != null && user.getRoles().stream()
-                .anyMatch(role -> "ROLE_STAFF".equalsIgnoreCase(role.getCode()));
+                .anyMatch(role -> "ROLE_STAFF".equalsIgnoreCase(role.getCode()) || "STAFF".equalsIgnoreCase(role.getCode()));
         if (!isStaff) {
             throw new BusinessException(SystemMessage.STAFF_ONLY_PERMISSION);
         }

@@ -2,12 +2,16 @@ import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
+import Modal from '../../components/ui/Modal/Modal';
+import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
+import { exportToExcel } from '../../utils/excelExport';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import * as warehouseApi from '../../api/warehouseApi';
 import styles from './AssemblyOrderListPage.module.css';
 
 const STATUS_META = {
-    DRAFT: { label: 'Lưu tạm', code: 'info' },
+    DRAFT: { label: 'Lưu tạm', code: 'secondary' },
+    APPROVED: { label: 'Đã duyệt', code: 'primary' },
     SUBMITTED: { label: 'Hoàn thành', code: 'success' }
 };
 
@@ -23,6 +27,26 @@ const DEFAULT_FILTERS = {
     warehouseId: '',
     fromDate: '',
     toDate: ''
+};
+
+const COLUMN_OPTIONS = [
+    { id: 'orderCode', label: 'Mã lệnh' },
+    { id: 'orderType', label: 'Loại lệnh' },
+    { id: 'bom', label: 'Cấu hình' },
+    { id: 'product', label: 'Thành phẩm' },
+    { id: 'warehouse', label: 'Kho thực hiện' },
+    { id: 'date', label: 'Ngày thực hiện' },
+    { id: 'status', label: 'Tình trạng' }
+];
+
+const DEFAULT_COLUMNS = {
+    orderCode: true,
+    orderType: true,
+    bom: true,
+    product: true,
+    warehouse: true,
+    date: true,
+    status: true
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -47,6 +71,43 @@ function AssemblyOrderListPage() {
 
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
+
+    const [columns, setColumns] = useState(() => {
+        const saved = localStorage.getItem('dlc_assembly_order_columns');
+        return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+    });
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+    const toggleColumn = (colId) => {
+        setColumns(prev => {
+            const next = { ...prev, [colId]: !prev[colId] };
+            localStorage.setItem('dlc_assembly_order_columns', JSON.stringify(next));
+            return next;
+        });
+    };
+
+    const handleExport = () => {
+        if (orders.length === 0) {
+            showToast('warning', 'Không có dữ liệu để xuất Excel');
+            return;
+        }
+
+        const headers = COLUMN_OPTIONS.filter(c => columns[c.id]).map(c => c.label);
+        const data = orders.map(order => {
+            const row = [];
+            if (columns.orderCode) row.push(order.orderCode);
+            if (columns.orderType) row.push(TYPE_META[order.orderType] || order.orderType);
+            if (columns.bom) row.push(order.bomName || order.bomCode || '---');
+            if (columns.product) row.push(order.targetName || order.targetSku || '---');
+            if (columns.warehouse) row.push(warehouseName(order.warehouseId));
+            if (columns.date) row.push(formatDate(order.executionDate));
+            if (columns.status) row.push(STATUS_META[order.status]?.label || order.status);
+            return row;
+        });
+
+        exportToExcel(headers, data, 'Danh_sach_lap_rap_thao_do');
+        showToast('success', 'Xuất Excel thành công!');
+    };
 
     const loadWarehouses = useCallback(async () => {
         try {
@@ -148,84 +209,59 @@ function AssemblyOrderListPage() {
                 </div>
 
                 <div className={styles.filterSection}>
-                    <div className={styles.filterGroup}>
-                        <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>TÌM KIẾM</span>
+                    <div className={styles.searchAndPopover}>
+                        <div className={styles.searchBox}>
+                            <i className="bi bi-search"></i>
                             <input
                                 type="text"
-                                className={styles.filterInput}
-                                placeholder="Mã lệnh, BOM, SKU..."
+                                className={styles.searchInput}
+                                placeholder="Mã lệnh, Cấu hình, SKU..."
                                 value={filters.keyword}
                                 onChange={(e) => handleFilterChange('keyword', e.target.value)}
                                 onKeyDown={handleSearchKeyDown}
                             />
+                            {filters.keyword && (
+                                <button className={styles.clearSearchBtn} onClick={() => handleFilterChange('keyword', '')}>
+                                    <i className="bi bi-x-circle-fill"></i>
+                                </button>
+                            )}
                         </div>
-                        <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>LOẠI LỆNH</span>
-                            <select
-                                className={styles.filterSelect}
-                                value={filters.orderType}
-                                onChange={(e) => handleFilterChange('orderType', e.target.value)}
-                            >
-                                <option value="">Tất cả</option>
-                                <option value="ASSEMBLY">Lắp ráp</option>
-                                <option value="DISASSEMBLY">Tháo dỡ</option>
-                            </select>
-                        </div>
-                        <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>TÌNH TRẠNG</span>
-                            <select
-                                className={styles.filterSelect}
-                                value={filters.status}
-                                onChange={(e) => handleFilterChange('status', e.target.value)}
-                            >
-                                <option value="">Tất cả</option>
-                                {Object.entries(STATUS_META).map(([val, meta]) => (
-                                    <option key={val} value={val}>{meta.label}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>KHO</span>
-                            <select
-                                className={styles.filterSelect}
-                                value={filters.warehouseId}
-                                onChange={(e) => handleFilterChange('warehouseId', e.target.value)}
-                            >
-                                <option value="">Tất cả</option>
-                                {warehouses.map(w => <option key={w.id} value={w.id}>{w.name || w.warehouseName}</option>)}
-                            </select>
-                        </div>
-                        <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>TỪ NGÀY</span>
-                            <input
-                                type="date"
-                                className={styles.filterInput}
-                                value={filters.fromDate}
-                                onChange={(e) => handleFilterChange('fromDate', e.target.value)}
-                            />
-                        </div>
-                        <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>ĐẾN NGÀY</span>
-                            <input
-                                type="date"
-                                className={styles.filterInput}
-                                value={filters.toDate}
-                                onChange={(e) => handleFilterChange('toDate', e.target.value)}
-                            />
-                        </div>
+
+                        <FilterPopover
+                            filters={filters}
+                            onApply={(newFilters) => setFilters(newFilters)}
+                            onReset={() => setFilters(DEFAULT_FILTERS)}
+                            warehouses={warehouses}
+                            purposeOptions={[
+                                { value: 'ASSEMBLY', label: 'Lắp ráp' },
+                                { value: 'DISASSEMBLY', label: 'Tháo dỡ' }
+                            ]}
+                            statusOptions={Object.entries(STATUS_META).map(([val, meta]) => ({ value: val, label: meta.label }))}
+                            purposeLabel="Loại lệnh"
+                        />
                     </div>
 
                     <div className={styles.filterActions}>
                         <button 
                             className={styles.iconBtn} 
-                            onClick={() => { setFilters(DEFAULT_FILTERS); setPage(1); }}
-                            title="Làm mới"
+                            onClick={() => { setFilters(DEFAULT_FILTERS); setPage(1); loadOrders(DEFAULT_FILTERS); }}
+                            title="Tải lại"
                         >
                             <i className="bi bi-arrow-clockwise"></i>
                         </button>
-                        <button className={styles.btnPrimary} onClick={() => loadOrders()}>
-                            <i className="bi bi-funnel"></i> Lọc dữ liệu
+                        <button
+                            className={styles.iconBtn}
+                            onClick={handleExport}
+                            title="Xuất tệp Excel"
+                        >
+                            <i className="bi bi-file-earmark-excel"></i>
+                        </button>
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => setShowSettingsModal(true)}
+                            title="Thiết lập cột hiển thị"
+                        >
+                            <i className="bi bi-gear"></i>
                         </button>
                     </div>
                 </div>
@@ -234,26 +270,26 @@ function AssemblyOrderListPage() {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th style={{ width: '160px' }}>Mã lệnh</th>
-                                <th style={{ width: '120px' }}>Loại lệnh</th>
-                                <th>BOM</th>
-                                <th>Thành phẩm</th>
-                                <th style={{ width: '180px' }}>Kho thực hiện</th>
-                                <th style={{ width: '150px', textAlign: 'center' }}>Ngày thực hiện</th>
-                                <th style={{ width: '130px' }}>Tình trạng</th>
+                                {columns.orderCode && <th style={{ width: '160px' }}>Mã lệnh</th>}
+                                {columns.orderType && <th style={{ width: '120px' }}>Loại lệnh</th>}
+                                {columns.bom && <th>Cấu hình</th>}
+                                {columns.product && <th>Thành phẩm</th>}
+                                {columns.warehouse && <th style={{ width: '180px' }}>Kho thực hiện</th>}
+                                {columns.date && <th style={{ width: '150px', textAlign: 'center' }}>Ngày thực hiện</th>}
+                                {columns.status && <th style={{ width: '130px' }}>Tình trạng</th>}
                                 <th style={{ width: '100px', textAlign: 'center' }}>Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading && currentOrders.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
+                                    <td colSpan={Object.values(columns).filter(Boolean).length + 1} className={styles.textCenter} style={{ padding: '40px' }}>
                                         <div className={styles.emptyState}>Đang tải dữ liệu...</div>
                                     </td>
                                 </tr>
                             ) : currentOrders.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" className={styles.textCenter} style={{ padding: '40px' }}>
+                                    <td colSpan={Object.values(columns).filter(Boolean).length + 1} className={styles.textCenter} style={{ padding: '40px' }}>
                                         <div className={styles.emptyState}>
                                             <i className={`bi bi-inbox ${styles.emptyIcon}`} style={{ fontSize: '32px', color: '#9ca3af', marginBottom: '12px' }}></i>
                                             <div className={styles.emptyText} style={{ color: '#6b7280', fontSize: '14px' }}>Không tìm thấy lệnh nào</div>
@@ -265,17 +301,19 @@ function AssemblyOrderListPage() {
                                     const status = STATUS_META[item.status] || { label: item.status || 'Chưa rõ', code: 'info' };
                                     return (
                                         <tr key={item.id} onClick={() => navigate(`/assembly-orders/${item.id}?mode=${item.status === 'DRAFT' ? 'edit' : 'view'}`)} style={{ cursor: 'pointer' }}>
-                                            <td className={styles.textBlue} style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{item.orderCode}</td>
-                                            <td>{TYPE_META[item.orderType] || item.orderType}</td>
-                                            <td>{item.bomCode || item.bomName || '---'}</td>
-                                            <td>{item.targetName || item.targetSku || '---'}</td>
-                                            <td>{warehouseName(item.warehouseId)}</td>
-                                            <td style={{ textAlign: 'center' }}>{formatDate(item.executionDate)}</td>
-                                            <td>
-                                                <span className={`${styles.badge} ${styles['badge' + status.code.charAt(0).toUpperCase() + status.code.slice(1)]}`}>
-                                                    {status.label}
-                                                </span>
-                                            </td>
+                                            {columns.orderCode && <td className={styles.textBlue} style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{item.orderCode}</td>}
+                                            {columns.orderType && <td>{TYPE_META[item.orderType] || item.orderType}</td>}
+                                            {columns.bom && <td>{item.bomCode || item.bomName || '---'}</td>}
+                                            {columns.product && <td>{item.targetName || item.targetSku || '---'}</td>}
+                                            {columns.warehouse && <td>{warehouseName(item.warehouseId)}</td>}
+                                            {columns.date && <td style={{ textAlign: 'center' }}>{formatDate(item.executionDate)}</td>}
+                                            {columns.status && (
+                                                <td>
+                                                    <span className={`${styles.badge} ${styles['badge' + status.code.charAt(0).toUpperCase() + status.code.slice(1)]}`}>
+                                                        {status.label}
+                                                    </span>
+                                                </td>
+                                            )}
                                             <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
                                                 <i
                                                     className="bi bi-eye"
@@ -376,6 +414,40 @@ function AssemblyOrderListPage() {
                     </div>
                 </div>
             </div>
+            <Modal
+                isOpen={showSettingsModal}
+                onClose={() => setShowSettingsModal(false)}
+                ariaLabel="Thiết lập cột hiển thị"
+            >
+                <div className={styles.settingsModalHeader}>
+                    <h3>Thiết lập cột hiển thị</h3>
+                    <button className={styles.settingsModalCloseBtn} onClick={() => setShowSettingsModal(false)}>
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div className={styles.settingsModalBody}>
+                    <div className={styles.checkboxGrid}>
+                        {COLUMN_OPTIONS.map(col => (
+                            <label key={col.id} className={styles.checkboxLabel}>
+                                <input
+                                    type="checkbox"
+                                    checked={columns[col.id]}
+                                    onChange={() => toggleColumn(col.id)}
+                                />
+                                <span className={styles.checkboxText}>{col.label}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+                <div className={styles.settingsModalFooter}>
+                    <button className={styles.btnSecondary} onClick={() => setColumns(DEFAULT_COLUMNS)}>
+                        Đặt lại
+                    </button>
+                    <button className={styles.btnPrimary} onClick={() => setShowSettingsModal(false)}>
+                        Hoàn tất
+                    </button>
+                </div>
+            </Modal>
             <Toast {...toast} onClose={hideToast} />
         </AdminLayout>
     );

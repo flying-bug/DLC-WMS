@@ -48,16 +48,8 @@ const getPageContent = (response) => {
 
 let globalSpecIdCounter = 1;
 
-const getPredefinedBomLines = (categoriesList) => {
-    const predefinedNames = ['CPU', 'MAINBOARD', 'RAM', 'HDD', 'SSD', 'VGA', 'Nguồn'];
-    const lines = predefinedNames.map(name => {
-        const cat = (categoriesList || []).find(c =>
-            (c.name && c.name.toUpperCase().includes(name.toUpperCase())) ||
-            (c.code && c.code.toUpperCase().includes(name.toUpperCase()))
-        );
-        return { componentVariantId: '', categoryId: cat ? cat.id : '', quantity: '', note: '' };
-    });
-    return lines.length > 0 ? lines : [{ componentVariantId: '', categoryId: '', quantity: '', note: '' }];
+const getPredefinedBomLines = () => {
+    return [{ componentVariantId: '', categoryId: '', quantity: '', note: '' }];
 };
 
 const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
@@ -70,7 +62,17 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
 
     const updateRect = () => {
         if (dropdownRef.current) {
-            setRect(dropdownRef.current.getBoundingClientRect());
+            const elRect = dropdownRef.current.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - elRect.bottom;
+            const spaceAbove = elRect.top;
+            
+            setRect({
+                top: elRect.top,
+                bottom: elRect.bottom,
+                left: elRect.left,
+                width: elRect.width,
+                openUpwards: spaceBelow < 250 && spaceAbove > spaceBelow
+            });
         }
     };
 
@@ -153,10 +155,11 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
             {isOpen && rect && createPortal(
                 <div ref={listRef} style={{
                     position: 'fixed',
-                    top: rect.bottom + 4,
+                    top: rect.openUpwards ? rect.top - 4 : rect.bottom + 4,
                     left: rect.left,
                     width: rect.width,
-                    zIndex: 999999,
+                    zIndex: 9999999,
+                    transform: rect.openUpwards ? 'translateY(-100%)' : 'none',
                     backgroundColor: '#fff',
                     border: '1px solid #d1d5db',
                     borderRadius: '4px',
@@ -182,7 +185,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = String(cat.id) === String(value) ? '#eff6ff' : 'transparent'}
                         >
                             <div style={{ fontWeight: 500, fontSize: '13px', color: '#111827' }}>
-                                {cat.code ? `${cat.code} - ` : ''}{cat.name}
+                                {cat.name}
                             </div>
                             {cat.description && (
                                 <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -597,6 +600,9 @@ const ProductPage = () => {
         setWarrantyQty(0);
         setWarrantyUnit('Tháng');
         setErrorMsg('');
+        setShowQuickAddCat(false);
+        setShowQuickAddUnit(false);
+        setShowQuickAddBrand(false);
         setShowModal(true);
     };
 
@@ -652,6 +658,10 @@ const ProductPage = () => {
 
         setBomLines(loadedBomLines);
         setErrorMsg('');
+        setActiveTab(product.productType === 'Thành phẩm' ? 'bom' : 'units');
+        setShowQuickAddCat(false);
+        setShowQuickAddUnit(false);
+        setShowQuickAddBrand(false);
         setShowModal(true);
         setOpenDropdownId(null);
     };
@@ -690,6 +700,10 @@ const ProductPage = () => {
         }
 
         setErrorMsg('');
+        setActiveTab(product.productType === 'Thành phẩm' ? 'bom' : 'units');
+        setShowQuickAddCat(false);
+        setShowQuickAddUnit(false);
+        setShowQuickAddBrand(false);
         setShowModal(true);
         setOpenDropdownId(null);
     };
@@ -761,6 +775,10 @@ const ProductPage = () => {
         if (!formData.unitId) return 'Vui lòng chọn đơn vị tính.';
         if (formData.salePrice === '' || Number.isNaN(Number(formData.salePrice))) return 'Giá bán không hợp lệ.';
         if (Number(formData.salePrice) < 0) return 'Giá bán không được âm.';
+        if (formData.productType === 'Thành phẩm') {
+            const validBomLines = bomLines.filter(l => l.categoryId);
+            if (validBomLines.length === 0) return 'Vui lòng chọn ít nhất một danh mục cho định mức cấu hình.';
+        }
         return '';
     };
 
@@ -1389,9 +1407,13 @@ const ProductPage = () => {
                                                         onClick={() => {
                                                             setFormData(fd => ({ ...fd, productType: type }));
                                                             setShowTypeMenu(false);
-                                                            if (type !== 'Dịch vụ') setActiveTab('units');
-                                                            if (type === 'Thành phẩm' && bomLines.length === 0) {
-                                                                setBomLines(getPredefinedBomLines(categories));
+                                                            if (type === 'Thành phẩm') {
+                                                                setActiveTab('bom');
+                                                                if (bomLines.length === 0) {
+                                                                    setBomLines(getPredefinedBomLines(categories));
+                                                                }
+                                                            } else if (type === 'Hàng hóa') {
+                                                                setActiveTab('units');
                                                             }
                                                         }}
                                                     >
@@ -1460,8 +1482,13 @@ const ProductPage = () => {
                                                             title="Thêm nhanh danh mục"
                                                             type="button"
                                                             onClick={() => {
-                                                                setShowQuickAddCat(v => !v);
-                                                                setQuickCatForm({ code: '', name: '' });
+                                                                const nextState = !showQuickAddCat;
+                                                                setShowQuickAddCat(nextState);
+                                                                if (nextState) {
+                                                                    setShowQuickAddUnit(false);
+                                                                    setShowQuickAddBrand(false);
+                                                                    setQuickCatForm({ code: '', name: '' });
+                                                                }
                                                             }}
                                                         >+</button>
                                                     </div>
@@ -1480,7 +1507,15 @@ const ProductPage = () => {
                                                                 <option key={u.id} value={u.id}>{u.name}</option>
                                                             ))}
                                                         </select>
-                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => setShowQuickAddUnit(v => !v)}>+</button>
+                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => {
+                                                            const nextState = !showQuickAddUnit;
+                                                            setShowQuickAddUnit(nextState);
+                                                            if (nextState) {
+                                                                setShowQuickAddCat(false);
+                                                                setShowQuickAddBrand(false);
+                                                                setQuickUnitForm({ code: '', name: '' });
+                                                            }
+                                                        }}>+</button>
                                                     </div>
                                                 </div>
                                             )}
@@ -1575,7 +1610,15 @@ const ProductPage = () => {
                                                                 <option key={u.id} value={u.id}>{u.name}</option>
                                                             ))}
                                                         </select>
-                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => setShowQuickAddUnit(v => !v)}>+</button>
+                                                        <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => {
+                                                            const nextState = !showQuickAddUnit;
+                                                            setShowQuickAddUnit(nextState);
+                                                            if (nextState) {
+                                                                setShowQuickAddCat(false);
+                                                                setShowQuickAddBrand(false);
+                                                                setQuickUnitForm({ code: '', name: '' });
+                                                            }
+                                                        }}>+</button>
                                                     </div>
                                                 </div>
                                             )}
@@ -1595,7 +1638,15 @@ const ProductPage = () => {
                                                                 <option key={b.id} value={b.id}>{b.name}</option>
                                                             ))}
                                                         </select>
-                                                        <button className={styles.addInlineBtn} title="Thêm nhanh thương hiệu" type="button" onClick={() => setShowQuickAddBrand(v => !v)}>+</button>
+                                                        <button className={styles.addInlineBtn} title="Thêm nhanh thương hiệu" type="button" onClick={() => {
+                                                            const nextState = !showQuickAddBrand;
+                                                            setShowQuickAddBrand(nextState);
+                                                            if (nextState) {
+                                                                setShowQuickAddCat(false);
+                                                                setShowQuickAddUnit(false);
+                                                                setQuickBrandForm({ code: '', name: '' });
+                                                            }
+                                                        }}>+</button>
                                                     </div>
                                                 </div>
                                             )}
@@ -1606,7 +1657,8 @@ const ProductPage = () => {
                                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                         <input
                                                             type="number" min="0" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
-                                                            value={warrantyQty} onChange={(e) => setWarrantyQty(Number(e.target.value))}
+                                                            value={warrantyQty === 0 ? '' : warrantyQty} onChange={(e) => setWarrantyQty(e.target.value === '' ? 0 : Number(e.target.value))}
+                                                            placeholder="0"
                                                         />
                                                         <select
                                                             className={styles.fieldInput} style={{ width: '110px', flexShrink: 0 }}
@@ -1626,7 +1678,8 @@ const ProductPage = () => {
                                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                             <input
                                                                 type="number" min="0" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
-                                                                value={warrantyQty} onChange={(e) => setWarrantyQty(Number(e.target.value))}
+                                                                value={warrantyQty === 0 ? '' : warrantyQty} onChange={(e) => setWarrantyQty(e.target.value === '' ? 0 : Number(e.target.value))}
+                                                                placeholder="0"
                                                             />
                                                             <select
                                                                 className={styles.fieldInput} style={{ width: '110px', flexShrink: 0 }}
@@ -1909,20 +1962,27 @@ const ProductPage = () => {
 
                                         <div style={{ padding: '14px 16px', minHeight: '120px' }}>
                                             {activeTab === 'bom' && (
-                                                <div>
-                                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                                                        <thead>
-                                                            <tr style={{ backgroundColor: '#f9fafb' }}>
-                                                                <th style={{ padding: '7px 10px', textAlign: 'left', border: '1px solid #e5e7eb', width: '30%', fontWeight: 600 }}>Cấu hình</th>
-                                                                <th style={{ padding: '7px 10px', textAlign: 'left', border: '1px solid #e5e7eb', width: '38%', fontWeight: 600 }}>Mã nguyên vật liệu</th>
-                                                                <th style={{ padding: '7px 10px', textAlign: 'left', border: '1px solid #e5e7eb', width: '18%', fontWeight: 600 }}>Số lượng</th>
-                                                                <th style={{ padding: '7px 10px', border: '1px solid #e5e7eb', width: '36px' }}></th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {bomLines.map((line, idx) => (
-                                                                <tr key={idx}>
-                                                                    <td style={{ border: '1px solid #e5e7eb', padding: '4px' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                    {bomLines.map((line, idx) => (
+                                                        <div key={idx} style={{
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                            padding: '8px 12px', background: '#fff', border: '1px solid #e5e7eb',
+                                                            borderRadius: '8px', transition: 'all 0.2s ease',
+                                                            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                                                        }}
+                                                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)'; }}
+                                                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'; }}
+                                                        >
+                                                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                <div style={{
+                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                    width: '28px', height: '28px', borderRadius: '50%', background: '#f3f4f6',
+                                                                    color: '#6b7280', fontSize: '12px', fontWeight: 600
+                                                                }}>
+                                                                    {idx + 1}
+                                                                </div>
+                                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                    <div style={{ flex: 1 }}>
                                                                         <SearchableCategoryDropdown
                                                                             categories={categories}
                                                                             value={line.categoryId || ''}
@@ -1933,42 +1993,55 @@ const ProductPage = () => {
                                                                                 setBomLines(a);
                                                                             }}
                                                                         />
-                                                                    </td>
-                                                                    <td style={{ border: '1px solid #e5e7eb', padding: '4px' }}>
-                                                                        <select
-                                                                            value={line.componentVariantId}
-                                                                            onChange={(e) => { const a = [...bomLines]; a[idx].componentVariantId = e.target.value; setBomLines(a); }}
-                                                                            style={{ width: '100%', border: 'none', outline: 'none', fontSize: '13px', padding: '3px', paddingRight: '20px', background: 'transparent', textOverflow: 'ellipsis' }}
-                                                                        >
-                                                                            <option value="">Chọn linh kiện</option>
-                                                                            {allVariants
-                                                                                .filter(v => !line.categoryId || String(v.categoryId) === String(line.categoryId))
-                                                                                .map(v => (
-                                                                                    <option key={v.id} value={v.id}>{v.sku} - {v.variantName}</option>
-                                                                                ))}
-                                                                        </select>
-                                                                    </td>
-                                                                    <td style={{ border: '1px solid #e5e7eb', padding: '4px' }}>
-                                                                        <input type="number" min="0" step="any" value={line.quantity}
-                                                                            onChange={(e) => { const a = [...bomLines]; a[idx].quantity = e.target.value; setBomLines(a); }}
-                                                                            style={{ width: '100%', border: 'none', outline: 'none', fontSize: '13px', padding: '3px', background: 'transparent' }}
-                                                                        />
-                                                                    </td>
-                                                                    <td style={{ border: '1px solid #e5e7eb', textAlign: 'center', padding: '4px' }}>
-                                                                        <button
-                                                                            onClick={() => { const a = [...bomLines]; a.splice(idx, 1); setBomLines(a); }}
-                                                                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '13px' }}
-                                                                        ><i className="fas fa-trash"></i></button>
-                                                                    </td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
+                                                                    </div>
+                                                                    <input 
+                                                                        type="text" 
+                                                                        placeholder="Ghi chú chi tiết (VD: Ổ chứa dữ liệu, Tản nhiệt nước...)" 
+                                                                        value={line.note || ''}
+                                                                        onChange={(e) => {
+                                                                            const a = [...bomLines];
+                                                                            a[idx].note = e.target.value;
+                                                                            setBomLines(a);
+                                                                        }}
+                                                                        style={{ 
+                                                                            width: '100%', border: 'none', borderBottom: '1px dashed #cbd5e1', 
+                                                                            padding: '4px 6px', fontSize: '12px', outline: 'none', 
+                                                                            background: 'transparent', color: '#4b5563', transition: 'border-color 0.2s' 
+                                                                        }}
+                                                                        onFocus={(e) => { e.target.style.borderBottom = '1px solid #3b82f6'; e.target.style.color = '#111827'; }}
+                                                                        onBlur={(e) => { e.target.style.borderBottom = '1px dashed #cbd5e1'; e.target.style.color = '#4b5563'; }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => { const a = [...bomLines]; a.splice(idx, 1); setBomLines(a); }}
+                                                                style={{
+                                                                    border: 'none', background: 'transparent', cursor: 'pointer',
+                                                                    color: '#9ca3af', fontSize: '15px', padding: '8px',
+                                                                    borderRadius: '6px', transition: 'all 0.2s', marginLeft: '8px'
+                                                                }}
+                                                                onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fee2e2'; }}
+                                                                onMouseLeave={(e) => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.background = 'transparent'; }}
+                                                                title="Xóa danh mục"
+                                                            >
+                                                                <i className="bi bi-trash3"></i>
+                                                            </button>
+                                                        </div>
+                                                    ))}
+
                                                     <button
                                                         onClick={() => setBomLines([...bomLines, { componentVariantId: '', categoryId: '', quantity: '', note: '' }])}
-                                                        style={{ marginTop: '8px', padding: '5px 12px', fontSize: '12px', border: '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer', background: '#fff', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                        style={{
+                                                            width: '100%', padding: '14px', border: '1px dashed #cbd5e1',
+                                                            borderRadius: '8px', background: '#f8fafc', color: '#3b82f6',
+                                                            fontSize: '14px', fontWeight: 500, cursor: 'pointer',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                                            transition: 'all 0.2s ease'
+                                                        }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
                                                     >
-                                                        <i className="fas fa-plus" style={{ fontSize: '11px' }}></i> Thêm linh kiện
+                                                        <i className="bi bi-plus-circle" style={{ fontSize: '16px' }}></i> Thêm danh mục yêu cầu
                                                     </button>
                                                 </div>
                                             )}
@@ -2225,7 +2298,7 @@ const ProductPage = () => {
                 onConfirm={handleConfirmDelete}
                 onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
             />
-            
+
             <PrintBarcodeModal
                 isOpen={!!printBarcodeProduct}
                 onClose={() => setPrintBarcodeProduct(null)}

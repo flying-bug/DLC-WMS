@@ -10,7 +10,7 @@ function WarehouseDashboard() {
         { label: 'Xuất kho', icon: 'fas fa-truck-loading', action: () => navigate('/export-slips') },
         { label: 'Nhập kho', icon: 'fas fa-boxes', action: () => navigate('/import-history') },
         { label: 'Chuyển kho', icon: 'fas fa-exchange-alt', action: () => navigate('/transfer-history') },
-        { label: 'Quản lý BOM', icon: 'fas fa-sitemap', action: () => navigate('/assembly-boms') },
+        { label: 'Quản lý Cấu hình', icon: 'fas fa-sitemap', action: () => navigate('/assembly-boms') },
         { label: 'Kiểm kê', icon: 'fas fa-clipboard-check' },
     ];
 

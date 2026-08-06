@@ -99,7 +99,7 @@ public class AssemblyOrderService {
         String bomCode = trimToNull(request.getBomCode());
         if (bomCode != null && !bomCode.equals(bom.getBomCode())) {
             if (assemblyBomRepository.existsByBomCodeAndIdNot(bomCode, id)) {
-                throw new BusinessException("Mã BOM đã tồn tại");
+                throw new BusinessException("Mã cấu hình đã tồn tại");
             }
             bom.setBomCode(bomCode);
         }
@@ -338,7 +338,7 @@ public class AssemblyOrderService {
             throw new BusinessException("Dữ liệu lệnh lắp ráp/tháo dỡ là bắt buộc");
         }
         if (request.getBomId() == null) {
-            throw new BusinessException("BOM là bắt buộc");
+            throw new BusinessException("Cấu hình là bắt buộc");
         }
         if (request.getWarehouseId() == null) {
             throw new BusinessException("Kho là bắt buộc");
@@ -356,19 +356,19 @@ public class AssemblyOrderService {
 
     private void validateBomRequest(AssemblyBomRequest request, boolean create) {
         if (request == null) {
-            throw new BusinessException("Dữ liệu BOM là bắt buộc");
+            throw new BusinessException("Dữ liệu Cấu hình là bắt buộc");
         }
         if (request.getProductId() == null) {
             throw new BusinessException("Sản phẩm thành phẩm là bắt buộc");
         }
         if (create && trimToNull(request.getBomCode()) != null && assemblyBomRepository.existsByBomCode(request.getBomCode().trim())) {
-            throw new BusinessException("Mã BOM đã tồn tại");
+            throw new BusinessException("Mã cấu hình đã tồn tại");
         }
         if (request.getVersionNo() != null && request.getVersionNo().compareTo(ZERO) <= 0) {
-            throw new BusinessException("Phiên bản BOM phải lớn hơn 0");
+            throw new BusinessException("Phiên bản cấu hình phải lớn hơn 0");
         }
         if (request.getLines() == null || request.getLines().isEmpty()) {
-            throw new BusinessException("BOM phải có ít nhất một linh kiện");
+            throw new BusinessException("Cấu hình phải có ít nhất một linh kiện");
         }
 
         boolean isApproved = "APPROVED".equals(request.getStatus());
@@ -403,6 +403,10 @@ public class AssemblyOrderService {
                     .quantity(requestLine.getQuantity())
                     .componentRole(requestLine.getComponentRole())
                     .note(requestLine.getNote())
+                    .unitPrice(requestLine.getUnitPrice() != null ? requestLine.getUnitPrice() : component.getSalePrice())
+                    .componentSku(requestLine.getComponentSku() != null ? requestLine.getComponentSku() : component.getSku())
+                    .componentName(requestLine.getComponentName() != null ? requestLine.getComponentName() : variantName(component))
+                    .warrantyMonths(requestLine.getWarrantyMonths() != null ? requestLine.getWarrantyMonths() : ((component.getWarrantyMonths() == null || component.getWarrantyMonths() <= 0) && component.getProduct() != null ? component.getProduct().getWarrantyPeriodMonths() : component.getWarrantyMonths()))
                     .build();
             bom.getLines().add(line);
         }
@@ -412,10 +416,10 @@ public class AssemblyOrderService {
         AssemblyBom bom = assemblyBomRepository.findByIdWithLines(bomId)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy định mức vật tư"));
         if (!"APPROVED".equalsIgnoreCase(bom.getStatus())) {
-            throw new BusinessException("Chỉ được tạo lệnh từ BOM đã duyệt");
+            throw new BusinessException("Chỉ được tạo lệnh từ cấu hình đã duyệt");
         }
         if (bom.getLines() == null || bom.getLines().isEmpty()) {
-            throw new BusinessException("BOM chưa có linh kiện");
+            throw new BusinessException("Cấu hình chưa có linh kiện");
         }
         return bom;
     }
@@ -431,11 +435,11 @@ public class AssemblyOrderService {
     private ProductVariant resolveTargetVariant(AssemblyBom bom) {
         Product product = bom.getProduct();
         if (product == null) {
-            throw new BusinessException("Sản phẩm thành phẩm của BOM chưa có SKU");
+            throw new BusinessException("Sản phẩm thành phẩm của cấu hình chưa có SKU");
         }
         List<ProductVariant> variants = productVariantRepository.findByProductIdOrderByIdAsc(product.getId());
         if (variants.isEmpty()) {
-            throw new BusinessException("Sản phẩm thành phẩm của BOM chưa có SKU");
+            throw new BusinessException("Sản phẩm thành phẩm của cấu hình chưa có SKU");
         }
         return variants.stream()
                 .filter(variant -> Boolean.TRUE.equals(variant.getActive()))
@@ -499,10 +503,10 @@ public class AssemblyOrderService {
         String bomCode = trimToNull(requestedCode);
         if (bomCode == null) {
             String productCode = trimToNull(product.getProductCode()) != null ? product.getProductCode().trim() : String.valueOf(product.getId());
-            bomCode = "BOM-" + productCode + "-" + System.currentTimeMillis();
+            bomCode = "CH-" + productCode + "-" + System.currentTimeMillis();
         }
         if (assemblyBomRepository.existsByBomCode(bomCode)) {
-            throw new BusinessException("Mã BOM đã tồn tại");
+            throw new BusinessException("Mã cấu hình đã tồn tại");
         }
         return bomCode;
     }
@@ -514,7 +518,7 @@ public class AssemblyOrderService {
         }
         normalized = normalized.toUpperCase(Locale.ROOT);
         if (!VALID_BOM_STATUSES.contains(normalized)) {
-            throw new BusinessException("Trạng thái BOM không hợp lệ");
+            throw new BusinessException("Trạng thái cấu hình không hợp lệ");
         }
         return normalized;
     }
@@ -526,7 +530,7 @@ public class AssemblyOrderService {
         }
         normalized = normalized.toUpperCase(Locale.ROOT);
         if (!VALID_BOM_STATUSES.contains(normalized)) {
-            throw new BusinessException("Trạng thái BOM không hợp lệ");
+            throw new BusinessException("Trạng thái cấu hình không hợp lệ");
         }
         return normalized;
     }
@@ -601,12 +605,14 @@ public class AssemblyOrderService {
         return AssemblyBomLineResponse.builder()
                 .id(line.getId())
                 .componentVariantId(variant != null ? variant.getId() : null)
-                .componentSku(variant != null ? variant.getSku() : null)
-                .componentName(variantName(variant))
+                .componentSku(line.getComponentSku() != null ? line.getComponentSku() : (variant != null ? variant.getSku() : null))
+                .componentName(line.getComponentName() != null ? line.getComponentName() : variantName(variant))
                 .unitName(product != null && product.getUnit() != null ? product.getUnit().getName() : null)
                 .quantity(line.getQuantity())
                 .componentRole(line.getComponentRole())
                 .note(line.getNote())
+                .unitPrice(line.getUnitPrice() != null ? line.getUnitPrice() : (variant != null ? variant.getSalePrice() : null))
+                .warrantyMonths(line.getWarrantyMonths() != null ? line.getWarrantyMonths() : (variant != null ? ((variant.getWarrantyMonths() == null || variant.getWarrantyMonths() <= 0) && product != null ? product.getWarrantyPeriodMonths() : variant.getWarrantyMonths()) : null))
                 .build();
     }
 

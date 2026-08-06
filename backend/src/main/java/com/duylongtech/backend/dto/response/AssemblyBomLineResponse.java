@@ -16,4 +16,6 @@ public class AssemblyBomLineResponse {
     private BigDecimal quantity;
     private String componentRole;
     private String note;
+    private BigDecimal unitPrice;
+    private Integer warrantyMonths;
 }

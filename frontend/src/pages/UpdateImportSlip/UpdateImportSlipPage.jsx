@@ -291,9 +291,9 @@ function UpdateImportSlipPage() {
       if (item.localId !== localId) return item;
       if (field === 'variantId') {
         const product = products.find(p => String(p.id) === String(value));
-        return { 
-          ...item, 
-          [field]: value, 
+        return {
+          ...item,
+          [field]: value,
           serialNumbers: [],
           warrantyMonths: product ? Number(product.warrantyMonths || 0) : 0
         };
@@ -307,7 +307,7 @@ function UpdateImportSlipPage() {
   };
 
   const removeItem = (localId) => {
-    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : prev);
+    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(), isNew: false }]);
   };
 
   const handleSerialModalClose = (savedSerials) => {
@@ -325,7 +325,7 @@ function UpdateImportSlipPage() {
     warehouseId: Number(form.warehouseId),
     partnerId: importType === 'RETURN' ? (form.customerId ? Number(form.customerId) : null)
       : importType === 'OTHER' ? null
-      : (form.partnerId ? Number(form.partnerId) : null),
+        : (form.partnerId ? Number(form.partnerId) : null),
     docDate: form.docDate,
     status,
     note: form.note,
@@ -695,17 +695,17 @@ function UpdateImportSlipPage() {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th className={styles.textCenter} style={{ width: '40px' }}>#</th>
-                      <th>Tên hàng</th>
-                      <th>Mã hàng</th>
-                      <th>ĐVT</th>
-                      <th style={{ textAlign: 'right' }}>SL</th>
-                      <th style={{ textAlign: 'center' }}>Serial</th>
-                      <th style={{ textAlign: 'center' }}>BH (T)</th>
-                      <th style={{ textAlign: 'right' }}>Đơn giá</th>
-                      <th style={{ textAlign: 'right' }}>Thành tiền</th>
-                      <th style={{ textAlign: 'right' }}>% thuế GTGT</th>
-                      <th style={{ width: '40px' }}></th>
+                  <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>#</th>
+                  <th style={{ minWidth: '130px', width: '13%' }}>Mã hàng</th>
+                  <th style={{ minWidth: '200px', width: '29%' }}>Tên hàng</th>
+                  <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                  <th style={{ minWidth: '70px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
+                  <th style={{ minWidth: '80px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                  <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                  <th style={{ minWidth: '110px', width: '10%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>
+                  <th style={{ minWidth: '110px', width: '10%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
+                  <th style={{ minWidth: '90px', width: '8%', textAlign: 'right', whiteSpace: 'nowrap' }}>% thuế GTGT</th>
+                  <th style={{ width: '40px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -720,8 +720,8 @@ function UpdateImportSlipPage() {
                               inventoryMap={inventoryMap}
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
-                              displayMode="name"
-                              placeholder="Chọn hàng"
+                              displayMode="code"
+                              placeholder="Chọn mã"
                             />
                           </td>
                           <td>
@@ -730,8 +730,8 @@ function UpdateImportSlipPage() {
                               inventoryMap={inventoryMap}
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
-                              displayMode="code"
-                              placeholder="Chọn mã"
+                              displayMode="name"
+                              placeholder="Chọn hàng"
                             />
                           </td>
                           <td>{product?.unitName || ''}</td>
@@ -756,7 +756,7 @@ function UpdateImportSlipPage() {
                             <input type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(e) => handleItemChange(item.localId, 'warrantyMonths', e.target.value)} />
                           </td>
                           <td align="right">
-                            <input type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
+                            <input type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
                           </td>
                           <td align="right" className={`${styles.textBold} ${styles.textBlue}`}>
                             {money(Number(item.quantity || 0) * Number(item.price || 0))} đ
@@ -771,11 +771,17 @@ function UpdateImportSlipPage() {
                   </tbody>
                   <tfoot>
                     <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
-                      <td colSpan="4" style={{ textAlign: 'right', padding: '12px' }}></td>
+                      <td style={{ borderRight: 'none' }}></td>
+                      <td style={{ borderRight: 'none' }}></td>
+                      <td style={{ borderRight: 'none' }}></td>
+                      <td></td>
                       <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalQuantity)}</td>
-                      <td colSpan="3"></td>
+                      <td style={{ borderRight: 'none' }}></td>
+                      <td style={{ borderRight: 'none' }}></td>
+                      <td></td>
                       <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>
-                      <td colSpan="2"></td>
+                      <td style={{ borderRight: 'none' }}></td>
+                      <td></td>
                     </tr>
                   </tfoot>
                 </table>
