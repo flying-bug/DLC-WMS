@@ -20,7 +20,7 @@
 .titleArea h2 {
     font-size: var(--font-size-page-title);
     font-weight: 700;
-    color: var(--color-primary-dark);
+    color: var(--color-text-strong);
     margin: 0 0 6px 0;
 }
 

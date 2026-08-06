@@ -310,15 +310,7 @@ const ReportListPage = () => {
                                 <span className={styles.subtitle}>Tổng hợp dữ liệu tồn kho, xuất nhập và đối chiếu công nợ của hệ thống.</span>
                             </div>
 
-                            <div className={styles.headerRight}>
-                                <div className={styles.languageSelect}>
-                                    <label>Ngôn ngữ báo cáo</label>
-                                    <select value={selectedLanguage} onChange={(e) => setSelectedLanguage(e.target.value)}>
-                                        <option value="vi">Tiếng Việt</option>
-                                        <option value="en">English</option>
-                                    </select>
-                                </div>
-                            </div>
+
                         </div>
 
                         {/* Filter and search controls */}

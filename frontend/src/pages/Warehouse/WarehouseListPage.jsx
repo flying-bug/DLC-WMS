@@ -268,21 +268,11 @@ const WarehouseListPage = () => {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th style={{ width: '15%' }} onClick={() => handleSort('code')}>
-                                    MÃ KHO {getSortIcon('code')}
-                                </th>
-                                <th style={{ width: '25%' }} onClick={() => handleSort('name')}>
-                                    TÊN KHO {getSortIcon('name')}
-                                </th>
-                                <th style={{ width: '30%' }} onClick={() => handleSort('address')}>
-                                    ĐỊA CHỈ {getSortIcon('address')}
-                                </th>
-                                <th style={{ width: '15%' }} onClick={() => handleSort('status')}>
-                                    TRẠNG THÁI {getSortIcon('status')}
-                                </th>
-                                <th style={{ width: '15%', textAlign: 'center' }}>
-                                    THAO TÁC
-                                </th>
+                                <th style={{ width: '15%' }}>MÃ KHO</th>
+                                <th style={{ width: '25%' }}>TÊN KHO</th>
+                                <th style={{ width: '30%' }}>ĐỊA CHỈ</th>
+                                <th style={{ width: '15%' }}>TRẠNG THÁI</th>
+                                <th style={{ width: '15%', textAlign: 'center' }}>THAO TÁC</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -292,9 +282,11 @@ const WarehouseListPage = () => {
                                 </tr>
                             ) : warehouses.length === 0 ? (
                                 <tr>
-                                    <td colSpan="5" className={styles.emptyState}>
-                                        <i className={`fas fa-box-open ${styles.emptyIcon}`}></i>
-                                        <div className={styles.emptyText}>Không có dữ liệu kho.</div>
+                                    <td colSpan="5">
+                                        <div className={styles.emptyState}>
+                                            <i className={`bi bi-inbox ${styles.emptyIcon}`}></i>
+                                            <div className={styles.emptyText}>Không có dữ liệu kho.</div>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : (
