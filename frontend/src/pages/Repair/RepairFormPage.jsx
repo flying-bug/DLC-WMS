@@ -214,6 +214,7 @@ function RepairFormPage() {
       }
     });
     return total > 0 ? total : null;
+    // eslint-disable-next-line
   }, [sourceWarranty, formData.productId, variants, products]);
 
   const showToast = (type, message) => {
