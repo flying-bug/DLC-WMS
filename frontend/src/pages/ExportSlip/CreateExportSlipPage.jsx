@@ -6,6 +6,7 @@ import * as exportApi from '../../api/inventoryExportApi';
 import CustomerModal from '../Customer/components/CustomerModal';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import AssemblyOrderSelectionModal from '../CreateImportSlip/components/AssemblyOrderSelectionModal';
+import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
@@ -155,7 +156,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         variantId: String(comp.variantId || comp.id),
         quantity: comp.quantity || 1,
         price: comp.price || 0,
-        note: `BOM cho Lệnh ${assemblyData.code}`,
+        note: `Cấu hình cho Lệnh ${assemblyData.code}`,
       }));
     }
     if (stocktakeData && stocktakeData.lines && stocktakeData.lines.length > 0) {
@@ -325,26 +326,51 @@ function CreateExportSlipPage({ mode: propMode }) {
     setSerialModalItemId(null);
   };
 
-  const handleSelectAssemblyOrder = (order) => {
-    setSelectedAssemblyOrder(order);
-    setForm(prev => ({
-      ...prev,
-      referenceType: 'ASSEMBLY_ORDER',
-      referenceId: order.id,
-      referenceCode: order.orderCode,
-      note: `Xuất linh kiện phục vụ Lệnh lắp ráp ${order.orderCode}`,
-    }));
+  const handleSelectAssemblyOrder = async (orderSummary) => {
+    try {
+      const res = await assemblyOrderApi.getAssemblyOrderById(orderSummary.id);
+      const order = res?.data?.data || res?.data || orderSummary;
 
-    if (order.items && order.items.length > 0) {
-      const loadedItems = order.items.map(comp => ({
-        ...emptyLine(),
-        variantId: String(comp.variantId || comp.id),
-        quantity: comp.quantityNeeded || comp.quantity || 1,
-        price: comp.price || 0,
-        note: `BOM cho ${order.targetName || 'Lắp ráp'}`,
+      setSelectedAssemblyOrder(order);
+      setForm(prev => ({
+        ...prev,
+        referenceType: 'ASSEMBLY_ORDER',
+        referenceId: order.id,
+        referenceCode: order.orderCode,
+        note: `Xuất kho cho Lệnh ${order.orderCode}`,
       }));
-      setItems(loadedItems);
-      showToast('success', `Đã tải ${loadedItems.length} linh kiện từ Lệnh lắp ráp ${order.orderCode}`);
+
+      const isAssembly = order.orderType !== 'DISASSEMBLY';
+
+      if (isAssembly) {
+        if (order.lines && order.lines.length > 0) {
+          const loadedItems = order.lines.map(comp => ({
+            ...emptyLine(),
+            variantId: String(comp.componentVariantId || comp.variantId || comp.id),
+            quantity: comp.quantityNeeded || comp.quantityRequired || comp.quantity || 1,
+            price: comp.price || 0,
+            note: `Cấu hình cho Lắp ráp`,
+          }));
+          setItems(loadedItems);
+          showToast('success', `Đã tải ${loadedItems.length} linh kiện từ Lệnh lắp ráp ${order.orderCode}`);
+        } else {
+          showToast('warning', `Lệnh lắp ráp ${order.orderCode} không có linh kiện nào.`);
+        }
+      } else {
+        if (order.targetVariantId || order.targetSku) {
+          setItems([{
+            ...emptyLine(),
+            variantId: String(order.targetVariantId || ''),
+            quantity: order.quantity || 1,
+            price: order.targetPrice || 0,
+            note: `Thành phẩm cần tháo dỡ`
+          }]);
+          showToast('success', `Đã tải thành phẩm từ Lệnh tháo dỡ ${order.orderCode}`);
+        }
+      }
+    } catch(err) {
+      console.error(err);
+      showToast('error', 'Lỗi khi tải chi tiết lệnh lắp ráp');
     }
   };
 

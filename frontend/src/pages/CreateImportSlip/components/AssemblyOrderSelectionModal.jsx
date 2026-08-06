@@ -118,7 +118,7 @@ const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
                                     <th className={styles.radioCell}></th>
                                     <th>Mã lệnh</th>
                                     <th>Loại</th>
-                                    <th>BOM</th>
+                                    <th>Cấu hình</th>
                                     <th>Thành phẩm</th>
                                     <th>Ngày thực hiện</th>
                                     <th>Tiến độ</th>

@@ -40,14 +40,14 @@ public class ImportDocumentController {
 
     @GetMapping("/next-code")
     @Operation(summary = "Get next import slip code")
-    @PreAuthorize("hasAuthority('import:view') or hasAuthority('import:add') or hasAuthority('export:view')")
+    @PreAuthorize("hasAuthority('import:view') or hasAuthority('import:add')")
     public ApiResponse<String> getNextImportCode() {
         return ApiResponse.success(inventoryDocumentService.generateNextImportCode());
     }
 
     @GetMapping("/history")
     @Operation(summary = "View import slip history")
-    @PreAuthorize("hasAuthority('import:view') or hasAuthority('export:view')")
+    @PreAuthorize("hasAuthority('import:view')")
     public ApiResponse<List<InventoryDocumentResponse>> getImportHistory(
             @RequestParam(required = false) String docCode,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
@@ -63,14 +63,14 @@ public class ImportDocumentController {
 
     @GetMapping("/{id}")
     @Operation(summary = "View import slip detail")
-    @PreAuthorize("hasAuthority('import:view') or hasAuthority('export:view')")
+    @PreAuthorize("hasAuthority('import:view')")
     public ApiResponse<InventoryDocumentResponse> getImportDetail(@PathVariable Long id) {
         return ApiResponse.success(inventoryDocumentService.getImportDetail(id));
     }
 
     @PostMapping("/create")
     @Operation(summary = "Create import slip")
-    @PreAuthorize("hasAuthority('import:add') or hasAuthority('export:add')")
+    @PreAuthorize("hasAuthority('import:add')")
     public ApiResponse<InventoryDocumentResponse> createImport(
             @Valid @RequestBody InventoryDocumentRequest req,
             jakarta.servlet.http.HttpServletRequest servletRequest
@@ -91,7 +91,7 @@ public class ImportDocumentController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update import slip")
-    @PreAuthorize("hasAuthority('import:edit') or hasAuthority('export:edit')")
+    @PreAuthorize("hasAuthority('import:edit')")
     public ApiResponse<InventoryDocumentResponse> updateImport(
             @PathVariable Long id,
             @Valid @RequestBody InventoryDocumentRequest req,
@@ -113,7 +113,7 @@ public class ImportDocumentController {
 
     @PostMapping("/{id}/post")
     @Operation(summary = "Post import slip")
-    @PreAuthorize("hasAuthority('import:edit') or hasAuthority('export:edit')")
+    @PreAuthorize("hasAuthority('import:edit')")
     public ApiResponse<InventoryDocumentResponse> postImport(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();

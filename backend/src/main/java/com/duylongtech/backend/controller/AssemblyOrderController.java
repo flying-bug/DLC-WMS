@@ -69,10 +69,10 @@ public class AssemblyOrderController {
         String actor = getCurrentUser();
         try {
             AssemblyBomResponse created = assemblyOrderService.createBom(request);
-            auditLogService.logEvent(actor, "CREATE", "AssemblyBom", created.getId(), "SUCCESS", "Tạo BOM: " + created.getBomCode(), ip, null);
+            auditLogService.logEvent(actor, "CREATE", "AssemblyBom", created.getId(), "SUCCESS", "Tạo cấu hình: " + created.getBomCode(), ip, null);
             return ApiResponse.success(created);
         } catch (Exception e) {
-            auditLogService.logEvent(actor, "CREATE", "AssemblyBom", null, "FAILED", "Tạo BOM thất bại: " + e.getMessage(), ip, null);
+            auditLogService.logEvent(actor, "CREATE", "AssemblyBom", null, "FAILED", "Tạo cấu hình thất bại: " + e.getMessage(), ip, null);
             throw e;
         }
     }
@@ -85,10 +85,10 @@ public class AssemblyOrderController {
         String actor = getCurrentUser();
         try {
             AssemblyBomResponse updated = assemblyOrderService.updateBom(id, request);
-            auditLogService.logEvent(actor, "UPDATE", "AssemblyBom", id, "SUCCESS", "Cập nhật BOM: " + updated.getBomCode(), ip, null);
+            auditLogService.logEvent(actor, "UPDATE", "AssemblyBom", id, "SUCCESS", "Cập nhật cấu hình: " + updated.getBomCode(), ip, null);
             return ApiResponse.success(updated);
         } catch (Exception e) {
-            auditLogService.logEvent(actor, "UPDATE", "AssemblyBom", id, "FAILED", "Cập nhật BOM thất bại: " + e.getMessage(), ip, null);
+            auditLogService.logEvent(actor, "UPDATE", "AssemblyBom", id, "FAILED", "Cập nhật cấu hình thất bại: " + e.getMessage(), ip, null);
             throw e;
         }
     }

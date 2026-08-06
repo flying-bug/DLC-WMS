@@ -93,7 +93,7 @@ function UpdateTransferSlipPage() {
   const [toast, setToast] = useState({ isVisible: false, type: 'error', message: '' });
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
-  
+
   const [scanCode, setScanCode] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
 
@@ -109,7 +109,7 @@ function UpdateTransferSlipPage() {
     referenceType: '',
     referenceCode: '',
   });
-  
+
   const [items, setItems] = useState([emptyLine()]);
   const [sourceInventory, setSourceInventory] = useState(new Map());
   const [serialModalItemId, setSerialModalItemId] = useState(null);
@@ -172,12 +172,12 @@ function UpdateTransferSlipPage() {
         });
         if (detail.lines && detail.lines.length > 0) {
           const loadedItems = detail.lines.map(line => ({
-             localId: crypto.randomUUID(),
-             variantId: line.variantId || '',
-             quantity: line.quantity || 1,
-             price: line.unitCost || 0,
-             serialNumbers: line.serialNumbers || [],
-             note: line.note || '',
+            localId: crypto.randomUUID(),
+            variantId: line.variantId || '',
+            quantity: line.quantity || 1,
+            price: line.unitCost || 0,
+            serialNumbers: line.serialNumbers || [],
+            note: line.note || '',
           }));
           setItems(loadedItems.length ? loadedItems : [emptyLine()]);
         }
@@ -195,18 +195,18 @@ function UpdateTransferSlipPage() {
 
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0)), 0);
-  
+
   const isLineValid = (item) => {
     const quantity = Number(item.quantity || 0);
     return item.variantId && quantity > 0;
   };
-  
+
   const isFormValid = Boolean(
-    form.fromWarehouseId && 
-    form.toWarehouseId && 
+    form.fromWarehouseId &&
+    form.toWarehouseId &&
     form.fromWarehouseId !== form.toWarehouseId &&
-    form.transferDate && 
-    items.length && 
+    form.transferDate &&
+    items.length &&
     items.every(isLineValid)
   );
 
@@ -217,10 +217,10 @@ function UpdateTransferSlipPage() {
   const handleItemChange = (localId, field, value) => {
     setItems(prev => prev.map(item => {
       if (item.localId !== localId) return item;
-      
+
       if (field === 'variantId') {
-         const product = productById.get(String(value));
-         return { ...item, [field]: value, price: product?.costPrice || 0 };
+        const product = productById.get(String(value));
+        return { ...item, [field]: value, price: product?.costPrice || 0 };
       }
 
       return { ...item, [field]: value };
@@ -234,7 +234,7 @@ function UpdateTransferSlipPage() {
   const removeItem = (localId) => {
     setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(), isNew: false }]);
   };
-  
+
   const ensureScannedProduct = (scanResult) => {
     setProducts(prev => {
       if (prev.some(product => String(product.id) === String(scanResult.variantId))) {
@@ -346,13 +346,13 @@ function UpdateTransferSlipPage() {
   const submit = async (status) => {
     if (!isFormValid) {
       if (form.fromWarehouseId === form.toWarehouseId) {
-         showToast('error', 'Kho xuất và kho nhập phải khác nhau.');
+        showToast('error', 'Kho xuất và kho nhập phải khác nhau.');
       } else {
-         showToast('error', 'Vui lòng điền đầy đủ thông tin kho, ngày chuyển và ít nhất một mặt hàng.');
+        showToast('error', 'Vui lòng điền đầy đủ thông tin kho, ngày chuyển và ít nhất một mặt hàng.');
       }
       return;
     }
-    
+
     // Check trackSerial matches
     const payload = buildPayload();
     for (const line of payload.lines) {
@@ -362,7 +362,7 @@ function UpdateTransferSlipPage() {
         return;
       }
     }
-    
+
     setSaving(true);
     try {
       payload.status = status;
