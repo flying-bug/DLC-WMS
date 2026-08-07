@@ -5,6 +5,8 @@ import * as stocktakeApi from '../../api/stocktakeApi';
 import * as XLSX from 'xlsx';
 import styles from './CreateStocktakePage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import { printStocktakeReport } from '../../utils/printStocktakeReport';
 
 function StocktakeDetailPage() {
   const navigate = useNavigate();
@@ -27,6 +29,7 @@ function StocktakeDetailPage() {
   });
 
   const [isSaved, setIsSaved] = useState(true);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
 
   const showToast = (type, message) => {
@@ -180,6 +183,21 @@ function StocktakeDetailPage() {
     XLSX.writeFile(wb, `Kiem_Ke_VTHH_${formData.code}_${new Date().getTime()}.xlsx`);
   };
 
+  const handlePrint = () => {
+    const whObj = warehouses.find(w => String(w.id) === String(formData.warehouseId));
+    const whName = whObj ? `${whObj.code} - ${whObj.name}` : (formData.warehouseId === 'all' ? 'Tất cả kho' : 'Chưa chọn kho');
+    printStocktakeReport({
+      stocktakeCode: formData.code,
+      purpose: formData.purpose,
+      warehouseName: whName,
+      stocktakeDate: formData.toDate || formData.createdDate,
+      conclusion: formData.conclusion,
+      lines,
+      participants,
+      onError: (msg) => showToast('error', msg)
+    });
+  };
+
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -287,10 +305,12 @@ function StocktakeDetailPage() {
     }
   };
 
-  const handleComplete = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn xử lý phiếu kiểm kê này? Số liệu kiểm kê sẽ được chốt và bạn có thể tạo phiếu Nhập/Xuất kho để điều chỉnh chênh lệch.")) {
-      return;
-    }
+  const handleComplete = () => {
+    setShowConfirmModal(true);
+  };
+
+  const confirmComplete = async () => {
+    setShowConfirmModal(false);
     try {
       const payload = buildPayload();
       // Lưu lại thay đổi trước khi xử lý
@@ -320,13 +340,23 @@ function StocktakeDetailPage() {
           code: formData.code,
           warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
           reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
-          lines: diffLackLines.map(l => ({
-            variantId: l.variantId,
-            sku: l.sku,
-            productName: l.itemName,
-            quantity: Math.abs(Number(l.diffQty)),
-            note: `Hàng thiếu từ kiểm kê ${formData.code}`
-          }))
+          lines: diffLackLines.map(l => {
+            const rawSerials = l.serials || [];
+            const missingSerials = rawSerials
+              .filter(s => s.scanStatus === 'MISSING' || !s.scanStatus)
+              .map(s => (typeof s === 'string' ? s : s.serialNumber))
+              .filter(Boolean);
+            const serialList = missingSerials.length > 0 ? missingSerials : rawSerials.map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean);
+            return {
+              variantId: l.variantId,
+              sku: l.sku,
+              productName: l.itemName,
+              quantity: Math.abs(Number(l.diffQty)),
+              serials: serialList,
+              serialNumbers: serialList,
+              note: `Hàng thiếu từ kiểm kê ${formData.code}`
+            };
+          })
         }
       }
     });
@@ -346,13 +376,23 @@ function StocktakeDetailPage() {
           code: formData.code,
           warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
           reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
-          lines: diffSurplusLines.map(l => ({
-            variantId: l.variantId,
-            sku: l.sku,
-            productName: l.itemName,
-            quantity: Number(l.diffQty),
-            note: `Hàng thừa từ kiểm kê ${formData.code}`
-          }))
+          lines: diffSurplusLines.map(l => {
+            const rawSerials = l.serials || [];
+            const surplusSerials = rawSerials
+              .filter(s => s.scanStatus === 'UNEXPECTED' || !s.scanStatus)
+              .map(s => (typeof s === 'string' ? s : s.serialNumber))
+              .filter(Boolean);
+            const serialList = surplusSerials.length > 0 ? surplusSerials : rawSerials.map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean);
+            return {
+              variantId: l.variantId,
+              sku: l.sku,
+              productName: l.itemName,
+              quantity: Number(l.diffQty),
+              serials: serialList,
+              serialNumbers: serialList,
+              note: `Hàng thừa từ kiểm kê ${formData.code}`
+            };
+          })
         }
       }
     });
@@ -712,7 +752,7 @@ function StocktakeDetailPage() {
             )}
           </div>
           <div className={styles.footerViewRight}>
-            <button className={styles.btnViewText} onClick={() => window.print()}>
+            <button className={styles.btnViewText} onClick={handlePrint}>
               <i className="bi bi-printer"></i> In bảng kiểm kê
             </button>
           </div>
@@ -742,6 +782,15 @@ function StocktakeDetailPage() {
         type={toast.type}
         message={toast.message}
         onClose={() => setToast({ ...toast, isVisible: false })}
+      />
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        title="Xác nhận xử lý phiếu kiểm kê"
+        message="Bạn có chắc chắn muốn xử lý phiếu kiểm kê này? Số liệu kiểm kê sẽ được chốt và bạn có thể tạo phiếu Nhập/Xuất kho để điều chỉnh chênh lệch."
+        confirmText="Xử lý"
+        cancelText="Hủy bỏ"
+        onConfirm={confirmComplete}
+        onCancel={() => setShowConfirmModal(false)}
       />
     </AdminLayout>
   );

@@ -6,6 +6,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { format, parseISO } from 'date-fns';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
+import CustomerModal from '../Customer/components/CustomerModal';
 import * as soApi from '../../api/salesOrderApi';
 import styles from './CreateSalesOrderPage.module.css';
 
@@ -39,6 +40,7 @@ function CreateSalesOrderPage() {
   const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const [inventoryBalances, setInventoryBalances] = useState([]);
 
@@ -278,21 +280,28 @@ function CreateSalesOrderPage() {
 
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Khách hàng <span className={styles.required}>*</span></label>
-                    <Select
-                      options={customerOptions}
-                      value={customerOptions.find(o => o.value === form.partnerId) || null}
-                      onChange={opt => {
-                        const cust = customers.find(c => c.id === opt?.value);
-                        setForm(p => ({ 
-                          ...p, 
-                          partnerId: opt?.value || null,
-                          deliveryAddress: cust ? cust.address || '' : ''
-                        }));
-                      }}
-                      placeholder="Chọn khách hàng..."
-                      isClearable
-                      styles={customSelectStyles}
-                    />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ flex: 1 }}>
+                        <Select
+                          options={customerOptions}
+                          value={customerOptions.find(o => o.value === form.partnerId) || null}
+                          onChange={opt => {
+                            const cust = customers.find(c => c.id === opt?.value);
+                            setForm(p => ({ 
+                              ...p, 
+                              partnerId: opt?.value || null,
+                              deliveryAddress: cust ? cust.address || '' : ''
+                            }));
+                          }}
+                          placeholder="Chọn khách hàng..."
+                          isClearable
+                          styles={customSelectStyles}
+                        />
+                      </div>
+                      <button type="button" onClick={() => setShowCustomerModal(true)} style={{ width: '38px', height: '38px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary)' }}></i>
+                      </button>
+                    </div>
                   </div>
 
                   <div className={styles.fieldRow}>
@@ -576,6 +585,20 @@ function CreateSalesOrderPage() {
         )}
       </div>
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
+
+      <CustomerModal
+        isOpen={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
+        onSuccess={(newCustomer) => {
+          setCustomers(prev => [newCustomer, ...prev]);
+          setForm(prev => ({ 
+            ...prev, 
+            partnerId: newCustomer.id,
+            deliveryAddress: newCustomer.address || ''
+          }));
+          setShowCustomerModal(false);
+        }}
+      />
     </AdminLayout>
   );
 }

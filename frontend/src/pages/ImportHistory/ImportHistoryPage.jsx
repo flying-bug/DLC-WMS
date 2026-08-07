@@ -180,11 +180,32 @@ function ImportHistoryPage() {
       setSelectedSlip(current => data.find(item => item.id === current?.id) || null);
       setSelectedIds([]);
     } catch (err) {
-      setError(err.response?.data?.userMessage || 'Không tải được danh sách phiếu nhập kho');
+      console.error('Failed to load import slips:', err);
+      setError('Khởi tạo danh sách thất bại. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
-  }, [filters.docCode, filters.fromDate, filters.toDate, filters.status, filters.warehouseId, filters.issuePurpose]);
+  }, [filters]);
+
+  const handleNavigateReference = (refType, refId) => {
+    if (!refType || !refId) return;
+    const type = String(refType).trim().toUpperCase();
+    if (type.includes('STOCKTAKE') || type.includes('STOCK_TAKE')) {
+      navigate(`/stocktakes/${refId}`);
+    } else if (type.includes('PURCHASE') || type === 'PO') {
+      navigate(`/purchase-orders/${refId}`);
+    } else if (type.includes('SALES') || type === 'SO') {
+      navigate(`/sales-orders/${refId}`);
+    } else if (type.includes('ASSEMBLY')) {
+      navigate(`/assembly-orders/${refId}`);
+    } else if (type === 'BOM') {
+      navigate(`/assembly-boms/${refId}`);
+    } else if (type.includes('REPAIR')) {
+      navigate(`/repairs/${refId}`);
+    } else if (type.includes('WARRANTY')) {
+      navigate(`/warranties/${refId}`);
+    }
+  };
 
   useEffect(() => {
 
@@ -709,7 +730,12 @@ function ImportHistoryPage() {
                         <span className={styles.infoLabel}>
                           <i className="bi bi-link-45deg"></i> Kèm chứng từ
                         </span>
-                        <span className={styles.infoValue} style={{ color: 'var(--color-primary)', cursor: 'pointer', display: 'inline-block', marginTop: '4px' }}>
+                        <span 
+                          className={styles.infoValue} 
+                          style={{ color: 'var(--color-primary)', cursor: 'pointer', display: 'inline-block', marginTop: '4px' }}
+                          onClick={() => handleNavigateReference(selectedSlip.referenceType, selectedSlip.referenceId)}
+                          title="Bấm để xem chứng từ tham chiếu"
+                        >
                           <span className={styles.serialBadge} style={{ cursor: 'pointer' }}>
                             <i className="bi bi-box-arrow-up-right" style={{ marginRight: '4px' }}></i>
                             {selectedSlip.referenceCode || selectedSlip.referenceId}

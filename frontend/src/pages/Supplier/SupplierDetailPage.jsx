@@ -21,6 +21,8 @@ const SupplierDetailPage = () => {
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
+    const formatCurrency = (val) => new Intl.NumberFormat('vi-VN').format(val || 0);
+
     const fetchSupplier = async () => {
         try {
             setLoading(true);
@@ -164,6 +166,12 @@ const SupplierDetailPage = () => {
                             <div className={styles.detailRightRow}>
                                 <span className={styles.detailRightLabel}>Chủ tài khoản</span>
                                 <span className={styles.detailRightValue}>{supplier.bankBeneficiaryName || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Chưa cập nhật</span>}</span>
+                            </div>
+                            
+                            <div style={{ borderTop: '1px solid var(--color-border)', margin: '16px 0' }}></div>
+                            <div>
+                                <div className={styles.detailLabel} style={{ marginBottom: '8px' }}>Dư nợ hiện tại</div>
+                                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-danger)' }}>{formatCurrency(supplier?.currentDebt || 0)} ₫</h2>
                             </div>
                         </div>
                     </div>

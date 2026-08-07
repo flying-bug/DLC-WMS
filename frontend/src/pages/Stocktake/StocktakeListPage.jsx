@@ -10,9 +10,7 @@ import styles from './StocktakeListPage.module.css';
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
-  SUBMITTED: { label: 'Chờ xử lý', code: 'warning' },
   POSTED: { label: 'Đã xử lý chênh lệch', code: 'success' },
-  CANCELLED: { label: 'Đã hủy', code: 'danger' },
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -99,14 +97,14 @@ function StocktakeListPage() {
   });
 
   const handleExport = () => {
-    const headers = ['Ngày', 'Số', 'Kiểm kê kho', 'Mục đích', 'Kết luận', 'Đã xử lý'];
+    const headers = ['Ngày', 'Số', 'Kiểm kê kho', 'Mục đích', 'Kết luận', 'Trạng thái'];
     const data = rows.map(item => [
       item.date,
       item.stocktakeCode,
       item.warehouse,
-      item.note,
-      item.statusLabel,
-      item.isProcessed ? 'Có' : 'Không'
+      item.purpose || item.note || '',
+      item.conclusion || '',
+      item.statusLabel
     ]);
     exportToExcel(headers, data, 'Danh_sach_kiem_ke');
   };
@@ -125,7 +123,7 @@ function StocktakeListPage() {
       <div className={styles.pageBody}>
         <div className={styles.pageTitleContainer}>
           <h1 className={styles.pageTitle}>Kiểm kê vật tư hàng hóa</h1>
-          <button className={styles.btnPrimary} style={{ backgroundColor: '#2e7d32' }} onClick={() => setShowInitModal(true)}>
+          <button className={styles.btnPrimary} onClick={() => setShowInitModal(true)}>
             Thêm bảng kiểm kê
           </button>
         </div>
@@ -160,9 +158,7 @@ function StocktakeListPage() {
               >
                 <option value="">Tất cả</option>
                 <option value="DRAFT">Lưu tạm</option>
-                <option value="SUBMITTED">Chờ xử lý</option>
                 <option value="POSTED">Đã xử lý</option>
-                <option value="CANCELLED">Đã hủy</option>
               </select>
             </div>
           </div>
@@ -205,7 +201,7 @@ function StocktakeListPage() {
                 <th>KIỂM KÊ KHO</th>
                 <th>MỤC ĐÍCH</th>
                 <th>KẾT LUẬN</th>
-                <th className={styles.textCenter}>ĐÃ XỬ LÝ</th>
+                <th>TRẠNG THÁI</th>
                 <th className={styles.textCenter}>CHỨC NĂNG</th>
               </tr>
             </thead>
@@ -236,7 +232,8 @@ function StocktakeListPage() {
                     </a>
                   </td>
                   <td>{st.warehouse}</td>
-                  <td>{st.note || ''}</td>
+                  <td>{st.purpose || st.note || ''}</td>
+                  <td>{st.conclusion || ''}</td>
                   <td>
                       <span className={`${styles.badge} ${
                         st.statusCode === 'success' ? styles.badgeSuccess :
@@ -246,9 +243,6 @@ function StocktakeListPage() {
                       }`}>
                         {st.statusLabel}
                       </span>
-                  </td>
-                  <td className={styles.textCenter}>
-                    {st.isProcessed ? <i className="bi bi-check-circle-fill" style={{ color: 'var(--color-success-strong)' }}></i> : ''}
                   </td>
                   <td className={styles.textCenter}>
                      <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); navigate(`/stocktakes/${st.id}`); }}></i>

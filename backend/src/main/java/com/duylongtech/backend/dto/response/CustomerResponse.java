@@ -46,6 +46,9 @@ public class CustomerResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    /** Tổng nợ hiện tại. */
+    private java.math.BigDecimal currentDebt;
+
     @Data
     @Builder
     @NoArgsConstructor

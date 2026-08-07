@@ -14,6 +14,10 @@ import com.duylongtech.backend.repository.PartnerRepository;
 import com.duylongtech.backend.repository.SalesOrderLineRepository;
 import com.duylongtech.backend.repository.WarrantyRepository;
 import com.duylongtech.backend.repository.RepairRepository;
+import com.duylongtech.backend.repository.PartnerLedgerRepository;
+import com.duylongtech.backend.entity.PartnerLedger;
+import java.math.BigDecimal;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -73,6 +77,7 @@ public class CustomerService {
     private final WarrantyRepository warrantyRepository;
     private final RepairRepository repairRepository;
     private final CodeGeneratorService codeGeneratorService;
+    private final PartnerLedgerRepository partnerLedgerRepository;
 
     private static final String[] EXCEL_HEADERS = {
             "Mã KH", "Tên khách hàng", "Số điện thoại", "Email", "Địa chỉ", "Nhóm KH", "Trạng thái"
@@ -685,6 +690,12 @@ public class CustomerService {
     }
 
     private CustomerResponse toResponse(Partner partner) {
+        BigDecimal currentDebt = BigDecimal.ZERO;
+        Optional<PartnerLedger> latestLedger = partnerLedgerRepository.findTopByPartnerIdOrderByIdDesc(partner.getId());
+        if (latestLedger.isPresent()) {
+            currentDebt = latestLedger.get().getBalanceAfter();
+        }
+
         return CustomerResponse.builder()
                 .id(partner.getId())
                 .code(partner.getCode())
@@ -695,6 +706,7 @@ public class CustomerService {
                 .address(partner.getAddress())
                 .groupType(partner.getGroupType())
                 .status(partner.getStatus())
+                .currentDebt(currentDebt)
                 .createdAt(partner.getCreatedAt())
                 .updatedAt(partner.getUpdatedAt())
                 .build();

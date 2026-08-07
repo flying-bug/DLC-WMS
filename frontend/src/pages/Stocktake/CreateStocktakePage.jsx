@@ -6,6 +6,8 @@ import Select from 'react-select';
 import * as XLSX from 'xlsx';
 import styles from './CreateStocktakePage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import { printStocktakeReport } from '../../utils/printStocktakeReport';
 
 function CreateStocktakePage() {
   const navigate = useNavigate();
@@ -29,6 +31,7 @@ function CreateStocktakePage() {
 
   const [isSaved, setIsSaved] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const showToast = (type, message) => {
     setToast({ isVisible: true, type, message });
@@ -192,7 +195,8 @@ function CreateStocktakePage() {
     loading: false,
     scanInput: '',
     systemSerials: [],
-    scannedList: []
+    scannedList: [],
+    filterTab: 'ALL'
   });
 
   const openSerialModal = async (lineIdx) => {
@@ -208,7 +212,8 @@ function CreateStocktakePage() {
       loading: true,
       scanInput: '',
       systemSerials: [],
-      scannedList: line.serials ? [...line.serials] : []
+      scannedList: line.serials ? line.serials.filter(s => s.scanStatus !== 'MISSING') : [],
+      filterTab: 'ALL'
     });
 
     try {
@@ -216,14 +221,7 @@ function CreateStocktakePage() {
       const sysSerials = res?.data?.data || res?.data || [];
       const sysList = Array.isArray(sysSerials) ? sysSerials : [];
 
-      let initialScanned = line.serials ? [...line.serials] : [];
-      if (initialScanned.length === 0 && sysList.length > 0) {
-        initialScanned = sysList.map(s => ({
-          serialNumberId: s.id,
-          serialNumber: s.serialNumber,
-          scanStatus: 'MATCHED'
-        }));
-      }
+      const initialScanned = line.serials ? line.serials.filter(s => s.scanStatus !== 'MISSING') : [];
 
       setSerialModal(prev => ({
         ...prev,
@@ -293,15 +291,15 @@ function CreateStocktakePage() {
         ...line,
         countQty: validCount,
         diffQty: diff,
-        good100: validCount,
-        bad: 0,
+        good100: serialModal.scannedList.filter(s => s.scanStatus === 'MATCHED').length,
+        bad: serialModal.scannedList.filter(s => s.scanStatus === 'UNEXPECTED').length,
         lost: missingSerials.length,
         action: diff !== 0 ? 'Xử lý chênh lệch' : 'Không xử lý',
         serials: finalSerials
       };
     }));
 
-    setSerialModal({ isOpen: false, lineIndex: null, loading: false, scanInput: '', systemSerials: [], scannedList: [] });
+    setSerialModal({ isOpen: false, lineIndex: null, loading: false, scanInput: '', systemSerials: [], scannedList: [], filterTab: 'ALL' });
   };
 
   const handleProductSelect = (index, variantId) => {
@@ -328,9 +326,12 @@ function CreateStocktakePage() {
   };
 
   const handleClearAllLines = () => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa tất cả các dòng kiểm kê?')) {
-      setLines([]);
-    }
+    setShowClearConfirm(true);
+  };
+
+  const confirmClearAllLines = () => {
+    setLines([]);
+    setShowClearConfirm(false);
   };
 
 
@@ -356,6 +357,21 @@ function CreateStocktakePage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "KiemKe");
     XLSX.writeFile(wb, `Kiem_Ke_VTHH_${formData.code}_${new Date().getTime()}.xlsx`);
+  };
+
+  const handlePrint = () => {
+    const whObj = warehouses.find(w => String(w.id) === String(formData.warehouseId));
+    const whName = whObj ? `${whObj.code} - ${whObj.name}` : (formData.warehouseId === 'all' ? 'Tất cả kho' : 'Chưa chọn kho');
+    printStocktakeReport({
+      stocktakeCode: formData.code,
+      purpose: formData.purpose,
+      warehouseName: whName,
+      stocktakeDate: formData.toDate || formData.createdDate,
+      conclusion: formData.conclusion,
+      lines,
+      participants,
+      onError: (msg) => showToast('error', msg)
+    });
   };
 
   const handleImportExcel = (e) => {
@@ -933,7 +949,7 @@ function CreateStocktakePage() {
             </button>
           </div>
           <div className={styles.footerViewRight}>
-            <button className={styles.btnViewText} onClick={() => window.print()}>
+            <button className={styles.btnViewText} onClick={handlePrint}>
               <i className="bi bi-printer"></i> In bảng kiểm kê
             </button>
           </div>
@@ -954,114 +970,164 @@ function CreateStocktakePage() {
         </div>
       )}
 
-      {serialModal.isOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.serialModalCard}>
-            <div className={styles.modalHeader}>
-              <h3>
-                <i className="bi bi-upc-scan" style={{ marginRight: '8px', color: '#0284c7' }}></i>
-                Kiểm kê Serial - {lines[serialModal.lineIndex]?.itemName} (SKU: {lines[serialModal.lineIndex]?.sku})
-              </h3>
-              <button className={styles.modalCloseBtn} onClick={() => setSerialModal({ ...serialModal, isOpen: false })}>
-                <i className="bi bi-x-lg"></i>
-              </button>
-            </div>
+      {serialModal.isOpen && (() => {
+        const scannedSet = new Set(serialModal.scannedList.map(s => s.serialNumber.toLowerCase()));
+        const missingList = serialModal.systemSerials
+          .filter(sys => !scannedSet.has(sys.serialNumber.toLowerCase()))
+          .map(sys => ({
+            serialNumberId: sys.id,
+            serialNumber: sys.serialNumber,
+            scanStatus: 'MISSING'
+          }));
 
-            <div className={styles.modalBody}>
-              <form onSubmit={handleScanSerialSubmit} className={styles.scanInputRow}>
-                <input
-                  type="text"
-                  className={styles.scanInput}
-                  placeholder="Quét mã vạch hoặc nhập mã Serial rồi nhấn Enter..."
-                  value={serialModal.scanInput}
-                  onChange={(e) => setSerialModal({ ...serialModal, scanInput: e.target.value })}
-                  autoFocus
-                />
-                <button type="submit" className={styles.btnScanSerial} style={{ padding: '0 20px', fontSize: '14px' }}>
-                  <i className="bi bi-plus-circle"></i> Thêm Serial
+        const combinedSerials = [...serialModal.scannedList, ...missingList];
+        const matchedCount = serialModal.scannedList.filter(s => s.scanStatus === 'MATCHED').length;
+        const missingCount = missingList.length;
+        const unexpectedCount = serialModal.scannedList.filter(s => s.scanStatus === 'UNEXPECTED').length;
+
+        const displaySerials = combinedSerials.filter(s => {
+          if (serialModal.filterTab === 'MATCHED') return s.scanStatus === 'MATCHED';
+          if (serialModal.filterTab === 'MISSING') return s.scanStatus === 'MISSING';
+          if (serialModal.filterTab === 'UNEXPECTED') return s.scanStatus === 'UNEXPECTED';
+          return true;
+        });
+
+        return (
+          <div className={styles.modalOverlay}>
+            <div className={styles.serialModalCard}>
+              <div className={styles.modalHeader}>
+                <h3>
+                  <i className="bi bi-upc-scan" style={{ marginRight: '8px', color: '#0284c7' }}></i>
+                  Kiểm kê Serial - {lines[serialModal.lineIndex]?.itemName} (SKU: {lines[serialModal.lineIndex]?.sku})
+                </h3>
+                <button className={styles.modalCloseBtn} onClick={() => setSerialModal({ ...serialModal, isOpen: false })}>
+                  <i className="bi bi-x-lg"></i>
                 </button>
-              </form>
-
-              <div className={styles.badgeRow}>
-                <div className={`${styles.badgeStat} ${styles.badgeBook}`}>
-                  Tồn hệ thống: {lines[serialModal.lineIndex]?.bookQty || 0}
-                </div>
-                <div className={`${styles.badgeStat} ${styles.badgeMatch}`}>
-                  Khớp: {serialModal.scannedList.filter(s => s.scanStatus === 'MATCHED').length}
-                </div>
-                <div className={`${styles.badgeStat} ${styles.badgeMissing}`}>
-                  Thiếu: {
-                    serialModal.systemSerials.filter(sys => 
-                      !serialModal.scannedList.some(s => s.serialNumber.toLowerCase() === sys.serialNumber.toLowerCase())
-                    ).length
-                  }
-                </div>
-                <div className={`${styles.badgeStat} ${styles.badgeUnexpected}`}>
-                  Thừa / Lạ: {serialModal.scannedList.filter(s => s.scanStatus === 'UNEXPECTED').length}
-                </div>
               </div>
 
-              <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
-                <table className={styles.table} style={{ margin: 0 }}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '10%', textAlign: 'center' }}>STT</th>
-                      <th style={{ width: '50%' }}>MÃ SERIAL</th>
-                      <th style={{ width: '30%', textAlign: 'center' }}>TRẠNG THÁI</th>
-                      {!isSaved && <th style={{ width: '10%', textAlign: 'center' }}>XÓA</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {serialModal.scannedList.map((s, sIdx) => (
-                      <tr key={sIdx}>
-                        <td style={{ textAlign: 'center' }}>{sIdx + 1}</td>
-                        <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>{s.serialNumber}</td>
-                        <td style={{ textAlign: 'center' }}>
-                          {s.scanStatus === 'MATCHED' && <span style={{ color: '#16a34a', fontWeight: 600 }}><i className="bi bi-check-circle-fill"></i> Khớp</span>}
-                          {s.scanStatus === 'UNEXPECTED' && <span style={{ color: '#d97706', fontWeight: 600 }}><i className="bi bi-exclamation-triangle-fill"></i> Thừa / Lạ</span>}
-                        </td>
-                        {!isSaved && (
-                          <td style={{ textAlign: 'center' }}>
-                            <button
-                              type="button"
-                              style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}
-                              onClick={() => handleRemoveScannedSerial(s.serialNumber)}
-                            >
-                              <i className="bi bi-trash"></i>
-                            </button>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                    {serialModal.scannedList.length === 0 && (
+              <div className={styles.modalBody}>
+                <form onSubmit={handleScanSerialSubmit} className={styles.scanInputRow}>
+                  <input
+                    type="text"
+                    className={styles.scanInput}
+                    placeholder="Quét mã vạch hoặc nhập mã Serial rồi nhấn Enter..."
+                    value={serialModal.scanInput}
+                    onChange={(e) => setSerialModal({ ...serialModal, scanInput: e.target.value })}
+                    autoFocus
+                  />
+                  <button type="submit" className={styles.btnScanSerial} style={{ padding: '0 20px', fontSize: '14px' }}>
+                    <i className="bi bi-plus-circle"></i> Thêm Serial
+                  </button>
+                </form>
+
+                <div className={styles.badgeRow}>
+                  <div
+                    className={`${styles.badgeStat} ${styles.badgeBook} ${serialModal.filterTab === 'ALL' ? styles.badgeActive : ''}`}
+                    onClick={() => setSerialModal(prev => ({ ...prev, filterTab: 'ALL' }))}
+                    title="Bấm để xem tất cả Serial"
+                  >
+                    Tất cả ({combinedSerials.length})
+                  </div>
+                  <div
+                    className={`${styles.badgeStat} ${styles.badgeMatch} ${serialModal.filterTab === 'MATCHED' ? styles.badgeActive : ''}`}
+                    onClick={() => setSerialModal(prev => ({ ...prev, filterTab: 'MATCHED' }))}
+                    title="Bấm để chỉ xem Serial Khớp"
+                  >
+                    Khớp ({matchedCount})
+                  </div>
+                  <div
+                    className={`${styles.badgeStat} ${styles.badgeMissing} ${serialModal.filterTab === 'MISSING' ? styles.badgeActive : ''}`}
+                    onClick={() => setSerialModal(prev => ({ ...prev, filterTab: 'MISSING' }))}
+                    title="Bấm để chỉ xem Serial Thiếu"
+                  >
+                    Thiếu ({missingCount})
+                  </div>
+                  <div
+                    className={`${styles.badgeStat} ${styles.badgeUnexpected} ${serialModal.filterTab === 'UNEXPECTED' ? styles.badgeActive : ''}`}
+                    onClick={() => setSerialModal(prev => ({ ...prev, filterTab: 'UNEXPECTED' }))}
+                    title="Bấm để chỉ xem Serial Thừa/Lạ"
+                  >
+                    Thừa / Lạ ({unexpectedCount})
+                  </div>
+                </div>
+
+                <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+                  <table className={styles.table} style={{ margin: 0 }}>
+                    <thead>
                       <tr>
-                        <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>
-                          Chưa có Serial nào được quét. Vui lòng sử dụng máy quét hoặc nhập ở trên.
-                        </td>
+                        <th style={{ width: '10%', textAlign: 'center' }}>STT</th>
+                        <th style={{ width: '50%' }}>MÃ SERIAL</th>
+                        <th style={{ width: '30%', textAlign: 'center' }}>TRẠNG THÁI</th>
+                        {!isSaved && <th style={{ width: '10%', textAlign: 'center' }}>XÓA</th>}
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {displaySerials.map((s, sIdx) => (
+                        <tr key={sIdx}>
+                          <td style={{ textAlign: 'center' }}>{sIdx + 1}</td>
+                          <td style={{ fontWeight: 600, fontFamily: 'monospace' }}>{s.serialNumber}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            {s.scanStatus === 'MATCHED' && <span style={{ color: '#16a34a', fontWeight: 600 }}><i className="bi bi-check-circle-fill"></i> Khớp</span>}
+                            {s.scanStatus === 'MISSING' && <span style={{ color: '#dc2626', fontWeight: 600 }}><i className="bi bi-x-circle-fill"></i> Thiếu (Chưa quét)</span>}
+                            {s.scanStatus === 'UNEXPECTED' && <span style={{ color: '#d97706', fontWeight: 600 }}><i className="bi bi-exclamation-triangle-fill"></i> Thừa / Lạ</span>}
+                          </td>
+                          {!isSaved && (
+                            <td style={{ textAlign: 'center' }}>
+                              {s.scanStatus !== 'MISSING' && (
+                                <button
+                                  type="button"
+                                  style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}
+                                  onClick={() => handleRemoveScannedSerial(s.serialNumber)}
+                                  title="Hủy quét Serial này"
+                                >
+                                  <i className="bi bi-trash"></i>
+                                </button>
+                              )}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                      {displaySerials.length === 0 && (
+                        <tr>
+                          <td colSpan={4} style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>
+                            Không có Serial nào thuộc mục đã chọn.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
 
-            <div className={styles.modalFooter}>
-              <button type="button" className={styles.btnOutline} onClick={() => setSerialModal({ ...serialModal, isOpen: false })}>
-                Hủy
-              </button>
-              <button type="button" className={styles.btnScanSerial} onClick={handleSaveSerialModal}>
-                Xác nhận kết quả đếm ({serialModal.scannedList.length})
-              </button>
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.btnOutline} onClick={() => setSerialModal({ ...serialModal, isOpen: false })}>
+                  Hủy
+                </button>
+                <button type="button" className={styles.btnScanSerial} onClick={handleSaveSerialModal}>
+                  Xác nhận kết quả đếm ({serialModal.scannedList.length})
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <Toast
         isVisible={toast.isVisible}
         type={toast.type}
         message={toast.message}
         onClose={() => setToast({ ...toast, isVisible: false })}
+      />
+
+      <ConfirmModal
+        isOpen={showClearConfirm}
+        title="Xác nhận xóa tất cả"
+        message="Bạn có chắc chắn muốn xóa tất cả các dòng kiểm kê?"
+        confirmText="Xóa tất cả"
+        cancelText="Hủy bỏ"
+        isDanger={true}
+        onConfirm={confirmClearAllLines}
+        onCancel={() => setShowClearConfirm(false)}
       />
 
     </AdminLayout>

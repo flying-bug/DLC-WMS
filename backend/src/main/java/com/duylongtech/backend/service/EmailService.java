@@ -80,4 +80,96 @@ public class EmailService {
             System.err.println("Failed to send backup notification email: " + e.getMessage());
         }
     }
+
+    public void sendSalesOrderQuoteEmail(String toEmail, com.duylongtech.backend.dto.response.SalesOrderResponse so, String customMessage) {
+        if (toEmail == null || toEmail.trim().isEmpty()) {
+            throw new BusinessException("Email người nhận không được để trống");
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail, "DLC-WMS Báo Giá");
+            helper.setTo(toEmail.trim());
+            helper.setSubject("[BÁO GIÁ] Đơn hàng " + (so.getSoCode() != null ? so.getSoCode() : "") + " - DLC WMS");
+
+            java.text.NumberFormat nf = java.text.NumberFormat.getInstance(new java.util.Locale("vi", "VN"));
+
+            StringBuilder tableRows = new StringBuilder();
+            if (so.getLines() != null) {
+                int stt = 1;
+                for (com.duylongtech.backend.dto.response.SalesOrderResponse.SalesOrderLineResponse line : so.getLines()) {
+                    String name = line.getVariantName() != null ? line.getVariantName() : (line.getSku() != null ? line.getSku() : "-");
+                    String unit = line.getUnitName() != null ? line.getUnitName() : "";
+                    String qty = line.getQuantity() != null ? nf.format(line.getQuantity()) : "0";
+                    String price = line.getUnitPrice() != null ? nf.format(line.getUnitPrice()) + " ₫" : "0 ₫";
+                    String amount = line.getLineAmount() != null ? nf.format(line.getLineAmount()) + " ₫" : "0 ₫";
+
+                    tableRows.append("<tr style='border-bottom: 1px solid #eee;'>")
+                            .append("<td style='padding: 10px; text-align: center;'>").append(stt++).append("</td>")
+                            .append("<td style='padding: 10px;'><strong>").append(name).append("</strong><br/><small style='color:#666;'>SKU: ").append(line.getSku() != null ? line.getSku() : "").append("</small></td>")
+                            .append("<td style='padding: 10px; text-align: center;'>").append(unit).append("</td>")
+                            .append("<td style='padding: 10px; text-align: right;'>").append(qty).append("</td>")
+                            .append("<td style='padding: 10px; text-align: right;'>").append(price).append("</td>")
+                            .append("<td style='padding: 10px; text-align: right; font-weight: bold;'>").append(amount).append("</td>")
+                            .append("</tr>");
+                }
+            }
+
+            String subTotal = so.getSubTotalAmount() != null ? nf.format(so.getSubTotalAmount()) + " ₫" : "0 ₫";
+            String tax = so.getTaxAmount() != null ? nf.format(so.getTaxAmount()) + " ₫" : "0 ₫";
+            String total = so.getTotalAmount() != null ? nf.format(so.getTotalAmount()) + " ₫" : "0 ₫";
+
+            String customMsgHtml = (customMessage != null && !customMessage.trim().isEmpty())
+                    ? "<div style='background: #f8fafc; border-left: 4px solid #007bff; padding: 12px; margin: 15px 0; font-style: italic; color: #475569;'>"
+                    + "<strong>Lời nhắn:</strong> " + customMessage.trim() + "</div>"
+                    : "";
+
+            String htmlMsg = "<div style='font-family: Arial, sans-serif; padding: 24px; color: #334155; max-width: 700px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;'>"
+                    + "<div style='text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2563eb; padding-bottom: 15px;'>"
+                    + "<h2 style='color: #2563eb; margin: 0;'>BẢNG BÁO GIÁ SẢN PHẨM</h2>"
+                    + "<p style='color: #64748b; margin-top: 5px; font-size: 14px;'>Mã báo giá: <strong>" + (so.getSoCode() != null ? so.getSoCode() : "") + "</strong></p>"
+                    + "</div>"
+
+                    + "<div style='margin-bottom: 20px; font-size: 14px; line-height: 1.6;'>"
+                    + "<p>Kính gửi Quý khách hàng <strong>" + (so.getPartnerName() != null ? so.getPartnerName() : "") + "</strong>,</p>"
+                    + "<p>Chúng tôi xin gửi đến Quý khách chi tiết bảng báo giá đơn hàng với nội dung cụ thể như sau:</p>"
+                    + customMsgHtml
+                    + "</div>"
+
+                    + "<table style='width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;'>"
+                    + "<thead>"
+                    + "<tr style='background: #f1f5f9; color: #1e293b; text-align: left;'>"
+                    + "<th style='padding: 10px; text-align: center;'>#</th>"
+                    + "<th style='padding: 10px;'>Sản phẩm</th>"
+                    + "<th style='padding: 10px; text-align: center;'>ĐVT</th>"
+                    + "<th style='padding: 10px; text-align: right;'>SL</th>"
+                    + "<th style='padding: 10px; text-align: right;'>Đơn giá</th>"
+                    + "<th style='padding: 10px; text-align: right;'>Thành tiền</th>"
+                    + "</tr>"
+                    + "</thead>"
+                    + "<tbody>"
+                    + tableRows.toString()
+                    + "</tbody>"
+                    + "</table>"
+
+                    + "<div style='width: 100%; text-align: right; margin-bottom: 25px; font-size: 14px; line-height: 1.8;'>"
+                    + "<div>Tạm tính: <strong style='min-width: 120px; display: inline-block;'>" + subTotal + "</strong></div>"
+                    + "<div>Thuế VAT: <strong style='min-width: 120px; display: inline-block;'>" + tax + "</strong></div>"
+                    + "<div style='font-size: 18px; color: #dc2626; margin-top: 5px;'>Tổng cộng: <strong style='min-width: 120px; display: inline-block;'>" + total + "</strong></div>"
+                    + "</div>"
+
+                    + "<div style='border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 13px; color: #64748b; line-height: 1.5;'>"
+                    + "<p>Nếu Quý khách có bất kỳ thắc mắc nào, xin vui lòng liên hệ với chúng tôi để được hỗ trợ tốt nhất.</p>"
+                    + "<p>Trân trọng,<br/><strong>Hệ thống Quản lý Bán hàng DLC-WMS</strong></p>"
+                    + "</div>"
+                    + "</div>";
+
+            helper.setText(htmlMsg, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Failed to send quote email: " + e.getMessage());
+            throw new BusinessException("Lỗi khi gửi email báo giá: " + e.getMessage());
+        }
+    }
 }

@@ -31,6 +31,7 @@ public class SalesOrderService {
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
     private final PartnerLedgerService partnerLedgerService;
+    private final EmailService emailService;
 
     // =========================================================
     // QUERY
@@ -468,6 +469,7 @@ public class SalesOrderService {
                 .partnerCode(so.getPartner() != null ? so.getPartner().getCode() : null)
                 .partnerName(so.getPartner() != null ? so.getPartner().getName() : null)
                 .partnerPhone(so.getPartner() != null ? so.getPartner().getPhone() : null)
+                .partnerEmail(so.getPartner() != null ? so.getPartner().getEmail() : null)
                 .warehouseId(so.getWarehouseId())
                 .warehouseCode(so.getWarehouse() != null ? so.getWarehouse().getCode() : null)
                 .warehouseName(so.getWarehouse() != null ? so.getWarehouse().getName() : null)
@@ -536,5 +538,10 @@ public class SalesOrderService {
         response.setLines(lineResponses);
         response.setReservations(reservationResponses);
         return response;
+    }
+
+    public void sendQuoteEmail(Long id, com.duylongtech.backend.dto.request.EmailQuoteRequest req) {
+        SalesOrderResponse soResponse = getSalesOrderById(id);
+        emailService.sendSalesOrderQuoteEmail(req.getToEmail(), soResponse, req.getMessage());
     }
 }
