@@ -25,7 +25,7 @@ const defaultFormData = {
     trackLot: false,
     isAssembly: false,
     active: true,
-    minStockQty: 0,
+    minStockQty: '',
     taxReductionStatus: 'NORMAL'
 };
 
@@ -38,7 +38,7 @@ const defaultVariantData = {
     manufacturerPartNumber: '',
     specsJson: '',
     active: true,
-    warrantyMonths: 0
+    warrantyMonths: ''
 };
 
 const getPageContent = (response) => {
@@ -267,18 +267,18 @@ const ProductPage = () => {
     const [activeTab, setActiveTab] = useState('bom');
     const [bomLines, setBomLines] = useState([]);
     const [allVariants, setAllVariants] = useState([]);
-    const [warrantyQty, setWarrantyQty] = useState(0);
+    const [warrantyQty, setWarrantyQty] = useState('');
     const [warrantyUnit, setWarrantyUnit] = useState('Tháng');
     const [showTypeMenu, setShowTypeMenu] = useState(false);
     const [showQuickAddCat, setShowQuickAddCat] = useState(false);
-    const [quickCatForm, setQuickCatForm] = useState({ code: '', name: '' });
+    const [quickCatForm, setQuickCatForm] = useState({ name: '', description: '' });
     const [savingCat, setSavingCat] = useState(false);
     const [showQuickAddUnit, setShowQuickAddUnit] = useState(false);
-    const [quickUnitForm, setQuickUnitForm] = useState({ code: '', name: '' });
+    const [quickUnitForm, setQuickUnitForm] = useState({ name: '', description: '' });
     const [savingUnit, setSavingUnit] = useState(false);
 
     const [showQuickAddBrand, setShowQuickAddBrand] = useState(false);
-    const [quickBrandForm, setQuickBrandForm] = useState({ code: '', name: '' });
+    const [quickBrandForm, setQuickBrandForm] = useState({ name: '', description: '' });
     const [savingBrand, setSavingBrand] = useState(false);
 
 
@@ -597,7 +597,7 @@ const ProductPage = () => {
         setFormData(buildInitialFormData());
         setBomLines(getPredefinedBomLines(categories));
         setActiveTab('bom');
-        setWarrantyQty(0);
+        setWarrantyQty('');
         setWarrantyUnit('Tháng');
         setErrorMsg('');
         setShowQuickAddCat(false);
@@ -623,7 +623,7 @@ const ProductPage = () => {
             trackLot: Boolean(product.trackLot),
             isAssembly: Boolean(product.isAssembly),
             active: product.active !== false,
-            minStockQty: Number(product.minStockQty || 0),
+            minStockQty: Number(product.minStockQty) || '',
             taxReductionStatus: product.taxReductionStatus || 'NORMAL'
         }));
 
@@ -688,14 +688,14 @@ const ProductPage = () => {
         if (product.warrantyPeriod) {
             const parts = product.warrantyPeriod.split(' ');
             if (parts.length >= 2) {
-                setWarrantyQty(Number(parts[0]) || 0);
+                setWarrantyQty(Number(parts[0]) || '');
                 setWarrantyUnit(parts[1]);
             } else {
-                setWarrantyQty(product.warrantyPeriodMonths || 0);
+                setWarrantyQty(product.warrantyPeriodMonths || '');
                 setWarrantyUnit('Tháng');
             }
         } else {
-            setWarrantyQty(product.warrantyPeriodMonths || 0);
+            setWarrantyQty(product.warrantyPeriodMonths || '');
             setWarrantyUnit('Tháng');
         }
 
@@ -935,7 +935,7 @@ const ProductPage = () => {
             sku: product.productCode || '',
             variantName: product.productName || '',
             salePrice: Number(product.salePrice || 0),
-            warrantyMonths: Number(product.warrantyPeriodMonths || 0)
+            warrantyMonths: Number(product.warrantyPeriodMonths) || ''
         });
         setSpecList([{ id: globalSpecIdCounter++, key: '', value: '' }]);
         setUseRawJson(false);
@@ -955,7 +955,7 @@ const ProductPage = () => {
             manufacturerPartNumber: variant.manufacturerPartNumber || '',
             specsJson: variant.specsJson || '',
             active: variant.active !== false,
-            warrantyMonths: Number(variant.warrantyMonths || 0)
+            warrantyMonths: Number(variant.warrantyMonths) || ''
         });
         setSpecList(parseSpecsToList(variant.specsJson));
         setUseRawJson(false);
@@ -968,7 +968,7 @@ const ProductPage = () => {
             sku: selectedProduct?.productCode || '',
             variantName: selectedProduct?.productName || '',
             salePrice: Number(selectedProduct?.salePrice || 0),
-            warrantyMonths: Number(selectedProduct?.warrantyPeriodMonths || 0)
+            warrantyMonths: Number(selectedProduct?.warrantyPeriodMonths) || ''
         });
         setSpecList([{ id: globalSpecIdCounter++, key: '', value: '' }]);
         setUseRawJson(false);
@@ -1487,7 +1487,7 @@ const ProductPage = () => {
                                                                 if (nextState) {
                                                                     setShowQuickAddUnit(false);
                                                                     setShowQuickAddBrand(false);
-                                                                    setQuickCatForm({ code: '', name: '' });
+                                                                    setQuickCatForm({ name: '', description: '' });
                                                                 }
                                                             }}
                                                         >+</button>
@@ -1513,7 +1513,7 @@ const ProductPage = () => {
                                                             if (nextState) {
                                                                 setShowQuickAddCat(false);
                                                                 setShowQuickAddBrand(false);
-                                                                setQuickUnitForm({ code: '', name: '' });
+                                                                setQuickUnitForm({ name: '', description: '' });
                                                             }
                                                         }}>+</button>
                                                     </div>
@@ -1526,18 +1526,6 @@ const ProductPage = () => {
                                             <div className={styles.quickAddPanel}>
                                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                                                     <div style={{ flex: 1 }}>
-                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Mã danh mục <span className="required">*</span></label>
-                                                        <input
-                                                            type="text"
-                                                            className={styles.fieldInput}
-                                                            style={{ fontSize: '12px', padding: '5px 8px' }}
-                                                            value={quickCatForm.code}
-                                                            onChange={(e) => setQuickCatForm(f => ({ ...f, code: e.target.value }))}
-                                                            placeholder="VD: DM001"
-                                                            autoFocus
-                                                        />
-                                                    </div>
-                                                    <div style={{ flex: 2 }}>
                                                         <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên danh mục <span className="required">*</span></label>
                                                         <input
                                                             type="text"
@@ -1546,13 +1534,45 @@ const ProductPage = () => {
                                                             value={quickCatForm.name}
                                                             onChange={(e) => setQuickCatForm(f => ({ ...f, name: e.target.value }))}
                                                             placeholder="Tên danh mục"
+                                                            autoFocus
                                                             onKeyDown={async (e) => {
                                                                 if (e.key === 'Enter') {
                                                                     e.preventDefault();
-                                                                    if (!quickCatForm.code.trim() || !quickCatForm.name.trim()) return;
+                                                                    if (!quickCatForm.name.trim()) return;
                                                                     setSavingCat(true);
                                                                     try {
-                                                                        const res = await axiosClient.post('/product-categories', { code: quickCatForm.code.trim().toUpperCase(), name: quickCatForm.name.trim(), status: 'ACTIVE' });
+                                                                        const res = await axiosClient.post('/product-categories', { name: quickCatForm.name.trim(), description: quickCatForm.description?.trim() || '', status: 'ACTIVE' });
+                                                                        const newCat = res.data?.data ?? res.data;
+                                                                        setCategories(prev => [...prev, newCat]);
+                                                                        setFormData(fd => ({ ...fd, categoryId: newCat.id }));
+                                                                        setShowQuickAddCat(false);
+                                                                        showToast('success', `Đã thêm danh mục "${newCat.name}"`);
+                                                                    } catch (err) {
+                                                                        showToast('error', err.response?.data?.userMessage || 'Không thể thêm danh mục.');
+                                                                    } finally {
+                                                                        setSavingCat(false);
+                                                                    }
+                                                                }
+                                                                if (e.key === 'Escape') setShowQuickAddCat(false);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ flex: 2 }}>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Mô tả</label>
+                                                        <input
+                                                            type="text"
+                                                            className={styles.fieldInput}
+                                                            style={{ fontSize: '12px', padding: '5px 8px' }}
+                                                            value={quickCatForm.description}
+                                                            onChange={(e) => setQuickCatForm(f => ({ ...f, description: e.target.value }))}
+                                                            placeholder="Mô tả"
+                                                            onKeyDown={async (e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    if (!quickCatForm.name.trim()) return;
+                                                                    setSavingCat(true);
+                                                                    try {
+                                                                        const res = await axiosClient.post('/product-categories', { name: quickCatForm.name.trim(), description: quickCatForm.description?.trim() || '', status: 'ACTIVE' });
                                                                         const newCat = res.data?.data ?? res.data;
                                                                         setCategories(prev => [...prev, newCat]);
                                                                         setFormData(fd => ({ ...fd, categoryId: newCat.id }));
@@ -1571,11 +1591,11 @@ const ProductPage = () => {
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                                                     <button type="button" className={styles.quickCancelBtn} onClick={() => setShowQuickAddCat(false)}>Hủy</button>
-                                                    <button type="button" className={styles.quickSaveBtn} disabled={savingCat || !quickCatForm.code.trim() || !quickCatForm.name.trim()} onClick={async () => {
-                                                        if (!quickCatForm.code.trim() || !quickCatForm.name.trim()) return;
+                                                    <button type="button" className={styles.quickSaveBtn} disabled={savingCat || !quickCatForm.name.trim()} onClick={async () => {
+                                                        if (!quickCatForm.name.trim()) return;
                                                         setSavingCat(true);
                                                         try {
-                                                            const res = await axiosClient.post('/product-categories', { code: quickCatForm.code.trim().toUpperCase(), name: quickCatForm.name.trim(), status: 'ACTIVE' });
+                                                            const res = await axiosClient.post('/product-categories', { name: quickCatForm.name.trim(), description: quickCatForm.description?.trim() || '', status: 'ACTIVE' });
                                                             const newCat = res.data?.data ?? res.data;
                                                             setCategories(prev => [...prev, newCat]);
                                                             setFormData(fd => ({ ...fd, categoryId: newCat.id }));
@@ -1616,7 +1636,7 @@ const ProductPage = () => {
                                                             if (nextState) {
                                                                 setShowQuickAddCat(false);
                                                                 setShowQuickAddBrand(false);
-                                                                setQuickUnitForm({ code: '', name: '' });
+                                                                setQuickUnitForm({ name: '', description: '' });
                                                             }
                                                         }}>+</button>
                                                     </div>
@@ -1644,7 +1664,7 @@ const ProductPage = () => {
                                                             if (nextState) {
                                                                 setShowQuickAddCat(false);
                                                                 setShowQuickAddUnit(false);
-                                                                setQuickBrandForm({ code: '', name: '' });
+                                                                setQuickBrandForm({ name: '', description: '' });
                                                             }
                                                         }}>+</button>
                                                     </div>
@@ -1656,8 +1676,11 @@ const ProductPage = () => {
                                                     <label className={styles.fieldLabel}>Thời hạn bảo hành</label>
                                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                         <input
-                                                            type="number" min="0" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
-                                                            value={warrantyQty === 0 ? '' : warrantyQty} onChange={(e) => setWarrantyQty(e.target.value === '' ? 0 : Number(e.target.value))}
+                                                            type="text" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
+                                                            value={warrantyQty} onChange={(e) => {
+                                                                const val = e.target.value.replace(/\D/g, '');
+                                                                setWarrantyQty(val ? Number(val) : '');
+                                                            }}
                                                             placeholder="0"
                                                         />
                                                         <select
@@ -1677,8 +1700,11 @@ const ProductPage = () => {
                                                         <label className={styles.fieldLabel}>Thời hạn bảo hành</label>
                                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                             <input
-                                                                type="number" min="0" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
-                                                                value={warrantyQty === 0 ? '' : warrantyQty} onChange={(e) => setWarrantyQty(e.target.value === '' ? 0 : Number(e.target.value))}
+                                                                type="text" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
+                                                                value={warrantyQty} onChange={(e) => {
+                                                                    const val = e.target.value.replace(/\D/g, '');
+                                                                    setWarrantyQty(val ? Number(val) : '');
+                                                                }}
                                                                 placeholder="0"
                                                             />
                                                             <select
@@ -1693,8 +1719,12 @@ const ProductPage = () => {
                                                     <div className={styles.formField} style={{ flex: 1 }}>
                                                         <label className={styles.fieldLabel}>Giá dịch vụ</label>
                                                         <input
-                                                            type="number" min="0" className={styles.fieldInput}
-                                                            value={formData.salePrice} onChange={(e) => setFormData(fd => ({ ...fd, salePrice: e.target.value }))}
+                                                            type="text" className={styles.fieldInput}
+                                                            value={formData.salePrice ? new Intl.NumberFormat('vi-VN').format(formData.salePrice) : ''}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value.replace(/\D/g, '');
+                                                                setFormData(fd => ({ ...fd, salePrice: val ? parseInt(val, 10) : 0 }));
+                                                            }}
                                                             placeholder="0"
                                                         />
                                                     </div>
@@ -1708,24 +1738,42 @@ const ProductPage = () => {
                                             <div className={styles.quickAddPanel} style={{ marginBottom: '12px' }}>
                                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                                                     <div style={{ flex: 1 }}>
-                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Mã ĐVT <span className="required">*</span></label>
-                                                        <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
-                                                            value={quickUnitForm.code} onChange={e => setQuickUnitForm(f => ({ ...f, code: e.target.value }))}
-                                                            placeholder="VD: DVT01" autoFocus
-                                                        />
-                                                    </div>
-                                                    <div style={{ flex: 2 }}>
                                                         <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên ĐVT <span className="required">*</span></label>
                                                         <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
                                                             value={quickUnitForm.name} onChange={e => setQuickUnitForm(f => ({ ...f, name: e.target.value }))}
-                                                            placeholder="Tên đơn vị tính"
+                                                            placeholder="Tên đơn vị tính" autoFocus
                                                             onKeyDown={async (e) => {
                                                                 if (e.key === 'Enter') {
                                                                     e.preventDefault();
-                                                                    if (!quickUnitForm.code.trim() || !quickUnitForm.name.trim()) return;
+                                                                    if (!quickUnitForm.name.trim()) return;
                                                                     setSavingUnit(true);
                                                                     try {
-                                                                        const res = await axiosClient.post('/units', { code: quickUnitForm.code.trim().toUpperCase(), name: quickUnitForm.name.trim(), status: 'ACTIVE' });
+                                                                        const res = await axiosClient.post('/units', { name: quickUnitForm.name.trim(), description: quickUnitForm.description?.trim() || '', status: 'ACTIVE' });
+                                                                        const newObj = res.data?.data ?? res.data;
+                                                                        setUnits(prev => [...prev, newObj]);
+                                                                        setFormData(fd => ({ ...fd, unitId: newObj.id }));
+                                                                        setShowQuickAddUnit(false);
+                                                                        showToast('success', `Đã thêm ĐVT "${newObj.name}"`);
+                                                                    } catch (err) {
+                                                                        showToast('error', err.response?.data?.userMessage || 'Không thể thêm ĐVT.');
+                                                                    } finally { setSavingUnit(false); }
+                                                                }
+                                                                if (e.key === 'Escape') setShowQuickAddUnit(false);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ flex: 2 }}>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Mô tả</label>
+                                                        <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
+                                                            value={quickUnitForm.description} onChange={e => setQuickUnitForm(f => ({ ...f, description: e.target.value }))}
+                                                            placeholder="Mô tả"
+                                                            onKeyDown={async (e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    if (!quickUnitForm.name.trim()) return;
+                                                                    setSavingUnit(true);
+                                                                    try {
+                                                                        const res = await axiosClient.post('/units', { name: quickUnitForm.name.trim(), description: quickUnitForm.description?.trim() || '', status: 'ACTIVE' });
                                                                         const newObj = res.data?.data ?? res.data;
                                                                         setUnits(prev => [...prev, newObj]);
                                                                         setFormData(fd => ({ ...fd, unitId: newObj.id }));
@@ -1742,11 +1790,11 @@ const ProductPage = () => {
                                                 </div>
                                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                                                     <button type="button" className={styles.quickCancelBtn} onClick={() => setShowQuickAddUnit(false)}>Hủy</button>
-                                                    <button type="button" className={styles.quickSaveBtn} disabled={savingUnit || !quickUnitForm.code.trim() || !quickUnitForm.name.trim()}
+                                                    <button type="button" className={styles.quickSaveBtn} disabled={savingUnit || !quickUnitForm.name.trim()}
                                                         onClick={async () => {
                                                             setSavingUnit(true);
                                                             try {
-                                                                const res = await axiosClient.post('/units', { code: quickUnitForm.code.trim().toUpperCase(), name: quickUnitForm.name.trim(), status: 'ACTIVE' });
+                                                                const res = await axiosClient.post('/units', { name: quickUnitForm.name.trim(), description: quickUnitForm.description?.trim() || '', status: 'ACTIVE' });
                                                                 const newObj = res.data?.data ?? res.data;
                                                                 setUnits(prev => [...prev, newObj]);
                                                                 setFormData(fd => ({ ...fd, unitId: newObj.id }));
@@ -1767,24 +1815,42 @@ const ProductPage = () => {
                                             <div className={styles.quickAddPanel} style={{ marginBottom: '12px' }}>
                                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                                                     <div style={{ flex: 1 }}>
-                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Mã TH <span className="required">*</span></label>
-                                                        <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
-                                                            value={quickBrandForm.code} onChange={e => setQuickBrandForm(f => ({ ...f, code: e.target.value }))}
-                                                            placeholder="VD: TH01" autoFocus
-                                                        />
-                                                    </div>
-                                                    <div style={{ flex: 2 }}>
-                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên TH <span className="required">*</span></label>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên thương hiệu <span className="required">*</span></label>
                                                         <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
                                                             value={quickBrandForm.name} onChange={e => setQuickBrandForm(f => ({ ...f, name: e.target.value }))}
-                                                            placeholder="Tên thương hiệu"
+                                                            placeholder="Tên thương hiệu" autoFocus
                                                             onKeyDown={async (e) => {
                                                                 if (e.key === 'Enter') {
                                                                     e.preventDefault();
-                                                                    if (!quickBrandForm.code.trim() || !quickBrandForm.name.trim()) return;
+                                                                    if (!quickBrandForm.name.trim()) return;
                                                                     setSavingBrand(true);
                                                                     try {
-                                                                        const res = await axiosClient.post('/brands', { code: quickBrandForm.code.trim().toUpperCase(), name: quickBrandForm.name.trim(), status: 'ACTIVE' });
+                                                                        const res = await axiosClient.post('/brands', { name: quickBrandForm.name.trim(), description: quickBrandForm.description?.trim() || '', status: 'ACTIVE' });
+                                                                        const newObj = res.data?.data ?? res.data;
+                                                                        setBrands(prev => [...prev, newObj]);
+                                                                        setFormData(fd => ({ ...fd, brandId: newObj.id }));
+                                                                        setShowQuickAddBrand(false);
+                                                                        showToast('success', `Đã thêm thương hiệu "${newObj.name}"`);
+                                                                    } catch (err) {
+                                                                        showToast('error', err.response?.data?.userMessage || 'Không thể thêm thương hiệu.');
+                                                                    } finally { setSavingBrand(false); }
+                                                                }
+                                                                if (e.key === 'Escape') setShowQuickAddBrand(false);
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ flex: 2 }}>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Mô tả</label>
+                                                        <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
+                                                            value={quickBrandForm.description} onChange={e => setQuickBrandForm(f => ({ ...f, description: e.target.value }))}
+                                                            placeholder="Mô tả"
+                                                            onKeyDown={async (e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    if (!quickBrandForm.name.trim()) return;
+                                                                    setSavingBrand(true);
+                                                                    try {
+                                                                        const res = await axiosClient.post('/brands', { name: quickBrandForm.name.trim(), description: quickBrandForm.description?.trim() || '', status: 'ACTIVE' });
                                                                         const newObj = res.data?.data ?? res.data;
                                                                         setBrands(prev => [...prev, newObj]);
                                                                         setFormData(fd => ({ ...fd, brandId: newObj.id }));
@@ -1801,11 +1867,11 @@ const ProductPage = () => {
                                                 </div>
                                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                                                     <button type="button" className={styles.quickCancelBtn} onClick={() => setShowQuickAddBrand(false)}>Hủy</button>
-                                                    <button type="button" className={styles.quickSaveBtn} disabled={savingBrand || !quickBrandForm.code.trim() || !quickBrandForm.name.trim()}
+                                                    <button type="button" className={styles.quickSaveBtn} disabled={savingBrand || !quickBrandForm.name.trim()}
                                                         onClick={async () => {
                                                             setSavingBrand(true);
                                                             try {
-                                                                const res = await axiosClient.post('/brands', { code: quickBrandForm.code.trim().toUpperCase(), name: quickBrandForm.name.trim(), status: 'ACTIVE' });
+                                                                const res = await axiosClient.post('/brands', { name: quickBrandForm.name.trim(), description: quickBrandForm.description?.trim() || '', status: 'ACTIVE' });
                                                                 const newObj = res.data?.data ?? res.data;
                                                                 setBrands(prev => [...prev, newObj]);
                                                                 setFormData(fd => ({ ...fd, brandId: newObj.id }));
@@ -1827,8 +1893,11 @@ const ProductPage = () => {
                                                 <div className={styles.formField} style={{ flex: 1 }}>
                                                     <label className={styles.fieldLabel}>Cảnh báo hết hàng</label>
                                                     <input
-                                                        type="number" min="0" className={styles.fieldInput}
-                                                        value={formData.minStockQty} onChange={(e) => setFormData(fd => ({ ...fd, minStockQty: e.target.value }))}
+                                                        type="text" className={styles.fieldInput}
+                                                        value={formData.minStockQty} onChange={(e) => {
+                                                            const val = e.target.value.replace(/\D/g, '');
+                                                            setFormData(fd => ({ ...fd, minStockQty: val ? Number(val) : '' }));
+                                                        }}
                                                         placeholder="0"
                                                     />
                                                 </div>
@@ -1836,8 +1905,12 @@ const ProductPage = () => {
                                                 <div className={styles.formField} style={{ flex: 1 }}>
                                                     <label className={styles.fieldLabel}>Giá bán</label>
                                                     <input
-                                                        type="number" min="0" className={styles.fieldInput}
-                                                        value={formData.salePrice} onChange={(e) => setFormData(fd => ({ ...fd, salePrice: e.target.value }))}
+                                                        type="text" className={styles.fieldInput}
+                                                        value={formData.salePrice ? new Intl.NumberFormat('vi-VN').format(formData.salePrice) : ''}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value.replace(/\D/g, '');
+                                                            setFormData(fd => ({ ...fd, salePrice: val ? parseInt(val, 10) : 0 }));
+                                                        }}
                                                         placeholder="0"
                                                     />
                                                 </div>
@@ -1850,8 +1923,11 @@ const ProductPage = () => {
                                                 <label className={styles.fieldLabel}>Thời hạn bảo hành</label>
                                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                     <input
-                                                        type="number" min="0" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
-                                                        value={warrantyQty} onChange={(e) => setWarrantyQty(Number(e.target.value))}
+                                                        type="text" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
+                                                        value={warrantyQty} onChange={(e) => {
+                                                            const val = e.target.value.replace(/\D/g, '');
+                                                            setWarrantyQty(val ? Number(val) : '');
+                                                        }}
                                                     />
                                                     <select
                                                         className={styles.fieldInput} style={{ width: '110px', flexShrink: 0 }}
@@ -2102,22 +2178,24 @@ const ProductPage = () => {
                                     <div className="misa-form-group">
                                         <label>Giá vốn</label>
                                         <input
-                                            type="number"
-                                            min="0"
-                                            step="1000"
-                                            value={variantForm.costPrice}
-                                            onChange={(event) => setVariantForm({ ...variantForm, costPrice: event.target.value })}
+                                            type="text"
+                                            value={variantForm.costPrice ? new Intl.NumberFormat('vi-VN').format(variantForm.costPrice) : ''}
+                                            onChange={(event) => {
+                                                const val = event.target.value.replace(/\D/g, '');
+                                                setVariantForm({ ...variantForm, costPrice: val ? parseInt(val, 10) : 0 });
+                                            }}
                                             className="misa-input"
                                         />
                                     </div>
                                     <div className="misa-form-group">
                                         <label>Giá bán <span className="required">*</span></label>
                                         <input
-                                            type="number"
-                                            min="0"
-                                            step="1000"
-                                            value={variantForm.salePrice}
-                                            onChange={(event) => setVariantForm({ ...variantForm, salePrice: event.target.value })}
+                                            type="text"
+                                            value={variantForm.salePrice ? new Intl.NumberFormat('vi-VN').format(variantForm.salePrice) : ''}
+                                            onChange={(event) => {
+                                                const val = event.target.value.replace(/\D/g, '');
+                                                setVariantForm({ ...variantForm, salePrice: val ? parseInt(val, 10) : 0 });
+                                            }}
                                             className="misa-input"
                                         />
                                     </div>
@@ -2136,10 +2214,12 @@ const ProductPage = () => {
                                     <div className="misa-form-group">
                                         <label>Thời hạn bảo hành (tháng)</label>
                                         <input
-                                            type="number"
-                                            min="0"
+                                            type="text"
                                             value={variantForm.warrantyMonths}
-                                            onChange={(event) => setVariantForm({ ...variantForm, warrantyMonths: Number(event.target.value) })}
+                                            onChange={(event) => {
+                                                const val = event.target.value.replace(/\D/g, '');
+                                                setVariantForm({ ...variantForm, warrantyMonths: val ? Number(val) : '' });
+                                            }}
                                             className="misa-input"
                                             placeholder="0"
                                         />

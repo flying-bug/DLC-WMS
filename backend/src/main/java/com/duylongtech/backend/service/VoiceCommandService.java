@@ -23,6 +23,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("deprecation")
 public class VoiceCommandService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestClient restClient = RestClient.builder().build();

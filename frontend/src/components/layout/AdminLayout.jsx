@@ -5,6 +5,65 @@ import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
 import VoiceCommandButton from '../ui/VoiceCommandButton/VoiceCommandButton';
 import styles from './AdminLayout.module.css';
 
+const MENU_CONFIG = [
+    {
+        id: 'overview',
+        label: 'TỔNG QUAN',
+        items: [
+            { path: '/dashboard', icon: 'fas fa-warehouse', label: 'Quy trình' }
+        ]
+    },
+    {
+        id: 'transaction',
+        label: 'GIAO DỊCH',
+        items: [
+            { path: '/purchase-orders', icon: 'bi bi-bag-plus', label: 'Đơn mua hàng' },
+            { path: '/sales-orders', icon: 'bi bi-cart3', label: 'Đơn bán hàng' }
+        ]
+    },
+    {
+        id: 'service',
+        label: 'DỊCH VỤ',
+        items: [
+            { path: '/warranties', icon: 'fas fa-shield-alt', label: 'Bảo hành' },
+            { path: '/repairs', icon: 'fas fa-tools', label: 'Sửa chữa' }
+        ]
+    },
+    {
+        id: 'partner',
+        label: 'ĐỐI TÁC',
+        items: [
+            { path: '/customers', icon: 'fas fa-users', label: 'Khách hàng' },
+            { path: '/suppliers', icon: 'fas fa-truck-loading', label: 'Nhà cung cấp' }
+        ]
+    },
+    {
+        id: 'catalog',
+        label: 'DANH MỤC',
+        items: [
+            { path: '/product-categories', icon: 'fas fa-layer-group', label: 'Danh mục sản phẩm' },
+            { path: '/brands', icon: 'fas fa-tags', label: 'Thương hiệu' },
+            { path: '/units', icon: 'fas fa-ruler-combined', label: 'Đơn vị tính' }
+        ]
+    },
+    {
+        id: 'config',
+        label: 'CẤU HÌNH',
+        items: [
+            { path: '/assembly-boms', icon: 'fas fa-sitemap', label: 'Quản lý Cấu hình' },
+            { path: '/assembly-orders', icon: 'fas fa-boxes-stacked', label: 'Lắp ráp / Tháo dỡ' }
+        ]
+    },
+    {
+        id: 'system',
+        label: 'HỆ THỐNG',
+        items: [
+            { path: '/ai-chat', icon: 'fas fa-robot', label: 'AI Chat' },
+            { path: '/operations', icon: 'fas fa-database', label: 'Backup & System', adminOnly: true }
+        ]
+    }
+];
+
 const AdminLayout = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -18,11 +77,32 @@ const AdminLayout = ({ children }) => {
     });
 
     useEffect(() => {
-        document.documentElement.style.setProperty('--sidebar-width', isSidebarCollapsed ? '68px' : '248px');
+        document.documentElement.style.setProperty('--sidebar-width', isSidebarCollapsed ? '72px' : '260px');
     }, [isSidebarCollapsed]);
     const [voiceEnabled, setVoiceEnabled] = useState(() => {
         return localStorage.getItem('dlc_voice_enabled') !== 'false';
     });
+
+    const [expandedGroups, setExpandedGroups] = useState({
+        overview: true,
+        transaction: true,
+        service: true,
+        partner: true,
+        catalog: true,
+        config: true,
+        system: true
+    });
+
+    const toggleGroup = (groupId) => {
+        if (isSidebarCollapsed) {
+            setIsSidebarCollapsed(false);
+            localStorage.setItem('dlc_sidebar_collapsed', 'false');
+        }
+        setExpandedGroups(prev => ({
+            ...prev,
+            [groupId]: !prev[groupId]
+        }));
+    };
 
     const toggleVoice = () => {
         setVoiceEnabled((prev) => {
@@ -71,121 +151,47 @@ const AdminLayout = ({ children }) => {
                     </button>
                 </div>
                 <nav className={styles.navMenu}>
-                    <button
-                        className={`${styles.navItem} ${currentPath === '/dashboard' ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/dashboard')}
-                        type="button"
-                    >
-                        <i className="fas fa-warehouse"></i>
-                        <span>Quy trình</span>
-                    </button>
-                    <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/suppliers') ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/suppliers')}
-                        type="button"
-                    >
-                        <i className="fas fa-truck-loading"></i>
-                        <span>Nhà cung cấp</span>
-                    </button>
-                    <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/customers') ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/customers')}
-                        type="button"
-                    >
-                        <i className="fas fa-users"></i>
-                        <span>Khách hàng</span>
-                    </button>
-                    <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/warranties') ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/warranties')}
-                        type="button"
-                    >
-                        <i className="fas fa-shield-alt"></i>
-                        <span>Bảo hành</span>
-                    </button>
-                    <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/repairs') ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/repairs')}
-                        type="button"
-                    >
-                        <i className="fas fa-tools"></i>
-                        <span>Sửa chữa</span>
-                    </button>
-                    <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/brands') ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/brands')}
-                        type="button"
-                    >
-                        <i className="fas fa-tags"></i>
-                        <span>Thương hiệu</span>
-                    </button>
-                    <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/sales-orders') ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/sales-orders')}
-                        type="button"
-                    >
-                        <i className="bi bi-cart3"></i>
-                        <span>Đơn bán hàng</span>
-                    </button>
-                    <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/purchase-orders') ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/purchase-orders')}
-                        type="button"
-                    >
-                        <i className="bi bi-bag-plus"></i>
-                        <span>Đơn mua hàng</span>
-                    </button>
-                    <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/assembly-orders') ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/assembly-orders')}
-                        type="button"
-                    >
-                        <i className="fas fa-boxes-stacked"></i>
-                        <span>Lắp ráp / Tháo dỡ</span>
-                    </button>
-                    <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/assembly-boms') ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/assembly-boms')}
-                        type="button"
-                    >
-                        <i className="fas fa-sitemap"></i>
-                        <span>Quản lý Cấu hình</span>
-                    </button>
-                    <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/units') ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/units')}
-                        type="button"
-                    >
-                        <i className="fas fa-ruler-combined"></i>
-                        <span>Đơn vị tính</span>
-                    </button>
-                    <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/product-categories') ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/product-categories')}
-                        type="button"
-                    >
-                        <i className="fas fa-layer-group"></i>
-                        <span>Danh mục sản phẩm</span>
-                    </button>
-                    <button
-                        className={`${styles.navItem} ${currentPath.startsWith('/ai-chat') ? styles.active : ''}`}
-                        onClick={() => handleNavClick('/ai-chat')}
-                        type="button"
-                    >
-                        <i className="fas fa-robot"></i>
-                        <span>AI Chat</span>
-                    </button>
-                    {isSuperAdmin && (
-                        <button
-                            className={`${styles.navItem} ${currentPath.startsWith('/operations') ? styles.active : ''}`}
-                            onClick={() => handleNavClick('/operations')}
-                            type="button"
-                            style={{ background: 'rgba(99, 102, 241, 0.12)', color: '#6366f1', marginTop: '8px', fontWeight: 'bold' }}
-                        >
-                            <i className="fas fa-database"></i>
-                            <span>Backup & System</span>
-                        </button>
-                    )}
+                    {MENU_CONFIG.map(group => {
+                        const hasVisibleItems = group.items.some(item => !item.adminOnly || isSuperAdmin);
+                        if (!hasVisibleItems) return null;
+
+                        const isExpanded = expandedGroups[group.id];
+
+                        return (
+                            <div key={group.id} className={styles.menuGroup}>
+                                <div 
+                                    className={styles.navGroupLabel} 
+                                    onClick={() => toggleGroup(group.id)}
+                                >
+                                    <span>{group.label}</span>
+                                    <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
+                                </div>
+                                {isExpanded && (
+                                    <div className={styles.groupItems}>
+                                        {group.items.map(item => {
+                                            if (item.adminOnly && !isSuperAdmin) return null;
+                                            
+                                            const isActive = item.path === '/dashboard' 
+                                                ? currentPath === item.path 
+                                                : currentPath.startsWith(item.path);
+
+                                            return (
+                                                <button
+                                                    key={item.path}
+                                                    className={`${styles.navItem} ${isActive ? styles.active : ''}`}
+                                                    onClick={() => handleNavClick(item.path)}
+                                                    type="button"
+                                                >
+                                                    <i className={item.icon}></i>
+                                                    <span>{item.label}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </nav>
                 <div className={styles.collapseBtnContainer}>
                     <button
