@@ -81,6 +81,13 @@ public class InventoryDocumentController {
         return ApiResponse.success(inventoryDocumentService.resolveExportScan(req));
     }
 
+    @PostMapping("/resolve-barcode")
+    @Operation(summary = "Resolve generic scanned product barcode or serial")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<ScanResolveResponse> resolveBarcode(@RequestBody ScanResolveRequest req) {
+        return ApiResponse.success(inventoryDocumentService.resolveGenericScan(req));
+    }
+
     @PostMapping("/create")
     @Operation(summary = "Create export slip")
     @PreAuthorize("hasAuthority('export:add')")

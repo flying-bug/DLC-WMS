@@ -9,5 +9,6 @@ public class AssemblyOrderSerialResponse {
     private Long targetVariantId;
     private String targetSerial;
     private Long componentVariantId;
+    private String componentName;
     private String componentSerial;
 }

@@ -235,4 +235,32 @@ public class AssemblyOrderController {
         assemblyOrderService.saveSerials(id, requests);
         return ApiResponse.success(null);
     }
+
+    @PostMapping("/assembly-orders/{id}/execute")
+    @Operation(summary = "Execute assembly order (scan and go)")
+    @PreAuthorize("hasAuthority('assembly:edit')")
+    public ApiResponse<Void> executeAssemblyOrder(
+            @PathVariable Long id,
+            @RequestBody @Valid com.duylongtech.backend.dto.request.AssemblyExecutionRequest request,
+            HttpServletRequest servletRequest) {
+        String ip = getClientIp(servletRequest);
+        String actor = getCurrentUser();
+        Long userId = 1L; // Fallback ID if cannot determine from context, in a real app extract from Principal
+        try {
+            // Retrieve userId from security context if available
+            if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() != null) {
+                Object principal = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+                if (principal instanceof com.duylongtech.backend.security.UserDetailsImpl) {
+                    userId = ((com.duylongtech.backend.security.UserDetailsImpl) principal).getId();
+                }
+            }
+            
+            assemblyOrderService.executeAssemblyOrder(id, request, userId);
+            auditLogService.logEvent(actor, "EXECUTE", "AssemblyOrder", id, "SUCCESS", "Thực thi lắp ráp qua quét mã vạch thành công", ip, null);
+            return ApiResponse.success(null);
+        } catch (Exception e) {
+            auditLogService.logEvent(actor, "EXECUTE", "AssemblyOrder", id, "FAILED", "Thực thi lắp ráp thất bại: " + e.getMessage(), ip, null);
+            throw e;
+        }
+    }
 }

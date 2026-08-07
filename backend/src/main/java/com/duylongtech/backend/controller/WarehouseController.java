@@ -171,6 +171,18 @@ public class WarehouseController {
         return ResponseEntity.ok(ApiResponse.success(warehouseService.getAvailableSerials(id, variantId)));
     }
 
+    @GetMapping("/{id}/variants/{variantId}/serial-tree")
+    @PreAuthorize("hasAuthority('warehouse_master:view') or hasRole('MANAGER')")
+    public ResponseEntity<ApiResponse<List<com.duylongtech.backend.dto.response.SerialTreeResponse>>> getSerialTree(@PathVariable Long id, @PathVariable Long variantId) {
+        return ResponseEntity.ok(ApiResponse.success(warehouseService.getSerialTree(id, variantId)));
+    }
+
+    @GetMapping("/serials/check")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Boolean>> checkSerialExists(@RequestParam String serialNumber) {
+        return ResponseEntity.ok(ApiResponse.success(warehouseService.checkSerialExists(serialNumber)));
+    }
+
     // ──────────────────────────────────────────────────────────
     // US1: POST - Tạo mới kho
     // ──────────────────────────────────────────────────────────
