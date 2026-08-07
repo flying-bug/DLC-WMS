@@ -1170,3 +1170,105 @@
 .btnSecondary:hover {
   background-color: var(--color-border-soft);
 }
+
+.summaryCards {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+.summaryCard {
+    flex: 1;
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    border: 1px solid #eef0f2;
+    transition: all 0.2s ease;
+}
+.summaryCard:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.activeCardPrimary {
+    border-color: #2563eb;
+}
+.activeCardSuccess {
+    border-color: #10b981;
+}
+.activeCardWarning {
+    border-color: #f59e0b;
+}
+.activeCardDanger {
+    border-color: #ef4444;
+}
+.activeCardSecondary {
+    border-color: #64748b;
+}
+.iconPrimary {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #dbeafe;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+.iconSuccess {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #d1fae5;
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+.iconWarning {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #fef3c7;
+    color: #f59e0b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+.iconDanger {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #fee2e2;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+.iconSecondary {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #f1f5f9;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+.cardInfo h3 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #111;
+}
+.cardInfo p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #666;
+}

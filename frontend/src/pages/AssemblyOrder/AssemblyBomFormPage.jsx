@@ -34,10 +34,11 @@ function AssemblyBomFormPage() {
     const [inventoryBalances, setInventoryBalances] = useState([]);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState(createDefaultForm());
+    const [nextVersion, setNextVersion] = useState(null);
 
     const isApproved = editing && form.status === 'APPROVED';
     const canEdit = !isApproved;
-    
+
     const showToast = (type, message) => {
         setToast({ isVisible: true, type, message });
         setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
@@ -56,7 +57,7 @@ function AssemblyBomFormPage() {
                 };
             }, { available: 0, total: 0 });
     };
-    
+
     // Variant Picker state
     const [pickingLineIndex, setPickingLineIndex] = useState(null);
     const [searchVariantQuery, setSearchVariantQuery] = useState('');
@@ -96,7 +97,7 @@ function AssemblyBomFormPage() {
                     categoryId: '',
                     componentRole: line.componentRole || '',
                     quantity: String(Number(line.quantity || 1)),
-                    templateNote: line.note || '',
+                    templateNote: '',
                     note: line.note || '',
                     unitPrice: line.unitPrice != null ? line.unitPrice : '',
                     componentSku: line.componentSku || '',
@@ -123,8 +124,25 @@ function AssemblyBomFormPage() {
     const handleProductChange = async (productId) => {
         setField('productId', productId);
         if (!productId) {
+            setNextVersion(null);
             setForm((current) => ({ ...current, lines: [{ ...defaultBomLine }] }));
             return;
+        }
+
+        if (!form.id) {
+            try {
+                const res = await assemblyApi.getAssemblyBoms({ productId });
+                const boms = unwrap(res) || [];
+                let maxV = 0;
+                boms.forEach(b => {
+                    const v = Number(b.versionNo);
+                    if (v > maxV) maxV = v;
+                });
+                setNextVersion(maxV + 1);
+            } catch (err) {
+                console.error("Lỗi lấy cấu hình cũ:", err);
+                setNextVersion(null);
+            }
         }
 
         const selectedProduct = products.find(p => String(p.id) === String(productId));
@@ -144,7 +162,7 @@ function AssemblyBomFormPage() {
                         componentName: '',
                         warrantyMonths: ''
                     }));
-                    
+
                     setForm((current) => ({ ...current, lines: newLines }));
                     return;
                 }
@@ -152,7 +170,7 @@ function AssemblyBomFormPage() {
                 console.error("Lỗi parse khung cấu hình", err);
             }
         }
-        
+
         setForm((current) => ({ ...current, lines: [{ ...defaultBomLine }] }));
     };
 
@@ -161,6 +179,42 @@ function AssemblyBomFormPage() {
             ...current,
             lines: current.lines.map((line, lineIndex) => lineIndex === index ? { ...line, [field]: value } : line)
         }));
+    };
+
+    const handleSelectVariant = (variantIdStr) => {
+        setForm(current => {
+            const existingIndex = current.lines.findIndex((line, idx) => idx !== pickingLineIndex && String(line.componentVariantId) === variantIdStr);
+            
+            if (existingIndex !== -1) {
+                const newLines = [...current.lines];
+                const pickingLineQty = Number(newLines[pickingLineIndex].quantity || 1);
+                const currentQty = Number(newLines[existingIndex].quantity || 1);
+                
+                // Tránh lỗi mutate state trực tiếp của React (tạo object mới cho existingIndex)
+                newLines[existingIndex] = { 
+                    ...newLines[existingIndex], 
+                    quantity: currentQty + pickingLineQty 
+                };
+                
+                if (newLines[pickingLineIndex].componentRole) {
+                    newLines[pickingLineIndex] = { ...newLines[pickingLineIndex], componentVariantId: '' };
+                } else {
+                    if (newLines.length > 1) {
+                        newLines.splice(pickingLineIndex, 1);
+                    } else {
+                        newLines[pickingLineIndex] = { ...newLines[pickingLineIndex], componentVariantId: '' };
+                    }
+                }
+                
+                return { ...current, lines: newLines };
+            } else {
+                const newLines = [...current.lines];
+                newLines[pickingLineIndex] = { ...newLines[pickingLineIndex], componentVariantId: variantIdStr };
+                return { ...current, lines: newLines };
+            }
+        });
+        setPickingLineIndex(null);
+        setSearchVariantQuery('');
     };
 
     const addLine = () => {
@@ -221,14 +275,14 @@ function AssemblyBomFormPage() {
         try {
             const payload = buildPayload(cleanedLines);
             payload.status = targetStatus;
-            
+
             let res;
             if (form.id) {
                 res = await assemblyApi.updateAssemblyBom(form.id, payload);
             } else {
                 res = await assemblyApi.createAssemblyBom(payload);
             }
-            
+
             if (shouldNavigate) {
                 navigate('/assembly-boms');
             } else {
@@ -304,7 +358,7 @@ function AssemblyBomFormPage() {
                 </div>
 
                 <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid var(--color-border)', padding: '24px' }}>
-                    
+
                     {!canEdit && (
                         <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534', display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <i className="bi bi-shield-lock-fill" style={{ fontSize: '20px' }}></i>
@@ -335,7 +389,13 @@ function AssemblyBomFormPage() {
                         </label>
                         <label className={styles.field}>
                             <span>Phiên bản</span>
-                            <input className={styles.numberInput} inputMode="decimal" type="number" min="0.01" step="0.01" value={form.versionNo} onChange={(event) => setField('versionNo', event.target.value)} disabled={!canEdit} />
+                            <input 
+                                className={styles.numberInput} 
+                                type="text" 
+                                value={form.id ? form.versionNo : (nextVersion !== null ? nextVersion : "Tự động sinh")} 
+                                disabled={true} 
+                                style={{ textAlign: 'left' }}
+                            />
                         </label>
                     </div>
 
@@ -353,19 +413,37 @@ function AssemblyBomFormPage() {
                         <div className={styles.bomList}>
                             {form.lines.map((line, index) => {
                                 const selectedVariant = variants.find(v => String(v.id) === String(line.componentVariantId));
-                                
+
+                                let displayTemplateNote = line.templateNote;
+                                if (editing && form.productId && products.length > 0) {
+                                    const prod = products.find(p => String(p.id) === String(form.productId));
+                                    if (prod && prod.bomTemplate) {
+                                        try {
+                                            const templateLines = JSON.parse(prod.bomTemplate);
+                                            if (line.componentRole) {
+                                                const tLine = templateLines.find(t => t.componentRole === line.componentRole);
+                                                if (tLine && tLine.note) {
+                                                    displayTemplateNote = tLine.note;
+                                                }
+                                            }
+                                        } catch (e) { 
+                                            // ignore parse error
+                                        }
+                                    }
+                                }
+
                                 return (
                                     <div key={index} className={styles.bomLineCard}>
                                         <div className={styles.bomLineHeader} style={{ flexDirection: 'column', justifyContent: 'center' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
                                                 <span style={{ fontWeight: 700, fontSize: '1rem', color: '#1f2937', textTransform: 'uppercase' }}>
                                                     {index + 1}. {line.componentRole || (selectedVariant ? selectedVariant.categoryName : 'Linh kiện tùy chọn')}
                                                 </span>
-                                                {line.templateNote && (
-                                                    <span style={{ fontSize: '0.8rem', backgroundColor: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', fontWeight: 500, marginLeft: '6px', border: '1px dashed #f59e0b' }}>
-                                                        <i className="bi bi-pin-angle-fill" style={{ marginRight: '4px' }}></i>
-                                                        Yêu cầu: {line.templateNote}
-                                                    </span>
+                                                {displayTemplateNote && (
+                                                    <div style={{ fontSize: '0.8rem', backgroundColor: '#fef3c7', color: '#92400e', padding: '4px 8px', borderRadius: '4px', fontWeight: 500, border: '1px dashed #f59e0b', display: 'flex', alignItems: 'flex-start', gap: '6px', lineHeight: 1.4, width: '100%', wordBreak: 'break-word' }}>
+                                                        <i className="bi bi-pin-angle-fill" style={{ marginTop: '2px' }}></i>
+                                                        <span><strong>Yêu cầu:</strong> {displayTemplateNote}</span>
+                                                    </div>
                                                 )}
                                             </div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', alignItems: 'flex-start' }}>
@@ -381,15 +459,18 @@ function AssemblyBomFormPage() {
                                                 )}
                                             </div>
                                         </div>
-                                        
+
                                         {selectedVariant ? (
                                             <div className={styles.bomLineContent}>
                                                 <div className={styles.bomItemImgBox}>
-                                                    {selectedVariant.imageUrl ? (
-                                                        <img src={selectedVariant.imageUrl} alt={selectedVariant.variantName} />
-                                                    ) : (
-                                                        <i className="bi bi-box"></i>
-                                                    )}
+                                                    {(() => {
+                                                        const parentProduct = products.find(p => String(p.id) === String(selectedVariant.productId));
+                                                        return parentProduct?.imageUrl ? (
+                                                            <img src={parentProduct.imageUrl} alt={selectedVariant.variantName} />
+                                                        ) : (
+                                                            <i className="bi bi-box"></i>
+                                                        );
+                                                    })()}
                                                 </div>
                                                 <div className={styles.bomItemDetails}>
                                                     <div className={styles.bomItemTitle} title={`${selectedVariant.productName} ${(selectedVariant.variantName && selectedVariant.variantName !== selectedVariant.productName) ? `/ ${selectedVariant.variantName}` : ''}`}>
@@ -408,16 +489,15 @@ function AssemblyBomFormPage() {
                                                     </div>
                                                 </div>
                                                 <div className={styles.bomItemPriceGroup}>
-                                                    <input 
-                                                        className={styles.bomItemQtyInput} 
-                                                        style={{ width: '110px', textAlign: 'right' }} 
-                                                        type="number" 
-                                                        min="0" 
-                                                        step="1" 
-                                                        value={line.unitPrice !== '' && line.unitPrice != null ? line.unitPrice : (selectedVariant?.salePrice || 0)} 
-                                                        onChange={(event) => setLineField(index, 'unitPrice', event.target.value)} 
-                                                        disabled={!canEdit} 
-                                                        title="Đơn giá" 
+                                                    <input
+                                                        className={styles.bomItemQtyInput}
+                                                        style={{ width: '110px', textAlign: 'right' }}
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        value={line.unitPrice !== '' && line.unitPrice != null ? Number(line.unitPrice).toLocaleString('vi-VN') : (selectedVariant?.salePrice != null ? Number(selectedVariant.salePrice).toLocaleString('vi-VN') : '0')}
+                                                        onChange={(event) => setLineField(index, 'unitPrice', event.target.value.replace(/\D/g, ''))}
+                                                        disabled={!canEdit}
+                                                        title="Đơn giá"
                                                     /> <span style={{ fontSize: '0.85rem' }}>đ</span>
                                                     <span>x</span>
                                                     <input className={styles.bomItemQtyInput} type="number" min="1" step="1" value={line.quantity} onChange={(event) => setLineField(index, 'quantity', event.target.value)} disabled={!canEdit} />
@@ -442,14 +522,16 @@ function AssemblyBomFormPage() {
                                         ) : (
                                             <div className={styles.bomEmptySlot} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '24px' }}>
                                                 {line.componentRole && (
-                                                    <div style={{ fontWeight: 600, color: '#4b5563', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <i className="bi bi-info-circle" style={{ color: '#3b82f6' }}></i>
-                                                        Cần chọn danh mục: <span style={{ color: '#1d4ed8' }}>{line.componentRole}</span>
-                                                        {line.templateNote && (
-                                                            <span style={{ marginLeft: '8px', color: '#92400e', backgroundColor: '#fef3c7', padding: '2px 6px', borderRadius: '4px', fontSize: '0.85rem' }}>
-                                                                <i className="bi bi-pin-angle-fill" style={{ marginRight: '4px' }}></i>
-                                                                Yêu cầu: {line.templateNote}
-                                                            </span>
+                                                    <div style={{ fontWeight: 600, color: '#4b5563', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <i className="bi bi-info-circle" style={{ color: '#3b82f6' }}></i>
+                                                            Cần chọn danh mục: <span style={{ color: '#1d4ed8' }}>{line.componentRole}</span>
+                                                        </div>
+                                                        {displayTemplateNote && (
+                                                            <div style={{ color: '#92400e', backgroundColor: '#fef3c7', padding: '4px 8px', borderRadius: '4px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '6px', border: '1px dashed #f59e0b', maxWidth: '400px', textAlign: 'left', lineHeight: 1.4 }}>
+                                                                <i className="bi bi-pin-angle-fill" style={{ marginTop: '2px' }}></i>
+                                                                <span><strong>Yêu cầu:</strong> {displayTemplateNote}</span>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 )}
@@ -472,7 +554,7 @@ function AssemblyBomFormPage() {
                                     </div>
                                 );
                             })}
-                            
+
                             {canEdit && (
                                 <div style={{ marginTop: 8 }}>
                                     <button className={styles.addBomLineBtn} type="button" onClick={addLine}>
@@ -485,7 +567,7 @@ function AssemblyBomFormPage() {
 
                     <div style={{ display: 'flex', gap: '12px', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--color-border)' }}>
                         <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-boms')}>{canEdit ? 'Hủy bỏ' : 'Đóng'}</button>
-                        
+
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
                             <button className="btn-misa-cancel" style={{ border: '1px solid #10b981', color: '#10b981' }} type="button" onClick={handleExportExcel}>
                                 <i className="bi bi-file-earmark-excel"></i> Xuất Excel cấu hình
@@ -497,7 +579,7 @@ function AssemblyBomFormPage() {
                                     </button>
                                     <button className="btn-misa-post" type="button" onClick={() => saveBom('APPROVED')} disabled={saving}>
                                         <i className="bi bi-check-circle"></i>
-                                        {saving ? 'Đang lưu...' : 'Duyệt cấu hình (Lưu)'}
+                                        {saving ? 'Đang lưu...' : 'Duyệt cấu hình'}
                                     </button>
                                 </>
                             )}
@@ -525,11 +607,11 @@ function AssemblyBomFormPage() {
                             </div>
                             <div className={styles.modalBody} style={{ padding: 0 }}>
                                 <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)', background: '#f8fafc' }}>
-                                    <input 
-                                        type="text" 
-                                        className="misa-input" 
+                                    <input
+                                        type="text"
+                                        className="misa-input"
                                         style={{ width: '100%', padding: '10px', fontSize: '1rem' }}
-                                        placeholder="Tìm kiếm linh kiện theo tên, mã sản phẩm..." 
+                                        placeholder="Tìm kiếm linh kiện theo tên, mã sản phẩm..."
                                         value={searchVariantQuery}
                                         onChange={(e) => setSearchVariantQuery(e.target.value)}
                                         autoFocus
@@ -547,14 +629,16 @@ function AssemblyBomFormPage() {
                                         }
                                         if (!searchVariantQuery) return true;
                                         const q = searchVariantQuery.toLowerCase();
-                                        return (v.sku || '').toLowerCase().includes(q) 
+                                        return (v.sku || '').toLowerCase().includes(q)
                                             || (v.productName || '').toLowerCase().includes(q)
                                             || (v.variantName || '').toLowerCase().includes(q);
-                                    }).map(variant => (
+                                    }).map(variant => {
+                                        const parentProduct = products.find(p => String(p.id) === String(variant.productId));
+                                        return (
                                         <div key={variant.id} className={styles.variantPickerItem}>
                                             <div className={styles.variantPickerImg}>
-                                                {variant.imageUrl ? (
-                                                    <img src={variant.imageUrl} alt={variant.variantName} />
+                                                {parentProduct?.imageUrl ? (
+                                                    <img src={parentProduct.imageUrl} alt={variant.variantName} />
                                                 ) : (
                                                     <i className="bi bi-box"></i>
                                                 )}
@@ -573,20 +657,19 @@ function AssemblyBomFormPage() {
                                                 </div>
                                             </div>
                                             <div className={styles.variantPickerAction}>
-                                                <button 
+                                                <button
                                                     className={styles.primaryButton}
                                                     type="button"
                                                     onClick={() => {
-                                                        setLineField(pickingLineIndex, 'componentVariantId', String(variant.id));
-                                                        setPickingLineIndex(null);
-                                                        setSearchVariantQuery('');
+                                                        handleSelectVariant(String(variant.id));
                                                     }}
                                                 >
                                                     THÊM VÀO CẤU HÌNH <i className="bi bi-chevron-right"></i>
                                                 </button>
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                     {variants.length > 0 && variants.filter(v => {
                                         const parentProd = products.find(p => String(p.id) === String(v.productId));
                                         const type = v.productType || (parentProd ? parentProd.productType : null);
@@ -598,14 +681,14 @@ function AssemblyBomFormPage() {
                                         }
                                         if (!searchVariantQuery) return true;
                                         const q = searchVariantQuery.toLowerCase();
-                                        return (v.sku || '').toLowerCase().includes(q) 
+                                        return (v.sku || '').toLowerCase().includes(q)
                                             || (v.productName || '').toLowerCase().includes(q)
                                             || (v.variantName || '').toLowerCase().includes(q);
                                     }).length === 0 && (
-                                        <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                                            Không tìm thấy linh kiện phù hợp với "{searchVariantQuery}"
-                                        </div>
-                                    )}
+                                            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                                Không tìm thấy linh kiện phù hợp với "{searchVariantQuery}"
+                                            </div>
+                                        )}
                                     {variants.length === 0 && (
                                         <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
                                             Không có linh kiện nào
@@ -620,7 +703,7 @@ function AssemblyBomFormPage() {
 
 
                 {toast.isVisible && (
-                    <Toast 
+                    <Toast
                         type={toast.type}
                         message={toast.message}
                         onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}

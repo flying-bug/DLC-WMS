@@ -238,6 +238,7 @@ function AssemblyOrderListPage() {
                             ]}
                             statusOptions={Object.entries(STATUS_META).map(([val, meta]) => ({ value: val, label: meta.label }))}
                             purposeLabel="Loại lệnh"
+                            purposeField="orderType"
                         />
                     </div>
 

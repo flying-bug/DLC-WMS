@@ -89,7 +89,7 @@ function AssemblyOrderFormPage() {
     const [customLinesDirty, setCustomLinesDirty] = useState(false);
     const [form, setForm] = useState(() => ({
         orderType: searchParams.get('type') === 'DISASSEMBLY' ? 'DISASSEMBLY' : 'ASSEMBLY',
-        orderCode: (searchParams.get('type') === 'DISASSEMBLY' ? 'TD-' : 'LR-') + Date.now(),
+        orderCode: '',
         bomId: '',
         warehouseId: '',
         quantity: '1',
@@ -230,11 +230,16 @@ function AssemblyOrderFormPage() {
     }, [form.quantity]);
 
     const requiredComponents = useMemo(() => {
-        if (!orderDetail || !orderDetail.lines) return 0;
-        return orderDetail.lines.reduce((sum, line) => sum + Number(line.quantityRequired || 0), 0);
-    }, [orderDetail]);
+        if (editing && orderDetail?.lines) {
+            return orderDetail.lines.reduce((sum, line) => sum + Number(line.quantityRequired || 0), 0);
+        }
+        if (!editing && selectedBom?.lines) {
+            return selectedBom.lines.reduce((sum, line) => sum + (Number(line.quantity || 0) * Number(form.quantity || 1)), 0);
+        }
+        return 0;
+    }, [editing, orderDetail, selectedBom, form.quantity]);
 
-    const requiredTarget = Number(orderDetail?.quantity || 1);
+    const requiredTarget = Number(editing ? (orderDetail?.quantity || 1) : (form.quantity || 1));
 
     const targetVariantId = orderDetail?.targetVariantId || orderDetail?.targetSku;
     const componentIds = useMemo(() => {
@@ -507,11 +512,23 @@ function AssemblyOrderFormPage() {
     const handleGenerateInventory = (documentType) => {
         if (!orderDetail || !orderDetail.id) return;
 
+        const isAssembly = orderDetail.orderType !== 'DISASSEMBLY';
+
         const targetPath = documentType === 'GOODS_ISSUE' ? '/export-slips/assembly'
             : documentType === 'SCRAP' ? '/import-history/create?type=SCRAP'
+                : !isAssembly ? '/import-history/create?type=OTHER'
                 : '/import-history/create?type=PRODUCTION';
 
-        const isAssembly = orderDetail.orderType !== 'DISASSEMBLY';
+        const draftSlip = documentType === 'GOODS_ISSUE' 
+            ? linkedExports.find(s => s.status === 'DRAFT')
+            : linkedImports.find(s => s.status === 'DRAFT');
+
+        if (draftSlip) {
+            navigate(documentType === 'GOODS_ISSUE' ? `/export-slips/${draftSlip.id}/edit` : `/import-slips/${draftSlip.id}/edit`, {
+                state: { returnUrl: `/assembly-orders/${orderDetail.id}` }
+            });
+            return;
+        }
 
         // Lắp ráp -> Nhập thành phẩm (GOODS_RECEIPT)
         // Tháo dỡ -> Xuất thành phẩm (GOODS_ISSUE)
@@ -867,19 +884,19 @@ function AssemblyOrderFormPage() {
 
                             <div className={styles.summaryList}>
                                 <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel}>Mã cấu hình</span>
+                                    <span className={styles.summaryLabel} style={{ whiteSpace: 'nowrap' }}>Mã cấu hình</span>
                                     <span className={styles.summaryValue} style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{selectedBom?.bomCode || '---'}</span>
                                 </div>
                                 <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel}>Phiên bản</span>
+                                    <span className={styles.summaryLabel} style={{ whiteSpace: 'nowrap' }}>Phiên bản</span>
                                     <span className={styles.summaryValue}>{selectedBom?.versionNo || '---'}</span>
                                 </div>
-                                <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel}>Thành phẩm</span>
-                                    <span className={styles.summaryValue}>{selectedBom?.productName || 'Chưa chọn'}</span>
+                                <div className={styles.summaryItem} style={{ alignItems: 'flex-start' }}>
+                                    <span className={styles.summaryLabel} style={{ whiteSpace: 'nowrap', minWidth: '85px', marginTop: '2px' }}>Thành phẩm</span>
+                                    <span className={styles.summaryValue} style={{ textAlign: 'right' }}>{selectedBom?.productName || 'Chưa chọn'}</span>
                                 </div>
                                 <div className={styles.summaryItem}>
-                                    <span className={styles.summaryLabel}>Số linh kiện (SKU)</span>
+                                    <span className={styles.summaryLabel} style={{ whiteSpace: 'nowrap' }}>Số linh kiện (SKU)</span>
                                     <span className={styles.summaryValue}>{previewLines.length}</span>
                                 </div>
 

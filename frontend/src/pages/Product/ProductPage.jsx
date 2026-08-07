@@ -8,8 +8,8 @@ import PrintBarcodeModal from '../../components/ui/PrintBarcodeModal/PrintBarcod
 import axiosClient from '../../api/axiosClient';
 import styles from './ProductPage.module.css';
 import * as XLSX from 'xlsx';
-
-
+import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
+import Modal from '../../components/ui/Modal/Modal';
 const defaultFormData = {
     id: null,
     productCode: '',
@@ -27,6 +27,18 @@ const defaultFormData = {
     active: true,
     minStockQty: '',
     taxReductionStatus: 'NORMAL'
+};
+
+const DEFAULT_COLUMNS = {
+    image: true,
+    productCode: true,
+    productName: true,
+    productType: true,
+    category: true,
+    brand: true,
+    unit: true,
+    salePrice: true,
+    stockQty: true
 };
 
 const defaultVariantData = {
@@ -208,6 +220,20 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
 const ProductPage = () => {
     const navigate = useNavigate();
     const [products, setProducts] = useState([]);
+    const [columns, setColumns] = useState(() => {
+        const saved = localStorage.getItem('dlc_product_columns');
+        return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+    });
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    
+    const handleColumnChange = (colId) => {
+        setColumns(prev => {
+            const next = { ...prev, [colId]: !prev[colId] };
+            localStorage.setItem('dlc_product_columns', JSON.stringify(next));
+            return next;
+        });
+    };
+
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [units, setUnits] = useState([]);
@@ -216,6 +242,9 @@ const ProductPage = () => {
     const [tempSearch, setTempSearch] = useState('');
     const [stockFilter, setStockFilter] = useState('ALL');
     const [categoryFilter, setCategoryFilter] = useState('');
+    const [typeFilter, setTypeFilter] = useState('');
+    const [brandFilter, setBrandFilter] = useState('');
+    const [unitFilter, setUnitFilter] = useState('');
 
     const [page, setPage] = useState(0);
     const [size, setSize] = useState(20);
@@ -530,7 +559,11 @@ const ProductPage = () => {
             setLoading(true);
             const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
             const categoryQuery = categoryFilter ? `&categoryId=${categoryFilter}` : '';
-            const res = await axiosClient.get(`/products?page=${page}&size=${size}${searchQuery}${categoryQuery}`);
+            const typeQuery = typeFilter ? `&productType=${encodeURIComponent(typeFilter)}` : '';
+            const brandQuery = brandFilter ? `&brandId=${brandFilter}` : '';
+            const unitQuery = unitFilter ? `&unitId=${unitFilter}` : '';
+            
+            const res = await axiosClient.get(`/products?page=${page}&size=${size}${searchQuery}${categoryQuery}${typeQuery}${brandQuery}${unitQuery}`);
             const content = res.data.content || [];
             setProducts(content);
             setTotalPages(res.data.totalPages || 0);
@@ -556,7 +589,7 @@ const ProductPage = () => {
             setLoading(false);
             setStockFilter('ALL');
         }
-    }, [page, size, searchTerm, categoryFilter]);
+    }, [page, size, searchTerm, categoryFilter, typeFilter, brandFilter, unitFilter]);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -1044,7 +1077,13 @@ const ProductPage = () => {
     const handleExportExcel = async () => {
         try {
             const res = await axiosClient.get('/products/export', {
-                params: { search: searchTerm || undefined },
+                params: { 
+                    search: searchTerm || undefined,
+                    categoryId: categoryFilter || undefined,
+                    productType: typeFilter || undefined,
+                    brandId: brandFilter || undefined,
+                    unitId: unitFilter || undefined
+                },
                 responseType: 'blob'
             });
             const url = window.URL.createObjectURL(new Blob([res.data]));
@@ -1193,37 +1232,79 @@ const ProductPage = () => {
                 </div>
 
                 <div className={styles.filterSection}>
-                    <div className={styles.filterGroup}>
-                        <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>TÌM KIẾM</span>
+                    <div className={styles.searchAndPopover}>
+                        <div className={styles.searchBox}>
+                            <i className="bi bi-search"></i>
                             <input
                                 type="text"
-                                className={styles.filterInput}
-                                placeholder="Mã hoặc tên sản phẩm..."
+                                className={styles.searchInput}
+                                placeholder="Nhập từ khóa tìm kiếm mã hoặc tên sản phẩm..."
                                 value={tempSearch}
                                 onChange={(e) => setTempSearch(e.target.value)}
                                 onKeyDown={handleSearch}
                             />
-                        </div>
-                        <div className={styles.filterField}>
-                            <span className={styles.filterLabel}>DANH MỤC</span>
-                            <select
-                                className={styles.filterInput}
-                                value={categoryFilter}
-                                onChange={(e) => { setCategoryFilter(e.target.value); setPage(0); }}
-                            >
-                                <option value="">Tất cả danh mục</option>
-                                {categories.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                ))}
-                            </select>
+                            {tempSearch && (
+                                <button className={styles.clearSearchBtn} onClick={() => { setTempSearch(''); setSearchTerm(''); setPage(0); }}>
+                                    <i className="bi bi-x-circle-fill"></i>
+                                </button>
+                            )}
                         </div>
 
+                        <FilterPopover
+                            filters={{ issuePurpose: categoryFilter, type: typeFilter, brand: brandFilter, unit: unitFilter }}
+                            onApply={(f) => { 
+                                setCategoryFilter(f.issuePurpose || ''); 
+                                setTypeFilter(f.type || '');
+                                setBrandFilter(f.brand || '');
+                                setUnitFilter(f.unit || '');
+                                setPage(0); 
+                            }}
+                            onReset={() => { 
+                                setCategoryFilter(''); 
+                                setTypeFilter('');
+                                setBrandFilter('');
+                                setUnitFilter('');
+                                setPage(0); 
+                            }}
+                            purposeOptions={categories.map(c => ({ value: String(c.id), label: c.name }))}
+                            purposeLabel="Danh mục"
+                            showDateRange={false}
+                            customSelects={[
+                                {
+                                    name: 'type',
+                                    label: 'Loại sản phẩm',
+                                    options: [
+                                        { value: 'Hàng hóa', label: 'Hàng hóa' },
+                                        { value: 'Dịch vụ', label: 'Dịch vụ' },
+                                        { value: 'Thành phẩm', label: 'Thành phẩm' }
+                                    ]
+                                },
+                                {
+                                    name: 'brand',
+                                    label: 'Thương hiệu',
+                                    options: brands.map(b => ({ value: String(b.id), label: b.name }))
+                                },
+                                {
+                                    name: 'unit',
+                                    label: 'Đơn vị tính',
+                                    options: units.map(u => ({ value: String(u.id), label: u.name }))
+                                }
+                            ]}
+                        />
                     </div>
                     <div className={styles.filterActions}>
                         <button
                             className={styles.iconBtn}
-                            onClick={() => { setTempSearch(''); setSearchTerm(''); setCategoryFilter(''); setStockFilter('ALL'); setPage(0); }}
+                            onClick={() => { 
+                                setTempSearch(''); 
+                                setSearchTerm(''); 
+                                setCategoryFilter(''); 
+                                setTypeFilter('');
+                                setBrandFilter('');
+                                setUnitFilter('');
+                                setStockFilter('ALL'); 
+                                setPage(0); 
+                            }}
                             title="Đặt lại bộ lọc"
                         >
                             <i className="bi bi-arrow-clockwise"></i>
@@ -1235,8 +1316,12 @@ const ProductPage = () => {
                         >
                             <i className="bi bi-file-earmark-excel"></i>
                         </button>
-                        <button className={styles.btnPrimary} onClick={handleSearchBtnClick}>
-                            <i className="bi bi-funnel"></i> Lọc dữ liệu
+                        <button
+                            className={styles.iconBtn}
+                            onClick={() => setShowSettingsModal(true)}
+                            title="Cấu hình hiển thị cột"
+                        >
+                            <i className="bi bi-gear"></i>
                         </button>
                     </div>
                 </div>
@@ -1248,16 +1333,16 @@ const ProductPage = () => {
                                 <th style={{ width: '40px', textAlign: 'center' }}>
                                     <input type="checkbox" className={styles.checkbox} />
                                 </th>
-                                <th style={{ width: '80px', textAlign: 'center' }}>Hình ảnh</th>
-                                <th style={{ width: '120px' }}>Mã sản phẩm</th>
-                                <th style={{ minWidth: '150px' }}>Tên sản phẩm</th>
-                                <th style={{ width: '100px' }}>Loại</th>
-                                <th style={{ width: '120px' }}>Danh mục</th>
-                                <th style={{ width: '120px' }}>Thương hiệu</th>
-                                <th style={{ width: '100px' }}>Đơn vị tính</th>
-                                <th className={styles.textRight} style={{ width: '120px' }}>Giá bán</th>
-                                <th className={styles.textRight} style={{ width: '100px' }}>Tồn kho</th>
-                                <th className={styles.textCenter} style={{ width: '120px' }}>Thao Tác</th>
+                                {columns.image && <th style={{ width: '100px', textAlign: 'center' }}>Hình ảnh</th>}
+                                {columns.productCode && <th style={{ width: '110px' }}>Mã sản phẩm</th>}
+                                {columns.productName && <th style={{ minWidth: '220px' }}>Tên sản phẩm</th>}
+                                {columns.productType && <th style={{ width: '90px' }}>Loại</th>}
+                                {columns.category && <th style={{ width: '110px' }}>Danh mục</th>}
+                                {columns.brand && <th style={{ width: '110px' }}>Thương hiệu</th>}
+                                {columns.unit && <th style={{ width: '90px' }}>Đơn vị tính</th>}
+                                {columns.salePrice && <th className={styles.textRight} style={{ width: '110px' }}>Giá bán</th>}
+                                {columns.stockQty && <th className={styles.textRight} style={{ width: '90px' }}>Tồn kho</th>}
+                                <th className={styles.textCenter} style={{ width: '130px' }}>Thao Tác</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1284,23 +1369,25 @@ const ProductPage = () => {
                                         <td style={{ textAlign: 'center' }}>
                                             <input type="checkbox" className={styles.checkbox} />
                                         </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <div style={{ width: '36px', height: '36px', margin: '0 auto', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--color-border)', backgroundColor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                {item.imageUrl ? (
-                                                    <img src={item.imageUrl} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                ) : (
-                                                    <i className="bi bi-image" style={{ color: '#9ca3af', fontSize: '18px' }}></i>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td><span className={styles.link}>{item.productCode}</span></td>
-                                        <td style={{ fontWeight: 600 }} title={item.productName}>{item.productName}</td>
-                                        <td>{item.productType || '-'}</td>
-                                        <td>{item.categoryName || '-'}</td>
-                                        <td>{item.brandName || '-'}</td>
-                                        <td>{item.unitName || '-'}</td>
-                                        <td className={`${styles.money} ${styles.textRight}`}>{formatCurrency(item.salePrice)}</td>
-                                        <td className={styles.textRight}>{formatQuantity(item.stockQty)}</td>
+                                        {columns.image && (
+                                            <td style={{ textAlign: 'center' }}>
+                                                <div style={{ width: '64px', height: '64px', margin: '0 auto', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--color-border)', backgroundColor: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {item.imageUrl ? (
+                                                        <img src={item.imageUrl} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <i className="bi bi-image" style={{ color: '#9ca3af', fontSize: '24px' }}></i>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        )}
+                                        {columns.productCode && <td><span className={styles.link}>{item.productCode}</span></td>}
+                                        {columns.productName && <td style={{ fontWeight: 600, wordBreak: 'break-word', whiteSpace: 'normal', minWidth: '220px' }} title={item.productName}>{item.productName}</td>}
+                                        {columns.productType && <td>{item.productType || '-'}</td>}
+                                        {columns.category && <td>{item.categoryName || '-'}</td>}
+                                        {columns.brand && <td>{item.brandName || '-'}</td>}
+                                        {columns.unit && <td>{item.unitName || '-'}</td>}
+                                        {columns.salePrice && <td className={`${styles.money} ${styles.textRight}`}>{formatCurrency(item.salePrice)}</td>}
+                                        {columns.stockQty && <td className={styles.textRight}>{formatQuantity(item.stockQty)}</td>}
                                         <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
                                             <i
                                                 className="bi bi-pencil"
@@ -2362,6 +2449,53 @@ const ProductPage = () => {
                         </div>
                     </div>
                 )}
+            <Modal
+                isOpen={showSettingsModal}
+                onClose={() => setShowSettingsModal(false)}
+                ariaLabel="Thiết lập cột hiển thị"
+            >
+                <div className={styles.settingsModalHeader}>
+                    <h3>Thiết lập cột hiển thị</h3>
+                    <button className={styles.settingsModalCloseBtn} onClick={() => setShowSettingsModal(false)}>
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div className={styles.settingsModalBody}>
+                    <div className={styles.checkboxGrid}>
+                        {[
+                            { id: 'image', label: 'Hình ảnh' },
+                            { id: 'productCode', label: 'Mã sản phẩm' },
+                            { id: 'productName', label: 'Tên sản phẩm' },
+                            { id: 'productType', label: 'Loại' },
+                            { id: 'category', label: 'Danh mục' },
+                            { id: 'brand', label: 'Thương hiệu' },
+                            { id: 'unit', label: 'Đơn vị tính' },
+                            { id: 'salePrice', label: 'Giá bán' },
+                            { id: 'stockQty', label: 'Tồn kho' }
+                        ].map(col => (
+                            <label key={col.id} className={styles.checkboxLabel}>
+                                <input
+                                    type="checkbox"
+                                    checked={columns[col.id]}
+                                    onChange={() => handleColumnChange(col.id)}
+                                />
+                                <span className={styles.checkboxText}>{col.label}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+                <div className={styles.settingsModalFooter}>
+                    <button className={styles.btnSecondary} onClick={() => {
+                        setColumns(DEFAULT_COLUMNS);
+                        localStorage.setItem('dlc_product_columns', JSON.stringify(DEFAULT_COLUMNS));
+                    }}>
+                        Đặt lại
+                    </button>
+                    <button className={styles.btnPrimary} onClick={() => setShowSettingsModal(false)}>
+                        Hoàn tất
+                    </button>
+                </div>
+            </Modal>
             </div>
 
             <Toast
