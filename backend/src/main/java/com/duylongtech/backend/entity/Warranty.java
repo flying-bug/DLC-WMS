@@ -41,6 +41,7 @@ public class Warranty {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
+    @Builder.Default
     @OneToMany(mappedBy = "warranty", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<WarrantyLine> lines = new java.util.ArrayList<>();
 }

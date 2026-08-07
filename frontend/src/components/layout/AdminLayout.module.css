@@ -8,37 +8,44 @@
 }
 
 .sidebar {
-    width: 248px;
+    width: 260px;
     background: var(--color-primary-sidebar);
     color: var(--overlay-white-soft-text);
     display: flex;
     flex-direction: column;
-    box-shadow: var(--shadow-dropdown);
     box-shadow: var(--shadow-dropdown);
     z-index: 10;
     transition: width 0.3s ease;
 }
 
 .sidebar.collapsed {
-    width: 68px;
+    width: 72px;
 }
 
 .sidebar.collapsed .brandText {
     display: none;
 }
 
-.sidebar.collapsed .navItem span {
+.sidebar.collapsed .navItem span,
+.sidebar.collapsed .navGroupLabel span,
+.sidebar.collapsed .navGroupLabel i {
     display: none;
 }
 
 .sidebar.collapsed .navItem {
     justify-content: center;
-    padding: 14px 0;
+    padding: 12px 0;
+    margin: 4px 10px;
 }
 
 .sidebar.collapsed .navItem i {
     margin: 0;
     font-size: 1.3rem;
+}
+
+.sidebar.collapsed .navGroupLabel {
+    padding: 12px 0;
+    justify-content: center;
 }
 
 .collapseBtnContainer {
@@ -146,18 +153,20 @@
 }
 
 .navItem {
-    padding: 14px 20px;
+    padding: 10px 16px;
+    margin: 4px 12px;
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 12px;
     cursor: pointer;
-    color: var(--color-white);
+    color: var(--overlay-white-soft-text);
     transition: all 0.2s ease;
     border: 0;
-    border-left: 3px solid transparent;
+    border-radius: 8px;
     background: transparent;
     text-align: left;
     font: inherit;
+    font-size: 0.9rem;
 }
 
 .navItem i {
@@ -174,8 +183,17 @@
 .navItem.active {
     background-color: var(--color-primary-sidebar-hover);
     color: var(--color-white);
-    border-left-color: var(--color-white);
     font-weight: 600;
+}
+
+.menuGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.groupItems {
+    display: flex;
+    flex-direction: column;
 }
 
 .mainWrapper {
@@ -335,7 +353,8 @@
     }
 
     .brandText,
-    .navItem span {
+    .navItem span,
+    .navGroupLabel {
         display: none;
     }
 
@@ -410,4 +429,22 @@
         padding: 0 !important;
         background: none !important;
     }
+}
+.navGroupLabel {
+    color: var(--overlay-white-soft-text);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 16px;
+    margin-top: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.navGroupLabel:hover {
+    color: var(--color-white);
 }

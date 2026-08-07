@@ -62,6 +62,7 @@ public class AuthService {
         org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
         String url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + token;
         try {
+            @SuppressWarnings("unchecked")
             java.util.Map<String, Object> response = restTemplate.getForObject(url, java.util.Map.class);
             if (response == null || !googleClientId.equals(response.get("aud"))) {
                 throw new BusinessException(SystemMessage.INVALID_GOOGLE_TOKEN);
