@@ -26,8 +26,6 @@ public class RepairLineResponse {
     private String actionType;
     private BigDecimal quantity;
     private BigDecimal availableQuantity; // Số lượng tồn kho khả dụng
-    private BigDecimal doneQuantity;
-    private Boolean isUsed;
     private BigDecimal unitPrice;
     private BigDecimal lineAmount;
     private Boolean isFreeWarranty;

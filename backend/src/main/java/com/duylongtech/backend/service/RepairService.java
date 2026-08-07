@@ -238,10 +238,8 @@ public class RepairService {
                 .componentVariantId(request.getComponentVariantId())
                 .actionType(request.getActionType().toUpperCase())
                 .quantity(request.getQuantity())
-                .doneQuantity(request.getDoneQuantity() != null ? request.getDoneQuantity() : BigDecimal.ZERO)
                 .unitPrice(unitPrice)
                 .isFreeWarranty(isFreeWarranty)
-                .isUsed(Boolean.TRUE.equals(request.getIsUsed()))
                 .serialNumberId(request.getSerialNumberId())
                 .serialNumberText(request.getSerialNumber())
 
@@ -272,17 +270,13 @@ public class RepairService {
         }
 
         if (isUnderRepair) {
-            // Chỉ cho phép cập nhật doneQuantity và isUsed khi đang UNDER_REPAIR
-            if (request.getDoneQuantity() != null) line.setDoneQuantity(request.getDoneQuantity());
-            if (request.getIsUsed() != null) line.setIsUsed(request.getIsUsed());
+            // Chỉ cho phép cập nhật serial khi đang UNDER_REPAIR
             if (request.getSerialNumberId() != null) line.setSerialNumberId(request.getSerialNumberId() == -1 ? null : request.getSerialNumberId());
             if (request.getSerialNumber() != null) line.setSerialNumberText(request.getSerialNumber().isEmpty() ? null : request.getSerialNumber());
         } else {
             // Trạng thái DRAFT hoặc QUOTATION cho phép sửa toàn bộ
             if (request.getComponentVariantId() != null) line.setComponentVariantId(request.getComponentVariantId());
             if (request.getQuantity() != null) line.setQuantity(request.getQuantity());
-            if (request.getDoneQuantity() != null) line.setDoneQuantity(request.getDoneQuantity());
-            if (request.getIsUsed() != null) line.setIsUsed(request.getIsUsed());
             if (request.getActionType() != null) line.setActionType(request.getActionType().toUpperCase());
             if (request.getUnitPrice() != null) line.setUnitPrice(request.getUnitPrice());
             if (request.getIsFreeWarranty() != null) {
@@ -433,12 +427,7 @@ public class RepairService {
         BigDecimal lineTotal = lines.stream()
                 .filter(l -> "ADD".equals(l.getActionType())) // Chỉ tính dòng ADD vào chi phí
                 .map(l -> {
-                    BigDecimal qty;
-                    if ("UNDER_REPAIR".equals(repair.getRepairStatus()) || "DONE".equals(repair.getRepairStatus())) {
-                        qty = (l.getDoneQuantity() != null && Boolean.TRUE.equals(l.getIsUsed())) ? l.getDoneQuantity() : BigDecimal.ZERO;
-                    } else {
-                        qty = l.getQuantity() != null ? l.getQuantity() : BigDecimal.ZERO;
-                    }
+                    BigDecimal qty = l.getQuantity() != null ? l.getQuantity() : BigDecimal.ZERO;
                     return l.getUnitPrice().multiply(qty);
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -688,8 +677,6 @@ public class RepairService {
                 .actionType(line.getActionType())
                 .quantity(line.getQuantity())
                 .availableQuantity(availableQty)
-                .doneQuantity(line.getDoneQuantity())
-                .isUsed(line.getIsUsed())
                 .unitPrice(line.getUnitPrice())
                 .lineAmount(lineAmount)
                 .isFreeWarranty(line.getIsFreeWarranty())
