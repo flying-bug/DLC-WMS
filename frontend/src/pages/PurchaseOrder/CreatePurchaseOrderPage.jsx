@@ -201,6 +201,28 @@ function CreatePurchaseOrderPage() {
     }
   };
 
+  const handleSaveSupplier = async (supplierFormData, isContinue) => {
+    try {
+      const res = await poApi.createSupplier(supplierFormData);
+      const newSupplier = unwrap(res);
+      if (newSupplier?.id) {
+        setSuppliers(prev => [newSupplier, ...prev]);
+        setForm(prev => ({ ...prev, partnerId: newSupplier.id }));
+      } else {
+        const supRes = await poApi.getSuppliers({ isSupplier: true, size: 1000 });
+        const list = pageContent(unwrap(supRes));
+        setSuppliers(list);
+        if (list.length > 0) setForm(prev => ({ ...prev, partnerId: list[0].id }));
+      }
+      showToast('success', 'Thêm mới nhà cung cấp thành công!');
+      if (!isContinue) {
+        setShowSupplierModal(false);
+      }
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Có lỗi xảy ra khi tạo nhà cung cấp');
+    }
+  };
+
   // ── react-select options ──
   const supplierOptions = suppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` }));
   const variantOptions  = variants.map(v => ({
@@ -494,15 +516,12 @@ function CreatePurchaseOrderPage() {
       </div>
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
 
-      <SupplierModal 
-        isOpen={showSupplierModal}
-        onClose={() => setShowSupplierModal(false)}
-        onSuccess={(newSupplier) => {
-          setSuppliers(prev => [newSupplier, ...prev]);
-          setForm(prev => ({ ...prev, partnerId: newSupplier.id }));
-          setShowSupplierModal(false);
-        }}
-      />
+      {showSupplierModal && (
+        <SupplierModal 
+          onClose={() => setShowSupplierModal(false)}
+          onSave={handleSaveSupplier}
+        />
+      )}
     </AdminLayout>
   );
 }

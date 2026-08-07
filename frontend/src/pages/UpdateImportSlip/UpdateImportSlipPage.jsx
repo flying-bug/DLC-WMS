@@ -861,7 +861,7 @@ function UpdateImportSlipPage() {
         <SupplierModal
           isOpen={showPartnerModal}
           onClose={() => setShowPartnerModal(false)}
-          onSaved={handleSavePartner}
+          onSave={handleSavePartner}
           onError={(msg) => showToast('error', msg)}
         />
       )}

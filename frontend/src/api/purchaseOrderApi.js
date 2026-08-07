@@ -30,5 +30,9 @@ export const recordPayment = (id, amount) =>
 export const getSuppliers = (params = {}) =>
   axiosClient.get('/suppliers', { params });
 
+export const createSupplier = (data) =>
+  axiosClient.post('/suppliers', data);
+
 export const getProducts = (params = {}) =>
   axiosClient.get('/products/variants', { params });
+

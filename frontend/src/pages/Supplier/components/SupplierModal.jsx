@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal/Modal';
 import styles from './SupplierModal.module.css';
 
-const SupplierModal = ({ onClose, onSave, initialData = null }) => {
+const SupplierModal = ({ isOpen = true, onClose, onSave, initialData = null }) => {
     const [formData, setFormData] = useState({
         code: '',
         name: '',
@@ -74,7 +74,7 @@ const SupplierModal = ({ onClose, onSave, initialData = null }) => {
     };
 
     return (
-        <Modal isOpen={true} onClose={onClose} dialogStyle={{ width: '800px', maxWidth: '95%', display: 'flex', flexDirection: 'column' }}>
+        <Modal isOpen={isOpen} onClose={onClose} dialogStyle={{ width: '800px', maxWidth: '95%', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
             <div className={styles.header}>
                 <h3 className={styles.headerTitle}>
