@@ -15,6 +15,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import Select from 'react-select';
 import styles from './UpdateImportSlipPage.module.css';
+import { getTodayIsoDate } from '../../utils/dateFormat';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -112,7 +113,7 @@ function UpdateImportSlipPage() {
     partnerId: '',
     partnerName: '',
     customerName: '',
-    docDate: new Date().toLocaleDateString('sv-SE'),
+    docDate: getTodayIsoDate(),
     note: '',
     status: 'DRAFT',
   });

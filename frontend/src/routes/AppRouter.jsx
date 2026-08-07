@@ -46,11 +46,11 @@ import OperationsCenterPage from '../pages/Operations/OperationsCenterPage';
 import SalesOrderListPage from '../pages/SalesOrder/SalesOrderListPage';
 import CreateSalesOrderPage from '../pages/SalesOrder/CreateSalesOrderPage';
 import SalesOrderDetailPage from '../pages/SalesOrder/SalesOrderDetailPage';
-import PublicQuotePage from '../pages/PublicQuote/PublicQuotePage';
-import PublicRepairQuotePage from '../pages/PublicQuote/PublicRepairQuotePage';
 import PurchaseOrderListPage from '../pages/PurchaseOrder/PurchaseOrderListPage';
 import CreatePurchaseOrderPage from '../pages/PurchaseOrder/CreatePurchaseOrderPage';
 import PurchaseOrderDetailPage from '../pages/PurchaseOrder/PurchaseOrderDetailPage';
+import PaymentManagementPage from '../pages/Payment/PaymentManagementPage';
+import PaymentHistoryPage from '../pages/Payment/PaymentHistoryPage';
 
 // Helper to check valid token
 const isValidToken = () => {
@@ -96,10 +96,6 @@ function AppRouter() {
                     <Route path={ROUTES.LOGIN} element={<LoginPage />} />
                     <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
                 </Route>
-
-                {/* Unrestricted Routes */}
-                <Route path="/quote/:token" element={<PublicQuotePage />} />
-                <Route path="/repair-quote/:token" element={<PublicRepairQuotePage />} />
 
                 {/* Protected Routes for Authenticated Users */}
                 <Route element={<ProtectedRoute />}>
@@ -147,6 +143,8 @@ function AppRouter() {
                     <Route path="/stocktakes/:id/edit" element={<CreateStocktakePage />} />
                     <Route path="/ai-chat" element={<AiChatPage />} />
                     <Route path="/reports" element={<ReportListPage />} />
+                    <Route path="/payments" element={<PaymentManagementPage />} />
+                    <Route path="/payments/history/:partnerId" element={<PaymentHistoryPage />} />
                     <Route path="/sales-orders" element={<SalesOrderListPage />} />
                     <Route path="/sales-orders/create" element={<CreateSalesOrderPage />} />
                     <Route path="/sales-orders/:id" element={<SalesOrderDetailPage />} />

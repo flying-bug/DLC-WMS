@@ -12,6 +12,8 @@ import {
     exportReportExcel
 } from '../../api/reportApi';
 import styles from './ReportListPage.module.css';
+import { formatDateOnly } from '../../utils/dateFormat';
+import { getDateRangePreset } from '../../utils/datePresets';
 
 const MOCK_CATEGORIES = [
     {
@@ -72,8 +74,8 @@ const ReportListPage = () => {
     // Filter inputs
     const [filters, setFilters] = useState({
         warehouseId: '',
-        startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
-        endDate: new Date().toISOString().slice(0, 10),
+        startDate: getDateRangePreset('THIS_MONTH').fromDate,
+        endDate: getDateRangePreset('THIS_MONTH').toDate,
         search: '',
         partnerType: 'ALL', // ALL, CUSTOMER, SUPPLIER
         status: ''
@@ -230,9 +232,7 @@ const ReportListPage = () => {
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
         try {
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return dateStr;
-            return d.toLocaleDateString('vi-VN');
+            return formatDateOnly(dateStr);
         } catch {
             return dateStr;
         }

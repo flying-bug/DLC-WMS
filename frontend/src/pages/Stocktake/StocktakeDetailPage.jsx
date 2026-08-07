@@ -7,6 +7,7 @@ import styles from './CreateStocktakePage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import { printStocktakeReport } from '../../utils/printStocktakeReport';
+import { getTodayIsoDate, getCurrentDateTimeInput, toDateTimeInputValue } from '../../utils/dateFormat';
 
 function StocktakeDetailPage() {
   const navigate = useNavigate();
@@ -21,8 +22,8 @@ function StocktakeDetailPage() {
     purpose: 'Kiểm kê vật tư hàng hóa định kỳ',
     code: id ? `KKK-000${id}` : 'KKK00002',
     warehouseId: searchParams.get('warehouseId') || 'all',
-    toDate: searchParams.get('toDate') || new Date().toISOString().split('T')[0],
-    createdDate: new Date().toISOString().slice(0, 16),
+    toDate: searchParams.get('toDate') || getTodayIsoDate(),
+    createdDate: getCurrentDateTimeInput(),
     conclusion: '',
     isProcessed: false,
     isValueStocktake: false
@@ -52,8 +53,8 @@ function StocktakeDetailPage() {
           purpose: data.purpose || '',
           code: data.stocktakeCode,
           warehouseId: String(data.warehouseId),
-          toDate: data.stocktakeDate || new Date().toISOString().split('T')[0],
-          createdDate: data.createdAt ? new Date(data.createdAt).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+          toDate: data.stocktakeDate || getTodayIsoDate(),
+          createdDate: data.createdAt ? toDateTimeInputValue(data.createdAt) : getCurrentDateTimeInput(),
           conclusion: data.conclusion || '',
           isProcessed: data.status === 'POSTED',
           isValueStocktake: false,

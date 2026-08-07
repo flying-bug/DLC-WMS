@@ -18,7 +18,8 @@ const MENU_CONFIG = [
         label: 'GIAO DỊCH',
         items: [
             { path: '/purchase-orders', icon: 'bi bi-bag-plus', label: 'Đơn mua hàng' },
-            { path: '/sales-orders', icon: 'bi bi-cart3', label: 'Đơn bán hàng' }
+            { path: '/sales-orders', icon: 'bi bi-cart3', label: 'Đơn bán hàng' },
+            { path: '/payments', icon: 'bi bi-cash-coin', label: 'Thu chi & Công nợ' }
         ]
     },
     {
@@ -272,6 +273,13 @@ const AdminLayout = ({ children }) => {
                             type="button"
                         >
                             Báo cáo
+                        </button>
+                        <button
+                            className={`${styles.tab} ${currentPath.startsWith('/payments') ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/payments')}
+                            type="button"
+                        >
+                            Thu chi
                         </button>
                         <button
                             className={`${styles.tab} ${currentPath === '/warehouses' ? styles.activeTab : ''}`}

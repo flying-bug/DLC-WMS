@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styles from './SuperAdminDashboard.module.css';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
 import Toast from '../../components/ui/Toast/Toast';
+import { formatDateOnly, formatTime } from '../../utils/dateFormat';
 
 function SuperAdminDashboard() {
     const navigate = useNavigate();
@@ -135,7 +136,7 @@ function SuperAdminDashboard() {
                 <div className={styles.footerLeft}>
                     <span className={styles.footerItem}>
                         <i className={`bi bi-clock ${styles.footerItemIcon}`} aria-hidden="true" />
-                        Giờ hiện tại: {currentTime.toLocaleTimeString('vi-VN')} {currentTime.toLocaleDateString('vi-VN')}
+                        Giờ hiện tại: {formatTime(currentTime, { withSeconds: true })} {formatDateOnly(currentTime)}
                     </span>
                 </div>
                 <div className={styles.footerRight}>

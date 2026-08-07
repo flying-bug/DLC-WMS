@@ -49,10 +49,6 @@ public interface RepairRepository extends JpaRepository<Repair, Long> {
     @Query("SELECT r FROM Repair r WHERE r.id = :id")
     Optional<Repair> findWithDetailsById(@Param("id") Long id);
 
-    @EntityGraph(attributePaths = {"repairLines", "repairLines.componentVariant", "warranty"})
-    @Query("SELECT r FROM Repair r WHERE r.publicToken = :token")
-    Optional<Repair> findByPublicTokenWithDetails(@Param("token") String token);
-
     /**
      * Lock pessimistic khi cần thực hiện workflow chuyển trạng thái.
      */

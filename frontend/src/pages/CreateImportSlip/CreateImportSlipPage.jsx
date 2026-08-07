@@ -19,10 +19,11 @@ import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGrid
 import Select from 'react-select';
 import axiosClient from '../../api/axiosClient';
 import styles from './CreateImportSlipPage.module.css';
+import { getTodayIsoDate } from '../../utils/dateFormat';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
-const today = () => new Date().toLocaleDateString('sv-SE');
+const today = getTodayIsoDate;
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
   ? `${item.productName} - ${item.variantName}`

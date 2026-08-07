@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as assemblyOrderApi from '../../../api/assemblyOrderApi';
 import styles from './AssemblyOrderSelectionModal.module.css';
+import { formatDateOnly } from '../../../utils/dateFormat';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -10,11 +11,7 @@ const TYPE_META = {
     'DISASSEMBLY': 'Tháo dỡ'
 };
 
-const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN');
-};
+const formatDate = formatDateOnly;
 
 const AssemblyOrderSelectionModal = ({ isOpen, onClose, onSelect }) => {
     const [orders, setOrders] = useState([]);

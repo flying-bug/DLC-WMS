@@ -6,18 +6,9 @@ import { exportToExcel } from '../../utils/excelExport';
 import Pagination from '../../components/ui/Pagination/Pagination';
 import { useToast } from '../../contexts/ToastContext';
 import styles from './AuditLogPage.module.css';
+import { formatDateTime as formatVietnamDateTime } from '../../utils/dateFormat';
 
-const formatDateTime = (isoString) => {
-    if (!isoString) return '';
-    try {
-        const date = new Date(isoString);
-        if (Number.isNaN(date.getTime())) return isoString;
-        const pad = (n) => String(n).padStart(2, '0');
-        return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-    } catch {
-        return isoString;
-    }
-};
+const formatDateTime = (isoString) => isoString ? formatVietnamDateTime(isoString) : '';
 
 const parseDateInput = (value, endOfDay = false) => {
     if (!value || !value.trim()) return null;
@@ -25,16 +16,8 @@ const parseDateInput = (value, endOfDay = false) => {
     const parts = value.trim().split('-');
     if (parts.length !== 3) return null;
     const [year, month, day] = parts;
-    const date = new Date(
-        Number(year),
-        Number(month) - 1,
-        Number(day),
-        endOfDay ? 23 : 0,
-        endOfDay ? 59 : 0,
-        endOfDay ? 59 : 0,
-        endOfDay ? 999 : 0
-    );
-
+    const time = endOfDay ? '23:59:59.999' : '00:00:00.000';
+    const date = new Date(`${year}-${month}-${day}T${time}+07:00`);
     return Number.isNaN(date.getTime()) ? null : date.toISOString();
 };
 

@@ -7,6 +7,7 @@ import {
 import { useToast } from '../../../contexts/ToastContext';
 import ConfirmModal from '../../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './BackupCenterTab.module.css';
+import { formatDateTime as formatVietnamDateTime } from '../../../utils/dateFormat';
 
 const STATUS_CONFIG = {
     LOCAL:     { label: 'Chỉ Local',   color: '#f59e0b', icon: 'bi bi-hdd-fill' },
@@ -16,12 +17,7 @@ const STATUS_CONFIG = {
     RESTORING: { label: 'Đang restore', color: '#06b6d4', icon: 'bi bi-arrow-repeat' },
 };
 
-function formatDateTime(iso) {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    const pad = n => String(n).padStart(2, '0');
-    return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+const formatDateTime = (iso) => iso ? formatVietnamDateTime(iso, { withSeconds: false }) : '—';
 
 // ─── Restore Confirm Modal ────────────────────────────────────────────────────
 function RestoreConfirmModal({ record, onConfirm, onCancel, loading }) {

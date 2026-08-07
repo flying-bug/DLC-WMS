@@ -6,10 +6,11 @@ import Toast from '../../components/ui/Toast/Toast';
 import SupplierModal from '../Supplier/components/SupplierModal';
 import * as poApi from '../../api/purchaseOrderApi';
 import styles from './CreatePurchaseOrderPage.module.css';
+import { getTodayIsoDate } from '../../utils/dateFormat';
 
 const unwrap      = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p)   => p?.content ?? p ?? [];
-const today       = ()    => new Date().toLocaleDateString('sv-SE');
+const today       = getTodayIsoDate;
 const money       = (v)   => Number(v || 0).toLocaleString('vi-VN');
 
 const customSelectStyles = {
@@ -152,7 +153,7 @@ function CreatePurchaseOrderPage() {
     if (!form.partnerId) { showToast('error', 'Vui lòng chọn nhà cung cấp'); return false; }
     if (!form.poDate)    { showToast('error', 'Vui lòng nhập ngày lập');      return false; }
     if (form.paymentDueDate && form.paymentDueDate < form.poDate) {
-      showToast('error', 'Hạn thanh toán không được nhỏ hơn ngày lập đơn');
+      showToast('error', 'Hạn công nợ không được nhỏ hơn ngày lập đơn');
       return false;
     }
     for (let i = 0; i < lines.length; i++) {
@@ -325,7 +326,7 @@ function CreatePurchaseOrderPage() {
                   </div>
 
                   <div className={styles.fieldRow}>
-                    <label className={styles.label}>Hạn thanh toán</label>
+                    <label className={styles.label}>Hạn công nợ</label>
                     <input
                       type="date"
                       className={styles.input}
@@ -361,7 +362,7 @@ function CreatePurchaseOrderPage() {
                       <strong>{money(totalVatAmount)} đ</strong>
                     </div>
                     <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
-                      <span>Tổng thanh toán:</span>
+                      <span>Tổng công nợ:</span>
                       <strong className={styles.totalAmount}>{money(grandTotal)} đ</strong>
                     </div>
                   </div>

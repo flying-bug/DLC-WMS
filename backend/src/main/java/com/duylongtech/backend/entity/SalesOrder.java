@@ -40,9 +40,6 @@ public class SalesOrder {
     @Column(name = "so_code", nullable = false, unique = true, length = 50)
     private String soCode;
 
-    @Column(name = "public_token", unique = true, length = 36)
-    private String publicToken;
-
     @Column(name = "so_date", nullable = false)
     private LocalDate soDate;
 

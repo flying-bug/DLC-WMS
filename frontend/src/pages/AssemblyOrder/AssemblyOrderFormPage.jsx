@@ -9,13 +9,14 @@ import * as warehouseApi from '../../api/warehouseApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import * as importApi from '../../api/inventoryImportApi';
 import axiosClient from '../../api/axiosClient';
+import { formatDateOnly, formatDateTime, getTodayIsoDate } from '../../utils/dateFormat';
 import styles from './AssemblyOrderFormPage.module.css';
 import bomStyles from './AssemblyOrderPage.module.css';
 import AssemblyExecutionModal from './AssemblyExecutionModal';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
-const today = () => new Date().toLocaleDateString('sv-SE');
+const today = getTodayIsoDate;
 
 const STATUS_META = {
     DRAFT: { label: 'Lưu tạm', code: 'info' },
@@ -687,7 +688,7 @@ function AssemblyOrderFormPage() {
                                 <div className={styles.detailGrid} style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                                     <div className={styles.detailItem}><span>Trạng thái</span><strong><span className={`${styles.badge} ${styles['badge' + status.code.charAt(0).toUpperCase() + status.code.slice(1)]}`}>{status.label}</span></strong></div>
                                     <div className={styles.detailItem}><span>Người tạo</span><strong>{orderDetail?.createdByName ? orderDetail.createdByName : (orderDetail?.createdBy ? `ID: ${orderDetail.createdBy}` : 'Hệ thống')}</strong></div>
-                                    <div className={styles.detailItem}><span>Ngày tạo</span><strong>{orderDetail?.createdAt ? new Date(orderDetail.createdAt).toLocaleString('vi-VN') : '---'}</strong></div>
+                                    <div className={styles.detailItem}><span>Ngày tạo</span><strong>{orderDetail?.createdAt ? formatDateTime(orderDetail.createdAt) : '---'}</strong></div>
                                 </div>
                             )}
 

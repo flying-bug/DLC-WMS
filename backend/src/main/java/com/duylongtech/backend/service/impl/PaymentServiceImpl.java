@@ -3,8 +3,10 @@ package com.duylongtech.backend.service.impl;
 import com.duylongtech.backend.dto.request.PaymentRequest;
 import com.duylongtech.backend.dto.response.PaymentResponse;
 import com.duylongtech.backend.entity.Partner;
+import com.duylongtech.backend.entity.PartnerLedger;
 import com.duylongtech.backend.entity.PaymentTransaction;
 import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.repository.PartnerLedgerRepository;
 import com.duylongtech.backend.repository.PartnerRepository;
 import com.duylongtech.backend.repository.PaymentTransactionRepository;
 import com.duylongtech.backend.service.CodeGeneratorService;
@@ -25,73 +27,93 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PaymentServiceImpl implements PaymentService {
 
+    private static final BigDecimal ZERO = BigDecimal.ZERO;
+
     private final PaymentTransactionRepository paymentTransactionRepository;
     private final PartnerRepository partnerRepository;
+    private final PartnerLedgerRepository partnerLedgerRepository;
     private final PartnerLedgerService partnerLedgerService;
     private final CodeGeneratorService codeGeneratorService;
 
     @Override
     @Transactional
     public PaymentResponse createPaymentReceipt(PaymentRequest request) {
-        return processPayment(request, "RECEIPT", "PAYMENT_TRANSACTIONS", "transaction_code", "PT");
+        return processPayment(request, "RECEIPT", "PT");
     }
 
     @Override
     @Transactional
     public PaymentResponse createPaymentVoucher(PaymentRequest request) {
-        return processPayment(request, "VOUCHER", "PAYMENT_TRANSACTIONS", "transaction_code", "PC");
+        return processPayment(request, "VOUCHER", "PC");
     }
 
-    private PaymentResponse processPayment(PaymentRequest request, String type, String tableName, String codeCol, String prefix) {
+    private PaymentResponse processPayment(PaymentRequest request, String type, String prefix) {
+        if (request == null || request.getPartnerId() == null) {
+            throw new BusinessException("Đối tác là bắt buộc");
+        }
         Partner partner = partnerRepository.findById(request.getPartnerId())
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác với ID: " + request.getPartnerId()));
 
-        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        BigDecimal amount = request.getAmount();
+        if (amount == null || amount.compareTo(ZERO) <= 0) {
             throw new BusinessException("Số tiền giao dịch phải lớn hơn 0");
         }
 
-        String code = codeGeneratorService.generateCode(tableName, codeCol, prefix, 5);
+        String status = normalizeStatus(request.getStatus());
+        String paymentMethod = normalizePaymentMethod(request.getPaymentMethod());
+        if ("POSTED".equals(status)) {
+            ensurePaymentDoesNotExceedDebt(partner.getId(), amount);
+        }
 
         PaymentTransaction transaction = PaymentTransaction.builder()
-                .transactionCode(code)
+                .transactionCode(codeGeneratorService.generateCode("PAYMENT_TRANSACTIONS", "transaction_code", prefix, 5))
                 .type(type)
                 .partnerId(partner.getId())
-                .amount(request.getAmount())
-                .status("POSTED")
-                .paymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "BANK_TRANSFER")
+                .amount(amount)
+                .status(status)
+                .paymentMethod(paymentMethod)
+                .note(trimToNull(request.getNote()))
                 .createdAt(LocalDateTime.now())
                 .build();
 
         PaymentTransaction saved = paymentTransactionRepository.save(transaction);
+        if ("POSTED".equals(saved.getStatus())) {
+            recordPostedPaymentLedger(saved, saved.getNote());
+        }
+        return toResponse(saved, partner);
+    }
 
-        String ledgerRefType = type.equals("RECEIPT") ? "PAYMENT_RECEIPT" : "PAYMENT_VOUCHER";
-        BigDecimal amountIn = BigDecimal.ZERO;
-        BigDecimal amountOut = request.getAmount();
-        
-        String defaultNote = (type.equals("RECEIPT") ? "Lập phiếu thu tiền " : "Lập phiếu chi tiền ") + saved.getTransactionCode();
+    @Override
+    @Transactional
+    public PaymentResponse postPayment(Long id) {
+        PaymentTransaction payment = paymentTransactionRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu thu/chi"));
+        Partner partner = partnerRepository.findById(payment.getPartnerId())
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác"));
 
-        // Ghi nhận vào Partner Ledger
-        partnerLedgerService.recordLedger(
-                partner.getId(),
-                ledgerRefType,
-                saved.getId(),
-                saved.getTransactionCode(),
-                amountIn,
-                amountOut,
-                request.getNote() != null ? request.getNote() : defaultNote
-        );
+        if ("POSTED".equals(payment.getStatus())) {
+            return toResponse(payment, partner);
+        }
+        if (!"DRAFT".equals(payment.getStatus())) {
+            throw new BusinessException("Chỉ có thể ghi sổ phiếu ở trạng thái DRAFT");
+        }
 
-        return PaymentResponse.builder()
-                .id(saved.getId())
-                .code(saved.getTransactionCode())
-                .partnerId(partner.getId())
-                .partnerName(partner.getName())
-                .amount(saved.getAmount())
-                .status(saved.getStatus())
-                .paymentMethod(saved.getPaymentMethod())
-                .type(saved.getType())
-                .createdAt(saved.getCreatedAt())
-                .build();
+        ensurePaymentDoesNotExceedDebt(payment.getPartnerId(), payment.getAmount());
+        payment.setStatus("POSTED");
+        PaymentTransaction saved = paymentTransactionRepository.save(payment);
+        recordPostedPaymentLedger(saved, saved.getNote());
+        return toResponse(saved, partner);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getPartnerDebtBalance(Long partnerId) {
+        if (partnerId == null) {
+            return ZERO;
+        }
+        return partnerLedgerRepository.findTopByPartnerIdOrderByIdDesc(partnerId)
+                .map(PartnerLedger::getBalanceAfter)
+                .orElse(ZERO);
     }
 
     @Override
@@ -102,17 +124,76 @@ public class PaymentServiceImpl implements PaymentService {
 
         return paymentTransactionRepository.findByPartnerIdOrderByCreatedAtDesc(partnerId)
                 .stream()
-                .map(txn -> PaymentResponse.builder()
-                        .id(txn.getId())
-                        .code(txn.getTransactionCode())
-                        .partnerId(partner.getId())
-                        .partnerName(partner.getName())
-                        .amount(txn.getAmount())
-                        .status(txn.getStatus())
-                        .paymentMethod(txn.getPaymentMethod())
-                        .type(txn.getType())
-                        .createdAt(txn.getCreatedAt())
-                        .build())
+                .map(txn -> toResponse(txn, partner))
                 .collect(Collectors.toList());
+    }
+
+    private void recordPostedPaymentLedger(PaymentTransaction payment, String note) {
+        String ledgerRefType = "RECEIPT".equals(payment.getType()) ? "PAYMENT_RECEIPT" : "PAYMENT_VOUCHER";
+        String defaultNote = ("RECEIPT".equals(payment.getType()) ? "Lập phiếu thu tiền " : "Lập phiếu chi tiền ")
+                + payment.getTransactionCode();
+
+        partnerLedgerService.recordLedger(
+                payment.getPartnerId(),
+                ledgerRefType,
+                payment.getId(),
+                payment.getTransactionCode(),
+                ZERO,
+                payment.getAmount(),
+                note != null && !note.isBlank() ? note : defaultNote
+        );
+    }
+
+    private void ensurePaymentDoesNotExceedDebt(Long partnerId, BigDecimal amount) {
+        BigDecimal currentDebt = getPartnerDebtBalance(partnerId);
+        if (amount.compareTo(currentDebt) > 0) {
+            throw new BusinessException("Số tiền thu/chi không được vượt quá số công nợ hiện tại");
+        }
+    }
+
+    private PaymentResponse toResponse(PaymentTransaction payment, Partner partner) {
+        return PaymentResponse.builder()
+                .id(payment.getId())
+                .code(payment.getTransactionCode())
+                .partnerId(partner.getId())
+                .partnerName(partner.getName())
+                .amount(payment.getAmount())
+                .status(payment.getStatus())
+                .paymentMethod(payment.getPaymentMethod())
+                .type(payment.getType())
+                .note(payment.getNote())
+                .createdAt(payment.getCreatedAt())
+                .partnerDebtBalance(getPartnerDebtBalance(partner.getId()))
+                .build();
+    }
+
+    private String normalizePaymentMethod(String paymentMethod) {
+        if (paymentMethod == null || paymentMethod.isBlank()) {
+            return "CASH";
+        }
+        String normalized = paymentMethod.trim().toUpperCase();
+        if (!"CASH".equals(normalized) && !"BANK_TRANSFER".equals(normalized)) {
+            throw new BusinessException("Phương thức thanh toán chỉ chấp nhận CASH hoặc BANK_TRANSFER");
+        }
+        return normalized;
+    }
+
+    private String normalizeStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return "POSTED";
+        }
+        String normalized = status.trim().toUpperCase();
+        if (!"DRAFT".equals(normalized) && !"POSTED".equals(normalized)) {
+            throw new BusinessException("Trạng thái phiếu thu/chi chỉ chấp nhận DRAFT hoặc POSTED");
+        }
+        return normalized;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

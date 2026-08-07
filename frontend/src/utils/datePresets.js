@@ -1,6 +1,6 @@
-/**
- * Date range preset utilities for MISA-style filter
- */
+import { getTodayIsoDate } from './dateFormat';
+
+/** Date range preset utilities using Vietnam calendar dates. */
 
 export const DATE_PRESET_OPTIONS = [
   { id: 'ALL', label: 'Tất cả thời gian' },
@@ -21,7 +21,9 @@ const formatIsoDate = (date) => {
 };
 
 export const getDateRangePreset = (presetKey) => {
-  const now = new Date();
+  // Use the Vietnam calendar date before doing calendar arithmetic. This keeps
+  // filters correct even when the browser is configured for another timezone.
+  const now = new Date(`${getTodayIsoDate()}T12:00:00`);
   const year = now.getFullYear();
   const month = now.getMonth();
 

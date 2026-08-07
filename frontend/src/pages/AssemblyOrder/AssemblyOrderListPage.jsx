@@ -7,6 +7,7 @@ import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import { exportToExcel } from '../../utils/excelExport';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import * as warehouseApi from '../../api/warehouseApi';
+import { formatDateOnly } from '../../utils/dateFormat';
 import styles from './AssemblyOrderListPage.module.css';
 
 const STATUS_META = {
@@ -51,7 +52,7 @@ const DEFAULT_COLUMNS = {
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString('vi-VN') : '---');
+const formatDate = (value) => value ? formatDateOnly(value) : '---';
 
 function AssemblyOrderListPage() {
     const navigate = useNavigate();

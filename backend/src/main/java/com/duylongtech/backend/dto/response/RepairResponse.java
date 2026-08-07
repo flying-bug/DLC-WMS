@@ -17,7 +17,6 @@ public class RepairResponse {
 
     private Long id;
     private String repairCode;
-    private String publicToken;
 
     // Khách hàng
     private Long partnerId;
