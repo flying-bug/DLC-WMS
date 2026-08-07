@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
 import * as warehouseApi from '../../../api/warehouseApi';
 import styles from './WarehouseInventoryList.module.css';
 
@@ -18,6 +18,11 @@ const WarehouseInventoryList = ({ warehouseId }) => {
     const [search, setSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
+    
+    // State quản lý Expandable Table
+    const [expandedVariants, setExpandedVariants] = useState({});
+    const [variantTrees, setVariantTrees] = useState({});
+    const [expandedSerials, setExpandedSerials] = useState({});
 
     const fetchInventory = async () => {
         setLoading(true);
@@ -32,9 +37,11 @@ const WarehouseInventoryList = ({ warehouseId }) => {
     };
 
     useEffect(() => {
-
         fetchInventory();
-
+        // Reset states when warehouse changes
+        setExpandedVariants({});
+        setVariantTrees({});
+        setExpandedSerials({});
     }, [warehouseId]);
 
     const [showBackorderedOnly, setShowBackorderedOnly] = useState(false);
@@ -69,6 +76,157 @@ const WarehouseInventoryList = ({ warehouseId }) => {
     useEffect(() => {
         setCurrentPage(1);
     }, [search, showBackorderedOnly]);
+
+    const toggleVariant = async (variantId) => {
+        const isCurrentlyExpanded = expandedVariants[variantId];
+        
+        if (!isCurrentlyExpanded && !variantTrees[variantId]) {
+            // Cần fetch dữ liệu
+            setVariantTrees(prev => ({ ...prev, [variantId]: { loading: true, data: [] } }));
+            try {
+                const res = await warehouseApi.getSerialTree(warehouseId, variantId);
+                setVariantTrees(prev => ({ 
+                    ...prev, 
+                    [variantId]: { loading: false, data: res.data.data || [] } 
+                }));
+            } catch (error) {
+                console.error("Lỗi khi tải cây serial:", error);
+                setVariantTrees(prev => ({ 
+                    ...prev, 
+                    [variantId]: { loading: false, data: [], error: true } 
+                }));
+            }
+        }
+
+        setExpandedVariants(prev => ({
+            ...prev,
+            [variantId]: !isCurrentlyExpanded
+        }));
+    };
+
+    const toggleSerial = (serialNumber) => {
+        setExpandedSerials(prev => ({
+            ...prev,
+            [serialNumber]: !prev[serialNumber]
+        }));
+    };
+
+    const renderVariantTree = (variantId) => {
+        const treeState = variantTrees[variantId];
+        if (!treeState) return null;
+        if (treeState.loading) {
+            return <div className={styles.subLoading}>Đang tải danh sách Serial...</div>;
+        }
+        if (treeState.error) {
+            return <div className={styles.subError}>Lỗi khi tải dữ liệu!</div>;
+        }
+        if (!treeState.data || treeState.data.length === 0) {
+            return <div className={styles.subEmpty}>Không có Serial nào trong kho cho mặt hàng này.</div>;
+        }
+
+        const hasAnyComponents = treeState.data.some(t => t.components && t.components.length > 0);
+
+        if (!hasAnyComponents) {
+            return (
+                <div className={styles.modernSerialContainer}>
+                    <div className={styles.modernSerialHeader}>
+                        <i className="bi bi-list-check" style={{ fontSize: '16px', color: 'var(--color-primary)' }}></i>
+                        Danh sách {treeState.data.length} Serial khả dụng
+                    </div>
+                    <div className={styles.modernSerialGrid}>
+                        {treeState.data.map((tree, idx) => (
+                            <div key={tree.targetSerial} className={styles.modernSerialItem} title={tree.targetSerial}>
+                                <div className={styles.modernSerialIcon}>
+                                    <i className="bi bi-upc-scan"></i>
+                                </div>
+                                <div className={styles.modernSerialText}>
+                                    {tree.targetSerial}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className={styles.treeContainer}>
+                <table className={styles.treeTable}>
+                    <thead>
+                        <tr>
+                            <th style={{ width: '40px' }}></th>
+                            <th>Mã Serial</th>
+                            <th>Cấu trúc</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {treeState.data.map(tree => {
+                            const hasComponents = tree.components && tree.components.length > 0;
+                            const isSerialExpanded = !!expandedSerials[tree.targetSerial];
+
+                            return (
+                                <Fragment key={tree.targetSerial}>
+                                    <tr 
+                                        className={`${styles.treeRow} ${hasComponents ? styles.clickableTreeRow : ''} ${isSerialExpanded ? styles.treeRowExpanded : ''}`}
+                                        onClick={() => hasComponents && toggleSerial(tree.targetSerial)}
+                                    >
+                                        <td style={{ textAlign: 'center' }}>
+                                            {hasComponents ? (
+                                                <i className={`bi ${isSerialExpanded ? 'bi-dash-square' : 'bi-plus-square'}`} style={{ color: 'var(--color-primary)' }}></i>
+                                            ) : (
+                                                <i className="bi bi-dash" style={{ opacity: 0.3 }}></i>
+                                            )}
+                                        </td>
+                                        <td style={{ fontWeight: '600', color: hasComponents ? 'var(--color-primary)' : 'inherit' }}>
+                                            {tree.targetSerial}
+                                        </td>
+                                        <td>
+                                            {hasComponents ? (
+                                                <span className={styles.typeBadge}>
+                                                    Bao gồm {tree.components.length} linh kiện
+                                                </span>
+                                            ) : (
+                                                <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>
+                                                    Đơn chiếc
+                                                </span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                    
+                                    {isSerialExpanded && hasComponents && (
+                                        <tr className={styles.compRow}>
+                                            <td colSpan="3" className={styles.compCell}>
+                                                <div className={styles.compContainer}>
+                                                    <table className={styles.compTable}>
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Serial Linh Kiện</th>
+                                                                <th>Mã SKU</th>
+                                                                <th>Tên Linh Kiện</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {tree.components.map((comp, idx) => (
+                                                                <tr key={`${comp.componentSerial}-${idx}`}>
+                                                                    <td><span className={styles.compSerialBadge}>{comp.componentSerial}</span></td>
+                                                                    <td>{comp.componentSku}</td>
+                                                                    <td>{comp.componentName}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </Fragment>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        );
+    };
 
     return (
         <div className={styles.container}>
@@ -108,7 +266,7 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                     <table className={styles.table}>
                         <thead>
                             <tr>
-                                <th style={{ width: '60px' }}>STT</th>
+                                <th style={{ width: '40px', textAlign: 'center' }}></th>
                                 <th>Mã sản phẩm</th>
                                 <th>Tên sản phẩm</th>
                                 <th>Mã SKU</th>
@@ -121,30 +279,54 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                         </thead>
                         <tbody>
                             {currentItems.map((item, idx) => {
-                                const stt = indexOfFirstItem + idx + 1;
+                                const isExpanded = !!expandedVariants[item.variantId];
                                 const isLowStock = item.availableQuantity <= 5;
+                                
                                 return (
-                                    <tr key={`${item.sku}-${idx}`}>
-                                        <td>{stt}</td>
-                                        <td className={styles.codeCell}>{item.productCode}</td>
-                                        <td>{item.productName}</td>
-                                        <td className={styles.skuCell}>{item.sku}</td>
-                                        <td>{item.variantName}</td>
-                                        <td style={{ textAlign: 'right', fontWeight: '500' }}>
-                                            {formatNumber(item.quantityOnHand)}
-                                        </td>
-                                        <td style={{ textAlign: 'right', color: '#64748b' }}>
-                                            {formatNumber(item.quantityReserved)}
-                                        </td>
-                                        <td style={{ textAlign: 'right' }}>
-                                            <span className={`${styles.qtyBadge} ${isLowStock ? styles.lowStock : styles.normalStock}`}>
-                                                {formatNumber(item.availableQuantity)}
-                                            </span>
-                                        </td>
-                                        <td style={{ textAlign: 'right', fontWeight: '500' }}>
-                                            {formatCurrency(item.inventoryValue)}
-                                        </td>
-                                    </tr>
+                                    <Fragment key={`${item.sku}-${idx}`}>
+                                        <tr className={`${styles.mainRow} ${isExpanded ? styles.mainRowExpanded : ''}`}>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <button 
+                                                    className={styles.expandBtn} 
+                                                    onClick={() => toggleVariant(item.variantId)}
+                                                    title={isExpanded ? "Thu gọn" : "Xem Serial"}
+                                                >
+                                                    <i className={`bi ${isExpanded ? 'bi-chevron-down' : 'bi-chevron-right'}`}></i>
+                                                </button>
+                                            </td>
+                                            <td className={styles.codeCell}>{item.productCode}</td>
+                                            <td>{item.productName}</td>
+                                            <td 
+                                                className={`${styles.skuCell} ${styles.clickableSku}`}
+                                                onClick={() => toggleVariant(item.variantId)}
+                                                title="Bấm để xem Serial"
+                                            >
+                                                {item.sku}
+                                            </td>
+                                            <td>{item.variantName}</td>
+                                            <td style={{ textAlign: 'right', fontWeight: '500' }}>
+                                                {formatNumber(item.quantityOnHand)}
+                                            </td>
+                                            <td style={{ textAlign: 'right', color: '#64748b' }}>
+                                                {formatNumber(item.quantityReserved)}
+                                            </td>
+                                            <td style={{ textAlign: 'right' }}>
+                                                <span className={`${styles.qtyBadge} ${isLowStock ? styles.lowStock : styles.normalStock}`}>
+                                                    {formatNumber(item.availableQuantity)}
+                                                </span>
+                                            </td>
+                                            <td style={{ textAlign: 'right', fontWeight: '500' }}>
+                                                {formatCurrency(item.inventoryValue)}
+                                            </td>
+                                        </tr>
+                                        {isExpanded && (
+                                            <tr className={styles.subRowWrapper}>
+                                                <td colSpan="9" className={styles.subRowCell}>
+                                                    {renderVariantTree(item.variantId)}
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </Fragment>
                                 );
                             })}
                         </tbody>

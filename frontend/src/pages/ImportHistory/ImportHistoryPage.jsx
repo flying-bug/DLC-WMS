@@ -117,7 +117,9 @@ function ImportHistoryPage() {
     partnerId: '',
     staffId: '',
     issuePurpose: '',
-  }), [location.state?.filterDocCode]);
+    referenceId: location.state?.referenceId || '',
+    referenceType: location.state?.referenceType || '',
+  }), [location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
@@ -173,6 +175,8 @@ function ImportHistoryPage() {
         status: filters.status || undefined,
         warehouseId: filters.warehouseId || undefined,
         issuePurpose: filters.issuePurpose || undefined,
+        referenceId: filters.referenceId || undefined,
+        referenceType: filters.referenceType || undefined,
       };
       const response = await importApi.getImportHistory(params);
       const data = unwrap(response) || [];

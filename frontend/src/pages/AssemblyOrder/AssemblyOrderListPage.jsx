@@ -215,7 +215,7 @@ function AssemblyOrderListPage() {
                             <input
                                 type="text"
                                 className={styles.searchInput}
-                                placeholder="Mã lệnh, Cấu hình, SKU..."
+                                placeholder="Thành phẩm, Mã lệnh, Cấu hình..."
                                 value={filters.keyword}
                                 onChange={(e) => handleFilterChange('keyword', e.target.value)}
                                 onKeyDown={handleSearchKeyDown}
@@ -302,10 +302,10 @@ function AssemblyOrderListPage() {
                                     const status = STATUS_META[item.status] || { label: item.status || 'Chưa rõ', code: 'info' };
                                     return (
                                         <tr key={item.id} onClick={() => navigate(`/assembly-orders/${item.id}?mode=${item.status === 'DRAFT' ? 'edit' : 'view'}`)} style={{ cursor: 'pointer' }}>
-                                            {columns.orderCode && <td className={styles.textBlue} style={{ fontWeight: 500, whiteSpace: 'nowrap' }}>{item.orderCode}</td>}
+                                            {columns.orderCode && <td style={{ color: 'var(--color-primary)', fontWeight: 'bold', whiteSpace: 'nowrap' }}>{item.orderCode}</td>}
                                             {columns.orderType && <td>{TYPE_META[item.orderType] || item.orderType}</td>}
                                             {columns.bom && <td>{item.bomCode || item.bomName || '---'}</td>}
-                                            {columns.product && <td>{item.targetName || item.targetSku || '---'}</td>}
+                                            {columns.product && <td style={{ fontWeight: 'bold' }}>{item.targetName || item.targetSku || '---'}</td>}
                                             {columns.warehouse && <td>{warehouseName(item.warehouseId)}</td>}
                                             {columns.date && <td style={{ textAlign: 'center' }}>{formatDate(item.executionDate)}</td>}
                                             {columns.status && (

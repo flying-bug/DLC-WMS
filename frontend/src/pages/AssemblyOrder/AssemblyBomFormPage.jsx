@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
+import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import axiosClient from '../../api/axiosClient';
 import { exportBomToExcel } from '../../utils/bomExcelExport';
@@ -35,6 +36,7 @@ function AssemblyBomFormPage() {
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState(createDefaultForm());
     const [nextVersion, setNextVersion] = useState(null);
+    const [showQuickAddModal, setShowQuickAddModal] = useState(false);
 
     const isApproved = editing && form.status === 'APPROVED';
     const canEdit = !isApproved;
@@ -121,7 +123,7 @@ function AssemblyBomFormPage() {
         setForm((current) => ({ ...current, [field]: value }));
     };
 
-    const handleProductChange = async (productId) => {
+    const handleProductChange = async (productId, productObj = null) => {
         setField('productId', productId);
         if (!productId) {
             setNextVersion(null);
@@ -145,7 +147,7 @@ function AssemblyBomFormPage() {
             }
         }
 
-        const selectedProduct = products.find(p => String(p.id) === String(productId));
+        const selectedProduct = productObj || products.find(p => String(p.id) === String(productId));
         if (selectedProduct && selectedProduct.bomTemplate) {
             try {
                 const templateLines = JSON.parse(selectedProduct.bomTemplate);
@@ -184,18 +186,18 @@ function AssemblyBomFormPage() {
     const handleSelectVariant = (variantIdStr) => {
         setForm(current => {
             const existingIndex = current.lines.findIndex((line, idx) => idx !== pickingLineIndex && String(line.componentVariantId) === variantIdStr);
-            
+
             if (existingIndex !== -1) {
                 const newLines = [...current.lines];
                 const pickingLineQty = Number(newLines[pickingLineIndex].quantity || 1);
                 const currentQty = Number(newLines[existingIndex].quantity || 1);
-                
+
                 // Tránh lỗi mutate state trực tiếp của React (tạo object mới cho existingIndex)
-                newLines[existingIndex] = { 
-                    ...newLines[existingIndex], 
-                    quantity: currentQty + pickingLineQty 
+                newLines[existingIndex] = {
+                    ...newLines[existingIndex],
+                    quantity: currentQty + pickingLineQty
                 };
-                
+
                 if (newLines[pickingLineIndex].componentRole) {
                     newLines[pickingLineIndex] = { ...newLines[pickingLineIndex], componentVariantId: '' };
                 } else {
@@ -205,7 +207,7 @@ function AssemblyBomFormPage() {
                         newLines[pickingLineIndex] = { ...newLines[pickingLineIndex], componentVariantId: '' };
                     }
                 }
-                
+
                 return { ...current, lines: newLines };
             } else {
                 const newLines = [...current.lines];
@@ -344,6 +346,12 @@ function AssemblyBomFormPage() {
         );
     }
 
+    const selectedProductForCode = products.find(p => String(p.id) === String(form.productId));
+    const generatedBomCode = (selectedProductForCode && !form.id && nextVersion !== null)
+        ? `CH-${selectedProductForCode.productCode}-v${nextVersion}`
+        : '';
+    const displayBomCode = form.id ? form.bomCode : (form.bomCode || generatedBomCode);
+
     return (
         <AdminLayout>
             <div className={styles.page}>
@@ -352,7 +360,7 @@ function AssemblyBomFormPage() {
                         <button className="btn-back" type="button" onClick={() => navigate('/assembly-boms')} style={{ marginBottom: 12, background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, padding: 0 }}>
                             <i className="bi bi-arrow-left"></i> Quay lại
                         </button>
-                        <h1 className={styles.pageTitle}>{form.id ? 'Cập nhật cấu hình' : 'Tạo cấu hình'}</h1>
+                        <h1 className={styles.pageTitle}>{form.id ? `Cập nhật cấu hình ${displayBomCode ? displayBomCode : ''}`.trim() : `Tạo cấu hình ${displayBomCode ? displayBomCode : ''}`.trim()}</h1>
                         <p className={styles.pageSubtitle}>Thiết lập cấu hình máy định mức linh kiện cho thành phẩm.</p>
                     </div>
                 </div>
@@ -372,16 +380,34 @@ function AssemblyBomFormPage() {
                     <div className={styles.formGrid}>
                         <label className={styles.field}>
                             <span>Thành phẩm <span style={{ color: 'red' }}>*</span></span>
-                            <select value={form.productId} onChange={(event) => handleProductChange(event.target.value)} disabled={!canEdit}>
-                                <option value="">Chọn thành phẩm</option>
-                                {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
-                                    <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
-                                ))}
-                            </select>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <select
+                                    value={form.productId}
+                                    onChange={(event) => handleProductChange(event.target.value)}
+                                    disabled={!canEdit}
+                                    style={{ flex: 1 }}
+                                >
+                                    <option value="">Chọn thành phẩm</option>
+                                    {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
+                                        <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
+                                    ))}
+                                </select>
+                                {canEdit && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowQuickAddModal(true)}
+                                        className={styles.btnOutline}
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 14px', height: '100%', minHeight: '38px' }}
+                                        title="Tạo thành phẩm mới"
+                                    >
+                                        <i className="bi bi-plus-lg" style={{ fontSize: '1.1rem' }}></i>
+                                    </button>
+                                )}
+                            </div>
                         </label>
                         <label className={styles.field}>
                             <span>Mã cấu hình</span>
-                            <input value={form.bomCode} onChange={(event) => setField('bomCode', event.target.value)} placeholder="Để trống để tự sinh mã" disabled={!canEdit} />
+                            <input value={form.bomCode} onChange={(event) => setField('bomCode', event.target.value)} placeholder={generatedBomCode || "Mã cấu hình"} disabled={!canEdit} />
                         </label>
                         <label className={styles.field}>
                             <span>Tên cấu hình <span style={{ color: 'red' }}>*</span></span>
@@ -389,11 +415,11 @@ function AssemblyBomFormPage() {
                         </label>
                         <label className={styles.field}>
                             <span>Phiên bản</span>
-                            <input 
-                                className={styles.numberInput} 
-                                type="text" 
-                                value={form.id ? form.versionNo : (nextVersion !== null ? nextVersion : "Tự động sinh")} 
-                                disabled={true} 
+                            <input
+                                className={styles.numberInput}
+                                type="text"
+                                value={form.id ? form.versionNo : (nextVersion !== null ? nextVersion : "Tự động sinh")}
+                                disabled={true}
                                 style={{ textAlign: 'left' }}
                             />
                         </label>
@@ -426,7 +452,7 @@ function AssemblyBomFormPage() {
                                                     displayTemplateNote = tLine.note;
                                                 }
                                             }
-                                        } catch (e) { 
+                                        } catch (e) {
                                             // ignore parse error
                                         }
                                     }
@@ -635,39 +661,39 @@ function AssemblyBomFormPage() {
                                     }).map(variant => {
                                         const parentProduct = products.find(p => String(p.id) === String(variant.productId));
                                         return (
-                                        <div key={variant.id} className={styles.variantPickerItem}>
-                                            <div className={styles.variantPickerImg}>
-                                                {parentProduct?.imageUrl ? (
-                                                    <img src={parentProduct.imageUrl} alt={variant.variantName} />
-                                                ) : (
-                                                    <i className="bi bi-box"></i>
-                                                )}
-                                            </div>
-                                            <div className={styles.variantPickerInfo}>
-                                                <div className={styles.variantPickerTitle}>
-                                                    {variant.productName} {(variant.variantName && variant.variantName !== variant.productName) && `/ ${variant.variantName}`}
+                                            <div key={variant.id} className={styles.variantPickerItem}>
+                                                <div className={styles.variantPickerImg}>
+                                                    {parentProduct?.imageUrl ? (
+                                                        <img src={parentProduct.imageUrl} alt={variant.variantName} />
+                                                    ) : (
+                                                        <i className="bi bi-box"></i>
+                                                    )}
                                                 </div>
-                                                <div className={styles.bomItemMeta}>
-                                                    <span>Mã SP: <strong>{variant.sku}</strong></span>
-                                                    <span>Bảo hành: <strong>{variant.warrantyMonths > 0 ? `${variant.warrantyMonths} Tháng` : 'Không bảo hành'}</strong></span>
-                                                    <span className={styles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(variant.id).available) > 0 ? '#16a34a' : '#dc2626' }}>{Math.max(0, getStockInfo(variant.id).available).toLocaleString('vi-VN')}</strong></span>
+                                                <div className={styles.variantPickerInfo}>
+                                                    <div className={styles.variantPickerTitle}>
+                                                        {variant.productName} {(variant.variantName && variant.variantName !== variant.productName) && `/ ${variant.variantName}`}
+                                                    </div>
+                                                    <div className={styles.bomItemMeta}>
+                                                        <span>Mã SP: <strong>{variant.sku}</strong></span>
+                                                        <span>Bảo hành: <strong>{variant.warrantyMonths > 0 ? `${variant.warrantyMonths} Tháng` : 'Không bảo hành'}</strong></span>
+                                                        <span className={styles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(variant.id).available) > 0 ? '#16a34a' : '#dc2626' }}>{Math.max(0, getStockInfo(variant.id).available).toLocaleString('vi-VN')}</strong></span>
+                                                    </div>
+                                                    <div className={styles.variantPickerPrice}>
+                                                        {Number(variant.salePrice || 0).toLocaleString('vi-VN')} đ
+                                                    </div>
                                                 </div>
-                                                <div className={styles.variantPickerPrice}>
-                                                    {Number(variant.salePrice || 0).toLocaleString('vi-VN')} đ
+                                                <div className={styles.variantPickerAction}>
+                                                    <button
+                                                        className={styles.primaryButton}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            handleSelectVariant(String(variant.id));
+                                                        }}
+                                                    >
+                                                        THÊM VÀO CẤU HÌNH <i className="bi bi-chevron-right"></i>
+                                                    </button>
                                                 </div>
                                             </div>
-                                            <div className={styles.variantPickerAction}>
-                                                <button
-                                                    className={styles.primaryButton}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        handleSelectVariant(String(variant.id));
-                                                    }}
-                                                >
-                                                    THÊM VÀO CẤU HÌNH <i className="bi bi-chevron-right"></i>
-                                                </button>
-                                            </div>
-                                        </div>
                                         );
                                     })}
                                     {variants.length > 0 && variants.filter(v => {
@@ -701,6 +727,16 @@ function AssemblyBomFormPage() {
                 )}
 
 
+
+                <QuickAddProductModal
+                    isOpen={showQuickAddModal}
+                    onClose={() => setShowQuickAddModal(false)}
+                    onSuccess={async (newProduct) => {
+                        await loadLookups();
+                        handleProductChange(newProduct.id, newProduct);
+                        showToast('success', 'Thêm thành phẩm thành công!');
+                    }}
+                />
 
                 {toast.isVisible && (
                     <Toast

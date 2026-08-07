@@ -24,7 +24,6 @@ const COLUMN_OPTIONS = [
     { id: 'bomName', label: 'Tên cấu hình' },
     { id: 'product', label: 'Thành phẩm' },
     { id: 'version', label: 'Phiên bản' },
-    { id: 'itemCount', label: 'Số linh kiện' },
     { id: 'status', label: 'Trạng thái' }
 ];
 
@@ -33,7 +32,6 @@ const DEFAULT_COLUMNS = {
     bomName: true,
     product: true,
     version: true,
-    itemCount: true,
     status: true
 };
 
@@ -134,7 +132,6 @@ function AssemblyBomPage() {
             if (columns.bomName) row.push(bom.bomName);
             if (columns.product) row.push(`${bom.productCode || ''} - ${bom.productName || ''}`.trim() || '---');
             if (columns.version) row.push(Number(bom.versionNo || 0).toLocaleString('vi-VN'));
-            if (columns.itemCount) row.push(bom.lines ? bom.lines.length : 0);
             if (columns.status) row.push(STATUS_META[bom.status]?.label || bom.status);
             return row;
         });
@@ -236,7 +233,7 @@ function AssemblyBomPage() {
                             <input
                                 type="text"
                                 className={styles.searchInput}
-                                placeholder="Nhập từ khóa tìm kiếm mã/tên cấu hình..."
+                                placeholder="Thành phẩm, Mã cấu hình, Tên cấu hình..."
                                 value={keywordFilter}
                                 onChange={(e) => { setKeywordFilter(e.target.value); setPage(1); }}
                             />
@@ -285,7 +282,6 @@ function AssemblyBomPage() {
                                 {columns.bomName && <th>Tên cấu hình</th>}
                                 {columns.product && <th>Thành phẩm</th>}
                                 {columns.version && <th>Phiên bản</th>}
-                                {columns.itemCount && <th>Số linh kiện</th>}
                                 {columns.status && <th>Trạng thái</th>}
                                 <th></th>
                             </tr>
@@ -299,7 +295,6 @@ function AssemblyBomPage() {
                                         {columns.bomName && <td>{bom.bomName}</td>}
                                         {columns.product && <td>{bom.productCode} - {bom.productName}</td>}
                                         {columns.version && <td>{Number(bom.versionNo || 0).toLocaleString('vi-VN')}</td>}
-                                        {columns.itemCount && <td>{bom.lines?.length || 0}</td>}
                                         {columns.status && <td><span className={`${styles.badge} ${styles[status.tone]}`}>{status.label}</span></td>}
                                         <td>
                                             <button className={styles.iconButton} type="button" title="Sửa BOM" onClick={(event) => { event.stopPropagation(); openEdit(bom); }}>

@@ -11,6 +11,7 @@ import * as importApi from '../../api/inventoryImportApi';
 import axiosClient from '../../api/axiosClient';
 import styles from './AssemblyOrderFormPage.module.css';
 import bomStyles from './AssemblyOrderPage.module.css';
+import AssemblyExecutionModal from './AssemblyExecutionModal';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
@@ -53,9 +54,10 @@ function AssemblyOrderFormPage() {
 
     // Modal states
     const [showBomModal, setShowBomModal] = useState(false);
+    const [showExecutionModal, setShowExecutionModal] = useState(false);
     const [bomForm, setBomForm] = useState(createDefaultBomForm);
     const [bomError, setBomError] = useState('');
-    
+
     // Quick cấu hình Picker states
     const [pickingLineIndex, setPickingLineIndex] = useState(null);
     const [searchVariantQuery, setSearchVariantQuery] = useState('');
@@ -81,8 +83,6 @@ function AssemblyOrderFormPage() {
     const showToast = (type, message) => setToast({ isVisible: true, type, message });
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-    const [serialMappings, setSerialMappings] = useState({});
-    const [savingSerials, setSavingSerials] = useState(false);
     const [savingNote, setSavingNote] = useState(false);
 
     const [customLines, setCustomLines] = useState([]);
@@ -156,21 +156,7 @@ function AssemblyOrderFormPage() {
                 console.error('Không tải được phiếu nhập liên kết', e);
             }
 
-            try {
-                const serialsRes = await assemblyApi.getAssemblyOrderSerials(id);
-                const fetchedSerials = unwrap(serialsRes);
-                if (fetchedSerials && fetchedSerials.length > 0) {
-                    const mappings = {};
-                    fetchedSerials.forEach(s => {
-                        if (!mappings[s.targetSerial]) mappings[s.targetSerial] = {};
-                        mappings[s.targetSerial][s.componentVariantId] = s.componentSerial;
-                    });
-                    setSerialMappings(mappings);
-                }
-            } catch (e) {
-                console.error('Không tải được serials', e);
-            }
-
+            // Removed manual serial mapping load
             setForm({
                 orderType: order.orderType || 'ASSEMBLY',
                 orderCode: order.orderCode || '',
@@ -201,6 +187,39 @@ function AssemblyOrderFormPage() {
     const setField = (field, value) => {
         setForm((current) => ({ ...current, [field]: value }));
     };
+
+    useEffect(() => {
+        if (!editing) {
+            const fetchNextCode = async () => {
+                try {
+                    const prefix = form.orderType === 'ASSEMBLY' ? 'LR' : 'TD';
+                    const res = await assemblyApi.getAssemblyOrders({ orderType: form.orderType });
+                    const orders = listFrom(unwrap(res));
+                    let maxNum = 0;
+                    orders.forEach(o => {
+                        if (o.orderCode && o.orderCode.startsWith(prefix)) {
+                            const numStr = o.orderCode.substring(prefix.length);
+                            const num = parseInt(numStr, 10);
+                            if (!isNaN(num) && num > maxNum) {
+                                maxNum = num;
+                            }
+                        }
+                    });
+                    const nextNum = maxNum + 1;
+                    const nextCode = `${prefix}${String(nextNum).padStart(5, '0')}`;
+                    setForm(prev => {
+                        if (!prev.orderCode || prev.orderCode.startsWith('LR') || prev.orderCode.startsWith('TD')) {
+                            return { ...prev, orderCode: nextCode };
+                        }
+                        return prev;
+                    });
+                } catch (err) {
+                    console.error('Lỗi sinh mã lệnh:', err);
+                }
+            };
+            fetchNextCode();
+        }
+    }, [editing, form.orderType]);
 
 
     useEffect(() => {
@@ -264,86 +283,50 @@ function AssemblyOrderFormPage() {
     }, [linkedImports, componentIds, targetVariantId, form.orderType]);
 
     const isAssembly = form.orderType !== 'DISASSEMBLY';
-    const requiredExportsQty = isAssembly ? requiredComponents : requiredTarget;
-    const requiredImportsQty = isAssembly ? requiredTarget : requiredComponents;
+    const baseRequiredExportsQty = isAssembly ? requiredComponents : requiredTarget;
+    const baseRequiredImportsQty = isAssembly ? requiredTarget : requiredComponents;
+
+    const targetSumQty = isAssembly ? actualImports : actualExports;
+    const requiredTargetQty = isAssembly ? baseRequiredImportsQty : baseRequiredExportsQty;
+    const targetRatio = targetSumQty > requiredTargetQty && requiredTargetQty > 0 ? (targetSumQty / requiredTargetQty) : 1;
+
+    const requiredExportsQty = isAssembly ? (baseRequiredExportsQty * targetRatio) : baseRequiredExportsQty;
+    const requiredImportsQty = isAssembly ? baseRequiredImportsQty : (baseRequiredImportsQty * targetRatio);
 
     const exportProgress = requiredExportsQty > 0 ? Math.min(100, (actualExports / requiredExportsQty) * 100) : 0;
     const importProgress = requiredImportsQty > 0 ? Math.min(100, (actualImports / requiredImportsQty) * 100) : 0;
 
-    const isReadyToComplete = actualExports >= requiredExportsQty && actualImports >= requiredImportsQty;
+    const isReadyToComplete = useMemo(() => {
+        if (targetSumQty < requiredTargetQty) return false;
+
+        const actualComponentMap = {};
+        const componentSlips = form.orderType === 'ASSEMBLY' ? linkedExports : linkedImports;
+        componentSlips.filter(s => s.status === 'POSTED').forEach(slip => {
+            slip.lines.forEach(l => {
+                const qty = form.orderType === 'ASSEMBLY' ? Number(l.quantityOut || 0) : Number(l.quantityIn || 0);
+                actualComponentMap[l.variantId] = (actualComponentMap[l.variantId] || 0) + qty;
+            });
+        });
+
+        // Đối với Tháo dỡ, chỉ cần xuất đủ Thành phẩm (PC) đi tháo là được. 
+        // Lượng linh kiện thu hồi (Nhập) phụ thuộc thực tế, không ép buộc phải đủ 100% định mức.
+        if (form.orderType === 'DISASSEMBLY') return true;
+
+        const sourceLines = (editing && orderDetail?.lines) ? orderDetail.lines : (selectedBom?.lines || []);
+        for (const line of sourceLines) {
+            const baseRequiredQty = editing ? Number(line.quantityRequired || 0) : (Number(line.quantity || 0) * Number(form.quantity || 1));
+            const requiredQty = baseRequiredQty * targetRatio;
+            const actualQty = actualComponentMap[line.componentVariantId] || 0;
+            if (actualQty < requiredQty) return false;
+        }
+
+        return true;
+    }, [linkedExports, linkedImports, form.orderType, editing, orderDetail, selectedBom, form.quantity, targetSumQty, requiredTargetQty, targetRatio]);
+
     const hasDrafts = linkedExports.some(s => s.status === 'DRAFT') || linkedImports.some(s => s.status === 'DRAFT');
     const disableComplete = saving || !isReadyToComplete || hasDrafts;
 
-    const targetSerials = useMemo(() => {
-        let serials = [];
-        if (form.orderType !== 'ASSEMBLY') return serials;
-        linkedImports
-            .filter(slip => slip.status === 'POSTED')
-            .forEach(slip => {
-                slip.lines
-                    .filter(l => String(l.variantId) === String(targetVariantId))
-                    .forEach(line => {
-                        if (line.serialNumbers) serials.push(...line.serialNumbers);
-                    });
-            });
-        return serials;
-    }, [linkedImports, form.orderType, targetVariantId]);
-
-    const componentSerialsByVariant = useMemo(() => {
-        let serials = {};
-        if (form.orderType !== 'ASSEMBLY') return serials;
-        linkedExports
-            .filter(slip => slip.status === 'POSTED')
-            .forEach(slip => {
-                slip.lines
-                    .filter(l => componentIds.has(String(l.variantId)))
-                    .forEach(line => {
-                        if (line.serialNumbers) {
-                            if (!serials[line.variantId]) serials[line.variantId] = [];
-                            serials[line.variantId].push(...line.serialNumbers);
-                        }
-                    });
-            });
-        return serials;
-    }, [linkedExports, form.orderType, componentIds]);
-
-    const isTrackingSerial = targetSerials.length > 0;
-
-    const handleMappingChange = (targetSerial, componentVariantId, componentSerial) => {
-        setSerialMappings(prev => ({
-            ...prev,
-            [targetSerial]: {
-                ...(prev[targetSerial] || {}),
-                [componentVariantId]: componentSerial
-            }
-        }));
-    };
-
-    const handleSaveSerials = async () => {
-        setSavingSerials(true);
-        try {
-            let requests = [];
-            Object.keys(serialMappings).forEach(ts => {
-                const comps = serialMappings[ts];
-                Object.keys(comps).forEach(cvId => {
-                    if (comps[cvId]) {
-                        requests.push({
-                            targetVariantId: Number(targetVariantId),
-                            targetSerial: ts,
-                            componentVariantId: Number(cvId),
-                            componentSerial: comps[cvId]
-                        });
-                    }
-                });
-            });
-            await assemblyApi.saveAssemblyOrderSerials(id, requests);
-            showToast('success', 'Đã lưu cấu hình Serial.');
-        } catch (err) {
-            showToast('error', err.response?.data?.userMessage || 'Không lưu được cấu hình Serial.');
-        } finally {
-            setSavingSerials(false);
-        }
-    };
+    // Removed unused manual serial mapping handlers
 
     const buildPayload = (overrideStatus = null) => ({
         orderCode: form.orderCode || null,
@@ -475,7 +458,7 @@ function AssemblyOrderFormPage() {
                         templateNote: line.note || '',
                         note: ''
                     }));
-                    
+
                     setBomForm((current) => ({ ...current, lines: newLines }));
                     return;
                 }
@@ -483,7 +466,7 @@ function AssemblyOrderFormPage() {
                 console.error("Lỗi parse khung cấu hình", err);
             }
         }
-        
+
         setBomForm((current) => ({ ...current, lines: [{ ...defaultBomLine }] }));
     };
 
@@ -517,9 +500,9 @@ function AssemblyOrderFormPage() {
         const targetPath = documentType === 'GOODS_ISSUE' ? '/export-slips/assembly'
             : documentType === 'SCRAP' ? '/import-history/create?type=SCRAP'
                 : !isAssembly ? '/import-history/create?type=OTHER'
-                : '/import-history/create?type=PRODUCTION';
+                    : '/import-history/create?type=PRODUCTION';
 
-        const draftSlip = documentType === 'GOODS_ISSUE' 
+        const draftSlip = documentType === 'GOODS_ISSUE'
             ? linkedExports.find(s => s.status === 'DRAFT')
             : linkedImports.find(s => s.status === 'DRAFT');
 
@@ -580,7 +563,7 @@ function AssemblyOrderFormPage() {
                 });
 
             lines = orderDetail.lines.map(l => {
-                const required = Number(l.quantityRequired || 0);
+                const required = Number(l.quantityRequired || 0) * targetRatio;
                 const completed = completedMap[l.componentVariantId] || 0;
                 const remaining = Math.max(0, required - completed);
 
@@ -709,24 +692,10 @@ function AssemblyOrderFormPage() {
                             )}
 
                             <div className={styles.cardBody}>
-                                {!editing && (
-                                    <div className="misa-form-row" style={{ marginBottom: '12px' }}>
-                                        <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                                            <label className="misa-label">Loại lệnh <span className="required">*</span></label>
-                                            <input
-                                                className="misa-input"
-                                                value={form.orderType === 'ASSEMBLY' ? 'Lắp ráp' : 'Tháo dỡ'}
-                                                disabled
-                                                style={{ backgroundColor: '#f1f5f9', color: '#64748b', cursor: 'not-allowed' }}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
                                 <div className="misa-form-row">
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                                         <label className="misa-label">Mã lệnh</label>
-                                        <input className="misa-input" value={form.orderCode} onChange={(event) => setField('orderCode', event.target.value)} placeholder="Để trống để tự sinh mã" disabled={!canEdit} />
+                                        <input className="misa-input" value={form.orderCode} onChange={(event) => setField('orderCode', event.target.value)} placeholder="Mã lệnh" disabled={!canEdit} />
                                     </div>
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                                         <label className="misa-label">Ngày thực hiện <span className="required">*</span></label>
@@ -744,7 +713,7 @@ function AssemblyOrderFormPage() {
                                     </div>
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                                         <label className="misa-label">Số lượng <span className="required">*</span></label>
-                                        <input className="misa-input" style={{ textAlign: 'right' }} inputMode="decimal" type="number" min="0.0001" step="0.0001" value={form.quantity} onChange={(event) => setField('quantity', event.target.value)} disabled={!canEdit} />
+                                        <input className="misa-input" style={{ textAlign: 'right' }} inputMode="numeric" type="number" min="1" step="1" value={form.quantity} onFocus={(e) => e.target.select()} onChange={(event) => setField('quantity', event.target.value)} disabled={!canEdit} />
                                     </div>
                                 </div>
 
@@ -803,78 +772,6 @@ function AssemblyOrderFormPage() {
                             </div>
 
                         </div>
-
-                        {isTrackingSerial && (
-                            <div className={styles.card}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                                    <div>
-                                        <h2 className={styles.cardTitle} style={{ margin: 0 }}>Cấu hình Serial (Serial Mapping)</h2>
-                                        <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>Vui lòng gán Serial linh kiện cho từng Serial thành phẩm.</p>
-                                    </div>
-                                    {orderDetail?.status === 'APPROVED' && (
-                                        <button className="btn-misa-post" type="button" onClick={handleSaveSerials} disabled={savingSerials} style={{ padding: '6px 16px', fontSize: '13px' }}>
-                                            <i className="bi bi-save"></i> {savingSerials ? 'Đang lưu...' : 'Lưu cấu hình'}
-                                        </button>
-                                    )}
-                                </div>
-                                <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-                                        <thead style={{ backgroundColor: '#f8fafc', color: '#475569' }}>
-                                            <tr>
-                                                <th style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>Serial Thành Phẩm (PC)</th>
-                                                {Object.keys(componentSerialsByVariant).map(vId => {
-                                                    const variantName = previewLines.find(l => String(l.componentVariantId) === String(vId))?.componentName || `Linh kiện ${vId}`;
-                                                    return <th key={vId} style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{variantName}</th>;
-                                                })}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {targetSerials.map((targetSerial, index) => (
-                                                <tr key={targetSerial} style={{ borderBottom: index < targetSerials.length - 1 ? '1px solid #f1f5f9' : 'none', backgroundColor: '#fff' }}>
-                                                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--color-primary)' }}>{targetSerial}</td>
-                                                    {Object.keys(componentSerialsByVariant).map(vId => {
-                                                        const availableSerials = componentSerialsByVariant[vId] || [];
-                                                        const selectedByOthers = new Set();
-                                                        Object.keys(serialMappings).forEach(ts => {
-                                                            if (ts !== targetSerial && serialMappings[ts][vId]) {
-                                                                selectedByOthers.add(serialMappings[ts][vId]);
-                                                            }
-                                                        });
-                                                        const currentSelection = serialMappings[targetSerial]?.[vId] || '';
-
-                                                        return (
-                                                            <td key={vId} style={{ padding: '12px 16px' }}>
-                                                                <select
-                                                                    className="misa-input"
-                                                                    value={currentSelection}
-                                                                    onChange={(e) => handleMappingChange(targetSerial, vId, e.target.value)}
-                                                                    disabled={orderDetail?.status !== 'APPROVED'}
-                                                                    style={{ minWidth: '150px', height: '36px' }}
-                                                                >
-                                                                    <option value="">-- Chọn Serial --</option>
-                                                                    {availableSerials.map(cs => (
-                                                                        <option key={cs} value={cs} disabled={selectedByOthers.has(cs)}>
-                                                                            {cs} {selectedByOthers.has(cs) ? '(Đã dùng)' : ''}
-                                                                        </option>
-                                                                    ))}
-                                                                </select>
-                                                            </td>
-                                                        );
-                                                    })}
-                                                </tr>
-                                            ))}
-                                            {targetSerials.length === 0 && (
-                                                <tr>
-                                                    <td colSpan={100} style={{ padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
-                                                        Chưa có dữ liệu Serial thành phẩm. Vui lòng lập Phiếu Nhập kho thành phẩm và khai báo Serial trước.
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     {/* RIGHT COLUMN: SUMMARY */}
@@ -932,7 +829,50 @@ function AssemblyOrderFormPage() {
                         </div>
                     </div>
                 </div>
+
+                {/* Hiển thị chi tiết Serial đã lắp ráp */}
+                {orderDetail?.mappedSerials?.length > 0 && (
+                    <div className={styles.card} style={{ marginTop: '24px' }}>
+                        <h2 className={styles.cardTitle}>
+                            <i className="bi bi-list-nested" style={{ marginRight: '8px', color: 'var(--color-primary)' }}></i>
+                            {orderDetail?.orderType === 'DISASSEMBLY' ? 'Lịch sử Serial đã tháo dỡ' : 'Lịch sử Serial đã lắp ráp'}
+                        </h2>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                            {Object.entries(
+                                orderDetail.mappedSerials.reduce((acc, curr) => {
+                                    if (!acc[curr.targetSerial]) acc[curr.targetSerial] = [];
+                                    acc[curr.targetSerial].push(curr);
+                                    return acc;
+                                }, {})
+                            ).map(([targetSerial, components], index) => (
+                                <div key={targetSerial} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                    <div style={{ backgroundColor: '#f8fafc', padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
+                                        <div style={{ backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', marginRight: '12px', flexShrink: 0 }}>
+                                            {index + 1}
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{orderDetail?.orderType === 'DISASSEMBLY' ? 'Thành phẩm đã tháo:' : 'Thành phẩm đã lắp:'} {orderDetail.targetName}</div>
+                                            <div style={{ fontWeight: 600, color: 'var(--color-primary)', fontSize: '14px' }}>{targetSerial}</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ padding: '8px 0' }}>
+                                        {components.map((comp, i) => (
+                                            <div key={comp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', borderBottom: i < components.length - 1 ? '1px solid #f1f5f9' : 'none', fontSize: '13px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, paddingRight: '12px' }}>
+                                                    <i className={orderDetail?.orderType === 'DISASSEMBLY' ? "bi bi-box-arrow-up-right" : "bi bi-arrow-return-right"} style={{ color: 'var(--color-primary)', opacity: 0.5, marginRight: '8px' }}></i>
+                                                    <span style={{ color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }} title={comp.componentName}>{comp.componentName}</span>
+                                                </div>
+                                                <span style={{ fontWeight: 500, color: '#0f172a', backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>{comp.componentSerial}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
+
 
             <div className={styles.bottomBar}>
                 <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-orders')}>
@@ -940,14 +880,33 @@ function AssemblyOrderFormPage() {
                 </button>
                 {orderDetail?.status === 'APPROVED' && (
                     <div className={styles.actionButtons}>
-                        <button className={styles.btnOutline} type="button" onClick={() => handleGenerateInventory('GOODS_ISSUE')} disabled={actualExports >= requiredExportsQty}>
-                            <i className="bi bi-box-arrow-up"></i> {actualExports >= requiredExportsQty ? 'Đã lập đủ xuất' : 'Lập phiếu xuất kho'}
-                        </button>
-                        <button className={styles.btnOutline} type="button" onClick={() => handleGenerateInventory('GOODS_RECEIPT')} disabled={actualExports < requiredExportsQty || actualImports >= requiredImportsQty}>
-                            <i className="bi bi-box-arrow-in-down"></i> {actualImports >= requiredImportsQty ? 'Đã lập đủ nhập' : 'Lập phiếu nhập kho'}
-                        </button>
+                        {['ASSEMBLY', 'DISASSEMBLY'].includes(form.orderType) && (
+                            <button className="btn-misa-post" style={{ backgroundColor: '#10b981', marginRight: '8px' }} type="button" onClick={() => setShowExecutionModal(true)}>
+                                <i className="bi bi-upc-scan"></i> {form.orderType === 'ASSEMBLY' ? 'Thực thi Lắp ráp' : 'Thực thi Tháo dỡ'}
+                            </button>
+                        )}
+                        {linkedExports?.length > 0 && (
+                            <button className={styles.btnOutline} type="button" onClick={() => navigate('/export-slips', { state: { referenceId: id, referenceType: 'ASSEMBLY_ORDER' } })}>
+                                <i className="bi bi-box-arrow-up"></i> Xem phiếu xuất kho
+                            </button>
+                        )}
+                        {linkedImports?.length > 0 && (
+                            <button className={styles.btnOutline} type="button" onClick={() => navigate('/import-history', { state: { referenceId: id, referenceType: 'ASSEMBLY_ORDER' } })}>
+                                <i className="bi bi-box-arrow-in-down"></i> Xem phiếu nhập kho
+                            </button>
+                        )}
                         <button className="btn-misa-post" style={{ backgroundColor: '#0ea5e9' }} type="button" onClick={(e) => handleSubmit(e, 'SUBMITTED')} disabled={disableComplete}>
                             <i className="bi bi-check-circle-fill"></i> Hoàn thành
+                        </button>
+                    </div>
+                )}
+                {orderDetail?.status === 'SUBMITTED' && (
+                    <div className={styles.actionButtons}>
+                        <button className={styles.btnOutline} type="button" onClick={() => navigate('/export-slips', { state: { referenceId: id, referenceType: 'ASSEMBLY_ORDER' } })}>
+                            <i className="bi bi-box-arrow-up"></i> Xem phiếu xuất kho
+                        </button>
+                        <button className={styles.btnOutline} type="button" onClick={() => navigate('/import-history', { state: { referenceId: id, referenceType: 'ASSEMBLY_ORDER' } })}>
+                            <i className="bi bi-box-arrow-in-down"></i> Xem phiếu nhập kho
                         </button>
                     </div>
                 )}
@@ -986,11 +945,11 @@ function AssemblyOrderFormPage() {
                         </div>
                         <div className={bomStyles.modalBody} style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1 }}>
                             <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)', background: '#f8fafc', flexShrink: 0 }}>
-                                <input 
-                                    type="text" 
-                                    className="misa-input" 
+                                <input
+                                    type="text"
+                                    className="misa-input"
                                     style={{ width: '100%', padding: '10px', fontSize: '1rem' }}
-                                    placeholder="Tìm kiếm linh kiện theo tên, mã sản phẩm..." 
+                                    placeholder="Tìm kiếm linh kiện theo tên, mã sản phẩm..."
                                     value={searchVariantQuery}
                                     onChange={(e) => setSearchVariantQuery(e.target.value)}
                                     autoFocus
@@ -1008,7 +967,7 @@ function AssemblyOrderFormPage() {
                                     }
                                     if (!searchVariantQuery) return true;
                                     const q = searchVariantQuery.toLowerCase();
-                                    return (v.sku || '').toLowerCase().includes(q) 
+                                    return (v.sku || '').toLowerCase().includes(q)
                                         || (v.productName || '').toLowerCase().includes(q)
                                         || (v.variantName || '').toLowerCase().includes(q);
                                 }).map(variant => (
@@ -1034,7 +993,7 @@ function AssemblyOrderFormPage() {
                                             </div>
                                         </div>
                                         <div className={bomStyles.variantPickerAction}>
-                                            <button 
+                                            <button
                                                 className={bomStyles.primaryButton}
                                                 type="button"
                                                 onClick={() => {
@@ -1059,14 +1018,14 @@ function AssemblyOrderFormPage() {
                                     }
                                     if (!searchVariantQuery) return true;
                                     const q = searchVariantQuery.toLowerCase();
-                                    return (v.sku || '').toLowerCase().includes(q) 
+                                    return (v.sku || '').toLowerCase().includes(q)
                                         || (v.productName || '').toLowerCase().includes(q)
                                         || (v.variantName || '').toLowerCase().includes(q);
                                 }).length === 0 && (
-                                    <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                                        Không tìm thấy linh kiện phù hợp với "{searchVariantQuery}"
-                                    </div>
-                                )}
+                                        <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                            Không tìm thấy linh kiện phù hợp với "{searchVariantQuery}"
+                                        </div>
+                                    )}
                                 {variants.length === 0 && (
                                     <div style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
                                         Không có linh kiện nào
@@ -1079,184 +1038,194 @@ function AssemblyOrderFormPage() {
                     <>
                         {/* Custom Modal Header to match Image 1 */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid #e5e7eb' }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>Tạo nhanh cấu hình</h2>
-                    <button type="button" onClick={() => setShowBomModal(false)} style={{ background: '#f3f4f6', border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280' }}>
-                        <i className="bi bi-x-lg"></i>
-                    </button>
-                </div>
+                            <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#1f2937' }}>Tạo nhanh cấu hình</h2>
+                            <button type="button" onClick={() => setShowBomModal(false)} style={{ background: '#f3f4f6', border: 'none', width: '32px', height: '32px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280' }}>
+                                <i className="bi bi-x-lg"></i>
+                            </button>
+                        </div>
 
-                <div style={{ padding: '24px' }}>
-                    {bomError && (
-                        <div style={{ padding: '12px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' }}>
-                            <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: '8px' }}></i>
-                            {bomError}
-                        </div>
-                    )}
+                        <div style={{ padding: '24px' }}>
+                            {bomError && (
+                                <div style={{ padding: '12px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' }}>
+                                    <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: '8px' }}></i>
+                                    {bomError}
+                                </div>
+                            )}
 
-                    <div className="misa-form-row">
-                        <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                            <label className="misa-label">Thành phẩm</label>
-                            <select className="misa-input" value={bomForm.productId} onChange={(event) => handleBomProductChange(event.target.value)}>
-                                <option value="">Chọn thành phẩm</option>
-                                {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
-                                    <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                            <label className="misa-label">Mã cấu hình</label>
-                            <input className="misa-input" value={bomForm.bomCode} onChange={(event) => setBomField('bomCode', event.target.value)} placeholder="Để trống để tự sinh mã" />
-                        </div>
-                    </div>
-                    <div className="misa-form-row" style={{ marginTop: '16px' }}>
-                        <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                            <label className="misa-label">Tên cấu hình</label>
-                            <input className="misa-input" value={bomForm.bomName} onChange={(event) => setBomField('bomName', event.target.value)} placeholder="Ví dụ: Cấu hình PC văn phòng" />
-                        </div>
-                        <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                            <label className="misa-label">Phiên bản</label>
-                            <input className="misa-input" inputMode="decimal" type="number" min="0.01" step="0.01" value={bomForm.versionNo} onChange={(event) => setBomField('versionNo', event.target.value)} />
-                        </div>
-                    </div>
-
-                    <div className={bomStyles.bomBuilderContainer} style={{ marginTop: '24px' }}>
-                        <div className={bomStyles.bomBuilderHeader}>
-                            <h3 className={bomStyles.bomBuilderTitle}>Chọn linh kiện xây cấu hình máy tính theo nhu cầu</h3>
-                            <div className={bomStyles.bomTotalCost}>
-                                Chi phí dự tính: {bomForm.lines.reduce((sum, line) => {
-                                    const v = variants.find(v => String(v.id) === String(line.componentVariantId));
-                                    return sum + (v ? Number(v.salePrice || 0) : 0) * Number(line.quantity || 0);
-                                }, 0).toLocaleString('vi-VN')} đ
+                            <div className="misa-form-row">
+                                <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                                    <label className="misa-label">Thành phẩm</label>
+                                    <select className="misa-input" value={bomForm.productId} onChange={(event) => handleBomProductChange(event.target.value)}>
+                                        <option value="">Chọn thành phẩm</option>
+                                        {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
+                                            <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                                    <label className="misa-label">Mã cấu hình</label>
+                                    <input className="misa-input" value={bomForm.bomCode} onChange={(event) => setBomField('bomCode', event.target.value)} placeholder="Để trống để tự sinh mã" />
+                                </div>
                             </div>
-                        </div>
-                        <div className={bomStyles.bomList}>
-                            {bomForm.lines.map((line, index) => {
-                                const selectedVariant = variants.find(v => String(v.id) === String(line.componentVariantId));
-                                
-                                return (
-                                    <div key={index} className={bomStyles.bomLineCard}>
-                                        <div className={bomStyles.bomLineHeader} style={{ flexDirection: 'column', justifyContent: 'center' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <span style={{ fontWeight: 700, fontSize: '1rem', color: '#1f2937', textTransform: 'uppercase' }}>
-                                                    {index + 1}. {line.componentRole || (selectedVariant ? selectedVariant.categoryName : 'Linh kiện tùy chọn')}
-                                                </span>
-                                                {line.templateNote && (
-                                                    <span style={{ fontSize: '0.8rem', backgroundColor: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', fontWeight: 500, marginLeft: '6px', border: '1px dashed #f59e0b' }}>
-                                                        <i className="bi bi-pin-angle-fill" style={{ marginRight: '4px' }}></i>
-                                                        Yêu cầu: {line.templateNote}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', alignItems: 'flex-start' }}>
-                                                {selectedVariant && selectedVariant.categoryDescription && (
-                                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 'normal' }}>
-                                                        ({selectedVariant.categoryDescription})
-                                                    </div>
-                                                )}
-                                                {line.componentRole && (
-                                                    <span style={{ fontSize: '0.65rem', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, textTransform: 'uppercase' }}>
-                                                        Bắt buộc
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        
-                                        {selectedVariant ? (
-                                            <div className={bomStyles.bomLineContent}>
-                                                <div className={bomStyles.bomItemImgBox}>
-                                                    {selectedVariant.imageUrl ? (
-                                                        <img src={selectedVariant.imageUrl} alt={selectedVariant.variantName} />
-                                                    ) : (
-                                                        <i className="bi bi-box"></i>
-                                                    )}
-                                                </div>
-                                                <div className={bomStyles.bomItemDetails}>
-                                                    <div className={bomStyles.bomItemTitle} title={`${selectedVariant.productName} ${(selectedVariant.variantName && selectedVariant.variantName !== selectedVariant.productName) ? `/ ${selectedVariant.variantName}` : ''}`}>
-                                                        {selectedVariant.productName} {(selectedVariant.variantName && selectedVariant.variantName !== selectedVariant.productName) && `/ ${selectedVariant.variantName}`}
-                                                    </div>
-                                                    <div className={bomStyles.bomItemMeta}>
-                                                        <span>Bảo hành: <strong>{selectedVariant.warrantyQty != null ? `${selectedVariant.warrantyQty} Tháng` : 'Không bảo hành'}</strong></span>
-                                                        <span className={bomStyles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(selectedVariant.id).available) > 0 ? '#16a34a' : '#dc2626' }}>{Math.max(0, getStockInfo(selectedVariant.id).available).toLocaleString('vi-VN')}</strong></span>
-                                                        <span>Mã SP: <strong>{selectedVariant.sku}</strong></span>
-                                                    </div>
-                                                    <div className={bomStyles.bomExtraFields}>
-                                                        <label>
-                                                            Ghi chú:
-                                                            <input type="text" className={bomStyles.fullWidth} value={line.note} onChange={(event) => setBomLineField(index, 'note', event.target.value)} />
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div className={bomStyles.bomItemPriceGroup}>
-                                                    <span className={bomStyles.bomItemPrice}>{Number(selectedVariant.salePrice || 0).toLocaleString('vi-VN')}</span>
-                                                    <span>x</span>
-                                                    <input className={bomStyles.bomItemQtyInput} type="number" min="1" step="1" value={line.quantity} onChange={(event) => setBomLineField(index, 'quantity', event.target.value)} />
-                                                    <span>=</span>
-                                                    <span className={bomStyles.bomItemTotal}>
-                                                        {(Number(selectedVariant.salePrice || 0) * Number(line.quantity || 0)).toLocaleString('vi-VN')}
-                                                    </span>
-                                                </div>
-                                                <div className={bomStyles.bomItemActions}>
-                                                    <button className={`${bomStyles.bomActionBtn} ${bomStyles.edit}`} type="button" title="Đổi linh kiện" onClick={() => setPickingLineIndex(index)}>
-                                                        <i className="bi bi-pencil-square"></i>
-                                                    </button>
-                                                    {!line.componentRole && (
-                                                        <button className={`${bomStyles.bomActionBtn} ${bomStyles.delete}`} type="button" title="Xóa" onClick={() => removeBomLine(index)}>
-                                                            <i className="bi bi-trash"></i>
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className={bomStyles.bomEmptySlot} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '24px' }}>
-                                                {line.componentRole && (
-                                                    <div style={{ fontWeight: 600, color: '#4b5563', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <i className="bi bi-info-circle" style={{ color: '#3b82f6' }}></i>
-                                                        Cần chọn danh mục: <span style={{ color: '#1d4ed8' }}>{line.componentRole}</span>
+                            <div className="misa-form-row" style={{ marginTop: '16px' }}>
+                                <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                                    <label className="misa-label">Tên cấu hình</label>
+                                    <input className="misa-input" value={bomForm.bomName} onChange={(event) => setBomField('bomName', event.target.value)} placeholder="Ví dụ: Cấu hình PC văn phòng" />
+                                </div>
+                                <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                                    <label className="misa-label">Phiên bản</label>
+                                    <input className="misa-input" inputMode="decimal" type="number" min="0.01" step="0.01" value={bomForm.versionNo} onChange={(event) => setBomField('versionNo', event.target.value)} />
+                                </div>
+                            </div>
+
+                            <div className={bomStyles.bomBuilderContainer} style={{ marginTop: '24px' }}>
+                                <div className={bomStyles.bomBuilderHeader}>
+                                    <h3 className={bomStyles.bomBuilderTitle}>Chọn linh kiện xây cấu hình máy tính theo nhu cầu</h3>
+                                    <div className={bomStyles.bomTotalCost}>
+                                        Chi phí dự tính: {bomForm.lines.reduce((sum, line) => {
+                                            const v = variants.find(v => String(v.id) === String(line.componentVariantId));
+                                            return sum + (v ? Number(v.salePrice || 0) : 0) * Number(line.quantity || 0);
+                                        }, 0).toLocaleString('vi-VN')} đ
+                                    </div>
+                                </div>
+                                <div className={bomStyles.bomList}>
+                                    {bomForm.lines.map((line, index) => {
+                                        const selectedVariant = variants.find(v => String(v.id) === String(line.componentVariantId));
+
+                                        return (
+                                            <div key={index} className={bomStyles.bomLineCard}>
+                                                <div className={bomStyles.bomLineHeader} style={{ flexDirection: 'column', justifyContent: 'center' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span style={{ fontWeight: 700, fontSize: '1rem', color: '#1f2937', textTransform: 'uppercase' }}>
+                                                            {index + 1}. {line.componentRole || (selectedVariant ? selectedVariant.categoryName : 'Linh kiện tùy chọn')}
+                                                        </span>
                                                         {line.templateNote && (
-                                                            <span style={{ marginLeft: '8px', color: '#92400e', backgroundColor: '#fef3c7', padding: '2px 6px', borderRadius: '4px', fontSize: '0.85rem' }}>
+                                                            <span style={{ fontSize: '0.8rem', backgroundColor: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', fontWeight: 500, marginLeft: '6px', border: '1px dashed #f59e0b' }}>
                                                                 <i className="bi bi-pin-angle-fill" style={{ marginRight: '4px' }}></i>
                                                                 Yêu cầu: {line.templateNote}
                                                             </span>
                                                         )}
                                                     </div>
-                                                )}
-                                                <button
-                                                    className={bomStyles.chooseComponentBtn}
-                                                    type="button"
-                                                    onClick={() => setPickingLineIndex(index)}
-                                                >
-                                                    + Chọn linh kiện...
-                                                </button>
-                                                {!line.componentRole && (
-                                                    <button className={bomStyles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeBomLine(index)} style={{ position: 'absolute', right: '12px', top: '12px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>
-                                                        <i className="bi bi-trash"></i>
-                                                    </button>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px', alignItems: 'flex-start' }}>
+                                                        {selectedVariant && selectedVariant.categoryDescription && (
+                                                            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 'normal' }}>
+                                                                ({selectedVariant.categoryDescription})
+                                                            </div>
+                                                        )}
+                                                        {line.componentRole && (
+                                                            <span style={{ fontSize: '0.65rem', backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fca5a5', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, textTransform: 'uppercase' }}>
+                                                                Bắt buộc
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {selectedVariant ? (
+                                                    <div className={bomStyles.bomLineContent}>
+                                                        <div className={bomStyles.bomItemImgBox}>
+                                                            {selectedVariant.imageUrl ? (
+                                                                <img src={selectedVariant.imageUrl} alt={selectedVariant.variantName} />
+                                                            ) : (
+                                                                <i className="bi bi-box"></i>
+                                                            )}
+                                                        </div>
+                                                        <div className={bomStyles.bomItemDetails}>
+                                                            <div className={bomStyles.bomItemTitle} title={`${selectedVariant.productName} ${(selectedVariant.variantName && selectedVariant.variantName !== selectedVariant.productName) ? `/ ${selectedVariant.variantName}` : ''}`}>
+                                                                {selectedVariant.productName} {(selectedVariant.variantName && selectedVariant.variantName !== selectedVariant.productName) && `/ ${selectedVariant.variantName}`}
+                                                            </div>
+                                                            <div className={bomStyles.bomItemMeta}>
+                                                                <span>Bảo hành: <strong>{selectedVariant.warrantyQty != null ? `${selectedVariant.warrantyQty} Tháng` : 'Không bảo hành'}</strong></span>
+                                                                <span className={bomStyles.stockStatus}>Tồn kho: <strong style={{ color: Math.max(0, getStockInfo(selectedVariant.id).available) > 0 ? '#16a34a' : '#dc2626' }}>{Math.max(0, getStockInfo(selectedVariant.id).available).toLocaleString('vi-VN')}</strong></span>
+                                                                <span>Mã SP: <strong>{selectedVariant.sku}</strong></span>
+                                                            </div>
+                                                            <div className={bomStyles.bomExtraFields}>
+                                                                <label>
+                                                                    Ghi chú:
+                                                                    <input type="text" className={bomStyles.fullWidth} value={line.note} onChange={(event) => setBomLineField(index, 'note', event.target.value)} />
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                        <div className={bomStyles.bomItemPriceGroup}>
+                                                            <span className={bomStyles.bomItemPrice}>{Number(selectedVariant.salePrice || 0).toLocaleString('vi-VN')}</span>
+                                                            <span>x</span>
+                                                            <input className={bomStyles.bomItemQtyInput} type="number" min="1" step="1" value={line.quantity} onChange={(event) => setBomLineField(index, 'quantity', event.target.value)} />
+                                                            <span>=</span>
+                                                            <span className={bomStyles.bomItemTotal}>
+                                                                {(Number(selectedVariant.salePrice || 0) * Number(line.quantity || 0)).toLocaleString('vi-VN')}
+                                                            </span>
+                                                        </div>
+                                                        <div className={bomStyles.bomItemActions}>
+                                                            <button className={`${bomStyles.bomActionBtn} ${bomStyles.edit}`} type="button" title="Đổi linh kiện" onClick={() => setPickingLineIndex(index)}>
+                                                                <i className="bi bi-pencil-square"></i>
+                                                            </button>
+                                                            {!line.componentRole && (
+                                                                <button className={`${bomStyles.bomActionBtn} ${bomStyles.delete}`} type="button" title="Xóa" onClick={() => removeBomLine(index)}>
+                                                                    <i className="bi bi-trash"></i>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className={bomStyles.bomEmptySlot} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '24px' }}>
+                                                        {line.componentRole && (
+                                                            <div style={{ fontWeight: 600, color: '#4b5563', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <i className="bi bi-info-circle" style={{ color: '#3b82f6' }}></i>
+                                                                Cần chọn danh mục: <span style={{ color: '#1d4ed8' }}>{line.componentRole}</span>
+                                                                {line.templateNote && (
+                                                                    <span style={{ marginLeft: '8px', color: '#92400e', backgroundColor: '#fef3c7', padding: '2px 6px', borderRadius: '4px', fontSize: '0.85rem' }}>
+                                                                        <i className="bi bi-pin-angle-fill" style={{ marginRight: '4px' }}></i>
+                                                                        Yêu cầu: {line.templateNote}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        <button
+                                                            className={bomStyles.chooseComponentBtn}
+                                                            type="button"
+                                                            onClick={() => setPickingLineIndex(index)}
+                                                        >
+                                                            + Chọn linh kiện...
+                                                        </button>
+                                                        {!line.componentRole && (
+                                                            <button className={bomStyles.deleteButton} type="button" title="Xóa dòng" onClick={() => removeBomLine(index)} style={{ position: 'absolute', right: '12px', top: '12px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                                                                <i className="bi bi-trash"></i>
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
-                                        )}
+                                        );
+                                    })}
+
+                                    <div style={{ marginTop: 8 }}>
+                                        <button className={bomStyles.addBomLineBtn} type="button" onClick={addBomLine}>
+                                            <i className="bi bi-plus-circle"></i> Thêm linh kiện
+                                        </button>
                                     </div>
-                                );
-                            })}
-                            
-                            <div style={{ marginTop: 8 }}>
-                                <button className={bomStyles.addBomLineBtn} type="button" onClick={addBomLine}>
-                                    <i className="bi bi-plus-circle"></i> Thêm linh kiện
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                                <button className="btn-misa-cancel" type="button" onClick={() => setShowBomModal(false)} style={{ padding: '8px 24px', fontWeight: '600' }}>Hủy</button>
+                                <button className="btn-misa-post" type="button" onClick={saveQuickBom} disabled={savingBom} style={{ padding: '8px 24px', fontWeight: '600', backgroundColor: '#0070cc' }}>
+                                    <i className="bi bi-download"></i>
+                                    {savingBom ? 'Đang lưu...' : 'Lưu'}
                                 </button>
                             </div>
                         </div>
-                    </div>
-
-                    <div style={{ marginTop: '32px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                        <button className="btn-misa-cancel" type="button" onClick={() => setShowBomModal(false)} style={{ padding: '8px 24px', fontWeight: '600' }}>Hủy</button>
-                        <button className="btn-misa-post" type="button" onClick={saveQuickBom} disabled={savingBom} style={{ padding: '8px 24px', fontWeight: '600', backgroundColor: '#0070cc' }}>
-                            <i className="bi bi-download"></i>
-                            {savingBom ? 'Đang lưu...' : 'Lưu'}
-                        </button>
-                    </div>
-                </div>
-                </>
+                    </>
                 )}
             </Modal>
+
+            <AssemblyExecutionModal
+                visible={showExecutionModal}
+                onCancel={() => setShowExecutionModal(false)}
+                order={orderDetail}
+                onSuccess={() => {
+                    setShowExecutionModal(false);
+                    loadOrder();
+                }}
+            />
 
             <Toast {...toast} onClose={hideToast} />
         </AdminLayout>

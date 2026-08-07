@@ -109,7 +109,9 @@ function ExportSlipPage() {
     partnerId: '',
     staffId: '',
     issuePurpose: '',
-  }), [location.state?.filterDocCode]);
+    referenceId: location.state?.referenceId || '',
+    referenceType: location.state?.referenceType || '',
+  }), [location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
@@ -184,6 +186,8 @@ function ExportSlipPage() {
         status: filters.status || undefined,
         warehouseId: filters.warehouseId || undefined,
         issuePurpose: filters.issuePurpose || undefined,
+        referenceId: filters.referenceId || undefined,
+        referenceType: filters.referenceType || undefined,
       });
       const data = unwrap(response) || [];
       setSlips(data);
@@ -194,7 +198,7 @@ function ExportSlipPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters.docCode, filters.fromDate, filters.toDate, filters.status, filters.warehouseId, filters.issuePurpose]);
+  }, [filters.docCode, filters.fromDate, filters.toDate, filters.status, filters.warehouseId, filters.issuePurpose, filters.referenceId, filters.referenceType]);
 
   const handleNavigateReference = (refType, refId) => {
     if (!refType || !refId) return;

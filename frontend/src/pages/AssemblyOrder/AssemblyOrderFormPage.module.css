@@ -25,7 +25,7 @@
   gap: 8px;
   font-size: 18px;
   font-weight: 600;
-  color: #1e3f7a;
+  color: var(--color-primary, #1e3f7a);
   text-decoration: none;
   cursor: pointer;
 }
@@ -587,7 +587,7 @@
 .mainContent { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start; }
 .leftColumn { display: flex; flex-direction: column; gap: 24px; }
 .rightColumn { display: flex; flex-direction: column; gap: 24px; }
-.cardTitle { padding: 16px 20px; margin: 0; border-bottom: 1px solid #e0e0e0; font-weight: 700; font-size: 16px; color: #1e3f7a; background-color: #fff; }
+.cardTitle { padding: 16px 20px; margin: 0; border-bottom: 1px solid #e0e0e0; font-weight: 700; font-size: 16px; color: var(--color-primary, #1e3f7a); background-color: #fff; }
 .detailGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .detailItem { display: flex; flex-direction: column; gap: 4px; }
 .detailItem span { font-size: 12px; color: #666; text-transform: uppercase; font-weight: 600; }

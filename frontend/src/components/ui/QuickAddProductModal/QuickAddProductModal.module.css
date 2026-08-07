@@ -1,0 +1,25 @@
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--color-text-body);
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+
+.field input,
+.field select {
+    width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font: inherit;
+    color: var(--color-text-body);
+    background: var(--color-white);
+}
+
+.field input:focus,
+.field select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
