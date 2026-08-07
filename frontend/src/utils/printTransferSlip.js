@@ -1,4 +1,5 @@
 import { numberToVietnameseWords } from './numberToVietnameseWords';
+import { formatDateOnly } from './dateFormat';
 
 export function printTransferSlip(slipOrSlips, options = {}) {
   const {
@@ -31,7 +32,7 @@ export function printTransferSlip(slipOrSlips, options = {}) {
   const pagesHtml = slips.map((slip) => {
     const lines = slip?.lines || [];
 
-    const docDateStr = slip.transferDate ? new Date(slip.transferDate).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN');
+    const docDateStr = formatDateOnly(slip.transferDate || new Date());
 
     const fromWarehouseName = warehouseById.get(slip.fromWarehouseId)?.name || 'Chưa rõ';
     const toWarehouseName = warehouseById.get(slip.toWarehouseId)?.name || 'Chưa rõ';

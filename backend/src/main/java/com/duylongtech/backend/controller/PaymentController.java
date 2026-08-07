@@ -9,30 +9,43 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/payments")
 @RequiredArgsConstructor
-@Tag(name = "Payment Management", description = "APIs cho Phiếu thu (Receipt) & Phiếu chi (Voucher) công nợ")
+@Tag(name = "Payment Management", description = "Receipt, voucher and partner debt APIs")
 public class PaymentController {
 
     private final PaymentService paymentService;
 
     @PostMapping("/receipts")
-    @Operation(summary = "Tạo phiếu thu tiền (Thu nợ Khách hàng / Khác)")
+    @Operation(summary = "Create customer receipt")
     public ResponseEntity<PaymentResponse> createReceipt(@RequestBody PaymentRequest request) {
         return ResponseEntity.ok(paymentService.createPaymentReceipt(request));
     }
 
     @PostMapping("/vouchers")
-    @Operation(summary = "Tạo phiếu chi tiền (Thanh toán nợ Nhà cung cấp / Khác)")
+    @Operation(summary = "Create supplier payment voucher")
     public ResponseEntity<PaymentResponse> createVoucher(@RequestBody PaymentRequest request) {
         return ResponseEntity.ok(paymentService.createPaymentVoucher(request));
     }
 
+    @PostMapping("/{id}/post")
+    @Operation(summary = "Post a DRAFT receipt/voucher")
+    public ResponseEntity<PaymentResponse> postPayment(@PathVariable Long id) {
+        return ResponseEntity.ok(paymentService.postPayment(id));
+    }
+
+    @GetMapping("/balance/{partnerId}")
+    @Operation(summary = "Get current partner debt balance")
+    public ResponseEntity<BigDecimal> getPartnerDebtBalance(@PathVariable Long partnerId) {
+        return ResponseEntity.ok(paymentService.getPartnerDebtBalance(partnerId));
+    }
+
     @GetMapping("/history/{partnerId}")
-    @Operation(summary = "Lấy lịch sử thu / chi tiền của một đối tác")
+    @Operation(summary = "Get receipt/voucher history for a partner")
     public ResponseEntity<List<PaymentResponse>> getPartnerHistory(@PathVariable Long partnerId) {
         return ResponseEntity.ok(paymentService.getPartnerPaymentHistory(partnerId));
     }

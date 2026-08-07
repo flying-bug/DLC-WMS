@@ -9,10 +9,11 @@ import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './CreateTransferSlipPage.module.css';
+import { getTodayIsoDate } from '../../utils/dateFormat';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
-const today = () => new Date().toLocaleDateString('sv-SE');
+const today = getTodayIsoDate;
 const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
   ? `${item.productName} - ${item.variantName}`
   : item?.productName || '';

@@ -7,6 +7,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import PrintBarcodeModal from '../../components/ui/PrintBarcodeModal/PrintBarcodeModal';
 import axiosClient from '../../api/axiosClient';
 import styles from './ProductPage.module.css';
+import { getVietnamTimestamp } from '../../utils/dateFormat';
 import * as XLSX from 'xlsx';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import Modal from '../../components/ui/Modal/Modal';
@@ -1065,13 +1066,7 @@ const ProductPage = () => {
     };
 
     const buildTimestamp = () => {
-        const now = new Date();
-        return now.getFullYear().toString() +
-            String(now.getMonth() + 1).padStart(2, '0') +
-            String(now.getDate()).padStart(2, '0') + '_' +
-            String(now.getHours()).padStart(2, '0') +
-            String(now.getMinutes()).padStart(2, '0') +
-            String(now.getSeconds()).padStart(2, '0');
+        return getVietnamTimestamp();
     };
 
     const handleExportExcel = async () => {

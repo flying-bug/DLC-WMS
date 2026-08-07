@@ -8,6 +8,7 @@ import styles from './CreateStocktakePage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import { printStocktakeReport } from '../../utils/printStocktakeReport';
+import { getTodayIsoDate, getCurrentDateTimeInput } from '../../utils/dateFormat';
 
 function CreateStocktakePage() {
   const navigate = useNavigate();
@@ -22,8 +23,8 @@ function CreateStocktakePage() {
     purpose: 'Kiểm kê vật tư hàng hóa định kỳ',
     code: '',
     warehouseId: searchParams.get('warehouseId') || 'all',
-    toDate: searchParams.get('toDate') || new Date().toISOString().split('T')[0],
-    createdDate: new Date().toISOString().slice(0, 16),
+    toDate: searchParams.get('toDate') || getTodayIsoDate(),
+    createdDate: getCurrentDateTimeInput(),
     conclusion: '',
     isProcessed: false,
     isValueStocktake: false

@@ -9,6 +9,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import * as transferApi from '../../api/stockTransferApi';
 import { exportToExcel } from '../../utils/excelExport';
 import { printTransferSlip } from '../../utils/printTransferSlip';
+import { formatDateOnly } from '../../utils/dateFormat';
 import styles from './TransferHistoryPage.module.css';
 
 const DEFAULT_COLUMNS = {
@@ -32,13 +33,13 @@ const COLUMN_OPTIONS = [
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
   SUBMITTED: { label: 'Lưu tạm', code: 'info' }, // Adjust if you have another status
-  POSTED: { label: 'Hoàn thành', code: 'success' },
+  POSTED: { label: 'Ghi sổ', code: 'success' },
   CANCELLED: { label: 'Đã hủy', code: 'danger' },
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
-const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN') : '';
+const formatDate = (value) => value ? formatDateOnly(value) : '';
 const sumQuantity = (lines = []) => lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
 const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
   ? `${item.productName} - ${item.variantName}`
@@ -234,7 +235,7 @@ function TransferHistoryPage() {
               onReset={() => { setFilters({ transferCode: '', fromDate: '', toDate: '', status: '' }); setCurrentPage(1); setTimeout(loadSlips, 0); }}
               statusOptions={[
                 { value: 'DRAFT', label: 'Lưu tạm' },
-                { value: 'POSTED', label: 'Hoàn thành' },
+                { value: 'POSTED', label: 'Ghi sổ' },
               ]}
             />
           </div>

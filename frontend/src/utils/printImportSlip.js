@@ -1,3 +1,5 @@
+import { formatDateOnly } from './dateFormat';
+
 export function printImportSlip(slipOrSlips, options = {}) {
   const {
     supplierById = new Map(),
@@ -83,7 +85,7 @@ export function printImportSlip(slipOrSlips, options = {}) {
       `;
     });
 
-    const slipDate = slip.docDate ? new Date(slip.docDate).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN');
+    const slipDate = formatDateOnly(slip.docDate || new Date());
     
     let partnerName = 'Chưa chọn';
     if (!slip.issuePurpose || slip.issuePurpose === 'PURCHASE') {

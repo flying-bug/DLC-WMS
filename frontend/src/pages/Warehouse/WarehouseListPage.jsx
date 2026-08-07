@@ -6,6 +6,7 @@ import WarehouseFormModal from '../../components/warehouse/WarehouseFormModal';
 import WarehouseDeleteModal from '../../components/warehouse/WarehouseDeleteModal';
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './WarehouseListPage.module.css';
+import { getVietnamTimestamp } from '../../utils/dateFormat';
 
 const WarehouseListPage = () => {
     const navigate = useNavigate();
@@ -190,13 +191,7 @@ const WarehouseListPage = () => {
             const link = document.createElement('a');
             link.href = url;
             
-            const now = new Date();
-            const timestamp = now.getFullYear().toString() +
-                String(now.getMonth() + 1).padStart(2, '0') +
-                String(now.getDate()).padStart(2, '0') + '_' +
-                String(now.getHours()).padStart(2, '0') +
-                String(now.getMinutes()).padStart(2, '0') +
-                String(now.getSeconds()).padStart(2, '0');
+            const timestamp = getVietnamTimestamp();
             
             link.setAttribute('download', `DLC_WMS_Danh_Sach_Kho_${timestamp}.xlsx`);
             document.body.appendChild(link);

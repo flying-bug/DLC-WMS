@@ -14,10 +14,11 @@ import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import styles from './UpdateExportSlipPage.module.css';
 
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
+import { getTodayIsoDate } from '../../utils/dateFormat';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
-const today = () => new Date().toLocaleDateString('sv-SE');
+const today = getTodayIsoDate;
 const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')} đ`;
 const customSelectStyles = {
   control: (base, state) => ({

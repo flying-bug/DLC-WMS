@@ -13,7 +13,6 @@ import java.util.List;
 public class SalesOrderResponse {
     private Long id;
     private String soCode;
-    private String publicToken;
     private LocalDate soDate;
     private String status;
 

@@ -23,12 +23,12 @@ export const approvePurchaseOrder = (id) =>
 export const cancelPurchaseOrder = (id) =>
   axiosClient.put(`${BASE}/${id}/cancel`);
 
-export const recordPayment = (id, amount) =>
-  axiosClient.post(`${BASE}/${id}/payments`, { amount });
-
 // Shared lookups
 export const getSuppliers = (params = {}) =>
   axiosClient.get('/suppliers', { params });
+
+export const getSupplierById = (id) =>
+  axiosClient.get(`/suppliers/${id}`);
 
 export const createSupplier = (data) =>
   axiosClient.post('/suppliers', data);

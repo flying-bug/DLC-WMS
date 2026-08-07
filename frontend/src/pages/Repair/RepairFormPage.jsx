@@ -16,6 +16,7 @@ import RepairSerialModal from './components/RepairSerialModal';
 import RepairQuotationTemplate from './components/RepairQuotationTemplate';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import styles from './RepairFormPage.module.css';
+import { getTodayIsoDate } from '../../utils/dateFormat';
 
 const customSelectStyles = {
   control: (base, state) => ({
@@ -38,7 +39,7 @@ const STAGES = ['DRAFT', 'CONFIRMED', 'UNDER_REPAIR', 'DONE'];
 const STAGE_LABELS = { DRAFT: 'Nháp', QUOTATION: 'Báo giá', CONFIRMED: 'Xác nhận', UNDER_REPAIR: 'Đang sửa', DONE: 'Hoàn tất', CANCELLED: 'Đã huỷ' };
 const EDITABLE_STATUSES = ['DRAFT', 'QUOTATION', 'CONFIRMED', 'UNDER_REPAIR'];
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
-const today = () => new Date().toLocaleDateString('sv-SE');
+const today = getTodayIsoDate;
 
 function RepairFormPage() {
   const { id } = useParams();
@@ -85,18 +86,6 @@ function RepairFormPage() {
     contentRef: printRef,
     documentTitle: `Bao-Gia-SC-${repair?.repairCode || 'REP'}`,
   });
-
-  const handleCopyPublicLink = () => {
-    if (!repair) return;
-    if (!repair.publicToken) {
-        showToast('error', 'Lệnh sửa chữa này chưa có mã bảo mật (public token). Vui lòng lưu lại hoặc tải lại trang!');
-        return;
-    }
-    const link = `${window.location.origin}/repair-quote/${repair.publicToken}`;
-    navigator.clipboard.writeText(link)
-      .then(() => showToast('success', 'Đã copy link báo giá!'))
-      .catch(() => showToast('error', 'Không thể copy link'));
-  };
 
   const handleGoBack = () => {
     if (location.key !== 'default') {
@@ -1143,10 +1132,6 @@ function RepairFormPage() {
                 <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: '#3b82f6', borderColor: '#3b82f6' }} onClick={handlePrintQuote}>
                   <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
                 </button>
-                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }} onClick={handleCopyPublicLink}>
-                  <i className="bi bi-link-45deg" style={{ marginRight: '4px' }}></i> Chia sẻ link
-                </button>
-
                 <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: '#10b981', borderColor: '#10b981' }}>
                   Xác nhận sửa chữa
                 </button>
@@ -1160,9 +1145,6 @@ function RepairFormPage() {
               <>
                 <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: '#3b82f6', borderColor: '#3b82f6' }} onClick={handlePrintQuote}>
                   <i className="bi bi-printer" style={{ marginRight: '4px' }}></i> In báo giá
-                </button>
-                <button className="btn-misa-post" style={{ marginRight: '8px', backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }} onClick={handleCopyPublicLink}>
-                  <i className="bi bi-link-45deg" style={{ marginRight: '4px' }}></i> Chia sẻ link
                 </button>
                 <button className="btn-misa-post" disabled={saving} onClick={() => handleChangeStatus('CONFIRMED')} style={{ marginRight: '8px', backgroundColor: '#10b981', borderColor: '#10b981' }}>
                   Xác nhận sửa chữa

@@ -1,9 +1,11 @@
 package com.duylongtech.backend.controller;
 
+import com.duylongtech.backend.dto.request.DirectCheckoutRequest;
 import com.duylongtech.backend.dto.request.SalesOrderRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.SalesOrderResponse;
 import com.duylongtech.backend.service.AuditLogService;
+import com.duylongtech.backend.service.DirectCheckoutService;
 import com.duylongtech.backend.service.SalesOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +25,7 @@ import java.util.List;
 public class SalesOrderController {
 
     private final SalesOrderService salesOrderService;
+    private final DirectCheckoutService directCheckoutService;
     private final AuditLogService auditLogService;
 
     private String getCurrentUser() {
@@ -91,6 +94,27 @@ public class SalesOrderController {
     }
 
     // ─── PUT: Cập nhật đơn bán hàng (chỉ DRAFT) ────────────────────────
+    @PostMapping("/direct-checkout")
+    @Operation(summary = "Bán hàng trực tiếp: tạo đơn, xuất kho và ghi nhận thanh toán")
+    @PreAuthorize("hasAuthority('sales_order:add') or hasAuthority('export:add')")
+    public ApiResponse<SalesOrderResponse> directCheckout(
+            @Valid @RequestBody DirectCheckoutRequest request,
+            HttpServletRequest servletRequest
+    ) {
+        String actor = getCurrentUser();
+        String ip = getClientIp(servletRequest);
+        try {
+            SalesOrderResponse created = directCheckoutService.directCheckout(request, actor);
+            auditLogService.logEvent(actor, "DIRECT_CHECKOUT", "SalesOrder", created.getId(), "SUCCESS",
+                    "Bán hàng trực tiếp: " + created.getSoCode(), ip, null);
+            return ApiResponse.success(created);
+        } catch (Exception e) {
+            auditLogService.logEvent(actor, "DIRECT_CHECKOUT", "SalesOrder", null, "FAILED",
+                    "Bán hàng trực tiếp thất bại: " + e.getMessage(), ip, null);
+            throw e;
+        }
+    }
+
     @PutMapping("/{id}")
     @Operation(summary = "Cập nhật đơn bán hàng (chỉ khi DRAFT)")
     @PreAuthorize("hasAuthority('sales_order:edit') or hasAuthority('export:edit')")

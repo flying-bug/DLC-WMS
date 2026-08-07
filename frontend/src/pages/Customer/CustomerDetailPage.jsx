@@ -9,6 +9,7 @@ import ReceiptsTab from './components/ReceiptsTab';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './CustomerDetailPage.module.css';
+import { formatDateOnly } from '../../utils/dateFormat';
 
 const TABS = {
     SALES: 'SALES',
@@ -141,8 +142,7 @@ const CustomerDetailPage = () => {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '';
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('vi-VN');
+        return formatDateOnly(dateStr);
     };
 
     if (error) {

@@ -1,0 +1,262 @@
+.page {
+  background: #f4f5f8;
+  min-height: calc(100vh - 56px);
+  padding: 24px;
+}
+
+.header {
+  align-items: flex-end;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.breadcrumb {
+  color: #64748b;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.title {
+  color: #1e3f7a;
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.subtitle {
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 6px 0 0;
+}
+
+.backButton,
+.postButton {
+  align-items: center;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 12px;
+  white-space: nowrap;
+}
+
+.backButton {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.backButton:hover {
+  background: #f8fafc;
+}
+
+.summaryGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 20px;
+}
+
+.summaryCard {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+
+.summaryCard span {
+  color: #64748b;
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.summaryCard strong {
+  color: #0075c0;
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  overflow: hidden;
+  padding: 0;
+}
+
+.toolbar {
+  align-items: center;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 0;
+  padding: 14px 16px;
+}
+
+.searchBox {
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 8px;
+  height: 38px;
+  max-width: 420px;
+  padding: 0 10px;
+}
+
+.searchBox:focus-within {
+  border-color: #0075c0;
+  box-shadow: 0 0 0 1px #0075c0;
+}
+
+.searchBox i {
+  color: #64748b;
+}
+
+.searchBox input {
+  border: 0;
+  color: #374151;
+  flex: 1;
+  font-size: 13px;
+  outline: none;
+}
+
+.select {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  color: #374151;
+  font-size: 13px;
+  height: 38px;
+  padding: 0 12px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  border-collapse: collapse;
+  min-width: 1080px;
+  width: 100%;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid #edf1f5;
+  color: #334155;
+  font-size: 13px;
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table tbody tr:hover td {
+  background: #fbfdff;
+}
+
+.codeCell {
+  color: #1e3f7a !important;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.noteCell {
+  color: #475569 !important;
+  max-width: 280px;
+  white-space: pre-wrap;
+}
+
+.textRight {
+  text-align: right !important;
+}
+
+.statusPosted,
+.statusDraft {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 8px;
+}
+
+.statusPosted {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.statusDraft {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.postButton {
+  background: #0075c0;
+  border: 1px solid #0075c0;
+  color: #fff;
+  min-height: 30px;
+  padding: 5px 10px;
+}
+
+.postButton:hover:not(:disabled) {
+  background: #0064a8;
+}
+
+.postButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.empty {
+  color: #64748b !important;
+  padding: 24px 0 !important;
+  text-align: center !important;
+}
+
+.muted {
+  color: #94a3b8;
+}
+
+@media (max-width: 900px) {
+  .header,
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .searchBox {
+    max-width: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -50,18 +50,6 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
     """)
     Optional<SalesOrder> findByIdWithDetails(@Param("id") Long id);
 
-    @Query("""
-        SELECT so FROM SalesOrder so
-        LEFT JOIN FETCH so.partner
-        LEFT JOIN FETCH so.warehouse
-        LEFT JOIN FETCH so.createdByUser
-        LEFT JOIN FETCH so.lines l
-        LEFT JOIN FETCH l.variant v
-        LEFT JOIN FETCH v.product
-        WHERE so.publicToken = :publicToken
-    """)
-    Optional<SalesOrder> findByPublicTokenWithDetails(@Param("publicToken") String publicToken);
-
     @Query("SELECT so.soCode FROM SalesOrder so WHERE so.soCode LIKE :prefixLike ORDER BY so.soCode DESC")
     List<String> findCodesByPrefix(@Param("prefixLike") String prefixLike);
 }

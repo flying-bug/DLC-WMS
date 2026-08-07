@@ -11,6 +11,7 @@ import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import { exportToExcel } from '../../utils/excelExport';
 import { printImportSlip } from '../../utils/printImportSlip';
+import { formatDateOnly } from '../../utils/dateFormat';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import styles from './ImportHistoryPage.module.css';
 
@@ -39,7 +40,7 @@ const IMPORT_PURPOSE_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { value: 'DRAFT', label: 'Lưu tạm' },
-  { value: 'POSTED', label: 'Hoàn thành' },
+  { value: 'POSTED', label: 'Ghi sổ' },
 ];
 
 const COLUMN_OPTIONS = [
@@ -58,7 +59,7 @@ const COLUMN_OPTIONS = [
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
-  POSTED: { label: 'Hoàn thành', code: 'success' },
+  POSTED: { label: 'Ghi sổ', code: 'success' },
 };
 
 const IMPORT_PURPOSE_LABELS = {
@@ -72,7 +73,7 @@ const IMPORT_PURPOSE_LABELS = {
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')} đ`;
-const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN') : '';
+const formatDate = formatDateOnly;
 const sumAmount = (lines = []) => lines.reduce((sum, line) => sum + Number(line.lineAmount || 0), 0);
 const sumSubtotal = (lines = []) => lines.reduce((sum, line) => {
   const qty = Number(line.quantityIn || line.quantityOut || 0);

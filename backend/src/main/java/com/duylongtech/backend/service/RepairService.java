@@ -89,18 +89,6 @@ public class RepairService {
         return toDetailResponse(repair);
     }
 
-    @Transactional(readOnly = true)
-    public RepairResponse getPublicQuoteByToken(String token) {
-        Repair repair = repairRepository.findByPublicTokenWithDetails(token)
-                .orElseThrow(() -> new BusinessException("Không tìm thấy báo giá hoặc báo giá đã bị xóa"));
-
-        if ("CANCELLED".equals(repair.getRepairStatus())) {
-            throw new BusinessException("Báo giá sửa chữa này đã bị hủy.");
-        }
-
-        return toDetailResponse(repair);
-    }
-
     // =====================================================================
     // CREATE / UPDATE
     // =====================================================================
@@ -116,7 +104,6 @@ public class RepairService {
 
         Repair repair = Repair.builder()
                 .repairCode(repairCode)
-                .publicToken(java.util.UUID.randomUUID().toString())
                 .partnerId(request.getPartnerId())
                 .productId(request.getProductId())
                 .productQuantity(request.getProductQuantity() != null ? request.getProductQuantity() : 1)
@@ -507,7 +494,6 @@ public class RepairService {
         return RepairResponse.builder()
                 .id(repair.getId())
                 .repairCode(repair.getRepairCode())
-                .publicToken(repair.getPublicToken())
                 .partnerId(repair.getPartnerId())
                 .partnerName(partnerName)
                 .partnerPhone(partnerPhone)
@@ -585,7 +571,6 @@ public class RepairService {
         return RepairResponse.builder()
                 .id(repair.getId())
                 .repairCode(repair.getRepairCode())
-                .publicToken(repair.getPublicToken())
                 .partnerId(repair.getPartnerId())
                 .partnerName(partnerName)
                 .partnerPhone(partnerPhone)

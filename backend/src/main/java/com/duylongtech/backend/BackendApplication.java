@@ -14,12 +14,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class BackendApplication {
 
-    @jakarta.annotation.PostConstruct
-    public void init() {
-        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
-    }
-
     public static void main(String[] args) {
+        // Set the application timezone before Spring creates entities or scheduled tasks.
+        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
         loadDotenv();
         SpringApplication.run(BackendApplication.class, args);
     }

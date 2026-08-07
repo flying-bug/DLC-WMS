@@ -15,7 +15,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -159,32 +158,4 @@ public class PurchaseOrderController {
         }
     }
 
-    // ─── POST: Ghi nhận thanh toán ───────────────────────────────────────
-    @PostMapping("/{id}/payments")
-    @Operation(summary = "Ghi nhận thanh toán (chi tiền) cho đơn mua hàng")
-    @PreAuthorize("hasAuthority('import:edit') or hasAuthority('purchase_order:edit')")
-    public ApiResponse<PurchaseOrderResponse> recordPayment(
-            @PathVariable Long id,
-            @RequestBody PaymentBodyRequest req,
-            HttpServletRequest servletRequest
-    ) {
-        String actor = getCurrentUser();
-        String ip = getClientIp(servletRequest);
-        try {
-            PurchaseOrderResponse updated = purchaseOrderService.recordPayment(id, req.getAmount(), actor);
-            auditLogService.logEvent(actor, "RECORD_PAYMENT", "PurchaseOrder", id, "SUCCESS",
-                    "Ghi nhận thanh toán " + req.getAmount() + " cho đơn: " + updated.getPoCode(), ip, null);
-            return ApiResponse.success(updated);
-        } catch (Exception e) {
-            auditLogService.logEvent(actor, "RECORD_PAYMENT", "PurchaseOrder", id, "FAILED",
-                    "Ghi nhận thanh toán thất bại: " + e.getMessage(), ip, null);
-            throw e;
-        }
-    }
-
-    public static class PaymentBodyRequest {
-        public BigDecimal amount;
-        public BigDecimal getAmount() { return amount; }
-        public void setAmount(BigDecimal amount) { this.amount = amount; }
-    }
 }

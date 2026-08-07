@@ -1,29 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useReactToPrint } from 'react-to-print';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as poApi from '../../api/purchaseOrderApi';
 import * as importApi from '../../api/inventoryImportApi';
+import PurchaseOrderQuotationTemplate from './components/PurchaseOrderQuotationTemplate';
 import styles from './PurchaseOrderDetailPage.module.css';
+import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
 const unwrap      = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const money       = (v)   => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
-const fmtDate     = (v)   => (v ? new Date(v).toLocaleDateString('vi-VN') : '—');
-const fmtDateTime = (v)   => (v ? new Date(v).toLocaleString('vi-VN') : '—');
+const fmtDate     = (v)   => (v ? formatDateOnly(v) : '—');
+const fmtDateTime = (v)   => (v ? formatDateTime(v) : '—');
 
 const STATUS_CONFIG = {
   DRAFT:     { label: 'Nháp',       bg: '#f1f5f9', color: '#64748b', icon: 'bi-pencil-square' },
   APPROVED:  { label: 'Đã duyệt',   bg: '#dcfce7', color: '#16a34a', icon: 'bi-check-circle-fill' },
-  POSTED:    { label: 'Hoàn thành', bg: '#ede9fe', color: '#7c3aed', icon: 'bi-bag-check-fill' },
+  POSTED:    { label: 'Ghi sổ', bg: '#ede9fe', color: '#7c3aed', icon: 'bi-bag-check-fill' },
   CANCELLED: { label: 'Đã hủy',     bg: '#fef2f2', color: '#dc2626', icon: 'bi-x-circle-fill' },
-};
-
-const PAYMENT_STATUS_CONFIG = {
-  UNPAID:  { label: 'Chưa thanh toán', bg: '#fee2e2', color: '#991b1b', icon: 'bi-dash-circle' },
-  PARTIAL: { label: 'Trả một phần',    bg: '#fef9c3', color: '#854d0e', icon: 'bi-pie-chart-fill' },
-  PAID:    { label: 'Đã thanh toán',   bg: '#dcfce7', color: '#166534', icon: 'bi-check-circle-fill' },
 };
 
 function PurchaseOrderDetailPage() {
@@ -36,9 +33,12 @@ function PurchaseOrderDetailPage() {
   const [toast,           setToast]           = useState({ isVisible: false, type: 'info', message: '' });
   const [confirmApprove,  setConfirmApprove]  = useState(false);
   const [confirmCancel,   setConfirmCancel]   = useState(false);
-  const [paymentOpen,     setPaymentOpen]     = useState(false);
-  const [paymentAmount,   setPaymentAmount]   = useState('');
-  const [recordingPayment, setRecordingPayment] = useState(false);
+  const printRef = useRef(null);
+
+  const handlePrintQuote = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Don-Mua-Hang-${po?.poCode || 'PO'}`,
+  });
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(p => ({ ...p, isVisible: false }));
@@ -88,23 +88,6 @@ function PurchaseOrderDetailPage() {
     }
   };
 
-  const handleRecordPayment = async () => {
-    const amt = parseFloat(paymentAmount);
-    if (!amt || amt <= 0) { showToast('error', 'Số tiền thanh toán phải lớn hơn 0'); return; }
-    setRecordingPayment(true);
-    try {
-      await poApi.recordPayment(id, amt);
-      showToast('success', `Đã ghi nhận thanh toán ${money(amt)}`);
-      setPaymentOpen(false);
-      setPaymentAmount('');
-      loadPo();
-    } catch (err) {
-      showToast('error', err.response?.data?.userMessage || 'Ghi nhận thanh toán thất bại');
-    } finally {
-      setRecordingPayment(false);
-    }
-  };
-
   if (loading) {
     return (
       <AdminLayout>
@@ -126,9 +109,7 @@ function PurchaseOrderDetailPage() {
     );
   }
 
-  const stCfg  = STATUS_CONFIG[po.status]         || STATUS_CONFIG.DRAFT;
-  const pstCfg = PAYMENT_STATUS_CONFIG[po.paymentStatus] || PAYMENT_STATUS_CONFIG.UNPAID;
-  const remaining = Number(po.totalAmount || 0) - Number(po.paidAmount || 0);
+  const stCfg = STATUS_CONFIG[po.status] || STATUS_CONFIG.DRAFT;
 
   return (
     <AdminLayout>
@@ -150,6 +131,9 @@ function PurchaseOrderDetailPage() {
           </div>
 
           <div className={styles.headerActions}>
+            <button className={styles.btnPrimary} onClick={handlePrintQuote}>
+              <i className="bi bi-printer" /> In báo giá
+            </button>
             {po.status === 'DRAFT' && (
               <button className={styles.btnEdit} onClick={() => navigate(`/purchase-orders/${id}/edit`)}>
                 <i className="bi bi-pencil" /> Sửa
@@ -165,11 +149,6 @@ function PurchaseOrderDetailPage() {
                 <i className="bi bi-box-seam" /> Tạo phiếu nhập
               </button>
             )}
-            {(po.status === 'APPROVED' || po.status === 'POSTED') && po.paymentStatus !== 'PAID' && (
-              <button className={styles.btnPay} onClick={() => setPaymentOpen(true)}>
-                <i className="bi bi-cash-coin" /> Ghi nhận thanh toán
-              </button>
-            )}
             {(po.status === 'DRAFT' || po.status === 'APPROVED') && (
               <button className={styles.btnCancel} onClick={() => setConfirmCancel(true)}>
                 <i className="bi bi-x-circle" /> Hủy đơn
@@ -182,9 +161,6 @@ function PurchaseOrderDetailPage() {
         <div className={styles.statusBar}>
           <span className={styles.statusBadge} style={{ background: stCfg.bg, color: stCfg.color }}>
             <i className={`bi ${stCfg.icon}`} /> {stCfg.label}
-          </span>
-          <span className={styles.statusBadge} style={{ background: pstCfg.bg, color: pstCfg.color }}>
-            <i className={`bi ${pstCfg.icon}`} /> {pstCfg.label}
           </span>
         </div>
 
@@ -223,7 +199,7 @@ function PurchaseOrderDetailPage() {
               <span className={styles.infoValue}>{fmtDate(po.poDate)}</span>
             </div>
             <div className={styles.infoRow}>
-              <span className={styles.infoLabel}>Hạn thanh toán</span>
+              <span className={styles.infoLabel}>Hạn công nợ</span>
               <span className={styles.infoValue}>{fmtDate(po.paymentDueDate)}</span>
             </div>
             <div className={styles.infoRow}>
@@ -246,10 +222,10 @@ function PurchaseOrderDetailPage() {
             </div>
           </div>
 
-          {/* Payment summary */}
+          {/* Debt summary */}
           <div className={styles.card}>
             <div className={styles.cardTitle}>
-              <i className="bi bi-cash-stack" /> Tóm tắt thanh toán
+              <i className="bi bi-cash-stack" /> Tóm tắt công nợ
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Tiền hàng</span>
@@ -260,36 +236,11 @@ function PurchaseOrderDetailPage() {
               <span className={styles.infoValue}>{money(po.taxAmount)}</span>
             </div>
             <div className={styles.infoRow} style={{ borderTop: '1px dashed #e2e8f0', paddingTop: 8, marginTop: 4 }}>
-              <span className={styles.infoLabel} style={{ fontWeight: 700 }}>Tổng cộng</span>
+              <span className={styles.infoLabel} style={{ fontWeight: 700 }}>Công nợ ghi nhận</span>
               <span className={styles.infoValue} style={{ fontWeight: 700, fontSize: 16, color: '#1e40af' }}>
                 {money(po.totalAmount)}
               </span>
             </div>
-            <div className={styles.infoRow}>
-              <span className={styles.infoLabel} style={{ color: '#16a34a' }}>Đã thanh toán</span>
-              <span className={styles.infoValue} style={{ color: '#16a34a', fontWeight: 600 }}>
-                {money(po.paidAmount)}
-              </span>
-            </div>
-            <div className={styles.infoRow}>
-              <span className={styles.infoLabel} style={{ color: '#dc2626' }}>Còn lại</span>
-              <span className={styles.infoValue} style={{ color: '#dc2626', fontWeight: 700 }}>
-                {money(remaining)}
-              </span>
-            </div>
-
-            {/* Progress bar */}
-            {Number(po.totalAmount) > 0 && (
-              <div className={styles.progressWrap}>
-                <div
-                  className={styles.progressBar}
-                  style={{ width: `${Math.min(100, (Number(po.paidAmount) / Number(po.totalAmount)) * 100).toFixed(1)}%` }}
-                />
-                <span className={styles.progressLabel}>
-                  {((Number(po.paidAmount) / Number(po.totalAmount)) * 100).toFixed(1)}% đã thanh toán
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -412,58 +363,6 @@ function PurchaseOrderDetailPage() {
         )}
       </div>
 
-      {/* ── Payment Modal ── */}
-      {paymentOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <div className={styles.modalHeader}>
-              <h3><i className="bi bi-cash-coin" /> Ghi nhận thanh toán</h3>
-              <button className={styles.modalClose} onClick={() => setPaymentOpen(false)}>
-                <i className="bi bi-x-lg" />
-              </button>
-            </div>
-            <div className={styles.modalBody}>
-              <p style={{ color: '#64748b', fontSize: 14, marginBottom: 16 }}>
-                Đơn <strong>{po.poCode}</strong> — Còn nợ: <strong style={{ color: '#dc2626' }}>{money(remaining)}</strong>
-              </p>
-              <label className={styles.modalLabel}>Số tiền thanh toán (đ)</label>
-              <input
-                type="number"
-                className={styles.modalInput}
-                min="1"
-                max={remaining}
-                step="1000"
-                value={paymentAmount}
-                onChange={e => setPaymentAmount(e.target.value)}
-                placeholder="Nhập số tiền..."
-                autoFocus
-              />
-              <div className={styles.quickAmounts}>
-                {[25, 50, 75, 100].map(pct => (
-                  <button
-                    key={pct}
-                    className={styles.quickBtn}
-                    onClick={() => setPaymentAmount(String(Math.round(remaining * pct / 100)))}
-                  >
-                    {pct}%
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className={styles.modalFooter}>
-              <button className={styles.btnOutlineSmall} onClick={() => setPaymentOpen(false)}>Hủy</button>
-              <button
-                className={styles.btnConfirmPay}
-                onClick={handleRecordPayment}
-                disabled={recordingPayment}
-              >
-                {recordingPayment ? 'Đang xử lý...' : <><i className="bi bi-check2" /> Xác nhận</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modals */}
       <ConfirmModal
         isOpen={confirmApprove}
@@ -480,6 +379,10 @@ function PurchaseOrderDetailPage() {
         onCancel={() => setConfirmCancel(false)}
       />
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
+
+      <div style={{ display: 'none' }}>
+        <PurchaseOrderQuotationTemplate ref={printRef} order={po} />
+      </div>
     </AdminLayout>
   );
 }

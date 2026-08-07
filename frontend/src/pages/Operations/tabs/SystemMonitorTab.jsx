@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getSystemHealth } from '../../../api/backupApi';
 import styles from './SystemMonitorTab.module.css';
+import { formatTime } from '../../../utils/dateFormat';
 
 // Simple gauge bar component
 function GaugeBar({ label, value, max, unit, color }) {
@@ -42,13 +43,13 @@ function SystemMonitorTab() {
     // Simulate log streaming (real implementation would use SSE or polling /api/v1/system/logs)
     useEffect(() => {
         const mockLogs = [
-            { level: 'INFO',  time: new Date().toLocaleTimeString(), msg: 'Application started successfully on port 8080' },
-            { level: 'INFO',  time: new Date().toLocaleTimeString(), msg: 'Connected to MySQL database: duylongcomputer' },
-            { level: 'INFO',  time: new Date().toLocaleTimeString(), msg: 'Flyway migrations: 21 applied, 0 pending' },
-            { level: 'INFO',  time: new Date().toLocaleTimeString(), msg: 'Scheduled task registered: BackupSchedulerService' },
-            { level: 'INFO',  time: new Date().toLocaleTimeString(), msg: 'CORS configured for localhost:5173, localhost:80, localhost:3000' },
-            { level: 'WARN',  time: new Date().toLocaleTimeString(), msg: 'Drive service account not configured — auto upload disabled' },
-            { level: 'INFO',  time: new Date().toLocaleTimeString(), msg: 'WebSocket endpoint registered: /ws' },
+            { level: 'INFO',  time: formatTime(), msg: 'Application started successfully on port 8080' },
+            { level: 'INFO',  time: formatTime(), msg: 'Connected to MySQL database: duylongcomputer' },
+            { level: 'INFO',  time: formatTime(), msg: 'Flyway migrations: 21 applied, 0 pending' },
+            { level: 'INFO',  time: formatTime(), msg: 'Scheduled task registered: BackupSchedulerService' },
+            { level: 'INFO',  time: formatTime(), msg: 'CORS configured for localhost:5173, localhost:80, localhost:3000' },
+            { level: 'WARN',  time: formatTime(), msg: 'Drive service account not configured — auto upload disabled' },
+            { level: 'INFO',  time: formatTime(), msg: 'WebSocket endpoint registered: /ws' },
         ];
         setLogLines(mockLogs);
     }, []);

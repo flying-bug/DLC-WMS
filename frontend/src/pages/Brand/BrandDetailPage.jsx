@@ -6,6 +6,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Toast from '../../components/ui/Toast/Toast';
 import axiosClient from '../../api/axiosClient';
 import styles from './BrandDetailPage.module.css';
+import { formatDateOnly } from '../../utils/dateFormat';
 
 const BrandDetailPage = () => {
     const navigate = useNavigate();
@@ -141,7 +142,7 @@ const BrandDetailPage = () => {
                             {brand.createdAt && (
                                 <div className={styles.detailRightRow}>
                                     <span className={styles.detailRightLabel}>Ngày tạo</span>
-                                    <span className={styles.detailRightValue}>{new Date(brand.createdAt).toLocaleDateString('vi-VN')}</span>
+                                    <span className={styles.detailRightValue}>{formatDateOnly(brand.createdAt)}</span>
                                 </div>
                             )}
                         </div>

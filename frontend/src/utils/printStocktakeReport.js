@@ -1,9 +1,11 @@
+import { formatDateOnly } from './dateFormat';
+
 export function printStocktakeReport(options = {}) {
   const {
     stocktakeCode = '',
     purpose = 'Kiểm kê vật tư hàng hóa định kỳ',
     warehouseName = 'Tất cả kho',
-    stocktakeDate = new Date().toLocaleDateString('vi-VN'),
+    stocktakeDate = new Date(),
     conclusion = '',
     lines = [],
     participants = [],
@@ -30,9 +32,7 @@ export function printStocktakeReport(options = {}) {
       .replace(/'/g, "&#039;");
   };
 
-  const formattedDate = stocktakeDate
-    ? (typeof stocktakeDate === 'string' && stocktakeDate.includes('T') ? stocktakeDate.split('T')[0] : stocktakeDate)
-    : new Date().toLocaleDateString('vi-VN');
+  const formattedDate = formatDateOnly(stocktakeDate || new Date());
 
   // Participants list HTML
   let participantsHtml = '';
@@ -228,7 +228,7 @@ export function printStocktakeReport(options = {}) {
         </div>
         <div style="text-align: right; font-size: 12px; color: #64748b;">
           <div>Mẫu số: 05-VT</div>
-          <div>Ngày in: ${new Date().toLocaleDateString('vi-VN')}</div>
+          <div>Ngày in: ${formatDateOnly(new Date())}</div>
         </div>
       </div>
 

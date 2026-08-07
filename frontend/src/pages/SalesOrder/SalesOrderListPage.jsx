@@ -5,11 +5,12 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as soApi from '../../api/salesOrderApi';
 import styles from './SalesOrderListPage.module.css';
+import { formatDateOnly } from '../../utils/dateFormat';
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
   APPROVED: { label: 'Đã duyệt', code: 'success' },
-  POSTED: { label: 'Hoàn thành', code: 'purple' },
+  POSTED: { label: 'Ghi sổ', code: 'purple' },
   CANCELLED: { label: 'Đã hủy', code: 'danger' },
 };
 
@@ -22,12 +23,12 @@ const PAYMENT_STATUS_LABELS = {
 const STATUS_OPTIONS = [
   { value: 'DRAFT', label: 'Nháp' },
   { value: 'APPROVED', label: 'Đã duyệt' },
-  { value: 'POSTED', label: 'Hoàn thành' },
+  { value: 'POSTED', label: 'Ghi sổ' },
   { value: 'CANCELLED', label: 'Đã hủy' },
 ];
 
 const money = (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
-const fmtDate = (v) => (v ? new Date(v).toLocaleDateString('vi-VN') : '');
+const fmtDate = (v) => (v ? formatDateOnly(v) : '');
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p) => p?.content ?? p ?? [];
 

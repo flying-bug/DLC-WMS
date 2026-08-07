@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { formatDateOnly } from '../utils/dateFormat';
 import * as importApi from '../api/inventoryImportApi';
 import * as exportApi from '../api/inventoryExportApi';
 import * as assemblyOrderApi from '../api/assemblyOrderApi';
@@ -85,9 +86,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
   const getDocDate = (item) => {
     const rawDate = item.docDate || item.date || item.createdAt;
     if (!rawDate) return '';
-    if (typeof rawDate === 'string') return rawDate.substring(0, 10);
-    if (Array.isArray(rawDate)) return `${rawDate[0]}-${String(rawDate[1]).padStart(2, '0')}-${String(rawDate[2]).padStart(2, '0')}`;
-    return String(rawDate);
+    return formatDateOnly(rawDate);
   };
 
   if (!isOpen) return null;

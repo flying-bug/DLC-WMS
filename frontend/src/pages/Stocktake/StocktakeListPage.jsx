@@ -7,6 +7,7 @@ import { exportToExcel } from '../../utils/excelExport';
 import StocktakeInitModal from './components/StocktakeInitModal';
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './StocktakeListPage.module.css';
+import { formatDateOnly } from '../../utils/dateFormat';
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
@@ -15,7 +16,7 @@ const STATUS_LABELS = {
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
-const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN') : '';
+const formatDate = (value) => value ? formatDateOnly(value) : '';
 
 function StocktakeListPage() {
   const navigate = useNavigate();

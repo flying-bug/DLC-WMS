@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './StocktakeInitModal.module.css';
+import { getTodayIsoDate } from '../../../utils/dateFormat';
 
 function StocktakeInitModal({ onClose, warehouses = [] }) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     warehouseId: 'all',
-    toDate: new Date().toISOString().split('T')[0]
+    toDate: getTodayIsoDate()
   });
 
   const handleChange = (e) => {
