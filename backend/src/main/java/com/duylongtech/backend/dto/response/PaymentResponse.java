@@ -21,5 +21,7 @@ public class PaymentResponse {
     private String status;
     private String paymentMethod;
     private String type; // RECEIPT / VOUCHER
+    private String note;
     private LocalDateTime createdAt;
+    private BigDecimal partnerDebtBalance;
 }

@@ -25,7 +25,6 @@ public class PurchaseOrderService {
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final PartnerRepository partnerRepository;
     private final UserRepository userRepository;
-    private final AuditLogService auditLogService;
     private final PartnerLedgerService partnerLedgerService;
 
     // =========================================================
@@ -79,7 +78,7 @@ public class PurchaseOrderService {
         }
 
         if (request.getPaymentDueDate() != null && request.getPaymentDueDate().isBefore(request.getPoDate())) {
-            throw new BusinessException("Hạn thanh toán không được nhỏ hơn ngày lập đơn");
+            throw new BusinessException("Hạn công nợ không được nhỏ hơn ngày lập đơn");
         }
 
         // Tự sinh mã nếu chưa có
@@ -164,7 +163,7 @@ public class PurchaseOrderService {
         }
 
         if (request.getPaymentDueDate() != null && request.getPaymentDueDate().isBefore(request.getPoDate())) {
-            throw new BusinessException("Hạn thanh toán không được nhỏ hơn ngày lập đơn");
+            throw new BusinessException("Hạn công nợ không được nhỏ hơn ngày lập đơn");
         }
 
         po.setPartnerId(request.getPartnerId());
@@ -271,68 +270,6 @@ public class PurchaseOrderService {
         }
 
         return toSummaryResponse(cancelled);
-    }
-
-    // =========================================================
-    // RECORD PAYMENT — ghi nhận thanh toán (chi tiền)
-    // =========================================================
-
-    @Transactional
-    public PurchaseOrderResponse recordPayment(Long id, BigDecimal amount, String actor) {
-        PurchaseOrder po = purchaseOrderRepository.findById(id)
-                .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng"));
-
-        if ("CANCELLED".equals(po.getStatus())) {
-            throw new BusinessException("Không thể ghi nhận thanh toán cho đơn hàng đã hủy");
-        }
-        if ("DRAFT".equals(po.getStatus())) {
-            throw new BusinessException("Phải duyệt đơn trước khi ghi nhận thanh toán");
-        }
-
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("Số tiền thanh toán phải lớn hơn 0");
-        }
-
-        BigDecimal currentPaid = po.getPaidAmount() != null ? po.getPaidAmount() : BigDecimal.ZERO;
-        BigDecimal newPaid = currentPaid.add(amount);
-        if (newPaid.compareTo(po.getTotalAmount()) > 0) {
-            throw new BusinessException("Số tiền thanh toán vượt quá tổng giá trị đơn hàng");
-        }
-
-        po.setPaidAmount(newPaid);
-        if (newPaid.compareTo(po.getTotalAmount()) >= 0) {
-            po.setPaymentStatus("PAID");
-        } else if (newPaid.compareTo(BigDecimal.ZERO) > 0) {
-            po.setPaymentStatus("PARTIAL");
-        }
-
-        purchaseOrderRepository.save(po);
-
-        // Ghi nhận chi tiền (giảm nợ phải trả NCC) vào sổ partner_ledger
-        partnerLedgerService.recordLedger(
-                po.getPartnerId(),
-                "PAYMENT_VOUCHER",
-                po.getId(),
-                po.getPoCode(),
-                BigDecimal.ZERO,
-                amount,  // amountReceipt  ← chi tiền cho NCC
-                "Thanh toán cho đơn mua hàng " + po.getPoCode()
-        );
-
-        auditLogService.logEvent(
-                actor,
-                "RECORD_PAYMENT",
-                "PurchaseOrder",
-                po.getId(),
-                "SUCCESS",
-                "Ghi nhận thanh toán " + amount + " cho đơn mua hàng " + po.getPoCode(),
-                null,
-                null
-        );
-
-        // Reload với details
-        PurchaseOrder reloaded = purchaseOrderRepository.findByIdWithDetails(id).orElse(po);
-        return toDetailResponse(reloaded);
     }
 
     // =========================================================

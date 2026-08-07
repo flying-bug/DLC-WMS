@@ -39,6 +39,9 @@ public class PaymentTransaction {
     @Column(name = "payment_method", length = 30)
     private String paymentMethod;
 
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 }

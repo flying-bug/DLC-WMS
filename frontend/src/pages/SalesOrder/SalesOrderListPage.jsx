@@ -9,7 +9,7 @@ import styles from './SalesOrderListPage.module.css';
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
   APPROVED: { label: 'Đã duyệt', code: 'success' },
-  POSTED: { label: 'Hoàn thành', code: 'purple' },
+  POSTED: { label: 'Ghi sổ', code: 'purple' },
   CANCELLED: { label: 'Đã hủy', code: 'danger' },
 };
 
@@ -22,7 +22,7 @@ const PAYMENT_STATUS_LABELS = {
 const STATUS_OPTIONS = [
   { value: 'DRAFT', label: 'Nháp' },
   { value: 'APPROVED', label: 'Đã duyệt' },
-  { value: 'POSTED', label: 'Hoàn thành' },
+  { value: 'POSTED', label: 'Ghi sổ' },
   { value: 'CANCELLED', label: 'Đã hủy' },
 ];
 

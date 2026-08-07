@@ -9,20 +9,14 @@ import styles from './PurchaseOrderListPage.module.css';
 const STATUS_LABELS = {
   DRAFT:     { label: 'Nháp',         code: 'info'    },
   APPROVED:  { label: 'Đã duyệt',     code: 'success' },
-  POSTED:    { label: 'Hoàn thành',   code: 'purple'  },
+  POSTED:    { label: 'Ghi sổ',       code: 'purple'  },
   CANCELLED: { label: 'Đã hủy',       code: 'danger'  },
-};
-
-const PAYMENT_STATUS_LABELS = {
-  UNPAID:  { label: 'Chưa thanh toán', color: '#991b1b', bg: '#fee2e2' },
-  PARTIAL: { label: 'Trả một phần',    color: '#854d0e', bg: '#fef9c3' },
-  PAID:    { label: 'Đã thanh toán',   color: '#166534', bg: '#dcfce7' },
 };
 
 const STATUS_OPTIONS = [
   { value: 'DRAFT',     label: 'Nháp'         },
   { value: 'APPROVED',  label: 'Đã duyệt'     },
-  { value: 'POSTED',    label: 'Hoàn thành'   },
+  { value: 'POSTED',    label: 'Ghi sổ'       },
   { value: 'CANCELLED', label: 'Đã hủy'       },
 ];
 
@@ -184,17 +178,14 @@ function PurchaseOrderListPage() {
                   <th style={{ width: 130 }}>Mã đơn</th>
                   <th style={{ width: 110 }}>Ngày lập</th>
                   <th>Nhà cung cấp</th>
-                  <th style={{ width: 130, textAlign: 'right' }}>Tổng tiền</th>
-                  <th style={{ width: 130, textAlign: 'right' }}>Đã thanh toán</th>
+                  <th style={{ width: 130, textAlign: 'right' }}>Công nợ</th>
                   <th style={{ width: 110 }}>Trạng thái</th>
-                  <th style={{ width: 120 }}>Thanh toán</th>
                   <th style={{ width: 120, textAlign: 'center' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedOrders.length > 0 ? paginatedOrders.map((po, idx) => {
                   const st  = STATUS_LABELS[po.status] || { label: po.status, code: 'info' };
-                  const pst = PAYMENT_STATUS_LABELS[po.paymentStatus || 'UNPAID'];
                   return (
                     <tr
                       key={po.id}
@@ -215,9 +206,6 @@ function PurchaseOrderListPage() {
                       <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>
                         {money(po.totalAmount)}
                       </td>
-                      <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap', color: '#16a34a' }}>
-                        {money(po.paidAmount)}
-                      </td>
                       <td>
                         <span className={`${styles.badge} ${
                           st.code === 'success' ? styles.badgeSuccess :
@@ -226,15 +214,6 @@ function PurchaseOrderListPage() {
                           styles.badgeInfo
                         }`}>
                           {st.label}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{
-                          display: 'inline-block', padding: '2px 8px', borderRadius: 12,
-                          fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
-                          backgroundColor: pst.bg, color: pst.color,
-                        }}>
-                          {pst.label}
                         </span>
                       </td>
                       <td className={styles.textCenter} onClick={e => e.stopPropagation()}>
@@ -273,7 +252,7 @@ function PurchaseOrderListPage() {
                   );
                 }) : (
                   <tr>
-                    <td colSpan={9} className={styles.textCenter} style={{ padding: 40 }}>
+                    <td colSpan={7} className={styles.textCenter} style={{ padding: 40 }}>
                       {loading ? 'Đang tải dữ liệu...' : 'Không tìm thấy đơn mua hàng nào'}
                     </td>
                   </tr>

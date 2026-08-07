@@ -68,17 +68,6 @@ public class SalesOrderService {
         return String.format("%s%04d", prefix, max + 1);
     }
 
-    public SalesOrderResponse getPublicQuoteByToken(String token) {
-        SalesOrder so = salesOrderRepository.findByPublicTokenWithDetails(token)
-                .orElseThrow(() -> new BusinessException("Không tìm thấy báo giá hoặc báo giá đã bị xóa"));
-        
-        if ("CANCELLED".equals(so.getStatus())) {
-            throw new BusinessException("Báo giá này đã bị hủy.");
-        }
-        
-        return toDetailResponse(so, java.util.Collections.emptyList()); // For quotes, we don't need reservation details
-    }
-
     // =========================================================
     // CREATE
     // =========================================================
@@ -143,7 +132,6 @@ public class SalesOrderService {
                 .partnerId(request.getPartnerId())
                 .warehouseId(request.getWarehouseId())
                 .soCode(soCode)
-                .publicToken(java.util.UUID.randomUUID().toString())
                 .soDate(request.getSoDate())
                 .status("DRAFT")
                 .subTotalAmount(subTotalAmount)
@@ -462,7 +450,6 @@ public class SalesOrderService {
         SalesOrderResponse r = SalesOrderResponse.builder()
                 .id(so.getId())
                 .soCode(so.getSoCode())
-                .publicToken(so.getPublicToken())
                 .soDate(so.getSoDate())
                 .status(so.getStatus())
                 .partnerId(so.getPartnerId())

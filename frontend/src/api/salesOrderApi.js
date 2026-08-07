@@ -14,6 +14,9 @@ export const getNextSoCode = () =>
 export const createSalesOrder = (data) =>
   axiosClient.post(BASE, data);
 
+export const directCheckout = (data) =>
+  axiosClient.post(`${BASE}/direct-checkout`, data);
+
 export const updateSalesOrder = (id, data) =>
   axiosClient.put(`${BASE}/${id}`, data);
 

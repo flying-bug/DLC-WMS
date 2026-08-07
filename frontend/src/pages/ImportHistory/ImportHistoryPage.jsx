@@ -39,7 +39,7 @@ const IMPORT_PURPOSE_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { value: 'DRAFT', label: 'Lưu tạm' },
-  { value: 'POSTED', label: 'Hoàn thành' },
+  { value: 'POSTED', label: 'Ghi sổ' },
 ];
 
 const COLUMN_OPTIONS = [
@@ -58,7 +58,7 @@ const COLUMN_OPTIONS = [
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
-  POSTED: { label: 'Hoàn thành', code: 'success' },
+  POSTED: { label: 'Ghi sổ', code: 'success' },
 };
 
 const IMPORT_PURPOSE_LABELS = {

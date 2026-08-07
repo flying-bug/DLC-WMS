@@ -1,6 +1,8 @@
 
 import TabPagination from './TabPagination';
 
+const statusText = (status) => (status === 'POSTED' ? 'Ghi sổ' : status === 'DRAFT' ? 'Nháp' : status || '-');
+
 const ReceiptsTab = ({ data, loading, page, setPage, formatDate, formatCurrency, styles }) => {
     return (
         <>
@@ -42,7 +44,7 @@ const ReceiptsTab = ({ data, loading, page, setPage, formatDate, formatCurrency,
                                 {item.type === 'VOUCHER' ? '-' : '+'}{formatCurrency(item.amount)}
                             </td>
                             <td>{item.paymentMethod || '-'}</td>
-                            <td>{item.status}</td>
+                            <td>{statusText(item.status)}</td>
                         </tr>
                     ))}
                 </tbody>

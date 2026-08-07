@@ -14,6 +14,11 @@ const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p) => p?.content ?? p ?? [];
 const today = () => new Date().toLocaleDateString('sv-SE');
 const money = (v) => Number(v || 0).toLocaleString('vi-VN');
+const digitsOnly = (value) => String(value || '').replace(/\D/g, '');
+const formatMoneyInput = (value) => {
+  const digits = digitsOnly(value);
+  return digits ? Number(digits).toLocaleString('vi-VN') : '';
+};
 
 const customSelectStyles = {
   control: (base, state) => ({
@@ -28,7 +33,7 @@ const customSelectStyles = {
   menuPortal: base => ({ ...base, zIndex: 9999 }),
 };
 
-const emptyLine = () => ({ variantId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, note: '' });
+const emptyLine = () => ({ variantId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, serialNumbers: '', note: '' });
 
 function CreateSalesOrderPage() {
   const navigate = useNavigate();
@@ -40,6 +45,7 @@ function CreateSalesOrderPage() {
   const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [mode, setMode] = useState('quote');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const [inventoryBalances, setInventoryBalances] = useState([]);
@@ -53,6 +59,12 @@ function CreateSalesOrderPage() {
     note: '',
     paymentDueDate: '',
   });
+  const [directCustomer, setDirectCustomer] = useState({
+    phone: '',
+    name: '',
+    address: '',
+  });
+  const [paymentAmount, setPaymentAmount] = useState('');
   const [lines, setLines] = useState([emptyLine()]);
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
@@ -155,6 +167,12 @@ function CreateSalesOrderPage() {
   const totalVatAmount = lines.reduce((sum, l) => sum + (Number(l.quantity || 0) * Number(l.unitPrice || 0) * Number(l.vatRate || 0) / 100), 0);
   const grandTotal = subTotalAmount + totalVatAmount;
 
+  useEffect(() => {
+    if (mode === 'direct' && (paymentAmount === '' || Number(paymentAmount) === 0)) {
+      setPaymentAmount(Math.round(grandTotal).toString());
+    }
+  }, [grandTotal, mode, paymentAmount]);
+
   // ── Save ──
   const buildPayload = () => ({
     soCode: form.soCode.trim() || undefined,
@@ -170,6 +188,28 @@ function CreateSalesOrderPage() {
       unitPrice: Number(l.unitPrice),
       vatRate: Number(l.vatRate || 0),
       warrantyMonths: Number(l.warrantyMonths || 0),
+      note: l.note || undefined,
+    })),
+  });
+
+  const buildDirectPayload = () => ({
+    customerPhone: directCustomer.phone.trim() || undefined,
+    customerName: directCustomer.name.trim() || undefined,
+    customerAddress: directCustomer.address.trim() || undefined,
+    warehouseId: Number(form.warehouseId),
+    checkoutDate: form.soDate,
+    paymentAmount: Number(paymentAmount || 0),
+    note: form.note || undefined,
+    lines: lines.map(l => ({
+      variantId: Number(l.variantId),
+      quantity: Number(l.quantity),
+      unitPrice: Number(l.unitPrice),
+      vatRate: Number(l.vatRate || 0),
+      warrantyMonths: Number(l.warrantyMonths || 0),
+      serialNumbers: String(l.serialNumbers || '')
+        .split(/\r?\n|,/)
+        .map(s => s.trim())
+        .filter(Boolean),
       note: l.note || undefined,
     })),
   });
@@ -195,6 +235,32 @@ function CreateSalesOrderPage() {
       const qty = Number(lines[i].quantity);
       if (!Number.isInteger(qty) || qty <= 0) {
         showToast('error', `Dòng ${i + 1}: số lượng phải là số nguyên lớn hơn 0`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const validateDirectCheckout = () => {
+    if (!form.warehouseId) { showToast('error', 'Vui lòng chọn kho xuất hàng'); return false; }
+    if (!form.soDate) { showToast('error', 'Vui lòng nhập ngày bán'); return false; }
+    const paid = Number(paymentAmount || 0);
+    if (Number.isNaN(paid) || paid < 0) { showToast('error', 'Số tiền khách trả không hợp lệ'); return false; }
+    if (paid > grandTotal) { showToast('error', 'Số tiền khách trả vượt tổng thanh toán'); return false; }
+
+    for (let i = 0; i < lines.length; i++) {
+      if (!lines[i].variantId) { showToast('error', `Dòng ${i + 1}: chưa chọn sản phẩm`); return false; }
+      const qty = Number(lines[i].quantity);
+      if (!Number.isInteger(qty) || qty <= 0) {
+        showToast('error', `Dòng ${i + 1}: số lượng phải là số nguyên lớn hơn 0`);
+        return false;
+      }
+      const serialCount = String(lines[i].serialNumbers || '')
+        .split(/\r?\n|,/)
+        .map(s => s.trim())
+        .filter(Boolean).length;
+      if (serialCount > 0 && serialCount !== qty) {
+        showToast('error', `Dòng ${i + 1}: số serial phải bằng số lượng`);
         return false;
       }
     }
@@ -236,6 +302,22 @@ function CreateSalesOrderPage() {
     }
   };
 
+  const handleDirectCheckout = async () => {
+    if (!validateDirectCheckout()) return;
+    setSaving(true);
+    try {
+      const res = await soApi.directCheckout(buildDirectPayload());
+      const saved = unwrap(res);
+      navigate('/sales-orders', {
+        state: { toastMessage: `Bán hàng trực tiếp ${saved.soCode} thành công. Đơn hàng và phiếu xuất đã hoàn thành.`, toastType: 'success' }
+      });
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Bán hàng trực tiếp thất bại');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ── Options for react-select ──
   const customerOptions = customers.map(c => ({ value: c.id, label: `${c.code} — ${c.name}` }));
   const warehouseOptions = warehouses.map(w => ({ value: w.id, label: `${w.code} — ${w.name}` }));
@@ -265,6 +347,25 @@ function CreateSalesOrderPage() {
           </h1>
         </div>
 
+        {!isEdit && (
+          <div className={styles.modeTabs}>
+            <button
+              type="button"
+              className={`${styles.modeTab} ${mode === 'quote' ? styles.modeTabActive : ''}`}
+              onClick={() => setMode('quote')}
+            >
+              <i className="bi bi-file-earmark-text" /> Tạo đơn báo giá
+            </button>
+            <button
+              type="button"
+              className={`${styles.modeTab} ${mode === 'direct' ? styles.modeTabActive : ''}`}
+              onClick={() => setMode('direct')}
+            >
+              <i className="bi bi-cash-coin" /> Bán hàng trực tiếp
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Đang tải dữ liệu...</div>
         ) : (
@@ -275,10 +376,47 @@ function CreateSalesOrderPage() {
               <div className={styles.leftPanel}>
                 <div className={styles.section}>
                   <div className={styles.sectionTitle}>
-                    <i className="bi bi-person" /> Thông tin khách hàng
+                    <i className="bi bi-person" /> {mode === 'direct' ? 'Khách mua tại quầy' : 'Thông tin khách hàng'}
                   </div>
 
-                  <div className={styles.fieldRow}>
+                  {mode === 'direct' && (
+                    <>
+                      <div className={styles.directGrid}>
+                        <div className={styles.fieldRow}>
+                          <label className={styles.label}>Số điện thoại</label>
+                          <input
+                            type="text"
+                            className={styles.input}
+                            value={directCustomer.phone}
+                            onChange={e => setDirectCustomer(p => ({ ...p, phone: e.target.value }))}
+                            placeholder="Bỏ trống nếu là khách vãng lai"
+                          />
+                        </div>
+                        <div className={styles.fieldRow}>
+                          <label className={styles.label}>Tên khách</label>
+                          <input
+                            type="text"
+                            className={styles.input}
+                            value={directCustomer.name}
+                            onChange={e => setDirectCustomer(p => ({ ...p, name: e.target.value }))}
+                            placeholder="Tự tạo nếu SĐT mới"
+                          />
+                        </div>
+                      </div>
+                      <div className={styles.fieldRow}>
+                        <label className={styles.label}>Địa chỉ</label>
+                        <textarea
+                          className={styles.textarea}
+                          rows={2}
+                          value={directCustomer.address}
+                          onChange={e => setDirectCustomer(p => ({ ...p, address: e.target.value }))}
+                          placeholder="Tùy chọn"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {mode !== 'direct' && <div className={styles.fieldRow}>
                     <label className={styles.label}>Khách hàng <span className={styles.required}>*</span></label>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <div style={{ flex: 1 }}>
@@ -287,8 +425,8 @@ function CreateSalesOrderPage() {
                           value={customerOptions.find(o => o.value === form.partnerId) || null}
                           onChange={opt => {
                             const cust = customers.find(c => c.id === opt?.value);
-                            setForm(p => ({ 
-                              ...p, 
+                            setForm(p => ({
+                              ...p,
                               partnerId: opt?.value || null,
                               deliveryAddress: cust ? cust.address || '' : ''
                             }));
@@ -302,9 +440,9 @@ function CreateSalesOrderPage() {
                         <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary)' }}></i>
                       </button>
                     </div>
-                  </div>
+                  </div>}
 
-                  <div className={styles.fieldRow}>
+                  {mode !== 'direct' && <div className={styles.fieldRow}>
                     <label className={styles.label}>Địa chỉ giao hàng</label>
                     <textarea
                       className={styles.textarea}
@@ -313,7 +451,7 @@ function CreateSalesOrderPage() {
                       onChange={e => setForm(p => ({ ...p, deliveryAddress: e.target.value }))}
                       placeholder="Địa chỉ giao hàng..."
                     />
-                  </div>
+                  </div>}
 
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Kho xuất hàng <span className={styles.required}>*</span></label>
@@ -347,7 +485,7 @@ function CreateSalesOrderPage() {
                     <i className="bi bi-file-earmark-text" /> Thông tin chứng từ
                   </div>
 
-                  <div className={styles.fieldRow}>
+                  {mode !== 'direct' && <div className={styles.fieldRow}>
                     <label className={styles.label}>Số đơn hàng</label>
                     <input
                       type="text"
@@ -356,7 +494,7 @@ function CreateSalesOrderPage() {
                       onChange={e => setForm(p => ({ ...p, soCode: e.target.value }))}
                       placeholder="Để trống để tự sinh"
                     />
-                  </div>
+                  </div>}
 
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Ngày lập <span className={styles.required}>*</span></label>
@@ -369,18 +507,31 @@ function CreateSalesOrderPage() {
                     />
                   </div>
 
-                  <div className={styles.fieldRow}>
-                    <label className={styles.label}>Hạn thanh toán</label>
-                    <DatePicker
-                      className={styles.input}
-                      dateFormat="dd/MM/yyyy"
-                      minDate={form.soDate ? parseISO(form.soDate) : new Date()}
-                      selected={form.paymentDueDate ? parseISO(form.paymentDueDate) : null}
-                      onChange={date => setForm(p => ({ ...p, paymentDueDate: date ? format(date, 'yyyy-MM-dd') : '' }))}
-                      placeholderText="dd/mm/yyyy"
-                      isClearable
-                    />
-                  </div>
+                  {mode === 'direct' ? (
+                    <div className={styles.fieldRow}>
+                      <label className={styles.label}>Khách trả</label>
+                      <input
+                        inputMode="numeric"
+                        type="text"
+                        className={styles.input}
+                        value={formatMoneyInput(paymentAmount)}
+                        onChange={e => setPaymentAmount(digitsOnly(e.target.value))}
+                      />
+                    </div>
+                  ) : (
+                    <div className={styles.fieldRow}>
+                      <label className={styles.label}>Hạn thanh toán</label>
+                      <DatePicker
+                        className={styles.input}
+                        dateFormat="dd/MM/yyyy"
+                        minDate={form.soDate ? parseISO(form.soDate) : new Date()}
+                        selected={form.paymentDueDate ? parseISO(form.paymentDueDate) : null}
+                        onChange={date => setForm(p => ({ ...p, paymentDueDate: date ? format(date, 'yyyy-MM-dd') : '' }))}
+                        placeholderText="dd/mm/yyyy"
+                        isClearable
+                      />
+                    </div>
+                  )}
 
                   {/* Summary box */}
                   <div className={styles.summaryBox}>
@@ -426,6 +577,7 @@ function CreateSalesOrderPage() {
                       <th style={{ width: 130 }}>Đơn giá</th>
                       <th style={{ width: 140, textAlign: 'right' }}>Thành tiền</th>
                       <th style={{ width: 80 }}>% VAT</th>
+                      {mode === 'direct' && <th style={{ width: 180 }}>Serial</th>}
                       <th style={{ width: 140 }}>Ghi chú dòng</th>
                       <th style={{ width: 40 }}></th>
                     </tr>
@@ -491,11 +643,11 @@ function CreateSalesOrderPage() {
                           </td>
                           <td>
                             <input
-                              type="number"
-                              min="0"
+                              inputMode="numeric"
+                              type="text"
                               className={styles.lineInput}
-                              value={line.unitPrice}
-                              onChange={e => updateLine(idx, 'unitPrice', e.target.value)}
+                              value={formatMoneyInput(line.unitPrice)}
+                              onChange={e => updateLine(idx, 'unitPrice', digitsOnly(e.target.value))}
                             />
                           </td>
                           <td style={{ textAlign: 'right', fontWeight: 600, color: '#1e40af' }}>
@@ -511,6 +663,16 @@ function CreateSalesOrderPage() {
                               onChange={e => updateLine(idx, 'vatRate', e.target.value)}
                             />
                           </td>
+                          {mode === 'direct' && (
+                            <td>
+                              <textarea
+                                className={styles.lineTextarea}
+                                value={line.serialNumbers || ''}
+                                onChange={e => updateLine(idx, 'serialNumbers', e.target.value)}
+                                placeholder="Mỗi serial 1 dòng"
+                              />
+                            </td>
+                          )}
                           <td>
                             <input
                               type="text"
@@ -533,7 +695,7 @@ function CreateSalesOrderPage() {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
+                      <td colSpan={mode === 'direct' ? 9 : 8} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
                         <strong>Tiền hàng:</strong>
                       </td>
                       <td colSpan={2} style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 15, color: '#1d4ed8' }}>
@@ -541,7 +703,7 @@ function CreateSalesOrderPage() {
                       </td>
                     </tr>
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
+                      <td colSpan={mode === 'direct' ? 9 : 8} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
                         <strong>Tiền thuế VAT:</strong>
                       </td>
                       <td colSpan={2} style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 15, color: '#dc2626' }}>
@@ -549,7 +711,7 @@ function CreateSalesOrderPage() {
                       </td>
                     </tr>
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 15, color: '#0f172a' }}>
+                      <td colSpan={mode === 'direct' ? 9 : 8} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 15, color: '#0f172a' }}>
                         <strong>Tổng cộng thanh toán:</strong>
                       </td>
                       <td colSpan={2} style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 16, color: '#16a34a' }}>
@@ -567,12 +729,19 @@ function CreateSalesOrderPage() {
                 <i className="bi bi-arrow-left" /> Quay lại
               </button>
               <div style={{ display: 'flex', gap: 10 }}>
-                <button className={styles.btnOutline} onClick={() => handleSave(false)} disabled={saving}>
+                {mode === 'direct' && (
+                  <button className={styles.btnPrimary} onClick={handleDirectCheckout} disabled={saving}>
+                    {saving ? 'Đang xử lý...' : (
+                      <><i className="bi bi-cash-coin" /> Thanh toán &amp; xuất kho ngay</>
+                    )}
+                  </button>
+                )}
+                {mode !== 'direct' && <button className={styles.btnOutline} onClick={() => handleSave(false)} disabled={saving}>
                   {saving ? 'Đang lưu...' : (
                     <><i className="bi bi-floppy" /> Lưu nháp</>
                   )}
-                </button>
-                {!isEdit && (
+                </button>}
+                {mode !== 'direct' && !isEdit && (
                   <button className={styles.btnPrimary} onClick={() => handleSave(true)} disabled={saving}>
                     {saving ? 'Đang xử lý...' : (
                       <><i className="bi bi-check2-circle" /> Lưu &amp; Duyệt ngay</>
@@ -591,8 +760,8 @@ function CreateSalesOrderPage() {
         onClose={() => setShowCustomerModal(false)}
         onSuccess={(newCustomer) => {
           setCustomers(prev => [newCustomer, ...prev]);
-          setForm(prev => ({ 
-            ...prev, 
+          setForm(prev => ({
+            ...prev,
             partnerId: newCustomer.id,
             deliveryAddress: newCustomer.address || ''
           }));
