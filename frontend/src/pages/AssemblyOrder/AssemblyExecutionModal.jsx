@@ -216,7 +216,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
                 }
             }
 
-            addComponentSerial(variantId, serial || `SKU-${scanData.code}-${Date.now()}`, productName || req.name);
+            addComponentSerial(variantId, serial || `SKU-${scanData.code}-${new Date().getTime()}`, productName || req.name);
         } catch (error) {
             showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Không tìm thấy thông tin mã quét.');
         }
