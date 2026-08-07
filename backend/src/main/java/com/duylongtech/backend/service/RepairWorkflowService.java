@@ -171,10 +171,9 @@ public class RepairWorkflowService {
     // =====================================================================
 
     private void handleDone(Repair repair) {
-        // 0. Validate: linh kiện ADD, isUsed=true, trackSerial=true phải có serialNumberId
+        // 0. Validate: linh kiện ADD, trackSerial=true phải có serialNumberId
         List<RepairLine> allAddLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), "ADD");
         for (RepairLine line : allAddLines) {
-            if (!Boolean.TRUE.equals(line.getIsUsed())) continue;
             // Lấy variant -> product -> trackSerial
             productVariantRepository.findById(line.getComponentVariantId()).ifPresent(variant -> {
                 if (Boolean.TRUE.equals(variant.getProduct().getTrackSerial()) && line.getSerialNumberId() == null) {
@@ -235,8 +234,7 @@ public class RepairWorkflowService {
                 .build();
 
         for (RepairLine rLine : addLines) {
-            BigDecimal actualDoneQty = (rLine.getDoneQuantity() != null && Boolean.TRUE.equals(rLine.getIsUsed())) 
-                                        ? rLine.getDoneQuantity() : BigDecimal.ZERO;
+            BigDecimal actualDoneQty = rLine.getQuantity();
             
             if (actualDoneQty.compareTo(BigDecimal.ZERO) <= 0) continue;
 

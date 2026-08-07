@@ -647,7 +647,6 @@ CREATE TABLE `ASSEMBLY_BOM_LINES` (
   `assembly_bom_id` BIGINT UNSIGNED NOT NULL,
   `component_variant_id` BIGINT UNSIGNED NOT NULL,
   `quantity` DECIMAL(15,4) NOT NULL,
-  `cost_allocation_pct` DECIMAL(5,2) NOT NULL DEFAULT 0.00,
   `note` TEXT,
   CONSTRAINT `fk_bom_line_bom` FOREIGN KEY (`assembly_bom_id`) REFERENCES `ASSEMBLY_BOMS` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_bom_line_component` FOREIGN KEY (`component_variant_id`) REFERENCES `PRODUCT_VARIANTS` (`id`) ON DELETE RESTRICT,
