@@ -461,8 +461,6 @@ function RepairFormPage() {
     if (status === 'DONE') {
       // Kiểm tra linh kiện có trackSerial nhưng chưa quét serial
       const missingSerial = (repair.lines || []).find(l => {
-        if (!l.isUsed) return false;
-
         const variant = variants.find(v => String(v.id) === String(l.componentVariantId));
         if (!variant?.trackSerial) return false;
 
@@ -477,14 +475,6 @@ function RepairFormPage() {
         const variant = variants.find(v => String(v.id) === String(missingSerial.componentVariantId));
         const name = missingSerial.componentVariant?.productName || variant?.productName || missingSerial.componentName || 'Linh kiện';
         showToast('error', `"${name}" quản lý theo Serial Number nhưng chưa được nhập/quét mã serial. Vui lòng hoàn thành trước khi kết thúc.`);
-        return;
-      }
-
-      const hasDiscrepancy = (repair.lines || []).some(l =>
-        l.actionType === 'ADD' && (Number(l.quantity) !== Number(l.doneQuantity) || !l.isUsed)
-      );
-      if (hasDiscrepancy) {
-        showToast('error', 'Có sự chênh lệch giữa số lượng yêu cầu và thực tế. Vui lòng cập nhật số lượng hoặc đánh dấu Đã sử dụng trước khi kết thúc.');
         return;
       }
     }
@@ -735,9 +725,7 @@ function RepairFormPage() {
 
   const totalLinesAmount = lines.reduce((acc, l) => {
     if (l.isFreeWarranty || l.actionType !== 'ADD') return acc;
-    const qty = ['UNDER_REPAIR', 'DONE'].includes(currentStatus)
-      ? (l.isUsed ? Number(l.doneQuantity || 0) : 0)
-      : Number(l.quantity || 0);
+    const qty = Number(l.quantity || 0);
     return acc + (qty * Number(l.unitPrice));
   }, 0);
   const totalFeesAmount = fees.reduce((acc, f) => acc + (f.isFreeWarranty ? 0 : Number(f.quantity || 1) * Number(f.feeAmount)), 0);
@@ -936,10 +924,8 @@ function RepairFormPage() {
                       <th style={{ whiteSpace: 'nowrap' }}>Loại</th>
                       <th style={{ whiteSpace: 'nowrap' }}>Hạng mục (Linh kiện / Dịch vụ)</th>
                       {showRepairCols && isEditable && <th style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>Tồn kho</th>}
-                      <th style={{ width: '80px', textAlign: 'right', whiteSpace: 'nowrap' }}>Yêu cầu</th>
-                      {showRepairCols && <th style={{ width: '100px', textAlign: 'right', whiteSpace: 'nowrap' }}>Hoàn thành</th>}
+                      <th style={{ width: '80px', textAlign: 'right', whiteSpace: 'nowrap' }}>Số lượng</th>
                       <th style={{ whiteSpace: 'nowrap' }}>ĐVT</th>
-                      {showRepairCols && <th style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>Đã sử dụng</th>}
                       <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá / Phí</th>
                       <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
                       <th style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>Bảo hành</th>
@@ -999,19 +985,7 @@ function RepairFormPage() {
                               <input type="number" min="0" step="1" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} value={line.quantity} onChange={(e) => handleUpdateLineField(line.id, line._key, 'quantity', e.target.value)} />
                             ) : Number(line.quantity || 0)}
                           </td>
-                          {showRepairCols && (
-                            <td align="right">
-                              {(isEditable || currentStatus === 'UNDER_REPAIR') ? (
-                                <input type="number" min="0" step="1" className="misa-input" style={{ width: '80px', textAlign: 'right', padding: '2px 4px', height: '28px' }} value={line.doneQuantity || 0} onFocus={(e) => e.target.select()} onChange={(e) => handleUpdateLineField(line.id, line._key, 'doneQuantity', parseInt(e.target.value, 10) || 0)} />
-                              ) : (Number(line.doneQuantity || 0))}
-                            </td>
-                          )}
                           <td>{variants.find(v => String(v.id) === String(line.componentVariantId))?.unitName || line.componentVariant?.unitName || line._unitName || '-'}</td>
-                          {showRepairCols && (
-                            <td align="center">
-                              <input type="checkbox" disabled={!isEditable && currentStatus !== 'UNDER_REPAIR'} checked={line.isUsed || false} onChange={(e) => handleUpdateLineField(line.id, line._key, 'isUsed', e.target.checked)} />
-                            </td>
-                          )}
                           <td align="right">
                             {isEditable ? (
                               <input type="text" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} value={line.isFreeWarranty ? 0 : money(line.unitPrice)} onChange={(e) => handleUpdateLineField(line.id, line._key, 'unitPrice', Number(e.target.value.replace(/\D/g, '')))} />
@@ -1020,10 +994,7 @@ function RepairFormPage() {
                           <td align="right" style={{ fontWeight: '500' }}>
                             {(() => {
                               if (line.isFreeWarranty || line.actionType !== 'ADD') return money(0);
-                              const qty = ['UNDER_REPAIR', 'DONE'].includes(currentStatus)
-                                ? (line.isUsed ? Number(line.doneQuantity || 0) : 0)
-                                : Number(line.quantity || 0);
-                              return money(qty * Number(line.unitPrice));
+                              return money(Number(line.quantity || 0) * Number(line.unitPrice));
                             })()}
                           </td>
                           <td align="center">
@@ -1062,7 +1033,7 @@ function RepairFormPage() {
                                     onClick={() => openSerialModal(line, idx)}
                                     style={btnStyle}
                                   >
-                                    <i className="bi bi-upc-scan"></i> {hasSerial ? '1' : '0'} / {Number(line.doneQuantity || 0)}
+                                    <i className="bi bi-upc-scan"></i> {hasSerial ? '1' : '0'} / {Number(line.quantity || 0)}
                                   </button>
                                 );
                               }
