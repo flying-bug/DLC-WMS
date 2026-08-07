@@ -13,4 +13,5 @@ public interface SerialNumberRepository extends JpaRepository<SerialNumber, Long
     List<SerialNumber> findBySerialNumberIn(List<String> serialNumbers);
     List<SerialNumber> findByWarehouseIdAndVariantIdAndStatus(Long warehouseId, Long variantId, String status);
     boolean existsByVariantIdIn(List<Long> variantIds);
+    boolean existsBySerialNumber(String serialNumber);
 }

@@ -18,4 +18,5 @@ public class AssemblyOrderLineResponse {
     private BigDecimal unitCost;
     private BigDecimal salePrice;
     private String note;
+    private Boolean trackSerial;
 }

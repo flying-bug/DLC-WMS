@@ -39,6 +39,7 @@ public class WarehouseService {
     private final UserRepository userRepository;
     private final CodeGeneratorService codeGeneratorService;
     private final com.duylongtech.backend.repository.SerialNumberRepository serialNumberRepository;
+    private final com.duylongtech.backend.repository.AssemblyOrderSerialRepository assemblyOrderSerialRepository;
 
     // ──────────────────────────────────────────────────────────
     // US1: Tạo mới kho
@@ -324,5 +325,51 @@ public class WarehouseService {
                 .stream()
                 .map(com.duylongtech.backend.entity.SerialNumber::getSerialNumber)
                 .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.duylongtech.backend.dto.response.SerialTreeResponse> getSerialTree(Long warehouseId, Long variantId) {
+        // 1. Lấy danh sách Serial của thành phẩm (variantId) đang AVAILABLE trong kho này
+        List<String> availableSerials = getAvailableSerials(warehouseId, variantId);
+        if (availableSerials.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        // 2. Lấy các bản ghi ghép nối lịch sử có chứa các Serial này
+        List<com.duylongtech.backend.entity.AssemblyOrderSerial> mappings = assemblyOrderSerialRepository.findByTargetVariantIdAndTargetSerialsIn(variantId, availableSerials);
+
+        // 3. Gom nhóm theo Target Serial
+        java.util.Map<String, List<com.duylongtech.backend.entity.AssemblyOrderSerial>> grouped = mappings.stream()
+                .collect(java.util.stream.Collectors.groupingBy(com.duylongtech.backend.entity.AssemblyOrderSerial::getTargetSerial));
+
+        // 4. Map sang SerialTreeResponse
+        return availableSerials.stream().map(targetSerial -> {
+            List<com.duylongtech.backend.entity.AssemblyOrderSerial> comps = grouped.getOrDefault(targetSerial, java.util.Collections.emptyList());
+            
+            String targetSku = comps.isEmpty() ? "" : comps.get(0).getTargetVariant().getSku();
+            String targetName = comps.isEmpty() ? "" : comps.get(0).getTargetVariant().getProduct().getProductName() + " - " + comps.get(0).getTargetVariant().getVariantName();
+
+            List<com.duylongtech.backend.dto.response.SerialTreeResponse.ComponentSerial> compResponses = comps.stream().map(c -> {
+                String cSku = c.getComponentVariant() != null ? c.getComponentVariant().getSku() : "";
+                String cName = c.getComponentVariant() != null ? c.getComponentVariant().getProduct().getProductName() + " - " + c.getComponentVariant().getVariantName() : "";
+                return com.duylongtech.backend.dto.response.SerialTreeResponse.ComponentSerial.builder()
+                        .componentSerial(c.getComponentSerial())
+                        .componentSku(cSku)
+                        .componentName(cName)
+                        .build();
+            }).collect(java.util.stream.Collectors.toList());
+
+            return com.duylongtech.backend.dto.response.SerialTreeResponse.builder()
+                    .targetSerial(targetSerial)
+                    .targetSku(targetSku)
+                    .targetName(targetName)
+                    .components(compResponses)
+                    .build();
+        }).collect(java.util.stream.Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean checkSerialExists(String serialNumber) {
+        return serialNumberRepository.existsBySerialNumber(serialNumber);
     }
 }

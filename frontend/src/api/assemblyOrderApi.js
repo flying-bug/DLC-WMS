@@ -65,7 +65,10 @@ export const getAssemblyOrderSerials = (id) => {
     return axiosClient.get(`/assembly-orders/${id}/serials`);
 };
 
-export const saveAssemblyOrderSerials = (id, data) => {
-    return axiosClient.post(`/assembly-orders/${id}/serials`, data);
+export const saveAssemblyOrderSerials = (id, requests) => {
+    return axiosClient.post(`/assembly-orders/${id}/serials`, requests);
 };
 
+export const executeAssemblyOrder = (id, request) => {
+    return axiosClient.post(`/assembly-orders/${id}/execute`, request);
+};

@@ -600,6 +600,27 @@ public class InventoryDocumentService {
         return buildScanResponse("SERIAL", code, variant, serial);
     }
 
+    @Transactional(readOnly = true)
+    public ScanResolveResponse resolveGenericScan(ScanResolveRequest req) {
+        String code = trimToNull(req != null ? req.getCode() : null);
+        if (code == null) {
+            throw new BusinessException("Mã quét là bắt buộc");
+        }
+        List<SerialNumber> serials = serialNumberRepository.findBySerialNumber(code);
+        if (serials.size() > 1) {
+            throw new BusinessException("Mã serial tồn tại trên nhiều sản phẩm");
+        }
+        if (serials.size() == 1) {
+            SerialNumber serial = serials.get(0);
+            ProductVariant variant = serial.getVariant();
+            if (variant == null) {
+                throw new BusinessException("Serial chưa gắn SKU sản phẩm");
+            }
+            return buildScanResponse("SERIAL", code, variant, serial);
+        }
+        return resolveVariantScan(code);
+    }
+
     private ScanResolveResponse resolveVariantScan(String code) {
         ProductVariant variant = productVariantRepository.findByBarcode(code)
                 .or(() -> productVariantRepository.findBySku(code))

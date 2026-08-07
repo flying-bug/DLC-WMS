@@ -20,7 +20,6 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public List<InventoryBalanceReportResponse> getInventoryBalanceReport(String search, Long warehouseId) {
-        log.info("Fetching Inventory Balance Report. warehouseId={}, search={}", warehouseId, search);
         return reportRepository.getInventoryBalanceReport(search, warehouseId);
     }
 

@@ -5,6 +5,7 @@ import com.duylongtech.backend.dto.request.AssemblyBomRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderLineRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderSerialRequest;
+import com.duylongtech.backend.dto.request.AssemblyExecutionRequest;
 import com.duylongtech.backend.dto.response.AssemblyBomLineResponse;
 import com.duylongtech.backend.dto.response.AssemblyBomResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderLineResponse;
@@ -677,6 +678,19 @@ public class AssemblyOrderService {
                     .orElse(String.valueOf(order.getCreatedBy()));
         }
         
+        List<com.duylongtech.backend.entity.AssemblyOrderSerial> serials = assemblyOrderSerialRepository.findByAssemblyOrderId(order.getId());
+        List<com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse> mappedSerials = serials.stream().map(s -> {
+            com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse res = new com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse();
+            res.setId(s.getId());
+            res.setAssemblyOrderId(s.getAssemblyOrder().getId());
+            res.setTargetVariantId(s.getTargetVariant().getId());
+            res.setTargetSerial(s.getTargetSerial());
+            res.setComponentVariantId(s.getComponentVariant().getId());
+            res.setComponentName(variantName(s.getComponentVariant()));
+            res.setComponentSerial(s.getComponentSerial());
+            return res;
+        }).toList();
+
         return AssemblyOrderResponse.builder()
                 .id(order.getId())
                 .orderCode(order.getOrderCode())
@@ -690,6 +704,7 @@ public class AssemblyOrderService {
                 .targetSalePrice(target != null ? target.getSalePrice() : null)
                 .warehouseId(order.getWarehouseId())
                 .quantity(order.getQuantity())
+                .quantityProduced(order.getQuantityProduced())
                 .status(order.getStatus())
                 .executionDate(order.getExecutionDate())
                 .note(order.getNote())
@@ -699,6 +714,7 @@ public class AssemblyOrderService {
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .lines(order.getLines() == null ? List.of() : order.getLines().stream().map(this::toOrderLineResponse).toList())
+                .mappedSerials(mappedSerials)
                 .build();
     }
 
@@ -716,6 +732,7 @@ public class AssemblyOrderService {
                 .unitCost(line.getUnitCost())
                 .salePrice(variant != null ? variant.getSalePrice() : null)
                 .note(line.getNote())
+                .trackSerial(product != null ? product.getTrackSerial() : false)
                 .build();
     }
 
@@ -777,5 +794,126 @@ public class AssemblyOrderService {
         }).collect(Collectors.toList());
         
         assemblyOrderSerialRepository.saveAll(newSerials);
+    }
+
+    @Transactional
+    public void executeAssemblyOrder(Long id, AssemblyExecutionRequest request, Long userId) {
+        AssemblyOrder order = findOrderOrThrow(id);
+        if (!"APPROVED".equals(order.getStatus())) {
+            throw new BusinessException("Chỉ có thể thực thi lệnh đã được duyệt");
+        }
+        if (!ASSEMBLY.equals(order.getOrderType()) && !"DISASSEMBLY".equals(order.getOrderType())) {
+            throw new BusinessException("Tính năng thực thi quét mã vạch hiện tại chỉ hỗ trợ Lắp ráp và Tháo dỡ");
+        }
+
+        ProductVariant targetVariant = order.getTargetVariant();
+        if (targetVariant == null) {
+            throw new BusinessException("Lệnh không có thành phẩm");
+        }
+
+        List<com.duylongtech.backend.dto.request.InventoryDocumentLineRequest> exportLines = new java.util.ArrayList<>();
+        List<com.duylongtech.backend.dto.request.InventoryDocumentLineRequest> importLines = new java.util.ArrayList<>();
+        List<AssemblyOrderSerialRequest> serialMappings = new java.util.ArrayList<>();
+
+        java.util.Map<Long, java.util.List<String>> componentsToExport = new java.util.HashMap<>();
+
+        for (AssemblyExecutionRequest.AssemblySetRequest set : request.getAssembledSets()) {
+            com.duylongtech.backend.dto.request.InventoryDocumentLineRequest targetLine = new com.duylongtech.backend.dto.request.InventoryDocumentLineRequest();
+            targetLine.setVariantId(targetVariant.getId());
+            targetLine.setQuantityIn(BigDecimal.ONE);
+            targetLine.setQuantityOut(BigDecimal.ONE); // Sets both, we will only use one based on the order type later
+            targetLine.setUnitCost(BigDecimal.ZERO);
+            targetLine.setUnitPrice(BigDecimal.ZERO);
+            targetLine.setSerialNumbers(List.of(set.getParentSerial()));
+            
+            if (ASSEMBLY.equals(order.getOrderType())) {
+                targetLine.setQuantityOut(null);
+                importLines.add(targetLine);
+            } else {
+                targetLine.setQuantityIn(null);
+                exportLines.add(targetLine);
+            }
+
+            for (AssemblyExecutionRequest.AssemblyComponentRequest comp : set.getComponents()) {
+                componentsToExport.computeIfAbsent(comp.getVariantId(), k -> new java.util.ArrayList<>()).add(comp.getSerial());
+
+                AssemblyOrderSerialRequest mapping = new AssemblyOrderSerialRequest();
+                mapping.setTargetVariantId(targetVariant.getId());
+                mapping.setTargetSerial(set.getParentSerial());
+                mapping.setComponentVariantId(comp.getVariantId());
+                mapping.setComponentSerial(comp.getSerial());
+                serialMappings.add(mapping);
+            }
+        }
+
+        for (java.util.Map.Entry<Long, java.util.List<String>> entry : componentsToExport.entrySet()) {
+            com.duylongtech.backend.dto.request.InventoryDocumentLineRequest compLine = new com.duylongtech.backend.dto.request.InventoryDocumentLineRequest();
+            compLine.setVariantId(entry.getKey());
+            compLine.setUnitCost(BigDecimal.ZERO);
+            compLine.setUnitPrice(BigDecimal.ZERO);
+            compLine.setSerialNumbers(entry.getValue());
+            
+            if (ASSEMBLY.equals(order.getOrderType())) {
+                compLine.setQuantityOut(new BigDecimal(entry.getValue().size()));
+                exportLines.add(compLine);
+            } else {
+                compLine.setQuantityIn(new BigDecimal(entry.getValue().size()));
+                importLines.add(compLine);
+            }
+        }
+
+        com.duylongtech.backend.dto.request.InventoryDocumentRequest exportDoc = new com.duylongtech.backend.dto.request.InventoryDocumentRequest();
+        exportDoc.setWarehouseId(request.getWarehouseId());
+        exportDoc.setDocDate(request.getExecutionDate());
+        exportDoc.setReferenceType("ASSEMBLY_ORDER");
+        exportDoc.setReferenceId(order.getId());
+        exportDoc.setIssuePurpose("ASSEMBLY"); // Xuất lắp ráp/tháo dỡ
+        exportDoc.setCreatedBy(userId);
+        exportDoc.setStatus("SUBMITTED");
+        exportDoc.setLines(exportLines);
+        com.duylongtech.backend.dto.response.InventoryDocumentResponse createdExport = inventoryDocumentService.createExport(exportDoc);
+        inventoryDocumentService.postExport(createdExport.getId());
+
+        com.duylongtech.backend.dto.request.InventoryDocumentRequest importDoc = new com.duylongtech.backend.dto.request.InventoryDocumentRequest();
+        importDoc.setWarehouseId(request.getWarehouseId());
+        importDoc.setDocDate(request.getExecutionDate());
+        importDoc.setReferenceType("ASSEMBLY_ORDER");
+        importDoc.setReferenceId(order.getId());
+        importDoc.setIssuePurpose("PRODUCTION"); // Nhập kho sản xuất (thành phẩm sau lắp ráp)
+        importDoc.setCreatedBy(userId);
+        importDoc.setStatus("SUBMITTED");
+        importDoc.setLines(importLines);
+        com.duylongtech.backend.dto.response.InventoryDocumentResponse createdImport = inventoryDocumentService.createImport(importDoc);
+        inventoryDocumentService.postImport(createdImport.getId());
+
+        List<AssemblyOrderSerial> newSerials = serialMappings.stream().map(req -> {
+            ProductVariant targetVar = productVariantRepository.findById(req.getTargetVariantId())
+                    .orElseThrow(() -> new EntityNotFoundException("Target variant not found: " + req.getTargetVariantId()));
+            ProductVariant compVar = productVariantRepository.findById(req.getComponentVariantId())
+                    .orElseThrow(() -> new EntityNotFoundException("Component variant not found: " + req.getComponentVariantId()));
+            
+            return AssemblyOrderSerial.builder()
+                    .assemblyOrder(order)
+                    .targetVariant(targetVar)
+                    .targetSerial(req.getTargetSerial())
+                    .componentVariant(compVar)
+                    .componentSerial(req.getComponentSerial())
+                    .createdBy(userId)
+                    .build();
+        }).collect(Collectors.toList());
+        
+        assemblyOrderSerialRepository.saveAll(newSerials);
+
+        // ── Cập nhật quantityProduced ──────────────────────────────────────────
+        int executedCount = request.getAssembledSets().size();
+        BigDecimal newProduced = order.getQuantityProduced().add(new BigDecimal(executedCount));
+        order.setQuantityProduced(newProduced);
+
+        // Nếu đã thực thi đủ toàn bộ → tự động chuyển SUBMITTED
+        if (newProduced.compareTo(order.getQuantity()) >= 0) {
+            order.setStatus("SUBMITTED");
+        }
+        order.setUpdatedAt(LocalDateTime.now());
+        assemblyOrderRepository.save(order);
     }
 }

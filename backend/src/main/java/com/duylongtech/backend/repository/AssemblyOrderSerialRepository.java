@@ -10,4 +10,7 @@ import java.util.List;
 public interface AssemblyOrderSerialRepository extends JpaRepository<AssemblyOrderSerial, Long> {
     List<AssemblyOrderSerial> findByAssemblyOrderId(Long assemblyOrderId);
     void deleteByAssemblyOrderId(Long assemblyOrderId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT s FROM AssemblyOrderSerial s JOIN FETCH s.componentVariant WHERE s.targetVariant.id = :targetVariantId AND s.targetSerial IN :targetSerials")
+    List<AssemblyOrderSerial> findByTargetVariantIdAndTargetSerialsIn(@org.springframework.data.repository.query.Param("targetVariantId") Long targetVariantId, @org.springframework.data.repository.query.Param("targetSerials") List<String> targetSerials);
 }

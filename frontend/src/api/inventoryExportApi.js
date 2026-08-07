@@ -27,7 +27,11 @@ export const postExportSlip = (id) => {
 };
 
 export const resolveScan = (data) => {
-  return axiosClient.post(`${EXPORT_BASE}/resolve-scan`, data);
+    return axiosClient.post(`${EXPORT_BASE}/resolve-scan`, data);
+};
+
+export const resolveBarcode = (data) => {
+    return axiosClient.post(`${EXPORT_BASE}/resolve-barcode`, data);
 };
 
 export const getProducts = (params = {}) => {

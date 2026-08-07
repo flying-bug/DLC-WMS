@@ -67,3 +67,17 @@ export const getWarehouseInventory = (id) => {
 export const getAvailableSerials = (warehouseId, variantId) => {
     return axiosClient.get(`/warehouses/${warehouseId}/variants/${variantId}/serials`);
 };
+
+/**
+ * Kiểm tra xem serial đã tồn tại trong hệ thống chưa
+ */
+export const checkSerialExists = (serialNumber) => {
+    return axiosClient.get(`/warehouses/serials/check`, { params: { serialNumber } });
+};
+
+/**
+ * Lấy cây Serial (Thành phẩm -> Linh kiện)
+ */
+export const getSerialTree = (warehouseId, variantId) => {
+    return axiosClient.get(`/warehouses/${warehouseId}/variants/${variantId}/serial-tree`);
+};

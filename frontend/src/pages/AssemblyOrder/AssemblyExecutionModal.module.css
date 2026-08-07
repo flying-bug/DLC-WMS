@@ -1,0 +1,728 @@
+/* ====== MODAL WRAPPER ====== */
+.modalWrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 92vh;
+    background: #fff;
+}
+
+/* ====== HEADER ====== */
+.modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 2px solid var(--color-border, #e5e7eb);
+    background: var(--color-primary, #0075c0);
+    flex-shrink: 0;
+}
+
+.headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.headerIcon {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+}
+
+.modalTitle {
+    font-size: 17px;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+}
+
+.modalSubtitle {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.75);
+    margin: 2px 0 0 0;
+}
+
+.closeBtn {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.closeBtn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ====== PROGRESS BAR ====== */
+.progressHeader {
+    padding: 12px 24px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+}
+
+.progressLabel {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.progressTrack {
+    flex: 1;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s;
+}
+
+.progressText {
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 42px;
+    text-align: right;
+}
+
+/* ====== BODY ====== */
+.modalBody {
+    flex: 1;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+}
+
+/* ====== LEFT: SET PANEL ====== */
+.setPanel {
+    border-right: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+.setPanelHeader {
+    padding: 14px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    background: white;
+    flex-shrink: 0;
+}
+
+.setList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.setCard {
+    padding: 12px 14px;
+    background: white;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.setCard:hover {
+    border-color: #93c5fd;
+    background: #f0f7ff;
+}
+
+.setCardActive {
+    border-color: #0075c0;
+    background: #eff6ff;
+    box-shadow: 0 0 0 3px rgba(0, 117, 192, 0.12);
+}
+
+.setCardComplete {
+    border-color: #6ee7b7;
+    background: #f0fdf4;
+}
+
+.setCardInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.setCardName {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.setCardSerial {
+    font-size: 11px;
+    color: #64748b;
+    font-family: 'Courier New', monospace;
+}
+
+.setCardStatus {
+    font-size: 18px;
+}
+
+/* ====== RIGHT: WORK AREA ====== */
+.workArea {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* === SCAN ZONE === */
+.scanZone {
+    padding: 16px 20px;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+.scanZoneTitle {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.scanRow {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.scanInputWrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f8fafc;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.scanInputWrap:focus-within {
+    border-color: #0075c0;
+    box-shadow: 0 0 0 3px rgba(0, 117, 192, 0.1);
+    background: white;
+}
+
+.scanIcon {
+    padding: 0 12px;
+    color: #94a3b8;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.scanInputWrap:focus-within .scanIcon {
+    color: #0075c0;
+}
+
+.scanInput {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 10px 0;
+    font-size: 14px;
+    color: #1e293b;
+    outline: none;
+}
+
+.scanInput::placeholder {
+    color: #94a3b8;
+}
+
+.scanBtn {
+    padding: 0 18px;
+    height: 42px;
+    background: var(--color-primary, #0075c0);
+    color: white;
+    border: none;
+    border-radius: 7px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+
+.scanBtn:hover {
+    background: var(--color-primary-hover, #005a96);
+}
+
+.scanHint {
+    margin-top: 8px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+
+.hintPending {
+    color: #b45309;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+}
+
+.hintReady {
+    color: #166534;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+}
+
+/* === SERIAL HEADER (Thành phẩm row) === */
+.serialHeader {
+    padding: 12px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.serialHeaderLabel {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.serialBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+}
+
+.serialEmpty {
+    font-size: 13px;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.changSerialBtn {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+
+.changSerialBtn:hover {
+    background: #fee2e2;
+}
+
+/* === COMPONENTS TABLE === */
+.componentTable {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+}
+
+.compTableHeader {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 10px;
+}
+
+.compTableHint {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.compRow {
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: white;
+    transition: border-color 0.2s;
+    overflow: hidden;
+}
+
+.compRowDone {
+    border-color: #6ee7b7;
+    background: #f0fdf4;
+}
+
+.compRowOpen {
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 3px rgba(0, 117, 192, 0.08);
+}
+
+.compRowHeader {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+}
+
+.compRowClickable {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.compRowClickable:hover {
+    background: #f8fafc;
+}
+
+.compRight {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.pickFromStockBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+
+.compRowClickable:hover .pickFromStockBtn {
+    background: #dbeafe;
+}
+
+/* ── Serial Picker ── */
+.serialPicker {
+    border-top: 1.5px dashed #bfdbfe;
+    background: #f8fafc;
+}
+
+.serialPickerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    gap: 12px;
+}
+
+.serialPickerSearch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 5px 10px;
+    color: #94a3b8;
+}
+
+.serialPickerSearch input {
+    border: none;
+    outline: none;
+    flex: 1;
+    font-size: 13px;
+    color: #1e293b;
+    background: transparent;
+}
+
+.serialPickerCount {
+    font-size: 12px;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.serialPickerList {
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+.serialPickerLoading,
+.serialPickerEmpty {
+    padding: 20px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.serialPickerItem {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: none;
+    background: transparent;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+    color: #1e293b;
+}
+
+.serialPickerItem:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.serialPickerItem > i:first-child {
+    color: #94a3b8;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.serialPickerItem:hover > i:first-child {
+    color: #1d4ed8;
+}
+
+.serialPickerItemCode {
+    flex: 1;
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+}
+
+.serialPickerItemAction {
+    font-size: 12px;
+    font-weight: 600;
+    color: #10b981;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.serialPickerItem:hover .serialPickerItemAction {
+    opacity: 1;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+
+
+.compIcon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.compRowDone .compIcon {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.compInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.compName {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 2px;
+}
+
+.compSku {
+    font-size: 12px;
+    color: #64748b;
+    font-family: 'Courier New', monospace;
+    margin-bottom: 8px;
+}
+
+.serialSlots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.serialSlotFilled {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+    border-radius: 5px;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+}
+
+.removeSerialBtn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0;
+    font-size: 12px;
+    line-height: 1;
+    transition: color 0.15s;
+}
+
+.removeSerialBtn:hover {
+    color: #ef4444;
+}
+
+.serialSlotEmpty {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border: 1.5px dashed #cbd5e1;
+    color: #94a3b8;
+    border-radius: 5px;
+    font-size: 12px;
+}
+
+.compQty {
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+    padding-top: 2px;
+}
+
+/* ====== FOOTER ====== */
+.modalFooter {
+    padding: 14px 24px;
+    border-top: 1px solid #e5e7eb;
+    background: white;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.footerInfo {
+    flex: 1;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.btnCancel {
+    padding: 9px 22px;
+    background: white;
+    border: 1.5px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btnCancel:hover {
+    background: #f4f5f8;
+}
+
+.btnSubmit {
+    padding: 9px 24px;
+    background: var(--color-primary, #0075c0);
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: background 0.2s, opacity 0.2s;
+}
+
+.btnSubmit:hover:not(:disabled) {
+    background: var(--color-primary-hover, #005a96);
+}
+
+.btnSubmit:disabled {
+    background: #d1d5db;
+    cursor: not-allowed;
+}
