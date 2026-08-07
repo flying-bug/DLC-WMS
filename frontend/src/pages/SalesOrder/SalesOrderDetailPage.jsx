@@ -8,11 +8,12 @@ import * as soApi from '../../api/salesOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import QuotationTemplate from './components/QuotationTemplate';
 import styles from './SalesOrderDetailPage.module.css';
+import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const money = (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
-const fmtDate = (v) => (v ? new Date(v).toLocaleDateString('vi-VN') : '—');
-const fmtDateTime = (v) => (v ? new Date(v).toLocaleString('vi-VN') : '—');
+const fmtDate = (v) => (v ? formatDateOnly(v) : '—');
+const fmtDateTime = (v) => (v ? formatDateTime(v) : '—');
 
 const STATUS_CONFIG = {
   DRAFT: { label: 'Nháp', bg: '#f1f5f9', color: '#64748b', icon: 'bi-pencil-square' },

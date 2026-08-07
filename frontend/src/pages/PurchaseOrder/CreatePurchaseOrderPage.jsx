@@ -6,10 +6,11 @@ import Toast from '../../components/ui/Toast/Toast';
 import SupplierModal from '../Supplier/components/SupplierModal';
 import * as poApi from '../../api/purchaseOrderApi';
 import styles from './CreatePurchaseOrderPage.module.css';
+import { getTodayIsoDate } from '../../utils/dateFormat';
 
 const unwrap      = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p)   => p?.content ?? p ?? [];
-const today       = ()    => new Date().toLocaleDateString('sv-SE');
+const today       = getTodayIsoDate;
 const money       = (v)   => Number(v || 0).toLocaleString('vi-VN');
 
 const customSelectStyles = {

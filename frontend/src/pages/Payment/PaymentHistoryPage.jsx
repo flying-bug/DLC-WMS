@@ -6,22 +6,12 @@ import * as customerApi from '../../api/customerApi';
 import * as purchaseOrderApi from '../../api/purchaseOrderApi';
 import * as paymentApi from '../../api/paymentApi';
 import styles from './PaymentHistoryPage.module.css';
+import { formatDateTime } from '../../utils/dateFormat';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 const statusText = (status) => (status === 'POSTED' ? 'Ghi sổ' : status === 'DRAFT' ? 'Nháp' : status || '-');
-const formatDateTime = (value) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
+const formatPaymentDateTime = (value) => value ? formatDateTime(value, { withSeconds: false }) : '-';
 
 function PaymentHistoryPage() {
   const { partnerId } = useParams();
@@ -187,7 +177,7 @@ function PaymentHistoryPage() {
                   <tr key={item.id}>
                     <td className={styles.codeCell}>{item.code}</td>
                     <td>{item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'}</td>
-                    <td>{formatDateTime(item.createdAt)}</td>
+                    <td>{formatPaymentDateTime(item.createdAt)}</td>
                     <td>{item.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</td>
                     <td className={styles.noteCell}>{item.note || 'Không có ghi chú'}</td>
                     <td>

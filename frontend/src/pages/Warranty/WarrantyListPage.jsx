@@ -7,6 +7,7 @@ import { exportToExcel } from '../../utils/excelExport';
 import styles from './WarrantyListPage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 import Modal from '../../components/ui/Modal/Modal';
+import { formatDateOnly } from '../../utils/dateFormat';
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
@@ -38,7 +39,7 @@ const COLUMN_OPTIONS = [
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const totalFromPayload = (payload, fallback) => payload?.totalElements ?? fallback;
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString('vi-VN') : 'Chưa có');
+const formatDate = (value) => (value ? formatDateOnly(value) : 'Chưa có');
 
 function WarrantyListPage() {
   const navigate = useNavigate();

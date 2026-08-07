@@ -4,6 +4,7 @@ import Select from 'react-select';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { format, parseISO } from 'date-fns';
+import { getTodayIsoDate } from '../../utils/dateFormat';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import CustomerModal from '../Customer/components/CustomerModal';
@@ -12,7 +13,7 @@ import styles from './CreateSalesOrderPage.module.css';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p) => p?.content ?? p ?? [];
-const today = () => new Date().toLocaleDateString('sv-SE');
+const today = getTodayIsoDate;
 const money = (v) => Number(v || 0).toLocaleString('vi-VN');
 const digitsOnly = (value) => String(value || '').replace(/\D/g, '');
 const formatMoneyInput = (value) => {

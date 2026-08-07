@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, useEffect } from 'react';
 import axiosClient from '../../api/axiosClient';
 import AdminLayout from '../../components/layout/AdminLayout';
 import styles from './AiChatPage.module.css';
+import { formatTime } from '../../utils/dateFormat';
 
 const suggestedPrompts = [
     'Tồn kho hiện tại của sản phẩm nào đang thấp?',
@@ -64,10 +65,7 @@ function AiChatPage() {
     const canSend = input.trim().length > 0 && !isThinking;
 
     const currentTime = useMemo(() => {
-        return new Intl.DateTimeFormat('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit'
-        }).format(new Date());
+        return formatTime();
     }, []);
 
     const sendMessage = (value = input) => {
@@ -101,10 +99,7 @@ function AiChatPage() {
                         id: Date.now() + 1,
                         role: 'assistant',
                         content: `${data?.answer || 'Backend đã phản hồi nhưng không có nội dung trả lời.'}${sourceText}`,
-                        time: new Intl.DateTimeFormat('vi-VN', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        }).format(new Date())
+                        time: formatTime()
                     }
                 ]);
             })
@@ -115,10 +110,7 @@ function AiChatPage() {
                         id: Date.now() + 1,
                         role: 'assistant',
                         content: buildErrorReply(error),
-                        time: new Intl.DateTimeFormat('vi-VN', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        }).format(new Date())
+                        time: formatTime()
                     }
                 ]);
             })

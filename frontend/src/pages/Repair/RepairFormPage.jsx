@@ -16,6 +16,7 @@ import RepairSerialModal from './components/RepairSerialModal';
 import RepairQuotationTemplate from './components/RepairQuotationTemplate';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import styles from './RepairFormPage.module.css';
+import { getTodayIsoDate } from '../../utils/dateFormat';
 
 const customSelectStyles = {
   control: (base, state) => ({
@@ -38,7 +39,7 @@ const STAGES = ['DRAFT', 'CONFIRMED', 'UNDER_REPAIR', 'DONE'];
 const STAGE_LABELS = { DRAFT: 'Nháp', QUOTATION: 'Báo giá', CONFIRMED: 'Xác nhận', UNDER_REPAIR: 'Đang sửa', DONE: 'Hoàn tất', CANCELLED: 'Đã huỷ' };
 const EDITABLE_STATUSES = ['DRAFT', 'QUOTATION', 'CONFIRMED', 'UNDER_REPAIR'];
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
-const today = () => new Date().toLocaleDateString('sv-SE');
+const today = getTodayIsoDate;
 
 function RepairFormPage() {
   const { id } = useParams();

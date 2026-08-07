@@ -7,6 +7,7 @@ import * as customerApi from '../../api/customerApi';
 import * as purchaseOrderApi from '../../api/purchaseOrderApi';
 import * as paymentApi from '../../api/paymentApi';
 import styles from './PaymentManagementPage.module.css';
+import { formatDateTime } from '../../utils/dateFormat';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -17,18 +18,7 @@ const formatMoneyInput = (value) => {
   return digits ? Number(digits).toLocaleString('vi-VN') : '';
 };
 const statusText = (status) => (status === 'POSTED' ? 'Ghi sổ' : status === 'DRAFT' ? 'Nháp' : status || '-');
-const formatDateTime = (value) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
+const formatPaymentDateTime = (value) => value ? formatDateTime(value, { withSeconds: false }) : '-';
 
 const selectStyles = {
   control: (base, state) => ({
@@ -330,7 +320,7 @@ function PaymentManagementPage() {
                     </div>
                     <span>{item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'} - {item.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</span>
                     <span className={styles.historyMeta}>
-                      <i className="bi bi-calendar3" /> {formatDateTime(item.createdAt)}
+                      <i className="bi bi-calendar3" /> {formatPaymentDateTime(item.createdAt)}
                     </span>
                     <span className={styles.historyNote}>
                       <i className="bi bi-chat-left-text" /> {item.note || 'Không có ghi chú'}

@@ -1,4 +1,5 @@
 import { numberToVietnameseWords } from './numberToVietnameseWords';
+import { formatDateOnly } from './dateFormat';
 
 export function printExportSlip(slipOrSlips, options = {}) {
   const {
@@ -41,7 +42,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
     const taxCode = customer.taxCode || customer.taxId || slip.taxCode || '';
 
     const salesperson = slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || 'Chưa rõ';
-    const docDateStr = slip.docDate ? new Date(slip.docDate).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN');
+    const docDateStr = formatDateOnly(slip.docDate || new Date());
     
     const currentWarehouseName = warehouseName || (slip.warehouseId ? (`Kho #${slip.warehouseId}`) : '');
 

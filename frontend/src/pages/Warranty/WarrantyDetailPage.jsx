@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warrantyApi from '../../api/warrantyApi';
 import styles from './WarrantyDetailPage.module.css';
+import { formatDateOnly } from '../../utils/dateFormat';
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
@@ -24,7 +25,7 @@ const REPAIR_STATUS_LABELS = {
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString('vi-VN') : 'Chưa có');
+const formatDate = (value) => (value ? formatDateOnly(value) : 'Chưa có');
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 
 function WarrantyDetailPage() {

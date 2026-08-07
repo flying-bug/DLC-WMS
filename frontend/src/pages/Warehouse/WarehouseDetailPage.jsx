@@ -7,20 +7,14 @@ import WarehouseDeleteModal from '../../components/warehouse/WarehouseDeleteModa
 import Toast from '../../components/ui/Toast/Toast';
 import WarehouseInventoryList from './components/WarehouseInventoryList';
 import styles from './WarehouseDetailPage.module.css';
+import { formatDateTime } from '../../utils/dateFormat';
 
 const formatCurrency = (value) => {
     if (value === undefined || value === null) return '0 ₫';
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 };
 
-const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN', { 
-        day: '2-digit', month: '2-digit', year: 'numeric', 
-        hour: '2-digit', minute: '2-digit' 
-    });
-};
+const formatDate = (dateString) => dateString ? formatDateTime(dateString, { withSeconds: false }) : 'N/A';
 
 const getStatusLabel = (status) => {
     switch (status) {

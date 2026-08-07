@@ -1,4 +1,5 @@
 import axiosClient from './axiosClient';
+import { getVietnamTimestamp } from '../utils/dateFormat';
 
 const REPORT_BASE = '/reports';
 
@@ -58,9 +59,7 @@ export const exportReportExcel = async (reportType, params = {}) => {
         const link = document.createElement('a');
         link.href = url;
         
-        const now = new Date();
-        const pad = (n) => (n < 10 ? '0' + n : n);
-        const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+        const timestamp = getVietnamTimestamp();
         
         link.setAttribute('download', `DLC_WMS_Bao_Cao_${reportType}_${timestamp}.xlsx`);
         document.body.appendChild(link);
