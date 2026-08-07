@@ -12,6 +12,9 @@ import java.util.Optional;
 public interface AssemblyOrderRepository extends JpaRepository<AssemblyOrder, Long> {
     boolean existsByOrderCode(String orderCode);
 
+    @Query("SELECT o.orderCode FROM AssemblyOrder o WHERE o.orderCode LIKE CONCAT(:prefix, '%')")
+    List<String> findOrderCodesByPrefix(@Param("prefix") String prefix);
+
     @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM AssemblyOrder o WHERE o.targetVariant.id IN :variantIds")
     boolean existsByTargetVariantIdIn(@Param("variantIds") List<Long> variantIds);
 

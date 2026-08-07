@@ -40,19 +40,26 @@ public class ProductController {
     @PreAuthorize("hasAuthority('product:view')")
     public ResponseEntity<Page<ProductResponse>> getProducts(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) Long categoryId) {
-        return ResponseEntity.ok(productService.getProducts(page, size, search, categoryId));
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String productType,
+            @RequestParam(required = false) Long brandId,
+            @RequestParam(required = false) Long unitId) {
+        return ResponseEntity.ok(productService.getProducts(page, size, search, categoryId, productType, brandId, unitId));
     }
 
     @GetMapping("/export")
     @PreAuthorize("hasAuthority('product:export')")
     public ResponseEntity<byte[]> exportProducts(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String productType,
+            @RequestParam(required = false) Long brandId,
+            @RequestParam(required = false) Long unitId,
             org.springframework.security.core.Authentication authentication) {
         String exporterName = authentication != null ? authentication.getName() : "System";
-        byte[] excelBytes = productService.exportProductsToExcel(search, exporterName);
+        byte[] excelBytes = productService.exportProductsToExcel(search, categoryId, productType, brandId, unitId, exporterName);
 
         org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
         String timestamp = java.time.LocalDateTime.now()

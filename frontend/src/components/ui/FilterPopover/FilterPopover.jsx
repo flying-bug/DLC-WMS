@@ -14,7 +14,9 @@ const FilterPopover = ({
   partnerLabel = 'Khách hàng / Đối tác',
   staffLabel = 'Nhân viên',
   purposeLabel = 'Loại phiếu',
+  purposeField = 'issuePurpose',
   showDateRange = true,
+  customSelects = [],
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [localFilters, setLocalFilters] = useState(filters);
@@ -152,8 +154,8 @@ const FilterPopover = ({
                   <label className={styles.label}>{purposeLabel.toUpperCase()}</label>
                   <select
                     className={styles.select}
-                    value={localFilters.issuePurpose || ''}
-                    onChange={(e) => handleFieldChange('issuePurpose', e.target.value)}
+                    value={localFilters[purposeField] || ''}
+                    onChange={(e) => handleFieldChange(purposeField, e.target.value)}
                   >
                     <option value="">Tất cả loại phiếu</option>
                     {purposeOptions.map(opt => (
@@ -228,6 +230,27 @@ const FilterPopover = ({
                     <option key={st.id} value={st.id}>{st.fullName || st.username || st.name}</option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {/* Custom Selects */}
+            {customSelects && customSelects.length > 0 && (
+              <div className={styles.row}>
+                {customSelects.map(sel => (
+                  <div className={styles.formGroup} key={sel.name}>
+                    <label className={styles.label}>{sel.label.toUpperCase()}</label>
+                    <select
+                      className={styles.select}
+                      value={localFilters[sel.name] || ''}
+                      onChange={(e) => handleFieldChange(sel.name, e.target.value)}
+                    >
+                      <option value="">{sel.defaultOption || `Tất cả ${sel.label.toLowerCase()}`}</option>
+                      {sel.options.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
               </div>
             )}
           </div>

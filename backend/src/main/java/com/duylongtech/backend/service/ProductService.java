@@ -67,9 +67,9 @@ public class ProductService {
     private final AssemblyOrderRepository assemblyOrderRepository;
     private final CodeGeneratorService codeGeneratorService;
 
-    public Page<ProductResponse> getProducts(int page, int size, String search, Long categoryId) {
+    public Page<ProductResponse> getProducts(int page, int size, String search, Long categoryId, String productType, Long brandId, Long unitId) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        Page<Product> productPage = productRepository.searchProducts(search, categoryId, pageable);
+        Page<Product> productPage = productRepository.searchProducts(search, categoryId, productType, brandId, unitId, pageable);
         List<Long> productIds = productPage.getContent().stream().map(Product::getId).toList();
         java.util.Map<Long, BigDecimal> stockMap = new java.util.HashMap<>();
         if (!productIds.isEmpty()) {
@@ -192,8 +192,8 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public byte[] exportProductsToExcel(String search, String exporterName) {
-        List<Product> products = productRepository.searchProducts(search, null, Pageable.unpaged()).getContent();
+    public byte[] exportProductsToExcel(String search, Long categoryId, String productType, Long brandId, Long unitId, String exporterName) {
+        List<Product> products = productRepository.searchProducts(search, categoryId, productType, brandId, unitId, Pageable.unpaged()).getContent();
         List<Long> productIds = products.stream().map(Product::getId).toList();
         java.util.Map<Long, BigDecimal> stockMap = new java.util.HashMap<>();
         if (!productIds.isEmpty()) {

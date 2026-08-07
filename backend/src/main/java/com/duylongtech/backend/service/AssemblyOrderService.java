@@ -72,12 +72,27 @@ public class AssemblyOrderService {
         validateBomRequest(request, true);
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new BusinessException("Không tìm thấy sản phẩm thành phẩm"));
-        String bomCode = resolveCreateBomCode(request.getBomCode(), product);
+                
+        List<AssemblyBom> existingBoms = assemblyBomRepository.findAllWithLines(null, product.getId());
+        BigDecimal nextVersion = BigDecimal.ONE;
+        
+        for (AssemblyBom existingBom : existingBoms) {
+            if (existingBom.getVersionNo() != null && existingBom.getVersionNo().compareTo(nextVersion) >= 0) {
+                nextVersion = existingBom.getVersionNo().add(BigDecimal.ONE);
+            }
+            if (isSameComponents(existingBom.getLines(), request.getLines())) {
+                throw new BusinessException("Cấu hình này trùng với cấu hình " + existingBom.getBomCode());
+            }
+        }
+        
+        String productCode = trimToNull(product.getProductCode()) != null ? product.getProductCode().trim() : String.valueOf(product.getId());
+        String bomCode = "CH-" + productCode + "-v" + nextVersion.stripTrailingZeros().toPlainString();
+        
         AssemblyBom bom = AssemblyBom.builder()
                 .product(product)
                 .bomCode(bomCode)
                 .bomName(trimToNull(request.getBomName()) != null ? request.getBomName().trim() : product.getProductName())
-                .versionNo(request.getVersionNo() != null ? request.getVersionNo() : BigDecimal.ONE)
+                .versionNo(nextVersion)
                 .status(normalizeBomStatus(request.getStatus(), "APPROVED"))
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -96,6 +111,14 @@ public class AssemblyOrderService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy định mức vật tư"));
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new BusinessException("Không tìm thấy sản phẩm thành phẩm"));
+                
+        List<AssemblyBom> existingBoms = assemblyBomRepository.findAllWithLines(null, product.getId());
+        for (AssemblyBom existingBom : existingBoms) {
+            if (!existingBom.getId().equals(id) && isSameComponents(existingBom.getLines(), request.getLines())) {
+                throw new BusinessException("Cấu hình này trùng với cấu hình " + existingBom.getBomCode());
+            }
+        }
+        
         String bomCode = trimToNull(request.getBomCode());
         if (bomCode != null && !bomCode.equals(bom.getBomCode())) {
             if (assemblyBomRepository.existsByBomCodeAndIdNot(bomCode, id)) {
@@ -410,6 +433,33 @@ public class AssemblyOrderService {
                     .build();
             bom.getLines().add(line);
         }
+    }
+
+    private boolean isSameComponents(List<AssemblyBomLine> existingLines, List<AssemblyBomLineRequest> requestLines) {
+        if (existingLines == null || requestLines == null) return false;
+        
+        java.util.Map<Long, BigDecimal> reqMap = requestLines.stream()
+                .filter(r -> r.getComponentVariantId() != null)
+                .collect(Collectors.toMap(AssemblyBomLineRequest::getComponentVariantId, 
+                    r -> r.getQuantity() != null ? r.getQuantity() : BigDecimal.ONE, 
+                    BigDecimal::add));
+                    
+        java.util.Map<Long, BigDecimal> existMap = existingLines.stream()
+                .filter(l -> l.getComponentVariant() != null && l.getComponentVariant().getId() != null)
+                .collect(Collectors.toMap(
+                    l -> l.getComponentVariant().getId(), 
+                    l -> l.getQuantity() != null ? l.getQuantity() : BigDecimal.ONE,
+                    BigDecimal::add));
+                    
+        if (reqMap.size() != existMap.size()) return false;
+        
+        for (java.util.Map.Entry<Long, BigDecimal> entry : reqMap.entrySet()) {
+            BigDecimal existQty = existMap.get(entry.getKey());
+            if (existQty == null || existQty.compareTo(entry.getValue()) != 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private AssemblyBom findBomOrThrow(Long bomId) {

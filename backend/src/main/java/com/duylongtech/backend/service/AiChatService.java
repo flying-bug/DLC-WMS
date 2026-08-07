@@ -142,7 +142,7 @@ public class AiChatService {
 
     private AiChatResponse answerProductSearch(String message) {
         String keyword = extractSearchKeyword(message);
-        Page<Product> products = productRepository.searchProducts(keyword, null, PageRequest.of(0, 5));
+        Page<Product> products = productRepository.searchProducts(keyword, null, null, null, null, PageRequest.of(0, 5));
         Page<ProductVariant> variants = productVariantRepository.searchVariants(keyword, PageRequest.of(0, 5));
 
         StringBuilder answer = new StringBuilder("Mình đã đọc dữ liệu sản phẩm");

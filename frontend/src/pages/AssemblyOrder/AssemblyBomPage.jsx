@@ -68,7 +68,7 @@ function AssemblyBomPage() {
         setLoading(true);
         setError('');
         try {
-            const response = await assemblyApi.getAssemblyBoms({ status: statusFilter || undefined });
+            const response = await assemblyApi.getAssemblyBoms({});
             setBoms(listFrom(unwrap(response)));
             setPage(1);
         } catch (err) {
@@ -77,7 +77,7 @@ function AssemblyBomPage() {
         } finally {
             setLoading(false);
         }
-    }, [statusFilter]);
+    }, []);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -103,9 +103,14 @@ function AssemblyBomPage() {
 
     const filteredBoms = useMemo(() => {
         let result = boms;
+
+        if (statusFilter) {
+            result = result.filter(bom => bom.status === statusFilter);
+        }
+
         if (keywordFilter) {
             const lower = keywordFilter.toLowerCase();
-            result = result.filter(bom => 
+            result = result.filter(bom =>
                 (bom.bomCode && bom.bomCode.toLowerCase().includes(lower)) ||
                 (bom.bomName && bom.bomName.toLowerCase().includes(lower)) ||
                 (bom.productCode && bom.productCode.toLowerCase().includes(lower)) ||
@@ -113,7 +118,7 @@ function AssemblyBomPage() {
             );
         }
         return result;
-    }, [boms, keywordFilter]);
+    }, [boms, keywordFilter, statusFilter]);
 
     const handleExport = () => {
         if (filteredBoms.length === 0) {
@@ -184,11 +189,44 @@ function AssemblyBomPage() {
                     </div>
                 </div>
 
-                <div className={styles.detailGrid}>
-                    <div className={styles.detailItem}><span>Tổng BOM</span><strong>{stats.total}</strong></div>
-                    <div className={styles.detailItem}><span>Đã duyệt</span><strong>{stats.approved}</strong></div>
-                    <div className={styles.detailItem}><span>Nháp</span><strong>{stats.draft}</strong></div>
-                    <div className={styles.detailItem}><span>Ngừng dùng</span><strong>{stats.inactive}</strong></div>
+                <div className={styles.summaryCards}>
+
+                    <div
+                        className={`${styles.summaryCard} ${statusFilter === 'APPROVED' ? styles.activeCardSuccess : ''}`}
+                        onClick={() => { setStatusFilter(statusFilter === 'APPROVED' ? '' : 'APPROVED'); setPage(1); }}
+                    >
+                        <div className={styles.iconSuccess}>
+                            <i className="bi bi-check-circle-fill"></i>
+                        </div>
+                        <div className={styles.cardInfo}>
+                            <h3>{stats.approved}</h3>
+                            <p>Đã duyệt</p>
+                        </div>
+                    </div>
+                    <div
+                        className={`${styles.summaryCard} ${statusFilter === 'DRAFT' ? styles.activeCardSecondary : ''}`}
+                        onClick={() => { setStatusFilter(statusFilter === 'DRAFT' ? '' : 'DRAFT'); setPage(1); }}
+                    >
+                        <div className={styles.iconSecondary}>
+                            <i className="bi bi-file-earmark-text-fill"></i>
+                        </div>
+                        <div className={styles.cardInfo}>
+                            <h3>{stats.draft}</h3>
+                            <p>Nháp</p>
+                        </div>
+                    </div>
+                    <div
+                        className={`${styles.summaryCard} ${statusFilter === 'INACTIVE' ? styles.activeCardDanger : ''}`}
+                        onClick={() => { setStatusFilter(statusFilter === 'INACTIVE' ? '' : 'INACTIVE'); setPage(1); }}
+                    >
+                        <div className={styles.iconDanger}>
+                            <i className="bi bi-x-circle-fill"></i>
+                        </div>
+                        <div className={styles.cardInfo}>
+                            <h3>{stats.inactive}</h3>
+                            <p>Ngừng dùng</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div className={styles.filterSection}>
@@ -201,7 +239,6 @@ function AssemblyBomPage() {
                                 placeholder="Nhập từ khóa tìm kiếm mã/tên cấu hình..."
                                 value={keywordFilter}
                                 onChange={(e) => { setKeywordFilter(e.target.value); setPage(1); }}
-                                onKeyDown={(e) => e.key === 'Enter' && loadBoms()}
                             />
                             {keywordFilter && (
                                 <button className={styles.clearSearchBtn} onClick={() => { setKeywordFilter(''); setPage(1); }}>
@@ -210,17 +247,7 @@ function AssemblyBomPage() {
                             )}
                         </div>
 
-                        <FilterPopover
-                            filters={{ status: statusFilter }}
-                            onApply={(newFilters) => { setStatusFilter(newFilters.status); setPage(1); }}
-                            onReset={() => { setStatusFilter(''); setPage(1); }}
-                            statusOptions={[
-                                { value: 'APPROVED', label: 'Đã duyệt' },
-                                { value: 'DRAFT', label: 'Nháp' },
-                                { value: 'INACTIVE', label: 'Ngừng dùng' }
-                            ]}
-                            showDateRange={false}
-                        />
+
                     </div>
                     <div className={styles.filterActions}>
                         <button
@@ -288,7 +315,7 @@ function AssemblyBomPage() {
                             )}
                         </tbody>
                     </table>
-                    
+
                     <div className={styles.pagination}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span>Hiển thị</span>
