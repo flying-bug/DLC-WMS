@@ -41,7 +41,7 @@ function CreatePurchaseOrderPage() {
 
   const [suppliers, setSuppliers] = useState([]);
   const [variants,  setVariants]  = useState([]);
-  const [isSubmitLoading, setIsSubmitLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [saving,    setSaving]    = useState(false);
   const [toast,     setToast]     = useState({ isVisible: false, type: 'info', message: '' });
