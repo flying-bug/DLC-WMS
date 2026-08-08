@@ -43,6 +43,12 @@ public class RepairWorkflowService {
     private static final String SCRAP_WAREHOUSE_CODE = "SCRAP";
     private static final String REPAIR_DOC_TYPE_EXPORT = "EX_SO"; // Xuất linh kiện để sửa
     private static final String REPAIR_DOC_TYPE_IMPORT = "IN_PO"; // Nhập linh kiện tháo ra (Scrap)
+    private static final String ACTION_ADD = "ADD";
+    private static final String ACTION_REPLACE = "REPLACE";
+    private static final String ACTION_REMOVE = "REMOVE";
+    private static final String COMPONENT_STATUS_ACTIVE = "ACTIVE";
+    private static final String COMPONENT_STATUS_REPLACED = "REPLACED";
+    private static final String COMPONENT_STATUS_REMOVED = "REMOVED";
 
     // Định nghĩa các bước chuyển trạng thái hợp lệ
     private static final Map<String, Set<String>> VALID_TRANSITIONS = Map.of(
@@ -66,6 +72,7 @@ public class RepairWorkflowService {
     private final ProductVariantRepository productVariantRepository;
     private final InventoryDocumentService inventoryDocumentService;
     private final SerialNumberRepository serialNumberRepository;
+    private final AssemblyOrderSerialRepository assemblyOrderSerialRepository;
 
     /**
      * Chuyển trạng thái chính.
@@ -127,8 +134,7 @@ public class RepairWorkflowService {
             throw new BusinessException(SystemMessage.REP_PARTNER_REQUIRED);
         }
 
-        List<RepairLine> addLines = repairLineRepository.findByRepairIdAndActionType(
-                repair.getId(), "ADD");
+        List<RepairLine> addLines = getLinesForStockOut(repair.getId());
 
         if (addLines.isEmpty()) {
             // Không có linh kiện cần xuất -> chỉ phí dịch vụ, cho phép CONFIRM
@@ -142,9 +148,10 @@ public class RepairWorkflowService {
 
         for (RepairLine line : addLines) {
             InventoryBalance balance;
-            if (line.getSerialNumberId() != null) {
+            Long stockSerialNumberId = resolveStockOutSerialNumberId(line);
+            if (stockSerialNumberId != null) {
                 balance = inventoryBalanceRepository.findByWarehouseVariantSerialForUpdate(
-                        warehouseId, line.getComponentVariantId(), line.getSerialNumberId(), "GOOD").orElse(null);
+                        warehouseId, line.getComponentVariantId(), stockSerialNumberId, "GOOD").orElse(null);
             } else {
                 balance = inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
                         warehouseId, line.getComponentVariantId(), "GOOD").orElse(null);
@@ -171,32 +178,33 @@ public class RepairWorkflowService {
     // =====================================================================
 
     private void handleDone(Repair repair) {
-        // 0. Validate: linh kiện ADD, trackSerial=true phải có serialNumberId
-        List<RepairLine> allAddLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), "ADD");
-        for (RepairLine line : allAddLines) {
-            // Lấy variant -> product -> trackSerial
-            productVariantRepository.findById(line.getComponentVariantId()).ifPresent(variant -> {
-                if (Boolean.TRUE.equals(variant.getProduct().getTrackSerial()) && line.getSerialNumberId() == null) {
-                    String variantName = variant.getProduct().getProductName() + " (" + variant.getSku() + ")";
-                    throw new BusinessException(
-                        String.format(SystemMessage.REP_SERIAL_REQUIRED.getMessage(), variantName));
-                }
-            });
-        }
+        // 0. Validate serial cho linh kiện có quản lý serial.
+        List<RepairLine> allAddLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), ACTION_ADD);
+        List<RepairLine> replaceLines = repairLineRepository.findByRepairIdAndActionType(repair.getId(), ACTION_REPLACE);
+        List<RepairLine> removeLines = repairLineRepository.findByRepairIdAndActionType(
+                repair.getId(), ACTION_REMOVE);
+        validateSerialPresenceForTrackedLines(allAddLines, ACTION_ADD);
+        validateSerialPresenceForTrackedLines(replaceLines, ACTION_REPLACE);
+        validateSerialPresenceForTrackedLines(removeLines, ACTION_REMOVE);
 
         // 1. Post phiếu xuất kho linh kiện ADD (nếu có)
-        if (!allAddLines.isEmpty()) {
-            createFinalInventoryDocuments(repair, allAddLines);
+        List<RepairLine> stockOutLines = new java.util.ArrayList<>(allAddLines);
+        stockOutLines.addAll(replaceLines);
+        if (!stockOutLines.isEmpty()) {
+            createFinalInventoryDocuments(repair, stockOutLines);
         }
 
         // 2. Sinh phiếu nhập kho Scrap cho linh kiện REMOVE (nếu có)
-        List<RepairLine> removeLines = repairLineRepository.findByRepairIdAndActionType(
-                repair.getId(), "REMOVE");
-        if (!removeLines.isEmpty()) {
-            createScrapDocument(repair, removeLines);
+        List<RepairLine> scrapLines = new java.util.ArrayList<>(removeLines);
+        scrapLines.addAll(replaceLines);
+        if (!scrapLines.isEmpty()) {
+            createScrapDocument(repair, scrapLines);
         }
 
-        // 3. Stub: Sinh Invoice nếu invoice_method != 'none'
+        // 3. Cập nhật cấu hình serial bên trong PC sau sửa chữa.
+        updateDeviceComponentSerialLifecycle(repair, allAddLines, replaceLines, removeLines);
+
+        // 4. Stub: Sinh Invoice nếu invoice_method != 'none'
         if (!"none".equals(repair.getInvoiceMethod()) && repair.getTotalAmount().compareTo(BigDecimal.ZERO) > 0) {
             log.info("[Repair {}] Invoice method: {} - Total: {}. Invoice generation stub (sẽ implement ở Phase 3)",
                     repair.getRepairCode(), repair.getInvoiceMethod(), repair.getTotalAmount());
@@ -238,9 +246,10 @@ public class RepairWorkflowService {
             
             if (actualDoneQty.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-            String serialNumbersText = rLine.getSerialNumberText();
-            if (rLine.getSerialNumberId() != null) {
-                serialNumbersText = serialNumberRepository.findById(rLine.getSerialNumberId())
+            Long stockOutSerialNumberId = resolveStockOutSerialNumberId(rLine);
+            String serialNumbersText = resolveStockOutSerialText(rLine);
+            if (stockOutSerialNumberId != null) {
+                serialNumbersText = serialNumberRepository.findById(stockOutSerialNumberId)
                         .map(SerialNumber::getSerialNumber)
                         .orElse(serialNumbersText);
             }
@@ -253,9 +262,10 @@ public class RepairWorkflowService {
                     .unitCost(BigDecimal.ZERO)
                     .unitPrice(rLine.getUnitPrice())
                     .lineAmount(rLine.getUnitPrice().multiply(actualDoneQty))
-                    .serialNumberId(rLine.getSerialNumberId())
+                    .serialNumberId(stockOutSerialNumberId)
                     .serialNumbersText(serialNumbersText)
-                    .note("Linh kiện sửa chữa: " + (rLine.getNote() != null ? rLine.getNote() : ""))
+                    .note((ACTION_REPLACE.equals(rLine.getActionType()) ? "Linh kiện thay thế: " : "Linh kiện sửa chữa: ")
+                            + (rLine.getNote() != null ? rLine.getNote() : ""))
                     .build();
             exportDoc.getLines().add(docLine);
         }
@@ -317,7 +327,7 @@ public class RepairWorkflowService {
 
             InventoryDocumentLine scrapLine = InventoryDocumentLine.builder()
                     .inventoryDocument(scrapDoc)
-                    .variantId(line.getComponentVariantId())
+                    .variantId(resolveRemovedComponentVariantId(line))
                     .quantityIn(line.getQuantity())
                     .quantityOut(BigDecimal.ZERO)
                     .unitCost(BigDecimal.ZERO) // Linh kiện tháo ra ghi nhận giá vốn = 0 (phế liệu)
@@ -395,5 +405,362 @@ public class RepairWorkflowService {
         } catch (Exception e) {
             return "system";
         }
+    }
+
+    private void validateSerialPresenceForTrackedLines(List<RepairLine> lines, String actionType) {
+        for (RepairLine line : lines) {
+            ProductVariant variant = productVariantRepository.findById(line.getComponentVariantId()).orElse(null);
+            if (variant == null || !productTracksSerial(variant)) {
+                continue;
+            }
+
+            boolean missingSerial = switch (actionType) {
+                case ACTION_ADD -> line.getSerialNumberId() == null;
+                case ACTION_REPLACE -> trimToNull(resolveLineSerial(line)) == null
+                        || line.getReplacementSerialNumberId() == null;
+                default -> trimToNull(resolveLineSerial(line)) == null;
+            };
+            if (missingSerial) {
+                String variantName = variantName(variant);
+                throw new BusinessException(
+                        String.format(SystemMessage.REP_SERIAL_REQUIRED.getMessage(), variantName));
+            }
+        }
+    }
+
+    private void updateDeviceComponentSerialLifecycle(Repair repair, List<RepairLine> addLines,
+            List<RepairLine> replaceLines, List<RepairLine> removeLines) {
+        if (repair.getSerialNumberId() == null) {
+            return;
+        }
+
+        SerialNumber targetSerialNumber = serialNumberRepository.findById(repair.getSerialNumberId()).orElse(null);
+        if (targetSerialNumber == null || targetSerialNumber.getVariantId() == null
+                || trimToNull(targetSerialNumber.getSerialNumber()) == null) {
+            log.warn("[Repair {}] Không tìm thấy serial thành phẩm để cập nhật cấu hình linh kiện", repair.getRepairCode());
+            return;
+        }
+
+        String targetSerial = targetSerialNumber.getSerialNumber().trim();
+        Long targetVariantId = targetSerialNumber.getVariantId();
+        List<AssemblyOrderSerial> mappings = new java.util.ArrayList<>(
+                assemblyOrderSerialRepository.findByTargetVariantIdAndTargetSerial(targetVariantId, targetSerial));
+
+        if (mappings.isEmpty()) {
+            log.info("[Repair {}] Serial {} chưa có mapping lắp ráp, bỏ qua cập nhật cấu hình linh kiện",
+                    repair.getRepairCode(), targetSerial);
+            return;
+        }
+
+        AssemblyOrder sourceOrder = mappings.stream()
+                .map(AssemblyOrderSerial::getAssemblyOrder)
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+        ProductVariant targetVariant = mappings.stream()
+                .map(AssemblyOrderSerial::getTargetVariant)
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElseGet(() -> productVariantRepository.findById(targetVariantId).orElse(null));
+
+        if (sourceOrder == null || targetVariant == null) {
+            log.warn("[Repair {}] Mapping serial {} thiếu lệnh lắp ráp hoặc SKU thành phẩm, bỏ qua cập nhật",
+                    repair.getRepairCode(), targetSerial);
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        Long currentUserId = resolveCurrentUserId();
+        java.util.List<RepairLine> serialAddLines = addLines.stream()
+                .filter(line -> trimToNull(resolveLineSerial(line)) != null)
+                .toList();
+        java.util.List<RepairLine> serialReplaceLines = replaceLines.stream()
+                .filter(line -> trimToNull(resolveLineSerial(line)) != null)
+                .filter(line -> trimToNull(resolveReplacementLineSerial(line)) != null)
+                .toList();
+        java.util.List<RepairLine> serialRemoveLines = removeLines.stream()
+                .filter(line -> trimToNull(resolveLineSerial(line)) != null)
+                .toList();
+        java.util.Set<RepairLine> usedReplacementLines = new java.util.HashSet<>();
+        java.util.List<AssemblyOrderSerial> changedMappings = new java.util.ArrayList<>();
+
+        for (RepairLine replaceLine : serialReplaceLines) {
+            String removedSerial = resolveLineSerial(replaceLine);
+            String replacementSerial = resolveReplacementLineSerial(replaceLine);
+            AssemblyOrderSerial currentMapping = findActiveMapping(mappings, replaceLine.getComponentVariantId(), removedSerial);
+            if (currentMapping == null) {
+                throw new BusinessException("Serial " + removedSerial
+                        + " không nằm trong cấu hình hiện tại của PC " + targetSerial + ".");
+            }
+            if (findActiveMapping(mappings, replaceLine.getComponentVariantId(), replacementSerial) != null) {
+                throw new BusinessException("Serial " + replacementSerial
+                        + " đã tồn tại trong cấu hình hiện tại của PC " + targetSerial + ".");
+            }
+
+            currentMapping.setStatus(COMPONENT_STATUS_REPLACED);
+            currentMapping.setReplacedBySerial(replacementSerial);
+            markRemovedByRepair(currentMapping, repair, now);
+            currentMapping.setNote(appendNote(currentMapping.getNote(),
+                    "Thay thế bởi serial " + replacementSerial + " từ phiếu sửa " + repair.getRepairCode()));
+            changedMappings.add(currentMapping);
+
+            AssemblyOrderSerial newMapping = buildActiveRepairMapping(
+                    sourceOrder, targetVariant, targetSerial, replaceLine, replacementSerial, repair, now, currentUserId,
+                    "Thay thế serial " + removedSerial + " từ phiếu sửa " + repair.getRepairCode());
+            mappings.add(newMapping);
+            changedMappings.add(newMapping);
+        }
+
+        for (int index = 0; index < serialRemoveLines.size(); index++) {
+            RepairLine removeLine = serialRemoveLines.get(index);
+            String removedSerial = resolveLineSerial(removeLine);
+            AssemblyOrderSerial currentMapping = findActiveMapping(mappings, removeLine.getComponentVariantId(), removedSerial);
+            if (currentMapping == null) {
+                throw new BusinessException("Serial " + removedSerial
+                        + " không nằm trong cấu hình hiện tại của PC " + targetSerial + ".");
+            }
+
+            RepairLine replacementLine = findReplacementLine(
+                    serialAddLines,
+                    usedReplacementLines,
+                    removeLine.getComponentVariantId(),
+                    serialRemoveLines.size() - index);
+
+            if (replacementLine != null) {
+                String replacementSerial = resolveLineSerial(replacementLine);
+                currentMapping.setStatus(COMPONENT_STATUS_REPLACED);
+                currentMapping.setReplacedBySerial(replacementSerial);
+                markRemovedByRepair(currentMapping, repair, now);
+                currentMapping.setNote(appendNote(currentMapping.getNote(),
+                        "Thay thế bởi serial " + replacementSerial + " từ phiếu sửa " + repair.getRepairCode()));
+                changedMappings.add(currentMapping);
+                usedReplacementLines.add(replacementLine);
+
+                AssemblyOrderSerial newMapping = buildActiveRepairMapping(
+                        sourceOrder, targetVariant, targetSerial, replacementLine, replacementSerial, repair, now, currentUserId,
+                        "Thay thế serial " + removedSerial + " từ phiếu sửa " + repair.getRepairCode());
+                mappings.add(newMapping);
+                changedMappings.add(newMapping);
+            } else {
+                currentMapping.setStatus(COMPONENT_STATUS_REMOVED);
+                currentMapping.setReplacedBySerial(null);
+                markRemovedByRepair(currentMapping, repair, now);
+                currentMapping.setNote(appendNote(currentMapping.getNote(),
+                        "Loại bỏ từ phiếu sửa " + repair.getRepairCode()));
+                changedMappings.add(currentMapping);
+            }
+        }
+
+        for (RepairLine addLine : serialAddLines) {
+            if (usedReplacementLines.contains(addLine)) {
+                continue;
+            }
+
+            String addedSerial = resolveLineSerial(addLine);
+            if (findActiveMapping(mappings, addLine.getComponentVariantId(), addedSerial) != null) {
+                throw new BusinessException("Serial " + addedSerial
+                        + " đã tồn tại trong cấu hình hiện tại của PC " + targetSerial + ".");
+            }
+
+            AssemblyOrderSerial newMapping = buildActiveRepairMapping(
+                    sourceOrder, targetVariant, targetSerial, addLine, addedSerial, repair, now, currentUserId,
+                    "Lắp thêm từ phiếu sửa " + repair.getRepairCode());
+            mappings.add(newMapping);
+            changedMappings.add(newMapping);
+        }
+
+        if (!changedMappings.isEmpty()) {
+            assemblyOrderSerialRepository.saveAll(changedMappings);
+            log.info("[Repair {}] Đã cập nhật {} dòng mapping serial cho PC {}",
+                    repair.getRepairCode(), changedMappings.size(), targetSerial);
+        }
+    }
+
+    private RepairLine findReplacementLine(List<RepairLine> addLines, Set<RepairLine> usedLines,
+            Long preferredVariantId, int remainingRemoveCount) {
+        RepairLine sameVariant = addLines.stream()
+                .filter(line -> !usedLines.contains(line))
+                .filter(line -> java.util.Objects.equals(line.getComponentVariantId(), preferredVariantId))
+                .findFirst()
+                .orElse(null);
+        if (sameVariant != null) {
+            return sameVariant;
+        }
+
+        java.util.List<RepairLine> unusedAdds = addLines.stream()
+                .filter(line -> !usedLines.contains(line))
+                .toList();
+        if (remainingRemoveCount == 1 && unusedAdds.size() == 1) {
+            return unusedAdds.get(0);
+        }
+
+        return null;
+    }
+
+    private AssemblyOrderSerial findActiveMapping(List<AssemblyOrderSerial> mappings, Long componentVariantId, String componentSerial) {
+        String normalizedSerial = trimToNull(componentSerial);
+        if (normalizedSerial == null) {
+            return null;
+        }
+
+        AssemblyOrderSerial sameVariant = mappings.stream()
+                .filter(this::isActiveComponentSerial)
+                .filter(mapping -> mapping.getComponentVariant() != null)
+                .filter(mapping -> java.util.Objects.equals(mapping.getComponentVariant().getId(), componentVariantId))
+                .filter(mapping -> normalizedSerial.equalsIgnoreCase(mapping.getComponentSerial()))
+                .findFirst()
+                .orElse(null);
+        if (sameVariant != null) {
+            return sameVariant;
+        }
+
+        return mappings.stream()
+                .filter(this::isActiveComponentSerial)
+                .filter(mapping -> normalizedSerial.equalsIgnoreCase(mapping.getComponentSerial()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private AssemblyOrderSerial buildActiveRepairMapping(AssemblyOrder sourceOrder, ProductVariant targetVariant,
+            String targetSerial,
+            RepairLine line, String componentSerial, Repair repair, LocalDateTime now, Long currentUserId, String note) {
+        ProductVariant componentVariant = productVariantRepository.findById(line.getComponentVariantId())
+                .orElseThrow(() -> new BusinessException("Không tìm thấy linh kiện " + line.getComponentVariantId()));
+
+        return AssemblyOrderSerial.builder()
+                .assemblyOrder(sourceOrder)
+                .targetVariant(targetVariant)
+                .targetSerial(targetSerial)
+                .componentVariant(componentVariant)
+                .componentSerial(componentSerial.trim())
+                .status(COMPONENT_STATUS_ACTIVE)
+                .installedAt(now)
+                .sourceRepairId(repair.getId())
+                .note(appendNote(note, trimToNull(line.getNote())))
+                .createdBy(currentUserId)
+                .build();
+    }
+
+    private void markRemovedByRepair(AssemblyOrderSerial mapping, Repair repair, LocalDateTime removedAt) {
+        mapping.setRemovedAt(removedAt);
+        mapping.setRemovedByRepairId(repair.getId());
+    }
+
+    private List<RepairLine> getLinesForStockOut(Long repairId) {
+        java.util.List<RepairLine> lines = new java.util.ArrayList<>(
+                repairLineRepository.findByRepairIdAndActionType(repairId, ACTION_ADD));
+        lines.addAll(repairLineRepository.findByRepairIdAndActionType(repairId, ACTION_REPLACE));
+        return lines;
+    }
+
+    private Long resolveStockOutSerialNumberId(RepairLine line) {
+        if (line == null) {
+            return null;
+        }
+        return ACTION_REPLACE.equals(line.getActionType())
+                ? line.getReplacementSerialNumberId()
+                : line.getSerialNumberId();
+    }
+
+    private String resolveStockOutSerialText(RepairLine line) {
+        if (line == null) {
+            return null;
+        }
+        return ACTION_REPLACE.equals(line.getActionType())
+                ? line.getReplacementSerialNumberText()
+                : line.getSerialNumberText();
+    }
+
+    private Long resolveRemovedComponentVariantId(RepairLine line) {
+        if (line == null) {
+            return null;
+        }
+        if (line.getSerialNumberId() != null) {
+            return serialNumberRepository.findById(line.getSerialNumberId())
+                    .map(SerialNumber::getVariantId)
+                    .orElse(line.getComponentVariantId());
+        }
+        String removedSerial = trimToNull(line.getSerialNumberText());
+        if (removedSerial != null) {
+            List<SerialNumber> serials = serialNumberRepository.findBySerialNumber(removedSerial);
+            if (serials.size() == 1) {
+                return serials.get(0).getVariantId();
+            }
+        }
+        return line.getComponentVariantId();
+    }
+
+    private boolean isActiveComponentSerial(AssemblyOrderSerial mapping) {
+        return mapping != null
+                && (mapping.getStatus() == null || COMPONENT_STATUS_ACTIVE.equalsIgnoreCase(mapping.getStatus()));
+    }
+
+    private boolean productTracksSerial(ProductVariant variant) {
+        return variant != null
+                && variant.getProduct() != null
+                && Boolean.TRUE.equals(variant.getProduct().getTrackSerial());
+    }
+
+    private String resolveLineSerial(RepairLine line) {
+        if (line == null) {
+            return null;
+        }
+        if (line.getSerialNumberId() != null) {
+            return serialNumberRepository.findById(line.getSerialNumberId())
+                    .map(SerialNumber::getSerialNumber)
+                    .map(String::trim)
+                    .filter(serial -> !serial.isEmpty())
+                    .orElse(trimToNull(line.getSerialNumberText()));
+        }
+        return trimToNull(line.getSerialNumberText());
+    }
+
+    private String resolveReplacementLineSerial(RepairLine line) {
+        if (line == null) {
+            return null;
+        }
+        if (line.getReplacementSerialNumberId() != null) {
+            return serialNumberRepository.findById(line.getReplacementSerialNumberId())
+                    .map(SerialNumber::getSerialNumber)
+                    .map(String::trim)
+                    .filter(serial -> !serial.isEmpty())
+                    .orElse(trimToNull(line.getReplacementSerialNumberText()));
+        }
+        return trimToNull(line.getReplacementSerialNumberText());
+    }
+
+    private String variantName(ProductVariant variant) {
+        if (variant == null) {
+            return "Linh kiện";
+        }
+        String productName = variant.getProduct() != null ? trimToNull(variant.getProduct().getProductName()) : null;
+        String variantName = trimToNull(variant.getVariantName());
+        if (productName == null) {
+            return variantName != null ? variantName : "Linh kiện";
+        }
+        if (variantName == null || productName.equals(variantName)) {
+            return productName + " (" + variant.getSku() + ")";
+        }
+        return productName + " - " + variantName + " (" + variant.getSku() + ")";
+    }
+
+    private String appendNote(String current, String addition) {
+        String normalizedAddition = trimToNull(addition);
+        if (normalizedAddition == null) {
+            return trimToNull(current);
+        }
+        String normalizedCurrent = trimToNull(current);
+        if (normalizedCurrent == null) {
+            return normalizedAddition;
+        }
+        return normalizedCurrent + "\n" + normalizedAddition;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

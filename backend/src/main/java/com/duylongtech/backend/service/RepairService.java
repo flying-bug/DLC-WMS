@@ -56,7 +56,7 @@ public class RepairService {
 
     private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "QUOTATION", "CONFIRMED", "UNDER_REPAIR");
     private static final Set<String> VALID_INVOICE_METHODS = Set.of("none", "b4repair", "after_repair");
-    private static final Set<String> VALID_ACTION_TYPES = Set.of("ADD", "REMOVE");
+    private static final Set<String> VALID_ACTION_TYPES = Set.of("ADD", "REPLACE", "REMOVE");
 
     private final RepairRepository repairRepository;
     private final RepairLineRepository repairLineRepository;
@@ -235,6 +235,8 @@ public class RepairService {
                 .isFreeWarranty(isFreeWarranty)
                 .serialNumberId(request.getSerialNumberId())
                 .serialNumberText(request.getSerialNumber())
+                .replacementSerialNumberId(request.getReplacementSerialNumberId())
+                .replacementSerialNumberText(request.getReplacementSerialNumber())
 
                 .note(trimToNull(request.getNote()))
                 .build();
@@ -257,32 +259,43 @@ public class RepairService {
             throw new BusinessException(SystemMessage.REP_LINE_NOT_FOUND);
         }
 
-        boolean isUnderRepair = "UNDER_REPAIR".equals(repair.getRepairStatus());
-        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus()) && !isUnderRepair) {
+        if (!EDITABLE_STATUSES.contains(repair.getRepairStatus())) {
             throw new BusinessException(SystemMessage.REP_CANNOT_MODIFY);
         }
 
-        if (isUnderRepair) {
-            // Chỉ cho phép cập nhật serial khi đang UNDER_REPAIR
-            if (request.getSerialNumberId() != null) line.setSerialNumberId(request.getSerialNumberId() == -1 ? null : request.getSerialNumberId());
-            if (request.getSerialNumber() != null) line.setSerialNumberText(request.getSerialNumber().isEmpty() ? null : request.getSerialNumber());
-        } else {
-            // Trạng thái DRAFT hoặc QUOTATION cho phép sửa toàn bộ
-            if (request.getComponentVariantId() != null) line.setComponentVariantId(request.getComponentVariantId());
-            if (request.getQuantity() != null) line.setQuantity(request.getQuantity());
-            if (request.getActionType() != null) line.setActionType(request.getActionType().toUpperCase());
-            if (request.getUnitPrice() != null) line.setUnitPrice(request.getUnitPrice());
-            if (request.getIsFreeWarranty() != null) {
-                line.setIsFreeWarranty(request.getIsFreeWarranty());
-                if (Boolean.TRUE.equals(request.getIsFreeWarranty())) {
-                    line.setUnitPrice(BigDecimal.ZERO);
-                }
-            }
-
-            if (request.getNote() != null) line.setNote(trimToNull(request.getNote()));
-            if (request.getSerialNumberId() != null) line.setSerialNumberId(request.getSerialNumberId() == -1 ? null : request.getSerialNumberId());
-            if (request.getSerialNumber() != null) line.setSerialNumberText(request.getSerialNumber().isEmpty() ? null : request.getSerialNumber());
+        if (request.getComponentVariantId() != null && !request.getComponentVariantId().equals(line.getComponentVariantId())) {
+            line.setComponentVariantId(request.getComponentVariantId());
+            clearLineSerials(line);
         }
+        if (request.getQuantity() != null) {
+            if (request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException("quantity phải lớn hơn 0");
+            }
+            line.setQuantity(request.getQuantity());
+        }
+        if (request.getActionType() != null) {
+            String normalizedActionType = request.getActionType().toUpperCase();
+            if (!VALID_ACTION_TYPES.contains(normalizedActionType)) {
+                throw new BusinessException("actionType phải là ADD, REPLACE hoặc REMOVE");
+            }
+            if (!normalizedActionType.equals(line.getActionType())) {
+                line.setActionType(normalizedActionType);
+                clearLineSerials(line);
+            }
+        }
+        if (request.getUnitPrice() != null) line.setUnitPrice(request.getUnitPrice());
+        if (request.getIsFreeWarranty() != null) {
+            line.setIsFreeWarranty(request.getIsFreeWarranty());
+            if (Boolean.TRUE.equals(request.getIsFreeWarranty())) {
+                line.setUnitPrice(BigDecimal.ZERO);
+            }
+        }
+
+        if (request.getNote() != null) line.setNote(trimToNull(request.getNote()));
+        if (request.getSerialNumberId() != null) line.setSerialNumberId(request.getSerialNumberId() == -1 ? null : request.getSerialNumberId());
+        if (request.getSerialNumber() != null) line.setSerialNumberText(request.getSerialNumber().isEmpty() ? null : request.getSerialNumber());
+        if (request.getReplacementSerialNumberId() != null) line.setReplacementSerialNumberId(request.getReplacementSerialNumberId() == -1 ? null : request.getReplacementSerialNumberId());
+        if (request.getReplacementSerialNumber() != null) line.setReplacementSerialNumberText(request.getReplacementSerialNumber().isEmpty() ? null : request.getReplacementSerialNumber());
 
         repairLineRepository.save(line);
         recalculateTotalAmount(repair);
@@ -418,7 +431,7 @@ public class RepairService {
         List<RepairFee> fees = repairFeeRepository.findByRepairId(repair.getId());
 
         BigDecimal lineTotal = lines.stream()
-                .filter(l -> "ADD".equals(l.getActionType())) // Chỉ tính dòng ADD vào chi phí
+                .filter(l -> "ADD".equals(l.getActionType()) || "REPLACE".equals(l.getActionType()))
                 .map(l -> {
                     BigDecimal qty = l.getQuantity() != null ? l.getQuantity() : BigDecimal.ZERO;
                     return l.getUnitPrice().multiply(qty);
@@ -646,18 +659,31 @@ public class RepairService {
             } catch (Exception ignored) { /* best-effort */ }
         }
 
+        String replacementSerialNum = line.getReplacementSerialNumberText();
+        if (line.getReplacementSerialNumberId() != null) {
+            try {
+                var snOpt = serialNumberRepository.findById(line.getReplacementSerialNumberId());
+                if (snOpt.isPresent()) {
+                    replacementSerialNum = snOpt.get().getSerialNumber();
+                }
+            } catch (Exception ignored) { /* best-effort */ }
+        }
+
         // Calculate available quantity
         BigDecimal availableQty = BigDecimal.ZERO;
         try {
             Long warehouseId = line.getRepair() != null && line.getRepair().getWarehouseId() != null ? line.getRepair().getWarehouseId() : 1L; // Fallback to 1L if needed, though best to rely on proper config
-            if (line.getSerialNumberId() != null) {
+            Long stockSerialNumberId = "REPLACE".equals(line.getActionType())
+                    ? line.getReplacementSerialNumberId()
+                    : line.getSerialNumberId();
+            if (stockSerialNumberId != null && !"REMOVE".equals(line.getActionType())) {
                 InventoryBalance balance = inventoryBalanceRepository.findByWarehouseVariantSerial(
-                        warehouseId, line.getComponentVariantId(), line.getSerialNumberId(), "GOOD").orElse(null);
+                        warehouseId, line.getComponentVariantId(), stockSerialNumberId, "GOOD").orElse(null);
                 if (balance != null) {
                     availableQty = balance.getQuantityOnHand().subtract(balance.getQuantityReserved());
                 }
             } else {
-                availableQty = inventoryBalanceRepository.sumAvailableQuantityByWarehouseAndVariant(
+                availableQty = inventoryBalanceRepository.sumAvailableLooseQuantityByWarehouseAndVariant(
                         warehouseId, line.getComponentVariantId(), "GOOD");
             }
             if (availableQty.compareTo(BigDecimal.ZERO) < 0) availableQty = BigDecimal.ZERO;
@@ -679,6 +705,8 @@ public class RepairService {
                 .isFreeWarranty(line.getIsFreeWarranty())
                 .serialNumberId(line.getSerialNumberId())
                 .serialNumber(serialNum)
+                .replacementSerialNumberId(line.getReplacementSerialNumberId())
+                .replacementSerialNumber(replacementSerialNum)
 
                 .note(line.getNote())
                 .createdAt(line.getCreatedAt())
@@ -726,7 +754,7 @@ public class RepairService {
             throw new BusinessException("componentVariantId là bắt buộc");
         }
         if (!VALID_ACTION_TYPES.contains(request.getActionType().toUpperCase())) {
-            throw new BusinessException("actionType phải là ADD hoặc REMOVE");
+            throw new BusinessException("actionType phải là ADD, REPLACE hoặc REMOVE");
         }
         if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException("quantity phải lớn hơn 0");
@@ -752,6 +780,13 @@ public class RepairService {
             return "after_repair";
         }
         return normalized;
+    }
+
+    private void clearLineSerials(RepairLine line) {
+        line.setSerialNumberId(null);
+        line.setSerialNumberText(null);
+        line.setReplacementSerialNumberId(null);
+        line.setReplacementSerialNumberText(null);
     }
 
     private String trimToNull(String value) {

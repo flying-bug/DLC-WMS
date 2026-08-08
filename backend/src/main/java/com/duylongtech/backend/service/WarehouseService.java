@@ -321,9 +321,25 @@ public class WarehouseService {
 
     @Transactional(readOnly = true)
     public List<String> getAvailableSerials(Long warehouseId, Long variantId) {
-        return serialNumberRepository.findByWarehouseIdAndVariantIdAndStatus(warehouseId, variantId, "AVAILABLE")
+        List<String> availableSerials = serialNumberRepository.findByWarehouseIdAndVariantIdAndStatus(warehouseId, variantId, "AVAILABLE")
                 .stream()
                 .map(com.duylongtech.backend.entity.SerialNumber::getSerialNumber)
+                .collect(java.util.stream.Collectors.toList());
+        if (availableSerials.isEmpty()) {
+            return availableSerials;
+        }
+
+        java.util.Set<String> installedComponentSerials = assemblyOrderSerialRepository
+                .findActiveComponentSerials(variantId, availableSerials)
+                .stream()
+                .map(serial -> serial == null ? "" : serial.trim().toLowerCase(java.util.Locale.ROOT))
+                .collect(java.util.stream.Collectors.toSet());
+        if (installedComponentSerials.isEmpty()) {
+            return availableSerials;
+        }
+
+        return availableSerials.stream()
+                .filter(serial -> !installedComponentSerials.contains(serial.trim().toLowerCase(java.util.Locale.ROOT)))
                 .collect(java.util.stream.Collectors.toList());
     }
 

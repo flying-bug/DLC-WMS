@@ -35,6 +35,28 @@ public class AssemblyOrderSerial {
     @Column(name = "component_serial", nullable = false, length = 100)
     private String componentSerial;
 
+    @Column(name = "status", nullable = false, length = 30)
+    @Builder.Default
+    private String status = "ACTIVE";
+
+    @Column(name = "installed_at")
+    private LocalDateTime installedAt;
+
+    @Column(name = "removed_at")
+    private LocalDateTime removedAt;
+
+    @Column(name = "source_repair_id")
+    private Long sourceRepairId;
+
+    @Column(name = "removed_by_repair_id")
+    private Long removedByRepairId;
+
+    @Column(name = "replaced_by_serial", length = 100)
+    private String replacedBySerial;
+
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
+
     @Column(name = "created_by")
     private Long createdBy;
 
