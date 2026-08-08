@@ -212,9 +212,6 @@ function WarrantyListPage() {
       <div className={styles.pageBody}>
         <div className={styles.pageTitleContainer}>
           <h1 className={styles.pageTitle}>Danh sách bảo hành</h1>
-          <button className={styles.btnPrimary} onClick={() => navigate('/export-slips/create?type=WARRANTY')}>
-            <i className="bi bi-plus"></i> Thêm mới
-          </button>
         </div>
 
         <div className={styles.filterSection}>
