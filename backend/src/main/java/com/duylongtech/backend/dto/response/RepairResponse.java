@@ -39,6 +39,11 @@ public class RepairResponse {
     // Thông tin bảo hành liên kết
     private Long warrantyId;
 
+    // Thông tin tham chiếu chứng từ chung
+    private String referenceType;
+    private Long referenceId;
+    private String referenceCode;
+
     // Ngày
     private LocalDate receivedDate;
     private LocalDate expectedDate;

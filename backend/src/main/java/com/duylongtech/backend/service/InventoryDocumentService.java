@@ -115,6 +115,9 @@ public class InventoryDocumentService {
         }
 
         List<SerialNumber> serials = serialNumberRepository.findBySerialNumber(code);
+        if (req.getVariantId() != null) {
+            serials = serials.stream().filter(s -> s.getVariantId().equals(req.getVariantId())).collect(Collectors.toList());
+        }
         if (serials.size() > 1) {
             throw new BusinessException("Mã serial tồn tại trên nhiều sản phẩm, vui lòng chọn mẫu sản phẩm trước");
         }
@@ -615,6 +618,9 @@ public class InventoryDocumentService {
             throw new BusinessException("Mã quét là bắt buộc");
         }
         List<SerialNumber> serials = serialNumberRepository.findBySerialNumber(code);
+        if (req != null && req.getVariantId() != null) {
+            serials = serials.stream().filter(s -> s.getVariantId().equals(req.getVariantId())).collect(Collectors.toList());
+        }
         if (serials.size() > 1) {
             throw new BusinessException("Mã serial tồn tại trên nhiều sản phẩm");
         }

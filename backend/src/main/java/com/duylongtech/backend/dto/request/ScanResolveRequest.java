@@ -11,4 +11,6 @@ public class ScanResolveRequest {
 
     @NotNull(message = "FIELD_REQUIRED")
     private Long warehouseId;
+
+    private Long variantId;
 }

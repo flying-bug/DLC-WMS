@@ -111,6 +111,9 @@ public class RepairService {
                 .warehouseId(request.getWarehouseId())
                 .serialNumberId(request.getSerialNumberId())
                 .warrantyId(request.getWarrantyId())
+                .referenceType(trimToNull(request.getReferenceType()))
+                .referenceId(request.getReferenceId())
+                .referenceCode(trimToNull(request.getReferenceCode()))
                 .receivedDate(request.getReceivedDate() != null ? request.getReceivedDate() : LocalDate.now())
                 .expectedDate(request.getExpectedDate())
                 .repairStatus("DRAFT")
@@ -152,6 +155,9 @@ public class RepairService {
         if (request.getWarehouseId() != null) repair.setWarehouseId(request.getWarehouseId());
         if (request.getSerialNumberId() != null) repair.setSerialNumberId(request.getSerialNumberId());
         if (request.getWarrantyId() != null) repair.setWarrantyId(request.getWarrantyId());
+        if (request.getReferenceType() != null) repair.setReferenceType(trimToNull(request.getReferenceType()));
+        if (request.getReferenceId() != null) repair.setReferenceId(request.getReferenceId());
+        if (request.getReferenceCode() != null) repair.setReferenceCode(trimToNull(request.getReferenceCode()));
         if (request.getReceivedDate() != null) repair.setReceivedDate(request.getReceivedDate());
         if (request.getExpectedDate() != null) repair.setExpectedDate(request.getExpectedDate());
         if (request.getIssueDescription() != null) repair.setIssueDescription(trimToNull(request.getIssueDescription()));
@@ -505,6 +511,9 @@ public class RepairService {
                 .serialNumberId(repair.getSerialNumberId())
                 .serialNumber(serialNumber)
                 .warrantyId(repair.getWarrantyId())
+                .referenceType(repair.getReferenceType())
+                .referenceId(repair.getReferenceId())
+                .referenceCode(repair.getReferenceCode())
                 .receivedDate(repair.getReceivedDate())
                 .expectedDate(repair.getExpectedDate())
                 .completedDate(repair.getCompletedDate())
@@ -582,6 +591,9 @@ public class RepairService {
                 .serialNumberId(repair.getSerialNumberId())
                 .serialNumber(serialNumber)
                 .warrantyId(repair.getWarrantyId())
+                .referenceType(repair.getReferenceType())
+                .referenceId(repair.getReferenceId())
+                .referenceCode(repair.getReferenceCode())
                 .receivedDate(repair.getReceivedDate())
                 .expectedDate(repair.getExpectedDate())
                 .completedDate(repair.getCompletedDate())
