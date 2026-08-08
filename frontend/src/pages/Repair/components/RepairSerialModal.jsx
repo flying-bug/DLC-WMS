@@ -59,7 +59,7 @@ function RepairSerialModal({ isOpen, onClose, productName, warehouseId, variantI
     // Đối với Thêm (Add), quét serial có sẵn trong kho (giống xuất kho)
     setLoading(true);
     try {
-      const res = await inventoryExportApi.resolveScan({ code: val, warehouseId });
+      const res = await inventoryExportApi.resolveScan({ code: val, warehouseId, variantId });
       const data = res.data?.data || res.data;
       if (data.type !== 'SERIAL') {
         setErrorText('Mã quét được không phải là Số Serial.');
@@ -91,7 +91,7 @@ function RepairSerialModal({ isOpen, onClose, productName, warehouseId, variantI
     // Gọi resolveScan để lấy thông tin ID của serial này
     setLoading(true);
     try {
-      const res = await inventoryExportApi.resolveScan({ code: s, warehouseId });
+      const res = await inventoryExportApi.resolveScan({ code: s, warehouseId, variantId });
       const data = res.data?.data || res.data;
       if (data.type === 'SERIAL' && data.variantId === variantId) {
         setSerials([{ serialNumber: data.serialNumber, serialNumberId: data.serialNumberId }]);

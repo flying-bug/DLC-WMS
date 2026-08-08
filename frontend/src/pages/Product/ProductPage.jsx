@@ -743,8 +743,8 @@ const ProductPage = () => {
     };
 
     const buildPayload = (data) => {
-        let finalBrandId = Number(data.brandId);
-        if (!finalBrandId) {
+        let finalBrandId = Number(data.brandId) || null;
+        if (!finalBrandId && data.productType !== 'Dịch vụ') {
             const khacBrand = brands.find(b => b.name && b.name.trim().toLowerCase() === 'khác');
             finalBrandId = khacBrand ? Number(khacBrand.id) : null;
         }
@@ -1487,7 +1487,12 @@ const ProductPage = () => {
                                                         key={type}
                                                         className={styles.typeMenuItem + (formData.productType === type ? ' ' + styles.typeMenuItemActive : '')}
                                                         onClick={() => {
-                                                            setFormData(fd => ({ ...fd, productType: type }));
+                                                            setFormData(fd => ({
+                                                                ...fd,
+                                                                productType: type,
+                                                                // Bắt buộc trackSerial = true khi là Thành phẩm
+                                                                trackSerial: type === 'Thành phẩm' ? true : fd.trackSerial
+                                                            }));
                                                             setShowTypeMenu(false);
                                                             if (type === 'Thành phẩm') {
                                                                 setActiveTab('bom');
@@ -2038,13 +2043,17 @@ const ProductPage = () => {
                                         {/* Checkboxes: Serial, Lot */}
                                         {formData.productType !== 'Dịch vụ' && (
                                             <div className={styles.checkboxGroup} style={{ marginTop: '16px', display: 'flex', gap: '20px' }}>
-                                                <label className={styles.checkboxLabel}>
+                                                <label className={styles.checkboxLabel} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: formData.productType === 'Thành phẩm' ? 'not-allowed' : 'pointer' }}>
                                                     <input
                                                         type="checkbox"
-                                                        checked={formData.trackSerial}
+                                                        checked={formData.productType === 'Thành phẩm' ? true : formData.trackSerial}
+                                                        disabled={formData.productType === 'Thành phẩm'}
                                                         onChange={(e) => setFormData(fd => ({ ...fd, trackSerial: e.target.checked }))}
                                                     />
                                                     <span>Quản lý theo Serial</span>
+                                                    {formData.productType === 'Thành phẩm' && (
+                                                        <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: 500, marginLeft: '4px' }}>(Bắt buộc cho Thành phẩm)</span>
+                                                    )}
                                                 </label>
                                             </div>
                                         )}
