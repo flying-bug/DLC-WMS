@@ -304,7 +304,15 @@ public class InventoryDocumentService {
             }
 
             if (balance == null) {
-                throw new BusinessException("Không tìm thấy tồn kho cho sản phẩm " + line.getVariantId());
+                String productDisplayName = variant != null && variant.getProduct() != null
+                        ? variant.getProduct().getProductName()
+                        : variant != null ? variant.getVariantName() : null;
+                if (productDisplayName == null || productDisplayName.isBlank()) {
+                    productDisplayName = variant != null && variant.getSku() != null
+                            ? variant.getSku()
+                            : String.valueOf(line.getVariantId());
+                }
+                throw new BusinessException("Không tìm thấy tồn kho cho sản phẩm " + productDisplayName);
             }
 
             if (balance.getQuantityOnHand().compareTo(qtyToExport) < 0) {

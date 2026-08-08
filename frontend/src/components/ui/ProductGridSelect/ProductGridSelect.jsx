@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './ProductGridSelect.module.css';
 
 const ProductGridSelect = ({
@@ -17,7 +18,10 @@ const ProductGridSelect = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [onlyInStock, setOnlyInStock] = useState(false);
   const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const popoverRef = useRef(null);
   const searchInputRef = useRef(null);
+  const [popoverPosition, setPopoverPosition] = useState(null);
 
   // Get currently selected product object
   const selectedProduct = useMemo(() => {
@@ -28,9 +32,9 @@ const ProductGridSelect = ({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
+      const clickedTrigger = containerRef.current?.contains(event.target);
+      const clickedPopover = popoverRef.current?.contains(event.target);
+      if (!clickedTrigger && !clickedPopover) setIsOpen(false);
     };
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
@@ -39,6 +43,45 @@ const ProductGridSelect = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isOpen]);
+
+  // Render the dropdown in a portal so table/scroll containers cannot clip it.
+  useEffect(() => {
+    if (!isOpen) {
+      setPopoverPosition(null);
+      return undefined;
+    }
+
+    const updatePopoverPosition = () => {
+      const trigger = triggerRef.current?.getBoundingClientRect();
+      if (!trigger) return;
+
+      const viewportPadding = 8;
+      const popoverWidth = fullWidthPopover
+        ? trigger.width
+        : Math.min(540, window.innerWidth - viewportPadding * 2);
+      const left = Math.min(
+        Math.max(viewportPadding, trigger.left),
+        window.innerWidth - popoverWidth - viewportPadding,
+      );
+      const spaceBelow = window.innerHeight - trigger.bottom;
+      const openUpwards = spaceBelow < 360 && trigger.top > spaceBelow;
+
+      setPopoverPosition({
+        top: openUpwards ? trigger.top - 4 : trigger.bottom + 4,
+        left,
+        width: popoverWidth,
+        transform: openUpwards ? 'translateY(-100%)' : undefined,
+      });
+    };
+
+    updatePopoverPosition();
+    window.addEventListener('scroll', updatePopoverPosition, true);
+    window.addEventListener('resize', updatePopoverPosition);
+    return () => {
+      window.removeEventListener('scroll', updatePopoverPosition, true);
+      window.removeEventListener('resize', updatePopoverPosition);
+    };
+  }, [fullWidthPopover, isOpen]);
 
   // Auto focus search input when popover opens
   useEffect(() => {
@@ -119,6 +162,7 @@ const ProductGridSelect = ({
   return (
     <div className={styles.container} ref={containerRef}>
       <div
+        ref={triggerRef}
         className={`${styles.triggerBox} ${isOpen ? styles.triggerBoxOpen : ''} ${disabled ? styles.disabled : ''}`}
         onClick={handleOpen}
       >
@@ -140,8 +184,20 @@ const ProductGridSelect = ({
         </div>
       </div>
 
-      {isOpen && (
-        <div className={styles.popover} style={fullWidthPopover ? { width: '100%', maxWidth: '100%' } : {}}>
+      {isOpen && popoverPosition && createPortal(
+        <div
+          ref={popoverRef}
+          className={styles.popover}
+          style={{
+            position: 'fixed',
+            top: popoverPosition.top,
+            left: popoverPosition.left,
+            width: popoverPosition.width,
+            maxWidth: 'calc(100vw - 16px)',
+            transform: popoverPosition.transform,
+            zIndex: 100000,
+          }}
+        >
           <div className={styles.searchHeader}>
             <i className={`bi bi-search ${styles.searchIcon}`}></i>
             <input
@@ -242,7 +298,8 @@ const ProductGridSelect = ({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

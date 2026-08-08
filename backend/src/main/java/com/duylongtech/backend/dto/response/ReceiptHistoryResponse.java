@@ -32,6 +32,7 @@ public class ReceiptHistoryResponse {
         private String status;
         private String paymentMethod;
         private LocalDateTime createdAt;
+        private String note;
         private String type; // "RECEIPT" (Thu) hoặc "VOUCHER" (Chi)
     }
 }

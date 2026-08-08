@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import org.springframework.web.multipart.MultipartFile;
@@ -429,13 +430,20 @@ public class CustomerService {
         PageRequest pageReq = PageRequest.of(page, size);
         Page<Object[]> results = salesOrderLineRepository.findSalesHistoryByCustomerId(customerId, pageReq);
         
-        return results.map(row -> SalesHistoryResponse.builder()
-                .orderCode((String) row[0])
-                .orderDate(row[1] != null ? ((java.sql.Date) row[1]).toLocalDate() : null)
-                .productName((String) row[2])
-                .quantity((java.math.BigDecimal) row[3])
-                .serialNumber((String) row[4])
-                .build());
+        return results.map(row -> {
+            Object orderDateValue = row[1];
+            LocalDate orderDate = orderDateValue instanceof java.sql.Date date
+                    ? date.toLocalDate()
+                    : orderDateValue instanceof LocalDate localDate ? localDate : null;
+
+            return SalesHistoryResponse.builder()
+                    .orderCode((String) row[0])
+                    .orderDate(orderDate)
+                    .productName((String) row[2])
+                    .quantity((java.math.BigDecimal) row[3])
+                    .serialNumber((String) row[4])
+                    .build();
+        });
     }
 
     /**
@@ -484,14 +492,22 @@ public class CustomerService {
         java.math.BigDecimal totalPaid = partnerRepository.getTotalPaidByCustomerId(customerId);
         Page<Object[]> receiptsPage = partnerRepository.findPaymentHistoryByCustomerId(customerId, pageReq);
         
-        Page<ReceiptHistoryResponse.ReceiptItem> items = receiptsPage.map(row -> ReceiptHistoryResponse.ReceiptItem.builder()
-                .receiptCode((String) row[0])
-                .amount((java.math.BigDecimal) row[1])
-                .status((String) row[2])
-                .paymentMethod((String) row[3])
-                .createdAt(row[4] != null ? ((java.sql.Timestamp) row[4]).toLocalDateTime() : null)
-                .type((String) row[5])
-                .build());
+        Page<ReceiptHistoryResponse.ReceiptItem> items = receiptsPage.map(row -> {
+            Object createdAtValue = row[4];
+            LocalDateTime createdAt = createdAtValue instanceof java.sql.Timestamp timestamp
+                    ? timestamp.toLocalDateTime()
+                    : createdAtValue instanceof LocalDateTime localDateTime ? localDateTime : null;
+
+            return ReceiptHistoryResponse.ReceiptItem.builder()
+                    .receiptCode((String) row[0])
+                    .amount((java.math.BigDecimal) row[1])
+                    .status((String) row[2])
+                    .paymentMethod((String) row[3])
+                    .createdAt(createdAt)
+                    .type((String) row[5])
+                    .note((String) row[6])
+                    .build();
+        });
 
         return ReceiptHistoryResponse.builder()
                 .summary(ReceiptHistoryResponse.Summary.builder().totalPaid(totalPaid).build())

@@ -314,15 +314,15 @@
 
 .footerActions {
   align-items: center;
-  background: #1e1f24;
-  border-top: 1px solid #2d3238;
+  background: var(--color-primary-sidebar);
+  border-top: 1px solid var(--color-primary-sidebar-hover);
   bottom: 0;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.18);
   display: flex;
-  height: 70px;
+  height: 58px;
   justify-content: space-between;
   left: var(--sidebar-width, 248px);
-  padding: 0 40px;
+  padding: 0 24px;
   position: fixed;
   right: 0;
   z-index: 10;

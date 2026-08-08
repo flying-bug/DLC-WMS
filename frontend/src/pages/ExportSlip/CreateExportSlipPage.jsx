@@ -13,6 +13,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
 import { printExportSlip } from '../../utils/printExportSlip';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
+import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import Select from 'react-select';
 import axiosClient from '../../api/axiosClient';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
@@ -106,6 +107,8 @@ function CreateExportSlipPage({ mode: propMode }) {
   const [exportMode, setExportMode] = useState(initialType);
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
+  const [showQuickAddProduct, setShowQuickAddProduct] = useState(false);
+  const [quickAddLineId, setQuickAddLineId] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [users, setUsers] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -314,6 +317,35 @@ function CreateExportSlipPage({ mode: propMode }) {
       }
       return prev.map(item => item.localId === localId ? { ...item, [field]: value } : item);
     });
+  };
+
+  const handleQuickAddProductSuccess = async (newProduct) => {
+    try {
+      const response = await exportApi.getProducts({ size: 1000 });
+      const refreshedProducts = pageContent(unwrap(response));
+      setProducts(refreshedProducts);
+      const createdVariant = refreshedProducts.find(product => String(product.productId) === String(newProduct?.id));
+
+      if (createdVariant && quickAddLineId) {
+        setItems(prev => prev.map(item => item.localId === quickAddLineId
+          ? {
+              ...item,
+              variantId: String(createdVariant.id),
+              serialNumbers: [],
+              price: Number(createdVariant.salePrice || 0),
+              warrantyMonths: Number(createdVariant.warrantyMonths || 0)
+            }
+          : item));
+        showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
+      } else {
+        showToast('warning', 'Đã thêm sản phẩm nhưng chưa tìm thấy biến thể mặc định để chọn.');
+      }
+    } catch (err) {
+      showToast('error', 'Thêm sản phẩm thành công nhưng không tải lại được danh sách hàng hóa.');
+    } finally {
+      setShowQuickAddProduct(false);
+      setQuickAddLineId(null);
+    }
   };
 
   const selectedSerialItem = items.find(item => item.localId === serialModalItemId);
@@ -932,6 +964,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                           inventoryMap={inventoryMap}
                           value={item.variantId}
                           onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+                          onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
                           displayMode="code"
                           placeholder="Chọn mã"
                         />
@@ -942,6 +975,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                           inventoryMap={inventoryMap}
                           value={item.variantId}
                           onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+                          onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
                           displayMode="name"
                           placeholder="Chọn hàng hóa / linh kiện"
                         />
@@ -1070,6 +1104,13 @@ function CreateExportSlipPage({ mode: propMode }) {
         onClose={() => setShowPartnerModal(false)}
         onSaved={handleSavePartner}
         onError={(msg) => showToast('error', msg)}
+      />
+
+      <QuickAddProductModal
+        isOpen={showQuickAddProduct}
+        onClose={() => { setShowQuickAddProduct(false); setQuickAddLineId(null); }}
+        onSuccess={handleQuickAddProductSuccess}
+        productType="Hàng hóa"
       />
 
       <AssemblyOrderSelectionModal

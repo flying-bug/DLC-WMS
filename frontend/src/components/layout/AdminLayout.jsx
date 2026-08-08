@@ -78,7 +78,21 @@ const AdminLayout = ({ children }) => {
     });
 
     useEffect(() => {
-        document.documentElement.style.setProperty('--sidebar-width', isSidebarCollapsed ? '72px' : '260px');
+        const syncSidebarWidth = () => {
+            const viewportWidth = window.innerWidth;
+            const sidebarWidth = viewportWidth < 768
+                ? '0px'
+                : isSidebarCollapsed
+                    ? '72px'
+                    : viewportWidth < 1200
+                        ? '80px'
+                        : '248px';
+            document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
+        };
+
+        syncSidebarWidth();
+        window.addEventListener('resize', syncSidebarWidth);
+        return () => window.removeEventListener('resize', syncSidebarWidth);
     }, [isSidebarCollapsed]);
     const [voiceEnabled, setVoiceEnabled] = useState(() => {
         return localStorage.getItem('dlc_voice_enabled') !== 'false';

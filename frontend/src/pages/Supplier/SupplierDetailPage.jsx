@@ -5,7 +5,14 @@ import SupplierModal from './components/SupplierModal';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Toast from '../../components/ui/Toast/Toast';
 import axiosClient from '../../api/axiosClient';
+import * as purchaseOrderApi from '../../api/purchaseOrderApi';
+import * as paymentApi from '../../api/paymentApi';
+import PurchaseHistoryTab from './components/PurchaseHistoryTab';
+import PaymentHistoryTab from './components/PaymentHistoryTab';
 import styles from './SupplierDetailPage.module.css';
+import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
+
+const unwrap = (response) => response?.data?.data ?? response?.data;
 
 const SupplierDetailPage = () => {
     const navigate = useNavigate();
@@ -13,6 +20,11 @@ const SupplierDetailPage = () => {
     
     const [supplier, setSupplier] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [activeHistoryTab, setActiveHistoryTab] = useState('PURCHASES');
+    const [purchaseHistory, setPurchaseHistory] = useState([]);
+    const [paymentHistory, setPaymentHistory] = useState([]);
+    const [debtBalance, setDebtBalance] = useState(0);
     
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -22,18 +34,56 @@ const SupplierDetailPage = () => {
     const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
     const formatCurrency = (val) => new Intl.NumberFormat('vi-VN').format(val || 0);
+    const formatDate = (value) => value ? formatDateOnly(value) : '-';
+    const formatPaymentDateTime = (value) => value ? formatDateTime(value, { withSeconds: false }) : '-';
 
     const fetchSupplier = async () => {
         try {
             setLoading(true);
             const res = await axiosClient.get(`/suppliers/${id}`);
             if (res.data && res.data.data) {
-                setSupplier(res.data.data);
+                const supplierData = res.data.data;
+                setSupplier(supplierData);
+                setDebtBalance(Number(supplierData.currentDebt || 0));
+
+                setHistoryLoading(true);
+                const [ordersRes, paymentRes, balanceRes] = await Promise.allSettled([
+                    purchaseOrderApi.getPurchaseOrders({ partnerId: id }),
+                    paymentApi.getPartnerPaymentHistory(id),
+                    paymentApi.getPartnerDebtBalance(id)
+                ]);
+
+                if (balanceRes.status === 'fulfilled') {
+                    setDebtBalance(Number(unwrap(balanceRes.value) || supplierData.currentDebt || 0));
+                }
+                if (paymentRes.status === 'fulfilled') {
+                    setPaymentHistory(unwrap(paymentRes.value) || []);
+                }
+                if (ordersRes.status === 'fulfilled') {
+                    const orders = (unwrap(ordersRes.value) || [])
+                        .filter(order => ['APPROVED', 'POSTED'].includes(order.status));
+                    const detailResults = await Promise.allSettled(
+                        orders.map(order => purchaseOrderApi.getPurchaseOrderById(order.id))
+                    );
+                    const lines = detailResults.flatMap((result, index) => {
+                        if (result.status !== 'fulfilled') return [];
+                        const order = unwrap(result.value) || orders[index];
+                        return (order.lines || []).map(line => ({
+                            ...line,
+                            poCode: order.poCode,
+                            poDate: order.poDate,
+                            status: order.status
+                        }));
+                    });
+                    setPurchaseHistory(lines);
+                }
+                setHistoryLoading(false);
             }
         } catch (error) {
             console.error('Lỗi tải chi tiết NCC:', error);
             showToast('error', error.response?.data?.userMessage || 'Không tải được thông tin chi tiết nhà cung cấp');
         } finally {
+            setHistoryLoading(false);
             setLoading(false);
         }
     };
@@ -174,6 +224,45 @@ const SupplierDetailPage = () => {
                                 <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-danger)' }}>{formatCurrency(supplier?.currentDebt || 0)} ₫</h2>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div className={styles.historySection}>
+                    <div className={styles.historyHeader}>
+                        <button
+                            className={`${styles.historyTabBtn} ${activeHistoryTab === 'PURCHASES' ? styles.historyTabBtnActive : ''}`}
+                            onClick={() => setActiveHistoryTab('PURCHASES')}
+                            type="button"
+                        >
+                            <i className="bi bi-cart3"></i> Lịch sử mua hàng
+                        </button>
+                        <button
+                            className={`${styles.historyTabBtn} ${activeHistoryTab === 'PAYMENTS' ? styles.historyTabBtnActive : ''}`}
+                            onClick={() => setActiveHistoryTab('PAYMENTS')}
+                            type="button"
+                        >
+                            <i className="bi bi-receipt"></i> Lịch sử thu chi
+                        </button>
+                    </div>
+                    <div className={styles.historyContent}>
+                        {activeHistoryTab === 'PURCHASES' ? (
+                            <PurchaseHistoryTab
+                                data={purchaseHistory}
+                                loading={historyLoading}
+                                formatDate={formatDate}
+                                formatCurrency={formatCurrency}
+                                styles={styles}
+                            />
+                        ) : (
+                            <PaymentHistoryTab
+                                data={paymentHistory}
+                                debtBalance={debtBalance}
+                                loading={historyLoading}
+                                formatDateTime={formatPaymentDateTime}
+                                formatCurrency={formatCurrency}
+                                styles={styles}
+                            />
+                        )}
                     </div>
                 </div>
             </div>

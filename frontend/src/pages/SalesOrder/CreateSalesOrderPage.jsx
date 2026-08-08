@@ -7,6 +7,8 @@ import { format, parseISO } from 'date-fns';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
+import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
+import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import CustomerModal from '../Customer/components/CustomerModal';
 import * as soApi from '../../api/salesOrderApi';
 import styles from './CreateSalesOrderPage.module.css';
@@ -50,6 +52,8 @@ function CreateSalesOrderPage() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const [inventoryBalances, setInventoryBalances] = useState([]);
+  const [showQuickAddProduct, setShowQuickAddProduct] = useState(false);
+  const [quickAddLineIndex, setQuickAddLineIndex] = useState(null);
 
   const [form, setForm] = useState({
     soCode: '',
@@ -162,6 +166,35 @@ function CreateSalesOrderPage() {
   const updateLineMultiple = (idx, updates) => setLines(p =>
     p.map((l, i) => i === idx ? { ...l, ...updates } : l)
   );
+
+  const handleQuickAddProductSuccess = async (newProduct) => {
+    try {
+      const response = await soApi.getProducts({ size: 500 });
+      const refreshedVariants = pageContent(unwrap(response));
+      setVariants(refreshedVariants);
+      const createdVariant = refreshedVariants.find(v =>
+        String(v.productId || v.product?.id) === String(newProduct?.id)
+      ) || refreshedVariants.find(v => String(v.id) === String(newProduct?.id));
+
+      if (createdVariant && quickAddLineIndex !== null) {
+        updateLineMultiple(quickAddLineIndex, {
+          variantId: createdVariant.id,
+          unitPrice: Number(createdVariant.salePrice || 0),
+          unitName: createdVariant.unitName || 'Cái',
+          warrantyMonths: Number(createdVariant.warrantyMonths || 0),
+          vatRate: Number(createdVariant.vatPercent || createdVariant.vatRate || 0),
+        });
+        showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
+      } else {
+        showToast('warning', 'Đã thêm sản phẩm nhưng chưa tìm thấy biến thể để chọn.');
+      }
+    } catch {
+      showToast('error', 'Thêm sản phẩm thành công nhưng không tải lại được danh sách hàng hóa.');
+    } finally {
+      setShowQuickAddProduct(false);
+      setQuickAddLineIndex(null);
+    }
+  };
 
   const totalQuantity = lines.reduce((sum, l) => sum + Number(l.quantity || 0), 0);
   const subTotalAmount = lines.reduce((sum, l) => sum + (Number(l.quantity || 0) * Number(l.unitPrice || 0)), 0);
@@ -322,14 +355,18 @@ function CreateSalesOrderPage() {
   // ── Options for react-select ──
   const customerOptions = customers.map(c => ({ value: c.id, label: `${c.code} — ${c.name}` }));
   const warehouseOptions = warehouses.map(w => ({ value: w.id, label: `${w.code} — ${w.name}` }));
-  const variantOptions = variants.map(v => ({
-    value: v.id,
-    label: `[${v.sku}] ${v.variantName || v.productName}`,
-    salePrice: v.salePrice || 0,
+  const productOptions = variants.map(v => ({
+    ...v,
+    productName: v.productName || v.variantName || `Sản phẩm #${v.id}`,
     unitName: v.unitName || 'Cái',
+    salePrice: v.salePrice || 0,
     warrantyMonths: v.warrantyMonths || 0,
     vatRate: v.vatPercent || v.vatRate || 0,
   }));
+  const inventoryMap = new Map(inventoryBalances.map(balance => [
+    String(balance.variantId),
+    Math.max(0, Number(balance.totalQuantity || 0) - Number(balance.totalReserved || 0)),
+  ]));
 
   return (
     <AdminLayout>
@@ -592,27 +629,29 @@ function CreateSalesOrderPage() {
                         <tr key={idx}>
                           <td style={{ textAlign: 'center', color: '#94a3b8' }}>{idx + 1}</td>
                           <td>
-                            <Select
-                              options={variantOptions}
-                              value={variantOptions.find(o => o.value === line.variantId) || null}
-                              onChange={opt => {
-                                if (opt) {
+                            <ProductGridSelect
+                              products={productOptions}
+                              inventoryMap={inventoryMap}
+                              value={line.variantId}
+                              onChange={selected => {
+                                if (selected) {
                                   updateLineMultiple(idx, {
-                                    variantId: opt.value,
-                                    unitPrice: opt.salePrice || 0,
-                                    unitName: opt.unitName || '',
-                                    warrantyMonths: opt.warrantyMonths || 0,
-                                    vatRate: opt.vatRate || 0
+                                    variantId: selected.id,
+                                    unitPrice: Number(selected.salePrice || 0),
+                                    unitName: selected.unitName || 'Cái',
+                                    warrantyMonths: Number(selected.warrantyMonths || 0),
+                                    vatRate: Number(selected.vatPercent || selected.vatRate || 0),
                                   });
                                 } else {
                                   updateLine(idx, 'variantId', null);
                                 }
                               }}
-                              placeholder="Chọn sản phẩm..."
-                              isClearable
-                              styles={customSelectStyles}
-                              menuPortalTarget={document.body}
-                              menuPosition="fixed"
+                              onAddNew={() => {
+                                setQuickAddLineIndex(idx);
+                                setShowQuickAddProduct(true);
+                              }}
+                              displayMode="code-name"
+                              placeholder="Chọn mã hoặc tên hàng"
                             />
                             {line.variantId && (
                               <div style={{ marginTop: 4, fontSize: 11, color: availableQty >= Number(line.quantity || 0) ? '#16a34a' : '#dc2626' }}>
@@ -755,6 +794,16 @@ function CreateSalesOrderPage() {
         )}
       </div>
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
+
+      <QuickAddProductModal
+        isOpen={showQuickAddProduct}
+        onClose={() => {
+          setShowQuickAddProduct(false);
+          setQuickAddLineIndex(null);
+        }}
+        onSuccess={handleQuickAddProductSuccess}
+        productType="Hàng hóa"
+      />
 
       <CustomerModal
         isOpen={showCustomerModal}
