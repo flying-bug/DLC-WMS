@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
+import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
+import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import SupplierModal from '../Supplier/components/SupplierModal';
 import * as poApi from '../../api/purchaseOrderApi';
 import styles from './CreatePurchaseOrderPage.module.css';
@@ -44,6 +46,8 @@ function CreatePurchaseOrderPage() {
   const [variants,  setVariants]  = useState([]);
   const [loading, setLoading] = useState(false);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [showQuickAddProduct, setShowQuickAddProduct] = useState(false);
+  const [quickAddLineIndex, setQuickAddLineIndex] = useState(null);
   const [saving,    setSaving]    = useState(false);
   const [toast,     setToast]     = useState({ isVisible: false, type: 'info', message: '' });
 
@@ -125,6 +129,33 @@ function CreatePurchaseOrderPage() {
   const updateLine  = (idx, f, val)  => setLines(p => p.map((l, i) => i === idx ? { ...l, [f]: val } : l));
   const updateLineMultiple = (idx, updates) =>
     setLines(p => p.map((l, i) => i === idx ? { ...l, ...updates } : l));
+
+  const handleQuickAddProductSuccess = async (newProduct) => {
+    try {
+      const response = await poApi.getProducts({ size: 500 });
+      const refreshedVariants = pageContent(unwrap(response));
+      setVariants(refreshedVariants);
+      const createdVariant = refreshedVariants.find(v =>
+        String(v.productId || v.product?.id) === String(newProduct?.id)
+      ) || refreshedVariants.find(v => String(v.id) === String(newProduct?.id));
+
+      if (createdVariant && quickAddLineIndex !== null) {
+        updateLineMultiple(quickAddLineIndex, {
+          variantId: createdVariant.id,
+          unitName: createdVariant.unitName || 'Cái',
+          vatRate: Number(createdVariant.vatPercent || createdVariant.vatRate || 0),
+        });
+        showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
+      } else {
+        showToast('warning', 'Đã thêm sản phẩm nhưng chưa tìm thấy biến thể để chọn.');
+      }
+    } catch {
+      showToast('error', 'Thêm sản phẩm thành công nhưng không tải lại được danh sách hàng hóa.');
+    } finally {
+      setShowQuickAddProduct(false);
+      setQuickAddLineIndex(null);
+    }
+  };
 
   // ── Totals ──
   const subTotalAmount = lines.reduce((s, l) => s + Number(l.quantity || 0) * Number(l.unitPrice || 0), 0);
@@ -226,11 +257,11 @@ function CreatePurchaseOrderPage() {
 
   // ── react-select options ──
   const supplierOptions = suppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` }));
-  const variantOptions  = variants.map(v => ({
-    value:    v.id,
-    label:    `[${v.sku}] ${v.variantName || v.productName}`,
+  const productOptions = variants.map(v => ({
+    ...v,
+    productName: v.productName || v.variantName || `Sản phẩm #${v.id}`,
     unitName: v.unitName || 'Cái',
-    vatRate:  v.vatPercent || v.vatRate || 0,
+    vatRate: v.vatPercent || v.vatRate || 0,
   }));
 
   return (
@@ -247,7 +278,9 @@ function CreatePurchaseOrderPage() {
           </div>
           <h1 className={styles.pageTitle}>
             <i className="bi bi-bag-plus" style={{ marginRight: 8 }} />
-            {isEdit ? `Cập nhật: ${form.poCode}` : 'Tạo đơn mua hàng mới'}
+            {isEdit
+              ? `Cập nhật: ${form.poCode}`
+              : `Tạo đơn mua hàng mới${form.poCode ? `: ${form.poCode}` : ''}`}
           </h1>
         </div>
 
@@ -297,22 +330,11 @@ function CreatePurchaseOrderPage() {
                 </div>
               </div>
 
-              {/* Right panel — document info */}
-              <div className={styles.rightPanel}>
+              {/* Middle panel — order identity */}
+              <div className={styles.middlePanel}>
                 <div className={styles.section}>
                   <div className={styles.sectionTitle}>
-                    <i className="bi bi-file-earmark-text" /> Thông tin chứng từ
-                  </div>
-
-                  <div className={styles.fieldRow}>
-                    <label className={styles.label}>Số đơn mua hàng</label>
-                    <input
-                      type="text"
-                      className={styles.input}
-                      value={form.poCode}
-                      onChange={e => setForm(p => ({ ...p, poCode: e.target.value }))}
-                      placeholder="Để trống để tự sinh (PO0001...)"
-                    />
+                    <i className="bi bi-file-earmark-text" /> Thông tin đơn mua
                   </div>
 
                   <div className={styles.fieldRow}>
@@ -325,28 +347,35 @@ function CreatePurchaseOrderPage() {
                     />
                   </div>
 
-                  <div className={styles.fieldRow}>
-                    <label className={styles.label}>Hạn công nợ</label>
-                    <input
-                      type="date"
-                      className={styles.input}
-                      min={form.poDate}
-                      value={form.paymentDueDate}
-                      onChange={e => setForm(p => ({ ...p, paymentDueDate: e.target.value }))}
-                    />
-                  </div>
+                  <div className={styles.additionalFields}>
+                    <div className={styles.fieldRow}>
+                      <label className={styles.label}>Hạn công nợ</label>
+                      <input
+                        type="date"
+                        className={styles.input}
+                        min={form.poDate}
+                        value={form.paymentDueDate}
+                        onChange={e => setForm(p => ({ ...p, paymentDueDate: e.target.value }))}
+                      />
+                    </div>
 
-                  <div className={styles.fieldRow}>
-                    <label className={styles.label}>Ngày giao hàng dự kiến</label>
-                    <input
-                      type="date"
-                      className={styles.input}
-                      min={form.poDate}
-                      value={form.expectedDeliveryDate}
-                      onChange={e => setForm(p => ({ ...p, expectedDeliveryDate: e.target.value }))}
-                    />
+                    <div className={styles.fieldRow}>
+                      <label className={styles.label}>Ngày giao hàng dự kiến</label>
+                      <input
+                        type="date"
+                        className={styles.input}
+                        min={form.poDate}
+                        value={form.expectedDeliveryDate}
+                        onChange={e => setForm(p => ({ ...p, expectedDeliveryDate: e.target.value }))}
+                      />
+                    </div>
                   </div>
+                </div>
+              </div>
 
+              {/* Right panel — delivery and totals */}
+              <div className={styles.rightPanel}>
+                <div className={styles.section}>
                   {/* Summary box */}
                   <div className={styles.summaryBox}>
                     <div className={styles.summaryRow}>
@@ -404,18 +433,21 @@ function CreatePurchaseOrderPage() {
                         <tr key={idx}>
                           <td style={{ textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>{idx + 1}</td>
                           <td>
-                            <Select
-                              options={variantOptions}
-                              value={variantOptions.find(o => o.value === line.variantId) || null}
-                              onChange={opt => updateLineMultiple(idx, {
-                                variantId: opt?.value || null,
-                                unitName:  opt?.unitName || '',
-                                vatRate:   opt?.vatRate  || 0,
+                            <ProductGridSelect
+                              products={productOptions}
+                              value={line.variantId}
+                              onChange={selected => updateLineMultiple(idx, {
+                                variantId: selected?.id || null,
+                                unitName: selected?.unitName || 'Cái',
+                                vatRate: Number(selected?.vatPercent || selected?.vatRate || 0),
                               })}
-                              placeholder="Chọn sản phẩm..."
-                              isClearable
-                              styles={customSelectStyles}
-                              menuPortalTarget={document.body}
+                              onAddNew={() => {
+                                setQuickAddLineIndex(idx);
+                                setShowQuickAddProduct(true);
+                              }}
+                              displayMode="code-name"
+                              placeholder="Chọn mã hoặc tên hàng"
+                              hideStock
                             />
                           </td>
                           <td style={{ textAlign: 'center', color: '#64748b', fontSize: 13 }}>
@@ -516,6 +548,16 @@ function CreatePurchaseOrderPage() {
         )}
       </div>
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
+
+      <QuickAddProductModal
+        isOpen={showQuickAddProduct}
+        onClose={() => {
+          setShowQuickAddProduct(false);
+          setQuickAddLineIndex(null);
+        }}
+        onSuccess={handleQuickAddProductSuccess}
+        productType="Hàng hóa"
+      />
 
       {showSupplierModal && (
         <SupplierModal 

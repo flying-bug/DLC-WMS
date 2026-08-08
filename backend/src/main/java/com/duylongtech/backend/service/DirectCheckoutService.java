@@ -48,6 +48,7 @@ public class DirectCheckoutService {
         User actorUser = userRepository.findByUsername(actor)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy người dùng hiện tại"));
         Partner customer = resolveCustomer(request);
+        requireActiveCustomer(customer);
         LocalDate checkoutDate = request.getCheckoutDate() != null ? request.getCheckoutDate() : LocalDate.now();
 
         SalesOrder savedOrder = createPostedSalesOrder(request, customer, actorUser, checkoutDate);
@@ -90,6 +91,15 @@ public class DirectCheckoutService {
 
         return partnerRepository.findByPhoneAndIsCustomerTrue(phone)
                 .orElseGet(() -> createCustomerFromCheckout(request, phone));
+    }
+
+    private void requireActiveCustomer(Partner customer) {
+        if (customer == null || !Boolean.TRUE.equals(customer.getIsCustomer())) {
+            throw new BusinessException("Khách hàng không tồn tại");
+        }
+        if (!"APPROVED".equals(customer.getStatus())) {
+            throw new BusinessException("Khách hàng đã ngừng hoạt động, không thể tạo đơn bán hàng");
+        }
     }
 
     private Partner createWalkInCustomer() {

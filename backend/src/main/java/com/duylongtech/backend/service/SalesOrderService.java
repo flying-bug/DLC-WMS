@@ -74,6 +74,7 @@ public class SalesOrderService {
 
     @Transactional
     public SalesOrderResponse createSalesOrder(SalesOrderRequest request, String actor) {
+        requireActiveCustomer(request.getPartnerId());
         // Validate partner và warehouse tồn tại
         partnerRepository.findById(request.getPartnerId())
                 .orElseThrow(() -> new BusinessException("Khách hàng không tồn tại"));
@@ -171,6 +172,8 @@ public class SalesOrderService {
                     "Chỉ được sửa đơn hàng ở trạng thái Nháp (DRAFT). Trạng thái hiện tại: " + so.getStatus());
         }
 
+        requireActiveCustomer(request.getPartnerId());
+
         if (request.getPaymentDueDate() != null) {
             if (request.getPaymentDueDate().isBefore(request.getSoDate())) {
                 throw new BusinessException("Hạn thanh toán không được nhỏ hơn ngày lập đơn");
@@ -235,6 +238,8 @@ public class SalesOrderService {
             throw new BusinessException(
                     "Chỉ được duyệt đơn hàng ở trạng thái Nháp. Trạng thái hiện tại: " + so.getStatus());
         }
+
+        requireActiveCustomer(so.getPartnerId());
 
         LocalDateTime expiresAt = LocalDateTime.now().plusHours(72); // giữ chỗ 72 giờ
 
@@ -323,6 +328,19 @@ public class SalesOrderService {
     // =========================================================
     // INTERNAL HELPERS
     // =========================================================
+
+    private Partner requireActiveCustomer(Long partnerId) {
+        if (partnerId == null) {
+            throw new BusinessException("Khách hàng là bắt buộc");
+        }
+
+        Partner customer = partnerRepository.findByIdAndIsCustomerTrue(partnerId)
+                .orElseThrow(() -> new BusinessException("Khách hàng không tồn tại"));
+        if (!"APPROVED".equals(customer.getStatus())) {
+            throw new BusinessException("Khách hàng đã ngừng hoạt động, không thể tạo đơn bán hàng");
+        }
+        return customer;
+    }
 
     /**
      * Release tất cả reservations HOLDING của một SO.
