@@ -47,6 +47,7 @@ public class PurchaseOrderResponse {
     public static class PurchaseOrderLineResponse {
         private Long id;
         private Long variantId;
+        private String productName;
         private String sku;
         private String variantName;
         private String productCode;

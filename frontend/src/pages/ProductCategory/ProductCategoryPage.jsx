@@ -421,12 +421,12 @@ const ProductCategoryPage = () => {
 
             <ConfirmModal
                 isOpen={deleteConfirm.isOpen}
-                onClose={() => setDeleteConfirm({ isOpen: false, category: null })}
+                onCancel={() => setDeleteConfirm({ isOpen: false, category: null })}
                 onConfirm={executeDelete}
                 title="Xác nhận xoá"
                 message={<>Bạn có chắc chắn muốn xoá danh mục <b>{deleteConfirm.category?.name}</b> không? Hành động này không thể hoàn tác.</>}
                 confirmText="Xóa"
-                confirmStyle="danger"
+                isDanger
             />
 
             {toast.isVisible && (

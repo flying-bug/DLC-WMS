@@ -316,6 +316,8 @@ public class PurchaseOrderService {
                     return PurchaseOrderResponse.PurchaseOrderLineResponse.builder()
                             .id(line.getId())
                             .variantId(line.getVariantId())
+                            .productName(variant != null && variant.getProduct() != null
+                                    ? variant.getProduct().getProductName() : null)
                             .sku(sku)
                             .variantName(variantName)
                             .productCode(productCode)

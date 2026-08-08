@@ -928,6 +928,103 @@
   background-color: var(--color-border-soft);
 }
 
+.historySection {
+  margin-top: 24px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.historyHeader {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 16px;
+}
+
+.historyTabBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.historyTabBtn:hover,
+.historyTabBtnActive {
+  color: var(--color-primary);
+}
+
+.historyTabBtnActive {
+  border-bottom-color: var(--color-primary);
+}
+
+.historyContent {
+  padding: 24px;
+  overflow-x: auto;
+}
+
+.historySummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 320px));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.historySummaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-subtle);
+}
+
+.historySummaryCard span {
+  color: var(--color-text-muted-2);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.historySummaryCard strong {
+  font-size: 20px;
+}
+
+.amountIn {
+  color: var(--color-success-strong);
+}
+
+.amountOut,
+.debtAmount {
+  color: var(--color-danger);
+}
+
+.loadingState,
+.emptyState {
+  padding: 40px 20px !important;
+  text-align: center !important;
+  color: var(--color-text-muted-2) !important;
+}
+
+.emptyIcon {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--color-text-muted-2);
+}
+
+.emptyText {
+  font-size: 14px;
+}
+
 /* Responsive Media Queries (4 Breakpoints) */
 @media (min-width: 1200px) {
   .detailGrid {
@@ -983,6 +1080,19 @@
   .checkboxLabel {
     min-height: var(--touch-target-min, 44px);
     width: 100%;
+  }
+
+  .historyHeader {
+    overflow-x: auto;
+  }
+
+  .historyTabBtn {
+    flex: 0 0 auto;
+    padding: 14px 16px;
+  }
+
+  .historySummaryGrid {
+    grid-template-columns: 1fr;
   }
 }
 

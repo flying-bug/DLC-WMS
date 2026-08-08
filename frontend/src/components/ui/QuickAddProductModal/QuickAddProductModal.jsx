@@ -154,7 +154,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
             )}
         </div>
     );
-};const QuickAddProductModal = ({ isOpen, onClose, onSuccess }) => {
+};const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thành phẩm' }) => {
     const [categories, setCategories] = useState([]);
     const [units, setUnits] = useState([]);
     const [formData, setFormData] = useState({
@@ -241,7 +241,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
 
     const handleSave = async () => {
         if (!formData.productName.trim()) {
-            setErrorMsg('Vui lòng nhập tên thành phẩm.');
+            setErrorMsg(`Vui lòng nhập tên ${productType.toLowerCase()}.`);
             return;
         }
         if (!formData.categoryId) {
@@ -265,7 +265,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
         try {
             const payload = {
                 productName: formData.productName.trim(),
-                productType: 'Thành phẩm',
+                productType,
                 categoryId: Number(formData.categoryId),
                 unitId: Number(formData.unitId),
                 brandId: formData.brandId ? Number(formData.brandId) : null,
@@ -296,7 +296,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
             onSuccess(newProduct);
             onClose();
         } catch (error) {
-            setErrorMsg(error.response?.data?.userMessage || error.response?.data?.message || 'Có lỗi xảy ra khi thêm thành phẩm.');
+            setErrorMsg(error.response?.data?.userMessage || error.response?.data?.message || `Có lỗi xảy ra khi thêm ${productType.toLowerCase()}.`);
         } finally {
             setLoading(false);
         }
@@ -308,7 +308,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
         <div className="misa-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
             <div className="misa-modal" style={{ width: '800px', maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                 <div className="misa-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>Thêm nhanh Thành phẩm</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>Thêm nhanh {productType}</span>
                     <i className="fas fa-times" onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: '#9ca3af' }}></i>
                 </div>
                 
@@ -318,12 +318,12 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                     <h5 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px', color: '#111827' }}>1. Thông tin chung</h5>
                     <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
                         <div className={styles.field}>
-                            <label>Tên thành phẩm <span style={{color: 'red'}}>*</span></label>
+                            <label>Tên {productType.toLowerCase()} <span style={{color: 'red'}}>*</span></label>
                             <input 
                                 type="text" 
                                 value={formData.productName} 
                                 onChange={e => setFormData(f => ({...f, productName: e.target.value}))} 
-                                placeholder="Nhập tên thành phẩm..."
+                                placeholder={`Nhập tên ${productType.toLowerCase()}...`}
                             />
                         </div>
                         
@@ -456,7 +456,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                 <div className="misa-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '12px 20px', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
                     <button type="button" className="btn-misa-cancel" onClick={onClose}>Hủy</button>
                     <button type="button" className="btn-misa-primary" onClick={handleSave} disabled={loading}>
-                        {loading ? 'Đang lưu...' : 'Lưu Thành Phẩm'}
+                        {loading ? 'Đang lưu...' : `Lưu ${productType}`}
                     </button>
                 </div>
             </div>

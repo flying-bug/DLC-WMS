@@ -423,9 +423,9 @@
   bottom: 0;
   left: var(--sidebar-width, 248px);
   right: 0;
-  height: 68px;
-  background-color: #1e1f24;
-  border-top: 1px solid #2d3238;
+  height: 58px;
+  background-color: var(--color-primary-sidebar);
+  border-top: 1px solid var(--color-primary-sidebar-hover);
   display: flex;
   align-items: center;
   justify-content: space-between;

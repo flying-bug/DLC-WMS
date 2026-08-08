@@ -13,6 +13,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
+import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import Select from 'react-select';
 import styles from './UpdateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
@@ -101,6 +102,8 @@ function UpdateImportSlipPage() {
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [showQuickAddProduct, setShowQuickAddProduct] = useState(false);
+  const [quickAddLineId, setQuickAddLineId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showPartnerModal, setShowPartnerModal] = useState(false);
@@ -301,6 +304,34 @@ function UpdateImportSlipPage() {
       }
       return { ...item, [field]: value };
     }));
+  };
+
+  const handleQuickAddProductSuccess = async (newProduct) => {
+    try {
+      const response = await importApi.getProducts({ size: 1000 });
+      const refreshedProducts = pageContent(unwrap(response));
+      setProducts(refreshedProducts);
+      const createdVariant = refreshedProducts.find(product => String(product.productId) === String(newProduct?.id));
+
+      if (createdVariant && quickAddLineId) {
+        setItems(prev => prev.map(item => item.localId === quickAddLineId
+          ? {
+              ...item,
+              variantId: String(createdVariant.id),
+              serialNumbers: [],
+              warrantyMonths: Number(createdVariant.warrantyMonths || 0)
+            }
+          : item));
+        showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
+      } else {
+        showToast('warning', 'Đã thêm sản phẩm nhưng chưa tìm thấy biến thể mặc định để chọn.');
+      }
+    } catch (err) {
+      showToast('error', 'Thêm sản phẩm thành công nhưng không tải lại được danh sách hàng hóa.');
+    } finally {
+      setShowQuickAddProduct(false);
+      setQuickAddLineId(null);
+    }
   };
 
   const addItem = () => {
@@ -721,6 +752,7 @@ function UpdateImportSlipPage() {
                               inventoryMap={inventoryMap}
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+                              onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
                               displayMode="code"
                               placeholder="Chọn mã"
                             />
@@ -731,6 +763,7 @@ function UpdateImportSlipPage() {
                               inventoryMap={inventoryMap}
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
+                              onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
                               displayMode="name"
                               placeholder="Chọn hàng"
                             />
@@ -851,6 +884,12 @@ function UpdateImportSlipPage() {
         productName={variantLabel(selectedSerialProduct)}
         targetQuantity={Number(selectedSerialItem?.quantity || 0)}
         initialSerials={selectedSerialItem?.serialNumbers || []}
+      />
+      <QuickAddProductModal
+        isOpen={showQuickAddProduct}
+        onClose={() => { setShowQuickAddProduct(false); setQuickAddLineId(null); }}
+        onSuccess={handleQuickAddProductSuccess}
+        productType={importType === 'PRODUCTION' ? 'Thành phẩm' : 'Hàng hóa'}
       />
       <CustomerModal
         isOpen={showCustomerDrawer}
