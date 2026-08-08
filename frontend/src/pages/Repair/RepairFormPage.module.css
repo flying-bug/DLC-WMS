@@ -238,8 +238,8 @@
 
 .tableContainer {
   margin-top: 10px;
-  max-height: 500px;
-  overflow-y: auto;
+  
+  overflow: visible;
   position: relative;
   border-bottom: 1px solid #e5e7eb;
 }
@@ -433,8 +433,8 @@
 
 .tableContainer {
   margin-top: 10px;
-  max-height: 500px;
-  overflow-y: auto;
+  
+  overflow: visible;
   position: relative;
   border-bottom: 1px solid #e5e7eb;
 }
