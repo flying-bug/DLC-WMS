@@ -14,7 +14,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import ManageSerialModal from './ManageSerialModal';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
-import { printExportSlip } from '../../utils/printExportSlip';
+import { printImportSlip } from '../../utils/printImportSlip';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import Select from 'react-select';
@@ -1140,8 +1140,8 @@ function CreateImportSlipPage() {
         onPrint={() => {
           const supplier = suppliers.find(s => String(s.id) === String(savedSlip?.partnerId || form.partnerId)) || {};
           const warehouseName = warehouses.find(w => String(w.id) === String(savedSlip?.warehouseId || form.warehouseId))?.name || '';
-          printExportSlip(savedSlip || {}, {
-            customer: supplier,
+          printImportSlip(savedSlip || {}, {
+            supplier,
             warehouseName,
             productById,
             userById,

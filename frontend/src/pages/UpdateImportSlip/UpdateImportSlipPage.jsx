@@ -15,6 +15,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import Select from 'react-select';
+import { printImportSlip } from '../../utils/printImportSlip';
 import styles from './UpdateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 
@@ -285,6 +286,31 @@ function UpdateImportSlipPage() {
     return item.variantId && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
   };
   const isFormValid = Boolean(form.warehouseId && form.docDate && items.length && items.every(isLineValid));
+
+  const handlePrint = () => {
+    const supplier = suppliers.find(s => String(s.id) === String(form.partnerId)) || {};
+    const warehouseName = warehouses.find(w => String(w.id) === String(form.warehouseId))?.name || '';
+    const slipData = {
+      ...form,
+      docCode: form.docCode,
+      lines: items.map(it => ({
+        variantId: it.variantId,
+        quantityIn: Number(it.quantity || 0),
+        unitCost: Number(it.price || 0),
+        vatPercent: Number(it.vatPercent || 0),
+        serialNumbers: it.serialNumbers || [],
+        note: it.note || ''
+      }))
+    };
+    printImportSlip(slipData, {
+      supplier,
+      warehouseName,
+      productById,
+      userById,
+      isImport: true,
+      onError: (msg) => showToast('error', msg)
+    });
+  };
 
   const handleFormChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -870,7 +896,7 @@ function UpdateImportSlipPage() {
             <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>Hủy bỏ</button>
           </div>
           <div className={styles.footerRight}>
-            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={() => window.print()}>
+            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={handlePrint}>
               <i className="bi bi-printer"></i> In phiếu
             </button>
             <button className="btn-misa-draft" disabled={saving || loading} onClick={() => submit('DRAFT')}>Lưu tạm</button>

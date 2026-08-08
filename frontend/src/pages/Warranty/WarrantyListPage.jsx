@@ -8,6 +8,7 @@ import styles from './WarrantyListPage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 import Modal from '../../components/ui/Modal/Modal';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { printWarrantyCard } from '../../utils/printWarrantyCard';
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
@@ -195,6 +196,17 @@ function WarrantyListPage() {
     return pages;
   };
 
+  const handlePrintCard = async (item, e) => {
+    e.stopPropagation();
+    try {
+      const res = await warrantyApi.getWarrantyById(item.id);
+      const detail = res?.data?.data || res?.data || item;
+      printWarrantyCard(detail);
+    } catch {
+      printWarrantyCard(item);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className={styles.pageBody}>
@@ -360,6 +372,12 @@ function WarrantyListPage() {
                       </td>
                     )}
                     <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
+                      <i
+                        className="bi bi-printer"
+                        style={{ cursor: 'pointer', color: '#0284c7', fontSize: '16px', marginRight: '12px' }}
+                        title="In phiếu bảo hành"
+                        onClick={(e) => handlePrintCard(item, e)}
+                      ></i>
                       <i
                         className="bi bi-eye"
                         style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }}

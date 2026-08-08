@@ -16,9 +16,9 @@ export function printImportSlip(slipOrSlips, options = {}) {
   const printWindow = window.open('', '_blank', 'width=800,height=600');
   if (!printWindow) {
     if (options.onError) {
-        options.onError('Trình duyệt đã chặn cửa sổ popup. Vui lòng cho phép popup để in phiếu.');
+      options.onError('Trình duyệt đã chặn cửa sổ popup. Vui lòng cho phép popup để in phiếu.');
     } else {
-        console.error('Trình duyệt đã chặn cửa sổ popup. Vui lòng cho phép popup để in phiếu.');
+      console.error('Trình duyệt đã chặn cửa sổ popup. Vui lòng cho phép popup để in phiếu.');
     }
     return false;
   }
@@ -37,14 +37,14 @@ export function printImportSlip(slipOrSlips, options = {}) {
   const partnerTitle = isImport ? 'Nhà cung cấp / Đối tác' : 'Khách hàng';
   const warehouseTitle = isImport ? 'Kho nhập' : 'Kho xuất';
 
-  const sumQuantity = (lines) => lines.reduce((acc, l) => acc + Number(isImport ? l.quantityIn : l.quantityOut || 0), 0);
+  const sumQuantity = (lines) => lines.reduce((acc, l) => acc + Number((isImport ? (l.quantityIn ?? l.quantity) : (l.quantityOut ?? l.quantity)) || 0), 0);
   const sumSubtotal = (lines) => lines.reduce((acc, l) => {
-    const qty = Number(isImport ? l.quantityIn : l.quantityOut || 0);
+    const qty = Number((isImport ? (l.quantityIn ?? l.quantity) : (l.quantityOut ?? l.quantity)) || 0);
     const price = Number(l.unitCost || l.unitPrice || 0);
     return acc + (qty * price);
   }, 0);
   const sumVat = (lines) => lines.reduce((acc, l) => {
-    const qty = Number(isImport ? l.quantityIn : l.quantityOut || 0);
+    const qty = Number((isImport ? (l.quantityIn ?? l.quantity) : (l.quantityOut ?? l.quantity)) || 0);
     const price = Number(l.unitCost || l.unitPrice || 0);
     const vatRate = Number(l.vatPercent ?? l.vatRate ?? 0);
     return acc + (qty * price * (vatRate / 100));
@@ -55,11 +55,11 @@ export function printImportSlip(slipOrSlips, options = {}) {
     let rowsHtml = '';
     
     lines.forEach((line, index) => {
-      const product = productById.get(line.variantId);
-      const sku = product?.sku || `SKU #${line.variantId}`;
+      const product = productById.get(String(line.variantId));
+      const sku = product?.sku || line.sku || `SKU #${line.variantId}`;
       const name = line.variantName || product?.variantName || product?.name || (product?.productName ? `${product.productName} ${product.variantName || ''}` : 'Sản phẩm');
-      const unit = product?.unitName || '';
-      const qty = Number(isImport ? line.quantityIn : line.quantityOut || 0);
+      const unit = product?.unitName || line.unitName || '';
+      const qty = Number((isImport ? (line.quantityIn ?? line.quantity) : (line.quantityOut ?? line.quantity)) || 0);
       const price = Number(line.unitCost || line.unitPrice || 0);
       const amount = qty * price;
       const vatPercent = Number(line.vatPercent ?? line.vatRate ?? 0);
@@ -87,17 +87,17 @@ export function printImportSlip(slipOrSlips, options = {}) {
 
     const slipDate = formatDateOnly(slip.docDate || new Date());
     
-    let partnerName = 'Chưa chọn';
+    let partnerName = options.supplier?.name || slip.partnerName || 'Chưa chọn';
     if (!slip.issuePurpose || slip.issuePurpose === 'PURCHASE') {
-      partnerName = supplierById.get(slip.partnerId)?.name || 'Chưa chọn';
+      partnerName = supplierById.get(String(slip.partnerId))?.name || options.supplier?.name || slip.partnerName || 'Chưa chọn';
     } else if (slip.issuePurpose === 'RETURN' || slip.issuePurpose === 'SCRAP') {
-      partnerName = customerById.get(slip.partnerId)?.name || 'Chưa chọn';
+      partnerName = customerById.get(String(slip.partnerId))?.name || slip.partnerName || 'Chưa chọn';
     } else if (slip.issuePurpose === 'PRODUCTION') {
-      partnerName = assemblyOrderById.get(slip.referenceId)?.orderCode || 'Chưa chọn';
+      partnerName = assemblyOrderById.get(String(slip.referenceId))?.orderCode || slip.partnerName || 'Chưa chọn';
     }
 
-    const warehouseName = warehouseById.get(slip.warehouseId)?.name || 'Chưa rõ';
-    const salesperson = userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || 'Chưa rõ';
+    const warehouseName = warehouseById.get(String(slip.warehouseId))?.name || options.warehouseName || slip.warehouseName || 'Chưa rõ';
+    const salesperson = userById.get(String(slip.salespersonId))?.fullName || userById.get(String(slip.salespersonId))?.username || slip.salespersonName || 'Chưa rõ';
 
     return `
       <div style="position: relative;">
@@ -155,19 +155,19 @@ export function printImportSlip(slipOrSlips, options = {}) {
             ${rowsHtml}
             <tr class="total-row">
               <td colspan="4" style="text-align: right; border: 1px solid #ddd; padding: 10px;">Tổng tiền hàng:</td>
-              <td style="text-align: center; border: 1px solid #ddd; padding: 10px;">${sumQuantity(slip.lines).toLocaleString('vi-VN')}</td>
+              <td style="text-align: center; border: 1px solid #ddd; padding: 10px;">${sumQuantity(slip.lines || []).toLocaleString('vi-VN')}</td>
               <td style="border: 1px solid #ddd; padding: 10px;"></td>
-              <td style="text-align: right; border: 1px solid #ddd; padding: 10px;">${sumSubtotal(slip.lines).toLocaleString('vi-VN')} đ</td>
+              <td style="text-align: right; border: 1px solid #ddd; padding: 10px;">${sumSubtotal(slip.lines || []).toLocaleString('vi-VN')} đ</td>
               <td colspan="3" style="border: 1px solid #ddd; padding: 10px;"></td>
             </tr>
             <tr class="total-row">
               <td colspan="8" style="text-align: right; border: 1px solid #ddd; padding: 10px;">Tiền VAT:</td>
-              <td style="text-align: right; border: 1px solid #ddd; padding: 10px;">${sumVat(slip.lines).toLocaleString('vi-VN')} đ</td>
+              <td style="text-align: right; border: 1px solid #ddd; padding: 10px;">${sumVat(slip.lines || []).toLocaleString('vi-VN')} đ</td>
               <td style="border: 1px solid #ddd; padding: 10px;"></td>
             </tr>
             <tr class="total-row">
               <td colspan="8" style="text-align: right; border: 1px solid #ddd; padding: 10px; color: #d32f2f;">Tổng thanh toán:</td>
-              <td style="text-align: right; border: 1px solid #ddd; padding: 10px; color: #d32f2f;">${(sumSubtotal(slip.lines) + sumVat(slip.lines)).toLocaleString('vi-VN')} đ</td>
+              <td style="text-align: right; border: 1px solid #ddd; padding: 10px; color: #d32f2f;">${(sumSubtotal(slip.lines || []) + sumVat(slip.lines || [])).toLocaleString('vi-VN')} đ</td>
               <td style="border: 1px solid #ddd; padding: 10px;"></td>
             </tr>
           </tbody>

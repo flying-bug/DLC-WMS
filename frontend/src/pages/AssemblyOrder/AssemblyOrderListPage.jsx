@@ -8,6 +8,7 @@ import { exportToExcel } from '../../utils/excelExport';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import * as warehouseApi from '../../api/warehouseApi';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
 import styles from './AssemblyOrderListPage.module.css';
 
 const STATUS_META = {
@@ -189,6 +190,23 @@ function AssemblyOrderListPage() {
         return pages;
     };
 
+    const handlePrintOrder = async (item, e) => {
+        e.stopPropagation();
+        try {
+            const res = await assemblyApi.getAssemblyOrderById(item.id);
+            const detail = res?.data?.data || res?.data || item;
+            printAssemblyOrder(detail, {
+                warehouseName: warehouseName(item.warehouseId),
+                onError: (msg) => showToast('error', msg)
+            });
+        } catch {
+            printAssemblyOrder(item, {
+                warehouseName: warehouseName(item.warehouseId),
+                onError: (msg) => showToast('error', msg)
+            });
+        }
+    };
+
     return (
         <AdminLayout>
             <div className={styles.pageBody}>
@@ -317,6 +335,12 @@ function AssemblyOrderListPage() {
                                                 </td>
                                             )}
                                             <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
+                                                <i
+                                                    className="bi bi-printer"
+                                                    style={{ cursor: 'pointer', color: '#0284c7', fontSize: '16px', marginRight: '12px' }}
+                                                    title="In phiếu lệnh"
+                                                    onClick={(e) => handlePrintOrder(item, e)}
+                                                ></i>
                                                 <i
                                                     className="bi bi-eye"
                                                     style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }}
