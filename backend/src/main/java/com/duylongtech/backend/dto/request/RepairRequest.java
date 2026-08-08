@@ -34,6 +34,15 @@ public class RepairRequest {
     /** Liên kết bảo hành (nullable) */
     private Long warrantyId;
 
+    /** Loại chứng từ tham chiếu (giống bên xuất kho) */
+    private String referenceType;
+
+    /** ID chứng từ tham chiếu */
+    private Long referenceId;
+
+    /** Mã chứng từ tham chiếu */
+    private String referenceCode;
+
     /** Mô tả lỗi */
     private String issueDescription;
 
