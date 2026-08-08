@@ -6,13 +6,15 @@ import * as exportApi from '../api/inventoryExportApi';
 import * as assemblyOrderApi from '../api/assemblyOrderApi';
 import * as stocktakeApi from '../api/stocktakeApi';
 import * as stockTransferApi from '../api/stockTransferApi';
+import * as warrantyApi from '../api/warrantyApi';
 
 const DOC_TYPES = [
   { value: 'IMPORT_SLIP', label: 'Phiếu nhập kho' },
   { value: 'EXPORT_SLIP', label: 'Phiếu xuất kho' },
-  { value: 'ASSEMBLY_ORDER', label: 'Lệnh sản xuất (BOM)' },
+  { value: 'ASSEMBLY_ORDER', label: 'Lệnh sản xuất' },
   { value: 'STOCKTAKE', label: 'Kiểm kê' },
   { value: 'STOCK_TRANSFER', label: 'Chuyển kho' },
+  { value: 'WARRANTY', label: 'Phiếu bảo hành' },
 ];
 
 const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
@@ -28,7 +30,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
     try {
       let res;
       const params = { page: page - 1, size: 10, keywordSearch: keyword };
-      
+
       switch (docType) {
         case 'IMPORT_SLIP':
           res = await importApi.getImportHistory(params).catch(() => null);
@@ -40,10 +42,13 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
           res = await assemblyOrderApi.getAssemblyOrders({ ...params, keywordSearch: undefined, docCode: keyword }).catch(() => null);
           break;
         case 'STOCKTAKE':
-          res = await stocktakeApi.getStocktakes().catch(() => null); 
+          res = await stocktakeApi.getStocktakes().catch(() => null);
           break;
         case 'STOCK_TRANSFER':
           res = await stockTransferApi.getTransferHistory(params).catch(() => null);
+          break;
+        case 'WARRANTY':
+          res = await warrantyApi.getWarranties(params).catch(() => null);
           break;
         default:
           break;
@@ -67,7 +72,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
 
   useEffect(() => {
     if (isOpen) {
-       
+
       fetchDocuments();
     }
   }, [isOpen, page, docType, fetchDocuments]);
@@ -84,7 +89,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
   };
 
   const getDocDate = (item) => {
-    const rawDate = item.docDate || item.date || item.createdAt;
+    const rawDate = item.docDate || item.date || item.createdAt || item.startDate || item.executionDate;
     if (!rawDate) return '';
     return formatDateOnly(rawDate);
   };
@@ -94,7 +99,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
   return createPortal(
     <div className="modal-overlay" style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
       <div className="modal-content" style={{ width: '850px', maxWidth: '95vw', backgroundColor: '#fff', borderRadius: '4px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        
+
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#111827' }}>Chọn chứng từ tham chiếu</h2>
@@ -105,15 +110,15 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
 
         {/* Body */}
         <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#f3f4f6' }}>
-          
+
           {/* Top Filter Area (MISA Style) */}
           <div style={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '16px' }}>
             <div style={{ display: 'flex', gap: '24px' }}>
               <div style={{ flex: '0 0 250px' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Loại chứng từ</label>
-                <select 
-                  className="misa-input" 
-                  value={docType} 
+                <select
+                  className="misa-input"
+                  value={docType}
                   onChange={(e) => { setDocType(e.target.value); setPage(1); setKeyword(''); }}
                   style={{ width: '100%', padding: '6px 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}
                 >
@@ -127,21 +132,21 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
 
           {/* Search and Table Area */}
           <div style={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '4px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-            
+
             <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', gap: '8px' }}>
               <div style={{ position: 'relative', width: '300px' }}>
                 <i className="bi bi-search" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '14px' }}></i>
-                <input 
-                  type="text" 
-                  placeholder="Nhập từ khóa tìm kiếm" 
+                <input
+                  type="text"
+                  placeholder="Nhập từ khóa tìm kiếm"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   onKeyDown={handleKeyDown}
                   style={{ width: '100%', padding: '6px 12px 6px 32px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}
                 />
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={handleSearch}
                 style={{ padding: '6px 16px', backgroundColor: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: '500', color: '#374151' }}
               >
@@ -166,13 +171,13 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
                     <tr><td colSpan="4" style={{ textAlign: 'center', padding: '24px', color: '#6b7280' }}>Không có dữ liệu</td></tr>
                   ) : data.map((item) => (
                     <tr key={item.id} style={{ borderBottom: '1px solid #e5e7eb', cursor: 'pointer' }} onClick={() => {
-                        onSelect({
-                          referenceType: docType,
-                          referenceId: item.id,
-                          docCode: item.docCode || item.code || item.stocktakeCode
-                        });
-                        onClose();
-                      }}>
+                      onSelect({
+                        referenceType: docType,
+                        referenceId: item.id,
+                        docCode: item.docCode || item.code || item.orderCode || item.stocktakeCode || item.warrantyCode
+                      });
+                      onClose();
+                    }}>
                       <td style={{ padding: '10px 16px', textAlign: 'center', borderRight: '1px solid #e5e7eb' }}>
                         <i className="bi bi-circle" style={{ color: '#d1d5db', fontSize: '14px' }}></i>
                       </td>
@@ -180,10 +185,10 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
                         {getDocDate(item)}
                       </td>
                       <td style={{ padding: '10px 16px', borderRight: '1px solid #e5e7eb', color: '#0070cc' }}>
-                        {item.docCode || item.code || item.stocktakeCode}
+                        {item.docCode || item.code || item.orderCode || item.stocktakeCode || item.warrantyCode}
                       </td>
                       <td style={{ padding: '10px 16px', color: '#374151' }}>
-                        {item.note || item.issuePurpose || item.description || ''}
+                        {item.note || item.issuePurpose || item.description || item.targetName || (item.partnerName ? `Bảo hành cho KH: ${item.partnerName}` : '') || ''}
                       </td>
                     </tr>
                   ))}
@@ -193,17 +198,17 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
 
             {totalPages > 1 && (
               <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', padding: '12px', borderTop: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
-                <button 
+                <button
                   style={{ padding: '4px 12px', border: '1px solid #d1d5db', borderRadius: '4px', background: page <= 1 ? '#f3f4f6' : '#fff', cursor: page <= 1 ? 'not-allowed' : 'pointer' }}
-                  disabled={page <= 1} 
+                  disabled={page <= 1}
                   onClick={() => setPage(p => p - 1)}
                 >
                   Trước
                 </button>
                 <span style={{ display: 'flex', alignItems: 'center', fontSize: '13px' }}>Trang {page} / {totalPages}</span>
-                <button 
+                <button
                   style={{ padding: '4px 12px', border: '1px solid #d1d5db', borderRadius: '4px', background: page >= totalPages ? '#f3f4f6' : '#fff', cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}
-                  disabled={page >= totalPages} 
+                  disabled={page >= totalPages}
                   onClick={() => setPage(p => p + 1)}
                 >
                   Sau
