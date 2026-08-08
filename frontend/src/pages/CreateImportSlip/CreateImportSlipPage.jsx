@@ -30,6 +30,22 @@ const variantLabel = (item) => item?.variantName && item.variantName !== item.pr
   ? `${item.productName} - ${item.variantName}`
   : item?.productName || '';
 
+const normalizeProductType = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+const isWarehouseProduct = (item) => {
+  const type = normalizeProductType(item?.productType);
+  return type === 'hang hoa' || type === 'thanh pham';
+};
+
+const isWarehouseLine = (line) => !line?.productType || isWarehouseProduct(line);
+const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
+const filterWarehouseLines = (lines) => (lines || []).filter(isWarehouseLine);
+
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
@@ -144,7 +160,8 @@ function CreateImportSlipPage() {
   }));
   const [items, setItems] = useState(() => {
     if (poData && poData.lines && poData.lines.length > 0) {
-      return poData.lines.map(line => ({
+      const poLines = filterWarehouseLines(poData.lines);
+      return poLines.length > 0 ? poLines.map(line => ({
         ...emptyLine(),
         variantId: String(line.variantId),
         quantity: Number(line.quantity) || 1,
@@ -152,20 +169,22 @@ function CreateImportSlipPage() {
         vatPercent: Number(line.vatRate) || 0,
         note: line.note || '',
         isNew: false
-      }));
+      })) : [{ ...emptyLine(), isNew: false }];
     }
     if (assemblyData && assemblyData.lines && assemblyData.lines.length > 0) {
-      return assemblyData.lines.map(comp => ({
+      const assemblyLines = filterWarehouseLines(assemblyData.lines);
+      return assemblyLines.length > 0 ? assemblyLines.map(comp => ({
         ...emptyLine(),
         variantId: String(comp.variantId || comp.id),
         quantity: comp.quantity || 1,
         price: comp.price || 0,
         note: `Cấu hình cho Lệnh ${assemblyData.code}`,
         isNew: false
-      }));
+      })) : [{ ...emptyLine(), isNew: false }];
     }
     if (stocktakeData && stocktakeData.lines && stocktakeData.lines.length > 0) {
-      return stocktakeData.lines.map(line => ({
+      const stocktakeLines = filterWarehouseLines(stocktakeData.lines);
+      return stocktakeLines.length > 0 ? stocktakeLines.map(line => ({
         ...emptyLine(),
         variantId: String(line.variantId),
         quantity: line.quantity || 1,
@@ -173,7 +192,7 @@ function CreateImportSlipPage() {
         serialNumbers: line.serialNumbers || line.serials || [],
         note: line.note || `Hàng thừa từ kiểm kê ${stocktakeData.code}`,
         isNew: false
-      }));
+      })) : [{ ...emptyLine(), isNew: false }];
     }
     return [{ ...emptyLine(), isNew: false }];
   });
@@ -218,7 +237,7 @@ function CreateImportSlipPage() {
       const [warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes] = await Promise.allSettled([
         importApi.getWarehouses({ size: 100 }),
         importApi.getSuppliers(),
-        importApi.getProducts({ size: 100 }),
+        importApi.getProducts({ size: 1000 }),
         customerApi.searchCustomers('', 'APPROVED', '', 0, 1000),
         assemblyOrderApi.getAssemblyOrders({ size: 100 }),
         exportApi.getUsers({ size: 1000 })
@@ -233,7 +252,7 @@ function CreateImportSlipPage() {
         setSuppliers(data);
       }
       if (productRes.status === 'fulfilled') {
-        const data = pageContent(unwrap(productRes.value));
+        const data = filterWarehouseProducts(pageContent(unwrap(productRes.value)));
         setProducts(data);
       }
       if (customerRes.status === 'fulfilled') {
@@ -299,14 +318,8 @@ function CreateImportSlipPage() {
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const type = p.productType;
-      if (importType === 'PURCHASE') return type === 'Hàng hóa';
-      if (importType === 'PRODUCTION') return type === 'Thành phẩm';
-      if (importType === 'SCRAP') return type === 'Hàng hóa' || type === 'Thành phẩm';
-      return type === 'Hàng hóa' || type === 'Thành phẩm';
-    });
-  }, [products, importType]);
+    return filterWarehouseProducts(products);
+  }, [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
@@ -316,7 +329,7 @@ function CreateImportSlipPage() {
     const quantity = Number(item.quantity || 0);
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
     const hasValidSerials = !product?.trackSerial || (Number.isInteger(quantity) && item.serialNumbers?.length === quantity);
-    return item.variantId && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
+    return product && isWarehouseProduct(product) && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
   };
   const isFormValid = Boolean(
     form.warehouseId &&
@@ -355,7 +368,7 @@ function CreateImportSlipPage() {
   const handleQuickAddProductSuccess = async (newProduct) => {
     try {
       const response = await importApi.getProducts({ size: 1000 });
-      const refreshedProducts = pageContent(unwrap(response));
+      const refreshedProducts = filterWarehouseProducts(pageContent(unwrap(response)));
       setProducts(refreshedProducts);
       const createdVariant = refreshedProducts.find(product => String(product.productId) === String(newProduct?.id));
 
@@ -1012,6 +1025,7 @@ function CreateImportSlipPage() {
         onClose={() => { setShowQuickAddProduct(false); setQuickAddLineId(null); }}
         onSuccess={handleQuickAddProductSuccess}
         productType={importType === 'PRODUCTION' ? 'Thành phẩm' : 'Hàng hóa'}
+        allowedProductTypes={['Hàng hóa', 'Thành phẩm']}
       />
       {showPartnerModal && (
         <SupplierModal
@@ -1094,7 +1108,7 @@ function CreateImportSlipPage() {
                 if (stData.warehouseId) {
                   setForm(prev => ({ ...prev, warehouseId: String(stData.warehouseId) }));
                 }
-                const diffSurplusLines = (stData.lines || []).filter(l => Number(l.diffQty || 0) > 0);
+                const diffSurplusLines = filterWarehouseLines(stData.lines || []).filter(l => Number(l.diffQty || 0) > 0);
                 if (diffSurplusLines.length > 0) {
                   setItems(diffSurplusLines.map(l => {
                     const rawSerials = l.serials || [];

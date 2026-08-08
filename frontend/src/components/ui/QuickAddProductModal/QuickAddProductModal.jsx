@@ -154,9 +154,19 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
             )}
         </div>
     );
-};const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thành phẩm' }) => {
+};
+
+const WAREHOUSE_PRODUCT_TYPES = ['Hàng hóa', 'Thành phẩm'];
+
+const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thành phẩm', allowedProductTypes }) => {
+    const productTypeOptions = (Array.isArray(allowedProductTypes) && allowedProductTypes.length > 0
+        ? allowedProductTypes
+        : [productType])
+        .filter((type) => WAREHOUSE_PRODUCT_TYPES.includes(type));
+    const defaultProductType = productTypeOptions.includes(productType) ? productType : (productTypeOptions[0] || 'Hàng hóa');
     const [categories, setCategories] = useState([]);
     const [units, setUnits] = useState([]);
+    const [selectedProductType, setSelectedProductType] = useState(defaultProductType);
     const [formData, setFormData] = useState({
         productName: '',
         categoryId: '',
@@ -209,6 +219,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
 
     useEffect(() => {
         if (isOpen) {
+            setSelectedProductType(defaultProductType);
             setFormData({
                 productName: '',
                 categoryId: '',
@@ -221,7 +232,18 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
             setErrorMsg('');
             fetchLookups();
         }
-    }, [isOpen]);
+    }, [isOpen, defaultProductType]);
+
+    const effectiveProductType = selectedProductType || defaultProductType;
+    const isAssemblyType = effectiveProductType === 'Thành phẩm';
+
+    const handleProductTypeChange = (type) => {
+        setSelectedProductType(type);
+        setErrorMsg('');
+        if (type !== 'Thành phẩm') {
+            setBomLines([]);
+        }
+    };
 
     const handleAddBomLine = () => {
         setBomLines([...bomLines, { categoryId: '', note: '' }]);
@@ -241,7 +263,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
 
     const handleSave = async () => {
         if (!formData.productName.trim()) {
-            setErrorMsg(`Vui lòng nhập tên ${productType.toLowerCase()}.`);
+            setErrorMsg(`Vui lòng nhập tên ${effectiveProductType.toLowerCase()}.`);
             return;
         }
         if (!formData.categoryId) {
@@ -254,8 +276,8 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
         }
 
         // Validate BOM lines if there are any
-        const validBomLines = bomLines.filter(l => l.categoryId);
-        if (bomLines.length > 0 && validBomLines.length === 0) {
+        const validBomLines = isAssemblyType ? bomLines.filter(l => l.categoryId) : [];
+        if (isAssemblyType && bomLines.length > 0 && validBomLines.length === 0) {
             setErrorMsg('Vui lòng chọn ít nhất một vai trò linh kiện cho định mức cấu hình.');
             return;
         }
@@ -265,19 +287,20 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
         try {
             const payload = {
                 productName: formData.productName.trim(),
-                productType,
+                productType: effectiveProductType,
                 categoryId: Number(formData.categoryId),
                 unitId: Number(formData.unitId),
                 brandId: formData.brandId ? Number(formData.brandId) : null,
                 warrantyPeriodMonths: formData.warrantyPeriodMonths ? Number(formData.warrantyPeriodMonths) : 0,
                 salePrice: formData.salePrice ? Number(formData.salePrice) : 0,
-                trackSerial: false,
+                trackSerial: isAssemblyType,
+                isAssembly: isAssemblyType,
                 active: true,
                 minStockQty: 0
             };
 
             // Format BOM template
-            if (validBomLines.length > 0) {
+            if (isAssemblyType && validBomLines.length > 0) {
                 const linesPayload = validBomLines.map(l => {
                     const selectedCat = categories.find(c => String(c.id) === String(l.categoryId));
                     return {
@@ -296,7 +319,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
             onSuccess(newProduct);
             onClose();
         } catch (error) {
-            setErrorMsg(error.response?.data?.userMessage || error.response?.data?.message || `Có lỗi xảy ra khi thêm ${productType.toLowerCase()}.`);
+            setErrorMsg(error.response?.data?.userMessage || error.response?.data?.message || `Có lỗi xảy ra khi thêm ${effectiveProductType.toLowerCase()}.`);
         } finally {
             setLoading(false);
         }
@@ -308,22 +331,38 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
         <div className="misa-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
             <div className="misa-modal" style={{ width: '800px', maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                 <div className="misa-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>Thêm nhanh {productType}</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>Thêm nhanh {effectiveProductType}</span>
                     <i className="fas fa-times" onClick={onClose} style={{ cursor: 'pointer', fontSize: '18px', color: '#9ca3af' }}></i>
                 </div>
                 
                 <div className="misa-modal-body" style={{ padding: '20px 24px', backgroundColor: '#fff', overflowY: 'auto', flex: 1 }}>
                     {errorMsg && <div style={{ color: '#dc2626', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '4px', marginBottom: '16px', fontSize: '13px' }}>{errorMsg}</div>}
+
+                    {productTypeOptions.length > 1 && (
+                        <div className={styles.typeSelector}>
+                            {productTypeOptions.map((type) => (
+                                <button
+                                    key={type}
+                                    type="button"
+                                    className={`${styles.typeOption} ${effectiveProductType === type ? styles.typeOptionActive : ''}`}
+                                    onClick={() => handleProductTypeChange(type)}
+                                >
+                                    <i className={type === 'Thành phẩm' ? 'bi bi-pc-display' : 'bi bi-box'}></i>
+                                    {type}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     
                     <h5 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '12px', color: '#111827' }}>1. Thông tin chung</h5>
                     <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
                         <div className={styles.field}>
-                            <label>Tên {productType.toLowerCase()} <span style={{color: 'red'}}>*</span></label>
+                            <label>Tên {effectiveProductType.toLowerCase()} <span style={{color: 'red'}}>*</span></label>
                             <input 
                                 type="text" 
                                 value={formData.productName} 
                                 onChange={e => setFormData(f => ({...f, productName: e.target.value}))} 
-                                placeholder={`Nhập tên ${productType.toLowerCase()}...`}
+                                placeholder={`Nhập tên ${effectiveProductType.toLowerCase()}...`}
                             />
                         </div>
                         
@@ -372,91 +411,95 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                        <h5 style={{ fontSize: '13px', fontWeight: 600, color: '#111827', margin: 0 }}>2. Định mức cấu hình (Tùy chọn)</h5>
-                    </div>
+                    {isAssemblyType && (
+                        <>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                <h5 style={{ fontSize: '13px', fontWeight: 600, color: '#111827', margin: 0 }}>2. Định mức cấu hình (Tùy chọn)</h5>
+                            </div>
 
-                    <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', overflow: 'hidden', padding: '14px 16px', minHeight: '120px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {bomLines.map((line, idx) => (
-                                <div key={idx} style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                    padding: '8px 12px', background: '#fff', border: '1px solid #e5e7eb',
-                                    borderRadius: '8px', transition: 'all 0.2s ease',
-                                    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-                                }}
-                                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)'; }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'; }}
-                                >
-                                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            width: '28px', height: '28px', borderRadius: '50%', background: '#f3f4f6',
-                                            color: '#6b7280', fontSize: '12px', fontWeight: 600
-                                        }}>
-                                            {idx + 1}
-                                        </div>
-                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <SearchableCategoryDropdown
-                                                    categories={categories}
-                                                    value={line.categoryId || ''}
-                                                    onChange={(newCatId) => handleBomLineChange(idx, 'categoryId', newCatId)}
-                                                />
-                                            </div>
-                                            <input
-                                                type="text"
-                                                placeholder="Ghi chú chi tiết (VD: Ổ chứa dữ liệu, Tản nhiệt nước...)"
-                                                value={line.note || ''}
-                                                onChange={(e) => handleBomLineChange(idx, 'note', e.target.value)}
-                                                style={{
-                                                    width: '100%', border: 'none', borderBottom: '1px dashed #cbd5e1',
-                                                    padding: '4px 6px', fontSize: '12px', outline: 'none',
-                                                    background: 'transparent', color: '#4b5563', transition: 'border-color 0.2s'
-                                                }}
-                                                onFocus={(e) => { e.target.style.borderBottom = '1px solid #3b82f6'; e.target.style.color = '#111827'; }}
-                                                onBlur={(e) => { e.target.style.borderBottom = '1px dashed #cbd5e1'; e.target.style.color = '#4b5563'; }}
-                                            />
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => handleRemoveBomLine(idx)}
-                                        style={{
-                                            border: 'none', background: 'transparent', cursor: 'pointer',
-                                            color: '#9ca3af', fontSize: '15px', padding: '8px',
-                                            borderRadius: '6px', transition: 'all 0.2s', marginLeft: '8px'
+                            <div style={{ border: '1px solid #e5e7eb', borderRadius: '6px', overflow: 'hidden', padding: '14px 16px', minHeight: '120px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {bomLines.map((line, idx) => (
+                                        <div key={idx} style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                            padding: '8px 12px', background: '#fff', border: '1px solid #e5e7eb',
+                                            borderRadius: '8px', transition: 'all 0.2s ease',
+                                            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
                                         }}
-                                        onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fee2e2'; }}
-                                        onMouseLeave={(e) => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.background = 'transparent'; }}
-                                        title="Xóa danh mục"
+                                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'; }}
+                                        >
+                                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    width: '28px', height: '28px', borderRadius: '50%', background: '#f3f4f6',
+                                                    color: '#6b7280', fontSize: '12px', fontWeight: 600
+                                                }}>
+                                                    {idx + 1}
+                                                </div>
+                                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <SearchableCategoryDropdown
+                                                            categories={categories}
+                                                            value={line.categoryId || ''}
+                                                            onChange={(newCatId) => handleBomLineChange(idx, 'categoryId', newCatId)}
+                                                        />
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Ghi chú chi tiết (VD: Ổ chứa dữ liệu, Tản nhiệt nước...)"
+                                                        value={line.note || ''}
+                                                        onChange={(e) => handleBomLineChange(idx, 'note', e.target.value)}
+                                                        style={{
+                                                            width: '100%', border: 'none', borderBottom: '1px dashed #cbd5e1',
+                                                            padding: '4px 6px', fontSize: '12px', outline: 'none',
+                                                            background: 'transparent', color: '#4b5563', transition: 'border-color 0.2s'
+                                                        }}
+                                                        onFocus={(e) => { e.target.style.borderBottom = '1px solid #3b82f6'; e.target.style.color = '#111827'; }}
+                                                        onBlur={(e) => { e.target.style.borderBottom = '1px dashed #cbd5e1'; e.target.style.color = '#4b5563'; }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => handleRemoveBomLine(idx)}
+                                                style={{
+                                                    border: 'none', background: 'transparent', cursor: 'pointer',
+                                                    color: '#9ca3af', fontSize: '15px', padding: '8px',
+                                                    borderRadius: '6px', transition: 'all 0.2s', marginLeft: '8px'
+                                                }}
+                                                onMouseEnter={(e) => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fee2e2'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.background = 'transparent'; }}
+                                                title="Xóa danh mục"
+                                            >
+                                                <i className="bi bi-trash3"></i>
+                                            </button>
+                                        </div>
+                                    ))}
+
+                                    <button
+                                        onClick={handleAddBomLine}
+                                        style={{
+                                            width: '100%', padding: '14px', border: '1px dashed #cbd5e1',
+                                            borderRadius: '8px', background: '#f8fafc', color: '#3b82f6',
+                                            fontSize: '14px', fontWeight: 500, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
                                     >
-                                        <i className="bi bi-trash3"></i>
+                                        <i className="bi bi-plus-circle" style={{ fontSize: '16px' }}></i> Thêm danh mục yêu cầu
                                     </button>
                                 </div>
-                            ))}
-
-                            <button
-                                onClick={handleAddBomLine}
-                                style={{
-                                    width: '100%', padding: '14px', border: '1px dashed #cbd5e1',
-                                    borderRadius: '8px', background: '#f8fafc', color: '#3b82f6',
-                                    fontSize: '14px', fontWeight: 500, cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                                    transition: 'all 0.2s ease'
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.background = '#eff6ff'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
-                            >
-                                <i className="bi bi-plus-circle" style={{ fontSize: '16px' }}></i> Thêm danh mục yêu cầu
-                            </button>
-                        </div>
-                    </div>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <div className="misa-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '12px 20px', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
                     <button type="button" className="btn-misa-cancel" onClick={onClose}>Hủy</button>
                     <button type="button" className="btn-misa-primary" onClick={handleSave} disabled={loading}>
-                        {loading ? 'Đang lưu...' : `Lưu ${productType}`}
+                        {loading ? 'Đang lưu...' : `Lưu ${effectiveProductType}`}
                     </button>
                 </div>
             </div>

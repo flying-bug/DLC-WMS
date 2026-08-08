@@ -25,6 +25,23 @@ const pageContent = (payload) => payload?.content ?? payload ?? [];
 const today = getTodayIsoDate;
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 
+const normalizeProductType = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+const isServiceProduct = (item) => normalizeProductType(item?.productType) === 'dich vu';
+const isWarehouseProduct = (item) => {
+  const type = normalizeProductType(item?.productType);
+  return type === 'hang hoa' || type === 'thanh pham';
+};
+
+const isWarehouseLine = (line) => !line?.productType || isWarehouseProduct(line);
+const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
+const filterWarehouseLines = (lines) => (lines || []).filter(isWarehouseLine);
+
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
@@ -145,7 +162,8 @@ function CreateExportSlipPage({ mode: propMode }) {
 
   const [items, setItems] = useState(() => {
     if (soData && soData.lines && soData.lines.length > 0) {
-      return soData.lines.map(l => ({
+      const soLines = filterWarehouseLines(soData.lines);
+      return soLines.length > 0 ? soLines.map(l => ({
         ...emptyLine(),
         variantId: String(l.variantId),
         quantity: l.quantity || 1,
@@ -153,25 +171,27 @@ function CreateExportSlipPage({ mode: propMode }) {
         vatPercent: l.vatPercent || 0,
         warrantyMonths: l.warrantyMonths || 0,
         note: l.note || '',
-      }));
+      })) : [{ ...emptyLine(), isNew: false }];
     }
     if (assemblyData && assemblyData.lines && assemblyData.lines.length > 0) {
-      return assemblyData.lines.map(comp => ({
+      const assemblyLines = filterWarehouseLines(assemblyData.lines);
+      return assemblyLines.length > 0 ? assemblyLines.map(comp => ({
         ...emptyLine(),
         variantId: String(comp.variantId || comp.id),
         quantity: comp.quantity || 1,
         price: comp.price || 0,
         note: `Cấu hình cho Lệnh ${assemblyData.code}`,
-      }));
+      })) : [{ ...emptyLine(), isNew: false }];
     }
     if (stocktakeData && stocktakeData.lines && stocktakeData.lines.length > 0) {
-      return stocktakeData.lines.map(line => ({
+      const stocktakeLines = filterWarehouseLines(stocktakeData.lines);
+      return stocktakeLines.length > 0 ? stocktakeLines.map(line => ({
         ...emptyLine(),
         variantId: String(line.variantId),
         quantity: line.quantity || 1,
         price: line.price || 0,
         note: line.note || `Hàng thiếu từ kiểm kê ${stocktakeData.code}`,
-      }));
+      })) : [{ ...emptyLine(), isNew: false }];
     }
     return [{ ...emptyLine(), isNew: false }];
   });
@@ -204,7 +224,7 @@ function CreateExportSlipPage({ mode: propMode }) {
 
       const [warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
         exportApi.getWarehouses({ size: 100 }),
-        exportApi.getProducts({ size: 100 }),
+        exportApi.getProducts({ size: 1000 }),
         exportApi.getCustomers({ size: 1000 }),
         exportApi.getUsers({ size: 1000 }).catch(() => null),
       ]);
@@ -215,7 +235,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         setForm(prev => ({ ...prev, warehouseId: prev.warehouseId || data[0]?.id || '' }));
       }
       if (productRes.status === 'fulfilled') {
-        const data = pageContent(unwrap(productRes.value));
+        const data = filterWarehouseProducts(pageContent(unwrap(productRes.value)));
         setProducts(data);
       }
       if (customerRes.status === 'fulfilled') {
@@ -259,8 +279,9 @@ function CreateExportSlipPage({ mode: propMode }) {
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
   const isLineValid = (item) => {
+    const product = productById.get(String(item.variantId));
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-    return item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
+    return product && isWarehouseProduct(product) && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
   };
 
   const isFormValid = Boolean(
@@ -322,7 +343,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   const handleQuickAddProductSuccess = async (newProduct) => {
     try {
       const response = await exportApi.getProducts({ size: 1000 });
-      const refreshedProducts = pageContent(unwrap(response));
+      const refreshedProducts = filterWarehouseProducts(pageContent(unwrap(response)));
       setProducts(refreshedProducts);
       const createdVariant = refreshedProducts.find(product => String(product.productId) === String(newProduct?.id));
 
@@ -448,6 +469,10 @@ function CreateExportSlipPage({ mode: propMode }) {
         warehouseId: Number(form.warehouseId),
       });
       const scanResult = unwrap(response);
+      if (isServiceProduct(scanResult)) {
+        setError('Dịch vụ không áp dụng cho phiếu xuất kho.');
+        return;
+      }
       setProducts(prev => {
         if (prev.some(p => String(p.id) === String(scanResult.variantId))) return prev;
         return [...prev, {
@@ -458,6 +483,7 @@ function CreateExportSlipPage({ mode: propMode }) {
           unitName: scanResult.unitName || '',
           salePrice: scanResult.salePrice || 0,
           trackSerial: scanResult.trackSerial,
+          productType: scanResult.productType || 'Hàng hóa',
         }];
       });
 
@@ -1111,6 +1137,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         onClose={() => { setShowQuickAddProduct(false); setQuickAddLineId(null); }}
         onSuccess={handleQuickAddProductSuccess}
         productType="Hàng hóa"
+        allowedProductTypes={['Hàng hóa', 'Thành phẩm']}
       />
 
       <AssemblyOrderSelectionModal
@@ -1137,7 +1164,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                 if (stData.warehouseId) {
                   setForm(prev => ({ ...prev, warehouseId: String(stData.warehouseId) }));
                 }
-                const diffLackLines = (stData.lines || []).filter(l => Number(l.diffQty || 0) < 0);
+                const diffLackLines = filterWarehouseLines(stData.lines || []).filter(l => Number(l.diffQty || 0) < 0);
                 if (diffLackLines.length > 0) {
                   setItems(diffLackLines.map(l => {
                     const rawSerials = l.serials || [];

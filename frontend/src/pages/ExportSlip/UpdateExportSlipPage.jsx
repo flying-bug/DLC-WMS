@@ -21,6 +21,22 @@ const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const today = getTodayIsoDate;
 const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')} đ`;
+
+const normalizeProductType = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+const isServiceProduct = (item) => normalizeProductType(item?.productType) === 'dich vu';
+const isWarehouseProduct = (item) => {
+  const type = normalizeProductType(item?.productType);
+  return type === 'hang hoa' || type === 'thanh pham';
+};
+
+const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
+
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
@@ -159,7 +175,7 @@ function UpdateExportSlipPage() {
         const [detailRes, warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
           exportApi.getExportDetail(id),
           exportApi.getWarehouses({ size: 100 }),
-          exportApi.getProducts({ size: 100 }),
+          exportApi.getProducts({ size: 1000 }),
           exportApi.getCustomers({ size: 1000 }),
           exportApi.getUsers({ size: 1000 }).catch(() => null),
         ]);
@@ -173,7 +189,7 @@ function UpdateExportSlipPage() {
           setWarehouses(pageContent(unwrap(warehouseRes.value)));
         }
         if (productRes.status === 'fulfilled') {
-          setProducts(pageContent(unwrap(productRes.value)));
+          setProducts(filterWarehouseProducts(pageContent(unwrap(productRes.value))));
         }
         if (customerRes.status === 'fulfilled') {
           setCustomers(pageContent(unwrap(customerRes.value)));
@@ -241,8 +257,9 @@ function UpdateExportSlipPage() {
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
   const isLineValid = (item) => {
+    const product = productById.get(String(item.variantId));
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-    return item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
+    return product && isWarehouseProduct(product) && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
   };
   const isFormValid = Boolean(
     form.warehouseId &&
@@ -308,7 +325,7 @@ function UpdateExportSlipPage() {
   const handleQuickAddProductSuccess = async (newProduct) => {
     try {
       const response = await exportApi.getProducts({ size: 1000 });
-      const refreshedProducts = pageContent(unwrap(response));
+      const refreshedProducts = filterWarehouseProducts(pageContent(unwrap(response)));
       setProducts(refreshedProducts);
       const createdVariant = refreshedProducts.find(product => String(product.productId) === String(newProduct?.id));
 
@@ -372,6 +389,11 @@ function UpdateExportSlipPage() {
   };
 
   const ensureScannedProduct = (scanResult) => {
+    if (isServiceProduct(scanResult)) {
+      setError('Dịch vụ không áp dụng cho phiếu xuất kho.');
+      return false;
+    }
+
     setProducts(prev => {
       if (prev.some(product => String(product.id) === String(scanResult.variantId))) {
         return prev;
@@ -389,13 +411,16 @@ function UpdateExportSlipPage() {
           warrantyMonths: scanResult.warrantyMonths || 0,
           salePrice: scanResult.salePrice || 0,
           trackSerial: scanResult.trackSerial,
+          productType: scanResult.productType || 'Hàng hóa',
         },
       ];
     });
+    return true;
   };
 
   const addScannedItem = (scanResult) => {
-    ensureScannedProduct(scanResult);
+    if (!ensureScannedProduct(scanResult)) return;
+
     setItems(prev => {
       const existingIndex = prev.findIndex(item => String(item.variantId) === String(scanResult.variantId));
       const serial = scanResult.serialNumber;
@@ -876,6 +901,7 @@ function UpdateExportSlipPage() {
         onClose={() => { setShowQuickAddProduct(false); setQuickAddLineId(null); }}
         onSuccess={handleQuickAddProductSuccess}
         productType="Hàng hóa"
+        allowedProductTypes={['Hàng hóa', 'Thành phẩm']}
       />
       <ReferenceDocumentModal
         isOpen={showReferenceModal}
