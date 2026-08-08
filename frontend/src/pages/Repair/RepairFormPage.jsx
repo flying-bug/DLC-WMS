@@ -245,48 +245,50 @@ function RepairFormPage() {
     return list;
   }, [products, sourceWarranty, variants]);
 
+  const _productId = formData.productId;
+  const _serialNumberId = formData.serialNumberId;
+
   const maxWarrantyQuantity = useMemo(() => {
-    if (!sourceWarranty || !sourceWarranty.lines || !formData.productId) return null;
+    if (!sourceWarranty || !sourceWarranty.lines || !_productId) return null;
     let total = 0;
     sourceWarranty.lines.forEach(line => {
       let matches = false;
-      if (line.productId && Number(line.productId) === Number(formData.productId)) {
+      if (line.productId && Number(line.productId) === Number(_productId)) {
         matches = true;
       } else if (line.productVariantId) {
         const matchV = variants.find(v => String(v.id) === String(line.productVariantId));
-        if (matchV && Number(matchV.productId) === Number(formData.productId)) matches = true;
+        if (matchV && Number(matchV.productId) === Number(_productId)) matches = true;
       } else if (line.sku) {
         const matchP = products.find(p => p.productCode === line.sku || p.sku === line.sku);
-        if (matchP && Number(matchP.id) === Number(formData.productId)) matches = true;
+        if (matchP && Number(matchP.id) === Number(_productId)) matches = true;
       }
       if (matches) {
         total += Number(line.quantity || 1);
       }
     });
     return total > 0 ? total : null;
-    // eslint-disable-next-line
-  }, [sourceWarranty, formData.productId, variants, products]);
+  }, [sourceWarranty, _productId, variants, products]);
 
   const selectedRepairProduct = useMemo(
-    () => products.find(p => String(p.id) === String(formData.productId)) || null,
-    [products, formData.productId]
+    () => products.find(p => String(p.id) === String(_productId)) || null,
+    [products, _productId]
   );
 
   const selectedWarrantyLine = useMemo(() => {
     const warrantyLines = sourceWarranty?.lines || [];
     if (warrantyLines.length === 0) return null;
 
-    if (formData.serialNumberId) {
-      const serialMatch = warrantyLines.find(line => String(line.serialNumberId) === String(formData.serialNumberId));
+    if (_serialNumberId) {
+      const serialMatch = warrantyLines.find(line => String(line.serialNumberId) === String(_serialNumberId));
       if (serialMatch) return serialMatch;
     }
 
-    if (formData.productId) {
+    if (_productId) {
       const productMatch = warrantyLines.find(line => {
-        if (line.productId && String(line.productId) === String(formData.productId)) return true;
+        if (line.productId && String(line.productId) === String(_productId)) return true;
         if (line.productVariantId) {
           const variant = variants.find(v => String(v.id) === String(line.productVariantId));
-          return variant && String(variant.productId) === String(formData.productId);
+          return variant && String(variant.productId) === String(_productId);
         }
         return false;
       });
@@ -294,7 +296,7 @@ function RepairFormPage() {
     }
 
     return warrantyLines[0];
-  }, [sourceWarranty, formData.serialNumberId, formData.productId, variants]);
+  }, [sourceWarranty, _serialNumberId, _productId, variants]);
 
   const selectedDeviceSerialNumber = repair?.serialNumber || selectedWarrantyLine?.serialNumber || '';
   const selectedDeviceVariantId = selectedWarrantyLine?.productVariantId || '';
