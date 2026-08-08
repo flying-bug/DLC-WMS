@@ -11,6 +11,7 @@ import { getVietnamTimestamp } from '../../utils/dateFormat';
 import * as XLSX from 'xlsx';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import Modal from '../../components/ui/Modal/Modal';
+import ProductDetailModal from './components/ProductDetailModal';
 const defaultFormData = {
     id: null,
     productCode: '',
@@ -253,6 +254,7 @@ const ProductPage = () => {
     const [totalElements, setTotalElements] = useState(0);
 
     const [showModal, setShowModal] = useState(false);
+    const [detailProduct, setDetailProduct] = useState(null);
     const [isEdit, setIsEdit] = useState(false);
     const [printBarcodeProduct, setPrintBarcodeProduct] = useState(null);
     const [formData, setFormData] = useState(defaultFormData);
@@ -1360,8 +1362,13 @@ const ProductPage = () => {
                                 </tr>
                             ) : (
                                 filteredProducts.map((item) => (
-                                    <tr key={item.id} className={!item.active ? styles.inactiveRow : ''}>
-                                        <td style={{ textAlign: 'center' }}>
+                                    <tr
+                                        key={item.id}
+                                        className={!item.active ? styles.inactiveRow : ''}
+                                        onClick={() => setDetailProduct(item)}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <td style={{ textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
                                             <input type="checkbox" className={styles.checkbox} />
                                         </td>
                                         {columns.image && (
@@ -1383,7 +1390,7 @@ const ProductPage = () => {
                                         {columns.unit && <td>{item.unitName || '-'}</td>}
                                         {columns.salePrice && <td className={`${styles.money} ${styles.textRight}`}>{formatCurrency(item.salePrice)}</td>}
                                         {columns.stockQty && <td className={styles.textRight}>{formatQuantity(item.stockQty)}</td>}
-                                        <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
+                                        <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }} onClick={(event) => event.stopPropagation()}>
                                             <i
                                                 className="bi bi-pencil"
                                                 style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '12px' }}
@@ -2512,6 +2519,12 @@ const ProductPage = () => {
                 isOpen={!!printBarcodeProduct}
                 onClose={() => setPrintBarcodeProduct(null)}
                 product={printBarcodeProduct}
+            />
+
+            <ProductDetailModal
+                product={detailProduct}
+                onClose={() => setDetailProduct(null)}
+                onEdit={handleOpenEdit}
             />
         </AdminLayout>
 
