@@ -4,6 +4,7 @@ import com.duylongtech.backend.dto.request.ProductRequest;
 import com.duylongtech.backend.dto.request.ProductVariantRequest;
 import com.duylongtech.backend.dto.response.ProductResponse;
 import com.duylongtech.backend.dto.response.ProductVariantResponse;
+import com.duylongtech.backend.dto.response.StockAlertSummaryResponse;
 import com.duylongtech.backend.entity.Brand;
 import com.duylongtech.backend.entity.Product;
 import com.duylongtech.backend.entity.ProductCategory;
@@ -79,6 +80,21 @@ public class ProductService {
             }
         }
         return productPage.map(product -> convertToDtoWithStock(product, stockMap.getOrDefault(product.getId(), BigDecimal.ZERO)));
+    }
+
+    public StockAlertSummaryResponse getStockAlertSummary() {
+        Object[] summary = productRepository.getStockAlertSummary();
+        int lowStockCount = summary != null && summary.length > 0 && summary[0] instanceof Number
+                ? ((Number) summary[0]).intValue()
+                : 0;
+        int outOfStockCount = summary != null && summary.length > 1 && summary[1] instanceof Number
+                ? ((Number) summary[1]).intValue()
+                : 0;
+
+        return StockAlertSummaryResponse.builder()
+                .lowStockCount(lowStockCount)
+                .outOfStockCount(outOfStockCount)
+                .build();
     }
 
     public ProductResponse getProductById(Long id) {

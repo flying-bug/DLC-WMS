@@ -13,6 +13,7 @@ import { formatDateOnly, formatDateTime, getTodayIsoDate } from '../../utils/dat
 import styles from './AssemblyOrderFormPage.module.css';
 import bomStyles from './AssemblyOrderPage.module.css';
 import AssemblyExecutionModal from './AssemblyExecutionModal';
+import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
@@ -692,6 +693,14 @@ function AssemblyOrderFormPage() {
         }))
         : (targetItem ? [targetItem] : []);
 
+    const handlePrint = () => {
+        if (!orderDetail) return;
+        const warehouse = warehouses.find(w => String(w.id) === String(orderDetail.warehouseId || form.warehouseId));
+        printAssemblyOrder(orderDetail, {
+            warehouseName: warehouse?.name || warehouse?.warehouseName,
+            onError: (msg) => showToast('error', msg)
+        });
+    };
     const orderSerials = useMemo(() => {
         return (orderDetail?.mappedSerials || []).filter(item => !item.sourceRepairId);
     }, [orderDetail?.mappedSerials]);
@@ -704,6 +713,16 @@ function AssemblyOrderFormPage() {
                 <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/assembly-orders'); }}>
                     <i className="bi bi-arrow-left"></i> {getPageTitle()}
                 </a>
+                {editing && orderDetail && (
+                    <button
+                        type="button"
+                        className="btn-misa-post"
+                        style={{ marginLeft: 'auto', backgroundColor: '#3b82f6', borderColor: '#3b82f6', padding: '6px 16px', fontSize: '13px' }}
+                        onClick={handlePrint}
+                    >
+                        <i className="bi bi-printer" style={{ marginRight: '6px' }}></i> In phiếu lệnh
+                    </button>
+                )}
             </div>
             <div className={styles.pageBody}>
 

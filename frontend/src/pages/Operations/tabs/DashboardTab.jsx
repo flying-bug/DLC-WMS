@@ -100,7 +100,7 @@ function DashboardTab() {
                     <p className={styles.pageSubtitle}>Tổng quan sức khỏe hệ thống theo thời gian thực</p>
                 </div>
                 <div className={styles.headerActions}>
-                    <button className={styles.refreshBtn} onClick={fetchHealth} title="Làm mới">
+                    <button type="button" className={styles.refreshBtn} onClick={fetchHealth} title="Làm mới" aria-label="Làm mới dữ liệu hệ thống">
                         <i className="bi bi-arrow-clockwise" />
                     </button>
                     <button

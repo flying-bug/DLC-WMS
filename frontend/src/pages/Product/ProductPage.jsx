@@ -577,27 +577,26 @@ const ProductPage = () => {
             const brandQuery = brandFilter ? `&brandId=${brandFilter}` : '';
             const unitQuery = unitFilter ? `&unitId=${unitFilter}` : '';
             
-            const res = await axiosClient.get(`/products?page=${page}&size=${size}${searchQuery}${categoryQuery}${typeQuery}${brandQuery}${unitQuery}`);
+            const [productsResult, stockSummaryResult] = await Promise.allSettled([
+                axiosClient.get(`/products?page=${page}&size=${size}${searchQuery}${categoryQuery}${typeQuery}${brandQuery}${unitQuery}`),
+                axiosClient.get('/products/stock-alert-summary')
+            ]);
+
+            if (productsResult.status === 'rejected') throw productsResult.reason;
+
+            const res = productsResult.value;
             const content = res.data.content || [];
             setProducts(content);
             setTotalPages(res.data.totalPages || 0);
             setTotalElements(res.data.totalElements || 0);
 
-            let outOfStock = 0;
-            let lowStock = 0;
-            content.forEach((product) => {
-                if (!isStockTrackedProduct(product)) return;
-
-                const qty = Number(product.stockQty || 0);
-                const minQty = Number(product.minStockQty || 0);
-                if (qty <= 0) {
-                    outOfStock++;
-                } else if (minQty > 0 && qty <= minQty) {
-                    lowStock++;
-                }
-            });
-            setOutOfStockCount(outOfStock);
-            setLowStockCount(lowStock);
+            if (stockSummaryResult.status === 'fulfilled') {
+                const summary = stockSummaryResult.value.data || {};
+                setLowStockCount(Number(summary.lowStockCount || 0));
+                setOutOfStockCount(Number(summary.outOfStockCount || 0));
+            } else {
+                console.error('Lỗi lấy tổng hợp cảnh báo tồn kho:', stockSummaryResult.reason);
+            }
         } catch (error) {
             console.error('Lỗi lấy danh sách hàng hóa:', error);
             showToast('error', 'Không thể tải danh sách sản phẩm.');

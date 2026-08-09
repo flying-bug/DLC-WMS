@@ -8,6 +8,7 @@ import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import Toast from '../../components/ui/Toast/Toast';
+import { printTransferSlip } from '../../utils/printTransferSlip';
 import styles from './CreateTransferSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 
@@ -210,6 +211,28 @@ function UpdateTransferSlipPage() {
     items.length &&
     items.every(isLineValid)
   );
+
+  const handlePrint = () => {
+    const fromWarehouse = warehouses.find(w => String(w.id) === String(form.fromWarehouseId));
+    const toWarehouse = warehouses.find(w => String(w.id) === String(form.toWarehouseId));
+    const slipData = {
+      ...form,
+      transferCode: form.transferCode,
+      lines: items.map(it => ({
+        variantId: it.variantId,
+        quantity: Number(it.quantity || 0),
+        unitPrice: Number(it.price || 0),
+        serialNumbers: it.serialNumbers || [],
+        note: it.note || ''
+      }))
+    };
+    printTransferSlip(slipData, {
+      fromWarehouseName: fromWarehouse?.name,
+      toWarehouseName: toWarehouse?.name,
+      productById,
+      onError: (msg) => showToast('error', msg)
+    });
+  };
 
   const handleFormChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -601,6 +624,9 @@ function UpdateTransferSlipPage() {
             <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>Hủy bỏ</button>
           </div>
           <div className={styles.footerRight}>
+            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={handlePrint}>
+              <i className="bi bi-printer"></i> In phiếu
+            </button>
             <button className="btn-misa-draft" disabled={!isFormValid || saving} onClick={() => submit('DRAFT')} style={{ marginRight: '8px' }}>
               Lưu tạm
             </button>

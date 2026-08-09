@@ -23,13 +23,13 @@ public class AiChatController {
     private final VoiceCommandService voiceCommandService;
 
     @PostMapping("/chat")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('ai_chat:view')")
     public ResponseEntity<ApiResponse<AiChatResponse>> chat(@Valid @RequestBody AiChatRequest request) {
         return ResponseEntity.ok(ApiResponse.success(aiChatService.chat(request.getMessage())));
     }
 
     @PostMapping("/voice-command")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('ai_chat:view')")
     public ResponseEntity<ApiResponse<VoiceCommandResponse>> voiceCommand(@Valid @RequestBody AiChatRequest request) {
         return ResponseEntity.ok(ApiResponse.success(voiceCommandService.parseVoiceCommand(request.getMessage())));
     }

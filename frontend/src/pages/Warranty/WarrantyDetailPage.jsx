@@ -5,6 +5,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import * as warrantyApi from '../../api/warrantyApi';
 import styles from './WarrantyDetailPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { printWarrantyCard } from '../../utils/printWarrantyCard';
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
@@ -63,6 +64,11 @@ function WarrantyDetailPage() {
   const repairs = warranty?.repairs || warranty?.repairHistory || [];
   const statusInfo = STATUS_LABELS[warranty?.warrantyStatus] || { label: warranty?.warrantyStatus || 'Chưa rõ', code: 'info' };
 
+  const handlePrint = () => {
+    if (!warranty) return;
+    printWarrantyCard(warranty);
+  };
+
   if (loading && !warranty) {
     return (
       <AdminLayout>
@@ -98,7 +104,10 @@ function WarrantyDetailPage() {
               {statusInfo.label}
             </span>
           </div>
-          <div className={styles.headerRight}>
+          <div className={styles.headerRight} style={{ display: 'flex', gap: '8px' }}>
+            <button className={styles.btnEdit} style={{ backgroundColor: '#0284c7', color: '#fff', border: 'none' }} onClick={handlePrint}>
+              <i className="bi bi-printer"></i> In phiếu bảo hành
+            </button>
             <button className={styles.btnEdit} onClick={() => navigate(`/repairs/create?warrantyId=${id}`)}>
               <i className="bi bi-tools"></i> Tạo phiếu sửa
             </button>
