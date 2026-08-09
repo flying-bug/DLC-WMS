@@ -17,6 +17,7 @@ import QuickAddProductModal from '../../components/ui/QuickAddProductModal/Quick
 import Select from 'react-select';
 import styles from './UpdateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import { printImportSlip } from '../../utils/printImportSlip';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -413,6 +414,23 @@ function UpdateImportSlipPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePrint = () => {
+    const slipForPrint = {
+      ...buildPayload(form.status),
+      docCode: form.docCode
+    };
+    
+    printImportSlip(slipForPrint, {
+      supplierById: new Map(suppliers.map(s => [s.id, s])),
+      customerById: new Map(customers.map(c => [c.id, c])),
+      warehouseById: new Map(warehouses.map(w => [w.id, w])),
+      assemblyOrderById: new Map(assemblyOrders.map(a => [a.id, a])),
+      productById: new Map(products.map(p => [p.id, p])),
+      userById: new Map(users.map(u => [u.id, u])),
+      isImport: true
+    });
   };
 
   return (
@@ -876,14 +894,20 @@ function UpdateImportSlipPage() {
 
         <div className={styles.stickyFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>Hủy bỏ</button>
+            <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>
+              <i className="bi bi-x-circle"></i> Hủy bỏ
+            </button>
           </div>
           <div className={styles.footerRight}>
-            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={() => window.print()}>
+            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={handlePrint}>
               <i className="bi bi-printer"></i> In phiếu
             </button>
-            <button className="btn-misa-draft" disabled={saving || loading} onClick={() => submit('DRAFT')}>Lưu tạm</button>
-            <button className="btn-misa-post" disabled={!isFormValid || saving || loading} onClick={() => setShowConfirm(true)}><i className="bi bi-printer"></i> Lưu và ghi sổ</button>
+            <button className="btn-misa-draft" disabled={saving || loading} onClick={() => submit('DRAFT')}>
+              <i className="bi bi-save"></i> Lưu tạm
+            </button>
+            <button className="btn-misa-post" disabled={!isFormValid || saving || loading} onClick={() => setShowConfirm(true)}>
+              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
+            </button>
           </div>
         </div>
       </div>

@@ -541,29 +541,28 @@
     body * {
         visibility: hidden;
     }
-    .misa-modal-overlay {
+    
+    /* Only show the report results area */
+    .report-results-view, .report-results-view * {
+        visibility: visible;
+    }
+    
+    .report-results-view {
         position: absolute;
         left: 0;
         top: 0;
-        width: 100%;
-        background: white;
-    }
-    .misa-modal {
-        box-shadow: none;
-        border: none;
         width: 100% !important;
-        max-width: 100% !important;
-        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
     }
-    .misa-modal-body, .misa-modal-body * {
-        visibility: visible;
-    }
-    .misa-modal-header, .misa-modal-footer {
-        display: none !important;
-    }
+    
     .reportTableContainer {
         border: none;
+        box-shadow: none;
     }
+    
     .reportTable th, .reportTable td {
         border: 1px solid #000 !important;
         color: #000 !important;

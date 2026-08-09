@@ -1121,14 +1121,14 @@ function CreateExportSlipPage({ mode: propMode }) {
       {/* Fixed Footer Bar (Identical Layout to Nhập Kho) */}
       <div className={styles.bottomBar}>
         <button className="btn-misa-cancel" onClick={() => navigate('/export-slips')}>
-          Hủy bỏ
+          <i className="bi bi-x-circle"></i> Hủy bỏ
         </button>
         <div className={styles.actionButtons}>
           <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>
-            Lưu tạm
+            <i className="bi bi-save"></i> Lưu tạm
           </button>
           <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => setShowConfirm(true)}>
-            <i className="bi bi-printer"></i> Lưu và ghi sổ
+            <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
           </button>
         </div>
       </div>

@@ -154,7 +154,7 @@ const AdminLayout = ({ children }) => {
                 <div className={styles.logoArea}>
                     <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.brandLogo} />
                     <div className={styles.brandText}>
-                        <span className={styles.brandTitle}>Duy Long</span>
+                        <span className={styles.brandTitle}>Duy Long Computer</span>
                         <span className={styles.brandSubtitle}>Warehouse Management</span>
                     </div>
                     <button

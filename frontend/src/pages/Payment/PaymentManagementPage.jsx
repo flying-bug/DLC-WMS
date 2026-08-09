@@ -8,6 +8,7 @@ import * as purchaseOrderApi from '../../api/purchaseOrderApi';
 import * as paymentApi from '../../api/paymentApi';
 import styles from './PaymentManagementPage.module.css';
 import { formatDateTime } from '../../utils/dateFormat';
+import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -316,7 +317,17 @@ function PaymentManagementPage() {
                   <div className={styles.historyMain}>
                     <div className={styles.historyCodeRow}>
                       <strong>{item.code}</strong>
-                      <span className={item.status === 'POSTED' ? styles.statusPosted : styles.statusDraft}>{statusText(item.status)}</span>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button 
+                          className={styles.btnPostInline}
+                          style={{ padding: '2px 6px', fontSize: '12px', backgroundColor: '#fff', border: '1px solid #d1d5db', color: '#374151' }}
+                          onClick={() => printPaymentReceipt(item, { partnerName: selectedPartner?.label?.split(' - ')[1] || selectedPartner?.label, salespersonName: '' })}
+                          title="In phiếu"
+                        >
+                          <i className="bi bi-printer"></i>
+                        </button>
+                        <span className={item.status === 'POSTED' ? styles.statusPosted : styles.statusDraft}>{statusText(item.status)}</span>
+                      </div>
                     </div>
                     <span>{item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'} - {item.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</span>
                     <span className={styles.historyMeta}>

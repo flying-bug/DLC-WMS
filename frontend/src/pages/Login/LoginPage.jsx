@@ -55,7 +55,7 @@ function LoginPage() {
                         </svg>
                     </div>
                     <div className={styles.brandText}>
-                        <span className={styles.brandName}>DUY LONG</span>
+                        <span className={styles.brandName}>DUY LONG COMPUTER</span>
                         <span className={styles.brandSub}>WAREHOUSE MANAGEMENT</span>
                     </div>
                 </div>
