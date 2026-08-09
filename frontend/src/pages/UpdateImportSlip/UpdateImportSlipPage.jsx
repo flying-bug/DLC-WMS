@@ -25,6 +25,20 @@ const variantLabel = (item) => item?.variantName && item.variantName !== item.pr
   ? `${item.productName} - ${item.variantName}`
   : item?.productName || '';
 
+const normalizeProductType = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+const isWarehouseProduct = (item) => {
+  const type = normalizeProductType(item?.productType);
+  return type === 'hang hoa' || type === 'thanh pham';
+};
+
+const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
+
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
@@ -200,7 +214,7 @@ function UpdateImportSlipPage() {
           importApi.getImportDetail(id),
           importApi.getWarehouses({ size: 100 }),
           importApi.getSuppliers(),
-          importApi.getProducts({ size: 100 }),
+          importApi.getProducts({ size: 1000 }),
           customerApi.searchCustomers('', 'APPROVED', '', 0, 1000),
           assemblyOrderApi.getAssemblyOrders({ size: 100 }),
           exportApi.getUsers({ size: 1000 })
@@ -208,7 +222,7 @@ function UpdateImportSlipPage() {
 
         if (warehouseRes.status === 'fulfilled') setWarehouses(pageContent(unwrap(warehouseRes.value)));
         if (supplierRes.status === 'fulfilled') setSuppliers(pageContent(unwrap(supplierRes.value)).filter(s => s.status !== 'INACTIVE'));
-        if (productRes.status === 'fulfilled') setProducts(pageContent(unwrap(productRes.value)));
+        if (productRes.status === 'fulfilled') setProducts(filterWarehouseProducts(pageContent(unwrap(productRes.value))));
         if (customerRes.status === 'fulfilled') setCustomers(pageContent(unwrap(customerRes.value)));
         if (assemblyOrderRes.status === 'fulfilled') setAssemblyOrders(pageContent(unwrap(assemblyOrderRes.value)));
         const userList = userRes.status === 'fulfilled' ? pageContent(unwrap(userRes.value)) : [];
@@ -266,13 +280,8 @@ function UpdateImportSlipPage() {
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const type = p.productType;
-      if (importType === 'PURCHASE') return type === 'Hàng hóa';
-      if (importType === 'PRODUCTION') return type === 'Thành phẩm';
-      return type === 'Hàng hóa' || type === 'Thành phẩm';
-    });
-  }, [products, importType]);
+    return filterWarehouseProducts(products);
+  }, [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
@@ -282,7 +291,7 @@ function UpdateImportSlipPage() {
     const quantity = Number(item.quantity || 0);
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
     const hasValidSerials = !product?.trackSerial || (Number.isInteger(quantity) && item.serialNumbers?.length === quantity);
-    return item.variantId && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
+    return product && isWarehouseProduct(product) && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
   };
   const isFormValid = Boolean(form.warehouseId && form.docDate && items.length && items.every(isLineValid));
 
@@ -309,7 +318,7 @@ function UpdateImportSlipPage() {
   const handleQuickAddProductSuccess = async (newProduct) => {
     try {
       const response = await importApi.getProducts({ size: 1000 });
-      const refreshedProducts = pageContent(unwrap(response));
+      const refreshedProducts = filterWarehouseProducts(pageContent(unwrap(response)));
       setProducts(refreshedProducts);
       const createdVariant = refreshedProducts.find(product => String(product.productId) === String(newProduct?.id));
 
@@ -335,7 +344,7 @@ function UpdateImportSlipPage() {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, { ...emptyLine(), variantId: products[0]?.id || '' }]);
+    setItems(prev => [...prev, { ...emptyLine(), variantId: filteredProducts[0]?.id || '' }]);
   };
 
   const removeItem = (localId) => {
@@ -890,6 +899,7 @@ function UpdateImportSlipPage() {
         onClose={() => { setShowQuickAddProduct(false); setQuickAddLineId(null); }}
         onSuccess={handleQuickAddProductSuccess}
         productType={importType === 'PRODUCTION' ? 'Thành phẩm' : 'Hàng hóa'}
+        allowedProductTypes={['Hàng hóa', 'Thành phẩm']}
       />
       <CustomerModal
         isOpen={showCustomerDrawer}

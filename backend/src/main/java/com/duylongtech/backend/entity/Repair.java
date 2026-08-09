@@ -60,6 +60,16 @@ public class Repair {
     @Column(name = "warranty_id")
     private Long warrantyId;
 
+    // Tham chiếu chứng từ tổng quát (giống bên xuất kho)
+    @Column(name = "reference_type", length = 50)
+    private String referenceType;
+
+    @Column(name = "reference_id")
+    private Long referenceId;
+
+    @Column(name = "reference_code", length = 100)
+    private String referenceCode;
+
     // Ngày tiếp nhận
     @Column(name = "received_date", nullable = false)
     private LocalDate receivedDate;

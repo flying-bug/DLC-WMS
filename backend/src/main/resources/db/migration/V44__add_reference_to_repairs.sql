@@ -1,0 +1,69 @@
+SET @sql = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `REPAIRS` ADD COLUMN `reference_type` VARCHAR(50) NULL',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'REPAIRS'
+    AND COLUMN_NAME = 'reference_type'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `REPAIRS` ADD COLUMN `reference_id` BIGINT NULL AFTER `reference_type`',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'REPAIRS'
+    AND COLUMN_NAME = 'reference_id'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `REPAIRS` ADD COLUMN `reference_code` VARCHAR(100) NULL AFTER `reference_id`',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'REPAIRS'
+    AND COLUMN_NAME = 'reference_code'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `REPAIR_LINES` ADD COLUMN `replacement_serial_number_id` BIGINT UNSIGNED NULL AFTER `serial_number_text`',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'REPAIR_LINES'
+    AND COLUMN_NAME = 'replacement_serial_number_id'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE `REPAIR_LINES` ADD COLUMN `replacement_serial_number_text` VARCHAR(255) NULL AFTER `replacement_serial_number_id`',
+    'SELECT 1'
+  )
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'REPAIR_LINES'
+    AND COLUMN_NAME = 'replacement_serial_number_text'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

@@ -3,23 +3,29 @@ package com.duylongtech.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "ASSEMBLY_ORDER_SERIALS")
+@Table(name = "DEVICE_COMPONENT_SERIALS")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AssemblyOrderSerial {
+public class DeviceComponentSerial {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assembly_order_id", nullable = false)
-    private AssemblyOrder assemblyOrder;
+    @JoinColumn(name = "source_assembly_order_id")
+    private AssemblyOrder sourceAssemblyOrder;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "removed_by_assembly_order_id")
+    private AssemblyOrder removedByAssemblyOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "target_variant_id", nullable = false)
@@ -63,4 +69,8 @@ public class AssemblyOrderSerial {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

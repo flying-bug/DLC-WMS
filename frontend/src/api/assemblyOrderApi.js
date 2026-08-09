@@ -69,6 +69,10 @@ export const saveAssemblyOrderSerials = (id, requests) => {
     return axiosClient.post(`/assembly-orders/${id}/serials`, requests);
 };
 
+export const getAssemblySerialTreeByTarget = (params = {}) => {
+    return axiosClient.get('/assembly-serial-tree', { params });
+};
+
 export const executeAssemblyOrder = (id, request) => {
     return axiosClient.post(`/assembly-orders/${id}/execute`, request);
 };

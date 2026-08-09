@@ -30,15 +30,69 @@ public class ReportRepository {
                         "w.code AS warehouseCode, " +
                         "w.name AS warehouseName, " +
                         "p.track_serial AS trackSerial, " +
-                        "SUM(ib.quantity_on_hand) AS totalQuantity, " +
-                        "SUM(ib.quantity_reserved) AS totalReserved, " +
-                        "SUM(ib.quantity_on_hand * ib.average_cost) AS totalValue " +
+                        "SUM(CASE WHEN ( " +
+                        "  (COALESCE(p.track_serial, FALSE) = TRUE " +
+                        "    AND ib.serial_number_id IS NOT NULL " +
+                        "    AND sn.status = 'AVAILABLE' " +
+                        "    AND NOT EXISTS ( " +
+                        "      SELECT 1 FROM device_component_serials dcs " +
+                        "      WHERE dcs.component_variant_id = ib.variant_id " +
+                        "        AND LOWER(dcs.component_serial) = LOWER(sn.serial_number) " +
+                        "        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
+                        "    ) " +
+                        "  ) " +
+                        "  OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
+                        ") THEN ib.quantity_on_hand ELSE 0 END) AS totalQuantity, " +
+                        "SUM(CASE WHEN ( " +
+                        "  (COALESCE(p.track_serial, FALSE) = TRUE " +
+                        "    AND ib.serial_number_id IS NOT NULL " +
+                        "    AND sn.status = 'AVAILABLE' " +
+                        "    AND NOT EXISTS ( " +
+                        "      SELECT 1 FROM device_component_serials dcs " +
+                        "      WHERE dcs.component_variant_id = ib.variant_id " +
+                        "        AND LOWER(dcs.component_serial) = LOWER(sn.serial_number) " +
+                        "        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
+                        "    ) " +
+                        "  ) " +
+                        "  OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
+                        ") THEN ib.quantity_reserved ELSE 0 END) AS totalReserved, " +
+                        "SUM(CASE WHEN ( " +
+                        "  (COALESCE(p.track_serial, FALSE) = TRUE " +
+                        "    AND ib.serial_number_id IS NOT NULL " +
+                        "    AND sn.status = 'AVAILABLE' " +
+                        "    AND NOT EXISTS ( " +
+                        "      SELECT 1 FROM device_component_serials dcs " +
+                        "      WHERE dcs.component_variant_id = ib.variant_id " +
+                        "        AND LOWER(dcs.component_serial) = LOWER(sn.serial_number) " +
+                        "        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
+                        "    ) " +
+                        "  ) " +
+                        "  OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
+                        ") THEN ib.quantity_on_hand - ib.quantity_reserved ELSE 0 END) AS availableQuantity, " +
+                        "SUM(CASE WHEN ( " +
+                        "  (COALESCE(p.track_serial, FALSE) = TRUE " +
+                        "    AND ib.serial_number_id IS NOT NULL " +
+                        "    AND sn.status = 'AVAILABLE' " +
+                        "    AND NOT EXISTS ( " +
+                        "      SELECT 1 FROM device_component_serials dcs " +
+                        "      WHERE dcs.component_variant_id = ib.variant_id " +
+                        "        AND LOWER(dcs.component_serial) = LOWER(sn.serial_number) " +
+                        "        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
+                        "    ) " +
+                        "  ) " +
+                        "  OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
+                        ") THEN ib.quantity_on_hand * ib.average_cost ELSE 0 END) AS totalValue " +
                         "FROM inventory_balances ib " +
                         "JOIN product_variants pv ON ib.variant_id = pv.id " +
                         "JOIN products p ON pv.product_id = p.id " +
                         "JOIN units u ON p.unit_id = u.id " +
                         "JOIN warehouses w ON ib.warehouse_id = w.id " +
-                        "WHERE ib.serial_number_id IS NULL "
+                        "LEFT JOIN serial_numbers sn ON ib.serial_number_id = sn.id " +
+                        "WHERE ib.stock_status = 'GOOD' " +
+                        "AND ( " +
+                        "  (COALESCE(p.track_serial, FALSE) = TRUE AND ib.serial_number_id IS NOT NULL) " +
+                        "  OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
+                        ") "
         );
         List<Object> params = new ArrayList<>();
 
@@ -63,6 +117,7 @@ public class ReportRepository {
                 .warehouseName(rs.getString("warehouseName"))
                 .totalQuantity(rs.getBigDecimal("totalQuantity"))
                 .totalReserved(rs.getBigDecimal("totalReserved"))
+                .availableQuantity(rs.getBigDecimal("availableQuantity"))
                 .totalValue(rs.getBigDecimal("totalValue"))
                 .variantId(rs.getLong("variantId"))
                 .sku(rs.getString("sku"))

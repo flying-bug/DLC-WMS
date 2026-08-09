@@ -21,6 +21,22 @@ const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const today = getTodayIsoDate;
 const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')} đ`;
+
+const normalizeProductType = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+const isServiceProduct = (item) => normalizeProductType(item?.productType) === 'dich vu';
+const isWarehouseProduct = (item) => {
+  const type = normalizeProductType(item?.productType);
+  return type === 'hang hoa' || type === 'thanh pham';
+};
+
+const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
+
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
@@ -144,12 +160,21 @@ function UpdateExportSlipPage() {
     const map = new Map();
     if (Array.isArray(inventoryBalances)) {
       inventoryBalances.forEach(b => {
-        if (b.variantId) map.set(String(b.variantId), Number(b.totalQuantity || 0));
-        else if (b.itemId) map.set(String(b.itemId), Number(b.totalQuantity || 0));
+        const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+        const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+        const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+        const stock = Math.max(0, availableQuantity);
+        if (b.variantId) map.set(String(b.variantId), stock);
+        else if (b.itemId) map.set(String(b.itemId), stock);
       });
     }
     return map;
   }, [inventoryBalances]);
+  const warehouseScopedProducts = useMemo(() => {
+    if (!form.warehouseId) return products;
+    const selectedIds = new Set(items.map(item => String(item.variantId || '')).filter(Boolean));
+    return products.filter(product => inventoryMap.has(String(product.id)) || selectedIds.has(String(product.id)));
+  }, [form.warehouseId, inventoryMap, items, products]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -159,7 +184,7 @@ function UpdateExportSlipPage() {
         const [detailRes, warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
           exportApi.getExportDetail(id),
           exportApi.getWarehouses({ size: 100 }),
-          exportApi.getProducts({ size: 100 }),
+          exportApi.getProducts({ size: 1000 }),
           exportApi.getCustomers({ size: 1000 }),
           exportApi.getUsers({ size: 1000 }).catch(() => null),
         ]);
@@ -173,7 +198,7 @@ function UpdateExportSlipPage() {
           setWarehouses(pageContent(unwrap(warehouseRes.value)));
         }
         if (productRes.status === 'fulfilled') {
-          setProducts(pageContent(unwrap(productRes.value)));
+          setProducts(filterWarehouseProducts(pageContent(unwrap(productRes.value))));
         }
         if (customerRes.status === 'fulfilled') {
           setCustomers(pageContent(unwrap(customerRes.value)));
@@ -241,8 +266,9 @@ function UpdateExportSlipPage() {
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
   const isLineValid = (item) => {
+    const product = productById.get(String(item.variantId));
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-    return item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
+    return product && isWarehouseProduct(product) && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
   };
   const isFormValid = Boolean(
     form.warehouseId &&
@@ -308,7 +334,7 @@ function UpdateExportSlipPage() {
   const handleQuickAddProductSuccess = async (newProduct) => {
     try {
       const response = await exportApi.getProducts({ size: 1000 });
-      const refreshedProducts = pageContent(unwrap(response));
+      const refreshedProducts = filterWarehouseProducts(pageContent(unwrap(response)));
       setProducts(refreshedProducts);
       const createdVariant = refreshedProducts.find(product => String(product.productId) === String(newProduct?.id));
 
@@ -372,6 +398,11 @@ function UpdateExportSlipPage() {
   };
 
   const ensureScannedProduct = (scanResult) => {
+    if (isServiceProduct(scanResult)) {
+      setError('Dịch vụ không áp dụng cho phiếu xuất kho.');
+      return false;
+    }
+
     setProducts(prev => {
       if (prev.some(product => String(product.id) === String(scanResult.variantId))) {
         return prev;
@@ -389,13 +420,16 @@ function UpdateExportSlipPage() {
           warrantyMonths: scanResult.warrantyMonths || 0,
           salePrice: scanResult.salePrice || 0,
           trackSerial: scanResult.trackSerial,
+          productType: scanResult.productType || 'Hàng hóa',
         },
       ];
     });
+    return true;
   };
 
   const addScannedItem = (scanResult) => {
-    ensureScannedProduct(scanResult);
+    if (!ensureScannedProduct(scanResult)) return;
+
     setItems(prev => {
       const existingIndex = prev.findIndex(item => String(item.variantId) === String(scanResult.variantId));
       const serial = scanResult.serialNumber;
@@ -726,7 +760,7 @@ function UpdateExportSlipPage() {
                       <th style={{ width: '12%' }}>Mã hàng</th>
                       <th style={{ width: '22%' }}>Tên hàng</th>
                       <th style={{ width: '7%' }}>ĐVT</th>
-                      <th style={{ width: '7%' }} className={styles.textCenter}>Tồn</th>
+                      <th style={{ width: '8%' }} className={styles.textCenter}>Tồn khả dụng</th>
                       <th style={{ width: '8%' }} className={styles.textRight}>SL</th>
                       <th style={{ width: '10%', textAlign: 'center' }}>Serial</th>
                       <th style={{ width: '8%', textAlign: 'center' }}>BH (T)</th>
@@ -744,7 +778,7 @@ function UpdateExportSlipPage() {
                           <td className={styles.textCenter}>{index + 1}</td>
                           <td>
                             <ProductGridSelect
-                              products={products}
+                              products={warehouseScopedProducts}
                               inventoryMap={inventoryMap}
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
@@ -755,7 +789,7 @@ function UpdateExportSlipPage() {
                           </td>
                           <td style={{ maxWidth: '300px' }}>
                             <ProductGridSelect
-                              products={products}
+                              products={warehouseScopedProducts}
                               inventoryMap={inventoryMap}
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
@@ -769,7 +803,7 @@ function UpdateExportSlipPage() {
                             {item.serialNumberId && <div className={styles.serialTag}>{item.scannedCode}</div>}
                           </td>
                           <td className={styles.textCenter} style={{ fontWeight: '600', color: '#0052cc' }}>
-                            {product ? (inventoryBalances.find(b => String(b.itemCode) === String(product?.productCode) || String(b.itemCode) === String(product?.sku))?.totalQuantity || 0) : ''}
+                            {product ? (inventoryMap.get(String(product.id)) || 0) : ''}
                           </td>
                           <td className={styles.textRight}>
                             <input type="number" min="0" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
@@ -876,6 +910,7 @@ function UpdateExportSlipPage() {
         onClose={() => { setShowQuickAddProduct(false); setQuickAddLineId(null); }}
         onSuccess={handleQuickAddProductSuccess}
         productType="Hàng hóa"
+        allowedProductTypes={['Hàng hóa', 'Thành phẩm']}
       />
       <ReferenceDocumentModal
         isOpen={showReferenceModal}

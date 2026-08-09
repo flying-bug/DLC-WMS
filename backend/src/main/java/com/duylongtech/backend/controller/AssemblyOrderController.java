@@ -7,6 +7,7 @@ import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.AssemblyBomResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse;
+import com.duylongtech.backend.dto.response.SerialTreeResponse;
 import com.duylongtech.backend.service.AssemblyOrderService;
 import com.duylongtech.backend.service.AuditLogService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -234,6 +235,16 @@ public class AssemblyOrderController {
             @RequestBody @Valid List<AssemblyOrderSerialRequest> requests) {
         assemblyOrderService.saveSerials(id, requests);
         return ApiResponse.success(null);
+    }
+
+    @GetMapping("/assembly-serial-tree")
+    @Operation(summary = "Get component serials by target serial")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<SerialTreeResponse> getSerialTreeByTarget(
+            @RequestParam(required = false) Long serialNumberId,
+            @RequestParam(required = false) Long targetVariantId,
+            @RequestParam(required = false) String targetSerial) {
+        return ApiResponse.success(assemblyOrderService.getSerialTreeByTarget(serialNumberId, targetVariantId, targetSerial));
     }
 
     @PostMapping("/assembly-orders/{id}/execute")

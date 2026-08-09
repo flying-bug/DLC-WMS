@@ -33,6 +33,7 @@ import com.duylongtech.backend.repository.SalesOrderRepository;
 import com.duylongtech.backend.entity.SalesOrder;
 import com.duylongtech.backend.entity.SalesOrderLine;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
+import com.duylongtech.backend.repository.DeviceComponentSerialRepository;
 import com.duylongtech.backend.repository.StocktakeRepository;
 import com.duylongtech.backend.repository.RepairRepository;
 import com.duylongtech.backend.repository.PurchaseOrderRepository;
@@ -98,6 +99,7 @@ public class InventoryDocumentService {
     private final ProductRepository productRepository;
     private final AssemblyOrderRepository assemblyOrderRepository;
     private final AssemblyBomRepository assemblyBomRepository;
+    private final DeviceComponentSerialRepository deviceComponentSerialRepository;
     private final StocktakeRepository stocktakeRepository;
     private final SalesOrderRepository salesOrderRepository;
     private final RepairRepository repairRepository;
@@ -115,6 +117,9 @@ public class InventoryDocumentService {
         }
 
         List<SerialNumber> serials = serialNumberRepository.findBySerialNumber(code);
+        if (req.getVariantId() != null) {
+            serials = serials.stream().filter(s -> s.getVariantId().equals(req.getVariantId())).collect(Collectors.toList());
+        }
         if (serials.size() > 1) {
             throw new BusinessException("Mã serial tồn tại trên nhiều sản phẩm, vui lòng chọn mẫu sản phẩm trước");
         }
@@ -284,6 +289,7 @@ public class InventoryDocumentService {
                 if (!line.getVariantId().equals(snObj.getVariantId())) {
                     throw new BusinessException("Serial " + snObj.getSerialNumber() + " không thuộc SKU này");
                 }
+                ensureSerialNotInstalledInPc(snObj, doc);
                 snObj.setStatus("SOLD"); // HOẶC "EXPORTED" tùy logic của dự án
                 serialNumberRepository.save(snObj);
             }
@@ -601,11 +607,39 @@ public class InventoryDocumentService {
         if (!warehouseId.equals(serial.getWarehouseId())) {
             throw new BusinessException("Serial không nằm trong kho đang chọn");
         }
+        ensureSerialNotInstalledInPc(serial);
         ProductVariant variant = serial.getVariant();
         if (variant == null) {
             throw new BusinessException("Serial chưa gắn SKU sản phẩm");
         }
         return buildScanResponse("SERIAL", code, variant, serial);
+    }
+
+    private void ensureSerialNotInstalledInPc(SerialNumber serial) {
+        if (serial == null || serial.getVariantId() == null || trimToNull(serial.getSerialNumber()) == null) {
+            return;
+        }
+        boolean installedInPc = deviceComponentSerialRepository.existsActiveComponentSerial(
+                serial.getVariantId(), serial.getSerialNumber().trim());
+        if (installedInPc) {
+            throw new BusinessException("Serial " + serial.getSerialNumber()
+                    + " đang nằm trong cấu hình PC, không thể xuất như linh kiện rời.");
+        }
+    }
+
+    private void ensureSerialNotInstalledInPc(SerialNumber serial, InventoryDocument doc) {
+        if (isAssemblyDocument(doc)) {
+            return;
+        }
+        ensureSerialNotInstalledInPc(serial);
+    }
+
+    private boolean isAssemblyDocument(InventoryDocument doc) {
+        if (doc == null) {
+            return false;
+        }
+        return ISSUE_PURPOSE_ASSEMBLY.equals(doc.getIssuePurpose())
+                || "ASSEMBLY_ORDER".equalsIgnoreCase(trimToNull(doc.getReferenceType()));
     }
 
     @Transactional(readOnly = true)
@@ -615,6 +649,9 @@ public class InventoryDocumentService {
             throw new BusinessException("Mã quét là bắt buộc");
         }
         List<SerialNumber> serials = serialNumberRepository.findBySerialNumber(code);
+        if (req != null && req.getVariantId() != null) {
+            serials = serials.stream().filter(s -> s.getVariantId().equals(req.getVariantId())).collect(Collectors.toList());
+        }
         if (serials.size() > 1) {
             throw new BusinessException("Mã serial tồn tại trên nhiều sản phẩm");
         }
@@ -651,6 +688,7 @@ public class InventoryDocumentService {
                 .serialNumberId(serial != null ? serial.getId() : null)
                 .productCode(product != null ? product.getProductCode() : null)
                 .productName(product != null ? product.getProductName() : variant.getVariantName())
+                .productType(product != null ? product.getProductType() : null)
                 .sku(variant.getSku())
                 .barcode(variant.getBarcode())
                 .serialNumber(serial != null ? serial.getSerialNumber() : null)
@@ -769,7 +807,24 @@ public class InventoryDocumentService {
             Optional<SerialNumber> existingOpt = serialNumberRepository
                     .findByVariantIdAndSerialNumber(line.getVariantId(), serialValue);
             if (existingOpt.isPresent()) {
-                if (ISSUE_PURPOSE_TRANSFER_IN.equals(doc.getIssuePurpose())) {
+                if ("SCRAP".equals(doc.getIssuePurpose())) {
+                    SerialNumber serial = existingOpt.get();
+                    serial.setStatus("SCRAP");
+                    serial.setWarehouseId(doc.getWarehouseId());
+                    serial.setUpdatedAt(LocalDateTime.now());
+                    SerialNumber savedSerial = serialNumberRepository.save(serial);
+                    inventoryBalanceRepository.save(InventoryBalance.builder()
+                            .warehouseId(doc.getWarehouseId())
+                            .variantId(line.getVariantId())
+                            .serialNumberId(savedSerial.getId())
+                            .stockStatus("GOOD")
+                            .quantityOnHand(BigDecimal.ONE)
+                            .quantityReserved(ZERO)
+                            .averageCost(unitCost)
+                            .updatedAt(LocalDateTime.now())
+                            .build());
+                    continue;
+                } else if (ISSUE_PURPOSE_TRANSFER_IN.equals(doc.getIssuePurpose())) {
                     SerialNumber serial = existingOpt.get();
                     if (!"IN_TRANSIT".equals(serial.getStatus())) {
                         throw new BusinessException("Serial " + serialValue + " không ở trạng thái IN_TRANSIT");
@@ -1058,6 +1113,7 @@ public class InventoryDocumentService {
                     if (!"AVAILABLE".equals(snObj.getStatus())) {
                         throw new BusinessException("Serial " + snValue + " không có sẵn trong kho (trạng thái: " + snObj.getStatus() + ")");
                     }
+                    ensureSerialNotInstalledInPc(snObj, doc);
                     boolean isLocked = inventoryDocumentLineRepository.isSerialLockedInDrafts(snObj.getId(), doc.getId());
                     if (isLocked) {
                         throw new BusinessException("Serial " + snValue + " đang nằm trong một phiếu xuất nháp khác, vui lòng kiểm tra lại");
@@ -1070,6 +1126,7 @@ public class InventoryDocumentService {
                 if (!"AVAILABLE".equals(snObj.getStatus())) {
                     throw new BusinessException("Serial " + snObj.getSerialNumber() + " không có sẵn trong kho (trạng thái: " + snObj.getStatus() + ")");
                 }
+                ensureSerialNotInstalledInPc(snObj, doc);
                 boolean isLocked = inventoryDocumentLineRepository.isSerialLockedInDrafts(serialNumberId, doc.getId());
                 if (isLocked) {
                     throw new BusinessException("Serial " + snObj.getSerialNumber() + " đang nằm trong một phiếu xuất nháp khác, vui lòng kiểm tra lại");

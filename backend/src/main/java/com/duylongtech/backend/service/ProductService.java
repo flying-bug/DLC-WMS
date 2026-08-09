@@ -467,28 +467,35 @@ public class ProductService {
     }
 
     private void updateRelations(Product product, ProductRequest dto) {
+        boolean isDichVu = "Dịch vụ".equals(dto.getProductType()) || "Dich vu".equals(dto.getProductType());
+
         if (dto.getBrandId() != null) {
             Brand brand = brandRepository.findById(dto.getBrandId())
                     .orElseThrow(() -> new BusinessException("Thuong hieu khong ton tai."));
             product.setBrand(brand);
-        } else {
-            throw new BusinessException("Thuong hieu la bat buoc.");
+        } else if (!isDichVu) {
+            // Hàng hóa / Thành phẩm: thương hiệu bắt buộc (có thể bỏ nếu muốn linh hoạt)
+            product.setBrand(null);
         }
 
         if (dto.getCategoryId() != null) {
             ProductCategory category = categoryRepository.findById(dto.getCategoryId())
                     .orElseThrow(() -> new BusinessException("Danh muc khong ton tai."));
             product.setCategory(category);
-        } else {
+        } else if (!isDichVu) {
             throw new BusinessException("Danh muc la bat buoc.");
+        } else {
+            product.setCategory(null);
         }
 
         if (dto.getUnitId() != null) {
             Unit unit = unitRepository.findById(dto.getUnitId())
                     .orElseThrow(() -> new BusinessException("Don vi tinh khong ton tai."));
             product.setUnit(unit);
-        } else {
+        } else if (!isDichVu) {
             throw new BusinessException("Don vi tinh la bat buoc.");
+        } else {
+            product.setUnit(null);
         }
     }
 
