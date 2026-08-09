@@ -8,9 +8,9 @@ import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import Toast from '../../components/ui/Toast/Toast';
-import { printTransferSlip } from '../../utils/printTransferSlip';
 import styles from './CreateTransferSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import { printTransferSlip } from '../../utils/printTransferSlip';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -212,28 +212,6 @@ function UpdateTransferSlipPage() {
     items.every(isLineValid)
   );
 
-  const handlePrint = () => {
-    const fromWarehouse = warehouses.find(w => String(w.id) === String(form.fromWarehouseId));
-    const toWarehouse = warehouses.find(w => String(w.id) === String(form.toWarehouseId));
-    const slipData = {
-      ...form,
-      transferCode: form.transferCode,
-      lines: items.map(it => ({
-        variantId: it.variantId,
-        quantity: Number(it.quantity || 0),
-        unitPrice: Number(it.price || 0),
-        serialNumbers: it.serialNumbers || [],
-        note: it.note || ''
-      }))
-    };
-    printTransferSlip(slipData, {
-      fromWarehouseName: fromWarehouse?.name,
-      toWarehouseName: toWarehouse?.name,
-      productById,
-      onError: (msg) => showToast('error', msg)
-    });
-  };
-
   const handleFormChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
@@ -365,6 +343,15 @@ function UpdateTransferSlipPage() {
         note: item.note || ''
       })),
     };
+  };
+
+  const handlePrint = () => {
+    const slipForPrint = buildPayload();
+    printTransferSlip(slipForPrint, {
+      warehouseById: new Map(warehouses.map(w => [w.id, w])),
+      productById: new Map(products.map(p => [p.id, p])),
+      userById: new Map(),
+    });
   };
 
   const submit = async (status) => {
@@ -621,17 +608,19 @@ function UpdateTransferSlipPage() {
 
         <div className={styles.fixedFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>Hủy bỏ</button>
+            <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>
+              <i className="bi bi-x-circle"></i> Hủy bỏ
+            </button>
           </div>
           <div className={styles.footerRight}>
-            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={handlePrint}>
+            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={handlePrint} disabled={items.length === 0 || !form.fromWarehouseId}>
               <i className="bi bi-printer"></i> In phiếu
             </button>
             <button className="btn-misa-draft" disabled={!isFormValid || saving} onClick={() => submit('DRAFT')} style={{ marginRight: '8px' }}>
-              Lưu tạm
+              <i className="bi bi-save"></i> Lưu tạm
             </button>
             <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => submit('POSTED')}>
-              <i className="bi bi-printer"></i> Lưu và ghi sổ
+              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
             </button>
           </div>
         </div>

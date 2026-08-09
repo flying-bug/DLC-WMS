@@ -1003,12 +1003,16 @@ function CreateImportSlipPage() {
 
       <div className={styles.fixedFooter}>
         <div className={styles.footerLeft}>
-          <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>Hủy bỏ</button>
+          <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>
+            <i className="bi bi-x-circle"></i> Hủy bỏ
+          </button>
         </div>
         <div className={styles.footerRight}>
-          <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>Lưu tạm</button>
+          <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>
+            <i className="bi bi-save"></i> Lưu tạm
+          </button>
           <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => setShowConfirm(true)}>
-            <i className="bi bi-printer"></i> Lưu và ghi sổ
+            <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
           </button>
         </div>
       </div>
@@ -1155,7 +1159,7 @@ function CreateImportSlipPage() {
           const supplier = suppliers.find(s => String(s.id) === String(savedSlip?.partnerId || form.partnerId)) || {};
           const warehouseName = warehouses.find(w => String(w.id) === String(savedSlip?.warehouseId || form.warehouseId))?.name || '';
           printImportSlip(savedSlip || {}, {
-            supplier,
+            customer: supplier,
             warehouseName,
             productById,
             userById,

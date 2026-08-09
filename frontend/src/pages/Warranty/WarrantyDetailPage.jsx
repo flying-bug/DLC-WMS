@@ -5,7 +5,9 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import * as warrantyApi from '../../api/warrantyApi';
 import styles from './WarrantyDetailPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
-import { printWarrantyCard } from '../../utils/printWarrantyCard';
+import { useReactToPrint } from 'react-to-print';
+import { useRef } from 'react';
+import WarrantySlipTemplate from './components/WarrantySlipTemplate';
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
@@ -35,6 +37,12 @@ function WarrantyDetailPage() {
   const [warranty, setWarranty] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  const printRef = useRef(null);
+  const handlePrintQuote = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Phieu_Bao_Hanh_${id}`
+  });
 
   const loadWarranty = useCallback(async () => {
     setLoading(true);
@@ -63,11 +71,6 @@ function WarrantyDetailPage() {
 
   const repairs = warranty?.repairs || warranty?.repairHistory || [];
   const statusInfo = STATUS_LABELS[warranty?.warrantyStatus] || { label: warranty?.warrantyStatus || 'Chưa rõ', code: 'info' };
-
-  const handlePrint = () => {
-    if (!warranty) return;
-    printWarrantyCard(warranty);
-  };
 
   if (loading && !warranty) {
     return (
@@ -105,7 +108,7 @@ function WarrantyDetailPage() {
             </span>
           </div>
           <div className={styles.headerRight} style={{ display: 'flex', gap: '8px' }}>
-            <button className={styles.btnEdit} style={{ backgroundColor: '#0284c7', color: '#fff', border: 'none' }} onClick={handlePrint}>
+            <button className={styles.btnEdit} style={{ backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={handlePrintQuote}>
               <i className="bi bi-printer"></i> In phiếu bảo hành
             </button>
             <button className={styles.btnEdit} onClick={() => navigate(`/repairs/create?warrantyId=${id}`)}>
@@ -263,6 +266,9 @@ function WarrantyDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+      <div style={{ display: 'none' }}>
+        <WarrantySlipTemplate ref={printRef} warranty={warranty} />
       </div>
     </AdminLayout>
   );

@@ -961,6 +961,21 @@ function AssemblyOrderFormPage() {
                         </button>
                     </div>
                 )}
+                
+                {orderDetail && (
+                    <div className={styles.actionButtons} style={{ marginBottom: '16px', justifyContent: 'flex-end' }}>
+                        <button className="btn-misa-draft" style={{ backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} type="button" onClick={() => {
+                            printAssemblyOrder(orderDetail, {
+                                warehouseName: warehouses.find(w => String(w.id) === String(orderDetail.warehouseId))?.name || '',
+                                productById: new Map(products.map(p => [String(p.id), p])),
+                                variantById: new Map(variants.map(v => [String(v.id), v])),
+                            });
+                        }}>
+                            <i className="bi bi-printer"></i> In lệnh lắp ráp
+                        </button>
+                    </div>
+                )}
+
                 {canEdit && (
                     <div className={styles.actionButtons}>
                         <button className="btn-misa-draft" type="button" onClick={(e) => handleSubmit(e, 'DRAFT')} disabled={saving}>

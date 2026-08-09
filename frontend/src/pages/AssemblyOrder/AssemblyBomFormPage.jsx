@@ -596,7 +596,7 @@ function AssemblyBomFormPage() {
 
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
                             <button className="btn-misa-cancel" style={{ border: '1px solid #10b981', color: '#10b981' }} type="button" onClick={handleExportExcel}>
-                                <i className="bi bi-file-earmark-excel"></i> Xuất Excel cấu hình
+                                <i className="bi bi-file-earmark-excel"></i>
                             </button>
                             {canEdit && (
                                 <>

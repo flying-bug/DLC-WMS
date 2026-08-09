@@ -559,7 +559,7 @@ function ImportHistoryPage() {
                     <i className="bi bi-printer"></i> In phiếu
                   </button>
                   <button className={styles.btnSecondary} onClick={handleExport} style={{ backgroundColor: 'white', color: '#16a34a', borderColor: '#bbf7d0' }}>
-                    <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                    <i className="bi bi-file-earmark-excel"></i>
                   </button>
                 </div>
               </div>
