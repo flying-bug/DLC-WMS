@@ -11,14 +11,18 @@ import com.duylongtech.backend.dto.response.AssemblyBomResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderLineResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse;
+import com.duylongtech.backend.dto.response.SerialTreeResponse;
 import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
 import com.duylongtech.backend.repository.AssemblyOrderRepository;
 import com.duylongtech.backend.repository.AssemblyOrderSerialRepository;
+import com.duylongtech.backend.repository.DeviceComponentSerialRepository;
 import com.duylongtech.backend.repository.InventoryDocumentRepository;
 import com.duylongtech.backend.repository.ProductRepository;
 import com.duylongtech.backend.repository.ProductVariantRepository;
+import com.duylongtech.backend.repository.RepairRepository;
+import com.duylongtech.backend.repository.SerialNumberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +47,8 @@ public class AssemblyOrderService {
     private static final Set<String> VALID_STATUSES = Set.of("DRAFT", "SUBMITTED", "APPROVED", "POSTED", "CANCELLED");
     private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "APPROVED");
     private static final BigDecimal ZERO = BigDecimal.ZERO;
+    private static final String COMPONENT_STATUS_ACTIVE = "ACTIVE";
+    private static final String COMPONENT_STATUS_REMOVED = "REMOVED";
 
     private final AssemblyBomRepository assemblyBomRepository;
     private final AssemblyOrderRepository assemblyOrderRepository;
@@ -51,6 +57,9 @@ public class AssemblyOrderService {
     private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryDocumentService inventoryDocumentService;
     private final AssemblyOrderSerialRepository assemblyOrderSerialRepository;
+    private final DeviceComponentSerialRepository deviceComponentSerialRepository;
+    private final SerialNumberRepository serialNumberRepository;
+    private final RepairRepository repairRepository;
     private final com.duylongtech.backend.repository.UserRepository userRepository;
 
     @Transactional(readOnly = true)
@@ -260,7 +269,10 @@ public class AssemblyOrderService {
                 // Validate Serial Mapping if Target tracks serial
                 if (order.getTargetVariant().getProduct().getTrackSerial()) {
                     List<AssemblyOrderSerial> serials = assemblyOrderSerialRepository.findByAssemblyOrderId(id);
-                    Set<String> mappedTargetSerials = serials.stream().map(AssemblyOrderSerial::getTargetSerial).collect(Collectors.toSet());
+                    Set<String> mappedTargetSerials = serials.stream()
+                            .filter(this::isOrderSerialMapping)
+                            .map(AssemblyOrderSerial::getTargetSerial)
+                            .collect(Collectors.toSet());
                     
                     // We expect the number of unique target serials mapped to be at least requiredTarget
                     if (mappedTargetSerials.size() < requiredTarget.intValue()) {
@@ -679,17 +691,10 @@ public class AssemblyOrderService {
         }
         
         List<com.duylongtech.backend.entity.AssemblyOrderSerial> serials = assemblyOrderSerialRepository.findByAssemblyOrderId(order.getId());
-        List<com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse> mappedSerials = serials.stream().map(s -> {
-            com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse res = new com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse();
-            res.setId(s.getId());
-            res.setAssemblyOrderId(s.getAssemblyOrder().getId());
-            res.setTargetVariantId(s.getTargetVariant().getId());
-            res.setTargetSerial(s.getTargetSerial());
-            res.setComponentVariantId(s.getComponentVariant().getId());
-            res.setComponentName(variantName(s.getComponentVariant()));
-            res.setComponentSerial(s.getComponentSerial());
-            return res;
-        }).toList();
+        List<com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse> mappedSerials = serials.stream()
+                .filter(this::isOrderSerialMapping)
+                .map(this::toSerialResponse)
+                .toList();
 
         return AssemblyOrderResponse.builder()
                 .id(order.getId())
@@ -715,6 +720,7 @@ public class AssemblyOrderService {
                 .updatedAt(order.getUpdatedAt())
                 .lines(order.getLines() == null ? List.of() : order.getLines().stream().map(this::toOrderLineResponse).toList())
                 .mappedSerials(mappedSerials)
+                .serialChangeHistory(List.of())
                 .build();
     }
 
@@ -754,29 +760,157 @@ public class AssemblyOrderService {
     }
 
     public List<AssemblyOrderSerialResponse> getSerials(Long orderId) {
-        return assemblyOrderSerialRepository.findByAssemblyOrderId(orderId).stream().map(s -> {
-            AssemblyOrderSerialResponse res = new AssemblyOrderSerialResponse();
-            res.setId(s.getId());
-            res.setAssemblyOrderId(s.getAssemblyOrder().getId());
-            res.setTargetVariantId(s.getTargetVariant().getId());
-            res.setTargetSerial(s.getTargetSerial());
-            res.setComponentVariantId(s.getComponentVariant().getId());
-            res.setComponentSerial(s.getComponentSerial());
-            return res;
-        }).collect(Collectors.toList());
+        return assemblyOrderSerialRepository.findByAssemblyOrderId(orderId).stream()
+                .filter(this::isOrderSerialMapping)
+                .map(this::toSerialResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public SerialTreeResponse getSerialTreeByTarget(Long serialNumberId, Long targetVariantId, String targetSerial) {
+        String normalizedTargetSerial = trimToNull(targetSerial);
+        Long resolvedTargetVariantId = targetVariantId;
+
+        if (serialNumberId != null) {
+            SerialNumber serial = serialNumberRepository.findById(serialNumberId)
+                    .orElseThrow(() -> new BusinessException("Không tìm thấy serial thành phẩm"));
+            normalizedTargetSerial = serial.getSerialNumber();
+            resolvedTargetVariantId = serial.getVariantId();
+        }
+
+        if (normalizedTargetSerial == null) {
+            throw new BusinessException("Serial thành phẩm là bắt buộc");
+        }
+
+        List<DeviceComponentSerial> mappings = resolvedTargetVariantId != null
+                ? deviceComponentSerialRepository.findByTargetVariantIdAndTargetSerial(resolvedTargetVariantId, normalizedTargetSerial)
+                : deviceComponentSerialRepository.findByTargetSerial(normalizedTargetSerial);
+
+        ProductVariant targetVariant = null;
+        if (!mappings.isEmpty()) {
+            targetVariant = mappings.get(0).getTargetVariant();
+        } else if (resolvedTargetVariantId != null) {
+            targetVariant = productVariantRepository.findById(resolvedTargetVariantId).orElse(null);
+        }
+
+        return SerialTreeResponse.builder()
+                .targetSerial(normalizedTargetSerial)
+                .targetSku(targetVariant != null ? targetVariant.getSku() : null)
+                .targetName(targetVariant != null ? variantName(targetVariant) : null)
+                .components(mappings.stream()
+                        .filter(this::isActiveComponentSerial)
+                        .map(this::toComponentSerialResponse)
+                        .toList())
+                .history(mappings.stream().map(this::toComponentSerialResponse).toList())
+                .build();
+    }
+
+    private AssemblyOrderSerialResponse toSerialResponse(AssemblyOrderSerial serial) {
+        AssemblyOrderSerialResponse res = new AssemblyOrderSerialResponse();
+        res.setId(serial.getId());
+        res.setAssemblyOrderId(serial.getAssemblyOrder() != null ? serial.getAssemblyOrder().getId() : null);
+        res.setTargetVariantId(serial.getTargetVariant() != null ? serial.getTargetVariant().getId() : null);
+        res.setTargetSerial(serial.getTargetSerial());
+        res.setComponentVariantId(serial.getComponentVariant() != null ? serial.getComponentVariant().getId() : null);
+        res.setComponentName(variantName(serial.getComponentVariant()));
+        res.setComponentSerial(serial.getComponentSerial());
+        res.setStatus(serial.getStatus());
+        res.setInstalledAt(serial.getInstalledAt());
+        res.setRemovedAt(serial.getRemovedAt());
+        res.setSourceRepairId(serial.getSourceRepairId());
+        res.setSourceRepairCode(resolveRepairCode(serial.getSourceRepairId()));
+        res.setRemovedByRepairId(serial.getRemovedByRepairId());
+        res.setRemovedByRepairCode(resolveRepairCode(serial.getRemovedByRepairId()));
+        res.setReplacedBySerial(serial.getReplacedBySerial());
+        res.setNote(serial.getNote());
+        return res;
+    }
+
+    private boolean isOrderSerialMapping(AssemblyOrderSerial serial) {
+        return serial.getSourceRepairId() == null;
+    }
+
+    private boolean isDeviceSerialChangeHistory(DeviceComponentSerial serial) {
+        return serial.getSourceRepairId() != null
+                || serial.getRemovedByRepairId() != null
+                || serial.getRemovedByAssemblyOrder() != null
+                || trimToNull(serial.getReplacedBySerial()) != null;
+    }
+
+    private AssemblyOrderSerialResponse toSerialResponse(DeviceComponentSerial serial) {
+        AssemblyOrderSerialResponse res = new AssemblyOrderSerialResponse();
+        res.setId(serial.getId());
+        res.setAssemblyOrderId(serial.getSourceAssemblyOrder() != null ? serial.getSourceAssemblyOrder().getId() : null);
+        res.setRemovedByAssemblyOrderId(serial.getRemovedByAssemblyOrder() != null ? serial.getRemovedByAssemblyOrder().getId() : null);
+        res.setRemovedByAssemblyOrderCode(serial.getRemovedByAssemblyOrder() != null ? serial.getRemovedByAssemblyOrder().getOrderCode() : null);
+        res.setTargetVariantId(serial.getTargetVariant() != null ? serial.getTargetVariant().getId() : null);
+        res.setTargetSerial(serial.getTargetSerial());
+        res.setComponentVariantId(serial.getComponentVariant() != null ? serial.getComponentVariant().getId() : null);
+        res.setComponentName(variantName(serial.getComponentVariant()));
+        res.setComponentSerial(serial.getComponentSerial());
+        res.setStatus(serial.getStatus());
+        res.setInstalledAt(serial.getInstalledAt());
+        res.setRemovedAt(serial.getRemovedAt());
+        res.setSourceRepairId(serial.getSourceRepairId());
+        res.setSourceRepairCode(resolveRepairCode(serial.getSourceRepairId()));
+        res.setRemovedByRepairId(serial.getRemovedByRepairId());
+        res.setRemovedByRepairCode(resolveRepairCode(serial.getRemovedByRepairId()));
+        res.setReplacedBySerial(serial.getReplacedBySerial());
+        res.setNote(serial.getNote());
+        return res;
+    }
+
+    private SerialTreeResponse.ComponentSerial toComponentSerialResponse(DeviceComponentSerial mapping) {
+        ProductVariant component = mapping.getComponentVariant();
+        return SerialTreeResponse.ComponentSerial.builder()
+                .componentSerial(mapping.getComponentSerial())
+                .componentSku(component != null ? component.getSku() : null)
+                .componentName(component != null ? variantName(component) : null)
+                .status(mapping.getStatus())
+                .installedAt(mapping.getInstalledAt())
+                .removedAt(mapping.getRemovedAt())
+                .removedByAssemblyOrderId(mapping.getRemovedByAssemblyOrder() != null ? mapping.getRemovedByAssemblyOrder().getId() : null)
+                .removedByAssemblyOrderCode(mapping.getRemovedByAssemblyOrder() != null ? mapping.getRemovedByAssemblyOrder().getOrderCode() : null)
+                .sourceRepairId(mapping.getSourceRepairId())
+                .sourceRepairCode(resolveRepairCode(mapping.getSourceRepairId()))
+                .removedByRepairId(mapping.getRemovedByRepairId())
+                .removedByRepairCode(resolveRepairCode(mapping.getRemovedByRepairId()))
+                .replacedBySerial(mapping.getReplacedBySerial())
+                .note(mapping.getNote())
+                .build();
+    }
+
+    private String resolveRepairCode(Long repairId) {
+        if (repairId == null) return null;
+        return repairRepository.findById(repairId)
+                .map(Repair::getRepairCode)
+                .orElse(null);
+    }
+
+    private boolean isActiveComponentSerial(DeviceComponentSerial mapping) {
+        return mapping.getStatus() == null || COMPONENT_STATUS_ACTIVE.equalsIgnoreCase(mapping.getStatus());
     }
 
     @Transactional
     public void saveSerials(Long orderId, List<AssemblyOrderSerialRequest> requests) {
         AssemblyOrder order = assemblyOrderRepository.findById(orderId)
                 .orElseThrow(() -> new EntityNotFoundException("Order not found with id: " + orderId));
-        
+
+        boolean hasRepairHistory = deviceComponentSerialRepository.findBySourceAssemblyOrderId(orderId)
+                .stream()
+                .anyMatch(this::isDeviceSerialChangeHistory);
+        if (hasRepairHistory) {
+            throw new BusinessException("Cấu hình serial đã có lịch sử sửa chữa, không thể ghi đè toàn bộ.");
+        }
+
         assemblyOrderSerialRepository.deleteByAssemblyOrderId(orderId);
+        deviceComponentSerialRepository.deleteBySourceAssemblyOrderId(orderId);
         
         if (requests == null || requests.isEmpty()) {
             return;
         }
         
+        LocalDateTime now = LocalDateTime.now();
         List<AssemblyOrderSerial> newSerials = requests.stream().map(req -> {
             ProductVariant targetVar = productVariantRepository.findById(req.getTargetVariantId())
                     .orElseThrow(() -> new EntityNotFoundException("Target variant not found: " + req.getTargetVariantId()));
@@ -789,11 +923,52 @@ public class AssemblyOrderService {
                     .targetSerial(req.getTargetSerial())
                     .componentVariant(compVar)
                     .componentSerial(req.getComponentSerial())
+                    .status(ASSEMBLY.equals(order.getOrderType()) ? COMPONENT_STATUS_ACTIVE : COMPONENT_STATUS_REMOVED)
+                    .installedAt(ASSEMBLY.equals(order.getOrderType()) ? now : null)
+                    .removedAt(DISASSEMBLY.equals(order.getOrderType()) ? now : null)
+                    .note(DISASSEMBLY.equals(order.getOrderType()) ? "Tháo dỡ từ lệnh " + order.getOrderCode() : null)
                     .createdBy(order.getCreatedBy())
                     .build();
         }).collect(Collectors.toList());
         
         assemblyOrderSerialRepository.saveAll(newSerials);
+
+        List<DeviceComponentSerial> deviceSerials = requests.stream()
+                .map(req -> buildDeviceSerialFromAssembly(order, req, order.getCreatedBy(), now))
+                .collect(Collectors.toList());
+        deviceComponentSerialRepository.saveAll(deviceSerials);
+    }
+
+    private DeviceComponentSerial buildDeviceSerialFromAssembly(AssemblyOrder order,
+            AssemblyOrderSerialRequest req, Long userId, LocalDateTime now) {
+        ProductVariant targetVar = productVariantRepository.findById(req.getTargetVariantId())
+                .orElseThrow(() -> new EntityNotFoundException("Target variant not found: " + req.getTargetVariantId()));
+        ProductVariant compVar = productVariantRepository.findById(req.getComponentVariantId())
+                .orElseThrow(() -> new EntityNotFoundException("Component variant not found: " + req.getComponentVariantId()));
+        String componentSerial = trimToNull(req.getComponentSerial());
+        if (componentSerial == null) {
+            throw new BusinessException("Serial linh kiện là bắt buộc");
+        }
+
+        if (ASSEMBLY.equals(order.getOrderType())
+                && deviceComponentSerialRepository.existsActiveComponentSerial(compVar.getId(), componentSerial)) {
+            throw new BusinessException("Serial " + componentSerial
+                    + " đang nằm trong cấu hình PC, không thể lắp vào PC khác.");
+        }
+
+        return DeviceComponentSerial.builder()
+                .sourceAssemblyOrder(order)
+                .removedByAssemblyOrder(DISASSEMBLY.equals(order.getOrderType()) ? order : null)
+                .targetVariant(targetVar)
+                .targetSerial(req.getTargetSerial())
+                .componentVariant(compVar)
+                .componentSerial(componentSerial)
+                .status(ASSEMBLY.equals(order.getOrderType()) ? COMPONENT_STATUS_ACTIVE : COMPONENT_STATUS_REMOVED)
+                .installedAt(ASSEMBLY.equals(order.getOrderType()) ? now : null)
+                .removedAt(DISASSEMBLY.equals(order.getOrderType()) ? now : null)
+                .note(DISASSEMBLY.equals(order.getOrderType()) ? "Tháo dỡ từ lệnh " + order.getOrderCode() : null)
+                .createdBy(userId)
+                .build();
     }
 
     @Transactional
@@ -886,6 +1061,7 @@ public class AssemblyOrderService {
         com.duylongtech.backend.dto.response.InventoryDocumentResponse createdImport = inventoryDocumentService.createImport(importDoc);
         inventoryDocumentService.postImport(createdImport.getId());
 
+        LocalDateTime now = LocalDateTime.now();
         List<AssemblyOrderSerial> newSerials = serialMappings.stream().map(req -> {
             ProductVariant targetVar = productVariantRepository.findById(req.getTargetVariantId())
                     .orElseThrow(() -> new EntityNotFoundException("Target variant not found: " + req.getTargetVariantId()));
@@ -898,11 +1074,23 @@ public class AssemblyOrderService {
                     .targetSerial(req.getTargetSerial())
                     .componentVariant(compVar)
                     .componentSerial(req.getComponentSerial())
+                    .status(ASSEMBLY.equals(order.getOrderType()) ? COMPONENT_STATUS_ACTIVE : COMPONENT_STATUS_REMOVED)
+                    .installedAt(ASSEMBLY.equals(order.getOrderType()) ? now : null)
+                    .removedAt(DISASSEMBLY.equals(order.getOrderType()) ? now : null)
+                    .note(DISASSEMBLY.equals(order.getOrderType()) ? "Tháo dỡ từ lệnh " + order.getOrderCode() : null)
                     .createdBy(userId)
                     .build();
         }).collect(Collectors.toList());
         
         assemblyOrderSerialRepository.saveAll(newSerials);
+        if (ASSEMBLY.equals(order.getOrderType())) {
+            List<DeviceComponentSerial> deviceSerials = serialMappings.stream()
+                    .map(req -> buildDeviceSerialFromAssembly(order, req, userId, now))
+                    .collect(Collectors.toList());
+            deviceComponentSerialRepository.saveAll(deviceSerials);
+        } else {
+            updateDeviceComponentsForDisassembly(order, serialMappings, userId, now);
+        }
 
         // ── Cập nhật quantityProduced ──────────────────────────────────────────
         int executedCount = request.getAssembledSets().size();
@@ -915,5 +1103,112 @@ public class AssemblyOrderService {
         }
         order.setUpdatedAt(LocalDateTime.now());
         assemblyOrderRepository.save(order);
+    }
+
+    private void updateDeviceComponentsForDisassembly(AssemblyOrder order,
+            List<AssemblyOrderSerialRequest> serialMappings, Long userId, LocalDateTime now) {
+        if (serialMappings == null || serialMappings.isEmpty()) {
+            return;
+        }
+
+        java.util.Map<String, List<AssemblyOrderSerialRequest>> groupedByTargetSerial = serialMappings.stream()
+                .filter(req -> trimToNull(req.getTargetSerial()) != null)
+                .collect(Collectors.groupingBy(req -> req.getTargetSerial().trim()));
+        List<DeviceComponentSerial> changedMappings = new java.util.ArrayList<>();
+
+        for (java.util.Map.Entry<String, List<AssemblyOrderSerialRequest>> entry : groupedByTargetSerial.entrySet()) {
+            String targetSerial = entry.getKey();
+            List<DeviceComponentSerial> currentMappings = new java.util.ArrayList<>(
+                    deviceComponentSerialRepository.findByTargetVariantIdAndTargetSerial(
+                            order.getTargetVariant().getId(), targetSerial));
+            AssemblyOrder sourceOrder = currentMappings.stream()
+                    .map(DeviceComponentSerial::getSourceAssemblyOrder)
+                    .filter(java.util.Objects::nonNull)
+                    .findFirst()
+                    .orElse(null);
+            ProductVariant targetVariant = currentMappings.stream()
+                    .map(DeviceComponentSerial::getTargetVariant)
+                    .filter(java.util.Objects::nonNull)
+                    .findFirst()
+                    .orElse(order.getTargetVariant());
+
+            for (AssemblyOrderSerialRequest req : entry.getValue()) {
+                String componentSerial = trimToNull(req.getComponentSerial());
+                if (componentSerial == null) {
+                    continue;
+                }
+
+                DeviceComponentSerial currentMapping = findActiveDeviceMapping(
+                        currentMappings, req.getComponentVariantId(), componentSerial);
+                if (currentMapping != null) {
+                    currentMapping.setStatus(COMPONENT_STATUS_REMOVED);
+                    currentMapping.setRemovedAt(now);
+                    currentMapping.setRemovedByAssemblyOrder(order);
+                    currentMapping.setReplacedBySerial(null);
+                    currentMapping.setNote(appendNote(currentMapping.getNote(),
+                            "Tháo dỡ từ lệnh " + order.getOrderCode()));
+                    changedMappings.add(currentMapping);
+                    continue;
+                }
+
+                ProductVariant componentVariant = productVariantRepository.findById(req.getComponentVariantId())
+                        .orElseThrow(() -> new EntityNotFoundException("Component variant not found: " + req.getComponentVariantId()));
+                DeviceComponentSerial recoveredMapping = DeviceComponentSerial.builder()
+                        .sourceAssemblyOrder(sourceOrder)
+                        .removedByAssemblyOrder(order)
+                        .targetVariant(targetVariant)
+                        .targetSerial(targetSerial)
+                        .componentVariant(componentVariant)
+                        .componentSerial(componentSerial)
+                        .status(COMPONENT_STATUS_REMOVED)
+                        .removedAt(now)
+                        .note("Thu hồi ngoài cấu hình hiện tại từ lệnh " + order.getOrderCode())
+                        .createdBy(userId)
+                        .build();
+                currentMappings.add(recoveredMapping);
+                changedMappings.add(recoveredMapping);
+            }
+        }
+
+        if (!changedMappings.isEmpty()) {
+            deviceComponentSerialRepository.saveAll(changedMappings);
+        }
+    }
+
+    private DeviceComponentSerial findActiveDeviceMapping(List<DeviceComponentSerial> mappings,
+            Long componentVariantId, String componentSerial) {
+        String normalizedSerial = trimToNull(componentSerial);
+        if (normalizedSerial == null) {
+            return null;
+        }
+
+        DeviceComponentSerial sameVariant = mappings.stream()
+                .filter(this::isActiveComponentSerial)
+                .filter(mapping -> mapping.getComponentVariant() != null)
+                .filter(mapping -> java.util.Objects.equals(mapping.getComponentVariant().getId(), componentVariantId))
+                .filter(mapping -> normalizedSerial.equalsIgnoreCase(mapping.getComponentSerial()))
+                .findFirst()
+                .orElse(null);
+        if (sameVariant != null) {
+            return sameVariant;
+        }
+
+        return mappings.stream()
+                .filter(this::isActiveComponentSerial)
+                .filter(mapping -> normalizedSerial.equalsIgnoreCase(mapping.getComponentSerial()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String appendNote(String currentNote, String appendedNote) {
+        String normalizedAppend = trimToNull(appendedNote);
+        if (normalizedAppend == null) {
+            return currentNote;
+        }
+        String normalizedCurrent = trimToNull(currentNote);
+        if (normalizedCurrent == null) {
+            return normalizedAppend;
+        }
+        return normalizedCurrent + " | " + normalizedAppend;
     }
 }

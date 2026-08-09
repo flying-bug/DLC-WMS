@@ -20,10 +20,12 @@ public class RepairLineRequest {
     private Long componentVariantId;
 
     @NotNull(message = "actionType là bắt buộc")
-    private String actionType; // "ADD" or "REMOVE"
+    private String actionType; // "ADD", "REPLACE" or "REMOVE"
 
     private Long serialNumberId;
     private String serialNumber;
+    private Long replacementSerialNumberId;
+    private String replacementSerialNumber;
 
     @NotNull(message = "quantity là bắt buộc")
     @DecimalMin(value = "0.0001", message = "quantity phải lớn hơn 0")

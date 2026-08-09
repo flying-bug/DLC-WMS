@@ -16,6 +16,7 @@ public class InventoryBalanceReportResponse {
     private String itemName;
     private String unitName;
     private BigDecimal totalQuantity;
+    private BigDecimal availableQuantity;
     private BigDecimal totalValue;
     private String warehouseCode;
     private String warehouseName;

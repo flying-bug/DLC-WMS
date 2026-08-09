@@ -23,3 +23,38 @@
     outline: none;
     border-color: var(--color-primary);
 }
+
+.typeSelector {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    margin-bottom: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    background: var(--color-bg);
+}
+
+.typeOption {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--color-text-body);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.typeOption:hover {
+    background: var(--color-white);
+}
+
+.typeOptionActive {
+    background: var(--color-white);
+    color: var(--color-primary);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
