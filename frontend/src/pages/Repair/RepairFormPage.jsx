@@ -238,14 +238,15 @@ function RepairFormPage() {
     });
     return map;
   }, [inventoryBalances]);
-  const getRepairPartOptions = useCallback((actionType, selectedVariantId) => {
+
+  const repairPartOptions = (() => {
     const base = variants.filter(p => p.productType === 'Hàng hóa' || p.productType === 'Thành phẩm');
     const warehouseId = repair?.warehouseId || formData.warehouseId;
-    if (!warehouseId || actionType === 'REMOVE') return base;
-    return base.filter(p => inventoryMap.has(String(p.id)) || String(p.id) === String(selectedVariantId || ''));
-  }, [formData.warehouseId, inventoryMap, repair?.warehouseId, variants]);
+    if (!warehouseId) return base;
+    return base.filter(p => inventoryMap.has(String(p.id)) || String(p.id) === String(formData.productId || ''));
+  })();
 
-  const filteredProductsList = useMemo(() => {
+  const filteredProductsList = (() => {
     let list = products.filter(p => p.productType === 'Hàng hóa' || p.productType === 'Thành phẩm');
     if (sourceWarranty && sourceWarranty.lines && sourceWarranty.lines.length > 0) {
       const allowedIds = new Set();
@@ -265,7 +266,7 @@ function RepairFormPage() {
       }
     }
     return list;
-  }, [products, sourceWarranty, variants]);
+  })();
 
   const _productId = formData.productId;
   const _serialNumberId = formData.serialNumberId;
@@ -1202,7 +1203,7 @@ function RepairFormPage() {
                     <td style={{ minWidth: '220px' }}>
                       {isEditable ? (
                         <ProductGridSelect
-                          products={getRepairPartOptions(line.actionType, line.componentVariantId || line.componentVariant?.id)}
+                          products={repairPartOptions}
                           inventoryMap={inventoryMap}
                           value={line.componentVariantId || line.componentVariant?.id || ''}
                           onChange={(selected) => {
