@@ -262,8 +262,10 @@ public class InventoryDocumentService {
             if (targetSerialId == null && line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
                 List<String> serials = parseSerialNumbers(line.getSerialNumbersText());
                 for (String sn : serials) {
-                    serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), sn)
-                        .ifPresent(serialsToExport::add);
+                    SerialNumber serial = serialNumberRepository
+                            .findByVariantIdAndSerialNumber(line.getVariantId(), sn)
+                            .orElseThrow(() -> new BusinessException("Không tìm thấy Serial: " + sn));
+                    serialsToExport.add(serial);
                 }
                 if (!serialsToExport.isEmpty() && targetSerialId == null) {
                     line.setSerialNumberId(serialsToExport.get(0).getId());

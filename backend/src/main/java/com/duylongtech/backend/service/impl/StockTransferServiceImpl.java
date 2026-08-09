@@ -106,6 +106,7 @@ public class StockTransferServiceImpl implements StockTransferService {
     @Override
     @Transactional
     public StockTransferResponseDTO createTransferRequest(StockTransferRequestDTO requestDTO, Long userId) {
+        validateTransferRequest(requestDTO, userId);
         if (requestDTO.getFromWarehouseId().equals(requestDTO.getToWarehouseId())) {
             throw new BusinessException(SystemMessage.INV_DIFF_WAREHOUSE_REQUIRED);
         }
@@ -172,6 +173,7 @@ public class StockTransferServiceImpl implements StockTransferService {
             throw new BusinessException("Chỉ được phép sửa phiếu khi ở trạng thái Lưu nháp.");
         }
 
+        validateTransferRequest(requestDTO, userId);
         if (requestDTO.getFromWarehouseId().equals(requestDTO.getToWarehouseId())) {
             throw new BusinessException(SystemMessage.INV_DIFF_WAREHOUSE_REQUIRED);
         }
@@ -229,6 +231,10 @@ public class StockTransferServiceImpl implements StockTransferService {
         StockTransfer stockTransfer = stockTransferRepository.findById(transferId)
                 .orElseThrow(() -> new BusinessException(SystemMessage.INV_DOC_NOT_FOUND));
 
+        if (!"DRAFT".equals(stockTransfer.getStatus()) && !"SUBMITTED".equals(stockTransfer.getStatus())) {
+            throw new BusinessException(SystemMessage.INV_INVALID_STATE);
+        }
+
         createAndPostExport(stockTransfer, userId);
 
         stockTransfer.setStatus("IN_TRANSIT");
@@ -274,6 +280,33 @@ public class StockTransferServiceImpl implements StockTransferService {
     private void processInventoryForTransfer(StockTransfer stockTransfer, Long userId) {
         java.util.Map<Long, BigDecimal> exportedCosts = createAndPostExport(stockTransfer, userId);
         createAndPostImport(stockTransfer, exportedCosts, userId);
+    }
+
+    private void validateTransferRequest(StockTransferRequestDTO requestDTO, Long userId) {
+        if (requestDTO == null) {
+            throw new BusinessException(SystemMessage.INV_MISSING_DATA);
+        }
+        if (requestDTO.getFromWarehouseId() == null) {
+            throw new BusinessException("Kho nguồn là bắt buộc");
+        }
+        if (requestDTO.getToWarehouseId() == null) {
+            throw new BusinessException("Kho đích là bắt buộc");
+        }
+        if (userId == null) {
+            throw new BusinessException("Người tạo phiếu là bắt buộc");
+        }
+        if (requestDTO.getLines() == null || requestDTO.getLines().isEmpty()) {
+            throw new BusinessException("Phiếu chuyển kho phải có ít nhất một dòng");
+        }
+        for (int index = 0; index < requestDTO.getLines().size(); index++) {
+            StockTransferLineDTO line = requestDTO.getLines().get(index);
+            if (line == null || line.getVariantId() == null) {
+                throw new BusinessException("lines[" + index + "].variantId là bắt buộc");
+            }
+            if (line.getQuantity() == null || line.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException("lines[" + index + "].quantity phải lớn hơn 0");
+            }
+        }
     }
 
     private java.util.Map<Long, BigDecimal> createAndPostExport(StockTransfer stockTransfer, Long userId) {
