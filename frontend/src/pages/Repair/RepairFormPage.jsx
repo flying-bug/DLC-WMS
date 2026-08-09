@@ -43,7 +43,7 @@ const customSelectStyles = {
 
 const STAGES = ['DRAFT', 'CONFIRMED', 'UNDER_REPAIR', 'DONE'];
 const STAGE_LABELS = { DRAFT: 'Nháp', QUOTATION: 'Báo giá', CONFIRMED: 'Xác nhận', UNDER_REPAIR: 'Đang sửa', DONE: 'Hoàn tất', CANCELLED: 'Đã huỷ' };
-const EDITABLE_STATUSES = ['DRAFT', 'QUOTATION', 'CONFIRMED', 'UNDER_REPAIR'];
+const EDITABLE_STATUSES = ['DRAFT', 'QUOTATION', 'UNDER_REPAIR'];
 const COMPONENT_SERIAL_STATUS = {
   ACTIVE: { label: 'Đang dùng', color: '#166534', bg: '#dcfce7', border: '#bbf7d0' },
   REPLACED: { label: 'Đã thay thế', color: '#92400e', bg: '#fef3c7', border: '#fde68a' },
@@ -114,6 +114,14 @@ function RepairFormPage() {
     }
   };
 
+  const mergeUpdatedLine = useCallback((updatedLine) => {
+    if (!updatedLine?.id) return;
+    setRepair(prev => prev ? ({
+      ...prev,
+      lines: (prev.lines || []).map(l => l.id === updatedLine.id ? { ...l, ...updatedLine } : l)
+    }) : prev);
+  }, []);
+
   const closeSerialModal = (serialObj) => {
     if (serialObj !== undefined) {
       const lineIndex = serialModalData.lineIndex;
@@ -151,7 +159,9 @@ function RepairFormPage() {
               serialNumberId: serialObj === null ? -1 : serialObj.serialNumberId,
               serialNumber: serialObj === null ? '' : serialObj.serialNumber
             };
-        repairApi.updateRepairLine(id, line.id, payload).catch(() => loadData());
+        repairApi.updateRepairLine(id, line.id, payload)
+          .then(res => mergeUpdatedLine(unwrap(res)))
+          .catch(() => loadData());
       }
     }
     setSerialModalData({ isOpen: false, lineIndex: null, serialRole: 'primary', productName: '', warehouseId: null, variantId: null, initialSerialObj: null, actionType: 'ADD' });
@@ -208,7 +218,8 @@ function RepairFormPage() {
     if (warehouseId) {
       exportApi.getInventoryBalance({ warehouseId })
         .then(res => {
-          const data = res?.data?.data?.content || res?.data?.content || [];
+          const payload = res?.data?.data ?? res?.data;
+          const data = Array.isArray(payload) ? payload : (payload?.content || []);
           setInventoryBalances(data);
         })
         .catch(() => {});
@@ -218,10 +229,21 @@ function RepairFormPage() {
   const inventoryMap = useMemo(() => {
     const map = new Map();
     inventoryBalances.forEach(b => {
-      if (b.variantId) map.set(String(b.variantId), Number(b.totalQuantity || 0));
+      if (b.variantId) {
+        const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+        const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+        const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+        map.set(String(b.variantId), Math.max(0, availableQuantity));
+      }
     });
     return map;
   }, [inventoryBalances]);
+  const getRepairPartOptions = useCallback((actionType, selectedVariantId) => {
+    const base = variants.filter(p => p.productType === 'Hàng hóa' || p.productType === 'Thành phẩm');
+    const warehouseId = repair?.warehouseId || formData.warehouseId;
+    if (!warehouseId || actionType === 'REMOVE') return base;
+    return base.filter(p => inventoryMap.has(String(p.id)) || String(p.id) === String(selectedVariantId || ''));
+  }, [formData.warehouseId, inventoryMap, repair?.warehouseId, variants]);
 
   const filteredProductsList = useMemo(() => {
     let list = products.filter(p => p.productType === 'Hàng hóa' || p.productType === 'Thành phẩm');
@@ -300,13 +322,14 @@ function RepairFormPage() {
 
   const selectedDeviceSerialNumber = repair?.serialNumber || selectedWarrantyLine?.serialNumber || '';
   const selectedDeviceVariantId = selectedWarrantyLine?.productVariantId || '';
-  const shouldShowComponentSerialPanel = selectedRepairProduct?.productType === 'Thành phẩm' || Boolean(formData.serialNumberId || selectedDeviceSerialNumber);
+  const isFinishedRepairProduct = selectedRepairProduct?.productType === 'Thành phẩm';
+  const shouldShowComponentSerialPanel = isFinishedRepairProduct;
 
   useEffect(() => {
     const serialNumberId = formData.serialNumberId;
     const targetSerial = selectedDeviceSerialNumber?.trim();
 
-    if (!serialNumberId && !targetSerial) {
+    if (!shouldShowComponentSerialPanel || (!serialNumberId && !targetSerial)) {
       setComponentSerialTree(null);
       setComponentSerialError('');
       setComponentSerialLoading(false);
@@ -338,7 +361,7 @@ function RepairFormPage() {
     return () => {
       isActive = false;
     };
-  }, [formData.serialNumberId, selectedDeviceSerialNumber, selectedDeviceVariantId]);
+  }, [formData.serialNumberId, selectedDeviceSerialNumber, selectedDeviceVariantId, shouldShowComponentSerialPanel]);
 
   const showToast = (type, message) => {
     setToast({ isVisible: true, type, message });
@@ -699,7 +722,9 @@ function RepairFormPage() {
       try {
         await repairApi.deleteRepairLine(id, lineId);
         loadData();
-      } catch (err) { showToast('error', 'Lỗi xóa linh kiện'); }
+      } catch (err) {
+        showToast('error', err.response?.data?.message || err.response?.data?.userMessage || 'Lỗi xóa linh kiện');
+      }
     }
   };
 
@@ -727,7 +752,8 @@ function RepairFormPage() {
         lines: prev.lines.map(l => l.id === lineId ? { ...l, [field]: value } : l)
       }));
       try {
-        await repairApi.updateRepairLine(id, lineId, { [field]: value });
+        const res = await repairApi.updateRepairLine(id, lineId, { [field]: value });
+        mergeUpdatedLine(unwrap(res));
       } catch (err) {
         showToast('error', 'Cập nhật thất bại');
         loadData(); // revert
@@ -762,13 +788,14 @@ function RepairFormPage() {
     }));
 
     try {
-      await repairApi.updateRepairLine(id, lineId, {
+      const res = await repairApi.updateRepairLine(id, lineId, {
         actionType,
         serialNumberId: -1,
         serialNumber: '',
         replacementSerialNumberId: -1,
         replacementSerialNumber: ''
       });
+      mergeUpdatedLine(unwrap(res));
     } catch (err) {
       showToast('error', 'Cập nhật thao tác thất bại');
       loadData();
@@ -852,7 +879,7 @@ function RepairFormPage() {
         } : l)
       }));
       try {
-        await repairApi.updateRepairLine(id, lineId, {
+        const res = await repairApi.updateRepairLine(id, lineId, {
           componentVariantId: variantId,
           unitPrice: isFree ? 0 : variant.salePrice,
           serialNumberId: -1,
@@ -860,6 +887,7 @@ function RepairFormPage() {
           replacementSerialNumberId: -1,
           replacementSerialNumber: ''
         }); // backend expects these
+        mergeUpdatedLine(unwrap(res));
       } catch (err) {
         showToast('error', 'Cập nhật linh kiện thất bại');
         loadData(); // revert
@@ -916,6 +944,9 @@ function RepairFormPage() {
   const showRepairCols = ['UNDER_REPAIR', 'DONE'].includes(currentStatus);
   const lines = isNew ? pendingLines : (repair?.lines || []);
   const fees = isNew ? pendingFees : (repair?.fees || []);
+  const detailTableColSpan = 9
+    + (visibleColumns.description ? 1 : 0)
+    + (showRepairCols && visibleColumns.serialNumber ? 1 : 0);
 
   const totalLinesAmount = lines.reduce((acc, l) => {
     if (l.isFreeWarranty || !['ADD', 'REPLACE'].includes(l.actionType)) return acc;
@@ -1138,7 +1169,6 @@ function RepairFormPage() {
                 <tr>
                   <th style={{ width: '132px', minWidth: '132px', whiteSpace: 'nowrap' }}>Loại</th>
                   <th style={{ whiteSpace: 'nowrap' }}>Hạng mục (Linh kiện / Dịch vụ)</th>
-                  {showRepairCols && isEditable && <th style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>Tồn kho</th>}
                   <th style={{ width: '80px', textAlign: 'right', whiteSpace: 'nowrap' }}>Số lượng</th>
                   <th style={{ whiteSpace: 'nowrap' }}>ĐVT</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá / Phí</th>
@@ -1153,7 +1183,7 @@ function RepairFormPage() {
               <tbody>
                 {lines.length === 0 && fees.length === 0 && addingType === null && (
                   <tr>
-                    <td colSpan="12" style={{ textAlign: 'center', padding: '24px', color: '#6b7280' }}>Chưa có linh kiện / dịch vụ nào</td>
+                    <td colSpan={detailTableColSpan} style={{ textAlign: 'center', padding: '24px', color: '#6b7280' }}>Chưa có linh kiện / dịch vụ nào</td>
                   </tr>
                 )}
 
@@ -1172,7 +1202,7 @@ function RepairFormPage() {
                     <td style={{ minWidth: '220px' }}>
                       {isEditable ? (
                         <ProductGridSelect
-                          products={variants.filter(p => p.productType === 'Hàng hóa' || p.productType === 'Thành phẩm')}
+                          products={getRepairPartOptions(line.actionType, line.componentVariantId || line.componentVariant?.id)}
                           inventoryMap={inventoryMap}
                           value={line.componentVariantId || line.componentVariant?.id || ''}
                           onChange={(selected) => {
@@ -1191,14 +1221,16 @@ function RepairFormPage() {
                         </div>
                       )}
                     </td>
-                    {showRepairCols && isEditable && (
-                      <td align="right" style={{ color: (line.availableQuantity < line.quantity && ['ADD', 'REPLACE'].includes(line.actionType)) ? 'red' : 'green', fontWeight: 'bold' }}>
-                        {['ADD', 'REPLACE'].includes(line.actionType) ? `${line.availableQuantity || 0}` : '-'}
-                      </td>
-                    )}
                     <td align="right">
                       {isEditable ? (
-                        <input type="number" min="0" step="1" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} value={line.quantity} onChange={(e) => handleUpdateLineField(line.id, line._key, 'quantity', e.target.value)} />
+                        <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                          <input type="number" min="0" step="1" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} value={line.quantity} onChange={(e) => handleUpdateLineField(line.id, line._key, 'quantity', e.target.value)} />
+                          {showRepairCols && ['ADD', 'REPLACE'].includes(line.actionType) && Number(line.availableQuantity || 0) < Number(line.quantity || 0) && (
+                            <span title={`Tồn khả dụng: ${Number(line.availableQuantity || 0)}`} style={{ color: '#dc2626', fontSize: '11px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                              Thiếu tồn
+                            </span>
+                          )}
+                        </div>
                       ) : Number(line.quantity || 0)}
                     </td>
                     <td>{variants.find(v => String(v.id) === String(line.componentVariantId))?.unitName || line.componentVariant?.unitName || line._unitName || '-'}</td>
@@ -1290,7 +1322,6 @@ function RepairFormPage() {
                     <td style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={fee.feeName}>
                       {fee.feeName}
                     </td>
-                    {showRepairCols && isEditable && <td align="right">-</td>}
                     <td align="right">
                       {isEditable ? (
                          <input type="number" min="1" step="1" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} value={fee.quantity || 1} onChange={(e) => {
@@ -1497,7 +1528,7 @@ function RepairFormPage() {
 }
 
 function SerialComponentsPanel({ loading, error, serialTree, serialNumber }) {
-  const components = serialTree?.components || [];
+  const activeComponents = (serialTree?.components || []).filter(item => String(item.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
   const history = serialTree?.history || [];
   const changeHistory = history.filter(item => {
     const status = String(item.status || 'ACTIVE').toUpperCase();
@@ -1515,8 +1546,12 @@ function SerialComponentsPanel({ loading, error, serialTree, serialNumber }) {
   };
   const historyTime = (item) => formatDateTime(item.removedAt || item.installedAt, { withSeconds: false }) || '-';
   const historyRepair = (item) => {
+    if (item.removedByRepairCode) return item.removedByRepairCode;
+    if (item.sourceRepairCode) return item.sourceRepairCode;
     if (item.removedByRepairId) return `#${item.removedByRepairId}`;
     if (item.sourceRepairId) return `#${item.sourceRepairId}`;
+    if (item.removedByAssemblyOrderCode) return item.removedByAssemblyOrderCode;
+    if (item.removedByAssemblyOrderId) return `#${item.removedByAssemblyOrderId}`;
     return '-';
   };
 
@@ -1543,7 +1578,7 @@ function SerialComponentsPanel({ loading, error, serialTree, serialNumber }) {
           <div style={{ fontSize: '13px', color: '#64748b' }}>Chưa có serial PC để tra linh kiện bên trong.</div>
         ) : (
           <>
-            {components.length === 0 ? (
+            {activeComponents.length === 0 ? (
               <div style={{ fontSize: '13px', color: '#64748b' }}>Chưa có linh kiện đang dùng cho serial này.</div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
@@ -1556,15 +1591,15 @@ function SerialComponentsPanel({ loading, error, serialTree, serialNumber }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {components.map((component, index) => (
+                    {activeComponents.map((component, index) => (
                       <tr key={`${component.componentSerial || 'serial'}-${index}`}>
-                        <td style={{ padding: '7px 8px', borderBottom: index < components.length - 1 ? '1px solid #eef2f7' : 'none', color: '#1f2937' }}>
+                        <td style={{ padding: '7px 8px', borderBottom: index < activeComponents.length - 1 ? '1px solid #eef2f7' : 'none', color: '#1f2937' }}>
                           {component.componentName || 'Chưa rõ linh kiện'}
                         </td>
-                        <td style={{ padding: '7px 8px', borderBottom: index < components.length - 1 ? '1px solid #eef2f7' : 'none', color: '#64748b' }}>
+                        <td style={{ padding: '7px 8px', borderBottom: index < activeComponents.length - 1 ? '1px solid #eef2f7' : 'none', color: '#64748b' }}>
                           {component.componentSku || '-'}
                         </td>
-                        <td style={{ padding: '7px 8px', borderBottom: index < components.length - 1 ? '1px solid #eef2f7' : 'none', color: '#0f172a', fontWeight: 600 }}>
+                        <td style={{ padding: '7px 8px', borderBottom: index < activeComponents.length - 1 ? '1px solid #eef2f7' : 'none', color: '#0f172a', fontWeight: 600 }}>
                           {component.componentSerial || '-'}
                         </td>
                       </tr>
@@ -1575,9 +1610,17 @@ function SerialComponentsPanel({ loading, error, serialTree, serialNumber }) {
             )}
 
             {changeHistory.length > 0 && (
-              <div style={{ marginTop: '12px', borderTop: '1px solid #dbeafe', paddingTop: '10px' }}>
-                <div style={{ marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>Lịch sử thay đổi</div>
-                <div style={{ overflowX: 'auto' }}>
+              <details style={{ marginTop: '12px', borderTop: '1px solid #dbeafe', paddingTop: '10px' }}>
+                <summary style={{ cursor: 'pointer', listStyle: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="bi bi-clock-history" style={{ color: '#2563eb' }}></i>
+                    Lịch sử thay đổi linh kiện
+                  </span>
+                  <span style={{ border: '1px solid #bfdbfe', backgroundColor: '#eff6ff', color: '#1d4ed8', borderRadius: '999px', padding: '1px 8px', fontSize: '12px', fontWeight: 600 }}>
+                    {changeHistory.length}
+                  </span>
+                </summary>
+                <div style={{ overflowX: 'auto', marginTop: '10px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                     <thead>
                       <tr style={{ color: '#475569' }}>
@@ -1586,7 +1629,7 @@ function SerialComponentsPanel({ loading, error, serialTree, serialNumber }) {
                         <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', width: '16%' }}>Trạng thái</th>
                         <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', width: '18%' }}>Serial thay thế</th>
                         <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0' }}>Thời điểm</th>
-                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', width: '10%' }}>Phiếu sửa</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', width: '10%' }}>Phiếu</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1603,7 +1646,7 @@ function SerialComponentsPanel({ loading, error, serialTree, serialNumber }) {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </details>
             )}
           </>
         )}
@@ -1687,6 +1730,11 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
   const skipFeeCommitRef = useRef(false);
 
   const isFree = form.isFreeWarranty;
+  const partOptions = useMemo(() => {
+    const base = variants.filter(v => v.productType === 'Hàng hóa' || v.productType === 'Thành phẩm');
+    if (!['ADD', 'REPLACE'].includes(form.actionType)) return base;
+    return base.filter(v => inventoryMap.has(String(v.id)) || String(v.id) === String(form.componentVariantId || ''));
+  }, [form.actionType, form.componentVariantId, inventoryMap, variants]);
 
   const savePart = async (nextForm) => {
     if (skipPartCommitRef.current) {
@@ -1749,7 +1797,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       {/* 2. Hạng mục */}
       <td>
         <ProductGridSelect
-          products={variants.filter(v => v.productType === 'Hàng hóa' || v.productType === 'Thành phẩm')}
+          products={partOptions}
           inventoryMap={inventoryMap}
           value={form.componentVariantId}
           onChange={opt => {
@@ -1766,8 +1814,6 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
           disabled={isSaving}
         />
       </td>
-      {/* 3. Tồn kho */}
-      {showRepairCols && <td align="right">-</td>}
       {/* 4. Số lượng */}
       <td align="right">
         <input
@@ -1863,8 +1909,6 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
           disabled={isSaving}
         />
       </td>
-      {/* 3. Tồn kho */}
-      {showRepairCols && <td align="right">-</td>}
       {/* 4. Số lượng */}
       <td align="right">
         <input

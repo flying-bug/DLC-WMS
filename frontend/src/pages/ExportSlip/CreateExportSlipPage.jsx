@@ -267,12 +267,21 @@ function CreateExportSlipPage({ mode: propMode }) {
     const map = new Map();
     if (Array.isArray(inventoryBalances)) {
       inventoryBalances.forEach(b => {
-        if (b.variantId) map.set(String(b.variantId), Number(b.totalQuantity || 0));
-        else if (b.itemId) map.set(String(b.itemId), Number(b.totalQuantity || 0));
+        const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+        const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+        const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+        const stock = Math.max(0, availableQuantity);
+        if (b.variantId) map.set(String(b.variantId), stock);
+        else if (b.itemId) map.set(String(b.itemId), stock);
       });
     }
     return map;
   }, [inventoryBalances]);
+  const warehouseScopedProducts = useMemo(() => {
+    if (!form.warehouseId) return products;
+    const selectedIds = new Set(items.map(item => String(item.variantId || '')).filter(Boolean));
+    return products.filter(product => inventoryMap.has(String(product.id)) || selectedIds.has(String(product.id)));
+  }, [form.warehouseId, inventoryMap, items, products]);
 
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
@@ -591,7 +600,7 @@ function CreateExportSlipPage({ mode: propMode }) {
     for (const item of items) {
       const product = productById.get(String(item.variantId));
       if (product) {
-        const balance = inventoryBalances.find(b => String(b.variantId) === String(product.id) || String(b.itemCode) === String(product.productCode) || String(b.itemCode) === String(product.sku))?.totalQuantity || 0;
+        const balance = inventoryMap.get(String(product.id)) || 0;
         if (Number(item.quantity) > balance) {
           hasOutOfStock = true;
           break;
@@ -968,7 +977,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                   <th style={{ minWidth: '130px', width: '13%' }}>Mã hàng</th>
                   <th style={{ minWidth: '200px', width: '22%' }}>{exportMode === 'ASSEMBLY' ? 'Tên linh kiện' : 'Tên hàng'}</th>
                   <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                  <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn kho</th>
+                  <th style={{ minWidth: '90px', width: '8%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
                   <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
                   <th style={{ minWidth: '80px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
                   <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
@@ -986,7 +995,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                       <td className={styles.textCenter}>{index + 1}</td>
                       <td>
                         <ProductGridSelect
-                          products={products}
+                          products={warehouseScopedProducts}
                           inventoryMap={inventoryMap}
                           value={item.variantId}
                           onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
@@ -997,7 +1006,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                       </td>
                       <td>
                         <ProductGridSelect
-                          products={products}
+                          products={warehouseScopedProducts}
                           inventoryMap={inventoryMap}
                           value={item.variantId}
                           onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
@@ -1010,7 +1019,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                         {product?.unitName || 'Cái'}
                       </td>
                       <td className={styles.textCenter} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>
-                        {product ? (inventoryBalances.find(b => String(b.variantId) === String(product?.id) || String(b.itemCode) === String(product?.productCode) || String(b.itemCode) === String(product?.sku))?.totalQuantity || 0) : ''}
+                        {product ? (inventoryMap.get(String(product.id)) || 0) : ''}
                       </td>
                       <td className={styles.textRight}>
                         <input type="number" min="1" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />

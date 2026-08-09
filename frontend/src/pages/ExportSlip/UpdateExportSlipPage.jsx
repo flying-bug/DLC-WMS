@@ -160,12 +160,21 @@ function UpdateExportSlipPage() {
     const map = new Map();
     if (Array.isArray(inventoryBalances)) {
       inventoryBalances.forEach(b => {
-        if (b.variantId) map.set(String(b.variantId), Number(b.totalQuantity || 0));
-        else if (b.itemId) map.set(String(b.itemId), Number(b.totalQuantity || 0));
+        const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+        const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+        const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+        const stock = Math.max(0, availableQuantity);
+        if (b.variantId) map.set(String(b.variantId), stock);
+        else if (b.itemId) map.set(String(b.itemId), stock);
       });
     }
     return map;
   }, [inventoryBalances]);
+  const warehouseScopedProducts = useMemo(() => {
+    if (!form.warehouseId) return products;
+    const selectedIds = new Set(items.map(item => String(item.variantId || '')).filter(Boolean));
+    return products.filter(product => inventoryMap.has(String(product.id)) || selectedIds.has(String(product.id)));
+  }, [form.warehouseId, inventoryMap, items, products]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -751,7 +760,7 @@ function UpdateExportSlipPage() {
                       <th style={{ width: '12%' }}>Mã hàng</th>
                       <th style={{ width: '22%' }}>Tên hàng</th>
                       <th style={{ width: '7%' }}>ĐVT</th>
-                      <th style={{ width: '7%' }} className={styles.textCenter}>Tồn</th>
+                      <th style={{ width: '8%' }} className={styles.textCenter}>Tồn khả dụng</th>
                       <th style={{ width: '8%' }} className={styles.textRight}>SL</th>
                       <th style={{ width: '10%', textAlign: 'center' }}>Serial</th>
                       <th style={{ width: '8%', textAlign: 'center' }}>BH (T)</th>
@@ -769,7 +778,7 @@ function UpdateExportSlipPage() {
                           <td className={styles.textCenter}>{index + 1}</td>
                           <td>
                             <ProductGridSelect
-                              products={products}
+                              products={warehouseScopedProducts}
                               inventoryMap={inventoryMap}
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
@@ -780,7 +789,7 @@ function UpdateExportSlipPage() {
                           </td>
                           <td style={{ maxWidth: '300px' }}>
                             <ProductGridSelect
-                              products={products}
+                              products={warehouseScopedProducts}
                               inventoryMap={inventoryMap}
                               value={item.variantId}
                               onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
@@ -794,7 +803,7 @@ function UpdateExportSlipPage() {
                             {item.serialNumberId && <div className={styles.serialTag}>{item.scannedCode}</div>}
                           </td>
                           <td className={styles.textCenter} style={{ fontWeight: '600', color: '#0052cc' }}>
-                            {product ? (inventoryBalances.find(b => String(b.itemCode) === String(product?.productCode) || String(b.itemCode) === String(product?.sku))?.totalQuantity || 0) : ''}
+                            {product ? (inventoryMap.get(String(product.id)) || 0) : ''}
                           </td>
                           <td className={styles.textRight}>
                             <input type="number" min="0" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
