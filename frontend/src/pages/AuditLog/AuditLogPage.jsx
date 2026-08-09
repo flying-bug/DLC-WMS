@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
-import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
+import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import { exportToExcel } from '../../utils/excelExport';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import Modal from '../../components/ui/Modal/Modal';
 import { useToast } from '../../contexts/ToastContext';
 import styles from './AuditLogPage.module.css';
 import { formatDateTime as formatVietnamDateTime } from '../../utils/dateFormat';
@@ -30,22 +31,26 @@ const getActionBadgeClass = (action) => {
     return styles.badgeLogin;
 };
 
-const getModuleLabel = (module) => {
-    const moduleLabels = {
-        Account: 'Tài khoản',
-        Auth: 'Xác thực',
-        Product: 'Sản phẩm',
-        Unit: 'Đơn vị tính',
-        Permission: 'Phân quyền',
-        ExportSlip: 'Phiếu xuất kho',
-        ImportSlip: 'Phiếu nhập kho',
-        InventoryDocument: 'Chứng từ kho',
-        User: 'Người dùng',
-        Role: 'Vai trò',
-        Warehouse: 'Kho hàng',
-    };
+const MODULE_LABELS = {
+    Account: 'Tài khoản',
+    Auth: 'Xác thực',
+    Product: 'Sản phẩm',
+    Unit: 'Đơn vị tính',
+    Permission: 'Phân quyền',
+    ExportSlip: 'Phiếu xuất kho',
+    ImportSlip: 'Phiếu nhập kho',
+    InventoryDocument: 'Chứng từ kho',
+    User: 'Người dùng',
+    Role: 'Vai trò',
+    Warehouse: 'Kho hàng',
+    Supplier: 'Nhà cung cấp',
+    Customer: 'Khách hàng',
+    Category: 'Danh mục',
+    Brand: 'Thương hiệu'
+};
 
-    return moduleLabels[module] || module || 'Hệ thống';
+const getModuleLabel = (module) => {
+    return MODULE_LABELS[module] || module || 'Hệ thống';
 };
 
 const fieldLabels = {
@@ -98,7 +103,7 @@ function AuditLogPage() {
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
     const [page, setPage] = useState(0);
-    const [size, setSize] = useState(20);
+    const [size, setSize] = useState(10);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
 
@@ -201,30 +206,8 @@ function AuditLogPage() {
     const fallbackFields = Array.from(new Set([...Object.keys(detailBefore), ...Object.keys(detailAfter)]));
 
     return (
-        <div className={styles.page}>
-            <header className={styles.header}>
-                <div className={styles.headerLeft}>
-                    <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '10px', marginRight: '32px' }} onClick={() => navigate('/dashboard')}>
-                        <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <img src="/dl-logo.png" alt="Duy Long Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                        </div>
-                        <div className={styles.brandName} style={{ margin: 0 }}>Duy Long Computer</div>
-                    </div>
-                    <nav className={styles.navLinks}>
-                        <a onClick={() => navigate('/users')} className={styles.navLink}>Quản lý người dùng</a>
-                        <a onClick={() => navigate('/audit-log')} className={styles.navLinkActive}>Nhật ký hệ thống</a>
-                        <a onClick={() => navigate('/operations')} className={styles.navLink}>Trung tâm điều hành</a>
-                    </nav>
-                </div>
-                <div className={styles.headerRight}>
-
-                    <div className={styles.userInfoContainer}>
-                        <UserProfileDropdown />
-                    </div>
-                </div>
-            </header>
-
-            <main className={styles.main}>
+        <SuperAdminLayout>
+            <div className={styles.main}>
                 <div className={styles.pageHeader}>
                     <div>
                         <h1 className={styles.pageTitle}>Nhật ký hệ thống</h1>
@@ -242,28 +225,31 @@ function AuditLogPage() {
                                 placeholder="Tìm tên, nội dung hoặc ID..."
                                 value={searchTerm}
                                 onChange={(e) => { setSearchTerm(e.target.value); }}
+                                aria-label="Tìm kiếm nhật ký hệ thống"
                             />
                             {searchTerm && (
-                                <button className={styles.clearSearchBtn} onClick={() => { setSearchTerm(''); setDebouncedSearch(''); setPage(0); }}>
-                                    <i className="bi bi-x-circle-fill"></i>
+                                <button type="button" className={styles.clearSearchBtn} onClick={() => { setSearchTerm(''); setDebouncedSearch(''); setPage(0); }} aria-label="Xóa nội dung tìm kiếm">
+                                    <i className="bi bi-x-circle-fill" aria-hidden="true"></i>
                                 </button>
                             )}
                         </div>
                     </div>
 
                     <div className={styles.filterSelectGroup}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Từ:</span>
+                        <div className={styles.dateFilterField}>
+                            <label htmlFor="audit-from-date">Từ:</label>
                             <input
+                                id="audit-from-date"
                                 type="date"
                                 className={styles.filterSelect}
                                 value={fromDateInput}
                                 onChange={(e) => { setFromDateInput(e.target.value); setPage(0); }}
                             />
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Đến:</span>
+                        <div className={styles.dateFilterField}>
+                            <label htmlFor="audit-to-date">Đến:</label>
                             <input
+                                id="audit-to-date"
                                 type="date"
                                 className={styles.filterSelect}
                                 value={toDateInput}
@@ -274,30 +260,28 @@ function AuditLogPage() {
                             className={styles.filterSelect}
                             value={selectedModule}
                             onChange={(e) => { setSelectedModule(e.target.value); setPage(0); }}
+                            aria-label="Lọc theo phân hệ"
                         >
                             <option value="">Tất cả phân hệ</option>
-                            <option value="Auth">Xác thực</option>
-                            <option value="Account">Tài khoản</option>
-                            <option value="Permission">Phân quyền</option>
-                            <option value="Product">Sản phẩm</option>
-                            <option value="Unit">Đơn vị tính</option>
-                            <option value="ExportSlip">Phiếu xuất kho</option>
+                            {Object.entries(MODULE_LABELS).map(([key, label]) => (
+                                <option key={key} value={key}>{label}</option>
+                            ))}
                         </select>
                     </div>
 
                     <div className={styles.filterActions}>
-                        <button className={styles.iconBtn} onClick={() => {
+                        <button type="button" className={styles.iconBtn} onClick={() => {
                             setSearchTerm(''); setDebouncedSearch(''); setFromDateInput(''); setToDateInput(''); setSelectedModule(''); setPage(0);
-                        }} title="Làm mới">
+                        }} title="Làm mới" aria-label="Làm mới bộ lọc">
                             <i className="bi bi-arrow-clockwise"></i>
                         </button>
-                        <button className={styles.iconBtn} onClick={handleExport} title="Xuất Excel">
+                        <button type="button" className={styles.iconBtn} onClick={handleExport} title="Xuất Excel" aria-label="Xuất nhật ký ra Excel">
                             <i className="bi bi-file-earmark-excel"></i>
                         </button>
                     </div>
                 </div>
 
-                <div className={styles.tableContainer}>
+                <div className="table-responsive">
                     <table className={styles.table}>
                         <thead>
                             <tr>
@@ -312,12 +296,17 @@ function AuditLogPage() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="6" style={{ textAlign: 'center', padding: '30px' }}>Đang tải dữ liệu...</td>
+                                    <td colSpan="6" style={{ textAlign: 'center', padding: '20px 0', color: '#64748b' }}>
+                                        <i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite', display: 'inline-block', marginRight: '8px' }}></i>
+                                        Đang tải dữ liệu...
+                                    </td>
                                 </tr>
                             ) : logs.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-subtle)' }}>
-                                        Không tìm thấy nhật ký nào.
+                                    <td colSpan="6" style={{ textAlign: 'center', padding: '50px 0' }}>
+                                        <div className={styles.detailEmpty}>
+                                            Không tìm thấy nhật ký nào
+                                        </div>
                                     </td>
                                 </tr>
                             ) : (
@@ -338,9 +327,11 @@ function AuditLogPage() {
                                         <td className={styles.ipCol}>{log.ip || 'N/A'}</td>
                                         <td className={styles.actionCell}>
                                             <button
+                                                type="button"
                                                 className={styles.btnView}
                                                 onClick={() => handleViewDetail(log.id)}
                                                 title="Xem chi tiết"
+                                                aria-label={`Xem chi tiết nhật ký ${log.id}`}
                                             >
                                                 <i className="bi bi-eye"></i>
                                             </button>
@@ -350,6 +341,7 @@ function AuditLogPage() {
                             )}
                         </tbody>
                     </table>
+                </div>
 
                     <Pagination
                         page={page}
@@ -359,18 +351,23 @@ function AuditLogPage() {
                         onPageChange={handlePageChange}
                         onSizeChange={(s) => { setSize(s); setPage(0); }}
                     />
-                </div>
-            </main>
+            </div>
 
             {(selectedLog || detailLoading || detailError) && (
-                <div className="misa-modal-overlay" onClick={closeDetail}>
-                    <div className="misa-modal" onClick={(e) => e.stopPropagation()} style={{ width: '900px', maxWidth: '95vw', height: '80vh' }}>
-                        <div className="misa-modal-header">
+                <Modal
+                    isOpen
+                    onClose={closeDetail}
+                    ariaLabelledBy="audit-detail-title"
+                    dialogClassName={styles.detailModal}
+                >
+                        <div className={styles.detailHeader}>
                             <div>
-                                <h2>Chi tiết nhật ký thao tác</h2>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--color-text-light, #64748b)' }}>{selectedLog?.description || 'Đang tải chi tiết nhật ký'}</p>
+                                <h2 id="audit-detail-title">Chi tiết nhật ký thao tác</h2>
+                                <p>{selectedLog?.description || 'Đang tải chi tiết nhật ký'}</p>
                             </div>
-                            <i className="fas fa-times" onClick={closeDetail} style={{ cursor: 'pointer', fontSize: '18px', color: 'var(--color-text-light, #94a3b8)' }}></i>
+                            <button type="button" className={styles.closeBtn} onClick={closeDetail} aria-label="Đóng chi tiết nhật ký">
+                                <i className="fas fa-times" aria-hidden="true"></i>
+                            </button>
                         </div>
 
                         {detailLoading ? (
@@ -378,7 +375,7 @@ function AuditLogPage() {
                         ) : detailError ? (
                             <div className={styles.detailEmpty}>{detailError}</div>
                         ) : (
-                            <div className="misa-modal-body">
+                            <div className={styles.detailBody}>
                                 <section className={styles.detailPanel}>
                                     <h3>Thông tin chung</h3>
                                     <dl className={styles.infoList}>
@@ -404,7 +401,7 @@ function AuditLogPage() {
                                     </div>
 
                                     {detailChanges.length > 0 ? (
-                                        <table className={styles.diffTable}>
+                                        <div className={styles.diffTableWrap}><table className={styles.diffTable}>
                                             <thead>
                                                 <tr>
                                                     <th>Trường</th>
@@ -421,9 +418,9 @@ function AuditLogPage() {
                                                     </tr>
                                                 ))}
                                             </tbody>
-                                        </table>
+                                        </table></div>
                                     ) : fallbackFields.length > 0 ? (
-                                        <table className={styles.diffTable}>
+                                        <div className={styles.diffTableWrap}><table className={styles.diffTable}>
                                             <thead>
                                                 <tr>
                                                     <th>Trường</th>
@@ -440,7 +437,7 @@ function AuditLogPage() {
                                                     </tr>
                                                 ))}
                                             </tbody>
-                                        </table>
+                                        </table></div>
                                     ) : (
                                         <div className={styles.detailEmpty}>Nhật ký này chưa có dữ liệu trước/sau.</div>
                                     )}
@@ -454,10 +451,9 @@ function AuditLogPage() {
                                 </section>
                             </div>
                         )}
-                    </div>
-                </div>
+                </Modal>
             )}
-        </div>
+        </SuperAdminLayout>
     );
 }
 

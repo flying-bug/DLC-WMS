@@ -49,7 +49,7 @@ public class RepairController {
     // =========================================================================
 
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:view')")
     @Operation(
             summary = "Lấy danh sách lệnh sửa chữa",
             description = "Trả về danh sách có phân trang, lọc theo keyword và trạng thái"
@@ -67,7 +67,7 @@ public class RepairController {
     }
 
     @GetMapping("/check-code")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:view')")
     @Operation(summary = "Kiểm tra mã lệnh sửa chữa có bị trùng không",
             description = "Trả về {exists: true/false}. Dùng để validate real-time trên Frontend.")
     public ApiResponse<java.util.Map<String, Boolean>> checkRepairCode(@RequestParam String code) {
@@ -76,7 +76,7 @@ public class RepairController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:view')")
     @Operation(
             summary = "Lấy chi tiết lệnh sửa chữa",
             description = "Trả về chi tiết lệnh kèm danh sách linh kiện (lines) và phí dịch vụ (fees)"
@@ -89,7 +89,7 @@ public class RepairController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:add')")
     @Operation(
             summary = "Tạo lệnh sửa chữa mới",
             description = "Tạo lệnh sửa chữa với trạng thái DRAFT. Bắt buộc: partnerId, productId."
@@ -101,7 +101,7 @@ public class RepairController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:edit')")
     @Operation(
             summary = "Cập nhật lệnh sửa chữa",
             description = "Chỉ cho phép cập nhật khi lệnh đang ở trạng thái DRAFT hoặc QUOTATION"
@@ -116,7 +116,7 @@ public class RepairController {
     }
 
     @PatchMapping("/{id}/internal-notes")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:edit')")
     @Operation(summary = "Cập nhật ghi chú nội bộ")
     public ApiResponse<RepairResponse> updateInternalNotes(
             @PathVariable Long id,
@@ -131,7 +131,7 @@ public class RepairController {
 
     @PostMapping("/{id}/lines")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:add')")
     @Operation(
             summary = "Thêm linh kiện vào lệnh sửa chữa",
             description = "actionType: ADD (lấy từ kho) hoặc REMOVE (tháo ra vào Scrap). " +
@@ -147,7 +147,7 @@ public class RepairController {
     }
 
     @DeleteMapping("/{id}/lines/{lineId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:delete')")
     @Operation(
             summary = "Xóa dòng linh kiện khỏi lệnh sửa chữa",
             description = "Chỉ xóa được khi lệnh ở trạng thái DRAFT hoặc QUOTATION"
@@ -159,7 +159,7 @@ public class RepairController {
     }
 
     @PutMapping("/{id}/lines/{lineId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:edit')")
     @Operation(
             summary = "Cập nhật dòng linh kiện trong lệnh sửa chữa"
     )
@@ -177,7 +177,7 @@ public class RepairController {
 
     @PostMapping("/{id}/fees")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:add')")
     @Operation(
             summary = "Thêm phí dịch vụ vào lệnh sửa chữa",
             description = "VD: Phí vệ sinh máy, Phí công thợ. Nếu bảo hành thì feeAmount tự động = 0."
@@ -191,7 +191,7 @@ public class RepairController {
     }
 
     @DeleteMapping("/{id}/fees/{feeId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:delete')")
     @Operation(
             summary = "Xóa dòng phí dịch vụ khỏi lệnh sửa chữa",
             description = "Chỉ xóa được khi lệnh ở trạng thái DRAFT hoặc QUOTATION"
@@ -203,7 +203,7 @@ public class RepairController {
     }
 
     @PutMapping("/{id}/fees/{feeId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:edit')")
     @Operation(
             summary = "Cập nhật dòng phí dịch vụ trong lệnh sửa chữa"
     )
@@ -220,7 +220,7 @@ public class RepairController {
     // =========================================================================
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('repair:edit')")
     @Operation(
             summary = "Chuyển trạng thái lệnh sửa chữa",
             description = """

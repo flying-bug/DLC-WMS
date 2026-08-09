@@ -42,7 +42,7 @@ public class PurchaseOrderController {
     // ─── GET: Danh sách đơn mua hàng ───────────────────────────────────
     @GetMapping
     @Operation(summary = "Danh sách đơn mua hàng")
-    @PreAuthorize("hasAuthority('import:view') or hasAuthority('purchase_order:view')")
+    @PreAuthorize("hasAuthority('purchase_order:view')")
     public ApiResponse<List<PurchaseOrderResponse>> getPurchaseOrders(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
@@ -56,7 +56,7 @@ public class PurchaseOrderController {
     // ─── GET: Sinh mã PO tự động ────────────────────────────────────────
     @GetMapping("/next-code")
     @Operation(summary = "Sinh mã đơn mua hàng tự động")
-    @PreAuthorize("hasAuthority('import:add') or hasAuthority('purchase_order:add')")
+    @PreAuthorize("hasAuthority('purchase_order:add')")
     public ApiResponse<String> getNextCode() {
         return ApiResponse.success(purchaseOrderService.generateNextPoCode());
     }
@@ -64,7 +64,7 @@ public class PurchaseOrderController {
     // ─── GET: Chi tiết đơn mua hàng ────────────────────────────────────
     @GetMapping("/{id}")
     @Operation(summary = "Chi tiết đơn mua hàng")
-    @PreAuthorize("hasAuthority('import:view') or hasAuthority('purchase_order:view')")
+    @PreAuthorize("hasAuthority('purchase_order:view')")
     public ApiResponse<PurchaseOrderResponse> getPurchaseOrderById(@PathVariable Long id) {
         return ApiResponse.success(purchaseOrderService.getPurchaseOrderById(id));
     }
@@ -72,7 +72,7 @@ public class PurchaseOrderController {
     // ─── POST: Tạo đơn mua hàng ────────────────────────────────────────
     @PostMapping
     @Operation(summary = "Tạo đơn mua hàng mới")
-    @PreAuthorize("hasAuthority('import:add') or hasAuthority('purchase_order:add')")
+    @PreAuthorize("hasAuthority('purchase_order:add')")
     public ApiResponse<PurchaseOrderResponse> createPurchaseOrder(
             @Valid @RequestBody PurchaseOrderRequest request,
             HttpServletRequest servletRequest
@@ -94,7 +94,7 @@ public class PurchaseOrderController {
     // ─── PUT: Cập nhật đơn mua hàng (chỉ DRAFT) ────────────────────────
     @PutMapping("/{id}")
     @Operation(summary = "Cập nhật đơn mua hàng (chỉ khi DRAFT)")
-    @PreAuthorize("hasAuthority('import:edit') or hasAuthority('purchase_order:edit')")
+    @PreAuthorize("hasAuthority('purchase_order:edit')")
     public ApiResponse<PurchaseOrderResponse> updatePurchaseOrder(
             @PathVariable Long id,
             @Valid @RequestBody PurchaseOrderRequest request,
@@ -117,7 +117,7 @@ public class PurchaseOrderController {
     // ─── PUT: Duyệt đơn ─────────────────────────────────────────────────
     @PutMapping("/{id}/approve")
     @Operation(summary = "Duyệt đơn mua hàng — ghi nhận công nợ phải trả")
-    @PreAuthorize("hasAuthority('import:edit') or hasAuthority('purchase_order:edit')")
+    @PreAuthorize("hasAuthority('purchase_order:edit')")
     public ApiResponse<PurchaseOrderResponse> approvePurchaseOrder(
             @PathVariable Long id,
             HttpServletRequest servletRequest
@@ -139,7 +139,7 @@ public class PurchaseOrderController {
     // ─── PUT: Hủy đơn ───────────────────────────────────────────────────
     @PutMapping("/{id}/cancel")
     @Operation(summary = "Hủy đơn mua hàng")
-    @PreAuthorize("hasAuthority('import:edit') or hasAuthority('purchase_order:edit')")
+    @PreAuthorize("hasAuthority('purchase_order:edit')")
     public ApiResponse<PurchaseOrderResponse> cancelPurchaseOrder(
             @PathVariable Long id,
             HttpServletRequest servletRequest

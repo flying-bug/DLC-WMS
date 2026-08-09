@@ -46,7 +46,7 @@ public class AssemblyOrderController {
 
     @GetMapping("/assembly-boms")
     @Operation(summary = "View assembly BOMs")
-    @PreAuthorize("hasAuthority('assembly:view')")
+    @PreAuthorize("hasAuthority('assembly_config:view')")
     public ApiResponse<List<AssemblyBomResponse>> getBoms(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long productId
@@ -56,14 +56,14 @@ public class AssemblyOrderController {
 
     @GetMapping("/assembly-boms/{id}")
     @Operation(summary = "View assembly BOM detail")
-    @PreAuthorize("hasAuthority('assembly:view')")
+    @PreAuthorize("hasAuthority('assembly_config:view')")
     public ApiResponse<AssemblyBomResponse> getBomById(@PathVariable Long id) {
         return ApiResponse.success(assemblyOrderService.getBomById(id));
     }
 
     @PostMapping("/assembly-boms")
     @Operation(summary = "Create assembly BOM")
-    @PreAuthorize("hasAuthority('assembly:add')")
+    @PreAuthorize("hasAuthority('assembly_config:add')")
     public ApiResponse<AssemblyBomResponse> createBom(@Valid @RequestBody AssemblyBomRequest request, HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
@@ -79,7 +79,7 @@ public class AssemblyOrderController {
 
     @PutMapping("/assembly-boms/{id}")
     @Operation(summary = "Update assembly BOM")
-    @PreAuthorize("hasAuthority('assembly:edit')")
+    @PreAuthorize("hasAuthority('assembly_config:edit')")
     public ApiResponse<AssemblyBomResponse> updateBom(@PathVariable Long id, @Valid @RequestBody AssemblyBomRequest request, HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();

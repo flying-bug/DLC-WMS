@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../Modal/Modal';
 import styles from './EmployeeDrawer.module.css';
@@ -11,6 +11,8 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState('');
+    const drawerRef = useRef(null);
+    const closeButtonRef = useRef(null);
 
     // Sync formData when user prop changes
     useEffect(() => {
@@ -33,6 +35,55 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
             return () => clearTimeout(timer);
         }
     }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) return undefined;
+
+        const previouslyFocused = document.activeElement;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        const focusTimer = window.setTimeout(() => closeButtonRef.current?.focus(), 0);
+
+        return () => {
+            window.clearTimeout(focusTimer);
+            document.body.style.overflow = previousOverflow;
+            previouslyFocused?.focus?.();
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen || showConfirmModal) return undefined;
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                onClose();
+                return;
+            }
+
+            if (event.key !== 'Tab' || !drawerRef.current) return;
+            const focusableElements = Array.from(drawerRef.current.querySelectorAll(
+                'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+            ));
+            if (focusableElements.length === 0) {
+                event.preventDefault();
+                drawerRef.current.focus();
+                return;
+            }
+
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+            if (event.shiftKey && document.activeElement === firstElement) {
+                event.preventDefault();
+                lastElement.focus();
+            } else if (!event.shiftKey && document.activeElement === lastElement) {
+                event.preventDefault();
+                firstElement.focus();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose, showConfirmModal]);
 
     if (!user || !formData) return null;
 
@@ -95,11 +146,11 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     <>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Email công việc</label>
-                            <input type="email" name="email" value={formData.email} onChange={handleChange} className={styles.input} />
+                            <input type="email" name="email" value={formData.email} onChange={handleChange} className={styles.input} aria-label="Email công việc" />
                         </div>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Số điện thoại</label>
-                            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className={styles.input} />
+                            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className={styles.input} aria-label="Số điện thoại" />
                         </div>
                     </>
                 ) : (
@@ -124,7 +175,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     <>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Bộ phận</label>
-                            <select name="department" value={formData.department} onChange={handleChange} className={`${styles.input} ${styles.select}`}>
+                            <select name="department" value={formData.department} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Bộ phận">
                                 <option value="Phòng Kỹ thuật & Bảo hành">Phòng Kỹ thuật & Bảo hành</option>
                                 <option value="Phòng Kinh doanh">Phòng Kinh doanh</option>
                                 <option value="Kho bãi">Kho bãi</option>
@@ -133,7 +184,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                         </div>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Chức danh</label>
-                            <select name="position" value={formData.position} onChange={handleChange} className={`${styles.input} ${styles.select}`}>
+                            <select name="position" value={formData.position} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Chức danh">
                                 <option value="Trưởng nhóm Kỹ thuật">Trưởng nhóm Kỹ thuật</option>
                                 <option value="Kỹ thuật viên">Kỹ thuật viên</option>
                                 <option value="Nhân viên kinh doanh">Nhân viên kinh doanh</option>
@@ -165,11 +216,11 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     <>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Ngày sinh</label>
-                            <input type="date" name="dob" value={formData.dob} onChange={handleChange} className={styles.input} />
+                            <input type="date" name="dob" value={formData.dob} onChange={handleChange} className={styles.input} aria-label="Ngày sinh" />
                         </div>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Giới tính</label>
-                            <select name="gender" value={formData.gender} onChange={handleChange} className={`${styles.input} ${styles.select}`}>
+                            <select name="gender" value={formData.gender} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Giới tính">
                                 <option value="Nam">Nam</option>
                                 <option value="Nữ">Nữ</option>
                                 <option value="Khác">Khác</option>
@@ -194,11 +245,11 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     <>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Địa chỉ thường trú</label>
-                            <input type="text" name="address" value={formData.address} onChange={handleChange} className={styles.input} />
+                            <input type="text" name="address" value={formData.address} onChange={handleChange} className={styles.input} aria-label="Địa chỉ thường trú" />
                         </div>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Số CMND/CCCD</label>
-                            <input type="text" name="idCard" value={formData.idCard} onChange={handleChange} className={styles.input} />
+                            <input type="text" name="idCard" value={formData.idCard} onChange={handleChange} className={styles.input} aria-label="Số CMND hoặc CCCD" />
                         </div>
                     </>
                 ) : (
@@ -223,11 +274,11 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     <>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Ngày chính thức</label>
-                            <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className={styles.input} />
+                            <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className={styles.input} aria-label="Ngày chính thức" />
                         </div>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Loại hợp đồng</label>
-                            <select name="contractType" value={formData.contractType} onChange={handleChange} className={`${styles.input} ${styles.select}`}>
+                            <select name="contractType" value={formData.contractType} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Loại hợp đồng">
                                 <option value="Chính thức">Chính thức</option>
                                 <option value="Thử việc">Thử việc</option>
                                 <option value="Thời vụ">Thời vụ</option>
@@ -251,7 +302,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                 {isEditMode ? (
                     <div className={styles.formGroup}>
                         <label className={styles.detailLabel}>Trạng thái</label>
-                        <select name="statusLabel" value={formData.statusLabel} onChange={handleChange} className={`${styles.input} ${styles.select}`}>
+                        <select name="statusLabel" value={formData.statusLabel} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Trạng thái">
                             <option value="Đang hoạt động">Đang hoạt động</option>
                             <option value="Chờ duyệt">Chờ duyệt</option>
                             <option value="Ngừng hoạt động">Ngừng hoạt động</option>
@@ -324,14 +375,27 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
 
     return (
         <>
-            <div className={`${styles.overlay} ${isOpen ? styles.overlayOpen : ''}`} onClick={onClose} />
-            <div className={`${styles.drawer} ${isOpen ? styles.drawerOpen : ''}`}>
+            <div className={`${styles.overlay} ${isOpen ? styles.overlayOpen : ''}`} onClick={onClose} aria-hidden="true" />
+            <div
+                ref={drawerRef}
+                className={`${styles.drawer} ${isOpen ? styles.drawerOpen : ''}`}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="employee-drawer-title"
+                aria-hidden={!isOpen}
+                tabIndex={-1}
+                {...(!isOpen ? { inert: '' } : {})}
+            >
                 <div className={styles.header}>
                     <div className={styles.headerTop}>
                         <div className={styles.userInfo}>
-                            <div className={styles.avatar}>{formData.initials}</div>
+                            {formData.imageUrl ? (
+                                <img src={formData.imageUrl} className={styles.avatarImage} alt={formData.name} />
+                            ) : (
+                                <div className={styles.avatar}>{formData.initials}</div>
+                            )}
                             <div className={styles.userDetails}>
-                                <h2 className={styles.userName}>{formData.name}</h2>
+                                <h2 id="employee-drawer-title" className={styles.userName}>{formData.name}</h2>
                                 <span className={styles.userCode}>Mã NV: {formData.code}</span>
                                 <div className={styles.badges}>
                                     <span className={styles.statusBadge} style={formData.status !== 'active' ? { background: 'var(--status-warning-bg)', color: 'var(--color-warning-dark)' } : {}}>
@@ -341,21 +405,21 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                                 </div>
                             </div>
                         </div>
-                        <button className={styles.btnClose} onClick={onClose}>
-                            <i className="bi bi-x-lg"></i>
+                        <button ref={closeButtonRef} type="button" className={styles.btnClose} onClick={onClose} aria-label="Đóng thông tin nhân viên">
+                            <i className="bi bi-x-lg" aria-hidden="true"></i>
                         </button>
                     </div>
 
-                    <div className={styles.tabs}>
-                        <button className={`${styles.tabBtn} ${activeTab === 'general' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('general')}>Thông tin chung</button>
-                        <button className={`${styles.tabBtn} ${activeTab === 'employee' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('employee')}>Thông tin nhân viên</button>
-                        <button className={`${styles.tabBtn} ${activeTab === 'role' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('role')}>Chức năng/Vai trò</button>
+                    <div className={styles.tabs} role="tablist" aria-label="Nhóm thông tin nhân viên">
+                        <button id="drawer-tab-general" type="button" role="tab" aria-selected={activeTab === 'general'} className={`${styles.tabBtn} ${activeTab === 'general' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('general')}>Thông tin chung</button>
+                        <button id="drawer-tab-employee" type="button" role="tab" aria-selected={activeTab === 'employee'} className={`${styles.tabBtn} ${activeTab === 'employee' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('employee')}>Thông tin nhân viên</button>
+                        <button id="drawer-tab-role" type="button" role="tab" aria-selected={activeTab === 'role'} className={`${styles.tabBtn} ${activeTab === 'role' ? styles.tabBtnActive : ''}`} onClick={() => setActiveTab('role')}>Chức năng/Vai trò</button>
                     </div>
                 </div>
 
-                <div className={styles.body}>
+                <div className={styles.body} role="tabpanel" aria-labelledby={`drawer-tab-${activeTab}`}>
                     {saveError && (
-                        <div className={styles.errorAlert}>
+                        <div className={styles.errorAlert} role="alert">
                             <i className="bi bi-exclamation-triangle"></i>
                             <span>{saveError}</span>
                         </div>
@@ -368,11 +432,11 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                 <div className={styles.footer}>
                     {isEditMode ? (
                         <>
-                            <button className="btnDefault" onClick={handleCancel}>Hủy</button>
-                            <button className="btnPrimary" onClick={handleInitialSave} disabled={saving}>Lưu thay đổi</button>
+                            <button type="button" className="btnDefault" onClick={handleCancel}>Hủy</button>
+                            <button type="button" className="btnPrimary" onClick={handleInitialSave} disabled={saving}>Lưu thay đổi</button>
                         </>
                     ) : (
-                        <button className="btnDefault" onClick={() => setIsEditMode(true)}>Chỉnh sửa</button>
+                        <button type="button" className="btnDefault" onClick={() => setIsEditMode(true)}>Chỉnh sửa</button>
                     )}
                 </div>
             </div>
