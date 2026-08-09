@@ -54,7 +54,7 @@ import org.springframework.data.domain.PageRequest;
 @Slf4j
 public class RepairService {
 
-    private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "QUOTATION", "CONFIRMED", "UNDER_REPAIR");
+    private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "QUOTATION", "UNDER_REPAIR");
     private static final Set<String> VALID_INVOICE_METHODS = Set.of("none", "b4repair", "after_repair");
     private static final Set<String> VALID_ACTION_TYPES = Set.of("ADD", "REPLACE", "REMOVE");
 
@@ -319,6 +319,7 @@ public class RepairService {
             throw new BusinessException(SystemMessage.REP_LINE_NOT_FOUND);
         }
 
+        repair.getRepairLines().removeIf(existing -> existing.getId().equals(lineId));
         repairLineRepository.delete(line);
         recalculateTotalAmount(repair);
     }
@@ -383,6 +384,7 @@ public class RepairService {
             throw new BusinessException(SystemMessage.REP_FEE_NOT_FOUND);
         }
 
+        repair.getFees().removeIf(existing -> existing.getId().equals(feeId));
         repairFeeRepository.delete(fee);
         recalculateTotalAmount(repair);
     }

@@ -64,16 +64,25 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
     @Query("""
             SELECT COALESCE(SUM(b.quantityOnHand - b.quantityReserved), 0)
             FROM InventoryBalance b
+            JOIN ProductVariant v ON v.id = b.variantId
+            JOIN v.product p
             LEFT JOIN SerialNumber sn ON sn.id = b.serialNumberId
             WHERE b.warehouseId = :warehouseId
               AND b.variantId = :variantId
               AND b.stockStatus = :stockStatus
-              AND NOT EXISTS (
-                  SELECT 1 FROM AssemblyOrderSerial aos
-                  WHERE aos.componentVariant.id = b.variantId
-                    AND sn.serialNumber IS NOT NULL
-                    AND LOWER(aos.componentSerial) = LOWER(sn.serialNumber)
-                    AND (aos.status IS NULL OR aos.status = 'ACTIVE')
+              AND (
+                  (
+                      p.trackSerial = true
+                      AND b.serialNumberId IS NOT NULL
+                      AND sn.status = 'AVAILABLE'
+                      AND NOT EXISTS (
+                          SELECT 1 FROM DeviceComponentSerial dcs
+                          WHERE dcs.componentVariant.id = b.variantId
+                            AND LOWER(dcs.componentSerial) = LOWER(sn.serialNumber)
+                            AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                      )
+                  )
+                  OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
               )
             """)
     java.math.BigDecimal sumAvailableLooseQuantityByWarehouseAndVariant(@Param("warehouseId") Long warehouseId, @Param("variantId") Long variantId, @Param("stockStatus") String stockStatus);

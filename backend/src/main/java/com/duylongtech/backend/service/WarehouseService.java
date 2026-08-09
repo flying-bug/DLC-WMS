@@ -39,7 +39,7 @@ public class WarehouseService {
     private final UserRepository userRepository;
     private final CodeGeneratorService codeGeneratorService;
     private final com.duylongtech.backend.repository.SerialNumberRepository serialNumberRepository;
-    private final com.duylongtech.backend.repository.AssemblyOrderSerialRepository assemblyOrderSerialRepository;
+    private final com.duylongtech.backend.repository.DeviceComponentSerialRepository deviceComponentSerialRepository;
 
     // ──────────────────────────────────────────────────────────
     // US1: Tạo mới kho
@@ -329,7 +329,7 @@ public class WarehouseService {
             return availableSerials;
         }
 
-        java.util.Set<String> installedComponentSerials = assemblyOrderSerialRepository
+        java.util.Set<String> installedComponentSerials = deviceComponentSerialRepository
                 .findActiveComponentSerials(variantId, availableSerials)
                 .stream()
                 .map(serial -> serial == null ? "" : serial.trim().toLowerCase(java.util.Locale.ROOT))
@@ -351,16 +351,16 @@ public class WarehouseService {
             return java.util.Collections.emptyList();
         }
 
-        // 2. Lấy các bản ghi ghép nối lịch sử có chứa các Serial này
-        List<com.duylongtech.backend.entity.AssemblyOrderSerial> mappings = assemblyOrderSerialRepository.findByTargetVariantIdAndTargetSerialsIn(variantId, availableSerials);
+        // 2. Lấy cấu hình linh kiện đang dùng của các serial thành phẩm này
+        List<com.duylongtech.backend.entity.DeviceComponentSerial> mappings = deviceComponentSerialRepository.findActiveByTargetVariantIdAndTargetSerialsIn(variantId, availableSerials);
 
         // 3. Gom nhóm theo Target Serial
-        java.util.Map<String, List<com.duylongtech.backend.entity.AssemblyOrderSerial>> grouped = mappings.stream()
-                .collect(java.util.stream.Collectors.groupingBy(com.duylongtech.backend.entity.AssemblyOrderSerial::getTargetSerial));
+        java.util.Map<String, List<com.duylongtech.backend.entity.DeviceComponentSerial>> grouped = mappings.stream()
+                .collect(java.util.stream.Collectors.groupingBy(com.duylongtech.backend.entity.DeviceComponentSerial::getTargetSerial));
 
         // 4. Map sang SerialTreeResponse
         return availableSerials.stream().map(targetSerial -> {
-            List<com.duylongtech.backend.entity.AssemblyOrderSerial> comps = grouped.getOrDefault(targetSerial, java.util.Collections.emptyList());
+            List<com.duylongtech.backend.entity.DeviceComponentSerial> comps = grouped.getOrDefault(targetSerial, java.util.Collections.emptyList());
             
             String targetSku = comps.isEmpty() ? "" : comps.get(0).getTargetVariant().getSku();
             String targetName = comps.isEmpty() ? "" : comps.get(0).getTargetVariant().getProduct().getProductName() + " - " + comps.get(0).getTargetVariant().getVariantName();
@@ -372,6 +372,9 @@ public class WarehouseService {
                         .componentSerial(c.getComponentSerial())
                         .componentSku(cSku)
                         .componentName(cName)
+                        .status(c.getStatus())
+                        .installedAt(c.getInstalledAt())
+                        .removedAt(c.getRemovedAt())
                         .build();
             }).collect(java.util.stream.Collectors.toList());
 

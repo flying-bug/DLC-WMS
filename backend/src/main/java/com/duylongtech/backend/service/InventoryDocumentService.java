@@ -33,7 +33,7 @@ import com.duylongtech.backend.repository.SalesOrderRepository;
 import com.duylongtech.backend.entity.SalesOrder;
 import com.duylongtech.backend.entity.SalesOrderLine;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
-import com.duylongtech.backend.repository.AssemblyOrderSerialRepository;
+import com.duylongtech.backend.repository.DeviceComponentSerialRepository;
 import com.duylongtech.backend.repository.StocktakeRepository;
 import com.duylongtech.backend.repository.RepairRepository;
 import com.duylongtech.backend.repository.PurchaseOrderRepository;
@@ -99,7 +99,7 @@ public class InventoryDocumentService {
     private final ProductRepository productRepository;
     private final AssemblyOrderRepository assemblyOrderRepository;
     private final AssemblyBomRepository assemblyBomRepository;
-    private final AssemblyOrderSerialRepository assemblyOrderSerialRepository;
+    private final DeviceComponentSerialRepository deviceComponentSerialRepository;
     private final StocktakeRepository stocktakeRepository;
     private final SalesOrderRepository salesOrderRepository;
     private final RepairRepository repairRepository;
@@ -619,7 +619,7 @@ public class InventoryDocumentService {
         if (serial == null || serial.getVariantId() == null || trimToNull(serial.getSerialNumber()) == null) {
             return;
         }
-        boolean installedInPc = assemblyOrderSerialRepository.existsActiveComponentSerial(
+        boolean installedInPc = deviceComponentSerialRepository.existsActiveComponentSerial(
                 serial.getVariantId(), serial.getSerialNumber().trim());
         if (installedInPc) {
             throw new BusinessException("Serial " + serial.getSerialNumber()

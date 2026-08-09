@@ -72,7 +72,7 @@ public class RepairWorkflowService {
     private final ProductVariantRepository productVariantRepository;
     private final InventoryDocumentService inventoryDocumentService;
     private final SerialNumberRepository serialNumberRepository;
-    private final AssemblyOrderSerialRepository assemblyOrderSerialRepository;
+    private final DeviceComponentSerialRepository deviceComponentSerialRepository;
 
     /**
      * Chuyển trạng thái chính.
@@ -443,8 +443,8 @@ public class RepairWorkflowService {
 
         String targetSerial = targetSerialNumber.getSerialNumber().trim();
         Long targetVariantId = targetSerialNumber.getVariantId();
-        List<AssemblyOrderSerial> mappings = new java.util.ArrayList<>(
-                assemblyOrderSerialRepository.findByTargetVariantIdAndTargetSerial(targetVariantId, targetSerial));
+        List<DeviceComponentSerial> mappings = new java.util.ArrayList<>(
+                deviceComponentSerialRepository.findByTargetVariantIdAndTargetSerial(targetVariantId, targetSerial));
 
         if (mappings.isEmpty()) {
             log.info("[Repair {}] Serial {} chưa có mapping lắp ráp, bỏ qua cập nhật cấu hình linh kiện",
@@ -453,18 +453,18 @@ public class RepairWorkflowService {
         }
 
         AssemblyOrder sourceOrder = mappings.stream()
-                .map(AssemblyOrderSerial::getAssemblyOrder)
+                .map(DeviceComponentSerial::getSourceAssemblyOrder)
                 .filter(java.util.Objects::nonNull)
                 .findFirst()
                 .orElse(null);
         ProductVariant targetVariant = mappings.stream()
-                .map(AssemblyOrderSerial::getTargetVariant)
+                .map(DeviceComponentSerial::getTargetVariant)
                 .filter(java.util.Objects::nonNull)
                 .findFirst()
                 .orElseGet(() -> productVariantRepository.findById(targetVariantId).orElse(null));
 
-        if (sourceOrder == null || targetVariant == null) {
-            log.warn("[Repair {}] Mapping serial {} thiếu lệnh lắp ráp hoặc SKU thành phẩm, bỏ qua cập nhật",
+        if (targetVariant == null) {
+            log.warn("[Repair {}] Mapping serial {} thiếu SKU thành phẩm, bỏ qua cập nhật",
                     repair.getRepairCode(), targetSerial);
             return;
         }
@@ -481,13 +481,12 @@ public class RepairWorkflowService {
         java.util.List<RepairLine> serialRemoveLines = removeLines.stream()
                 .filter(line -> trimToNull(resolveLineSerial(line)) != null)
                 .toList();
-        java.util.Set<RepairLine> usedReplacementLines = new java.util.HashSet<>();
-        java.util.List<AssemblyOrderSerial> changedMappings = new java.util.ArrayList<>();
+        java.util.List<DeviceComponentSerial> changedMappings = new java.util.ArrayList<>();
 
         for (RepairLine replaceLine : serialReplaceLines) {
             String removedSerial = resolveLineSerial(replaceLine);
             String replacementSerial = resolveReplacementLineSerial(replaceLine);
-            AssemblyOrderSerial currentMapping = findActiveMapping(mappings, replaceLine.getComponentVariantId(), removedSerial);
+            DeviceComponentSerial currentMapping = findActiveMapping(mappings, replaceLine.getComponentVariantId(), removedSerial);
             if (currentMapping == null) {
                 throw new BusinessException("Serial " + removedSerial
                         + " không nằm trong cấu hình hiện tại của PC " + targetSerial + ".");
@@ -504,65 +503,37 @@ public class RepairWorkflowService {
                     "Thay thế bởi serial " + replacementSerial + " từ phiếu sửa " + repair.getRepairCode()));
             changedMappings.add(currentMapping);
 
-            AssemblyOrderSerial newMapping = buildActiveRepairMapping(
+            DeviceComponentSerial newMapping = buildActiveRepairMapping(
                     sourceOrder, targetVariant, targetSerial, replaceLine, replacementSerial, repair, now, currentUserId,
                     "Thay thế serial " + removedSerial + " từ phiếu sửa " + repair.getRepairCode());
             mappings.add(newMapping);
             changedMappings.add(newMapping);
         }
 
-        for (int index = 0; index < serialRemoveLines.size(); index++) {
-            RepairLine removeLine = serialRemoveLines.get(index);
+        for (RepairLine removeLine : serialRemoveLines) {
             String removedSerial = resolveLineSerial(removeLine);
-            AssemblyOrderSerial currentMapping = findActiveMapping(mappings, removeLine.getComponentVariantId(), removedSerial);
+            DeviceComponentSerial currentMapping = findActiveMapping(mappings, removeLine.getComponentVariantId(), removedSerial);
             if (currentMapping == null) {
                 throw new BusinessException("Serial " + removedSerial
                         + " không nằm trong cấu hình hiện tại của PC " + targetSerial + ".");
             }
 
-            RepairLine replacementLine = findReplacementLine(
-                    serialAddLines,
-                    usedReplacementLines,
-                    removeLine.getComponentVariantId(),
-                    serialRemoveLines.size() - index);
-
-            if (replacementLine != null) {
-                String replacementSerial = resolveLineSerial(replacementLine);
-                currentMapping.setStatus(COMPONENT_STATUS_REPLACED);
-                currentMapping.setReplacedBySerial(replacementSerial);
-                markRemovedByRepair(currentMapping, repair, now);
-                currentMapping.setNote(appendNote(currentMapping.getNote(),
-                        "Thay thế bởi serial " + replacementSerial + " từ phiếu sửa " + repair.getRepairCode()));
-                changedMappings.add(currentMapping);
-                usedReplacementLines.add(replacementLine);
-
-                AssemblyOrderSerial newMapping = buildActiveRepairMapping(
-                        sourceOrder, targetVariant, targetSerial, replacementLine, replacementSerial, repair, now, currentUserId,
-                        "Thay thế serial " + removedSerial + " từ phiếu sửa " + repair.getRepairCode());
-                mappings.add(newMapping);
-                changedMappings.add(newMapping);
-            } else {
-                currentMapping.setStatus(COMPONENT_STATUS_REMOVED);
-                currentMapping.setReplacedBySerial(null);
-                markRemovedByRepair(currentMapping, repair, now);
-                currentMapping.setNote(appendNote(currentMapping.getNote(),
-                        "Loại bỏ từ phiếu sửa " + repair.getRepairCode()));
-                changedMappings.add(currentMapping);
-            }
+            currentMapping.setStatus(COMPONENT_STATUS_REMOVED);
+            currentMapping.setReplacedBySerial(null);
+            markRemovedByRepair(currentMapping, repair, now);
+            currentMapping.setNote(appendNote(currentMapping.getNote(),
+                    "Loại bỏ từ phiếu sửa " + repair.getRepairCode()));
+            changedMappings.add(currentMapping);
         }
 
         for (RepairLine addLine : serialAddLines) {
-            if (usedReplacementLines.contains(addLine)) {
-                continue;
-            }
-
             String addedSerial = resolveLineSerial(addLine);
             if (findActiveMapping(mappings, addLine.getComponentVariantId(), addedSerial) != null) {
                 throw new BusinessException("Serial " + addedSerial
                         + " đã tồn tại trong cấu hình hiện tại của PC " + targetSerial + ".");
             }
 
-            AssemblyOrderSerial newMapping = buildActiveRepairMapping(
+            DeviceComponentSerial newMapping = buildActiveRepairMapping(
                     sourceOrder, targetVariant, targetSerial, addLine, addedSerial, repair, now, currentUserId,
                     "Lắp thêm từ phiếu sửa " + repair.getRepairCode());
             mappings.add(newMapping);
@@ -570,40 +541,19 @@ public class RepairWorkflowService {
         }
 
         if (!changedMappings.isEmpty()) {
-            assemblyOrderSerialRepository.saveAll(changedMappings);
+            deviceComponentSerialRepository.saveAll(changedMappings);
             log.info("[Repair {}] Đã cập nhật {} dòng mapping serial cho PC {}",
                     repair.getRepairCode(), changedMappings.size(), targetSerial);
         }
     }
 
-    private RepairLine findReplacementLine(List<RepairLine> addLines, Set<RepairLine> usedLines,
-            Long preferredVariantId, int remainingRemoveCount) {
-        RepairLine sameVariant = addLines.stream()
-                .filter(line -> !usedLines.contains(line))
-                .filter(line -> java.util.Objects.equals(line.getComponentVariantId(), preferredVariantId))
-                .findFirst()
-                .orElse(null);
-        if (sameVariant != null) {
-            return sameVariant;
-        }
-
-        java.util.List<RepairLine> unusedAdds = addLines.stream()
-                .filter(line -> !usedLines.contains(line))
-                .toList();
-        if (remainingRemoveCount == 1 && unusedAdds.size() == 1) {
-            return unusedAdds.get(0);
-        }
-
-        return null;
-    }
-
-    private AssemblyOrderSerial findActiveMapping(List<AssemblyOrderSerial> mappings, Long componentVariantId, String componentSerial) {
+    private DeviceComponentSerial findActiveMapping(List<DeviceComponentSerial> mappings, Long componentVariantId, String componentSerial) {
         String normalizedSerial = trimToNull(componentSerial);
         if (normalizedSerial == null) {
             return null;
         }
 
-        AssemblyOrderSerial sameVariant = mappings.stream()
+        DeviceComponentSerial sameVariant = mappings.stream()
                 .filter(this::isActiveComponentSerial)
                 .filter(mapping -> mapping.getComponentVariant() != null)
                 .filter(mapping -> java.util.Objects.equals(mapping.getComponentVariant().getId(), componentVariantId))
@@ -621,14 +571,14 @@ public class RepairWorkflowService {
                 .orElse(null);
     }
 
-    private AssemblyOrderSerial buildActiveRepairMapping(AssemblyOrder sourceOrder, ProductVariant targetVariant,
+    private DeviceComponentSerial buildActiveRepairMapping(AssemblyOrder sourceOrder, ProductVariant targetVariant,
             String targetSerial,
             RepairLine line, String componentSerial, Repair repair, LocalDateTime now, Long currentUserId, String note) {
         ProductVariant componentVariant = productVariantRepository.findById(line.getComponentVariantId())
                 .orElseThrow(() -> new BusinessException("Không tìm thấy linh kiện " + line.getComponentVariantId()));
 
-        return AssemblyOrderSerial.builder()
-                .assemblyOrder(sourceOrder)
+        return DeviceComponentSerial.builder()
+                .sourceAssemblyOrder(sourceOrder)
                 .targetVariant(targetVariant)
                 .targetSerial(targetSerial)
                 .componentVariant(componentVariant)
@@ -641,7 +591,7 @@ public class RepairWorkflowService {
                 .build();
     }
 
-    private void markRemovedByRepair(AssemblyOrderSerial mapping, Repair repair, LocalDateTime removedAt) {
+    private void markRemovedByRepair(DeviceComponentSerial mapping, Repair repair, LocalDateTime removedAt) {
         mapping.setRemovedAt(removedAt);
         mapping.setRemovedByRepairId(repair.getId());
     }
@@ -690,7 +640,7 @@ public class RepairWorkflowService {
         return line.getComponentVariantId();
     }
 
-    private boolean isActiveComponentSerial(AssemblyOrderSerial mapping) {
+    private boolean isActiveComponentSerial(DeviceComponentSerial mapping) {
         return mapping != null
                 && (mapping.getStatus() == null || COMPONENT_STATUS_ACTIVE.equalsIgnoreCase(mapping.getStatus()));
     }
