@@ -7,8 +7,9 @@ import * as customerApi from '../../api/customerApi';
 import * as purchaseOrderApi from '../../api/purchaseOrderApi';
 import * as paymentApi from '../../api/paymentApi';
 import styles from './PaymentManagementPage.module.css';
-import { formatDateTime } from '../../utils/dateFormat';
+import { formatDateTime, formatDateOnly } from '../../utils/dateFormat';
 import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
+import { exportToExcel } from '../../utils/excelExport';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -192,6 +193,25 @@ function PaymentManagementPage() {
     });
   };
 
+  const handleExportExcel = () => {
+    if (!history || history.length === 0) {
+      showToast('warning', 'Không có lịch sử thu chi để xuất Excel');
+      return;
+    }
+    const headers = ['Mã phiếu', 'Ngày tạo', 'Loại phiếu', 'Số tiền', 'Phương thức', 'Trạng thái', 'Ghi chú'];
+    const data = history.map(item => [
+      item.code,
+      item.createdAt ? formatDateOnly(item.createdAt) : '',
+      item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi',
+      item.amount,
+      item.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Tiền mặt',
+      item.status === 'POSTED' ? 'Đã ghi sổ' : 'Lưu tạm',
+      item.note || ''
+    ]);
+    exportToExcel(headers, data, `Lich_su_thu_chi_${partnerId || 'tat_ca'}`);
+    showToast('success', 'Xuất Excel thành công!');
+  };
+
   return (
     <AdminLayout>
       <div className={styles.page}>
@@ -296,6 +316,11 @@ function PaymentManagementPage() {
               </div>
               <div className={styles.historyTools}>
                 <span className={styles.historyCount}>{Math.min(history.length, 5)} gần nhất</span>
+                {history.length > 0 && (
+                  <button className={styles.linkButton} onClick={handleExportExcel} type="button" title="Xuất tệp Excel" style={{ marginRight: 8 }}>
+                    <i className="bi bi-file-earmark-excel" /> Xuất Excel
+                  </button>
+                )}
                 {partnerId && (
                   <button className={styles.linkButton} onClick={openFullHistory} type="button">
                     Xem tất cả

@@ -6,6 +6,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as soApi from '../../api/salesOrderApi';
 import styles from './SalesOrderListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { exportToExcel } from '../../utils/excelExport';
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
@@ -64,6 +65,23 @@ function SalesOrderListPage() {
       setLoading(false);
     }
   }, [filters]);
+
+  const handleExport = () => {
+    if (!orders || orders.length === 0) {
+      showToast('warning', 'Không có dữ liệu để xuất Excel');
+      return;
+    }
+    const headers = ['Mã đơn', 'Ngày lập', 'Khách hàng', 'Tổng tiền', 'Trạng thái'];
+    const data = orders.map(so => [
+      so.soCode,
+      fmtDate(so.soDate),
+      so.customerName || `#${so.customerId}`,
+      money(so.totalAmount),
+      STATUS_LABELS[so.status]?.label || so.status
+    ]);
+    exportToExcel(headers, data, 'Danh_sach_don_ban_hang');
+    showToast('success', 'Xuất Excel thành công!');
+  };
 
   useEffect(() => { loadOrders(); }, [loadOrders]);
 
@@ -175,6 +193,13 @@ function SalesOrderListPage() {
           <div className={styles.filterActions}>
             <button className={styles.iconBtn} onClick={() => setFilters({ keyword: '', status: '', fromDate: '', toDate: '' })} title="Đặt lại">
               <i className="bi bi-arrow-clockwise" />
+            </button>
+            <button
+              className={styles.iconBtn}
+              onClick={handleExport}
+              title="Xuất tệp Excel"
+            >
+              <i className="bi bi-file-earmark-excel" />
             </button>
             <button className={styles.btnPrimary} onClick={loadOrders}>
               <i className="bi bi-funnel" /> Lọc
