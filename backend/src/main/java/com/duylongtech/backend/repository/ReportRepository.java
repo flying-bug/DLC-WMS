@@ -361,16 +361,6 @@ public class ReportRepository {
         LocalDate endOfMonth = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
 
         // CompletableFuture to fetch all metrics in parallel
-        var lowStockFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT COUNT(DISTINCT pv.id) FROM inventory_balances ib JOIN product_variants pv ON ib.variant_id = pv.id WHERE ib.serial_number_id IS NULL AND ib.quantity_on_hand > 0 AND ib.quantity_on_hand <= 5";
-            return jdbcTemplate.queryForObject(sql, Integer.class);
-        });
-
-        var outOfStockFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-            String sql = "SELECT COUNT(DISTINCT pv.id) FROM product_variants pv WHERE pv.active = TRUE AND NOT EXISTS (SELECT 1 FROM inventory_balances ib WHERE ib.variant_id = pv.id AND ib.serial_number_id IS NULL AND ib.quantity_on_hand > 0)";
-            return jdbcTemplate.queryForObject(sql, Integer.class);
-        });
-
         var totalValueFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
             String sql = "SELECT COALESCE(SUM(quantity_on_hand * average_cost), 0) FROM inventory_balances WHERE serial_number_id IS NULL";
             return jdbcTemplate.queryForObject(sql, BigDecimal.class);
@@ -439,7 +429,7 @@ public class ReportRepository {
         });
 
         java.util.concurrent.CompletableFuture.allOf(
-            lowStockFuture, outOfStockFuture, totalValueFuture,
+            totalValueFuture,
             importExportFuture, safeDebtFuture, warrantyFuture, recentActivityFuture
         ).join();
 
@@ -450,8 +440,6 @@ public class ReportRepository {
 
 
             return DashboardResponse.builder()
-                .lowStockItemsCount(lowStockFuture.get() != null ? lowStockFuture.get() : 0)
-                .outOfStockItemsCount(outOfStockFuture.get() != null ? outOfStockFuture.get() : 0)
                 .inventoryTurnoverRatio(BigDecimal.ZERO) 
                 .averageDaysInInventory(BigDecimal.ZERO) 
                 .totalInventoryValue(totalValueFuture.get() != null ? totalValueFuture.get() : BigDecimal.ZERO)

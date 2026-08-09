@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { getAuthRole } from '../../auth/session';
 import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
 import VoiceCommandButton from '../ui/VoiceCommandButton/VoiceCommandButton';
+import ActiveWorkflowGuide from '../workflow/ActiveWorkflowGuide';
 import styles from './AdminLayout.module.css';
 
 const MENU_CONFIG = [
@@ -10,16 +11,32 @@ const MENU_CONFIG = [
         id: 'overview',
         label: 'TỔNG QUAN',
         items: [
-            { path: '/dashboard', icon: 'fas fa-warehouse', label: 'Quy trình' }
+            { path: '/dashboard', icon: 'fas fa-chart-pie', label: 'Tổng quan' }
         ]
     },
     {
-        id: 'transaction',
-        label: 'GIAO DỊCH',
+        id: 'inbound',
+        label: 'MUA & NHẬP HÀNG',
         items: [
             { path: '/purchase-orders', icon: 'bi bi-bag-plus', label: 'Đơn mua hàng' },
+            { path: '/import-history', activePaths: ['/import-history', '/import-slips'], icon: 'fas fa-boxes', label: 'Nhập kho' }
+        ]
+    },
+    {
+        id: 'outbound',
+        label: 'BÁN & XUẤT HÀNG',
+        items: [
             { path: '/sales-orders', icon: 'bi bi-cart3', label: 'Đơn bán hàng' },
-            { path: '/payments', icon: 'bi bi-cash-coin', label: 'Thu chi & Công nợ' }
+            { path: '/export-slips', icon: 'fas fa-truck-loading', label: 'Xuất kho' }
+        ]
+    },
+    {
+        id: 'warehouse',
+        label: 'QUẢN LÝ KHO',
+        items: [
+            { path: '/warehouses', icon: 'fas fa-warehouse', label: 'Kho' },
+            { path: '/transfer-history', icon: 'fas fa-exchange-alt', label: 'Chuyển kho' },
+            { path: '/stocktakes', icon: 'fas fa-clipboard-check', label: 'Kiểm kê' }
         ]
     },
     {
@@ -31,6 +48,16 @@ const MENU_CONFIG = [
         ]
     },
     {
+        id: 'catalog',
+        label: 'HÀNG HÓA',
+        items: [
+            { path: '/products', icon: 'fas fa-box', label: 'Hàng hóa, dịch vụ' },
+            { path: '/product-categories', icon: 'fas fa-layer-group', label: 'Danh mục sản phẩm' },
+            { path: '/brands', icon: 'fas fa-tags', label: 'Thương hiệu' },
+            { path: '/units', icon: 'fas fa-ruler-combined', label: 'Đơn vị tính' }
+        ]
+    },
+    {
         id: 'partner',
         label: 'ĐỐI TÁC',
         items: [
@@ -39,20 +66,19 @@ const MENU_CONFIG = [
         ]
     },
     {
-        id: 'catalog',
-        label: 'DANH MỤC',
-        items: [
-            { path: '/product-categories', icon: 'fas fa-layer-group', label: 'Danh mục sản phẩm' },
-            { path: '/brands', icon: 'fas fa-tags', label: 'Thương hiệu' },
-            { path: '/units', icon: 'fas fa-ruler-combined', label: 'Đơn vị tính' }
-        ]
-    },
-    {
         id: 'config',
         label: 'CẤU HÌNH',
         items: [
             { path: '/assembly-boms', icon: 'fas fa-sitemap', label: 'Quản lý Cấu hình' },
             { path: '/assembly-orders', icon: 'fas fa-boxes-stacked', label: 'Lắp ráp / Tháo dỡ' }
+        ]
+    },
+    {
+        id: 'finance',
+        label: 'TÀI CHÍNH & BÁO CÁO',
+        items: [
+            { path: '/payments', icon: 'bi bi-cash-coin', label: 'Thu chi & Công nợ' },
+            { path: '/reports', icon: 'fas fa-chart-line', label: 'Báo cáo' }
         ]
     },
     {
@@ -65,6 +91,15 @@ const MENU_CONFIG = [
     }
 ];
 
+const isMenuItemActive = (item, currentPath) => {
+    const activePaths = item.activePaths || [item.path];
+    return activePaths.some(path => (
+        path === '/dashboard' ? currentPath === path : currentPath.startsWith(path)
+    ));
+};
+
+const SIDEBAR_SCROLL_KEY = 'dlc_sidebar_scroll_top';
+
 const AdminLayout = ({ children }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -73,6 +108,7 @@ const AdminLayout = ({ children }) => {
     const userRole = getAuthRole() || 'STAFF';
     const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'ROLE_ADMIN';
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const navMenuRef = useRef(null);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
         return localStorage.getItem('dlc_sidebar_collapsed') === 'true';
     });
@@ -94,19 +130,41 @@ const AdminLayout = ({ children }) => {
         window.addEventListener('resize', syncSidebarWidth);
         return () => window.removeEventListener('resize', syncSidebarWidth);
     }, [isSidebarCollapsed]);
+
+    useLayoutEffect(() => {
+        const savedScrollTop = Number(sessionStorage.getItem(SIDEBAR_SCROLL_KEY));
+        if (navMenuRef.current && Number.isFinite(savedScrollTop)) {
+            navMenuRef.current.scrollTop = savedScrollTop;
+        }
+    }, []);
     const [voiceEnabled, setVoiceEnabled] = useState(() => {
         return localStorage.getItem('dlc_voice_enabled') !== 'false';
     });
 
     const [expandedGroups, setExpandedGroups] = useState({
         overview: true,
-        transaction: true,
+        inbound: true,
+        outbound: true,
+        warehouse: true,
         service: true,
         partner: true,
         catalog: true,
         config: true,
+        finance: true,
         system: true
     });
+
+    const visibleMenuGroups = MENU_CONFIG.map(group => ({
+        ...group,
+        items: group.items.filter(item => !item.adminOnly || isSuperAdmin)
+    })).filter(group => group.items.length > 0);
+
+    const activeGroup = visibleMenuGroups.find(group => group.items.some(item => (
+        isMenuItemActive(item, currentPath)
+    )));
+    const activeItem = activeGroup?.items.find(item => (
+        isMenuItemActive(item, currentPath)
+    ));
 
     const toggleGroup = (groupId) => {
         if (isSidebarCollapsed) {
@@ -136,8 +194,15 @@ const AdminLayout = ({ children }) => {
     };
 
     const handleNavClick = (path) => {
+        if (navMenuRef.current) {
+            sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(navMenuRef.current.scrollTop));
+        }
         navigate(path);
         setMobileMenuOpen(false);
+    };
+
+    const handleNavScroll = (event) => {
+        sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(event.currentTarget.scrollTop));
     };
 
     return (
@@ -165,30 +230,25 @@ const AdminLayout = ({ children }) => {
                         <i className="fas fa-times"></i>
                     </button>
                 </div>
-                <nav className={styles.navMenu}>
-                    {MENU_CONFIG.map(group => {
-                        const hasVisibleItems = group.items.some(item => !item.adminOnly || isSuperAdmin);
-                        if (!hasVisibleItems) return null;
-
+                <nav ref={navMenuRef} className={styles.navMenu} onScroll={handleNavScroll}>
+                    {visibleMenuGroups.map(group => {
                         const isExpanded = expandedGroups[group.id];
 
                         return (
                             <div key={group.id} className={styles.menuGroup}>
-                                <div 
+                                <button
+                                    type="button"
                                     className={styles.navGroupLabel} 
                                     onClick={() => toggleGroup(group.id)}
+                                    aria-expanded={isExpanded}
                                 >
                                     <span>{group.label}</span>
                                     <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
-                                </div>
+                                </button>
                                 {isExpanded && (
                                     <div className={styles.groupItems}>
                                         {group.items.map(item => {
-                                            if (item.adminOnly && !isSuperAdmin) return null;
-                                            
-                                            const isActive = item.path === '/dashboard' 
-                                                ? currentPath === item.path 
-                                                : currentPath.startsWith(item.path);
+                                            const isActive = isMenuItemActive(item, currentPath);
 
                                             return (
                                                 <button
@@ -231,103 +291,11 @@ const AdminLayout = ({ children }) => {
                         <i className="fas fa-bars"></i>
                     </button>
 
-                    <nav className={styles.topTabs}>
-                        <button
-                            className={`${styles.tab} ${currentPath === '/dashboard' ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/dashboard')}
-                            type="button"
-                        >
-                            Quy trình
-                        </button>
-                        <button
-                            className={`${styles.tab} ${(currentPath.startsWith('/import-history') || currentPath.startsWith('/import-slips/')) ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/import-history')}
-                            type="button"
-                        >
-                            Nhập kho
-                        </button>
-                        <button
-                            className={`${styles.tab} ${currentPath.startsWith('/export-slips') ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/export-slips')}
-                            type="button"
-                        >
-                            Xuất kho
-                        </button>
-                        <button
-                            className={`${styles.tab} ${currentPath.startsWith('/transfer-history') ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/transfer-history')}
-                            type="button"
-                        >
-                            Chuyển kho
-                        </button>
-                        <button
-                            className={`${styles.tab} ${currentPath.startsWith('/stocktakes') ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/stocktakes')}
-                            type="button"
-                        >
-                            Kiểm kê
-                        </button>
-                        <button
-                            className={`${styles.tab} ${currentPath.startsWith('/assembly-orders') ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/assembly-orders')}
-                            type="button"
-                        >
-                            Lắp ráp / Tháo dỡ
-                        </button>
-                        <button
-                            className={`${styles.tab} ${currentPath.startsWith('/assembly-boms') ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/assembly-boms')}
-                            type="button"
-                        >
-                            Cấu hình
-                        </button>
-                        <button
-                            className={`${styles.tab} ${currentPath.startsWith('/reports') ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/reports')}
-                            type="button"
-                        >
-                            Báo cáo
-                        </button>
-                        <button
-                            className={`${styles.tab} ${currentPath.startsWith('/payments') ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/payments')}
-                            type="button"
-                        >
-                            Thu chi
-                        </button>
-                        <button
-                            className={`${styles.tab} ${currentPath === '/warehouses' ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/warehouses')}
-                            type="button"
-                        >
-                            Quản lý kho
-                        </button>
-                        <button
-                            className={`${styles.tab} ${currentPath === '/products' ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/products')}
-                            type="button"
-                        >
-                            Hàng hóa, dịch vụ
-                        </button>
-                        <button
-                            className={`${styles.tab} ${currentPath.startsWith('/ai-chat') ? styles.activeTab : ''}`}
-                            onClick={() => navigate('/ai-chat')}
-                            type="button"
-                        >
-                            AI Chat
-                        </button>
-                        {isSuperAdmin && (
-                            <button
-                                className={`${styles.tab} ${currentPath.startsWith('/operations') ? styles.activeTab : ''}`}
-                                onClick={() => navigate('/operations')}
-                                type="button"
-                                style={{ color: '#6366f1', fontWeight: 'bold' }}
-                            >
-                                <i className="fas fa-database" style={{ marginRight: '6px' }}></i>
-                                Backup DB
-                            </button>
-                        )}
-                    </nav>
+                    <div className={styles.headerContext}>
+                        <span className={styles.headerSection}>{activeGroup?.label || 'DUY LONG WMS'}</span>
+                        <i className="fas fa-chevron-right" aria-hidden="true"></i>
+                        <strong>{activeItem?.label || 'Quản lý kho vận'}</strong>
+                    </div>
                     <div className={styles.headerRight}>
                         <UserProfileDropdown voiceEnabled={voiceEnabled} onToggleVoice={toggleVoice} />
                     </div>
@@ -336,6 +304,7 @@ const AdminLayout = ({ children }) => {
                 <main className={styles.content}>
                     {children || <Outlet />}
                 </main>
+                <ActiveWorkflowGuide />
             </div>
 
             {voiceEnabled && <VoiceCommandButton />}

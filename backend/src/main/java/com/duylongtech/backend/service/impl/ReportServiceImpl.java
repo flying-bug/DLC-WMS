@@ -2,6 +2,7 @@ package com.duylongtech.backend.service.impl;
 
 import com.duylongtech.backend.dto.response.report.*;
 import com.duylongtech.backend.repository.ReportRepository;
+import com.duylongtech.backend.service.ProductService;
 import com.duylongtech.backend.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import java.util.List;
 public class ReportServiceImpl implements ReportService {
 
     private final ReportRepository reportRepository;
+    private final ProductService productService;
 
     @Override
     public List<InventoryBalanceReportResponse> getInventoryBalanceReport(String search, Long warehouseId) {
@@ -50,7 +52,11 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public DashboardResponse getDashboardMetrics() {
         log.info("Fetching Dashboard Metrics");
-        return reportRepository.getDashboardMetrics();
+        DashboardResponse dashboard = reportRepository.getDashboardMetrics();
+        var stockAlerts = productService.getStockAlertSummary();
+        dashboard.setLowStockItemsCount(stockAlerts.getLowStockCount());
+        dashboard.setOutOfStockItemsCount(stockAlerts.getOutOfStockCount());
+        return dashboard;
     }
 
     @Override
