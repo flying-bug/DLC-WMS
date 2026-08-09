@@ -26,6 +26,12 @@ const STATUS_META = {
     CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
 
+const COMPONENT_SERIAL_STATUS = {
+    ACTIVE: { label: 'Đang dùng', color: '#166534', bg: '#dcfce7', border: '#bbf7d0' },
+    REPLACED: { label: 'Đã thay thế', color: '#92400e', bg: '#fef3c7', border: '#fde68a' },
+    REMOVED: { label: 'Đã loại bỏ', color: '#991b1b', bg: '#fee2e2', border: '#fecaca' }
+};
+
 const defaultBomLine = { componentVariantId: '', quantity: '1', note: '' };
 
 const createDefaultBomForm = () => ({
@@ -36,6 +42,23 @@ const createDefaultBomForm = () => ({
     status: 'APPROVED',
     lines: [{ ...defaultBomLine }]
 });
+
+const groupSerialsByTarget = (serials = []) => Object.entries(serials.reduce((acc, curr) => {
+    const targetSerial = curr.targetSerial || 'Chưa có serial thành phẩm';
+    if (!acc[targetSerial]) acc[targetSerial] = [];
+    acc[targetSerial].push(curr);
+    return acc;
+}, {}));
+
+function SerialStatusBadge({ status }) {
+    const normalized = String(status || 'ACTIVE').toUpperCase();
+    const meta = COMPONENT_SERIAL_STATUS[normalized] || COMPONENT_SERIAL_STATUS.ACTIVE;
+    return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', borderRadius: '4px', border: `1px solid ${meta.border}`, backgroundColor: meta.bg, color: meta.color, padding: '2px 7px', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            {meta.label}
+        </span>
+    );
+}
 
 function AssemblyOrderFormPage() {
     const { id } = useParams();
@@ -678,6 +701,11 @@ function AssemblyOrderFormPage() {
             onError: (msg) => showToast('error', msg)
         });
     };
+    const orderSerials = useMemo(() => {
+        return (orderDetail?.mappedSerials || []).filter(item => !item.sourceRepairId);
+    }, [orderDetail?.mappedSerials]);
+
+    const orderSerialGroups = useMemo(() => groupSerialsByTarget(orderSerials), [orderSerials]);
 
     return (
         <AdminLayout>
@@ -851,45 +879,47 @@ function AssemblyOrderFormPage() {
                     </div>
                 </div>
 
-                {/* Hiển thị chi tiết Serial đã lắp ráp */}
-                {orderDetail?.mappedSerials?.length > 0 && (
+                {/* Hiển thị serial thuộc đúng phiếu, tách lịch sử sửa chữa riêng */}
+                {orderSerialGroups.length > 0 && (
                     <div className={styles.card} style={{ marginTop: '24px' }}>
                         <h2 className={styles.cardTitle}>
                             <i className="bi bi-list-nested" style={{ marginRight: '8px', color: 'var(--color-primary)' }}></i>
-                            {orderDetail?.orderType === 'DISASSEMBLY' ? 'Lịch sử Serial đã tháo dỡ' : 'Lịch sử Serial đã lắp ráp'}
+                            {orderDetail?.orderType === 'DISASSEMBLY' ? 'Serial tháo dỡ theo phiếu' : 'Serial lắp ráp theo phiếu'}
                         </h2>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-                            {Object.entries(
-                                orderDetail.mappedSerials.reduce((acc, curr) => {
-                                    if (!acc[curr.targetSerial]) acc[curr.targetSerial] = [];
-                                    acc[curr.targetSerial].push(curr);
-                                    return acc;
-                                }, {})
-                            ).map(([targetSerial, components], index) => (
-                                <div key={targetSerial} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                                    <div style={{ backgroundColor: '#f8fafc', padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
-                                        <div style={{ backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', marginRight: '12px', flexShrink: 0 }}>
-                                            {index + 1}
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{orderDetail?.orderType === 'DISASSEMBLY' ? 'Thành phẩm đã tháo:' : 'Thành phẩm đã lắp:'} {orderDetail.targetName}</div>
-                                            <div style={{ fontWeight: 600, color: 'var(--color-primary)', fontSize: '14px' }}>{targetSerial}</div>
-                                        </div>
-                                    </div>
-                                    <div style={{ padding: '8px 0' }}>
-                                        {components.map((comp, i) => (
-                                            <div key={comp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', borderBottom: i < components.length - 1 ? '1px solid #f1f5f9' : 'none', fontSize: '13px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, paddingRight: '12px' }}>
-                                                    <i className={orderDetail?.orderType === 'DISASSEMBLY' ? "bi bi-box-arrow-up-right" : "bi bi-arrow-return-right"} style={{ color: 'var(--color-primary)', opacity: 0.5, marginRight: '8px' }}></i>
-                                                    <span style={{ color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }} title={comp.componentName}>{comp.componentName}</span>
-                                                </div>
-                                                <span style={{ fontWeight: 500, color: '#0f172a', backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>{comp.componentSerial}</span>
+                        {orderSerialGroups.length > 0 ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                {orderSerialGroups.map(([targetSerial, components], index) => (
+                                    <div key={targetSerial} style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                                        <div style={{ backgroundColor: '#f8fafc', padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
+                                            <div style={{ backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', marginRight: '12px', flexShrink: 0 }}>
+                                                {index + 1}
                                             </div>
-                                        ))}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{orderDetail?.orderType === 'DISASSEMBLY' ? 'Thành phẩm đã tháo:' : 'Thành phẩm đã lắp:'} {orderDetail.targetName}</div>
+                                                <div style={{ fontWeight: 600, color: 'var(--color-primary)', fontSize: '14px' }}>{targetSerial}</div>
+                                            </div>
+                                        </div>
+                                        <div style={{ padding: '8px 0' }}>
+                                            {components.map((comp, i) => (
+                                                <div key={comp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '8px 16px', borderBottom: i < components.length - 1 ? '1px solid #f1f5f9' : 'none', fontSize: '13px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, paddingRight: '12px' }}>
+                                                        <i className={orderDetail?.orderType === 'DISASSEMBLY' ? "bi bi-box-arrow-up-right" : "bi bi-arrow-return-right"} style={{ color: 'var(--color-primary)', opacity: 0.5, marginRight: '8px' }}></i>
+                                                        <span style={{ color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }} title={comp.componentName}>{comp.componentName}</span>
+                                                    </div>
+                                                    <SerialStatusBadge status={comp.status} />
+                                                    <span style={{ fontWeight: 500, color: '#0f172a', backgroundColor: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>{comp.componentSerial}</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{ padding: '16px 20px', color: '#64748b', fontSize: '13px' }}>
+                                Chưa có serial thuộc phiếu này.
+                            </div>
+                        )}
+
                     </div>
                 )}
             </div>

@@ -15,6 +15,7 @@ public class ScanResolveResponse {
     private Long serialNumberId;
     private String productCode;
     private String productName;
+    private String productType;
     private String sku;
     private String barcode;
     private String serialNumber;

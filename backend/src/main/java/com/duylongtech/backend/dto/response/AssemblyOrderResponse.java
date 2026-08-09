@@ -35,4 +35,5 @@ public class AssemblyOrderResponse {
     private LocalDateTime updatedAt;
     private List<AssemblyOrderLineResponse> lines;
     private List<AssemblyOrderSerialResponse> mappedSerials;
+    private List<AssemblyOrderSerialResponse> serialChangeHistory;
 }

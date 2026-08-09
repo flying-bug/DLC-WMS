@@ -12,6 +12,7 @@ const ProductGridSelect = ({
   disabled = false,
   onAddNew,
   hideStock = false,
+  forceInStockOnly = false,
   fullWidthPopover = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -123,8 +124,8 @@ const ProductGridSelect = ({
   const filteredProducts = useMemo(() => {
     let result = products;
 
-    if (onlyInStock) {
-      result = result.filter((p) => getStock(p) > 0);
+    if (forceInStockOnly || onlyInStock) {
+      result = result.filter((p) => getStock(p) > 0 || String(p.id) === String(value));
     }
 
     if (searchQuery.trim()) {
@@ -138,7 +139,7 @@ const ProductGridSelect = ({
     }
 
     return result;
-  }, [products, searchQuery, onlyInStock, inventoryMap]);
+  }, [products, searchQuery, onlyInStock, forceInStockOnly, inventoryMap, value]);
 
   // Render display value in trigger box
   const renderValue = () => {
@@ -219,7 +220,7 @@ const ProductGridSelect = ({
                 <tr>
                   <th style={{ width: '130px' }}>Mã hàng</th>
                   <th>Tên hàng</th>
-                  {!hideStock && <th style={{ width: '110px', textAlign: 'right' }}>Số lượng tồn</th>}
+                  {!hideStock && <th style={{ width: '110px', textAlign: 'right' }}>Tồn khả dụng</th>}
                 </tr>
               </thead>
               <tbody>
@@ -268,7 +269,7 @@ const ProductGridSelect = ({
 
           <div className={styles.popoverFooter}>
             <div className={styles.footerLeft}>
-              {onAddNew && (
+              {onAddNew && !forceInStockOnly && (
                 <button
                   type="button"
                   className={styles.footerActionBtn}
@@ -285,7 +286,7 @@ const ProductGridSelect = ({
               </span>
             </div>
 
-            {!hideStock && (
+            {!hideStock && !forceInStockOnly && (
               <div className={styles.footerRight}>
                 <label className={styles.toggleSwitch}>
                   <input

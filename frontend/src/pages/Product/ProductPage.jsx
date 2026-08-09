@@ -60,6 +60,16 @@ const getPageContent = (response) => {
     return payload?.content ?? payload ?? [];
 };
 
+const normalizeText = (value) =>
+    String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+
+const isServiceType = (productType) => normalizeText(productType) === 'dich vu';
+const isStockTrackedProduct = (product) => !isServiceType(product?.productType);
+
 let globalSpecIdCounter = 1;
 
 const getPredefinedBomLines = () => {
@@ -446,6 +456,7 @@ const ProductPage = () => {
                     let productType = 'Hàng hóa';
                     if (String(productTypeRaw).includes('Thành phẩm')) productType = 'Thành phẩm';
                     if (String(productTypeRaw).includes('Dịch vụ')) productType = 'Dịch vụ';
+                    const isService = isServiceType(productType);
 
                     const trackSerial = trackSerialRaw.includes('có') || trackSerialRaw.includes('co') || trackSerialRaw === '1' || trackSerialRaw === 'true';
 
@@ -458,13 +469,13 @@ const ProductPage = () => {
                         productCode: trimmedCode || undefined,
                         productName: String(productName).trim(),
                         productType: productType,
-                        categoryId: matchedCat ? matchedCat.id : null,
-                        brandId: matchedBrand ? matchedBrand.id : null,
+                        categoryId: isService ? null : (matchedCat ? matchedCat.id : null),
+                        brandId: isService ? null : (matchedBrand ? matchedBrand.id : null),
                         unitId: matchedUnit ? matchedUnit.id : null,
                         salePrice: salePrice >= 0 ? salePrice : 0,
-                        minStockQty: minStockQty >= 0 ? minStockQty : 0,
+                        minStockQty: isService ? 0 : (minStockQty >= 0 ? minStockQty : 0),
                         warrantyPeriodMonths: warrantyMonths >= 0 ? warrantyMonths : 0,
-                        trackSerial: trackSerial,
+                        trackSerial: isService ? false : trackSerial,
                         description: description,
                         active: true
                     };
@@ -746,8 +757,9 @@ const ProductPage = () => {
     };
 
     const buildPayload = (data) => {
+        const isService = isServiceType(data.productType);
         let finalBrandId = Number(data.brandId) || null;
-        if (!finalBrandId && data.productType !== 'Dịch vụ') {
+        if (!finalBrandId && !isService) {
             const khacBrand = brands.find(b => b.name && b.name.trim().toLowerCase() === 'khác');
             finalBrandId = khacBrand ? Number(khacBrand.id) : null;
         }
@@ -756,15 +768,15 @@ const ProductPage = () => {
             productCode: data.productCode.trim().toUpperCase(),
             productName: data.productName.trim(),
             productType: data.productType || 'Hàng hóa',
-            categoryId: Number(data.categoryId) || null,
-            brandId: finalBrandId,
+            categoryId: isService ? null : (Number(data.categoryId) || null),
+            brandId: isService ? null : finalBrandId,
             unitId: Number(data.unitId),
             salePrice: Number(data.salePrice || 0),
             description: data.description?.trim() || '',
             imageUrl: data.imageUrl || '',
             active: data.active,
-            trackSerial: Boolean(data.trackSerial),
-            trackLot: Boolean(data.trackLot),
+            trackSerial: isService ? false : Boolean(data.trackSerial),
+            trackLot: isService ? false : Boolean(data.trackLot),
             taxReductionStatus: data.taxReductionStatus || 'NORMAL',
             isAssembly: data.productType === 'Thành phẩm',
             bomLines: data.productType === 'Thành phẩm' ? bomLines.filter(line => line.componentVariantId).map(line => ({
@@ -773,7 +785,7 @@ const ProductPage = () => {
                 quantity: Number(line.quantity || 0),
                 note: line.note || ''
             })) : [],
-            minStockQty: Number(data.minStockQty || 0),
+            minStockQty: isService ? 0 : Number(data.minStockQty || 0),
             warrantyPeriod: warrantyQty > 0 ? `${warrantyQty} ${warrantyUnit}` : null,
             warrantyPeriodMonths: warrantyQty > 0 ? (warrantyUnit === 'Năm' ? warrantyQty * 12 : warrantyQty) : 0
         };
@@ -1119,6 +1131,8 @@ const ProductPage = () => {
     const getFilteredProducts = () => {
         if (stockFilter === 'ALL') return products;
         return products.filter((product) => {
+            if (!isStockTrackedProduct(product)) return false;
+
             const qty = Number(product.stockQty || 0);
             const minQty = Number(product.minStockQty || 0);
             if (stockFilter === 'OUT_OF_STOCK') return qty <= 0;
@@ -1128,6 +1142,7 @@ const ProductPage = () => {
     };
 
     const filteredProducts = getFilteredProducts();
+    const showStockColumn = columns.stockQty && !isServiceType(typeFilter);
 
     return (
         <AdminLayout>
@@ -1339,7 +1354,7 @@ const ProductPage = () => {
                                 {columns.brand && <th style={{ width: '110px' }}>Thương hiệu</th>}
                                 {columns.unit && <th style={{ width: '90px' }}>Đơn vị tính</th>}
                                 {columns.salePrice && <th className={styles.textRight} style={{ width: '110px' }}>Giá bán</th>}
-                                {columns.stockQty && <th className={styles.textRight} style={{ width: '90px' }}>Tồn kho</th>}
+                                {showStockColumn && <th className={styles.textRight} style={{ width: '90px' }}>Tồn kho</th>}
                                 <th className={styles.textCenter} style={{ width: '130px' }}>Thao Tác</th>
                             </tr>
                         </thead>
@@ -1390,7 +1405,11 @@ const ProductPage = () => {
                                         {columns.brand && <td>{item.brandName || '-'}</td>}
                                         {columns.unit && <td>{item.unitName || '-'}</td>}
                                         {columns.salePrice && <td className={`${styles.money} ${styles.textRight}`}>{formatCurrency(item.salePrice)}</td>}
-                                        {columns.stockQty && <td className={styles.textRight}>{formatQuantity(item.stockQty)}</td>}
+                                        {showStockColumn && (
+                                            <td className={styles.textRight}>
+                                                {isStockTrackedProduct(item) ? formatQuantity(item.stockQty) : '-'}
+                                            </td>
+                                        )}
                                         <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }} onClick={(event) => event.stopPropagation()}>
                                             <i
                                                 className="bi bi-pencil"
@@ -1495,11 +1514,16 @@ const ProductPage = () => {
                                                         key={type}
                                                         className={styles.typeMenuItem + (formData.productType === type ? ' ' + styles.typeMenuItemActive : '')}
                                                         onClick={() => {
+                                                            const isService = isServiceType(type);
                                                             setFormData(fd => ({
                                                                 ...fd,
                                                                 productType: type,
+                                                                categoryId: isService ? '' : fd.categoryId,
+                                                                brandId: isService ? '' : fd.brandId,
+                                                                minStockQty: isService ? '' : fd.minStockQty,
+                                                                trackLot: isService ? false : fd.trackLot,
                                                                 // Bắt buộc trackSerial = true khi là Thành phẩm
-                                                                trackSerial: type === 'Thành phẩm' ? true : fd.trackSerial
+                                                                trackSerial: isService ? false : (type === 'Thành phẩm' ? true : fd.trackSerial)
                                                             }));
                                                             setShowTypeMenu(false);
                                                             if (type === 'Thành phẩm') {

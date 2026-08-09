@@ -25,6 +25,23 @@ const pageContent = (payload) => payload?.content ?? payload ?? [];
 const today = getTodayIsoDate;
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 
+const normalizeProductType = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+const isServiceProduct = (item) => normalizeProductType(item?.productType) === 'dich vu';
+const isWarehouseProduct = (item) => {
+  const type = normalizeProductType(item?.productType);
+  return type === 'hang hoa' || type === 'thanh pham';
+};
+
+const isWarehouseLine = (line) => !line?.productType || isWarehouseProduct(line);
+const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
+const filterWarehouseLines = (lines) => (lines || []).filter(isWarehouseLine);
+
 const customSelectStyles = {
   control: (base, state) => ({
     ...base,
@@ -145,7 +162,8 @@ function CreateExportSlipPage({ mode: propMode }) {
 
   const [items, setItems] = useState(() => {
     if (soData && soData.lines && soData.lines.length > 0) {
-      return soData.lines.map(l => ({
+      const soLines = filterWarehouseLines(soData.lines);
+      return soLines.length > 0 ? soLines.map(l => ({
         ...emptyLine(),
         variantId: String(l.variantId),
         quantity: l.quantity || 1,
@@ -153,25 +171,27 @@ function CreateExportSlipPage({ mode: propMode }) {
         vatPercent: l.vatPercent || 0,
         warrantyMonths: l.warrantyMonths || 0,
         note: l.note || '',
-      }));
+      })) : [{ ...emptyLine(), isNew: false }];
     }
     if (assemblyData && assemblyData.lines && assemblyData.lines.length > 0) {
-      return assemblyData.lines.map(comp => ({
+      const assemblyLines = filterWarehouseLines(assemblyData.lines);
+      return assemblyLines.length > 0 ? assemblyLines.map(comp => ({
         ...emptyLine(),
         variantId: String(comp.variantId || comp.id),
         quantity: comp.quantity || 1,
         price: comp.price || 0,
         note: `Cấu hình cho Lệnh ${assemblyData.code}`,
-      }));
+      })) : [{ ...emptyLine(), isNew: false }];
     }
     if (stocktakeData && stocktakeData.lines && stocktakeData.lines.length > 0) {
-      return stocktakeData.lines.map(line => ({
+      const stocktakeLines = filterWarehouseLines(stocktakeData.lines);
+      return stocktakeLines.length > 0 ? stocktakeLines.map(line => ({
         ...emptyLine(),
         variantId: String(line.variantId),
         quantity: line.quantity || 1,
         price: line.price || 0,
         note: line.note || `Hàng thiếu từ kiểm kê ${stocktakeData.code}`,
-      }));
+      })) : [{ ...emptyLine(), isNew: false }];
     }
     return [{ ...emptyLine(), isNew: false }];
   });
@@ -204,7 +224,7 @@ function CreateExportSlipPage({ mode: propMode }) {
 
       const [warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
         exportApi.getWarehouses({ size: 100 }),
-        exportApi.getProducts({ size: 100 }),
+        exportApi.getProducts({ size: 1000 }),
         exportApi.getCustomers({ size: 1000 }),
         exportApi.getUsers({ size: 1000 }).catch(() => null),
       ]);
@@ -215,7 +235,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         setForm(prev => ({ ...prev, warehouseId: prev.warehouseId || data[0]?.id || '' }));
       }
       if (productRes.status === 'fulfilled') {
-        const data = pageContent(unwrap(productRes.value));
+        const data = filterWarehouseProducts(pageContent(unwrap(productRes.value)));
         setProducts(data);
       }
       if (customerRes.status === 'fulfilled') {
@@ -247,20 +267,30 @@ function CreateExportSlipPage({ mode: propMode }) {
     const map = new Map();
     if (Array.isArray(inventoryBalances)) {
       inventoryBalances.forEach(b => {
-        if (b.variantId) map.set(String(b.variantId), Number(b.totalQuantity || 0));
-        else if (b.itemId) map.set(String(b.itemId), Number(b.totalQuantity || 0));
+        const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+        const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+        const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+        const stock = Math.max(0, availableQuantity);
+        if (b.variantId) map.set(String(b.variantId), stock);
+        else if (b.itemId) map.set(String(b.itemId), stock);
       });
     }
     return map;
   }, [inventoryBalances]);
+  const warehouseScopedProducts = useMemo(() => {
+    if (!form.warehouseId) return products;
+    const selectedIds = new Set(items.map(item => String(item.variantId || '')).filter(Boolean));
+    return products.filter(product => inventoryMap.has(String(product.id)) || selectedIds.has(String(product.id)));
+  }, [form.warehouseId, inventoryMap, items, products]);
 
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
   const isLineValid = (item) => {
+    const product = productById.get(String(item.variantId));
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-    return item.variantId && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
+    return product && isWarehouseProduct(product) && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
   };
 
   const isFormValid = Boolean(
@@ -322,7 +352,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   const handleQuickAddProductSuccess = async (newProduct) => {
     try {
       const response = await exportApi.getProducts({ size: 1000 });
-      const refreshedProducts = pageContent(unwrap(response));
+      const refreshedProducts = filterWarehouseProducts(pageContent(unwrap(response)));
       setProducts(refreshedProducts);
       const createdVariant = refreshedProducts.find(product => String(product.productId) === String(newProduct?.id));
 
@@ -448,6 +478,10 @@ function CreateExportSlipPage({ mode: propMode }) {
         warehouseId: Number(form.warehouseId),
       });
       const scanResult = unwrap(response);
+      if (isServiceProduct(scanResult)) {
+        setError('Dịch vụ không áp dụng cho phiếu xuất kho.');
+        return;
+      }
       setProducts(prev => {
         if (prev.some(p => String(p.id) === String(scanResult.variantId))) return prev;
         return [...prev, {
@@ -458,6 +492,7 @@ function CreateExportSlipPage({ mode: propMode }) {
           unitName: scanResult.unitName || '',
           salePrice: scanResult.salePrice || 0,
           trackSerial: scanResult.trackSerial,
+          productType: scanResult.productType || 'Hàng hóa',
         }];
       });
 
@@ -565,7 +600,7 @@ function CreateExportSlipPage({ mode: propMode }) {
     for (const item of items) {
       const product = productById.get(String(item.variantId));
       if (product) {
-        const balance = inventoryBalances.find(b => String(b.variantId) === String(product.id) || String(b.itemCode) === String(product.productCode) || String(b.itemCode) === String(product.sku))?.totalQuantity || 0;
+        const balance = inventoryMap.get(String(product.id)) || 0;
         if (Number(item.quantity) > balance) {
           hasOutOfStock = true;
           break;
@@ -942,7 +977,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                   <th style={{ minWidth: '130px', width: '13%' }}>Mã hàng</th>
                   <th style={{ minWidth: '200px', width: '22%' }}>{exportMode === 'ASSEMBLY' ? 'Tên linh kiện' : 'Tên hàng'}</th>
                   <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                  <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn kho</th>
+                  <th style={{ minWidth: '90px', width: '8%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
                   <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
                   <th style={{ minWidth: '80px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
                   <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
@@ -960,7 +995,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                       <td className={styles.textCenter}>{index + 1}</td>
                       <td>
                         <ProductGridSelect
-                          products={products}
+                          products={warehouseScopedProducts}
                           inventoryMap={inventoryMap}
                           value={item.variantId}
                           onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
@@ -971,7 +1006,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                       </td>
                       <td>
                         <ProductGridSelect
-                          products={products}
+                          products={warehouseScopedProducts}
                           inventoryMap={inventoryMap}
                           value={item.variantId}
                           onChange={(selected) => handleItemChange(item.localId, 'variantId', selected ? selected.id : '')}
@@ -984,7 +1019,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                         {product?.unitName || 'Cái'}
                       </td>
                       <td className={styles.textCenter} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>
-                        {product ? (inventoryBalances.find(b => String(b.variantId) === String(product?.id) || String(b.itemCode) === String(product?.productCode) || String(b.itemCode) === String(product?.sku))?.totalQuantity || 0) : ''}
+                        {product ? (inventoryMap.get(String(product.id)) || 0) : ''}
                       </td>
                       <td className={styles.textRight}>
                         <input type="number" min="1" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
@@ -1111,6 +1146,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         onClose={() => { setShowQuickAddProduct(false); setQuickAddLineId(null); }}
         onSuccess={handleQuickAddProductSuccess}
         productType="Hàng hóa"
+        allowedProductTypes={['Hàng hóa', 'Thành phẩm']}
       />
 
       <AssemblyOrderSelectionModal
@@ -1137,7 +1173,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                 if (stData.warehouseId) {
                   setForm(prev => ({ ...prev, warehouseId: String(stData.warehouseId) }));
                 }
-                const diffLackLines = (stData.lines || []).filter(l => Number(l.diffQty || 0) < 0);
+                const diffLackLines = filterWarehouseLines(stData.lines || []).filter(l => Number(l.diffQty || 0) < 0);
                 if (diffLackLines.length > 0) {
                   setItems(diffLackLines.map(l => {
                     const rawSerials = l.serials || [];

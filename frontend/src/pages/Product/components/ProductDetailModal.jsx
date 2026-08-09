@@ -15,6 +15,15 @@ const formatQuantity = (value) => new Intl.NumberFormat('vi-VN', {
 
 const yesNo = (value) => value ? 'Có' : 'Không';
 
+const normalizeText = (value) =>
+    String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+
+const isServiceType = (productType) => normalizeText(productType) === 'dich vu';
+
 const ProductDetailModal = ({ product, onClose, onEdit }) => {
     const [variants, setVariants] = useState([]);
     const [loadingVariants, setLoadingVariants] = useState(false);
@@ -43,6 +52,8 @@ const ProductDetailModal = ({ product, onClose, onEdit }) => {
     }, [product?.id]);
 
     if (!product) return null;
+
+    const isService = isServiceType(product.productType);
 
     return (
         <Modal
@@ -82,10 +93,12 @@ const ProductDetailModal = ({ product, onClose, onEdit }) => {
                                 <span className={styles.type}>{product.productType || '-'}</span>
                             </div>
                             <div className={styles.metrics}>
-                                <div>
-                                    <span>Tồn kho</span>
-                                    <strong>{formatQuantity(product.stockQty)}</strong>
-                                </div>
+                                {!isService && (
+                                    <div>
+                                        <span>Tồn kho</span>
+                                        <strong>{formatQuantity(product.stockQty)}</strong>
+                                    </div>
+                                )}
                                 <div>
                                     <span>Giá bán</span>
                                     <strong>{formatCurrency(product.salePrice)}</strong>
@@ -105,9 +118,13 @@ const ProductDetailModal = ({ product, onClose, onEdit }) => {
                             <div><span>Danh mục</span><strong>{product.categoryName || '-'}</strong></div>
                             <div><span>Thương hiệu</span><strong>{product.brandName || '-'}</strong></div>
                             <div><span>Đơn vị tính</span><strong>{product.unitName || '-'}</strong></div>
-                            <div><span>Theo dõi serial</span><strong>{yesNo(product.trackSerial)}</strong></div>
-                            <div><span>Theo dõi lô</span><strong>{yesNo(product.trackLot)}</strong></div>
-                            <div><span>Tồn tối thiểu</span><strong>{formatQuantity(product.minStockQty)}</strong></div>
+                            {!isService && (
+                                <>
+                                    <div><span>Theo dõi serial</span><strong>{yesNo(product.trackSerial)}</strong></div>
+                                    <div><span>Theo dõi lô</span><strong>{yesNo(product.trackLot)}</strong></div>
+                                    <div><span>Tồn tối thiểu</span><strong>{formatQuantity(product.minStockQty)}</strong></div>
+                                </>
+                            )}
                             <div><span>Trạng thái giảm thuế</span><strong>{product.taxReductionStatus || '-'}</strong></div>
                         </div>
                     </section>

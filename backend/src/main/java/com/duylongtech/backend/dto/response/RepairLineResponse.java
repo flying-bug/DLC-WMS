@@ -31,6 +31,8 @@ public class RepairLineResponse {
     private Boolean isFreeWarranty;
     private Long serialNumberId;
     private String serialNumber;
+    private Long replacementSerialNumberId;
+    private String replacementSerialNumber;
 
     private String note;
     private LocalDateTime createdAt;
