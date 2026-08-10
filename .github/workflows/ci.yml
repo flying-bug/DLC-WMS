@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main", "duybo" ]
+    branches: [ "main", "release/**" ]
   pull_request:
-    branches: [ "main", "duybo" ]
+    branches: [ "main", "release/**" ]
 
 jobs:
   frontend-ci:
@@ -61,18 +61,18 @@ jobs:
         run: ./mvnw clean package -DskipTests
 
       - name: Upload JAR to VPS (CD)
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/duybo'
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.VPS_USERNAME }}
           password: ${{ secrets.VPS_PASSWORD }}
-          source: "backend/target/*SNAPSHOT.jar"
+          source: "backend/target/*.jar"
           target: "/root/backend"
           strip_components: 2
 
       - name: Start Spring Boot on VPS (CD)
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/duybo'
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
         run: |
           sudo apt-get update && sudo apt-get install -y sshpass
           export SSHPASS="${{ secrets.VPS_PASSWORD }}"
@@ -81,7 +81,8 @@ jobs:
             sleep 2
             cd /root/backend
             export SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/duylongcomputer?useSSL=false&serverTimezone=UTC"
-            nohup java -jar backend-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
+            JAR_FILE=$(ls backend-*.jar 2>/dev/null | head -n 1)
+            nohup java -jar "$JAR_FILE" > app.log 2>&1 &
             sleep 2
           EOF
           echo "Successfully deployed!"
