@@ -74,11 +74,11 @@ jobs:
       - name: Create .env file from Secret
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
         run: |
-          cat << 'EOF' > backend/target/.env
+          cat << 'EOF' > target/.env
           ${{ secrets.ENV_PRODUCT }}
           EOF
           # Xóa các khoảng trắng thừa ở đầu dòng (nếu có do thụt lề YAML)
-          sed -i 's/^[ \t]*//' backend/target/.env
+          sed -i 's/^[ \t]*//' target/.env
 
       - name: Upload JAR and .env to VPS (CD)
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')

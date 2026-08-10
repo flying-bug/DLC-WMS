@@ -19,6 +19,25 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
+  const handleFile = useCallback((file) => {
+    if (!file) return;
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      alert('Chỉ hỗ trợ file ảnh (JPG, PNG, WEBP) hoặc PDF.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File quá lớn. Tối đa 10MB.');
+      return;
+    }
+    if (file.type.startsWith('image/')) {
+      setPreview(URL.createObjectURL(file));
+    } else {
+      setPreview(null);
+    }
+    onFileSelected(file);
+  }, [onFileSelected]);
+
   // Ctrl + V Paste Listener
   useEffect(() => {
     if (!open) {
@@ -89,25 +108,6 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
       setQrLoading(false);
     }
   };
-
-  const handleFile = useCallback((file) => {
-    if (!file) return;
-    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'application/pdf'];
-    if (!validTypes.includes(file.type)) {
-      alert('Chỉ hỗ trợ file ảnh (JPG, PNG, WEBP) hoặc PDF.');
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File quá lớn. Tối đa 10MB.');
-      return;
-    }
-    if (file.type.startsWith('image/')) {
-      setPreview(URL.createObjectURL(file));
-    } else {
-      setPreview(null);
-    }
-    onFileSelected(file);
-  }, [onFileSelected]);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
