@@ -3,7 +3,7 @@ import WarehouseDashboard from './WarehouseDashboard';
 
 const DashboardPage = () => {
     const userRole = sessionStorage.getItem('role') || 'STAFF';
-    const isSuperAdmin = userRole.toUpperCase() === 'SUPER_ADMIN' || userRole.toUpperCase() === 'ROLE_SUPER_ADMIN' || userRole === 'Super Admin';
+    const isSuperAdmin = ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN', 'Super Admin'].includes(userRole.toUpperCase());
 
     return isSuperAdmin ? <SuperAdminDashboard /> : <WarehouseDashboard />;
 };

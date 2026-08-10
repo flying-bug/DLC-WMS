@@ -1,0 +1,605 @@
+.dashboardWrapper {
+    padding: 24px;
+    background-color: var(--color-bg-page-alt);
+    min-height: calc(100vh - 70px);
+    font-family: var(--font-sans);
+}
+
+.pageHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 24px;
+}
+
+.pageTitle {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--color-text-strong);
+    margin: 0 0 6px 0;
+}
+
+.pageSubtitle {
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.headerActions {
+    display: flex;
+    gap: 12px;
+}
+
+/* KPI Cards Grid */
+.kpiGrid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.kpiCard {
+    background: var(--color-surface);
+    border-radius: var(--radius-card);
+    padding: 20px 24px 0 24px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    border: 1px solid var(--color-border-card);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.kpiCard:hover {
+    transform: translateY(-6px) !important;
+    box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+}
+
+.kpiTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.kpiInfo {
+    flex: 1;
+}
+
+.kpiTitle {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.kpiValue {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--color-text-strong);
+    margin: 0 0 6px 0;
+    letter-spacing: -0.5px;
+}
+
+.kpiTrend {
+    font-size: 0.85rem;
+    margin: 0;
+    font-weight: 500;
+}
+
+.kpiIconWrapper {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.kpiCard:hover .kpiIconWrapper {
+    transform: scale(1.15) rotate(5deg);
+}
+
+.kpiSparkline {
+    margin-top: 10px;
+    margin-bottom: -5px; /* Push chart to bottom edge slightly */
+    width: 100%;
+}
+
+/* Color Variations for KPI Cards */
+.primary .kpiIconWrapper { background: var(--color-primary-soft); color: var(--color-primary); }
+.primary .kpiTrend { color: var(--color-primary); }
+.primary:hover { border-color: var(--color-primary); box-shadow: 0 12px 24px var(--color-primary-soft); }
+
+.orange .kpiIconWrapper { background: #ffedd5; color: #ea580c; }
+.orange .kpiTrend { color: #ea580c; }
+.orange:hover { border-color: #f97316; box-shadow: 0 12px 24px #ffedd5; }
+
+.green .kpiIconWrapper { background: #dcfce7; color: #16a34a; }
+.green .kpiTrend { color: #16a34a; }
+.green:hover { border-color: #22c55e; box-shadow: 0 12px 24px #dcfce7; }
+
+.red .kpiIconWrapper { background: #fee2e2; color: #dc2626; }
+.red .kpiTrend { color: #dc2626; }
+.red:hover { border-color: #ef4444; box-shadow: 0 12px 24px #fee2e2; }
+
+.purple .kpiIconWrapper { background: #f3e8ff; color: #9333ea; }
+.purple .kpiTrend { color: #9333ea; }
+.purple:hover { border-color: #a855f7; box-shadow: 0 12px 24px #f3e8ff; }
+
+
+/* Charts Grid Row */
+.chartsGrid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--color-border-card);
+    background: var(--color-surface);
+    border-top-left-radius: var(--radius-card);
+    border-top-right-radius: var(--radius-card);
+}
+
+.cardTitle {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--color-text-strong);
+    margin: 0;
+}
+
+.chartCard, .mainChartCard, .pieChartCard {
+    background: var(--color-surface);
+    border-radius: var(--radius-card);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    border: 1px solid var(--color-border-card);
+    display: flex;
+    flex-direction: column;
+}
+
+.chartBody {
+    padding: 20px;
+    flex: 1;
+}
+
+.moreBtn {
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+.moreBtn:hover { color: var(--color-primary); }
+
+.chartFilter {
+    padding: 6px 12px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--color-border-field);
+    background-color: var(--color-bg-page);
+    color: var(--color-text-body);
+    font-size: 0.85rem;
+    font-weight: 500;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: var(--font-sans);
+}
+
+.chartFilter:hover, .chartFilter:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-bg-hover);
+}
+
+.pieLegend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px 20px;
+    margin-top: 10px;
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+}
+
+.legendDot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.legendText {
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+/* Full Width Grid */
+.fullWidthGrid {
+    margin-bottom: 24px;
+}
+
+/* Bottom Content Grid */
+.bottomGrid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+}
+
+.viewAllBtn {
+    background: transparent;
+    border: none;
+    color: var(--color-primary);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+}
+
+.viewAllBtn:hover {
+    color: var(--color-primary-hover);
+    text-decoration: underline;
+}
+
+.transactionsCard, .topProductsCard {
+    background: var(--color-surface);
+    border-radius: var(--radius-card);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    border: 1px solid var(--color-border-card);
+    display: flex;
+    flex-direction: column;
+}
+
+.tableWrapper {
+    padding: 0;
+    overflow-x: auto;
+}
+
+.txTable {
+    width: 100%;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+}
+
+.txTable th {
+    background: var(--color-bg-soft);
+    border-bottom: 2px solid var(--color-border-soft);
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    padding: 14px 24px;
+}
+
+.txTable td {
+    border-bottom: 1px solid var(--color-border-soft);
+    padding: 16px 24px;
+    vertical-align: middle;
+}
+
+.txTable tr:last-child td {
+    border-bottom: none;
+}
+
+.txTable tr:hover td {
+    background-color: var(--color-bg-hover);
+}
+
+.rightColumnStack {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.txType {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    color: var(--color-text-strong);
+    font-size: 0.95rem;
+}
+
+.typeIcon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.typeIn { background: #dcfce7; color: #16a34a; }
+.typeOut { background: #e0f2fe; color: #0284c7; }
+
+.txId {
+    font-weight: 600;
+    color: var(--color-primary-link);
+    font-family: monospace;
+    font-size: 0.95rem;
+}
+
+.txPartner {
+    font-weight: 500;
+    color: var(--color-text-body);
+}
+
+.txTime {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+/* Status Badge local class for warning */
+.statusWarning {
+    background-color: #ffedd5;
+    color: #ea580c;
+}
+
+/* Top Products List (Horizontal Bars) */
+.topProductsList {
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.productItem {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.productHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.productInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.productName {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text-strong);
+    margin-bottom: 2px;
+}
+
+.productSku {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-family: monospace;
+}
+
+.productSold {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+}
+
+.productProgressBg {
+    width: 100%;
+    height: 6px;
+    background-color: var(--color-bg-muted);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.productProgressFill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease-out;
+}
+
+/* Background variants for progress bars */
+.bgPrimary { background-color: var(--color-primary); }
+.bgBlue { background-color: #3b82f6; }
+.bgGreen { background-color: #10b981; }
+.bgOrange { background-color: #f59e0b; }
+.bgPurple { background-color: #8b5cf6; }
+.bgSlate { background-color: #64748b; }
+
+/* Pending Tasks Styles */
+.pendingTasksCard {
+    background: var(--color-surface);
+    border-radius: var(--radius-card);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    border: 1px solid var(--color-border-card);
+    display: flex;
+    flex-direction: column;
+    animation: slideUpFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+    animation-delay: 0.68s;
+}
+
+.taskList {
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.taskItem {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    border-radius: var(--radius-control);
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border-soft);
+    transition: transform 0.2s, border-color 0.2s;
+    cursor: pointer;
+}
+
+.taskItem:hover {
+    transform: translateX(4px);
+    border-color: var(--color-border-field);
+}
+
+.taskIcon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+.bgPrimarySoft { background-color: var(--color-primary-soft); color: var(--color-primary); }
+.bgRedSoft { background-color: #fee2e2; color: #dc2626; }
+.bgOrangeSoft { background-color: #ffedd5; color: #ea580c; }
+.bgBlueSoft { background-color: var(--color-primary-soft); color: var(--color-primary); }
+
+.taskInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.taskTitle {
+    margin: 0 0 4px 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text-strong);
+}
+
+.taskTime {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+}
+
+
+/* =========================================
+   ANIMATIONS & MICRO-INTERACTIONS
+   ========================================= */
+
+@keyframes slideUpFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulseWarning {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 12px rgba(220, 38, 38, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+    }
+}
+
+/* Apply entrance animation to all cards */
+.kpiCard, .mainChartCard, .pieChartCard, .transactionsCard, .topProductsCard {
+    animation: slideUpFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+}
+
+/* Staggered Delays for beautiful cascading effect */
+.kpiGrid > .kpiCard:nth-child(1) { animation-delay: 0.05s; }
+.kpiGrid > .kpiCard:nth-child(2) { animation-delay: 0.12s; }
+.kpiGrid > .kpiCard:nth-child(3) { animation-delay: 0.19s; }
+.kpiGrid > .kpiCard:nth-child(4) { animation-delay: 0.26s; }
+.kpiGrid > .kpiCard:nth-child(5) { animation-delay: 0.33s; }
+
+.chartsGrid > div:nth-child(1) { animation-delay: 0.40s; }
+.chartsGrid > div:nth-child(2) { animation-delay: 0.47s; }
+
+.fullWidthGrid > div { animation-delay: 0.54s; }
+
+.bottomGrid > div:nth-child(1) { animation-delay: 0.61s; }
+.bottomGrid > div:nth-child(2) { animation-delay: 0.68s; }
+
+/* Critical Warning Pulse */
+.red .kpiIconWrapper {
+    animation: pulseWarning 2s infinite ease-out;
+}
+
+/* Table Row Hover Upgrade */
+.txTable tbody tr {
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+.txTable tbody tr:hover {
+    transform: scale(1.005) translateX(4px);
+}
+
+/* Top Product Progress Bar Animation */
+.productProgressFill {
+    height: 100%;
+    border-radius: 3px;
+    width: var(--target-width, 100%);
+    transform-origin: left;
+    animation: slideInBar 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: 0.3s;
+    transform: scaleX(0);
+}
+
+@keyframes slideInBar {
+    from {
+        transform: scaleX(0);
+    }
+    to {
+        transform: scaleX(1);
+    }
+}
+
+
+/* Responsive */
+@media (max-width: 1300px) {
+    .kpiValue {
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 1200px) {
+    .kpiGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .chartsGrid, .bottomGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .kpiGrid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .pageHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    .headerActions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

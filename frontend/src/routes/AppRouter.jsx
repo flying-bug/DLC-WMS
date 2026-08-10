@@ -3,6 +3,7 @@ import { ROUTES } from '../constants';
 import LoginPage from '../pages/Login/LoginPage';
 import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
+import AnalyticsDashboard from '../pages/Dashboard/AnalyticsDashboard';
 import UnitPage from '../pages/Unit/UnitPage';
 import ProductPage from '../pages/Product/ProductPage';
 import ProductCategoryPage from '../pages/ProductCategory/ProductCategoryPage';
@@ -50,6 +51,7 @@ import PurchaseOrderListPage from '../pages/PurchaseOrder/PurchaseOrderListPage'
 import CreatePurchaseOrderPage from '../pages/PurchaseOrder/CreatePurchaseOrderPage';
 import PurchaseOrderDetailPage from '../pages/PurchaseOrder/PurchaseOrderDetailPage';
 import PaymentManagementPage from '../pages/Payment/PaymentManagementPage';
+import PaymentOverviewPage from '../pages/Payment/PaymentOverviewPage';
 import PaymentHistoryPage from '../pages/Payment/PaymentHistoryPage';
 
 // Helper to check valid token
@@ -59,15 +61,21 @@ const isValidToken = () => {
 };
 
 // Wrapper for protected routes (requires token)
-const ProtectedRoute = ({ allowedRoles }) => {
+const ProtectedRoute = ({ allowedRoles, disallowedRoles }) => {
     const tokenValid = isValidToken();
-    const userRole = sessionStorage.getItem('role');
+    const userRole = sessionStorage.getItem('role') || '';
 
     if (!tokenValid) {
         return <Navigate to="/login" replace />;
     }
 
-    if (allowedRoles && !allowedRoles.includes(userRole)) {
+    const currentRole = userRole.toUpperCase();
+
+    if (allowedRoles && !allowedRoles.includes(currentRole)) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    if (disallowedRoles && disallowedRoles.includes(currentRole)) {
         return <Navigate to="/dashboard" replace />;
     }
 
@@ -87,6 +95,14 @@ const NotFoundRedirect = () => {
     return <Navigate to={isValidToken() ? "/dashboard" : "/login"} replace />;
 };
 
+// Root route redirect based on role
+const RootRedirect = () => {
+    if (!isValidToken()) return <Navigate to="/login" replace />;
+    const userRole = sessionStorage.getItem('role') || 'STAFF';
+    const isSuperAdmin = ['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN'].includes(userRole.toUpperCase());
+    return isSuperAdmin ? <Navigate to="/dashboard" replace /> : <Navigate to="/main-dashboard" replace />;
+};
+
 function AppRouter() {
     return (
         <BrowserRouter>
@@ -97,10 +113,18 @@ function AppRouter() {
                     <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
                 </Route>
 
-                {/* Protected Routes for Authenticated Users */}
+                {/* Protected Routes for All Authenticated Users */}
                 <Route element={<ProtectedRoute />}>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/" element={<RootRedirect />} />
+                    <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/change-password" element={<ChangePasswordPage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/ai-chat" element={<AiChatPage />} />
+                </Route>
+
+                {/* Business Routes for Staff & Manager only */}
+                <Route element={<ProtectedRoute disallowedRoles={['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN']} />}>
+                    <Route path="/main-dashboard" element={<AnalyticsDashboard />} />
                     <Route path="/export-slips" element={<ExportSlipPage />} />
                     <Route path="/export-slips/create" element={<CreateExportSlipPage />} />
                     <Route path="/export-slips/usage" element={<CreateExportSlipPage mode="USAGE" />} />
@@ -112,8 +136,6 @@ function AppRouter() {
                     <Route path="/transfer-history" element={<TransferHistoryPage />} />
                     <Route path="/transfer-history/create" element={<CreateTransferSlipPage />} />
                     <Route path="/transfer-history/:id/edit" element={<UpdateTransferSlipPage />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/units" element={<UnitPage />} />
                     <Route path="/products" element={<ProductPage />} />
                     <Route path="/product-categories" element={<ProductCategoryPage />} />
@@ -141,9 +163,11 @@ function AppRouter() {
                     <Route path="/stocktakes/create" element={<CreateStocktakePage />} />
                     <Route path="/stocktakes/:id" element={<StocktakeDetailPage />} />
                     <Route path="/stocktakes/:id/edit" element={<CreateStocktakePage />} />
-                    <Route path="/ai-chat" element={<AiChatPage />} />
                     <Route path="/reports" element={<ReportListPage />} />
-                    <Route path="/payments" element={<PaymentManagementPage />} />
+                    <Route path="/payments" element={<Navigate to="/payments/overview" replace />} />
+                    <Route path="/payments/overview" element={<PaymentOverviewPage />} />
+                    <Route path="/payments/expense" element={<PaymentManagementPage initialMode="VOUCHER" />} />
+                    <Route path="/payments/receipt" element={<PaymentManagementPage initialMode="RECEIPT" />} />
                     <Route path="/payments/history/:partnerId" element={<PaymentHistoryPage />} />
                     <Route path="/sales-orders" element={<SalesOrderListPage />} />
                     <Route path="/sales-orders/create" element={<CreateSalesOrderPage />} />

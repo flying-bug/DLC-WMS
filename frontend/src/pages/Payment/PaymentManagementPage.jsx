@@ -38,9 +38,13 @@ const selectStyles = {
   menuPortal: (base) => ({ ...base, zIndex: 9999 }),
 };
 
-function PaymentManagementPage() {
+function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
   const navigate = useNavigate();
-  const [mode, setMode] = useState('RECEIPT');
+  const [mode, setMode] = useState(initialMode);
+
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [partnerId, setPartnerId] = useState(null);
@@ -217,24 +221,8 @@ function PaymentManagementPage() {
       <div className={styles.page}>
         <div className={styles.pageHeader}>
           <div>
-            <div className={styles.breadcrumb}>Thu chi &amp; Công nợ</div>
-            <h1 className={styles.pageTitle}>Quản lý thu chi công nợ</h1>
-          </div>
-          <div className={styles.modeTabs}>
-            <button
-              className={`${styles.modeTab} ${mode === 'RECEIPT' ? styles.modeTabActive : ''}`}
-              onClick={() => setMode('RECEIPT')}
-              type="button"
-            >
-              <i className="bi bi-arrow-down-circle" /> Phiếu thu
-            </button>
-            <button
-              className={`${styles.modeTab} ${mode === 'VOUCHER' ? styles.modeTabActive : ''}`}
-              onClick={() => setMode('VOUCHER')}
-              type="button"
-            >
-              <i className="bi bi-arrow-up-circle" /> Phiếu chi
-            </button>
+            <div className={styles.breadcrumb}>Thu chi</div>
+            <h1 className={styles.pageTitle}>{mode === 'RECEIPT' ? 'Quản lý phiếu thu' : 'Quản lý phiếu chi'}</h1>
           </div>
         </div>
 

@@ -1,45 +1,44 @@
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
-import styles from './WarehouseDashboard.module.css';
+import styles from './PaymentOverviewPage.module.css';
 
-function WarehouseDashboard() {
+function PaymentOverviewPage() {
     const navigate = useNavigate();
 
     const processItems = [
-        { label: 'Lắp ráp, tháo dỡ', icon: 'fas fa-tools' },
-        { label: 'Xuất kho', icon: 'fas fa-truck-loading', action: () => navigate('/export-slips') },
-        { label: 'Nhập kho', icon: 'fas fa-boxes', action: () => navigate('/import-history') },
-        { label: 'Chuyển kho', icon: 'fas fa-exchange-alt', action: () => navigate('/transfer-history') },
-        { label: 'Quản lý Cấu hình', icon: 'fas fa-sitemap', action: () => navigate('/assembly-boms') },
-        { label: 'Kiểm kê', icon: 'fas fa-clipboard-check' },
+        { label: 'Khách hàng', icon: 'fas fa-user-friends', action: () => navigate('/customers') },
+        { label: 'Phiếu Thu', icon: 'fas fa-arrow-down', action: () => navigate('/payments/receipt') },
+        { label: 'Phải thu KH', icon: 'fas fa-file-invoice', action: () => navigate('/reports') },
+        { label: 'Sổ quỹ', icon: 'fas fa-wallet', action: () => navigate('/payments') },
+        { label: 'Phải trả NCC', icon: 'fas fa-file-invoice-dollar', action: () => navigate('/reports') },
+        { label: 'Phiếu Chi', icon: 'fas fa-arrow-up', action: () => navigate('/payments/expense') },
     ];
 
     const toolbarItems = [
-        { label: 'Kho', icon: 'fas fa-warehouse', action: () => navigate('/warehouses') },
-        { label: 'Hàng hóa dịch vụ', icon: 'fas fa-box', action: () => navigate('/products') },
-        { label: 'Đơn vị tính', icon: 'fas fa-balance-scale', action: () => navigate('/units') },
-        { label: 'Danh mục sản phẩm', icon: 'fas fa-list', action: () => navigate('/product-categories') },
-        { label: 'Bảo hành', icon: 'fas fa-shield-alt', action: () => navigate('/warranties') }
+        { label: 'Đối tác', icon: 'fas fa-handshake', action: () => navigate('/customers') },
+        { label: 'Đơn mua hàng', icon: 'fas fa-shopping-cart', action: () => navigate('/purchase-orders') },
+        { label: 'Đơn bán hàng', icon: 'fas fa-store', action: () => navigate('/sales-orders') },
+        { label: 'Kiểm kê', icon: 'fas fa-clipboard-check', action: () => navigate('/stocktakes') }
     ];
 
     const reportItems = [
-        { id: 'inventory-summary', name: 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)' },
-        { id: 'stock-ledger', name: 'Sổ chi tiết vật tư hàng hóa' },
-        { id: 'inventory-balance', name: 'Báo cáo tồn kho hiện tại' },
-        { id: 'stock-transfers', name: 'Báo cáo chuyển kho nội bộ' },
-        { id: 'debt', name: 'Báo cáo công nợ đối tác' }
+        { id: 'cash-ledger', name: 'Sổ chi tiết quỹ tiền mặt' },
+        { id: 'debt-customer', name: 'Tổng hợp công nợ phải thu' },
+        { id: 'debt-supplier', name: 'Tổng hợp công nợ phải trả' },
+        { id: 'cash-flow', name: 'Báo cáo lưu chuyển tiền tệ' },
+        { id: 'payment-history', name: 'Lịch sử thanh toán' }
     ];
 
     return (
-        <AdminLayout activeTab="dashboard">
+        <AdminLayout activeTab="finance">
             <div className={styles.dashboardContainer}>
                 <section className={styles.mainProcess}>
                     <div className={styles.panelHeader}>
                         <div>
                             <p className={styles.eyebrow}>Quy trình vận hành</p>
-                            <h3 className={styles.sectionTitle}>Nghiệp vụ kho</h3>
+                            <h3 className={styles.sectionTitle}>Nghiệp vụ Thu Chi</h3>
                         </div>
-
                     </div>
 
                     <div className={styles.processDiagram}>
@@ -73,12 +72,12 @@ function WarehouseDashboard() {
                 <aside className={styles.reportsArea}>
                     <div className={styles.reportHeader}>
                         <p className={styles.eyebrow}>Theo dõi nhanh</p>
-                        <h3 className={styles.sectionTitle}>Báo cáo</h3>
+                        <h3 className={styles.sectionTitle}>Báo cáo Thu Chi</h3>
                     </div>
                     <ul className={styles.reportList}>
                         {reportItems.map((report) => (
                             <li key={report.id} onClick={() => navigate('/reports', { state: { reportId: report.id, fromDashboard: true } })} style={{ cursor: 'pointer' }}>
-                                <i className="fas fa-chart-line"></i>
+                                <i className="fas fa-chart-bar"></i>
                                 <span>{report.name}</span>
                             </li>
                         ))}
@@ -95,4 +94,4 @@ function WarehouseDashboard() {
     );
 }
 
-export default WarehouseDashboard;
+export default PaymentOverviewPage;
