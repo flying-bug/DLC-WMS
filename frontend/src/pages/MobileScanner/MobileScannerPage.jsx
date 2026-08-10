@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { uploadOcrForSession } from '../../api/inventoryImportApi';
 import styles from './MobileScannerPage.module.css';
 
@@ -14,7 +14,6 @@ export default function MobileScannerPage() {
   const [status, setStatus] = useState('idle'); // idle | uploading | success | error
   const [message, setMessage] = useState('');
   const [sentCount, setSentCount] = useState(0);
-  const fileInputRef = useRef(null);
   
   const searchParams = new URLSearchParams(window.location.search);
   const sessionId = searchParams.get('session');
@@ -40,9 +39,7 @@ export default function MobileScannerPage() {
     }
   }, [sentCount, sessionId]);
 
-  const triggerCamera = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
+
 
   if (!sessionId) {
     return (
@@ -81,10 +78,9 @@ export default function MobileScannerPage() {
       </div>
 
       {/* Main Capture Button */}
-      <button
+      <label
         className={styles.captureBtn}
-        onClick={triggerCamera}
-        disabled={status === 'uploading'}
+        style={status === 'uploading' ? { opacity: 0.7, cursor: 'not-allowed', pointerEvents: 'none' } : {}}
       >
         {status === 'uploading' ? (
           <span className={styles.spinnerInline} />
@@ -92,7 +88,17 @@ export default function MobileScannerPage() {
           '📷'
         )}
         <span>{status === 'uploading' ? 'Đang gửi...' : 'Chụp / Chọn ảnh hóa đơn'}</span>
-      </button>
+
+        {/* Hidden camera input inside label for native triggering */}
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style={{ display: 'none' }}
+          onChange={handleCapture}
+          disabled={status === 'uploading'}
+        />
+      </label>
 
       {/* Instructions */}
       <div className={styles.instructions}>
@@ -104,16 +110,6 @@ export default function MobileScannerPage() {
           <li>Bạn có thể chụp liên tiếp nhiều phiếu</li>
         </ol>
       </div>
-
-      {/* Hidden camera input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        style={{ display: 'none' }}
-        onChange={handleCapture}
-      />
     </div>
   );
 }
