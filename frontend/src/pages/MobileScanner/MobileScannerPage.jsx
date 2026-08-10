@@ -34,7 +34,17 @@ export default function MobileScannerPage() {
       setMessage(`✅ Đã gửi ảnh thành công! Vui lòng nhìn lên màn hình máy tính.`);
     } catch (err) {
       setStatus('error');
-      setMessage('❌ Gửi thất bại. Vui lòng thử lại.');
+      let errorDetail = err.message;
+      if (err.response) {
+        // Có phản hồi từ server nhưng lỗi (4xx, 5xx)
+        errorDetail = `Mã lỗi ${err.response.status}: ${
+          err.response.data?.userMessage || err.response.data?.message || JSON.stringify(err.response.data)
+        }`;
+      } else if (err.request) {
+        // Không nhận được phản hồi (có thể do sai IP, CORS, mạng)
+        errorDetail = `Không thể kết nối đến server (Network Error hoặc CORS). Request URL: ${err.config?.url}`;
+      }
+      setMessage(`❌ Gửi thất bại: ${errorDetail}`);
       console.error('Mobile OCR error:', err);
     }
   }, [sentCount, sessionId]);
@@ -68,7 +78,7 @@ export default function MobileScannerPage() {
           {status === 'success' && '✅'}
           {status === 'error' && '❌'}
         </div>
-        <p className={styles.statusText}>
+        <p className={styles.statusText} style={status === 'error' ? { fontSize: '13px', wordBreak: 'break-word', color: '#fca5a5' } : {}}>
           {status === 'idle' && 'Sẵn sàng chụp phiếu giao hàng'}
           {status !== 'idle' && message}
         </p>
