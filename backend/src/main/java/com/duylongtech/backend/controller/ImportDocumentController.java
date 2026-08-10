@@ -4,13 +4,17 @@ import jakarta.validation.Valid;
 import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.InventoryDocumentResponse;
+import com.duylongtech.backend.dto.response.OcrImportResponse;
 import com.duylongtech.backend.service.AuditLogService;
+import com.duylongtech.backend.service.ImportOcrService;
 import com.duylongtech.backend.service.InventoryDocumentService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -22,6 +26,7 @@ public class ImportDocumentController {
 
     private final InventoryDocumentService inventoryDocumentService;
     private final AuditLogService auditLogService;
+    private final ImportOcrService importOcrService;
 
     private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
         String ipAddress = request.getHeader("X-Forwarded-For");
@@ -127,5 +132,51 @@ public class ImportDocumentController {
                     "Ghi so phieu nhap kho ID " + id + " that bai: " + e.getMessage(), ip, null);
             throw e;
         }
+    }
+
+    // ==========================================
+    // OCR - AI Document Processing
+    // ==========================================
+
+    @GetMapping("/ocr-session/init")
+    @Operation(summary = "Khởi tạo phiên quét OCR từ Desktop")
+    public ApiResponse<String> initOcrSession() {
+        return ApiResponse.success(importOcrService.initSession());
+    }
+
+    @GetMapping("/ocr-session/{sessionId}")
+    @Operation(summary = "Lấy trạng thái của phiên quét OCR")
+    public ApiResponse<ImportOcrService.OcrSessionData> getOcrSessionState(@PathVariable String sessionId) {
+        return ApiResponse.success(importOcrService.getSessionState(sessionId));
+    }
+
+    @PostMapping(value = "/ocr-session/{sessionId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Mobile gửi ảnh lên để OCR cho một session cụ thể")
+    public ApiResponse<String> uploadOcrForSession(
+            @PathVariable String sessionId,
+            @RequestParam("file") MultipartFile file) {
+        importOcrService.scanDocumentForSession(sessionId, file);
+        return ApiResponse.success("Đang xử lý ảnh trên máy chủ...");
+    }
+
+    @PostMapping(value = "/ocr-scan", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "OCR scan import document (invoice/delivery note image)")
+    @PreAuthorize("hasAuthority('import:add')")
+    public ApiResponse<OcrImportResponse> ocrScan(
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ApiResponse.success(importOcrService.scanDocument(file));
+    }
+
+    @PostMapping("/ocr-confirm-mapping")
+    @Operation(summary = "Confirm OCR product mapping for learning")
+    @PreAuthorize("hasAuthority('import:add')")
+    public ApiResponse<Void> confirmOcrMapping(
+            @RequestParam Long partnerId,
+            @RequestParam String vendorProductName,
+            @RequestParam Long variantId
+    ) {
+        importOcrService.confirmMapping(partnerId, vendorProductName, variantId);
+        return ApiResponse.success();
     }
 }

@@ -53,6 +53,7 @@ import PurchaseOrderDetailPage from '../pages/PurchaseOrder/PurchaseOrderDetailP
 import PaymentManagementPage from '../pages/Payment/PaymentManagementPage';
 import PaymentOverviewPage from '../pages/Payment/PaymentOverviewPage';
 import PaymentHistoryPage from '../pages/Payment/PaymentHistoryPage';
+import MobileScannerPage from '../pages/MobileScanner/MobileScannerPage';
 
 // Helper to check valid token
 const isValidToken = () => {
@@ -187,6 +188,9 @@ function AppRouter() {
                     <Route path="/audit-log" element={<AuditLogPage />} />
                     <Route path="/operations" element={<OperationsCenterPage />} />
                 </Route>
+
+                {/* Mobile Scanner (lightweight page for phone camera) */}
+                <Route path="/m/scan" element={<MobileScannerPage />} />
 
                 {/* Catch-all Redirect */}
                 <Route path="*" element={<NotFoundRedirect />} />

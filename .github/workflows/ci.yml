@@ -71,14 +71,23 @@ jobs:
             rm -f /root/backend/*.jar
           EOF
 
-      - name: Upload JAR to VPS (CD)
+      - name: Create .env file from Secret
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+        run: |
+          cat << 'EOF' > backend/target/.env
+          ${{ secrets.ENV_PRODUCT }}
+          EOF
+          # Xóa các khoảng trắng thừa ở đầu dòng (nếu có do thụt lề YAML)
+          sed -i 's/^[ \t]*//' backend/target/.env
+
+      - name: Upload JAR and .env to VPS (CD)
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.VPS_USERNAME }}
           password: ${{ secrets.VPS_PASSWORD }}
-          source: "backend/target/*.jar"
+          source: "backend/target/*.jar,backend/target/.env"
           target: "/root/backend"
           strip_components: 2
 
@@ -89,7 +98,13 @@ jobs:
           export SSHPASS="${{ secrets.VPS_PASSWORD }}"
           sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_IP }} << 'EOF'
             cd /root/backend
-            export SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/duylongcomputer?useSSL=false&serverTimezone=UTC"
+            
+            # Tải các biến môi trường từ file .env vừa upload
+            set -a
+            [ -f .env ] && source .env
+            set +a
+            
+            # Khởi động ứng dụng (nó sẽ tự nhận các biến môi trường vừa load)
             nohup java -jar *.jar > app.log 2>&1 &
             sleep 3
           EOF

@@ -158,7 +158,17 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
 
 const WAREHOUSE_PRODUCT_TYPES = ['Hàng hóa', 'Thành phẩm'];
 
-const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thành phẩm', allowedProductTypes }) => {
+const QuickAddProductModal = ({ 
+    isOpen, 
+    onClose, 
+    onSuccess, 
+    productType = 'Hàng hóa', 
+    allowedProductTypes = ['Hàng hóa', 'Thành phẩm'],
+    initialProductName = '',
+    initialUnitName = '',
+    initialCategoryName = '',
+    initialWarrantyMonths = ''
+}) => {
     const productTypeOptions = (Array.isArray(allowedProductTypes) && allowedProductTypes.length > 0
         ? allowedProductTypes
         : [productType])
@@ -168,12 +178,13 @@ const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thàn
     const [units, setUnits] = useState([]);
     const [selectedProductType, setSelectedProductType] = useState(defaultProductType);
     const [formData, setFormData] = useState({
-        productName: '',
+        productName: initialProductName,
         categoryId: '',
         unitId: '',
         warrantyPeriodMonths: '',
         salePrice: ''
     });
+    const [trackSerial, setTrackSerial] = useState(false);
     
     // Thêm state cho định mức cấu hình (BOM)
     const [bomLines, setBomLines] = useState([]);
@@ -192,9 +203,27 @@ const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thàn
             const getPageContent = (response) => response?.data?.data?.content || response?.data?.content || response?.data?.data || response?.data || [];
             
             const cats = getPageContent(catRes);
-            setCategories(cats.filter(c => c.status !== 'INACTIVE'));
+            const fetchedCategories = cats.filter(c => c.status !== 'INACTIVE');
+            setCategories(fetchedCategories);
             
-            setUnits(getPageContent(unitRes));
+            const unitsList = getPageContent(unitRes);
+            setUnits(unitsList);
+            
+            setFormData(prev => {
+                let newCatId = prev.categoryId;
+                let newUnitId = prev.unitId;
+
+                if (initialCategoryName && !newCatId) {
+                    const matchedCat = fetchedCategories.find(c => c.name?.trim().toLowerCase() === initialCategoryName.trim().toLowerCase());
+                    if (matchedCat) newCatId = String(matchedCat.id);
+                }
+                if (initialUnitName && !newUnitId) {
+                    const matchedUnit = unitsList.find(u => u.name?.trim().toLowerCase() === initialUnitName.trim().toLowerCase());
+                    if (matchedUnit) newUnitId = String(matchedUnit.id);
+                }
+                
+                return { ...prev, categoryId: newCatId, unitId: newUnitId };
+            });
             
             let brands = getPageContent(brandRes);
             let defaultBrand = brands.find(b => b.name.toLowerCase() === 'khác' || b.name.toLowerCase() === 'other');
@@ -221,18 +250,19 @@ const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thàn
         if (isOpen) {
             setSelectedProductType(defaultProductType);
             setFormData({
-                productName: '',
+                productName: initialProductName || '',
                 categoryId: '',
                 unitId: '',
                 brandId: '',
-                warrantyPeriodMonths: '',
+                warrantyPeriodMonths: initialWarrantyMonths || '',
                 salePrice: ''
             });
+            setTrackSerial(false);
             setBomLines([]);
             setErrorMsg('');
             fetchLookups();
         }
-    }, [isOpen, defaultProductType]);
+    }, [isOpen, defaultProductType, initialProductName, initialUnitName, initialCategoryName, initialWarrantyMonths]);
 
     const effectiveProductType = selectedProductType || defaultProductType;
     const isAssemblyType = effectiveProductType === 'Thành phẩm';
@@ -293,7 +323,7 @@ const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thàn
                 brandId: formData.brandId ? Number(formData.brandId) : null,
                 warrantyPeriodMonths: formData.warrantyPeriodMonths ? Number(formData.warrantyPeriodMonths) : 0,
                 salePrice: formData.salePrice ? Number(formData.salePrice) : 0,
-                trackSerial: isAssemblyType,
+                trackSerial: trackSerial,
                 isAssembly: isAssemblyType,
                 active: true,
                 minStockQty: 0
@@ -408,6 +438,19 @@ const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thàn
                                     placeholder="0"
                                 />
                             </div>
+                        </div>
+
+                        <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input 
+                                type="checkbox" 
+                                id="trackSerial"
+                                checked={trackSerial}
+                                onChange={(e) => setTrackSerial(e.target.checked)}
+                                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                            />
+                            <label htmlFor="trackSerial" style={{ fontSize: '13.5px', fontWeight: 500, cursor: 'pointer', color: '#374151', margin: 0 }}>
+                                Có quản lý theo số Serial / IMEI
+                            </label>
                         </div>
                     </div>
 
