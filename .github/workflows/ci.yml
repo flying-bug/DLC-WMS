@@ -94,6 +94,7 @@ jobs:
             JAR_FILE=$(ls *.jar 2>/dev/null | head -n 1)
             echo "Starting backend JAR: $JAR_FILE"
             nohup java -jar "$JAR_FILE" > app.log 2>&1 &
+            disown
             sleep 3
           EOF
           echo "Successfully deployed!"
