@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as importApi from '../../api/inventoryImportApi';
+import { scanImportSlipOcr } from '../../api/inventoryImportApi';
+import OcrUploadModal from './components/OcrUploadModal';
+import OcrResultPreviewModal from './components/OcrResultPreviewModal';
 import * as customerApi from '../../api/customerApi';
 import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -138,6 +141,94 @@ function CreateImportSlipPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [savedSlip, setSavedSlip] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showOcrModal, setShowOcrModal] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrPreviewData, setOcrPreviewData] = useState(null);
+  const [ocrQuickAddPreviewIndex, setOcrQuickAddPreviewIndex] = useState(null);
+  const [ocrQuickAddProductName, setOcrQuickAddProductName] = useState('');
+  const [ocrQuickAddUnitName, setOcrQuickAddUnitName] = useState('');
+  const [ocrQuickAddCategoryName, setOcrQuickAddCategoryName] = useState('');
+  const [ocrQuickAddWarrantyMonths, setOcrQuickAddWarrantyMonths] = useState('');
+
+  const handleOcrPreviewQuickAdd = (index, rawProductName, unit, category, warrantyMonths) => {
+    setOcrQuickAddPreviewIndex(index);
+    setOcrQuickAddProductName(rawProductName);
+    setOcrQuickAddUnitName(unit || '');
+    setOcrQuickAddCategoryName(category || '');
+    setOcrQuickAddWarrantyMonths(warrantyMonths !== null && warrantyMonths !== undefined ? String(warrantyMonths) : '');
+    setShowQuickAddProduct(true);
+  };
+
+  const handleOcrSuccess = (data) => {
+    setShowOcrModal(false);
+    setOcrPreviewData(data);
+  };
+
+  const handleOcrFile = async (file) => {
+    setOcrLoading(true);
+    try {
+      const res = await scanImportSlipOcr(file);
+      const data = res?.data?.data ?? res?.data;
+      if (!data) {
+        showToast('error', 'Không nhận được dữ liệu từ AI');
+        return;
+      }
+      handleOcrSuccess(data);
+    } catch (err) {
+      console.error('OCR scan error:', err);
+      showToast('error', err.response?.data?.userMessage || 'Không thể trích xuất dữ liệu từ chứng từ');
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  const confirmOcrPreview = () => {
+    if (!ocrPreviewData) return;
+    const data = ocrPreviewData;
+    
+    // Auto-fill supplier
+    if (data.matchedSupplierId) {
+      setForm(prev => ({
+        ...prev,
+        partnerId: String(data.matchedSupplierId),
+        partnerName: data.matchedSupplierName || '',
+      }));
+      setImportType('PURCHASE');
+    }
+    // Auto-fill product lines
+    if (data.items && data.items.length > 0) {
+      const ocrLines = data.items.map(item => {
+        const variantId = item.matchedVariantId ? String(item.matchedVariantId) : '';
+        const product = variantId ? products.find(p => String(p.id) === variantId) : null;
+        return {
+          ...emptyLine(),
+          variantId,
+          quantity: Number(item.quantity) || 1,
+          price: Number(item.unitPrice) || 0,
+          note: item.rawProductName || '',
+          serialNumbers: item.serialNumbers || [],
+          warrantyMonths: product ? Number(product.warrantyMonths || 0) : 0,
+          vatPercent: item.vatPercent !== null && item.vatPercent !== undefined ? Number(item.vatPercent) : 0,
+          isNew: false,
+          _ocrConfidence: item.matchConfidence,
+          _ocrRawName: item.rawProductName,
+          _ocrSuggestions: item.alternativeSuggestions,
+        };
+      });
+      setItems(ocrLines);
+    }
+    // Auto-fill invoice info
+    if (data.invoiceCode) {
+      setForm(prev => ({
+        ...prev,
+        attachedDoc: data.invoiceCode,
+        note: prev.note || `Nhập từ hóa đơn ${data.invoiceCode}`,
+      }));
+    }
+    
+    setOcrPreviewData(null);
+    showToast('success', `Đã điền ${data.items?.length || 0} dòng sản phẩm vào phiếu nhập!`);
+  };
 
   const [form, setForm] = useState(() => ({
     docCode: '',
@@ -382,6 +473,20 @@ function CreateImportSlipPage() {
             }
           : item));
         showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
+      } else if (createdVariant && ocrQuickAddPreviewIndex !== null) {
+        setOcrPreviewData(prev => {
+          if (!prev) return prev;
+          const newData = { ...prev };
+          newData.items = [...prev.items];
+          newData.items[ocrQuickAddPreviewIndex] = {
+            ...newData.items[ocrQuickAddPreviewIndex],
+            matchedVariantId: createdVariant.id,
+            matchedVariantName: createdVariant.variantName,
+            matchedProductName: createdVariant.productName,
+          };
+          return newData;
+        });
+        showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
       } else {
         showToast('warning', 'Đã thêm sản phẩm nhưng chưa tìm thấy biến thể mặc định để chọn.');
       }
@@ -390,6 +495,11 @@ function CreateImportSlipPage() {
     } finally {
       setShowQuickAddProduct(false);
       setQuickAddLineId(null);
+      setOcrQuickAddPreviewIndex(null);
+      setOcrQuickAddProductName('');
+      setOcrQuickAddUnitName('');
+      setOcrQuickAddCategoryName('');
+      setOcrQuickAddWarrantyMonths('');
     }
   };
 
@@ -512,6 +622,16 @@ function CreateImportSlipPage() {
       if (shouldPost && createdId) {
         await importApi.postImportSlip(createdId);
       }
+      
+      // Trigger AI Learning for OCR
+      if (form.partnerId) {
+        items.forEach(item => {
+          if (item._ocrRawName && item.variantId) {
+            importApi.confirmOcrMapping(form.partnerId, item._ocrRawName, item.variantId)
+              .catch(e => console.warn('Lỗi lưu OCR mapping:', e));
+          }
+        });
+      }
       const fullSlipData = {
         ...created,
         docCode: created?.docCode || form.docCode,
@@ -586,6 +706,22 @@ function CreateImportSlipPage() {
             />
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowOcrModal(true)}
+          style={{
+            padding: '7px 16px', borderRadius: '8px', border: 'none',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '6px',
+            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)',
+            transition: 'transform 0.15s',
+          }}
+          onMouseOver={e => e.currentTarget.style.transform = 'scale(1.03)'}
+          onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          🤖 Quét AI (OCR)
+        </button>
       </div>
 
       <div className={styles.pageBody}>
@@ -1026,10 +1162,22 @@ function CreateImportSlipPage() {
       />
       <QuickAddProductModal
         isOpen={showQuickAddProduct}
-        onClose={() => { setShowQuickAddProduct(false); setQuickAddLineId(null); }}
+        onClose={() => { 
+          setShowQuickAddProduct(false); 
+          setQuickAddLineId(null); 
+          setOcrQuickAddPreviewIndex(null); 
+          setOcrQuickAddProductName('');
+          setOcrQuickAddUnitName('');
+          setOcrQuickAddCategoryName('');
+          setOcrQuickAddWarrantyMonths('');
+        }}
         onSuccess={handleQuickAddProductSuccess}
         productType={importType === 'PRODUCTION' ? 'Thành phẩm' : 'Hàng hóa'}
         allowedProductTypes={['Hàng hóa', 'Thành phẩm']}
+        initialProductName={ocrQuickAddProductName}
+        initialUnitName={ocrQuickAddUnitName}
+        initialCategoryName={ocrQuickAddCategoryName}
+        initialWarrantyMonths={ocrQuickAddWarrantyMonths}
       />
       {showPartnerModal && (
         <SupplierModal
@@ -1171,6 +1319,20 @@ function CreateImportSlipPage() {
         onClose={() => navigate(returnUrl || '/import-history')}
       />
 
+      <OcrUploadModal
+        open={showOcrModal}
+        onClose={() => setShowOcrModal(false)}
+        onFileSelected={handleOcrFile}
+        onOcrSuccess={handleOcrSuccess}
+        loading={ocrLoading}
+      />
+      <OcrResultPreviewModal
+        open={!!ocrPreviewData}
+        data={ocrPreviewData}
+        onConfirm={confirmOcrPreview}
+        onCancel={() => setOcrPreviewData(null)}
+        onQuickAdd={handleOcrPreviewQuickAdd}
+      />
       <Toast
         isVisible={toast.isVisible}
         message={toast.message}

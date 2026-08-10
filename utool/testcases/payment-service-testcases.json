@@ -1,0 +1,1070 @@
+﻿{
+    "createPaymentReceipt(PaymentRequest request)":  {
+                                                         "technique":  "Equivalence Partitioning (EP)",
+                                                         "testCases":  [
+                                                                           {
+                                                                               "id":  "UTCID01",
+                                                                               "purpose":  "Verify a null request is rejected before any repository or collaborator is called.",
+                                                                               "type":  "A",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "8":  {
+                                                                                                            "label":  "Precondition"
+                                                                                                        },
+                                                                                                  "9":  {
+                                                                                                            "value":  "All repositories and dependent services are available as Mockito mocks"
+                                                                                                        },
+                                                                                                  "14":  {
+                                                                                                             "label":  "Mock setup"
+                                                                                                         },
+                                                                                                  "15":  {
+                                                                                                             "value":  "No collaborator behavior is stubbed"
+                                                                                                         },
+                                                                                                  "21":  {
+                                                                                                             "label":  "partnerId"
+                                                                                                         },
+                                                                                                  "24":  {
+                                                                                                             "label":  "amount"
+                                                                                                         },
+                                                                                                  "40":  {
+                                                                                                             "label":  "paymentMethod"
+                                                                                                         },
+                                                                                                  "45":  {
+                                                                                                             "label":  "status"
+                                                                                                         },
+                                                                                                  "51":  {
+                                                                                                             "label":  "note"
+                                                                                                         },
+                                                                                                  "55":  {
+                                                                                                             "label":  "Expected"
+                                                                                                         },
+                                                                                                  "56":  {
+                                                                                                             "value":  "No repository or dependent service is called"
+                                                                                                         },
+                                                                                                  "29":  {
+                                                                                                             "label":  "return"
+                                                                                                         },
+                                                                                                  "30":  {
+                                                                                                             "value":  "No PaymentResponse is returned"
+                                                                                                         },
+                                                                                                  "32":  {
+                                                                                                             "label":  "Exception"
+                                                                                                         },
+                                                                                                  "33":  {
+                                                                                                             "value":  "BusinessException: Đối tác là bắt buộc"
+                                                                                                         },
+                                                                                                  "34":  {
+                                                                                                             "label":  "Log message"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         }
+                                                                                              }
+                                                                           },
+                                                                           {
+                                                                               "id":  "UTCID02",
+                                                                               "purpose":  "Verify a request without partnerId is rejected before partner lookup.",
+                                                                               "type":  "A",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "9":  {
+                                                                                                            "value":  "All repositories and dependent services are available as Mockito mocks"
+                                                                                                        },
+                                                                                                  "15":  {
+                                                                                                             "value":  "No collaborator behavior is stubbed"
+                                                                                                         },
+                                                                                                  "22":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "25":  {
+                                                                                                             "value":  "100.00"
+                                                                                                         },
+                                                                                                  "41":  {
+                                                                                                             "value":  "\"CASH\""
+                                                                                                         },
+                                                                                                  "46":  {
+                                                                                                             "value":  "\"POSTED\""
+                                                                                                         },
+                                                                                                  "52":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "57":  {
+                                                                                                             "value":  "partnerRepository.findById is not called"
+                                                                                                         },
+                                                                                                  "30":  {
+                                                                                                             "value":  "No PaymentResponse is returned"
+                                                                                                         },
+                                                                                                  "33":  {
+                                                                                                             "value":  "BusinessException: Đối tác là bắt buộc"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         }
+                                                                                              }
+                                                                           },
+                                                                           {
+                                                                               "id":  "UTCID03",
+                                                                               "purpose":  "Verify a request referencing a nonexistent partner is rejected.",
+                                                                               "type":  "A",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "10":  {
+                                                                                                             "value":  "partnerRepository contains no partner with id 10"
+                                                                                                         },
+                                                                                                  "16":  {
+                                                                                                             "value":  "partnerRepository.findById(10) returns Optional.empty"
+                                                                                                         },
+                                                                                                  "23":  {
+                                                                                                             "value":  "10"
+                                                                                                         },
+                                                                                                  "25":  {
+                                                                                                             "value":  "100.00"
+                                                                                                         },
+                                                                                                  "41":  {
+                                                                                                             "value":  "\"CASH\""
+                                                                                                         },
+                                                                                                  "46":  {
+                                                                                                             "value":  "\"POSTED\""
+                                                                                                         },
+                                                                                                  "52":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "58":  {
+                                                                                                             "value":  "No payment transaction is saved and no ledger entry is recorded"
+                                                                                                         },
+                                                                                                  "30":  {
+                                                                                                             "value":  "No PaymentResponse is returned"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         },
+                                                                                                  "91":  {
+                                                                                                             "value":  "BusinessException: Không tìm thấy đối tác với ID: 10"
+                                                                                                         }
+                                                                                              }
+                                                                           },
+                                                                           {
+                                                                               "id":  "UTCID04",
+                                                                               "purpose":  "Verify the invalid amount partition represented by null is rejected.",
+                                                                               "type":  "A",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "11":  {
+                                                                                                             "value":  "Partner 10 exists with name Công ty Minh Long"
+                                                                                                         },
+                                                                                                  "17":  {
+                                                                                                             "value":  "partnerRepository.findById(10) returns partner 10"
+                                                                                                         },
+                                                                                                  "23":  {
+                                                                                                             "value":  "10"
+                                                                                                         },
+                                                                                                  "26":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "41":  {
+                                                                                                             "value":  "\"CASH\""
+                                                                                                         },
+                                                                                                  "46":  {
+                                                                                                             "value":  "\"POSTED\""
+                                                                                                         },
+                                                                                                  "52":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "58":  {
+                                                                                                             "value":  "No payment transaction is saved and no ledger entry is recorded"
+                                                                                                         },
+                                                                                                  "30":  {
+                                                                                                             "value":  "No PaymentResponse is returned"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         },
+                                                                                                  "92":  {
+                                                                                                             "value":  "BusinessException: Số tiền giao dịch phải lớn hơn 0"
+                                                                                                         }
+                                                                                              }
+                                                                           },
+                                                                           {
+                                                                               "id":  "UTCID05",
+                                                                               "purpose":  "Verify the invalid amount partition represented by zero is rejected.",
+                                                                               "type":  "B",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "11":  {
+                                                                                                             "value":  "Partner 10 exists with name Công ty Minh Long"
+                                                                                                         },
+                                                                                                  "17":  {
+                                                                                                             "value":  "partnerRepository.findById(10) returns partner 10"
+                                                                                                         },
+                                                                                                  "23":  {
+                                                                                                             "value":  "10"
+                                                                                                         },
+                                                                                                  "27":  {
+                                                                                                             "value":  "0.00"
+                                                                                                         },
+                                                                                                  "41":  {
+                                                                                                             "value":  "\"CASH\""
+                                                                                                         },
+                                                                                                  "46":  {
+                                                                                                             "value":  "\"POSTED\""
+                                                                                                         },
+                                                                                                  "52":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "58":  {
+                                                                                                             "value":  "No payment transaction is saved and no ledger entry is recorded"
+                                                                                                         },
+                                                                                                  "30":  {
+                                                                                                             "value":  "No PaymentResponse is returned"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         },
+                                                                                                  "92":  {
+                                                                                                             "value":  "BusinessException: Số tiền giao dịch phải lớn hơn 0"
+                                                                                                         }
+                                                                                              }
+                                                                           },
+                                                                           {
+                                                                               "id":  "UTCID06",
+                                                                               "purpose":  "Verify the invalid negative amount partition is rejected.",
+                                                                               "type":  "A",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "11":  {
+                                                                                                             "value":  "Partner 10 exists with name Công ty Minh Long"
+                                                                                                         },
+                                                                                                  "17":  {
+                                                                                                             "value":  "partnerRepository.findById(10) returns partner 10"
+                                                                                                         },
+                                                                                                  "23":  {
+                                                                                                             "value":  "10"
+                                                                                                         },
+                                                                                                  "28":  {
+                                                                                                             "value":  "-0.01"
+                                                                                                         },
+                                                                                                  "41":  {
+                                                                                                             "value":  "\"CASH\""
+                                                                                                         },
+                                                                                                  "46":  {
+                                                                                                             "value":  "\"POSTED\""
+                                                                                                         },
+                                                                                                  "52":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "58":  {
+                                                                                                             "value":  "No payment transaction is saved and no ledger entry is recorded"
+                                                                                                         },
+                                                                                                  "30":  {
+                                                                                                             "value":  "No PaymentResponse is returned"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         },
+                                                                                                  "92":  {
+                                                                                                             "value":  "BusinessException: Số tiền giao dịch phải lớn hơn 0"
+                                                                                                         }
+                                                                                              }
+                                                                           },
+                                                                           {
+                                                                               "id":  "UTCID07",
+                                                                               "purpose":  "Verify a status outside the DRAFT and POSTED partitions is rejected.",
+                                                                               "type":  "A",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "11":  {
+                                                                                                             "value":  "Partner 10 exists with name Công ty Minh Long"
+                                                                                                         },
+                                                                                                  "17":  {
+                                                                                                             "value":  "partnerRepository.findById(10) returns partner 10"
+                                                                                                         },
+                                                                                                  "23":  {
+                                                                                                             "value":  "10"
+                                                                                                         },
+                                                                                                  "25":  {
+                                                                                                             "value":  "100.00"
+                                                                                                         },
+                                                                                                  "41":  {
+                                                                                                             "value":  "\"CASH\""
+                                                                                                         },
+                                                                                                  "47":  {
+                                                                                                             "value":  "\"APPROVED\""
+                                                                                                         },
+                                                                                                  "52":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "58":  {
+                                                                                                             "value":  "No payment transaction is saved and no ledger entry is recorded"
+                                                                                                         },
+                                                                                                  "30":  {
+                                                                                                             "value":  "No PaymentResponse is returned"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         },
+                                                                                                  "93":  {
+                                                                                                             "value":  "BusinessException: Trạng thái phiếu thu/chi chỉ chấp nhận DRAFT hoặc POSTED"
+                                                                                                         }
+                                                                                              }
+                                                                           },
+                                                                           {
+                                                                               "id":  "UTCID08",
+                                                                               "purpose":  "Verify a payment method outside CASH and BANK_TRANSFER is rejected.",
+                                                                               "type":  "A",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "11":  {
+                                                                                                             "value":  "Partner 10 exists with name Công ty Minh Long"
+                                                                                                         },
+                                                                                                  "17":  {
+                                                                                                             "value":  "partnerRepository.findById(10) returns partner 10"
+                                                                                                         },
+                                                                                                  "23":  {
+                                                                                                             "value":  "10"
+                                                                                                         },
+                                                                                                  "25":  {
+                                                                                                             "value":  "100.00"
+                                                                                                         },
+                                                                                                  "42":  {
+                                                                                                             "value":  "\"CARD\""
+                                                                                                         },
+                                                                                                  "48":  {
+                                                                                                             "value":  "\"DRAFT\""
+                                                                                                         },
+                                                                                                  "52":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "58":  {
+                                                                                                             "value":  "No payment transaction is saved and no ledger entry is recorded"
+                                                                                                         },
+                                                                                                  "30":  {
+                                                                                                             "value":  "No PaymentResponse is returned"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         },
+                                                                                                  "94":  {
+                                                                                                             "value":  "BusinessException: Phương thức thanh toán chỉ chấp nhận CASH hoặc BANK_TRANSFER"
+                                                                                                         }
+                                                                                              }
+                                                                           },
+                                                                           {
+                                                                               "id":  "UTCID09",
+                                                                               "purpose":  "Verify omitted status and payment method default to POSTED and CASH and record a receipt ledger.",
+                                                                               "type":  "N",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "12":  {
+                                                                                                             "value":  "Partner 10 exists and its current debt balance is 200.00"
+                                                                                                         },
+                                                                                                  "18":  {
+                                                                                                             "value":  "Code generator returns PT00001; save assigns transaction id 101; post-ledger balance is 0.00"
+                                                                                                         },
+                                                                                                  "23":  {
+                                                                                                             "value":  "10"
+                                                                                                         },
+                                                                                                  "37":  {
+                                                                                                             "value":  "200.00"
+                                                                                                         },
+                                                                                                  "43":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "49":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "53":  {
+                                                                                                             "value":  "\"   \""
+                                                                                                         },
+                                                                                                  "59":  {
+                                                                                                             "value":  "A PAYMENT_RECEIPT ledger entry records amountReceipt=200.00 with default note Lập phiếu thu tiền PT00001"
+                                                                                                         },
+                                                                                                  "31":  {
+                                                                                                             "value":  "PaymentResponse{id=101, code=\"PT00001\", type=\"RECEIPT\", status=\"POSTED\", paymentMethod=\"CASH\", note=null, partnerDebtBalance=0.00}"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         }
+                                                                                              }
+                                                                           },
+                                                                           {
+                                                                               "id":  "UTCID10",
+                                                                               "purpose":  "Verify DRAFT and BANK_TRANSFER values are normalized and do not create a ledger entry.",
+                                                                               "type":  "N",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "13":  {
+                                                                                                             "value":  "Partner 10 exists and its current debt balance is 500.00"
+                                                                                                         },
+                                                                                                  "19":  {
+                                                                                                             "value":  "Code generator returns PT00002 and save assigns transaction id 102"
+                                                                                                         },
+                                                                                                  "23":  {
+                                                                                                             "value":  "10"
+                                                                                                         },
+                                                                                                  "38":  {
+                                                                                                             "value":  "150.00"
+                                                                                                         },
+                                                                                                  "44":  {
+                                                                                                             "value":  "\" bank_transfer \""
+                                                                                                         },
+                                                                                                  "50":  {
+                                                                                                             "value":  "\" draft \""
+                                                                                                         },
+                                                                                                  "54":  {
+                                                                                                             "value":  "\"  Thanh toán đợt 1  \""
+                                                                                                         },
+                                                                                                  "60":  {
+                                                                                                             "value":  "Transaction is saved without calling partnerLedgerService.recordLedger"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         },
+                                                                                                  "81":  {
+                                                                                                             "value":  "PaymentResponse{id=102, code=\"PT00002\", type=\"RECEIPT\", status=\"DRAFT\", paymentMethod=\"BANK_TRANSFER\", note=\"Thanh toán đợt 1\", partnerDebtBalance=500.00}"
+                                                                                                         }
+                                                                                              }
+                                                                           },
+                                                                           {
+                                                                               "id":  "UTCID11",
+                                                                               "purpose":  "Verify a POSTED receipt amount above current debt is rejected before code generation and save.",
+                                                                               "type":  "A",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "12":  {
+                                                                                                             "value":  "Partner 10 exists and its current debt balance is 200.00"
+                                                                                                         },
+                                                                                                  "20":  {
+                                                                                                             "value":  "partnerLedgerRepository returns latest balanceAfter=200.00"
+                                                                                                         },
+                                                                                                  "23":  {
+                                                                                                             "value":  "10"
+                                                                                                         },
+                                                                                                  "39":  {
+                                                                                                             "value":  "200.01"
+                                                                                                         },
+                                                                                                  "41":  {
+                                                                                                             "value":  "\"CASH\""
+                                                                                                         },
+                                                                                                  "46":  {
+                                                                                                             "value":  "\"POSTED\""
+                                                                                                         },
+                                                                                                  "52":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "61":  {
+                                                                                                             "value":  "No transaction code is generated, no transaction is saved, and no ledger entry is recorded"
+                                                                                                         },
+                                                                                                  "30":  {
+                                                                                                             "value":  "No PaymentResponse is returned"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         },
+                                                                                                  "95":  {
+                                                                                                             "value":  "BusinessException: Số tiền thu/chi không được vượt quá số công nợ hiện tại"
+                                                                                                         }
+                                                                                              }
+                                                                           }
+                                                                       ]
+                                                     },
+    "createPaymentVoucher(PaymentRequest request)":  {
+                                                         "technique":  "Boundary Value Analysis (BVA)",
+                                                         "testCases":  [
+                                                                           {
+                                                                               "id":  "UTCID01",
+                                                                               "purpose":  "Verify a POSTED voucher equal to the current debt boundary is accepted and recorded.",
+                                                                               "type":  "B",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "8":  {
+                                                                                                            "label":  "Precondition"
+                                                                                                        },
+                                                                                                  "9":  {
+                                                                                                            "value":  "Partner 10 exists and its current debt balance is 300.00"
+                                                                                                        },
+                                                                                                  "10":  {
+                                                                                                             "label":  "Mock setup"
+                                                                                                         },
+                                                                                                  "11":  {
+                                                                                                             "value":  "Code generator returns PC00001; save assigns id 201; post-ledger balance is 0.00"
+                                                                                                         },
+                                                                                                  "13":  {
+                                                                                                             "label":  "partnerId"
+                                                                                                         },
+                                                                                                  "14":  {
+                                                                                                             "value":  "10"
+                                                                                                         },
+                                                                                                  "15":  {
+                                                                                                             "label":  "amount"
+                                                                                                         },
+                                                                                                  "16":  {
+                                                                                                             "value":  "300.00"
+                                                                                                         },
+                                                                                                  "18":  {
+                                                                                                             "label":  "paymentMethod"
+                                                                                                         },
+                                                                                                  "19":  {
+                                                                                                             "value":  "\"CASH\""
+                                                                                                         },
+                                                                                                  "20":  {
+                                                                                                             "label":  "status"
+                                                                                                         },
+                                                                                                  "21":  {
+                                                                                                             "value":  "\"POSTED\""
+                                                                                                         },
+                                                                                                  "22":  {
+                                                                                                             "label":  "note"
+                                                                                                         },
+                                                                                                  "23":  {
+                                                                                                             "value":  "\"Chi nhà cung cấp\""
+                                                                                                         },
+                                                                                                  "25":  {
+                                                                                                             "label":  "Expected"
+                                                                                                         },
+                                                                                                  "26":  {
+                                                                                                             "value":  "A PAYMENT_VOUCHER ledger entry records amountReceipt=300.00 with note Chi nhà cung cấp"
+                                                                                                         },
+                                                                                                  "29":  {
+                                                                                                             "label":  "return"
+                                                                                                         },
+                                                                                                  "30":  {
+                                                                                                             "value":  "PaymentResponse{id=201, code=\"PC00001\", type=\"VOUCHER\", status=\"POSTED\", partnerDebtBalance=0.00}"
+                                                                                                         },
+                                                                                                  "32":  {
+                                                                                                             "label":  "Exception"
+                                                                                                         },
+                                                                                                  "34":  {
+                                                                                                             "label":  "Log message"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         }
+                                                                                              }
+                                                                           },
+                                                                           {
+                                                                               "id":  "UTCID02",
+                                                                               "purpose":  "Verify a POSTED voucher one cent above the current debt boundary is rejected.",
+                                                                               "type":  "B",
+                                                                               "status":  "P",
+                                                                               "executedDate":  "2026-08-09",
+                                                                               "defectId":  "",
+                                                                               "cellValues":  {
+                                                                                                  "9":  {
+                                                                                                            "value":  "Partner 10 exists and its current debt balance is 300.00"
+                                                                                                        },
+                                                                                                  "12":  {
+                                                                                                             "value":  "partnerLedgerRepository returns latest balanceAfter=300.00"
+                                                                                                         },
+                                                                                                  "14":  {
+                                                                                                             "value":  "10"
+                                                                                                         },
+                                                                                                  "17":  {
+                                                                                                             "value":  "300.01"
+                                                                                                         },
+                                                                                                  "19":  {
+                                                                                                             "value":  "\"CASH\""
+                                                                                                         },
+                                                                                                  "21":  {
+                                                                                                             "value":  "\"POSTED\""
+                                                                                                         },
+                                                                                                  "24":  {
+                                                                                                             "value":  "null"
+                                                                                                         },
+                                                                                                  "27":  {
+                                                                                                             "value":  "No transaction code is generated, no transaction is saved, and no ledger entry is recorded"
+                                                                                                         },
+                                                                                                  "31":  {
+                                                                                                             "value":  "No PaymentResponse is returned"
+                                                                                                         },
+                                                                                                  "33":  {
+                                                                                                             "value":  "BusinessException: Số tiền thu/chi không được vượt quá số công nợ hiện tại"
+                                                                                                         },
+                                                                                                  "35":  {
+                                                                                                             "value":  "No application log is expected"
+                                                                                                         }
+                                                                                              }
+                                                                           }
+                                                                       ]
+                                                     },
+    "postPayment(Long id)":  {
+                                 "technique":  "Branch Coverage",
+                                 "testCases":  [
+                                                   {
+                                                       "id":  "UTCID01",
+                                                       "purpose":  "Verify posting a nonexistent payment follows the payment-not-found exception branch.",
+                                                       "type":  "A",
+                                                       "status":  "P",
+                                                       "executedDate":  "2026-08-09",
+                                                       "defectId":  "",
+                                                       "cellValues":  {
+                                                                          "8":  {
+                                                                                    "label":  "Precondition"
+                                                                                },
+                                                                          "9":  {
+                                                                                    "value":  "Payment transaction 999 does not exist"
+                                                                                },
+                                                                          "15":  {
+                                                                                     "label":  "Mock setup"
+                                                                                 },
+                                                                          "16":  {
+                                                                                     "value":  "paymentTransactionRepository.findById(999) returns Optional.empty"
+                                                                                 },
+                                                                          "22":  {
+                                                                                     "label":  "id"
+                                                                                 },
+                                                                          "23":  {
+                                                                                     "value":  "999"
+                                                                                 },
+                                                                          "29":  {
+                                                                                     "label":  "return"
+                                                                                 },
+                                                                          "30":  {
+                                                                                     "value":  "No PaymentResponse is returned"
+                                                                                 },
+                                                                          "32":  {
+                                                                                     "label":  "Exception"
+                                                                                 },
+                                                                          "33":  {
+                                                                                     "value":  "BusinessException: Không tìm thấy phiếu thu/chi"
+                                                                                 },
+                                                                          "34":  {
+                                                                                     "label":  "Log message"
+                                                                                 },
+                                                                          "35":  {
+                                                                                     "value":  "No application log is expected"
+                                                                                 },
+                                                                          "37":  {
+                                                                                     "label":  "Expected"
+                                                                                 },
+                                                                          "38":  {
+                                                                                     "value":  "Partner lookup, transaction save, and ledger recording are not called"
+                                                                                 }
+                                                                      }
+                                                   },
+                                                   {
+                                                       "id":  "UTCID02",
+                                                       "purpose":  "Verify posting a payment whose partner is missing follows the partner-not-found exception branch.",
+                                                       "type":  "A",
+                                                       "status":  "P",
+                                                       "executedDate":  "2026-08-09",
+                                                       "defectId":  "",
+                                                       "cellValues":  {
+                                                                          "10":  {
+                                                                                     "value":  "Payment 301 exists with partnerId=10, but partner 10 does not exist"
+                                                                                 },
+                                                                          "17":  {
+                                                                                     "value":  "Payment lookup returns PT00003 and partner lookup returns Optional.empty"
+                                                                                 },
+                                                                          "24":  {
+                                                                                     "value":  "301"
+                                                                                 },
+                                                                          "30":  {
+                                                                                     "value":  "No PaymentResponse is returned"
+                                                                                 },
+                                                                          "35":  {
+                                                                                     "value":  "No application log is expected"
+                                                                                 },
+                                                                          "39":  {
+                                                                                     "value":  "Transaction save and ledger recording are not called"
+                                                                                 },
+                                                                          "91":  {
+                                                                                     "value":  "BusinessException: Không tìm thấy đối tác"
+                                                                                 }
+                                                                      }
+                                                   },
+                                                   {
+                                                       "id":  "UTCID03",
+                                                       "purpose":  "Verify posting an already POSTED payment follows the idempotent return branch without duplicate ledger data.",
+                                                       "type":  "N",
+                                                       "status":  "P",
+                                                       "executedDate":  "2026-08-09",
+                                                       "defectId":  "",
+                                                       "cellValues":  {
+                                                                          "11":  {
+                                                                                     "value":  "Payment 302 is POSTED, partner 10 exists, and latest debt balance is 400.00"
+                                                                                 },
+                                                                          "18":  {
+                                                                                     "value":  "Repositories return payment PT00004, partner 10, and balanceAfter=400.00"
+                                                                                 },
+                                                                          "25":  {
+                                                                                     "value":  "302"
+                                                                                 },
+                                                                          "31":  {
+                                                                                     "value":  "PaymentResponse{id=302, code=\"PT00004\", status=\"POSTED\", partnerDebtBalance=400.00}"
+                                                                                 },
+                                                                          "35":  {
+                                                                                     "value":  "No application log is expected"
+                                                                                 },
+                                                                          "40":  {
+                                                                                     "value":  "Transaction is not saved again and partnerLedgerService.recordLedger is not called"
+                                                                                 }
+                                                                      }
+                                                   },
+                                                   {
+                                                       "id":  "UTCID04",
+                                                       "purpose":  "Verify posting a CANCELLED payment follows the invalid-state exception branch.",
+                                                       "type":  "A",
+                                                       "status":  "P",
+                                                       "executedDate":  "2026-08-09",
+                                                       "defectId":  "",
+                                                       "cellValues":  {
+                                                                          "12":  {
+                                                                                     "value":  "Payment 303 is CANCELLED and partner 10 exists"
+                                                                                 },
+                                                                          "19":  {
+                                                                                     "value":  "Repositories return payment PC00002 and partner 10"
+                                                                                 },
+                                                                          "26":  {
+                                                                                     "value":  "303"
+                                                                                 },
+                                                                          "30":  {
+                                                                                     "value":  "No PaymentResponse is returned"
+                                                                                 },
+                                                                          "35":  {
+                                                                                     "value":  "No application log is expected"
+                                                                                 },
+                                                                          "41":  {
+                                                                                     "value":  "Payment status remains CANCELLED; transaction save and ledger recording are not called"
+                                                                                 },
+                                                                          "92":  {
+                                                                                     "value":  "BusinessException: Chỉ có thể ghi sổ phiếu ở trạng thái DRAFT"
+                                                                                 }
+                                                                      }
+                                                   },
+                                                   {
+                                                       "id":  "UTCID05",
+                                                       "purpose":  "Verify posting a DRAFT payment above current debt follows the excessive-amount exception branch.",
+                                                       "type":  "A",
+                                                       "status":  "P",
+                                                       "executedDate":  "2026-08-09",
+                                                       "defectId":  "",
+                                                       "cellValues":  {
+                                                                          "13":  {
+                                                                                     "value":  "Payment 304 is DRAFT for 500.01 and partner 10 debt balance is 500.00"
+                                                                                 },
+                                                                          "20":  {
+                                                                                     "value":  "Repositories return payment PC00003, partner 10, and balanceAfter=500.00"
+                                                                                 },
+                                                                          "27":  {
+                                                                                     "value":  "304"
+                                                                                 },
+                                                                          "30":  {
+                                                                                     "value":  "No PaymentResponse is returned"
+                                                                                 },
+                                                                          "35":  {
+                                                                                     "value":  "No application log is expected"
+                                                                                 },
+                                                                          "42":  {
+                                                                                     "value":  "Payment status remains DRAFT; transaction save and ledger recording are not called"
+                                                                                 },
+                                                                          "93":  {
+                                                                                     "value":  "BusinessException: Số tiền thu/chi không được vượt quá số công nợ hiện tại"
+                                                                                 }
+                                                                      }
+                                                   },
+                                                   {
+                                                       "id":  "UTCID06",
+                                                       "purpose":  "Verify posting a valid DRAFT payment follows the successful state transition and ledger branch.",
+                                                       "type":  "N",
+                                                       "status":  "P",
+                                                       "executedDate":  "2026-08-09",
+                                                       "defectId":  "",
+                                                       "cellValues":  {
+                                                                          "14":  {
+                                                                                     "value":  "Payment 305 is DRAFT for 500.00 and partner 10 debt balance is 500.00"
+                                                                                 },
+                                                                          "21":  {
+                                                                                     "value":  "Save returns PC00004 with status POSTED and post-ledger balance is 0.00"
+                                                                                 },
+                                                                          "28":  {
+                                                                                     "value":  "305"
+                                                                                 },
+                                                                          "35":  {
+                                                                                     "value":  "No application log is expected"
+                                                                                 },
+                                                                          "43":  {
+                                                                                     "value":  "Payment status becomes POSTED and PAYMENT_VOUCHER ledger records amountReceipt=500.00 with default note Lập phiếu chi tiền PC00004"
+                                                                                 },
+                                                                          "81":  {
+                                                                                     "value":  "PaymentResponse{id=305, code=\"PC00004\", status=\"POSTED\", partnerDebtBalance=0.00}"
+                                                                                 }
+                                                                      }
+                                                   }
+                                               ]
+                             },
+    "getPartnerDebtBalance(Long partnerId)":  {
+                                                  "technique":  "Equivalence Partitioning (EP)",
+                                                  "testCases":  [
+                                                                    {
+                                                                        "id":  "UTCID01",
+                                                                        "purpose":  "Verify the null partnerId partition returns zero without querying the ledger repository.",
+                                                                        "type":  "A",
+                                                                        "status":  "P",
+                                                                        "executedDate":  "2026-08-09",
+                                                                        "defectId":  "",
+                                                                        "cellValues":  {
+                                                                                           "8":  {
+                                                                                                     "label":  "Precondition"
+                                                                                                 },
+                                                                                           "9":  {
+                                                                                                     "value":  "partnerLedgerRepository is available as a Mockito mock"
+                                                                                                 },
+                                                                                           "12":  {
+                                                                                                      "label":  "Mock setup"
+                                                                                                  },
+                                                                                           "13":  {
+                                                                                                      "value":  "No repository behavior is stubbed"
+                                                                                                  },
+                                                                                           "16":  {
+                                                                                                      "label":  "partnerId"
+                                                                                                  },
+                                                                                           "17":  {
+                                                                                                      "value":  "null"
+                                                                                                  },
+                                                                                           "19":  {
+                                                                                                      "label":  "Expected"
+                                                                                                  },
+                                                                                           "20":  {
+                                                                                                      "value":  "partnerLedgerRepository is not called"
+                                                                                                  },
+                                                                                           "29":  {
+                                                                                                      "label":  "return"
+                                                                                                  },
+                                                                                           "30":  {
+                                                                                                      "value":  "0"
+                                                                                                  },
+                                                                                           "32":  {
+                                                                                                      "label":  "Exception"
+                                                                                                  },
+                                                                                           "34":  {
+                                                                                                      "label":  "Log message"
+                                                                                                  },
+                                                                                           "35":  {
+                                                                                                      "value":  "No application log is expected"
+                                                                                                  }
+                                                                                       }
+                                                                    },
+                                                                    {
+                                                                        "id":  "UTCID02",
+                                                                        "purpose":  "Verify a partner with no ledger entries returns zero debt balance.",
+                                                                        "type":  "N",
+                                                                        "status":  "P",
+                                                                        "executedDate":  "2026-08-09",
+                                                                        "defectId":  "",
+                                                                        "cellValues":  {
+                                                                                           "10":  {
+                                                                                                      "value":  "Partner 10 has no partner ledger entries"
+                                                                                                  },
+                                                                                           "14":  {
+                                                                                                      "value":  "partnerLedgerRepository.findTopByPartnerIdOrderByIdDesc(10) returns Optional.empty"
+                                                                                                  },
+                                                                                           "18":  {
+                                                                                                      "value":  "10"
+                                                                                                  },
+                                                                                           "21":  {
+                                                                                                      "value":  "Latest ledger lookup is performed exactly once"
+                                                                                                  },
+                                                                                           "30":  {
+                                                                                                      "value":  "0"
+                                                                                                  },
+                                                                                           "35":  {
+                                                                                                      "value":  "No application log is expected"
+                                                                                                  }
+                                                                                       }
+                                                                    },
+                                                                    {
+                                                                        "id":  "UTCID03",
+                                                                        "purpose":  "Verify a partner with ledger entries returns balanceAfter from the latest entry.",
+                                                                        "type":  "N",
+                                                                        "status":  "P",
+                                                                        "executedDate":  "2026-08-09",
+                                                                        "defectId":  "",
+                                                                        "cellValues":  {
+                                                                                           "11":  {
+                                                                                                      "value":  "Partner 10 latest ledger entry has balanceAfter=725.50"
+                                                                                                  },
+                                                                                           "15":  {
+                                                                                                      "value":  "partnerLedgerRepository.findTopByPartnerIdOrderByIdDesc(10) returns that entry"
+                                                                                                  },
+                                                                                           "18":  {
+                                                                                                      "value":  "10"
+                                                                                                  },
+                                                                                           "21":  {
+                                                                                                      "value":  "Latest ledger lookup is performed exactly once"
+                                                                                                  },
+                                                                                           "31":  {
+                                                                                                      "value":  "725.50"
+                                                                                                  },
+                                                                                           "35":  {
+                                                                                                      "value":  "No application log is expected"
+                                                                                                  }
+                                                                                       }
+                                                                    }
+                                                                ]
+                                              },
+    "getPartnerPaymentHistory(Long partnerId)":  {
+                                                     "technique":  "Loop Testing",
+                                                     "testCases":  [
+                                                                       {
+                                                                           "id":  "UTCID01",
+                                                                           "purpose":  "Verify history lookup for a nonexistent partner stops before iterating payment transactions.",
+                                                                           "type":  "A",
+                                                                           "status":  "P",
+                                                                           "executedDate":  "2026-08-09",
+                                                                           "defectId":  "",
+                                                                           "cellValues":  {
+                                                                                              "8":  {
+                                                                                                        "label":  "Precondition"
+                                                                                                    },
+                                                                                              "9":  {
+                                                                                                        "value":  "Partner 999 does not exist"
+                                                                                                    },
+                                                                                              "13":  {
+                                                                                                         "label":  "Mock setup"
+                                                                                                     },
+                                                                                              "14":  {
+                                                                                                         "value":  "partnerRepository.findById(999) returns Optional.empty"
+                                                                                                     },
+                                                                                              "18":  {
+                                                                                                         "label":  "partnerId"
+                                                                                                     },
+                                                                                              "19":  {
+                                                                                                         "value":  "999"
+                                                                                                     },
+                                                                                              "21":  {
+                                                                                                         "label":  "Expected"
+                                                                                                     },
+                                                                                              "22":  {
+                                                                                                         "value":  "Payment history repository and ledger repository are not called"
+                                                                                                     },
+                                                                                              "29":  {
+                                                                                                         "label":  "return"
+                                                                                                     },
+                                                                                              "30":  {
+                                                                                                         "value":  "No payment history list is returned"
+                                                                                                     },
+                                                                                              "32":  {
+                                                                                                         "label":  "Exception"
+                                                                                                     },
+                                                                                              "33":  {
+                                                                                                         "value":  "BusinessException: Không tìm thấy đối tác với ID: 999"
+                                                                                                     },
+                                                                                              "34":  {
+                                                                                                         "label":  "Log message"
+                                                                                                     },
+                                                                                              "35":  {
+                                                                                                         "value":  "No application log is expected"
+                                                                                                     }
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "UTCID02",
+                                                                           "purpose":  "Verify zero loop iterations return an empty history list when the partner has no transactions.",
+                                                                           "type":  "B",
+                                                                           "status":  "P",
+                                                                           "executedDate":  "2026-08-09",
+                                                                           "defectId":  "",
+                                                                           "cellValues":  {
+                                                                                              "10":  {
+                                                                                                         "value":  "Partner 10 exists and has zero payment transactions"
+                                                                                                     },
+                                                                                              "15":  {
+                                                                                                         "value":  "Payment history repository returns an empty list"
+                                                                                                     },
+                                                                                              "20":  {
+                                                                                                         "value":  "10"
+                                                                                                     },
+                                                                                              "23":  {
+                                                                                                         "value":  "Mapping loop executes zero times and ledger repository is not called"
+                                                                                                     },
+                                                                                              "31":  {
+                                                                                                         "value":  "Empty List\u003cPaymentResponse\u003e"
+                                                                                                     },
+                                                                                              "35":  {
+                                                                                                         "value":  "No application log is expected"
+                                                                                                     }
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "UTCID03",
+                                                                           "purpose":  "Verify one loop iteration maps one transaction to one complete payment response.",
+                                                                           "type":  "B",
+                                                                           "status":  "P",
+                                                                           "executedDate":  "2026-08-09",
+                                                                           "defectId":  "",
+                                                                           "cellValues":  {
+                                                                                              "11":  {
+                                                                                                         "value":  "Partner 10 has one POSTED receipt PT00005 for 120.00 and debt balance 480.00"
+                                                                                                     },
+                                                                                              "16":  {
+                                                                                                         "value":  "History repository returns one transaction and ledger repository returns balanceAfter=480.00"
+                                                                                                     },
+                                                                                              "20":  {
+                                                                                                         "value":  "10"
+                                                                                                     },
+                                                                                              "24":  {
+                                                                                                         "value":  "Mapping loop executes once and ledger lookup executes once"
+                                                                                                     },
+                                                                                              "35":  {
+                                                                                                         "value":  "No application log is expected"
+                                                                                                     },
+                                                                                              "81":  {
+                                                                                                         "value":  "List with PaymentResponse{id=401, code=\"PT00005\", type=\"RECEIPT\", status=\"POSTED\", partnerDebtBalance=480.00}"
+                                                                                                     }
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "UTCID04",
+                                                                           "purpose":  "Verify multiple loop iterations preserve repository order and map every transaction.",
+                                                                           "type":  "N",
+                                                                           "status":  "P",
+                                                                           "executedDate":  "2026-08-09",
+                                                                           "defectId":  "",
+                                                                           "cellValues":  {
+                                                                                              "12":  {
+                                                                                                         "value":  "Partner 10 has two transactions ordered PC00005 then PT00005 and debt balance 600.00"
+                                                                                                     },
+                                                                                              "17":  {
+                                                                                                         "value":  "History repository returns two transactions and ledger repository returns balanceAfter=600.00 for each mapping"
+                                                                                                     },
+                                                                                              "20":  {
+                                                                                                         "value":  "10"
+                                                                                                     },
+                                                                                              "25":  {
+                                                                                                         "value":  "Mapping loop executes twice, ledger lookup executes twice, and repository order is preserved"
+                                                                                                     },
+                                                                                              "35":  {
+                                                                                                         "value":  "No application log is expected"
+                                                                                                     },
+                                                                                              "82":  {
+                                                                                                         "value":  "List with two responses ordered code PC00005 then PT00005; both contain partnerName Công ty Minh Long and partnerDebtBalance=600.00"
+                                                                                                     }
+                                                                                          }
+                                                                       }
+                                                                   ]
+                                                 }
+}

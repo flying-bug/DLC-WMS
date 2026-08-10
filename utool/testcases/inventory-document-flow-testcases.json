@@ -1,0 +1,331 @@
+{
+  "createImport(InventoryDocumentRequest req)": {
+    "technique": "Equivalence Partitioning (EP)",
+    "testCases": [
+      {
+        "id": "UTCID01",
+        "purpose": "Verify a valid import request is mapped to a draft IN_PO document with VAT-inclusive line amount.",
+        "type": "N",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "8": { "label": "Precondition" },
+          "9": { "value": "Import code NK90001 does not exist; warehouse 1, variant 100 and creator 7 are valid" },
+          "12": { "label": "Mock setup" },
+          "13": { "value": "inventoryDocumentRepository.save assigns document id 50 and line id 500" },
+          "16": { "label": "docCode" },
+          "17": { "value": "\"NK90001\"" },
+          "18": { "label": "warehouseId" },
+          "19": { "value": "1" },
+          "20": { "label": "docDate" },
+          "21": { "value": "2026-08-09" },
+          "22": { "label": "createdBy" },
+          "23": { "value": "7" },
+          "24": { "label": "lines[].variantId" },
+          "25": { "value": "100" },
+          "26": { "label": "lines[].quantityIn" },
+          "27": { "value": "5" },
+          "37": { "label": "lines[].unitCost" },
+          "38": { "value": "120" },
+          "39": { "label": "lines[].vatPercent" },
+          "40": { "value": "10" },
+          "41": { "label": "Expected" },
+          "42": { "value": "Saved document has docType=IN_PO and status=DRAFT; line quantityIn=5, quantityOut=0, lineAmount=660" },
+          "29": { "label": "return" },
+          "30": { "value": "InventoryDocumentResponse{id=50, docType=IN_PO, status=DRAFT}" },
+          "32": { "label": "Exception" },
+          "34": { "label": "Log message" },
+          "35": { "value": "No application log is expected" }
+        }
+      }
+    ]
+  },
+  "createExport(InventoryDocumentRequest req)": {
+    "technique": "Equivalence Partitioning (EP)",
+    "testCases": [
+      {
+        "id": "UTCID01",
+        "purpose": "Verify a valid export request maps quantities, normalizes issue purpose and calculates VAT-inclusive amount.",
+        "type": "N",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "8": { "label": "Precondition" },
+          "9": { "value": "Export code XK90001 does not exist; warehouse 1, variant 100 and creator 7 are valid" },
+          "12": { "label": "Mock setup" },
+          "13": { "value": "inventoryDocumentRepository.save assigns document id 50 and line id 500" },
+          "16": { "label": "docCode" },
+          "17": { "value": "\"XK90001\"" },
+          "19": { "label": "issuePurpose" },
+          "20": { "value": "\" usage \"" },
+          "22": { "label": "warehouseId" },
+          "23": { "value": "1" },
+          "24": { "label": "lines[].variantId" },
+          "25": { "value": "100" },
+          "26": { "label": "lines[].quantityOut" },
+          "27": { "value": "3" },
+          "37": { "label": "lines[].quantityIn" },
+          "38": { "value": "0" },
+          "41": { "label": "lines[].unitPrice" },
+          "42": { "value": "200" },
+          "45": { "label": "lines[].vatRate" },
+          "46": { "value": "5" },
+          "49": { "label": "Expected" },
+          "50": { "value": "Saved document has docType=EX_SO, issuePurpose=USAGE; line quantityIn=0, quantityOut=3, lineAmount=630" },
+          "29": { "label": "return" },
+          "30": { "value": "InventoryDocumentResponse{id=50, docType=EX_SO, status=DRAFT, issuePurpose=USAGE}" },
+          "32": { "label": "Exception" },
+          "34": { "label": "Log message" },
+          "35": { "value": "No application log is expected" }
+        }
+      },
+      {
+        "id": "UTCID02",
+        "purpose": "Verify an export request containing a positive inbound quantity is rejected before persistence.",
+        "type": "A",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "10": { "value": "No inventory document has been persisted" },
+          "14": { "value": "No repository save behavior is configured" },
+          "18": { "value": "\"XK90002\"" },
+          "21": { "value": "\"USAGE\"" },
+          "23": { "value": "1" },
+          "25": { "value": "100" },
+          "28": { "value": "1" },
+          "39": { "value": "1" },
+          "43": { "value": "100" },
+          "47": { "value": "0" },
+          "51": { "value": "inventoryDocumentRepository.save is not called" },
+          "81": { "value": "No InventoryDocumentResponse is returned" },
+          "33": { "value": "BusinessException: Import quantity is not allowed on an export document" },
+          "35": { "value": "No application log is expected" }
+        }
+      }
+    ]
+  },
+  "postImport(Long id)": {
+    "technique": "Branch Coverage",
+    "testCases": [
+      {
+        "id": "UTCID01",
+        "purpose": "Verify an already posted import document cannot be posted again and stock remains unchanged.",
+        "type": "A",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "8": { "label": "Precondition" },
+          "9": { "value": "Import document 50 has status POSTED" },
+          "15": { "label": "Mock setup" },
+          "16": { "value": "findImportByIdWithLines(50) returns the POSTED import document" },
+          "37": { "label": "id" },
+          "38": { "value": "50" },
+          "39": { "label": "Expected" },
+          "40": { "value": "No balance, cost layer or ledger is saved" },
+          "29": { "label": "return" },
+          "30": { "value": "No InventoryDocumentResponse is returned" },
+          "32": { "label": "Exception" },
+          "33": { "value": "BusinessException: Only draft or submitted import documents can be posted" },
+          "34": { "label": "Log message" },
+          "35": { "value": "No application log is expected" }
+        }
+      },
+      {
+        "id": "UTCID02",
+        "purpose": "Verify posting a new SKU import creates aggregate balance, cost layer and inbound inventory ledger.",
+        "type": "N",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "10": { "value": "Draft import has quantityIn=5 at unitCost=120 and no existing aggregate balance" },
+          "17": { "value": "Both locked balance queries return no balance" },
+          "38": { "value": "50" },
+          "41": { "value": "Create GOOD balance qty=5 avgCost=120, FIFO layer qty=5, IN ledger balanceAfter=5; mark document POSTED" },
+          "31": { "value": "InventoryDocumentResponse{status=POSTED, postedAt is set}" },
+          "35": { "value": "No application log is expected" }
+        }
+      },
+      {
+        "id": "UTCID03",
+        "purpose": "Verify posting into existing stock recalculates weighted average cost from old and imported values.",
+        "type": "N",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "11": { "value": "Submitted import has quantityIn=5 at unitCost=160; current balance qty=10 at avgCost=100" },
+          "18": { "value": "Locked GOOD balance query returns the existing balance" },
+          "38": { "value": "50" },
+          "42": { "value": "Balance becomes qty=15 and weighted average cost=(10*100+5*160)/15=120" },
+          "31": { "value": "InventoryDocumentResponse{status=POSTED, postedAt is set}" },
+          "35": { "value": "No application log is expected" }
+        }
+      },
+      {
+        "id": "UTCID04",
+        "purpose": "Verify a direct supplier import records payable debt using total imported quantity multiplied by unit cost.",
+        "type": "N",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "12": { "value": "Draft direct import has partnerId=20, quantityIn=3, unitCost=100 and no purchase-order reference" },
+          "19": { "value": "Locked GOOD balance exists; partner ledger service accepts the debt entry" },
+          "38": { "value": "50" },
+          "43": { "value": "recordLedger is called with entityType=INVENTORY_IMPORT, amountDebt=300 and amountReceipt=0" },
+          "31": { "value": "InventoryDocumentResponse{status=POSTED, postedAt is set}" },
+          "35": { "value": "No application log is expected" }
+        }
+      },
+      {
+        "id": "UTCID05",
+        "purpose": "Verify importing a serial-tracked SKU creates each serial and an individual one-unit serial balance.",
+        "type": "N",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "13": { "value": "Draft import has quantityIn=2 and serials SN-001, SN-002 for a serial-tracked product" },
+          "20": { "value": "Variant 100 resolves to product.trackSerial=true; neither serial exists" },
+          "38": { "value": "50" },
+          "44": { "value": "Create two AVAILABLE serials and two GOOD serial balances with quantityOnHand=1, plus aggregate stock records" },
+          "31": { "value": "InventoryDocumentResponse{status=POSTED, postedAt is set}" },
+          "35": { "value": "No application log is expected" }
+        }
+      },
+      {
+        "id": "UTCID06",
+        "purpose": "Verify a serial-tracked import is rejected when serial count differs from the whole imported quantity.",
+        "type": "B",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "14": { "value": "Draft import has quantityIn=2 but only serial ONLY-ONE for a serial-tracked product" },
+          "21": { "value": "Variant 100 resolves to product.trackSerial=true" },
+          "38": { "value": "50" },
+          "45": { "value": "No serial is persisted and document status remains DRAFT; transaction is expected to roll back earlier writes" },
+          "30": { "value": "No InventoryDocumentResponse is returned" },
+          "91": { "value": "BusinessException: Serial-tracked product must contain exactly 2 serial numbers" },
+          "35": { "value": "No application log is expected" }
+        }
+      }
+    ]
+  },
+  "postExport(Long id)": {
+    "technique": "Branch Coverage",
+    "testCases": [
+      {
+        "id": "UTCID01",
+        "purpose": "Verify an already posted export document cannot be posted again and stock remains unchanged.",
+        "type": "A",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "8": { "label": "Precondition" },
+          "9": { "value": "Export document 50 has status POSTED" },
+          "15": { "label": "Mock setup" },
+          "16": { "value": "findExportByIdWithLines(50) returns the POSTED export document" },
+          "37": { "label": "id" },
+          "38": { "value": "50" },
+          "39": { "label": "Expected" },
+          "40": { "value": "No balance, FIFO layer or ledger is changed" },
+          "29": { "label": "return" },
+          "30": { "value": "No InventoryDocumentResponse is returned" },
+          "32": { "label": "Exception" },
+          "33": { "value": "BusinessException: Only draft or submitted export documents can be posted" },
+          "34": { "label": "Log message" },
+          "35": { "value": "No application log is expected" }
+        }
+      },
+      {
+        "id": "UTCID02",
+        "purpose": "Verify posting an export without an aggregate stock balance is rejected before ledger creation.",
+        "type": "A",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "10": { "value": "Draft export requests quantityOut=2 but variant 100 has no balance in warehouse 1" },
+          "17": { "value": "Both locked balance queries return no balance" },
+          "38": { "value": "50" },
+          "41": { "value": "No outbound ledger is created and document remains DRAFT" },
+          "30": { "value": "No InventoryDocumentResponse is returned" },
+          "91": { "value": "BusinessException: Inventory balance cannot be found for variant 100" },
+          "35": { "value": "No application log is expected" }
+        }
+      },
+      {
+        "id": "UTCID03",
+        "purpose": "Verify an export quantity greater than on-hand stock is rejected without consuming FIFO layers.",
+        "type": "B",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "11": { "value": "Draft export quantityOut=6 while GOOD balance quantityOnHand=5" },
+          "18": { "value": "Locked GOOD balance query returns qty=5 at avgCost=100" },
+          "38": { "value": "50" },
+          "42": { "value": "No FIFO layer is queried or changed and no outbound ledger is created" },
+          "30": { "value": "No InventoryDocumentResponse is returned" },
+          "92": { "value": "BusinessException: Export quantity exceeds on-hand inventory" },
+          "35": { "value": "No application log is expected" }
+        }
+      },
+      {
+        "id": "UTCID04",
+        "purpose": "Verify a sufficient export consumes oldest cost layers first and records the calculated outbound unit cost.",
+        "type": "N",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "12": { "value": "Draft export quantityOut=7; balance qty=20; FIFO layers are 5 units at 100 then 10 units at 120" },
+          "19": { "value": "Locked balance and ordered FIFO layers are returned" },
+          "38": { "value": "50" },
+          "43": { "value": "Balance becomes 13; first layer becomes 0; second becomes 8; OUT ledger unitCost=105.7143 and balanceAfter=13" },
+          "31": { "value": "InventoryDocumentResponse{status=POSTED, postedAt is set}" },
+          "35": { "value": "No application log is expected" }
+        }
+      },
+      {
+        "id": "UTCID05",
+        "purpose": "Verify export costing falls back to aggregate average cost when no available FIFO layer exists.",
+        "type": "N",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "13": { "value": "Submitted export quantityOut=2; balance qty=10 at avgCost=75; no FIFO layer is available" },
+          "20": { "value": "Locked balance is returned and FIFO query returns an empty list" },
+          "38": { "value": "50" },
+          "44": { "value": "OUT ledger uses fallback unitCost=75 and document is marked POSTED" },
+          "31": { "value": "InventoryDocumentResponse{status=POSTED, postedAt is set}" },
+          "35": { "value": "No application log is expected" }
+        }
+      },
+      {
+        "id": "UTCID06",
+        "purpose": "Verify exporting an available serial marks it sold and clears both aggregate and serial-specific balances.",
+        "type": "N",
+        "status": "P",
+        "executedDate": "2026-08-09",
+        "defectId": "",
+        "cellValues": {
+          "14": { "value": "Draft export quantityOut=1 references AVAILABLE serial SN-901 in warehouse 1 for variant 100" },
+          "21": { "value": "Aggregate balance qty=4, serial balance qty=1 and FIFO layer 1 unit at cost 80 are returned" },
+          "38": { "value": "50" },
+          "45": { "value": "Serial status becomes SOLD with soldAt set; serial balance becomes 0; aggregate balance becomes 3" },
+          "31": { "value": "InventoryDocumentResponse{status=POSTED, postedAt is set}" },
+          "35": { "value": "No application log is expected" }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,363 @@
+{
+  "createImport(InventoryDocumentRequest req)": [
+    {
+      "purpose": "[Equivalence Partitioning] Verify a null import request is rejected before persistence.",
+      "type": "A",
+      "semanticValues": {
+        "Precondition": "No import request is provided",
+        "req": "null",
+        "Expected": "No inventory document is saved",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Import request data is required",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Boundary Value Analysis] Verify quantityIn equal to zero is rejected.",
+      "type": "B",
+      "semanticValues": {
+        "Precondition": "A complete import request contains one line",
+        "warehouseId": "1",
+        "docDate": "2026-08-09",
+        "createdBy": "7",
+        "lines[].variantId": "100",
+        "lines[].quantityIn": "0",
+        "lines[].unitCost": "100",
+        "Expected": "No inventory document is saved",
+        "return": "No normal completion",
+        "Exception": "BusinessException: lines[0].quantityIn must be greater than 0",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Decision Table] Verify an import line with a positive quantityOut is rejected.",
+      "type": "A",
+      "semanticValues": {
+        "Precondition": "A complete import request contains an outbound quantity",
+        "warehouseId": "1",
+        "docDate": "2026-08-09",
+        "createdBy": "7",
+        "lines[].variantId": "100",
+        "lines[].quantityIn": "1",
+        "lines[].quantityOut": "1",
+        "lines[].unitCost": "100",
+        "Expected": "No inventory document is saved because import lines cannot contain quantityOut",
+        "return": "No normal completion",
+        "Exception": "BusinessException",
+        "Log message": "No application log is expected"
+      }
+    }
+  ],
+  "createExport(InventoryDocumentRequest req)": [
+    {
+      "purpose": "[Boundary Value Analysis] Verify quantityOut equal to zero is rejected.",
+      "type": "B",
+      "semanticValues": {
+        "Precondition": "A complete export request contains one line",
+        "warehouseId": "1",
+        "docDate": "2026-08-09",
+        "lines[].variantId": "100",
+        "lines[].quantityOut": "0",
+        "Expected": "No inventory document is saved",
+        "return": "No normal completion",
+        "Exception": "BusinessException: lines[0].quantityOut must be greater than 0",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Equivalence Partitioning] Verify an unsupported export purpose is rejected.",
+      "type": "A",
+      "semanticValues": {
+        "Precondition": "A complete export request uses an unsupported purpose",
+        "warehouseId": "1",
+        "docDate": "2026-08-09",
+        "issuePurpose": "\"UNKNOWN_PURPOSE\"",
+        "lines[].variantId": "100",
+        "lines[].quantityOut": "1",
+        "Expected": "No inventory document is saved",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Export purpose is invalid",
+        "Log message": "No application log is expected"
+      }
+    }
+  ],
+  "postImport(Long id)": [
+    {
+      "purpose": "[Boundary Value Analysis] Verify a null import document id is rejected before repository access.",
+      "type": "B",
+      "semanticValues": {
+        "id": "null",
+        "Expected": "Import repository, balance and ledger are not changed",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Import document id is required",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Equivalence Partitioning] Verify an unknown import document id is rejected.",
+      "type": "A",
+      "semanticValues": {
+        "Mock setup": "findImportByIdWithLines(999) returns empty",
+        "id": "999",
+        "Expected": "No balance, cost layer or inbound ledger is changed",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Import document not found",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Branch Coverage] Verify a positive fallback balance is used when the GOOD balance lookup is empty.",
+      "type": "N",
+      "semanticValues": {
+        "Precondition": "Draft import quantity is 2 at unit cost 100; fallback balances hold 0 and 4 units",
+        "Mock setup": "GOOD balance lookup is empty; generic lookup returns zero and positive balances",
+        "id": "50",
+        "Expected": "Positive fallback balance becomes 6 and weighted average cost becomes 66.6667",
+        "return": "InventoryDocumentResponse{status=POSTED}",
+        "Exception": "No exception",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Decision Table] Verify an import referenced to a purchase order does not record supplier debt twice.",
+      "type": "N",
+      "semanticValues": {
+        "Precondition": "Draft supplier import references PO and has partner id 20",
+        "Mock setup": "Inventory posting succeeds with an existing aggregate balance",
+        "id": "50",
+        "Expected": "Document is posted and PartnerLedgerService.recordLedger is not called",
+        "return": "InventoryDocumentResponse{status=POSTED}",
+        "Exception": "No exception",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[State Transition] Verify TRANSFER_IN changes an existing serial from IN_TRANSIT to AVAILABLE at the destination warehouse.",
+      "type": "N",
+      "semanticValues": {
+        "Precondition": "Serial SN-TRANSFER is IN_TRANSIT in another warehouse",
+        "Mock setup": "Variant is serial tracked and import balance posting succeeds",
+        "id": "50",
+        "Expected": "Serial status becomes AVAILABLE, warehouse becomes 1, and a one-unit serial balance is saved",
+        "return": "InventoryDocumentResponse{status=POSTED}",
+        "Exception": "No exception",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[State Transition] Verify TRANSFER_IN rejects an existing serial that is not IN_TRANSIT.",
+      "type": "A",
+      "semanticValues": {
+        "Precondition": "Serial SN-AVAILABLE is already AVAILABLE",
+        "Mock setup": "Variant is serial tracked and the serial exists",
+        "id": "50",
+        "Expected": "Serial is not saved in the destination warehouse",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Serial is not in IN_TRANSIT state",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Equivalence Partitioning] Verify a duplicate serial outside a transfer import is rejected.",
+      "type": "A",
+      "semanticValues": {
+        "Precondition": "Serial SN-DUPLICATE already exists for variant 100",
+        "Mock setup": "Variant is serial tracked and import is not TRANSFER_IN",
+        "id": "50",
+        "Expected": "No new serial is saved",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Serial already exists",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Boundary Value Analysis] Verify a fractional quantity is rejected for a serial-tracked import.",
+      "type": "B",
+      "semanticValues": {
+        "Precondition": "Serial-tracked import quantity is 1.5",
+        "Mock setup": "Variant is serial tracked",
+        "id": "50",
+        "Expected": "No serial is saved because serial quantity must be a whole number",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Serial import quantity must be an integer",
+        "Log message": "No application log is expected"
+      }
+    }
+  ],
+  "postExport(Long id)": [
+    {
+      "purpose": "[Boundary Value Analysis] Verify a null export document id is rejected before repository access.",
+      "type": "B",
+      "semanticValues": {
+        "id": "null",
+        "Expected": "Export repository, balance and ledger are not changed",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Export document id is required",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Equivalence Partitioning] Verify an unknown export document id is rejected.",
+      "type": "A",
+      "semanticValues": {
+        "Mock setup": "findExportByIdWithLines(999) returns empty",
+        "id": "999",
+        "Expected": "No balance, FIFO layer or outbound ledger is changed",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Export document not found",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Equivalence Partitioning] Verify a missing serial id is rejected before stock changes.",
+      "type": "A",
+      "semanticValues": {
+        "Precondition": "Draft export line references serial id 999",
+        "Mock setup": "findById(999) returns empty",
+        "id": "50",
+        "Expected": "Aggregate balance and ledger are not changed",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Export serial not found",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[State Transition] Verify a SOLD serial cannot be exported again.",
+      "type": "A",
+      "semanticValues": {
+        "Precondition": "Serial 901 has status SOLD",
+        "Mock setup": "Draft export references serial 901",
+        "id": "50",
+        "Expected": "Balance and ledger are not changed",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Serial is not available",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Decision Table] Verify an available serial from another warehouse cannot be exported.",
+      "type": "A",
+      "semanticValues": {
+        "Precondition": "Serial 901 is AVAILABLE in warehouse 2 while export warehouse is 1",
+        "id": "50",
+        "Expected": "Balance and ledger are not changed",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Serial is not in the export warehouse",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Equivalence Partitioning] Verify a serial belonging to another variant cannot be exported.",
+      "type": "A",
+      "semanticValues": {
+        "Precondition": "Serial 901 belongs to variant 200 while line variant is 100",
+        "id": "50",
+        "Expected": "Balance and ledger are not changed",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Serial does not belong to the line SKU",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[State Transition] Verify TRANSFER_OUT resolves serial text and changes AVAILABLE to IN_TRANSIT.",
+      "type": "N",
+      "semanticValues": {
+        "Precondition": "Serial SN-TRANSFER is AVAILABLE with one unit in warehouse 1",
+        "Mock setup": "Serial text resolves to id 901; aggregate, serial balance and FIFO layer exist",
+        "id": "50",
+        "Expected": "Line serial id becomes 901, serial becomes IN_TRANSIT, and serial balance becomes 0",
+        "return": "InventoryDocumentResponse{status=POSTED}",
+        "Exception": "No exception",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Equivalence Partitioning] Verify unknown serial text is rejected instead of silently exporting aggregate stock.",
+      "type": "A",
+      "semanticValues": {
+        "Precondition": "Draft export line contains serial text SN-MISSING",
+        "Mock setup": "Serial lookup returns empty",
+        "id": "50",
+        "Expected": "No aggregate balance or ledger is changed",
+        "return": "No normal completion",
+        "Exception": "BusinessException: Serial SN-MISSING not found",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Branch Coverage] Verify a positive fallback balance is used when the GOOD balance lookup is empty.",
+      "type": "N",
+      "semanticValues": {
+        "Precondition": "Fallback balances hold 0 and 5 units; export quantity is 2",
+        "Mock setup": "GOOD lookup is empty and no FIFO layer exists",
+        "id": "50",
+        "Expected": "Positive fallback balance becomes 3 and outbound ledger unitCost is 70",
+        "return": "InventoryDocumentResponse{status=POSTED}",
+        "Exception": "No exception",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Path Coverage] Verify partial FIFO coverage uses line unit cost for the remaining quantity.",
+      "type": "N",
+      "semanticValues": {
+        "Precondition": "Export quantity is 3; FIFO has 1 unit at 100; line unitCost is 60",
+        "id": "50",
+        "Expected": "FIFO unit is consumed and remaining 2 units use line cost; ledger unitCost is 73.3333",
+        "return": "InventoryDocumentResponse{status=POSTED}",
+        "Exception": "No exception",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Decision Table] Verify variant cost price is used when FIFO, line cost and average cost are unavailable.",
+      "type": "N",
+      "semanticValues": {
+        "Precondition": "No FIFO layer; line and average cost are 0; variant costPrice is 55",
+        "id": "50",
+        "Expected": "Outbound ledger unitCost is 55",
+        "return": "InventoryDocumentResponse{status=POSTED}",
+        "Exception": "No exception",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Decision Table] Verify sale price is the final positive cost fallback when cost price is absent.",
+      "type": "N",
+      "semanticValues": {
+        "Precondition": "No FIFO layer; line and average cost are 0; costPrice is null and salePrice is 90",
+        "id": "50",
+        "Expected": "Outbound ledger unitCost is 90",
+        "return": "InventoryDocumentResponse{status=POSTED}",
+        "Exception": "No exception",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Path Coverage] Verify a SALES export creates warranty from product defaults and fulfills sales reservation.",
+      "type": "N",
+      "semanticValues": {
+        "Precondition": "Sales export has partner 20, sales order 30 and product warranty period 12 months",
+        "Mock setup": "Inventory posting succeeds and warranty code generator returns WAR00001",
+        "id": "50",
+        "Expected": "Active warranty ends on 2027-08-09 and sales reservation is fulfilled",
+        "return": "InventoryDocumentResponse{status=POSTED}",
+        "Exception": "No exception",
+        "Log message": "No application log is expected"
+      }
+    },
+    {
+      "purpose": "[Branch Coverage] Verify missing stock error falls back to SKU when product and variant names are unavailable.",
+      "type": "A",
+      "semanticValues": {
+        "Precondition": "Variant has blank name, no product and SKU SKU-DRILL-100",
+        "Mock setup": "All aggregate balance lookups return empty",
+        "id": "50",
+        "Expected": "Error identifies SKU-DRILL-100 and no outbound ledger is saved",
+        "return": "No normal completion",
+        "Exception": "BusinessException: No stock found for SKU-DRILL-100",
+        "Log message": "No application log is expected"
+      }
+    }
+  ]
+}
