@@ -10,6 +10,7 @@ import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGrid
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './CreateTransferSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import { printTransferSlip } from '../../utils/printTransferSlip';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -344,6 +345,15 @@ function UpdateTransferSlipPage() {
     };
   };
 
+  const handlePrint = () => {
+    const slipForPrint = buildPayload();
+    printTransferSlip(slipForPrint, {
+      warehouseById: new Map(warehouses.map(w => [w.id, w])),
+      productById: new Map(products.map(p => [p.id, p])),
+      userById: new Map(),
+    });
+  };
+
   const submit = async (status) => {
     if (!isFormValid) {
       if (form.fromWarehouseId === form.toWarehouseId) {
@@ -598,14 +608,19 @@ function UpdateTransferSlipPage() {
 
         <div className={styles.fixedFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>Hủy bỏ</button>
+            <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>
+              <i className="bi bi-x-circle"></i> Hủy bỏ
+            </button>
           </div>
           <div className={styles.footerRight}>
+            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={handlePrint} disabled={items.length === 0 || !form.fromWarehouseId}>
+              <i className="bi bi-printer"></i> In phiếu
+            </button>
             <button className="btn-misa-draft" disabled={!isFormValid || saving} onClick={() => submit('DRAFT')} style={{ marginRight: '8px' }}>
-              Lưu tạm
+              <i className="bi bi-save"></i> Lưu tạm
             </button>
             <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => submit('POSTED')}>
-              <i className="bi bi-printer"></i> Lưu và ghi sổ
+              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
             </button>
           </div>
         </div>

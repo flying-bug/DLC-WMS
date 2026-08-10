@@ -171,10 +171,15 @@ public class DatabaseSeeder implements CommandLineRunner {
         java.util.Map<String, String[]> moduleActions = new java.util.LinkedHashMap<>();
         moduleActions.put("import", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("export", new String[]{"view", "add", "edit", "delete", "export", "print"});
-        moduleActions.put("sales_order", new String[]{"view", "add", "edit", "approve", "export", "print"});
+        moduleActions.put("purchase_order", new String[]{"view", "add", "edit"});
+        moduleActions.put("sales_order", new String[]{"view", "add", "edit", "export", "print"});
+        moduleActions.put("payment", new String[]{"view", "add", "edit"});
         moduleActions.put("transfer", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("stocktake", new String[]{"view", "add", "edit", "delete", "export", "print"});
+        moduleActions.put("assembly_config", new String[]{"view", "add", "edit"});
         moduleActions.put("assembly", new String[]{"view", "add", "edit", "delete", "export", "print"});
+        moduleActions.put("warranty", new String[]{"view"});
+        moduleActions.put("repair", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("product", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("product_category", new String[]{"view", "add", "edit", "delete"});
         moduleActions.put("brand", new String[]{"view", "add", "edit", "delete"});
@@ -184,7 +189,10 @@ public class DatabaseSeeder implements CommandLineRunner {
         moduleActions.put("warehouse_master", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("report_balance", new String[]{"view", "export"});
         moduleActions.put("report_ledger", new String[]{"view", "export"});
+        moduleActions.put("report_transfer", new String[]{"view", "export"});
+        moduleActions.put("report_debt", new String[]{"view", "export"});
         moduleActions.put("report_summary", new String[]{"view", "export"});
+        moduleActions.put("ai_chat", new String[]{"view"});
         moduleActions.put("account", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("auth", new String[]{"view", "edit"});
         moduleActions.put("audit", new String[]{"view", "export"});
@@ -234,7 +242,11 @@ public class DatabaseSeeder implements CommandLineRunner {
         roleRepository.findByCode("ROLE_STAFF").ifPresent(role -> {
             Set<PermissionEntity> staffPerms = new HashSet<>();
             for (PermissionEntity perm : allPerms) {
-                if (java.util.Arrays.asList("import", "export", "sales_order", "transfer", "stocktake", "assembly", "product", "report_balance").contains(perm.getModule())) {
+                if (java.util.Arrays.asList(
+                        "import", "export", "purchase_order", "sales_order", "payment",
+                        "transfer", "stocktake", "assembly_config", "assembly", "warranty", "repair",
+                        "product", "report_balance", "ai_chat"
+                ).contains(perm.getModule())) {
                     staffPerms.add(perm);
                 }
             }

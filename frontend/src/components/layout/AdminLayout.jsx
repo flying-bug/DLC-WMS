@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { getAuthRole } from '../../auth/session';
 import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
 import VoiceCommandButton from '../ui/VoiceCommandButton/VoiceCommandButton';
+import ActiveWorkflowGuide from '../workflow/ActiveWorkflowGuide';
 import styles from './AdminLayout.module.css';
 
 const MENU_CONFIG = [
@@ -27,6 +28,14 @@ const MENU_CONFIG = [
         ]
     },
     {
+        id: 'finance',
+        label: 'TÀI CHÍNH & BÁO CÁO',
+        items: [
+            { path: '/payments', icon: 'bi bi-cash-coin', label: 'Thu chi & Công nợ' },
+            { path: '/reports', icon: 'fas fa-chart-line', label: 'Báo cáo' }
+        ]
+    },
+    {
         id: 'system',
         label: 'HỆ THỐNG',
         items: [
@@ -35,6 +44,15 @@ const MENU_CONFIG = [
         ]
     }
 ];
+
+const isMenuItemActive = (item, currentPath) => {
+    const activePaths = item.activePaths || [item.path];
+    return activePaths.some(path => (
+        path === '/dashboard' ? currentPath === path : currentPath.startsWith(path)
+    ));
+};
+
+const SIDEBAR_SCROLL_KEY = 'dlc_sidebar_scroll_top';
 
 const AdminLayout = ({ children }) => {
     const navigate = useNavigate();
@@ -107,6 +125,7 @@ const AdminLayout = ({ children }) => {
     const activeTabs = TABS_CONFIG[activeModule] || [];
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const navMenuRef = useRef(null);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
         return localStorage.getItem('dlc_sidebar_collapsed') === 'true';
     });
@@ -128,6 +147,13 @@ const AdminLayout = ({ children }) => {
         window.addEventListener('resize', syncSidebarWidth);
         return () => window.removeEventListener('resize', syncSidebarWidth);
     }, [isSidebarCollapsed]);
+
+    useLayoutEffect(() => {
+        const savedScrollTop = Number(sessionStorage.getItem(SIDEBAR_SCROLL_KEY));
+        if (navMenuRef.current && Number.isFinite(savedScrollTop)) {
+            navMenuRef.current.scrollTop = savedScrollTop;
+        }
+    }, []);
     const [voiceEnabled, setVoiceEnabled] = useState(() => {
         return localStorage.getItem('dlc_voice_enabled') !== 'false';
     });
@@ -137,6 +163,18 @@ const AdminLayout = ({ children }) => {
         catalog: true,
         system: true
     });
+
+    const visibleMenuGroups = MENU_CONFIG.map(group => ({
+        ...group,
+        items: group.items.filter(item => !item.adminOnly || isSuperAdmin)
+    })).filter(group => group.items.length > 0);
+
+    const activeGroup = visibleMenuGroups.find(group => group.items.some(item => (
+        isMenuItemActive(item, currentPath)
+    )));
+    const activeItem = activeGroup?.items.find(item => (
+        isMenuItemActive(item, currentPath)
+    ));
 
     const toggleGroup = (groupId) => {
         if (isSidebarCollapsed) {
@@ -166,8 +204,15 @@ const AdminLayout = ({ children }) => {
     };
 
     const handleNavClick = (path) => {
+        if (navMenuRef.current) {
+            sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(navMenuRef.current.scrollTop));
+        }
         navigate(path);
         setMobileMenuOpen(false);
+    };
+
+    const handleNavScroll = (event) => {
+        sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(event.currentTarget.scrollTop));
     };
 
     return (
@@ -184,7 +229,7 @@ const AdminLayout = ({ children }) => {
                 <div className={styles.logoArea}>
                     <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.brandLogo} />
                     <div className={styles.brandText}>
-                        <span className={styles.brandTitle}>Duy Long</span>
+                        <span className={styles.brandTitle}>Duy Long Computer</span>
                         <span className={styles.brandSubtitle}>Warehouse Management</span>
                     </div>
                     <button
@@ -195,11 +240,8 @@ const AdminLayout = ({ children }) => {
                         <i className="fas fa-times"></i>
                     </button>
                 </div>
-                <nav className={styles.navMenu}>
-                    {MENU_CONFIG.map(group => {
-                        const hasVisibleItems = group.items.some(item => !item.adminOnly || isSuperAdmin);
-                        if (!hasVisibleItems) return null;
-
+                <nav ref={navMenuRef} className={styles.navMenu} onScroll={handleNavScroll}>
+                    {visibleMenuGroups.map(group => {
                         const isExpanded = expandedGroups[group.id];
 
                         return (
@@ -207,10 +249,11 @@ const AdminLayout = ({ children }) => {
                                 <div
                                     className={styles.navGroupLabel}
                                     onClick={() => toggleGroup(group.id)}
+                                    aria-expanded={isExpanded}
                                 >
                                     <span>{group.label}</span>
                                     <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
-                                </div>
+                                </button>
                                 {isExpanded && (
                                     <div className={styles.groupItems}>
                                         {group.items.map(item => {
@@ -292,6 +335,7 @@ const AdminLayout = ({ children }) => {
                 <main className={styles.content}>
                     {children || <Outlet />}
                 </main>
+                <ActiveWorkflowGuide />
             </div>
 
             {voiceEnabled && <VoiceCommandButton />}

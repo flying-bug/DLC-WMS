@@ -168,7 +168,7 @@ function StocktakeListPage() {
               <i className="bi bi-arrow-clockwise"></i> Tải lại
             </button>
             <button className={`${styles.iconBtnAction} ${styles.excel}`} onClick={handleExport} title="Xuất ra file excel">
-              <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+              <i className="bi bi-file-earmark-excel"></i>
             </button>
             <button className={styles.btnPrimary} onClick={loadStocktakes}>
               <i className="bi bi-funnel"></i> Lọc

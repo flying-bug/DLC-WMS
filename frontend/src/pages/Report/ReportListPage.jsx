@@ -492,11 +492,11 @@ const ReportListPage = () => {
                                 </button>
 
                                 <button className={styles.btnExport} onClick={handleExport}>
-                                    <i className="fas fa-file-excel" style={{ color: 'var(--color-excel)' }}></i> Xuất Excel
+                                    <i className="fas fa-file-excel" style={{ color: 'var(--color-excel)' }}></i>
                                 </button>
 
                                 <button className={styles.btnPrint} onClick={() => window.print()}>
-                                    <i className="fas fa-print"></i> In ấn
+                                    <i className="bi bi-printer"></i> In ấn
                                 </button>
                             </div>
 

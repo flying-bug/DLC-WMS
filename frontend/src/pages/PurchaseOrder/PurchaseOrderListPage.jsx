@@ -6,6 +6,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as poApi from '../../api/purchaseOrderApi';
 import styles from './PurchaseOrderListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { exportToExcel } from '../../utils/excelExport';
 
 const STATUS_LABELS = {
   DRAFT:     { label: 'Nháp',         code: 'info'    },
@@ -44,19 +45,32 @@ function PurchaseOrderListPage() {
   const loadOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await poApi.getPurchaseOrders({
-        keyword:  filters.keyword  || undefined,
-        status:   filters.status   || undefined,
-        fromDate: filters.fromDate || undefined,
-        toDate:   filters.toDate   || undefined,
-      });
-      setOrders(unwrap(res) || []);
-    } catch {
-      showToast('error', 'Không thể tải danh sách đơn mua hàng');
+      const res = await poApi.getPurchaseOrders(filters);
+      const list = unwrap(res);
+      setOrders(Array.isArray(list) ? list : []);
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || 'Không thể tải danh sách đơn mua hàng');
     } finally {
       setLoading(false);
     }
   }, [filters]);
+
+  const handleExport = () => {
+    if (!orders || orders.length === 0) {
+      showToast('warning', 'Không có dữ liệu để xuất Excel');
+      return;
+    }
+    const headers = ['Mã đơn', 'Ngày lập', 'Nhà cung cấp', 'Tổng tiền', 'Trạng thái'];
+    const data = orders.map(po => [
+      po.poCode,
+      fmtDate(po.poDate),
+      po.partnerName || `#${po.partnerId}`,
+      money(po.totalAmount),
+      STATUS_LABELS[po.status]?.label || po.status
+    ]);
+    exportToExcel(headers, data, 'Danh_sach_don_mua_hang');
+    showToast('success', 'Xuất Excel thành công!');
+  };
 
   useEffect(() => { loadOrders(); }, [loadOrders]);
 
@@ -162,6 +176,13 @@ function PurchaseOrderListPage() {
               title="Đặt lại"
             >
               <i className="bi bi-arrow-clockwise" />
+            </button>
+            <button
+              className={styles.iconBtn}
+              onClick={handleExport}
+              title="Xuất tệp Excel"
+            >
+              <i className="bi bi-file-earmark-excel" />
             </button>
             <button className={styles.btnPrimary} onClick={loadOrders}>
               <i className="bi bi-funnel" /> Lọc

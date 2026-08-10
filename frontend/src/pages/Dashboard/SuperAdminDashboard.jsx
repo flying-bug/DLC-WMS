@@ -2,12 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './SuperAdminDashboard.module.css';
 import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
-import Toast from '../../components/ui/Toast/Toast';
 import { formatDateOnly, formatTime } from '../../utils/dateFormat';
 
 function SuperAdminDashboard() {
     const navigate = useNavigate();
-    const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
@@ -58,39 +56,15 @@ function SuperAdminDashboard() {
             {/* ── HEADER ── */}
             <header className={styles.header}>
                 {/* Brand */}
-                <div className={styles.headerBrand} onClick={() => navigate('/')}>
+                <button type="button" className={styles.headerBrand} onClick={() => navigate('/')}>
                     <div className={styles.headerLogoBox} aria-hidden="true">
-                        <img src="/dl-logo.png" alt="Duy Long Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        <img src="/dl-logo.png" alt="" className={styles.headerLogo} />
                     </div>
                     <span className={styles.headerBrandName}>Duy Long Computer</span>
-                </div>
+                </button>
 
                 {/* Controls */}
                 <div className={styles.headerControls}>
-                    {/* Search */}
-                    <div className={styles.searchBar}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8" />
-                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                        </svg>
-                        <input
-                            type="text"
-                            className={styles.searchInput}
-                            placeholder="Tìm kiếm nhanh..."
-                            aria-label="Tìm kiếm"
-                        />
-                    </div>
-
-                    {/* Bell */}
-                    <button 
-                        className={styles.bellBtn} 
-                        aria-label="Thông báo"
-                        onClick={() => setToast({ isVisible: true, type: 'info', message: 'Tính năng thông báo đang được phát triển.' })}
-                    >
-                        <i className="bi bi-bell" style={{ fontSize: '17px' }} />
-                    </button>
-
                     {/* User info */}
                     <UserProfileDropdown />
                 </div>
@@ -110,15 +84,13 @@ function SuperAdminDashboard() {
                 </section>
 
                 {/* Action cards */}
-                <div className={styles.cardsGrid} role="list">
+                <div className={styles.cardsGrid}>
                     {ACTION_CARDS.map((card) => (
-                        <div
+                        <button
+                            type="button"
                             key={card.id}
                             className={styles.actionCard}
-                            role="listitem"
                             onClick={() => navigate(card.route)}
-                            onKeyDown={(e) => e.key === 'Enter' && navigate(card.route)}
-                            tabIndex={0}
                             aria-label={card.title}
                         >
                             <div className={`${styles.cardIconWrapper} ${card.iconWrapperClass}`} aria-hidden="true">
@@ -126,7 +98,7 @@ function SuperAdminDashboard() {
                             </div>
                             <h2 className={styles.cardTitle}>{card.title}</h2>
                             <p className={styles.cardDesc}>{card.description}</p>
-                        </div>
+                        </button>
                     ))}
                 </div>
             </main>
@@ -144,13 +116,6 @@ function SuperAdminDashboard() {
                 </div>
             </footer>
 
-            {toast.isVisible && (
-                <Toast
-                    type={toast.type}
-                    message={toast.message}
-                    onClose={() => setToast({ ...toast, isVisible: false })}
-                />
-            )}
         </div>
     );
 }

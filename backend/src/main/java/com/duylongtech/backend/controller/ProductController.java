@@ -5,6 +5,7 @@ import com.duylongtech.backend.dto.request.ProductVariantRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.ProductResponse;
 import com.duylongtech.backend.dto.response.ProductVariantResponse;
+import com.duylongtech.backend.dto.response.StockAlertSummaryResponse;
 import com.duylongtech.backend.service.ProductService;
 import com.duylongtech.backend.service.AuditLogService;
 import jakarta.validation.Valid;
@@ -47,6 +48,12 @@ public class ProductController {
             @RequestParam(required = false) Long brandId,
             @RequestParam(required = false) Long unitId) {
         return ResponseEntity.ok(productService.getProducts(page, size, search, categoryId, productType, brandId, unitId));
+    }
+
+    @GetMapping("/stock-alert-summary")
+    @PreAuthorize("hasAuthority('product:view')")
+    public ResponseEntity<StockAlertSummaryResponse> getStockAlertSummary() {
+        return ResponseEntity.ok(productService.getStockAlertSummary());
     }
 
     @GetMapping("/export")
