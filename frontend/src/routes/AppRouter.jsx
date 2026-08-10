@@ -51,6 +51,7 @@ import PurchaseOrderListPage from '../pages/PurchaseOrder/PurchaseOrderListPage'
 import CreatePurchaseOrderPage from '../pages/PurchaseOrder/CreatePurchaseOrderPage';
 import PurchaseOrderDetailPage from '../pages/PurchaseOrder/PurchaseOrderDetailPage';
 import PaymentManagementPage from '../pages/Payment/PaymentManagementPage';
+import PaymentOverviewPage from '../pages/Payment/PaymentOverviewPage';
 import PaymentHistoryPage from '../pages/Payment/PaymentHistoryPage';
 
 // Helper to check valid token
@@ -163,7 +164,10 @@ function AppRouter() {
                     <Route path="/stocktakes/:id" element={<StocktakeDetailPage />} />
                     <Route path="/stocktakes/:id/edit" element={<CreateStocktakePage />} />
                     <Route path="/reports" element={<ReportListPage />} />
-                    <Route path="/payments" element={<PaymentManagementPage />} />
+                    <Route path="/payments" element={<Navigate to="/payments/overview" replace />} />
+                    <Route path="/payments/overview" element={<PaymentOverviewPage />} />
+                    <Route path="/payments/expense" element={<PaymentManagementPage initialMode="VOUCHER" />} />
+                    <Route path="/payments/receipt" element={<PaymentManagementPage initialMode="RECEIPT" />} />
                     <Route path="/payments/history/:partnerId" element={<PaymentHistoryPage />} />
                     <Route path="/sales-orders" element={<SalesOrderListPage />} />
                     <Route path="/sales-orders/create" element={<CreateSalesOrderPage />} />

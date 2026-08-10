@@ -15,7 +15,7 @@ const MENU_CONFIG = [
             { path: '/dashboard', icon: 'fas fa-warehouse', label: 'Kho', moduleId: 'warehouse' },
             { path: '/purchase-orders', icon: 'bi bi-bag-plus', label: 'Mua hàng', moduleId: 'purchase' },
             { path: '/sales-orders', icon: 'bi bi-cart3', label: 'Bán hàng', moduleId: 'sales' },
-            { path: '/payments', icon: 'bi bi-cash-coin', label: 'Quỹ / Thu chi', moduleId: 'finance' },
+            { path: '/payments', icon: 'bi bi-cash-coin', label: 'Thu chi', moduleId: 'finance' },
             { path: '/warranties', icon: 'fas fa-shield-alt', label: 'Dịch vụ', moduleId: 'service' }
         ]
     },
@@ -77,7 +77,9 @@ const AdminLayout = ({ children }) => {
             { path: '/sales-orders', label: 'Đơn bán hàng' }
         ],
         finance: [
-            { path: '/payments', label: 'Thu chi & Công nợ' }
+            { path: '/payments/overview', label: 'Tổng quan' },
+            { path: '/payments/expense', label: 'Phiếu Chi' },
+            { path: '/payments/receipt', label: 'Phiếu Thu' }
         ],
         service: [
             { path: '/warranties', label: 'Bảo hành' },
