@@ -13,7 +13,12 @@ const getBaseURL = () => {
         }
 
         if (!envUrl) {
-            return isLocalhost ? 'http://localhost:8080/api/v1' : '/api/v1';
+            if (import.meta.env.DEV) {
+                // Development mode (vite dev): backend is usually on port 8080 of the same host
+                return `http://${window.location.hostname}:8080/api/v1`;
+            }
+            // Production mode: use relative path for Nginx
+            return '/api/v1';
         }
     }
     return envUrl || 'http://localhost:8080/api/v1';
