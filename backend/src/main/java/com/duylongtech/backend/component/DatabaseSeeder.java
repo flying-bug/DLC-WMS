@@ -37,13 +37,23 @@ public class DatabaseSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         // Ensure REPAIRS.serial_number_id is NULLable for devices without serial
-        try {
-            jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
-            jdbcTemplate.execute("ALTER TABLE REPAIRS MODIFY COLUMN serial_number_id BIGINT UNSIGNED NULL");
-            jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
-            System.out.println("✅ Successfully altered REPAIRS.serial_number_id to NULLABLE");
-        } catch (Exception e) {
-            System.err.println("❌ Failed to alter REPAIRS.serial_number_id: " + e.getMessage());
+        // Ensure USERS table has all required columns
+        String[] userAlterStatements = new String[]{
+            "ALTER TABLE USERS ADD COLUMN user_code VARCHAR(50) NULL",
+            "ALTER TABLE USERS ADD COLUMN avatar_url VARCHAR(255) NULL",
+            "ALTER TABLE USERS ADD COLUMN address TEXT NULL",
+            "ALTER TABLE USERS ADD COLUMN id_card VARCHAR(20) NULL",
+            "ALTER TABLE USERS ADD COLUMN dob DATE NULL",
+            "ALTER TABLE USERS ADD COLUMN gender VARCHAR(10) NULL",
+            "ALTER TABLE USERS ADD COLUMN start_date DATE NULL",
+            "ALTER TABLE USERS ADD COLUMN position VARCHAR(50) NULL",
+            "ALTER TABLE USERS ADD COLUMN department VARCHAR(50) NULL"
+        };
+        for (String sql : userAlterStatements) {
+            try {
+                jdbcTemplate.execute(sql);
+            } catch (Exception ignored) {
+            }
         }
 
         // 1. Seed Roles (Chuẩn Spring Boot với tiền tố ROLE_)
