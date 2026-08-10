@@ -271,7 +271,12 @@ function AnalyticsDashboard() {
                         {/* Top Products */}
                         <div className={styles.topProductsCard}>
                             <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>Top 5 Hàng Xuất Kho Nhiều (Tháng)</h3>
+                                <h3 className={styles.cardTitle}>Top 5 Hàng Xuất Kho Nhiều</h3>
+                                <select className={styles.chartFilter}>
+                                    <option value="thisMonth">Tháng này</option>
+                                    <option value="thisWeek">Tuần này</option>
+                                    <option value="thisYear">Năm nay</option>
+                                </select>
                             </div>
                             <div className={styles.topProductsList}>
                                 {topProducts.map((prod, idx) => (
