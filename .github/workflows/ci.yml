@@ -89,12 +89,8 @@ jobs:
           export SSHPASS="${{ secrets.VPS_PASSWORD }}"
           sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_IP }} << 'EOF'
             cd /root/backend
-            export PATH=$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
             export SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/duylongcomputer?useSSL=false&serverTimezone=UTC"
-            JAR_FILE=$(ls *.jar 2>/dev/null | head -n 1)
-            echo "Starting backend JAR: $JAR_FILE"
-            nohup java -jar "$JAR_FILE" > app.log 2>&1 &
-            disown
+            nohup java -jar *.jar > app.log 2>&1 &
             sleep 3
           EOF
           echo "Successfully deployed!"
