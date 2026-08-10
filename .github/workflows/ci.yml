@@ -81,7 +81,8 @@ jobs:
             sleep 2
             cd /root/backend
             export SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/duylongcomputer?useSSL=false&serverTimezone=UTC"
-            JAR_FILE=$(ls backend-*.jar 2>/dev/null | head -n 1)
+            JAR_FILE=$(ls -t backend-*.jar 2>/dev/null | head -n 1)
+            echo "Starting backend JAR: $JAR_FILE"
             nohup java -jar "$JAR_FILE" > app.log 2>&1 &
             sleep 2
           EOF
