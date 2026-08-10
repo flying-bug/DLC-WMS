@@ -10,6 +10,7 @@ const MENU_CONFIG = [
         id: 'overview',
         label: 'TỔNG QUAN',
         items: [
+            { path: '/main-dashboard', icon: 'fas fa-chart-pie', label: 'Dashboard' },
             { path: '/dashboard', icon: 'fas fa-warehouse', label: 'Quy trình' }
         ]
     },
@@ -186,7 +187,7 @@ const AdminLayout = ({ children }) => {
                                         {group.items.map(item => {
                                             if (item.adminOnly && !isSuperAdmin) return null;
                                             
-                                            const isActive = item.path === '/dashboard' 
+                                            const isActive = (item.path === '/dashboard' || item.path === '/main-dashboard')
                                                 ? currentPath === item.path 
                                                 : currentPath.startsWith(item.path);
 
@@ -232,6 +233,13 @@ const AdminLayout = ({ children }) => {
                     </button>
 
                     <nav className={styles.topTabs}>
+                        <button
+                            className={`${styles.tab} ${currentPath === '/main-dashboard' ? styles.activeTab : ''}`}
+                            onClick={() => navigate('/main-dashboard')}
+                            type="button"
+                        >
+                            Dashboard
+                        </button>
                         <button
                             className={`${styles.tab} ${currentPath === '/dashboard' ? styles.activeTab : ''}`}
                             onClick={() => navigate('/dashboard')}

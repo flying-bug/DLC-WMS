@@ -3,6 +3,7 @@ import { ROUTES } from '../constants';
 import LoginPage from '../pages/Login/LoginPage';
 import ForgotPasswordPage from '../pages/ForgotPassword/ForgotPasswordPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
+import AnalyticsDashboard from '../pages/Dashboard/AnalyticsDashboard';
 import UnitPage from '../pages/Unit/UnitPage';
 import ProductPage from '../pages/Product/ProductPage';
 import ProductCategoryPage from '../pages/ProductCategory/ProductCategoryPage';
@@ -99,7 +100,7 @@ function AppRouter() {
 
                 {/* Protected Routes for Authenticated Users */}
                 <Route element={<ProtectedRoute />}>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/" element={<Navigate to="/main-dashboard" replace />} />
                     <Route path="/change-password" element={<ChangePasswordPage />} />
                     <Route path="/export-slips" element={<ExportSlipPage />} />
                     <Route path="/export-slips/create" element={<CreateExportSlipPage />} />
@@ -114,6 +115,7 @@ function AppRouter() {
                     <Route path="/transfer-history/:id/edit" element={<UpdateTransferSlipPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/main-dashboard" element={<AnalyticsDashboard />} />
                     <Route path="/units" element={<UnitPage />} />
                     <Route path="/products" element={<ProductPage />} />
                     <Route path="/product-categories" element={<ProductCategoryPage />} />
