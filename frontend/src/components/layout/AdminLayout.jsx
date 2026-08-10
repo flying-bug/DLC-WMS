@@ -28,14 +28,6 @@ const MENU_CONFIG = [
         ]
     },
     {
-        id: 'finance',
-        label: 'TÀI CHÍNH & BÁO CÁO',
-        items: [
-            { path: '/payments', icon: 'bi bi-cash-coin', label: 'Thu chi & Công nợ' },
-            { path: '/reports', icon: 'fas fa-chart-line', label: 'Báo cáo' }
-        ]
-    },
-    {
         id: 'system',
         label: 'HỆ THỐNG',
         items: [
@@ -253,7 +245,7 @@ const AdminLayout = ({ children }) => {
                                 >
                                     <span>{group.label}</span>
                                     <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
-                                </button>
+                                </div>
                                 {isExpanded && (
                                     <div className={styles.groupItems}>
                                         {group.items.map(item => {
