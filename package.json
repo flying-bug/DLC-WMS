@@ -1,4 +1,6 @@
 {
+  "name": "dlc-wms",
+  "version": "1.0.1",
   "scripts": {
     "lint": "npm run --prefix frontend lint"
   },
