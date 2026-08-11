@@ -79,6 +79,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         // seedAuditLogs();
     }
 
+    @SuppressWarnings("unused")
     private void seedWarehouses() {
         if (warehouseRepository.count() == 0) {
             warehouseRepository.save(Warehouse.builder()
@@ -99,6 +100,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
     }
 
+    @SuppressWarnings("unused")
     private void seedPartners() {
         if (partnerRepository.count() == 0) {
             partnerRepository.save(Partner.builder()
@@ -334,6 +336,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         // }
     }
 
+    @SuppressWarnings("unused")
     private void seedBusinessData() {
         // Seed Đơn vị tính cơ bản (nếu CSDL rỗng)
         seedUnitIfNotFound("Cái");
@@ -346,6 +349,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
 
+    @SuppressWarnings("unused")
     private void seedAuditLogs() {
         if (auditLogRepository.count() == 0) {
             User adminUser = userRepository.findByUsername("admin").orElse(null);

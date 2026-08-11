@@ -7,7 +7,6 @@ export function printSalesInvoice(orderOrOrders, options = {}) {
     warehouseName = '',
     productById = new Map(),
     userById = new Map(),
-    isImport = false,
   } = options;
 
   const orders = Array.isArray(orderOrOrders) ? orderOrOrders : [orderOrOrders];
@@ -62,7 +61,7 @@ export function printSalesInvoice(orderOrOrders, options = {}) {
         warrantyText = warrantyText >= 12 && warrantyText % 12 === 0 ? `${warrantyText / 12} năm` : `${warrantyText} tháng`;
       }
 
-      const qty = Number(isImport ? (line.quantityIn || line.quantity) : (line.quantityOut || line.quantity) || 0);
+      const qty = Number(line.quantity || 0);
       const price = Number(line.unitPrice || line.unitCost || 0);
       const amount = qty * price;
       const vatPercent = Number(line.vatPercent ?? line.vatRate ?? 0);
