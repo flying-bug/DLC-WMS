@@ -394,7 +394,6 @@ const ProductPage = () => {
         inst4.value = '- Các dòng dữ liệu phía dưới chỉ là ví dụ minh họa, vui lòng xóa đi trước khi nhập';
         inst4.font = { name: 'Arial', size: 11 };
         inst4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE0B2' } };
-
         worksheet.mergeCells('A6:K6');
 
         const headerRow = worksheet.getRow(7);
@@ -469,12 +468,10 @@ const ProductPage = () => {
                 }
 
                 const headers = rawArray[headerRowIndex].map(h => String(h || '').replace(/\(\*\)/g, '').trim());
-
                 const rawData = [];
                 for (let i = headerRowIndex + 1; i < rawArray.length; i++) {
                     const rowArr = rawArray[i];
                     if (!rowArr || rowArr.length === 0) continue;
-
                     // Skip completely empty rows
                     if (rowArr.every(cell => cell === null || cell === undefined || String(cell).trim() === '')) continue;
 
@@ -645,7 +642,6 @@ const ProductPage = () => {
                 isValid = false;
                 rowErrors.push('Thiếu Tên sản phẩm');
             }
-
             const isService = isServiceType(row.productType);
             if (!isService && !row.categoryId) {
                 isValid = false;
@@ -659,7 +655,6 @@ const ProductPage = () => {
                 isValid = false;
                 rowErrors.push('Thiếu Đơn vị tính');
             }
-
             row.isValid = isValid;
             row.errors = rowErrors;
 
@@ -673,7 +668,6 @@ const ProductPage = () => {
                         const pNorm = String(p.productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
                         return pNorm === normName;
                     });
-
                     if (similarProduct) {
                         row.warnings.push(`Trùng tên với SP trên hệ thống: ${similarProduct.productCode}`);
                     } else {

@@ -1,36 +1,22 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
-import { 
+import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
-    PieChart, Pie, Cell, LineChart, Line, ComposedChart 
+    PieChart, Pie, Cell, LineChart, Line, ComposedChart
 } from 'recharts';
 import styles from './AnalyticsDashboard.module.css';
 
-import axiosClient from '../../api/axiosClient';
-import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
-
-
 function AnalyticsDashboard() {
     const navigate = useNavigate();
-    const [aiInsights, setAiInsights] = React.useState([]);
-
-    React.useEffect(() => {
-        axiosClient.get('/ai/insights/frequent-questions')
-            .then(res => {
-                const data = res.data?.data || [];
-                setAiInsights(data.slice(0, 5));
-            })
-            .catch(err => console.error('Failed to load AI insights:', err));
-    }, []);
 
     // KPI Data with sparkline trend data
     const kpis = [
-        { title: 'Tổng Tồn Kho', value: '1.25 Tỷ ₫', icon: 'fas fa-wallet', color: 'primary', trend: '+5.4% so với tuần trước', data: [{v: 100}, {v: 120}, {v: 110}, {v: 140}, {v: 130}, {v: 160}] },
-        { title: 'Đơn Nhập (PO)', value: '12', icon: 'fas fa-box-open', color: 'orange', trend: '2 đơn cần duyệt gấp', data: [{v: 5}, {v: 8}, {v: 12}, {v: 7}, {v: 15}, {v: 12}] },
-        { title: 'Đơn Xuất (SO)', value: '8', icon: 'fas fa-truck-loading', color: 'green', trend: 'Tiến độ giao: 80%', data: [{v: 4}, {v: 6}, {v: 5}, {v: 8}, {v: 6}, {v: 8}] },
-        { title: 'Sắp Hết Hàng', value: '5 SKU', icon: 'fas fa-exclamation-triangle', color: 'red', trend: 'Mức nguy hiểm!', data: [{v: 2}, {v: 3}, {v: 2}, {v: 4}, {v: 5}, {v: 5}] },
-        { title: 'Chờ Bảo Hành', value: '18 Máy', icon: 'fas fa-tools', color: 'purple', trend: '3 ca trễ hẹn (SLA)', data: [{v: 4}, {v: 7}, {v: 12}, {v: 10}, {v: 15}, {v: 18}] }
+        { title: 'Tổng Tồn Kho', value: '1.25 Tỷ ₫', icon: 'fas fa-wallet', color: 'primary', trend: '+5.4% so với tuần trước', data: [{ v: 100 }, { v: 120 }, { v: 110 }, { v: 140 }, { v: 130 }, { v: 160 }] },
+        { title: 'Đơn Nhập (PO)', value: '12', icon: 'fas fa-box-open', color: 'orange', trend: '2 đơn cần duyệt gấp', data: [{ v: 5 }, { v: 8 }, { v: 12 }, { v: 7 }, { v: 15 }, { v: 12 }] },
+        { title: 'Đơn Xuất (SO)', value: '8', icon: 'fas fa-truck-loading', color: 'green', trend: 'Tiến độ giao: 80%', data: [{ v: 4 }, { v: 6 }, { v: 5 }, { v: 8 }, { v: 6 }, { v: 8 }] },
+        { title: 'Sắp Hết Hàng', value: '5 SKU', icon: 'fas fa-exclamation-triangle', color: 'red', trend: 'Mức nguy hiểm!', data: [{ v: 2 }, { v: 3 }, { v: 2 }, { v: 4 }, { v: 5 }, { v: 5 }] },
+        { title: 'Chờ Bảo Hành', value: '18 Máy', icon: 'fas fa-tools', color: 'purple', trend: '3 ca trễ hẹn (SLA)', data: [{ v: 4 }, { v: 7 }, { v: 12 }, { v: 10 }, { v: 15 }, { v: 18 }] }
     ];
 
     // Bar Chart Data (Inbound vs Outbound over 7 days)
@@ -94,7 +80,7 @@ function AnalyticsDashboard() {
     return (
         <AdminLayout activeTab="main-dashboard">
             <div className={styles.dashboardWrapper}>
-                
+
                 {/* Header Section */}
                 <div className={styles.pageHeader}>
                     <div>
@@ -122,7 +108,7 @@ function AnalyticsDashboard() {
                                         <p className={styles.kpiTitle}>{kpi.title}</p>
                                         <h3 className={styles.kpiValue}>{kpi.value}</h3>
                                         <p className={styles.kpiTrend}>
-                                            <i className="fas fa-chart-line" style={{marginRight: 4}}></i> {kpi.trend}
+                                            <i className="fas fa-chart-line" style={{ marginRight: 4 }}></i> {kpi.trend}
                                         </p>
                                     </div>
                                     <div className={styles.kpiIconWrapper}>
@@ -147,20 +133,20 @@ function AnalyticsDashboard() {
                     <div className={styles.mainChartCard}>
                         <div className={styles.cardHeader}>
                             <h3 className={styles.cardTitle}>Lưu Lượng Nhập / Xuất Kho</h3>
-                            <SearchableSelect className={styles.chartFilter}>
+                            <select className={styles.chartFilter}>
                                 <option value="7days">7 Ngày Qua</option>
                                 <option value="thisMonth">Tháng Này</option>
                                 <option value="lastMonth">Tháng Trước</option>
-                            </SearchableSelect>
+                            </select>
                         </div>
                         <div className={styles.chartBody}>
                             <ResponsiveContainer width="100%" height={320}>
                                 <BarChart data={trafficData} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 13}} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 13}} />
-                                    <RechartsTooltip cursor={{fill: '#f3f4f6'}} contentStyle={{borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                                    <Legend iconType="circle" wrapperStyle={{paddingTop: 10}} />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 13 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 13 }} />
+                                    <RechartsTooltip cursor={{ fill: '#f3f4f6' }} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                    <Legend iconType="circle" wrapperStyle={{ paddingTop: 10 }} />
                                     <Bar dataKey="nhap" name="SL Nhập Kho" fill="var(--color-primary)" radius={[4, 4, 0, 0]} maxBarSize={30} />
                                     <Bar dataKey="xuat" name="SL Xuất Kho" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={30} />
                                 </BarChart>
@@ -172,13 +158,13 @@ function AnalyticsDashboard() {
                     <div className={styles.pieChartCard}>
                         <div className={styles.cardHeader}>
                             <h3 className={styles.cardTitle}>Cơ Cấu Giá Trị Tồn Kho</h3>
-                            <SearchableSelect className={styles.chartFilter}>
+                            <select className={styles.chartFilter}>
                                 <option value="all">Tất Cả Kho</option>
                                 <option value="kho1">Kho Linh Kiện</option>
                                 <option value="kho2">Kho Thành Phẩm</option>
-                            </SearchableSelect>
+                            </select>
                         </div>
-                        <div className={styles.chartBody} style={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', paddingBottom: '30px'}}>
+                        <div className={styles.chartBody} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', paddingBottom: '30px' }}>
                             <ResponsiveContainer width="100%" height={220}>
                                 <PieChart>
                                     <Pie data={categoryData} cx="50%" cy="50%" innerRadius={70} outerRadius={95} paddingAngle={3} dataKey="value" stroke="none">
@@ -186,14 +172,14 @@ function AnalyticsDashboard() {
                                             <Cell key={`cell-${index}`} fill={entry.color} />
                                         ))}
                                     </Pie>
-                                    <RechartsTooltip formatter={(value) => `${value}%`} contentStyle={{borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                                    <RechartsTooltip formatter={(value) => `${value}%`} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className={styles.pieLegend}>
                                 {categoryData.map((item, idx) => (
                                     <div key={idx} className={styles.legendItem}>
-                                        <span className={styles.legendDot} style={{backgroundColor: item.color}}></span>
-                                        <span className={styles.legendText}>{item.name} <strong style={{color: 'var(--color-text-strong)'}}>{item.value}%</strong></span>
+                                        <span className={styles.legendDot} style={{ backgroundColor: item.color }}></span>
+                                        <span className={styles.legendText}>{item.name} <strong style={{ color: 'var(--color-text-strong)' }}>{item.value}%</strong></span>
                                     </div>
                                 ))}
                             </div>
@@ -206,28 +192,28 @@ function AnalyticsDashboard() {
                     <div className={styles.mainChartCard}>
                         <div className={styles.cardHeader}>
                             <h3 className={styles.cardTitle}>Báo Cáo Thu Chi & Công Nợ</h3>
-                            <SearchableSelect className={styles.chartFilter}>
+                            <select className={styles.chartFilter}>
                                 <option value="2026">Năm 2026</option>
                                 <option value="2025">Năm 2025</option>
                                 <option value="quarter">Theo Quý (2026)</option>
-                            </SearchableSelect>
+                            </select>
                         </div>
                         <div className={styles.chartBody}>
                             <ResponsiveContainer width="100%" height={320}>
                                 <ComposedChart data={financeData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 13}} />
-                                    <YAxis yAxisId="left" tickFormatter={(value) => `${value}M`} axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 13}} />
-                                    <YAxis yAxisId="right" orientation="right" tickFormatter={(value) => `${value}M`} axisLine={false} tickLine={false} tick={{fill: '#ea580c', fontSize: 13}} />
-                                    <RechartsTooltip 
-                                        cursor={{fill: '#f3f4f6'}} 
-                                        contentStyle={{borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} 
-                                        formatter={(value) => `${value} Triệu VNĐ`} 
+                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 13 }} />
+                                    <YAxis yAxisId="left" tickFormatter={(value) => `${value}M`} axisLine={false} tickLine={false} tick={{ fill: '#6b7280', fontSize: 13 }} />
+                                    <YAxis yAxisId="right" orientation="right" tickFormatter={(value) => `${value}M`} axisLine={false} tickLine={false} tick={{ fill: '#ea580c', fontSize: 13 }} />
+                                    <RechartsTooltip
+                                        cursor={{ fill: '#f3f4f6' }}
+                                        contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        formatter={(value) => `${value} Triệu VNĐ`}
                                     />
-                                    <Legend iconType="circle" wrapperStyle={{paddingTop: 10}} />
+                                    <Legend iconType="circle" wrapperStyle={{ paddingTop: 10 }} />
                                     <Bar yAxisId="left" dataKey="thu" name="Tổng Thu" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
                                     <Bar yAxisId="left" dataKey="chi" name="Tổng Chi" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                                    <Line yAxisId="right" type="monotone" dataKey="congNo" name="Dư Nợ (Phải Thu)" stroke="#ea580c" strokeWidth={3} dot={{r: 4, fill: '#ea580c'}} activeDot={{r: 6}} />
+                                    <Line yAxisId="right" type="monotone" dataKey="congNo" name="Dư Nợ (Phải Thu)" stroke="#ea580c" strokeWidth={3} dot={{ r: 4, fill: '#ea580c' }} activeDot={{ r: 6 }} />
                                 </ComposedChart>
                             </ResponsiveContainer>
                         </div>
@@ -236,12 +222,12 @@ function AnalyticsDashboard() {
 
                 {/* Bottom Row */}
                 <div className={styles.bottomGrid}>
-                    
+
                     {/* Left Column - Recent Transactions */}
                     <div className={styles.transactionsCard}>
                         <div className={styles.cardHeader}>
                             <h3 className={styles.cardTitle}>Giao Dịch Gần Đây</h3>
-                            <button className={styles.viewAllBtn}>Tất cả <i className="fas fa-arrow-right" style={{marginLeft: '4px'}}></i></button>
+                            <button className={styles.viewAllBtn}>Tất cả <i className="fas fa-arrow-right" style={{ marginLeft: '4px' }}></i></button>
                         </div>
                         <div className={styles.tableWrapper}>
                             <table className={`misa-table ${styles.txTable}`}>
@@ -286,11 +272,11 @@ function AnalyticsDashboard() {
                         <div className={styles.topProductsCard}>
                             <div className={styles.cardHeader}>
                                 <h3 className={styles.cardTitle}>Top 5 Hàng Xuất Kho Nhiều</h3>
-                                <SearchableSelect className={styles.chartFilter}>
+                                <select className={styles.chartFilter}>
                                     <option value="thisMonth">Tháng này</option>
                                     <option value="thisWeek">Tuần này</option>
                                     <option value="thisYear">Năm nay</option>
-                                </SearchableSelect>
+                                </select>
                             </div>
                             <div className={styles.topProductsList}>
                                 {topProducts.map((prod, idx) => (
@@ -303,7 +289,7 @@ function AnalyticsDashboard() {
                                             <div className={styles.productSold}>{prod.sold} / {prod.max}</div>
                                         </div>
                                         <div className={styles.productProgressBg}>
-                                            <div className={`${styles.productProgressFill} ${styles['bg' + prod.color.charAt(0).toUpperCase() + prod.color.slice(1)]}`} style={{'--target-width': `${(prod.sold / prod.max) * 100}%`}}></div>
+                                            <div className={`${styles.productProgressFill} ${styles['bg' + prod.color.charAt(0).toUpperCase() + prod.color.slice(1)]}`} style={{ '--target-width': `${(prod.sold / prod.max) * 100}%` }}></div>
                                         </div>
                                     </div>
                                 ))}
@@ -319,7 +305,7 @@ function AnalyticsDashboard() {
                                 {pendingTasks.map((task) => (
                                     <div key={task.id} className={styles.taskItem}>
                                         <div className={`${styles.taskIcon} ${styles['bg' + task.color.charAt(0).toUpperCase() + task.color.slice(1) + 'Soft']}`}>
-                                            <i className={task.icon} style={{color: task.color === 'blue' ? 'var(--color-primary)' : ''}}></i>
+                                            <i className={task.icon} style={{ color: task.color === 'blue' ? 'var(--color-primary)' : '' }}></i>
                                         </div>
                                         <div className={styles.taskInfo}>
                                             <p className={styles.taskTitle}>{task.title}</p>
@@ -327,30 +313,6 @@ function AnalyticsDashboard() {
                                         </div>
                                     </div>
                                 ))}
-                            </div>
-                        </div>
-
-                        {/* AI Insights Card */}
-                        <div className={styles.pendingTasksCard} style={{marginTop: '24px'}}>
-                            <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>Góc nhìn từ AI (Câu hỏi thường gặp)</h3>
-                            </div>
-                            <div className={styles.taskList}>
-                                {aiInsights.length === 0 ? (
-                                    <p style={{color: 'var(--color-text-muted)', fontSize: '13px', padding: '10px'}}>Chưa có đủ dữ liệu chat.</p>
-                                ) : (
-                                    aiInsights.map((insight, idx) => (
-                                        <div key={idx} className={styles.taskItem}>
-                                            <div className={`${styles.taskIcon} ${styles.bgPrimarySoft}`}>
-                                                <i className="fas fa-comment-dots" style={{color: 'var(--color-primary)'}}></i>
-                                            </div>
-                                            <div className={styles.taskInfo}>
-                                                <p className={styles.taskTitle}>{insight}</p>
-                                                <span className={styles.taskTime}>Câu hỏi phổ biến</span>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
                             </div>
                         </div>
                     </div>
