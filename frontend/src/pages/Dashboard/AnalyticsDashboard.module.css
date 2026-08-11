@@ -30,6 +30,16 @@
     gap: 12px;
 }
 
+.errorBanner {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    font-weight: 600;
+}
+
 /* KPI Cards Grid */
 .kpiGrid {
     display: grid;
@@ -49,6 +59,10 @@
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     overflow: hidden;
     cursor: pointer;
+}
+
+.kpiCardDisabled {
+    cursor: wait;
 }
 
 .kpiCard:hover {
@@ -472,6 +486,7 @@
 .bgRedSoft { background-color: #fee2e2; color: #dc2626; }
 .bgOrangeSoft { background-color: #ffedd5; color: #ea580c; }
 .bgBlueSoft { background-color: var(--color-primary-soft); color: var(--color-primary); }
+.bgPurpleSoft { background-color: #f3e8ff; color: #9333ea; }
 
 .taskInfo {
     display: flex;
@@ -572,6 +587,86 @@
     }
 }
 
+.detailModalHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--color-border-card);
+}
+
+.detailModalTitle {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-text-strong);
+}
+
+.detailModalSubtitle {
+    margin: 6px 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.detailModalClose {
+    border: none;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.detailModalBody {
+    padding: 20px 24px 24px;
+}
+
+.detailTableWrap {
+    overflow-x: auto;
+}
+
+.detailTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.detailTable th {
+    padding: 12px 14px;
+    background: var(--color-bg-soft);
+    border-bottom: 1px solid var(--color-border-soft);
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    text-align: left;
+}
+
+.detailTable td {
+    padding: 14px;
+    border-bottom: 1px solid var(--color-border-soft);
+    color: var(--color-text-body);
+    vertical-align: middle;
+}
+
+.detailTable tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.clickableRow {
+    cursor: pointer;
+}
+
+.clickableRow:hover td {
+    background: var(--color-bg-hover);
+}
+
+.detailEmpty {
+    padding: 28px 16px;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
 
 /* Responsive */
 @media (max-width: 1300px) {
@@ -601,5 +696,9 @@
     .headerActions {
         width: 100%;
         justify-content: flex-start;
+    }
+    .detailModalHeader {
+        flex-direction: column;
+        align-items: stretch;
     }
 }
