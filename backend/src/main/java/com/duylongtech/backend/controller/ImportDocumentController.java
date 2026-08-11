@@ -54,7 +54,7 @@ public class ImportDocumentController {
     @Operation(summary = "View import slip history")
     @PreAuthorize("hasAuthority('import:view')")
     public ApiResponse<List<InventoryDocumentResponse>> getImportHistory(
-            @RequestParam(required = false) String docCode,
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status,
@@ -63,7 +63,7 @@ public class ImportDocumentController {
             @RequestParam(required = false) String referenceType,
             @RequestParam(required = false) Long referenceId
     ) {
-        return ApiResponse.success(inventoryDocumentService.getImportHistory(docCode, fromDate, toDate, status, warehouseId, issuePurpose, referenceType, referenceId));
+        return ApiResponse.success(inventoryDocumentService.getImportHistory(keyword, fromDate, toDate, status, warehouseId, issuePurpose, referenceType, referenceId));
     }
 
     @GetMapping("/{id}")

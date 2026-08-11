@@ -466,13 +466,13 @@ function CreatePurchaseOrderPage() {
                           </td>
                           <td>
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="numeric"
                               className={styles.cellInput}
                               style={{ textAlign: 'right' }}
-                              min="0"
-                              step="1000"
-                              value={line.unitPrice}
-                              onChange={e => updateLine(idx, 'unitPrice', e.target.value)}
+                              value={line.unitPrice ? new Intl.NumberFormat('vi-VN').format(line.unitPrice) : ''}
+                              onChange={e => updateLine(idx, 'unitPrice', e.target.value.replace(/\D/g, ''))}
+                              placeholder="0"
                             />
                           </td>
                           <td>

@@ -138,7 +138,7 @@ export default function QuickProductModal({ isOpen, onClose, onSaved, fixedType 
                     
                     <div className={styles.formGroup}>
                         <label>Giá bán</label>
-                        <input type="number" className="form-control" value={formData.salePrice} onChange={e => setFormData({...formData, salePrice: e.target.value})} />
+                        <input type="text" inputMode="numeric" className="form-control" value={formData.salePrice ? new Intl.NumberFormat('vi-VN').format(formData.salePrice) : ''} onChange={e => setFormData({...formData, salePrice: e.target.value.replace(/\D/g, '')})} placeholder="0" />
                     </div>
 
                     <div className={styles.formGroup}>
