@@ -11,14 +11,25 @@ import { formatDateTime as formatVietnamDateTime } from '../../utils/dateFormat'
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 
-const formatDateTime = (isoString) => isoString ? formatVietnamDateTime(isoString) : '';
+const formatDateTime = (isoString) => isoString ? formatVietnamDateTime(isoString, { withSeconds: false }) : '';
 
 const parseDateInput = (value, endOfDay = false) => {
     if (!value || !value.trim()) return null;
 
-    const parts = value.trim().split('-');
-    if (parts.length !== 3) return null;
-    const [year, month, day] = parts;
+    const text = value.trim();
+    const isoDate = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!isoDate) return null;
+
+    const [, year, month, day] = isoDate;
+    const calendarDate = new Date(Number(year), Number(month) - 1, Number(day));
+    if (
+        calendarDate.getFullYear() !== Number(year) ||
+        calendarDate.getMonth() !== Number(month) - 1 ||
+        calendarDate.getDate() !== Number(day)
+    ) {
+        return null;
+    }
+
     const time = endOfDay ? '23:59:59.999' : '00:00:00.000';
     const date = new Date(`${year}-${month}-${day}T${time}+07:00`);
     return Number.isNaN(date.getTime()) ? null : date.toISOString();
@@ -129,6 +140,14 @@ function AuditLogPage() {
             setLoading(true);
             const fromDate = parseDateInput(fromDateInput);
             const toDate = parseDateInput(toDateInput, true);
+            if ((fromDateInput.trim() && !fromDate) || (toDateInput.trim() && !toDate)) {
+                showToast('warning', 'Ngày lọc không hợp lệ. Vui lòng chọn ngày từ lịch.');
+                return;
+            }
+            if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) {
+                showToast('warning', 'Ngày bắt đầu không được lớn hơn ngày kết thúc.');
+                return;
+            }
             const params = new URLSearchParams({
                 page: String(page),
                 size: String(size),
@@ -151,7 +170,7 @@ function AuditLogPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, size, debouncedSearch, selectedModule, fromDateInput, toDateInput]);
+    }, [page, size, debouncedSearch, selectedModule, fromDateInput, toDateInput, showToast]);
 
     useEffect(() => {
 

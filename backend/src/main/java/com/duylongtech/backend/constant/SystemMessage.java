@@ -13,6 +13,7 @@ public enum SystemMessage {
     INVALID_EMAIL("MSG06", "Email không đúng định dạng."),
     INVALID_PHONE("MSG07", "Số điện thoại không hợp lệ (phải đúng mạng viễn thông Việt Nam)."),
     EXCEED_MAX_LENGTH("MSG08", "Độ dài dữ liệu vượt quá giới hạn cho phép."),
+    INVALID_FULL_NAME("MSG09", "Họ và tên phải có 2-100 ký tự và không chứa số hoặc ký tự đặc biệt."),
     
     // Auth & User
     LOGIN_FAILED("AUTH01", "Tài khoản hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại."),

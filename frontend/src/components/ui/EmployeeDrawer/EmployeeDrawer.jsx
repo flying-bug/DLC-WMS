@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../Modal/Modal';
+import { formatDateOnly } from '../../../utils/dateFormat';
 import styles from './EmployeeDrawer.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
@@ -96,6 +97,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
     };
 
     const normalizePhone = (value) => (value || '').replace(/[\s.-]/g, '');
+    const displayDate = (value) => value ? formatDateOnly(value) : 'Chưa cập nhật';
 
     const saveCurrentForm = async () => {
         setSaving(true);
@@ -233,7 +235,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     <>
                         <div className={styles.detailItem}>
                             <span className={styles.detailLabel}>Ngày sinh</span>
-                            <span className={styles.detailValue}>{formData.dob}</span>
+                            <span className={styles.detailValue}>{displayDate(formData.dob)}</span>
                         </div>
                         <div className={styles.detailItem}>
                             <span className={styles.detailLabel}>Giới tính</span>
@@ -398,7 +400,7 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                             )}
                             <div className={styles.userDetails}>
                                 <h2 id="employee-drawer-title" className={styles.userName}>{formData.name}</h2>
-                                <span className={styles.userCode}>Mã NV: {formData.code}</span>
+                                <span className={styles.userCode}>Tên đăng nhập: {formData.username || formData.code}</span>
                                 <div className={styles.badges}>
                                     <span className={styles.statusBadge} style={formData.status !== 'active' ? { background: 'var(--status-warning-bg)', color: 'var(--color-warning-dark)' } : {}}>
                                         <i className="bi bi-circle-fill"></i> {formData.statusLabel}
