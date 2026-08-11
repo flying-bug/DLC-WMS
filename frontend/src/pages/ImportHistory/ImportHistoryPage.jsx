@@ -109,7 +109,7 @@ function ImportHistoryPage() {
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const DEFAULT_FILTERS = useMemo(() => ({
-    docCode: location.state?.filterDocCode || '',
+    keyword: location.state?.filterKeyword || location.state?.filterDocCode || '',
     fromDate: '',
     toDate: '',
     preset: 'ALL',
@@ -120,7 +120,7 @@ function ImportHistoryPage() {
     issuePurpose: '',
     referenceId: location.state?.referenceId || '',
     referenceType: location.state?.referenceType || '',
-  }), [location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
+  }), [location.state?.filterKeyword, location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
@@ -380,12 +380,12 @@ function ImportHistoryPage() {
               <input
                 type="text"
                 className={styles.searchInput}
-                placeholder="Nhập từ khóa tìm kiếm mã phiếu..."
-                value={filters.docCode}
-                onChange={(e) => setFilters(prev => ({ ...prev, docCode: e.target.value }))}
+                placeholder="Tìm theo mã phiếu, Serial, SKU..."
+                value={filters.keyword}
+                onChange={(e) => setFilters(prev => ({ ...prev, keyword: e.target.value }))}
               />
-              {filters.docCode && (
-                <button className={styles.clearSearchBtn} onClick={() => setFilters(prev => ({ ...prev, docCode: '' }))}>
+              {filters.keyword && (
+                <button className={styles.clearSearchBtn} onClick={() => setFilters(prev => ({ ...prev, keyword: '' }))}>
                   <i className="bi bi-x-circle-fill"></i>
                 </button>
               )}

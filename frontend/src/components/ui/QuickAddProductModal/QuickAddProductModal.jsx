@@ -431,10 +431,10 @@ const QuickAddProductModal = ({
                             <div className={styles.field} style={{ flex: 1 }}>
                                 <label>Giá bán dự kiến</label>
                                 <input 
-                                    type="number" 
-                                    min="0"
-                                    value={formData.salePrice} 
-                                    onChange={e => setFormData(f => ({...f, salePrice: e.target.value}))} 
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formData.salePrice ? new Intl.NumberFormat('vi-VN').format(formData.salePrice) : ''} 
+                                    onChange={e => setFormData(f => ({...f, salePrice: e.target.value.replace(/\D/g, '')}))} 
                                     placeholder="0"
                                 />
                             </div>

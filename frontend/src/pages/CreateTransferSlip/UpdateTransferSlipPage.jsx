@@ -625,13 +625,18 @@ function UpdateTransferSlipPage() {
           </div>
         </div>
       </div>
-      <ManageSerialModal
-        isOpen={Boolean(serialModalItemId)}
-        onClose={handleSerialModalClose}
-        productName={variantLabel(selectedSerialProduct)}
-        targetQuantity={Number(selectedSerialItem?.quantity || 0)}
-        initialSerials={selectedSerialItem?.serialNumbers || []}
-      />
+      {serialModalItemId && selectedSerialProduct && (
+        <ManageSerialModal
+          isOpen={true}
+          onClose={handleSerialModalClose}
+          productName={variantLabel(selectedSerialProduct)}
+          targetQuantity={Number(selectedSerialItem?.quantity || 0)}
+          initialSerials={selectedSerialItem?.serialNumbers || []}
+          mode="export"
+          warehouseId={form.fromWarehouseId}
+          variantId={selectedSerialProduct.id}
+        />
+      )}
       <ReferenceDocumentModal
         isOpen={showReferenceModal}
         onClose={() => setShowReferenceModal(false)}

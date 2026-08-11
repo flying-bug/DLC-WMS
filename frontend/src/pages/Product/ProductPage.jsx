@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -9,6 +9,8 @@ import axiosClient from '../../api/axiosClient';
 import styles from './ProductPage.module.css';
 import { getVietnamTimestamp } from '../../utils/dateFormat';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import Modal from '../../components/ui/Modal/Modal';
 import ProductDetailModal from './components/ProductDetailModal';
@@ -330,60 +332,103 @@ const ProductPage = () => {
     const [outOfStockCount, setOutOfStockCount] = useState(0);
     const [lowStockCount, setLowStockCount] = useState(0);
     const [importing, setImporting] = useState(false);
+    const [showExcelPreviewModal, setShowExcelPreviewModal] = useState(false);
+    const [excelPreviewData, setExcelPreviewData] = useState([]);
+    const [previewFilter, setPreviewFilter] = useState('ALL');
+    const [isSavingExcel, setIsSavingExcel] = useState(false);
     const fileInputRef = useRef(null);
 
     const showToast = (type, message) => {
         setToast({ isVisible: true, type, message });
     };
 
-    const handleDownloadTemplate = () => {
+    const handleDownloadTemplate = async () => {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Mau_Nhap_Hang_Hoa');
+
+        worksheet.properties.defaultRowHeight = 22;
+
+        worksheet.columns = [
+            { key: 'code', width: 20 },
+            { key: 'name', width: 45 },
+            { key: 'type', width: 18 },
+            { key: 'category', width: 25 },
+            { key: 'brand', width: 20 },
+            { key: 'unit', width: 15 },
+            { key: 'price', width: 18 },
+            { key: 'minStock', width: 20 },
+            { key: 'warranty', width: 18 },
+            { key: 'serial', width: 25 },
+            { key: 'description', width: 50 }
+        ];
+
+        worksheet.mergeCells('A1:K1');
+        const titleCell = worksheet.getCell('A1');
+        titleCell.value = 'FILE MẪU DANH SÁCH HÀNG HÓA ĐỂ NHẬP VÀO HỆ THỐNG';
+        titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FF000000' } };
+        titleCell.alignment = { vertical: 'middle', horizontal: 'left' };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE0B2' } };
+
+        worksheet.mergeCells('A2:K2');
+        const inst1 = worksheet.getCell('A2');
+        inst1.value = 'Hướng dẫn:';
+        inst1.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFD84315' } };
+        inst1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE0B2' } };
+
+        worksheet.mergeCells('A3:K3');
+        const inst2 = worksheet.getCell('A3');
+        inst2.value = '- Điền dữ liệu vào các cột tương ứng trên file này';
+        inst2.font = { name: 'Arial', size: 11 };
+        inst2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE0B2' } };
+
+        worksheet.mergeCells('A4:K4');
+        const inst3 = worksheet.getCell('A4');
+        inst3.value = '- Các cột có dấu (*) là những cột bắt buộc';
+        inst3.font = { name: 'Arial', size: 11 };
+        inst3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE0B2' } };
+
+        worksheet.mergeCells('A5:K5');
+        const inst4 = worksheet.getCell('A5');
+        inst4.value = '- Các dòng dữ liệu phía dưới chỉ là ví dụ minh họa, vui lòng xóa đi trước khi nhập';
+        inst4.font = { name: 'Arial', size: 11 };
+        inst4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE0B2' } };
+        
+        worksheet.mergeCells('A6:K6');
+
+        const headerRow = worksheet.getRow(7);
+        headerRow.values = [
+            'Mã sản phẩm (*)', 'Tên sản phẩm (*)', 'Loại sản phẩm (*)', 'Danh mục (*)', 
+            'Thương hiệu (*)', 'Đơn vị tính (*)', 'Giá bán (VNĐ)', 'Cảnh báo hết hàng', 
+            'Bảo hành (tháng)', 'Quản lý Serial (Có/Không)', 'Mô tả'
+        ];
+        headerRow.height = 30;
+        headerRow.eachCell((cell) => {
+            cell.font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FF000000' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB3E5FC' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+
         const sampleData = [
-            {
-                'Mã sản phẩm': 'SP000001',
-                'Tên sản phẩm': 'Dell OptiPlex 7010 SFF',
-                'Loại sản phẩm': 'Hàng hóa',
-                'Danh mục': 'Máy tính đồng bộ',
-                'Thương hiệu': 'Dell',
-                'Đơn vị tính': 'Bộ',
-                'Giá bán (VNĐ)': 12500000,
-                'Cảnh báo hết hàng': 5,
-                'Bảo hành (tháng)': 24,
-                'Quản lý Serial (Có/Không)': 'Có',
-                'Mô tả': 'Máy tính đồng bộ Intel Core i5 12500, 16GB RAM, 512GB SSD'
-            },
-            {
-                'Mã sản phẩm': 'SP000002',
-                'Tên sản phẩm': 'RAM Kingston Fury Beast 16GB DDR4 3200MHz',
-                'Loại sản phẩm': 'Hàng hóa',
-                'Danh mục': 'RAM',
-                'Thương hiệu': 'Kingston',
-                'Đơn vị tính': 'Thanh',
-                'Giá bán (VNĐ)': 950000,
-                'Cảnh báo hết hàng': 10,
-                'Bảo hành (tháng)': 36,
-                'Quản lý Serial (Có/Không)': 'Không',
-                'Mô tả': 'Bộ nhớ RAM 16GB bus 3200MHz tản nhiệt đen'
-            }
+            ['SP000001', 'Dell OptiPlex 7010 SFF', 'Hàng hóa', 'Máy tính đồng bộ', 'Dell', 'Bộ', 12500000, 5, 24, 'Có', 'Máy tính đồng bộ Intel Core i5 12500, 16GB RAM, 512GB SSD'],
+            ['SP000002', 'RAM Kingston Fury Beast 16GB DDR4 3200MHz', 'Hàng hóa', 'RAM', 'Kingston', 'Thanh', 950000, 10, 36, 'Không', 'Bộ nhớ RAM 16GB bus 3200MHz tản nhiệt đen']
         ];
 
-        const worksheet = XLSX.utils.json_to_sheet(sampleData);
-        worksheet['!cols'] = [
-            { wch: 15 },
-            { wch: 45 },
-            { wch: 15 },
-            { wch: 25 },
-            { wch: 18 },
-            { wch: 12 },
-            { wch: 18 },
-            { wch: 18 },
-            { wch: 18 },
-            { wch: 25 },
-            { wch: 50 }
-        ];
+        sampleData.forEach((dataRow, index) => {
+            const row = worksheet.getRow(8 + index);
+            row.values = dataRow;
+            row.eachCell((cell, colNumber) => {
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                cell.alignment = { vertical: 'middle', horizontal: colNumber >= 7 && colNumber <= 9 ? 'right' : 'left' };
+                if (colNumber === 7) {
+                    cell.numFmt = '#,##0';
+                }
+            });
+        });
 
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Mau_Nhap_Hang_Hoa');
-        XLSX.writeFile(workbook, 'DLC_WMS_Mau_Nhap_Hang_Hoa.xlsx');
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, 'DLC_WMS_Mau_Nhap_Hang_Hoa.xlsx');
     };
 
     const handleImportExcel = (e) => {
@@ -398,112 +443,182 @@ const ProductPage = () => {
                 const wb = XLSX.read(bstr, { type: 'binary' });
                 const wsname = wb.SheetNames[0];
                 const ws = wb.Sheets[wsname];
-                const rawData = XLSX.utils.sheet_to_json(ws);
-
-                if (!rawData || rawData.length === 0) {
+                const rawArray = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                if (!rawArray || rawArray.length === 0) {
                     showToast('warning', 'File Excel không có dữ liệu');
                     setImporting(false);
                     return;
                 }
 
-                let createdCount = 0;
-                let updatedCount = 0;
-                let failCount = 0;
-                const errors = [];
+                // Find header row (the row that has 'Tên sản phẩm')
+                let headerRowIndex = -1;
+                for (let i = 0; i < Math.min(20, rawArray.length); i++) {
+                    const rowStr = (rawArray[i] || []).join(' ').toLowerCase();
+                    if (rowStr.includes('tên sản phẩm') || rowStr.includes('ten san pham') || rowStr.includes('mã sản phẩm')) {
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
 
-                // Fetch current products list to check existing codes/ids for Upsert
+                if (headerRowIndex === -1) {
+                    showToast('error', 'Không tìm thấy dòng tiêu đề hợp lệ trong file Excel');
+                    setImporting(false);
+                    return;
+                }
+
+                const headers = rawArray[headerRowIndex].map(h => String(h || '').replace(/\(\*\)/g, '').trim());
+                
+                const rawData = [];
+                for (let i = headerRowIndex + 1; i < rawArray.length; i++) {
+                    const rowArr = rawArray[i];
+                    if (!rowArr || rowArr.length === 0) continue;
+                    
+                    // Skip completely empty rows
+                    if (rowArr.every(cell => cell === null || cell === undefined || String(cell).trim() === '')) continue;
+
+                    const rowObj = {
+                        _excelRowNumber: i + 1 // i is 0-indexed, Excel rows are 1-indexed
+                    };
+                    headers.forEach((h, colIdx) => {
+                        if (h) rowObj[h] = rowArr[colIdx];
+                    });
+                    rawData.push(rowObj);
+                }
+
+                if (rawData.length === 0) {
+                    showToast('warning', 'Không có dữ liệu sản phẩm trong file');
+                    setImporting(false);
+                    return;
+                }
+
+                // Fetch current products list to check existing codes for Upsert
                 let existingProductsList = products;
                 try {
                     const allProdRes = await axiosClient.get('/products?page=0&size=5000');
                     existingProductsList = allProdRes.data?.content || products;
-                } catch (e) {
-                    console.warn('Không thể lấy danh sách sản phẩm đầy đủ để kiểm tra trùng mã:', e);
+                } catch (err) {
+                    console.warn('Không thể lấy danh sách sản phẩm để kiểm tra:', err);
                 }
+
+                const previewData = [];
 
                 for (let i = 0; i < rawData.length; i++) {
                     const row = rawData[i];
-                    const productName = row['Tên sản phẩm'] || row['Ten san pham'] || row['Name'] || row['Product Name'];
-                    if (!productName || !String(productName).trim()) {
-                        continue;
-                    }
+                    const rowErrors = [];
+                    let isValid = true;
 
-                    const productCode = row['Mã sản phẩm'] || row['Ma san pham'] || row['Code'] || '';
+                    const productName = String(row['Tên sản phẩm'] || row['Ten san pham'] || row['Name'] || row['Product Name'] || '').trim();
+                    const productCode = String(row['Mã sản phẩm'] || row['Ma san pham'] || row['Code'] || '').trim();
                     const productTypeRaw = row['Loại sản phẩm'] || row['Loai san pham'] || 'Hàng hóa';
-                    const categoryNameRaw = row['Danh mục'] || row['Danh muc'] || row['Category'] || '';
-                    const brandNameRaw = row['Thương hiệu'] || row['Thuong hieu'] || row['Brand'] || '';
-                    const unitNameRaw = row['Đơn vị tính'] || row['Don vi tinh'] || row['Unit'] || '';
+                    const categoryNameRaw = String(row['Danh mục'] || row['Danh muc'] || row['Category'] || '').trim();
+                    const brandNameRaw = String(row['Thương hiệu'] || row['Thuong hieu'] || row['Brand'] || '').trim();
+                    const unitNameRaw = String(row['Đơn vị tính'] || row['Don vi tinh'] || row['Unit'] || '').trim();
                     const salePrice = Number(row['Giá bán (VNĐ)'] || row['Giá bán'] || row['Price'] || 0);
                     const minStockQty = Number(row['Cảnh báo hết hàng'] || row['Tồn tối thiểu'] || 0);
                     const warrantyMonths = Number(row['Bảo hành (tháng)'] || row['Bảo hành'] || 0);
                     const trackSerialRaw = String(row['Quản lý Serial (Có/Không)'] || row['Quản lý Serial'] || row['Serial'] || '').toLowerCase();
                     const description = row['Mô tả'] || row['Mo ta'] || '';
 
-                    const matchedCat = categories.find(c =>
-                        (c.name && c.name.toLowerCase() === String(categoryNameRaw).trim().toLowerCase()) ||
-                        (c.code && c.code.toLowerCase() === String(categoryNameRaw).trim().toLowerCase())
-                    );
-
-                    const matchedBrand = brands.find(b =>
-                        (b.name && b.name.toLowerCase() === String(brandNameRaw).trim().toLowerCase()) ||
-                        (b.code && b.code.toLowerCase() === String(brandNameRaw).trim().toLowerCase())
-                    );
-
-                    const matchedUnit = units.find(u =>
-                        (u.name && u.name.toLowerCase() === String(unitNameRaw).trim().toLowerCase()) ||
-                        (u.code && u.code.toLowerCase() === String(unitNameRaw).trim().toLowerCase())
-                    );
+                    if (!productName) {
+                        isValid = false;
+                        rowErrors.push('Thiếu Tên sản phẩm');
+                    }
 
                     let productType = 'Hàng hóa';
                     if (String(productTypeRaw).includes('Thành phẩm')) productType = 'Thành phẩm';
                     if (String(productTypeRaw).includes('Dịch vụ')) productType = 'Dịch vụ';
                     const isService = isServiceType(productType);
 
+                    const matchedCat = categories.find(c =>
+                        (c.name && c.name.toLowerCase() === categoryNameRaw.toLowerCase()) ||
+                        (c.code && c.code.toLowerCase() === categoryNameRaw.toLowerCase())
+                    );
+                    let categoryId = isService ? null : (matchedCat ? matchedCat.id : '');
+                    if (!isService && categoryNameRaw && !matchedCat) {
+                        isValid = false;
+                        rowErrors.push(`Danh mục '${categoryNameRaw}' không tồn tại`);
+                    } else if (!isService && !categoryNameRaw) {
+                        isValid = false;
+                        rowErrors.push('Thiếu Danh mục');
+                    }
+
+                    const matchedBrand = brands.find(b =>
+                        (b.name && b.name.toLowerCase() === brandNameRaw.toLowerCase()) ||
+                        (b.code && b.code.toLowerCase() === brandNameRaw.toLowerCase())
+                    );
+                    let brandId = isService ? null : (matchedBrand ? matchedBrand.id : '');
+                    if (!isService && brandNameRaw && !matchedBrand) {
+                        isValid = false;
+                        rowErrors.push(`Thương hiệu '${brandNameRaw}' không tồn tại`);
+                    } else if (!isService && !brandNameRaw) {
+                        isValid = false;
+                        rowErrors.push('Thiếu Thương hiệu');
+                    }
+
+                    const matchedUnit = units.find(u =>
+                        (u.name && u.name.toLowerCase() === unitNameRaw.toLowerCase()) ||
+                        (u.code && u.code.toLowerCase() === unitNameRaw.toLowerCase())
+                    );
+                    let unitId = matchedUnit ? matchedUnit.id : '';
+                    if (unitNameRaw && !matchedUnit) {
+                        isValid = false;
+                        rowErrors.push(`Đơn vị tính '${unitNameRaw}' không tồn tại`);
+                    } else if (!unitNameRaw) {
+                        isValid = false;
+                        rowErrors.push('Thiếu Đơn vị tính');
+                    }
+
                     const trackSerial = trackSerialRaw.includes('có') || trackSerialRaw.includes('co') || trackSerialRaw === '1' || trackSerialRaw === 'true';
+                    const existingProduct = productCode ? existingProductsList.find(p => p.productCode && p.productCode.toLowerCase() === productCode.toLowerCase()) : null;
 
-                    const trimmedCode = productCode ? String(productCode).trim() : '';
+                    const warnings = [];
+                    if (productName) {
+                        const normName = String(productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+                        if (normName.length > 3) {
+                            const similarProduct = existingProductsList.find(p => {
+                                if (!p.productName) return false;
+                                if (productCode && p.productCode && p.productCode.toLowerCase() === productCode.toLowerCase()) return false;
+                                const pNorm = String(p.productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+                                return pNorm === normName;
+                            });
+                            
+                            if (similarProduct) {
+                                warnings.push(`Trùng tên với SP trên hệ thống: ${similarProduct.productCode}`);
+                            } else {
+                                const duplicateInExcel = previewData.find(r => {
+                                    if (!r.productName) return false;
+                                    const rNorm = String(r.productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+                                    return rNorm === normName;
+                                });
+                                if (duplicateInExcel) {
+                                    warnings.push(`Trùng tên với Dòng ${duplicateInExcel.originalIndex} (trong file Excel)`);
+                                }
+                            }
+                        }
+                    }
 
-                    // Check if product already exists by code
-                    const existingProduct = trimmedCode ? existingProductsList.find(p => p.productCode && p.productCode.toLowerCase() === trimmedCode.toLowerCase()) : null;
-
-                    const payload = {
-                        productCode: trimmedCode || undefined,
-                        productName: String(productName).trim(),
-                        productType: productType,
-                        categoryId: isService ? null : (matchedCat ? matchedCat.id : null),
-                        brandId: isService ? null : (matchedBrand ? matchedBrand.id : null),
-                        unitId: matchedUnit ? matchedUnit.id : null,
+                    previewData.push({
+                        originalIndex: row._excelRowNumber,
+                        productName,
+                        productCode,
+                        productType,
+                        categoryId,
+                        brandId,
+                        unitId,
                         salePrice: salePrice >= 0 ? salePrice : 0,
                         minStockQty: isService ? 0 : (minStockQty >= 0 ? minStockQty : 0),
                         warrantyPeriodMonths: warrantyMonths >= 0 ? warrantyMonths : 0,
                         trackSerial: isService ? false : trackSerial,
-                        description: description,
-                        active: true
-                    };
-
-                    try {
-                        if (existingProduct) {
-                            // GHI ĐÈ / CẬP NHẬT sản phẩm đã tồn tại
-                            await axiosClient.put(`/products/${existingProduct.id}`, payload);
-                            updatedCount++;
-                        } else {
-                            // THÊM MỚI sản phẩm chưa tồn tại
-                            await axiosClient.post('/products', payload);
-                            createdCount++;
-                        }
-                    } catch (err) {
-                        failCount++;
-                        const msg = err.response?.data?.userMessage || err.message;
-                        errors.push(`Dòng ${i + 2} (${productName}): ${msg}`);
-                    }
+                        description,
+                        existingProduct,
+                        isValid,
+                        errors: rowErrors,
+                        warnings: warnings
+                    });
                 }
 
-                if (createdCount > 0 || updatedCount > 0) {
-                    showToast('success', `Đã xử lý Excel: Thêm mới ${createdCount} sản phẩm, Cập nhật ghi đè ${updatedCount} sản phẩm thành công!`);
-                    fetchProducts();
-                }
-                if (failCount > 0) {
-                    showToast('error', `${failCount} sản phẩm bị lỗi: ${errors.slice(0, 3).join('; ')}`);
-                }
+                setExcelPreviewData(previewData);
+                setShowExcelPreviewModal(true);
 
             } catch (err) {
                 console.error('Lỗi đọc file Excel:', err);
@@ -514,6 +629,172 @@ const ProductPage = () => {
             }
         };
         reader.readAsBinaryString(file);
+    };
+
+    const handlePreviewEdit = (index, field, value) => {
+        setExcelPreviewData(prevData => {
+            const newData = [...prevData];
+            const row = { ...newData[index], [field]: value };
+            
+            let isValid = true;
+            const rowErrors = [];
+            
+            if (!row.productName || !String(row.productName).trim()) {
+                isValid = false;
+                rowErrors.push('Thiếu Tên sản phẩm');
+            }
+            
+            const isService = isServiceType(row.productType);
+            if (!isService && !row.categoryId) {
+                isValid = false;
+                rowErrors.push('Thiếu Danh mục');
+            }
+            if (!isService && !row.brandId) {
+                isValid = false;
+                rowErrors.push('Thiếu Thương hiệu');
+            }
+            if (!row.unitId) {
+                isValid = false;
+                rowErrors.push('Thiếu Đơn vị tính');
+            }
+            
+            row.isValid = isValid;
+            row.errors = rowErrors;
+
+            if (field === 'productName' && row.productName) {
+                row.warnings = [];
+                const normName = String(row.productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+                if (normName.length > 3) {
+                    const similarProduct = products.find(p => {
+                        if (!p.productName) return false;
+                        if (row.productCode && p.productCode && p.productCode.toLowerCase() === row.productCode.toLowerCase()) return false;
+                        const pNorm = String(p.productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+                        return pNorm === normName;
+                    });
+                    
+                    if (similarProduct) {
+                        row.warnings.push(`Trùng tên với SP trên hệ thống: ${similarProduct.productCode}`);
+                    } else {
+                        const duplicateInExcel = newData.find((r, i) => {
+                            if (i === index) return false;
+                            if (!r.productName) return false;
+                            const rNorm = String(r.productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
+                            return rNorm === normName;
+                        });
+                        if (duplicateInExcel) {
+                            row.warnings.push(`Trùng tên với Dòng ${duplicateInExcel.originalIndex} (trong file Excel)`);
+                        }
+                    }
+                }
+            }
+
+            newData[index] = row;
+            return newData;
+        });
+    };
+
+    const handleQuickAddEntity = async (type, name) => {
+        try {
+            let endpoint = '';
+            let fieldName = '';
+            let updateStateFunc = null;
+
+            if (type === 'category') {
+                endpoint = '/product-categories';
+                fieldName = 'categoryId';
+                updateStateFunc = setCategories;
+            } else if (type === 'brand') {
+                endpoint = '/brands';
+                fieldName = 'brandId';
+                updateStateFunc = setBrands;
+            } else if (type === 'unit') {
+                endpoint = '/units';
+                fieldName = 'unitId';
+                updateStateFunc = setUnits;
+            }
+
+            const res = await axiosClient.post(endpoint, { name: name, status: 'APPROVED' });
+            const newEntity = type === 'brand' ? res.data.data : res.data;
+
+            updateStateFunc(prev => [...prev, newEntity]);
+
+            setExcelPreviewData(prevData => {
+                return prevData.map(row => {
+                    const errorMsgToMatch = type === 'category' ? `Danh mục '${name}' không tồn tại`
+                                          : type === 'brand' ? `Thương hiệu '${name}' không tồn tại`
+                                          : `Đơn vị tính '${name}' không tồn tại`;
+                    
+                    if (row.errors && row.errors.includes(errorMsgToMatch)) {
+                        const newRow = { ...row };
+                        newRow[fieldName] = newEntity.id;
+                        newRow.errors = row.errors.filter(e => e !== errorMsgToMatch);
+                        newRow.isValid = newRow.errors.length === 0;
+                        return newRow;
+                    }
+                    return row;
+                });
+            });
+
+            showToast('success', `Đã thêm nhanh ${name} thành công`);
+        } catch (error) {
+            console.error(error);
+            showToast('error', `Thêm nhanh ${name} thất bại`);
+        }
+    };
+
+    const handleSaveValidExcelRows = async () => {
+        const validRows = excelPreviewData.filter(row => row.isValid);
+        if (validRows.length === 0) {
+            showToast('warning', 'Không có dòng dữ liệu nào hợp lệ để lưu.');
+            return;
+        }
+
+        setIsSavingExcel(true);
+        let createdCount = 0;
+        let updatedCount = 0;
+        let failCount = 0;
+
+        for (const row of validRows) {
+            const payload = {
+                productCode: row.productCode || undefined,
+                productName: row.productName,
+                productType: row.productType,
+                categoryId: row.categoryId,
+                brandId: row.brandId,
+                unitId: row.unitId,
+                salePrice: row.salePrice,
+                minStockQty: row.minStockQty,
+                warrantyPeriodMonths: row.warrantyPeriodMonths,
+                trackSerial: row.trackSerial,
+                description: row.description,
+                active: true
+            };
+
+            try {
+                if (row.existingProduct) {
+                    await axiosClient.put(`/products/${row.existingProduct.id}`, payload);
+                    updatedCount++;
+                } else {
+                    await axiosClient.post('/products', payload);
+                    createdCount++;
+                }
+            } catch (err) {
+                failCount++;
+                console.error(`Lỗi lưu dòng ${row.originalIndex}:`, err);
+            }
+        }
+
+        setIsSavingExcel(false);
+        setShowExcelPreviewModal(false);
+        setExcelPreviewData([]);
+
+        if (createdCount > 0 || updatedCount > 0) {
+            showToast('success', `Thêm mới ${createdCount} sản phẩm, Cập nhật ${updatedCount} sản phẩm thành công!`);
+            fetchProducts();
+        }
+        if (failCount > 0) {
+            showToast('error', `Có ${failCount} sản phẩm lưu thất bại.`);
+        }
     };
 
 
@@ -1347,7 +1628,7 @@ const ProductPage = () => {
                                     <input type="checkbox" className={styles.checkbox} />
                                 </th>
                                 {columns.image && <th style={{ width: '100px', textAlign: 'center' }}>Hình ảnh</th>}
-                                {columns.productCode && <th style={{ width: '110px' }}>Mã sản phẩm</th>}
+                                {columns.productCode && <th style={{ width: '140px', whiteSpace: 'nowrap' }}>Mã sản phẩm</th>}
                                 {columns.productName && <th style={{ minWidth: '220px' }}>Tên sản phẩm</th>}
                                 {columns.productType && <th style={{ width: '90px' }}>Loại</th>}
                                 {columns.category && <th style={{ width: '110px' }}>Danh mục</th>}
@@ -1398,7 +1679,7 @@ const ProductPage = () => {
                                                 </div>
                                             </td>
                                         )}
-                                        {columns.productCode && <td><span className={styles.link}>{item.productCode}</span></td>}
+                                        {columns.productCode && <td style={{ whiteSpace: 'nowrap' }}><span className={styles.link}>{item.productCode}</span></td>}
                                         {columns.productName && <td style={{ fontWeight: 600, wordBreak: 'break-word', whiteSpace: 'normal', minWidth: '220px' }} title={item.productName}>{item.productName}</td>}
                                         {columns.productType && <td>{item.productType || '-'}</td>}
                                         {columns.category && <td>{item.categoryName || '-'}</td>}
@@ -2560,8 +2841,215 @@ const ProductPage = () => {
                 onClose={() => setDetailProduct(null)}
                 onEdit={handleOpenEdit}
             />
-        </AdminLayout>
+            <Modal
+                isOpen={showExcelPreviewModal}
+                onClose={() => !isSavingExcel && setShowExcelPreviewModal(false)}
+                ariaLabel="Xem trước dữ liệu nhập Excel"
+                dialogStyle={{ maxWidth: '1400px', width: '95vw' }}
+            >
+                <div className={styles.settingsModalHeader}>
+                    <h3>Xem trước dữ liệu nhập Excel</h3>
+                    <button 
+                        className={styles.settingsModalCloseBtn} 
+                        onClick={() => setShowExcelPreviewModal(false)}
+                        disabled={isSavingExcel}
+                    >
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div className={styles.settingsModalBody} style={{ padding: '24px', width: '100%', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', backgroundColor: '#f8fafc' }}>
+                    <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: '16px 20px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', gap: '24px', fontSize: '15px' }}>
+                            <span style={{ color: '#475569' }}>Tổng số: <strong style={{ color: '#0f172a', fontSize: '16px' }}>{excelPreviewData.length}</strong> dòng</span>
+                            <span style={{ color: '#16a34a' }}><i className="bi bi-check-circle-fill"></i> Hợp lệ: <strong style={{ fontSize: '16px' }}>{excelPreviewData.filter(r => r.isValid).length}</strong></span>
+                            <span style={{ color: '#dc2626' }}><i className="bi bi-exclamation-circle-fill"></i> Lỗi: <strong style={{ fontSize: '16px' }}>{excelPreviewData.filter(r => !r.isValid).length}</strong></span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <select 
+                                className={styles.inlineSelect} 
+                                style={{ width: '160px', backgroundColor: '#f1f5f9', border: 'none', fontWeight: 500, padding: '8px 12px', cursor: 'pointer' }}
+                                value={previewFilter}
+                                onChange={e => setPreviewFilter(e.target.value)}
+                            >
+                                <option value="ALL">Hiển thị: Tất cả</option>
+                                <option value="VALID">Hiển thị: Hợp lệ</option>
+                                <option value="INVALID">Hiển thị: Bị lỗi</option>
+                            </select>
+                            <div style={{ fontSize: '14px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '8px 16px', borderRadius: '20px' }}>
+                                <i className="bi bi-info-circle-fill" style={{ color: '#3b82f6', marginRight: '6px' }}></i>
+                                Sửa các ô bị lỗi trực tiếp trên bảng dưới đây
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className={styles.previewTableContainer} style={{ flex: 1, overflowY: 'auto' }}>
+                        <table className={styles.previewTable}>
+                            <thead>
+                                <tr>
+                                    <th style={{ width: '60px' }}>Dòng</th>
+                                    <th style={{ width: '120px' }}>Trạng thái</th>
+                                    <th>Mã sản phẩm (*)</th>
+                                    <th>Tên sản phẩm (*)</th>
+                                    <th>Loại sản phẩm (*)</th>
+                                    <th>Danh mục (*)</th>
+                                    <th>Thương hiệu (*)</th>
+                                    <th>Đơn vị tính (*)</th>
+                                    <th>Giá bán</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {excelPreviewData.map((row, idx) => {
+                                    if (previewFilter === 'VALID' && !row.isValid) return null;
+                                    if (previewFilter === 'INVALID' && row.isValid) return null;
 
+                                    return (
+                                        <Fragment key={idx}>
+                                            <tr className={row.isValid ? styles.rowValid : styles.rowInvalidMain}>
+                                                <td style={{ textAlign: 'center' }}>{row.originalIndex}</td>
+                                                <td>
+                                                    <span className={row.isValid ? styles.statusBadgeValid : styles.statusBadgeInvalid}>
+                                                        {row.isValid ? 'Hợp lệ' : 'Lỗi'}
+                                                    </span>
+                                                </td>
+                                            <td>
+                                            <input 
+                                                type="text" 
+                                                className={styles.inlineInput} 
+                                                value={row.productCode} 
+                                                onChange={e => handlePreviewEdit(idx, 'productCode', e.target.value)}
+                                                disabled={isSavingExcel}
+                                            />
+                                            {row.existingProduct && <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: 4 }}><i className="bi bi-exclamation-triangle"></i> Sẽ ghi đè</div>}
+                                        </td>
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                className={styles.inlineInput} 
+                                                value={row.productName} 
+                                                onChange={e => handlePreviewEdit(idx, 'productName', e.target.value)}
+                                                disabled={isSavingExcel}
+                                                style={{ borderColor: !row.productName ? '#ef4444' : '' }}
+                                            />
+                                            {row.warnings && row.warnings.length > 0 && (
+                                                <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: 4 }}>
+                                                    {row.warnings.map((w, i) => <div key={i}><i className="bi bi-exclamation-triangle"></i> {w}</div>)}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <select 
+                                                className={styles.inlineSelect}
+                                                value={row.productType}
+                                                onChange={e => handlePreviewEdit(idx, 'productType', e.target.value)}
+                                                disabled={isSavingExcel}
+                                            >
+                                                <option value="Hàng hóa">Hàng hóa</option>
+                                                <option value="Dịch vụ">Dịch vụ</option>
+                                                <option value="Thành phẩm">Thành phẩm</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select 
+                                                className={styles.inlineSelect}
+                                                value={row.categoryId || ''}
+                                                onChange={e => handlePreviewEdit(idx, 'categoryId', e.target.value)}
+                                                disabled={isSavingExcel || isServiceType(row.productType)}
+                                                style={{ borderColor: (!isServiceType(row.productType) && !row.categoryId) ? '#ef4444' : '' }}
+                                            >
+                                                <option value="">-- Chọn --</option>
+                                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select 
+                                                className={styles.inlineSelect}
+                                                value={row.brandId || ''}
+                                                onChange={e => handlePreviewEdit(idx, 'brandId', e.target.value)}
+                                                disabled={isSavingExcel || isServiceType(row.productType)}
+                                                style={{ borderColor: (!isServiceType(row.productType) && !row.brandId) ? '#ef4444' : '' }}
+                                            >
+                                                <option value="">-- Chọn --</option>
+                                                {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select 
+                                                className={styles.inlineSelect}
+                                                value={row.unitId || ''}
+                                                onChange={e => handlePreviewEdit(idx, 'unitId', e.target.value)}
+                                                disabled={isSavingExcel}
+                                                style={{ borderColor: !row.unitId ? '#ef4444' : '' }}
+                                            >
+                                                <option value="">-- Chọn --</option>
+                                                {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                            </select>
+                                        </td>
+                                        <td>{formatCurrency(row.salePrice)}</td>
+                                        </tr>
+                                        {!row.isValid && (
+                                            <tr className={styles.rowInvalidError}>
+                                                <td colSpan={9} style={{ padding: '4px 12px 12px 12px', borderTop: 'none' }}>
+                                                    <div className={styles.errorReasonInline}>
+                                                        {row.errors.map((e, i) => {
+                                                            let quickAddType = null;
+                                                            let quickAddName = null;
+                                                            const catMatch = e.match(/Danh mục '(.*)' không tồn tại/);
+                                                            if (catMatch) { quickAddType = 'category'; quickAddName = catMatch[1]; }
+                                                            else {
+                                                                const brandMatch = e.match(/Thương hiệu '(.*)' không tồn tại/);
+                                                                if (brandMatch) { quickAddType = 'brand'; quickAddName = brandMatch[1]; }
+                                                                else {
+                                                                    const unitMatch = e.match(/Đơn vị tính '(.*)' không tồn tại/);
+                                                                    if (unitMatch) { quickAddType = 'unit'; quickAddName = unitMatch[1]; }
+                                                                }
+                                                            }
+
+                                                            return (
+                                                                <span key={i} style={{ marginRight: '24px', display: 'inline-flex', alignItems: 'center' }}>
+                                                                    <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: '4px' }}></i> {e}
+                                                                    {quickAddType && (
+                                                                        <button 
+                                                                            type="button"
+                                                                            className={styles.quickAddBtn}
+                                                                            onClick={() => handleQuickAddEntity(quickAddType, quickAddName)}
+                                                                            title="Thêm nhanh vào hệ thống"
+                                                                            disabled={isSavingExcel}
+                                                                        >
+                                                                            <i className="bi bi-plus-circle"></i> Thêm
+                                                                        </button>
+                                                                    )}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </Fragment>
+                                );
+                            })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div className={styles.settingsModalFooter}>
+                    <button className={styles.btnSecondary} onClick={() => setShowExcelPreviewModal(false)} disabled={isSavingExcel}>
+                        Hủy
+                    </button>
+                    <button 
+                        className={styles.btnPrimary} 
+                        onClick={handleSaveValidExcelRows}
+                        disabled={isSavingExcel || excelPreviewData.filter(r => r.isValid).length === 0}
+                    >
+                        {isSavingExcel ? (
+                            <><i className="fas fa-spinner fa-spin"></i> Đang lưu...</>
+                        ) : (
+                            <><i className="bi bi-save"></i> Chỉ lưu {excelPreviewData.filter(r => r.isValid).length} dòng hợp lệ</>
+                        )}
+                    </button>
+                </div>
+            </Modal>
+        </AdminLayout>
     );
 };
 
