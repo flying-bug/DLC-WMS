@@ -7,6 +7,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as soApi from '../../api/salesOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import QuotationTemplate from './components/QuotationTemplate';
+import { printSalesInvoice } from '../../utils/printSalesInvoice';
 import styles from './SalesOrderDetailPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
@@ -62,6 +63,10 @@ function SalesOrderDetailPage() {
     contentRef: printRef,
     documentTitle: `Bao-Gia-${so?.soCode || 'SO'}`,
   });
+
+  const handlePrintInvoice = () => {
+    printSalesInvoice(so);
+  };
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(p => ({ ...p, isVisible: false }));
@@ -252,12 +257,25 @@ function SalesOrderDetailPage() {
           <div className={styles.headerActions}>
             {so.status !== 'CANCELLED' && (
               <>
-                <button className={styles.btnPrimary} onClick={handlePrintQuote}>
-                  <i className="bi bi-printer" /> In Báo giá
-                </button>
-                <button className={styles.btnPrimary} onClick={handleOpenEmailModal} style={{ backgroundColor: '#0284c7' }}>
-                  <i className="bi bi-envelope" /> Gửi Email Báo giá
-                </button>
+                {so.status === 'POSTED' ? (
+                  <>
+                    <button className={styles.btnPrimary} onClick={handlePrintInvoice}>
+                      <i className="bi bi-printer" /> In Hóa đơn
+                    </button>
+                    <button className={styles.btnPrimary} onClick={handleOpenEmailModal} style={{ backgroundColor: '#0284c7' }}>
+                      <i className="bi bi-envelope" /> Gửi Email Hóa đơn
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button className={styles.btnPrimary} onClick={handlePrintQuote}>
+                      <i className="bi bi-printer" /> In Báo giá
+                    </button>
+                    <button className={styles.btnPrimary} onClick={handleOpenEmailModal} style={{ backgroundColor: '#0284c7' }}>
+                      <i className="bi bi-envelope" /> Gửi Email Báo giá
+                    </button>
+                  </>
+                )}
               </>
             )}
             {so.status === 'DRAFT' && (

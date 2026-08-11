@@ -89,9 +89,10 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromEmail, "DLC-WMS Báo Giá");
+            String typeName = "POSTED".equals(so.getStatus()) ? "Hóa Đơn" : "Báo Giá";
+            helper.setFrom(fromEmail, "DLC-WMS " + typeName);
             helper.setTo(toEmail.trim());
-            helper.setSubject("[BÁO GIÁ] Đơn hàng " + (so.getSoCode() != null ? so.getSoCode() : "") + " - DLC WMS");
+            helper.setSubject("[" + typeName.toUpperCase() + "] Đơn hàng " + (so.getSoCode() != null ? so.getSoCode() : "") + " - DLC WMS");
 
             java.text.NumberFormat nf = java.text.NumberFormat.getInstance(new java.util.Locale("vi", "VN"));
 
@@ -127,8 +128,8 @@ public class EmailService {
 
             String htmlMsg = "<div style='font-family: Arial, sans-serif; padding: 24px; color: #334155; max-width: 700px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;'>"
                     + "<div style='text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2563eb; padding-bottom: 15px;'>"
-                    + "<h2 style='color: #2563eb; margin: 0;'>BẢNG BÁO GIÁ SẢN PHẨM</h2>"
-                    + "<p style='color: #64748b; margin-top: 5px; font-size: 14px;'>Mã báo giá: <strong>" + (so.getSoCode() != null ? so.getSoCode() : "") + "</strong></p>"
+                    + "<h2 style='color: #0f172a; margin-top: 0;'>" + typeName.toUpperCase() + " BÁN HÀNG</h2>"
+                    + "<p style='color: #64748b; margin-top: 5px; font-size: 14px;'>Mã đơn hàng: <strong>" + (so.getSoCode() != null ? so.getSoCode() : "") + "</strong></p>"
                     + "</div>"
 
                     + "<div style='margin-bottom: 20px; font-size: 14px; line-height: 1.6;'>"

@@ -70,13 +70,13 @@ public class DatabaseSeeder implements CommandLineRunner {
         // 4. Seed Users mẫu
         seedUsers(superAdminRole, managerRole, staffRole);
 
-        // 5. Seed Dữ liệu kinh doanh (Units, Brands, Categories, Products)
-        seedWarehouses();
-        seedPartners();
-        seedBusinessData();
+        // 5. Seed Dữ liệu kinh doanh (Đã comment ra để hệ thống trắng)
+        // seedWarehouses();
+        // seedPartners();
+        // seedBusinessData();
 
         // 6. Seed Lịch sử hệ thống (Mock Audit Logs)
-        seedAuditLogs();
+        // seedAuditLogs();
     }
 
     private void seedWarehouses() {
@@ -304,32 +304,34 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
 
         // Tài khoản Manager
-        if (userRepository.findByUsername("manager@duylong.vn").isEmpty()) {
-            User manager = User.builder()
-                    .username("manager@duylong.vn")
-                    .fullName("Quản Lý Hệ Thống")
-                    .passwordHash(passwordEncoder.encode("123456"))
-                    .status("APPROVED")
-                    .roles(new HashSet<>())
-                    .build();
-            manager.getRoles().add(managerRole);
-            userRepository.save(manager);
-            System.out.println("✅ Đã tạo tài khoản mẫu: manager@duylong.vn / 123456");
-        }
+        // if (userRepository.findByUsername("manager@duylong.vn").isEmpty()) {
+        //     User manager = User.builder()
+        //             .username("manager@duylong.vn")
+        //             .fullName("Quản Lý Hệ Thống")
+        //             .passwordHash(passwordEncoder.encode("123456"))
+        //             .status("APPROVED")
+        //             .roles(new HashSet<>())
+        //             .build();
+        //     manager.getRoles().add(managerRole);
+        //     userRepository.save(manager);
+        //     System.out.println("✅ Đã tạo tài khoản mẫu: manager@duylong.vn / 123456");
+        // }
 
         // Tài khoản Staff
-        if (userRepository.findByUsername("staff@duylong.vn").isEmpty()) {
-            User staff = User.builder()
-                    .username("staff@duylong.vn")
-                    .fullName("Nhân Viên Kho")
-                    .passwordHash(passwordEncoder.encode("123456"))
-                    .status("APPROVED")
-                    .roles(new HashSet<>())
-                    .build();
-            staff.getRoles().add(staffRole);
-            userRepository.save(staff);
-            System.out.println("✅ Đã tạo tài khoản mẫu: staff@duylong.vn / 123456");
-        }
+        // for (int i = 1; i <= 2; i++) {
+        //     String username = "staff" + i + "@duylong.vn";
+        //     if (userRepository.findByUsername(username).isEmpty()) {
+        //         User staff = User.builder()
+        //                 .username(username)
+        //                 .fullName("Nhân Viên " + i)
+        //                 .passwordHash(passwordEncoder.encode("123456"))
+        //                 .status("APPROVED")
+        //                 .roles(new HashSet<>())
+        //                 .build();
+        //         staff.getRoles().add(staffRole);
+        //         userRepository.save(staff);
+        //     }
+        // }
     }
 
     private void seedBusinessData() {

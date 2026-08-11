@@ -1,7 +1,7 @@
 import { numberToVietnameseWords } from './numberToVietnameseWords';
 import { formatDateOnly } from './dateFormat';
 
-export function printExportSlip(slipOrSlips, options = {}) {
+export function printSalesInvoice(orderOrOrders, options = {}) {
   const {
     customer = {},
     warehouseName = '',
@@ -10,7 +10,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
     isImport = false,
   } = options;
 
-  const slips = Array.isArray(slipOrSlips) ? slipOrSlips : [slipOrSlips];
+  const orders = Array.isArray(orderOrOrders) ? orderOrOrders : [orderOrOrders];
 
   const printWindow = window.open('', '_blank', 'width=900,height=800');
   if (!printWindow) {
@@ -32,19 +32,19 @@ export function printExportSlip(slipOrSlips, options = {}) {
       .replace(/'/g, "&#039;");
   };
 
-  const typeTitle = isImport ? 'NHẬP KHO' : 'XUẤT KHO / BÁN HÀNG';
+  const typeTitle = 'HÓA ĐƠN BÁN HÀNG';
 
-  const pagesHtml = slips.map((slip) => {
-    const lines = slip?.lines || [];
-    const customerName = slip.customerName || customer.name || slip.partnerName || 'Khách lẻ';
-    const customerPhone = customer.phone || customer.phoneNumber || slip.customerPhone || slip.partnerPhone || 'Chưa có';
-    const customerAddress = customer.address || slip.customerAddress || slip.partnerAddress || 'Chưa có';
-    const taxCode = customer.taxCode || customer.taxId || slip.taxCode || '';
+  const pagesHtml = orders.map((order) => {
+    const lines = order?.lines || [];
+    const customerName = order.customerName || customer.name || order.partnerName || 'Khách lẻ';
+    const customerPhone = customer.phone || customer.phoneNumber || order.customerPhone || order.partnerPhone || 'Chưa có';
+    const customerAddress = customer.address || order.customerAddress || order.partnerAddress || 'Chưa có';
+    const taxCode = customer.taxCode || customer.taxId || order.taxCode || '';
 
-    const salesperson = slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || 'Chưa rõ';
-    const docDateStr = formatDateOnly(slip.docDate || new Date());
+    const salesperson = order.salespersonName || userById.get(order.createdBy)?.fullName || userById.get(order.createdBy)?.username || 'Chưa rõ';
+    const docDateStr = formatDateOnly(order.soDate || order.docDate || new Date());
     
-    const currentWarehouseName = warehouseName || (slip.warehouseId ? (`Kho #${slip.warehouseId}`) : '');
+    const currentWarehouseName = warehouseName || (order.warehouseId ? (`Kho #${order.warehouseId}`) : '');
 
     let totalQty = 0;
     let totalAmount = 0;
@@ -134,7 +134,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
             </td>
             <td style="width: 40%; text-align: right;">
               <strong>Ngày:</strong> ${escapeHtml(docDateStr)}<br/>
-              <strong>Số:</strong> <span style="font-weight: 700; font-size: 14px;">${escapeHtml(slip.docCode || '')}</span><br/>
+              <strong>Số:</strong> <span style="font-weight: 700; font-size: 14px;">${escapeHtml(order.soCode || order.docCode || '')}</span><br/>
               <strong>Loại tiền:</strong> VND<br/>
               ${currentWarehouseName ? `<strong>Kho:</strong> ${escapeHtml(currentWarehouseName)}` : ''}
             </td>
@@ -245,7 +245,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
     <html lang="vi">
       <head>
         <meta charset="UTF-8">
-        <title>In Phiếu ${escapeHtml(slips.length === 1 ? (slips[0].docCode || 'Xuất Kho') : 'Xuất Kho Hàng Loạt')}</title>
+        <title>In Phiếu ${escapeHtml(orders.length === 1 ? (orders[0].soCode || orders[0].docCode || 'Hóa Đơn') : 'Hóa Đơn Hàng Loạt')}</title>
         <style>
           @page {
             size: A4;

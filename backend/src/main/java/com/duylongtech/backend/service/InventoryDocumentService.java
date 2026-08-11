@@ -406,6 +406,40 @@ public class InventoryDocumentService {
             warrantyRepository.save(w);
         }
 
+        if (doc.getSalesOrderId() != null && doc.getPartnerId() != null) {
+            SalesOrder so = salesOrderRepository.findById(doc.getSalesOrderId()).orElse(null);
+            if (so != null) {
+                BigDecimal totalDebt = BigDecimal.ZERO;
+                for (InventoryDocumentLine line : doc.getLines()) {
+                    SalesOrderLine soLine = so.getLines().stream()
+                            .filter(l -> l.getVariantId().equals(line.getVariantId()))
+                            .findFirst().orElse(null);
+
+                    if (soLine != null) {
+                        BigDecimal qtyToExport = line.getQuantityOut();
+                        BigDecimal unitPrice = soLine.getUnitPrice();
+                        BigDecimal lineAmount = qtyToExport.multiply(unitPrice);
+                        BigDecimal vatRate = soLine.getVatRate() != null ? soLine.getVatRate() : BigDecimal.ZERO;
+                        BigDecimal vatAmount = lineAmount.multiply(vatRate).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+                        totalDebt = totalDebt.add(lineAmount).add(vatAmount);
+                    }
+                }
+
+                if (totalDebt.compareTo(BigDecimal.ZERO) > 0) {
+                    partnerLedgerService.recordLedger(
+                            doc.getPartnerId(),
+                            "INVENTORY_EXPORT_SO",
+                            doc.getId(),
+                            doc.getDocCode(),
+                            totalDebt,
+                            BigDecimal.ZERO,
+                            "Ghi nhận công nợ xuất kho bán hàng " + doc.getDocCode()
+                    );
+                }
+            }
+        }
+
         doc.setStatus("POSTED");
         doc.setPostedAt(LocalDateTime.now());
         doc.setUpdatedAt(LocalDateTime.now());
@@ -482,26 +516,22 @@ public class InventoryDocumentService {
         InventoryDocument savedImport = inventoryDocumentRepository.save(savedDoc);
         syncStocktakeReference(savedImport);
 
-        // Ghi nhận tăng công nợ nhà cung cấp khi nhập kho (nếu không phải nhập từ Đơn mua hàng đã ghi nợ)
+        // Ghi nhận tăng công nợ nhà cung cấp khi nhập kho (luôn luôn ghi nhận nếu có partnerId)
         if (savedImport.getPartnerId() != null) {
-            boolean isRefPO = (savedImport.getReferenceType() != null && ("PURCHASE_ORDER".equalsIgnoreCase(savedImport.getReferenceType()) || "PO".equalsIgnoreCase(savedImport.getReferenceType())))
-                    || savedImport.getPurchaseOrderId() != null;
-            if (!isRefPO) {
-                BigDecimal totalImportValue = savedImport.getLines().stream()
-                        .map(l -> (l.getQuantityIn() != null ? l.getQuantityIn() : BigDecimal.ZERO)
-                                .multiply(l.getUnitCost() != null ? l.getUnitCost() : BigDecimal.ZERO))
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalImportValue = savedImport.getLines().stream()
+                    .map(l -> (l.getQuantityIn() != null ? l.getQuantityIn() : BigDecimal.ZERO)
+                            .multiply(l.getUnitCost() != null ? l.getUnitCost() : BigDecimal.ZERO))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                partnerLedgerService.recordLedger(
-                        savedImport.getPartnerId(),
-                        "INVENTORY_IMPORT",
-                        savedImport.getId(),
-                        savedImport.getDocCode(),
-                        totalImportValue,
-                        BigDecimal.ZERO,
-                        "Ghi nhận công nợ phiếu nhập kho " + savedImport.getDocCode()
-                );
-            }
+            partnerLedgerService.recordLedger(
+                    savedImport.getPartnerId(),
+                    "INVENTORY_IMPORT",
+                    savedImport.getId(),
+                    savedImport.getDocCode(),
+                    totalImportValue,
+                    BigDecimal.ZERO,
+                    "Ghi nhận công nợ phiếu nhập kho " + savedImport.getDocCode()
+            );
         }
 
         return toResponse(savedImport);

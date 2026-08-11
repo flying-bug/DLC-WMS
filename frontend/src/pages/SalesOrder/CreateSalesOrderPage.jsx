@@ -11,7 +11,9 @@ import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGrid
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import CustomerModal from '../Customer/components/CustomerModal';
 import * as soApi from '../../api/salesOrderApi';
+import * as exportApi from '../../api/inventoryExportApi';
 import styles from './CreateSalesOrderPage.module.css';
+import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p) => p?.content ?? p ?? [];
@@ -36,7 +38,7 @@ const customSelectStyles = {
   menuPortal: base => ({ ...base, zIndex: 9999 }),
 };
 
-const emptyLine = () => ({ variantId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, serialNumbers: '', note: '' });
+const emptyLine = () => ({ variantId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, serialNumbers: [], note: '' });
 
 function CreateSalesOrderPage() {
   const navigate = useNavigate();
@@ -48,12 +50,14 @@ function CreateSalesOrderPage() {
   const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [mode, setMode] = useState('quote');
+  const [mode, setMode] = useState('direct');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const [inventoryBalances, setInventoryBalances] = useState([]);
   const [showQuickAddProduct, setShowQuickAddProduct] = useState(false);
   const [quickAddLineIndex, setQuickAddLineIndex] = useState(null);
+  const [serialModalLineIndex, setSerialModalLineIndex] = useState(null);
+
 
   const [form, setForm] = useState({
     soCode: '',
@@ -71,6 +75,9 @@ function CreateSalesOrderPage() {
   });
   const [paymentAmount, setPaymentAmount] = useState('');
   const [lines, setLines] = useState([emptyLine()]);
+
+  const selectedSerialLine = serialModalLineIndex !== null ? lines[serialModalLineIndex] : null;
+  const selectedSerialProduct = selectedSerialLine ? variants.find(v => String(v.id) === String(selectedSerialLine.variantId)) : null;
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(p => ({ ...p, isVisible: false }));
@@ -202,10 +209,10 @@ function CreateSalesOrderPage() {
   const grandTotal = subTotalAmount + totalVatAmount;
 
   useEffect(() => {
-    if (mode === 'direct' && (paymentAmount === '' || Number(paymentAmount) === 0)) {
+    if (mode === 'direct') {
       setPaymentAmount(Math.round(grandTotal).toString());
     }
-  }, [grandTotal, mode, paymentAmount]);
+  }, [grandTotal, mode]);
 
   // ── Save ──
   const buildPayload = () => ({
@@ -240,10 +247,7 @@ function CreateSalesOrderPage() {
       unitPrice: Number(l.unitPrice),
       vatRate: Number(l.vatRate || 0),
       warrantyMonths: Number(l.warrantyMonths || 0),
-      serialNumbers: String(l.serialNumbers || '')
-        .split(/\r?\n|,/)
-        .map(s => s.trim())
-        .filter(Boolean),
+      serialNumbers: Array.isArray(l.serialNumbers) ? l.serialNumbers : [],
       note: l.note || undefined,
     })),
   });
@@ -289,10 +293,7 @@ function CreateSalesOrderPage() {
         showToast('error', `Dòng ${i + 1}: số lượng phải là số nguyên lớn hơn 0`);
         return false;
       }
-      const serialCount = String(lines[i].serialNumbers || '')
-        .split(/\r?\n|,/)
-        .map(s => s.trim())
-        .filter(Boolean).length;
+      const serialCount = Array.isArray(lines[i].serialNumbers) ? lines[i].serialNumbers.length : 0;
       if (serialCount > 0 && serialCount !== qty) {
         showToast('error', `Dòng ${i + 1}: số serial phải bằng số lượng`);
         return false;
@@ -389,17 +390,17 @@ function CreateSalesOrderPage() {
           <div className={styles.modeTabs}>
             <button
               type="button"
-              className={`${styles.modeTab} ${mode === 'quote' ? styles.modeTabActive : ''}`}
-              onClick={() => setMode('quote')}
-            >
-              <i className="bi bi-file-earmark-text" /> Tạo đơn báo giá
-            </button>
-            <button
-              type="button"
               className={`${styles.modeTab} ${mode === 'direct' ? styles.modeTabActive : ''}`}
               onClick={() => setMode('direct')}
             >
               <i className="bi bi-cash-coin" /> Bán hàng trực tiếp
+            </button>
+            <button
+              type="button"
+              className={`${styles.modeTab} ${mode === 'quote' ? styles.modeTabActive : ''}`}
+              onClick={() => setMode('quote')}
+            >
+              <i className="bi bi-file-earmark-text" /> Tạo đơn báo giá
             </button>
           </div>
         )}
@@ -704,13 +705,33 @@ function CreateSalesOrderPage() {
                             />
                           </td>
                           {mode === 'direct' && (
-                            <td>
-                              <textarea
-                                className={styles.lineTextarea}
-                                value={line.serialNumbers || ''}
-                                onChange={e => updateLine(idx, 'serialNumbers', e.target.value)}
-                                placeholder="Mỗi serial 1 dòng"
-                              />
+                            <td align="center">
+                              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                {line.variantId && (
+                                  <button
+                                    type="button"
+                                    style={{
+                                      background: (line.serialNumbers?.length || 0) === Number(line.quantity || 0) ? '#dcfce7' : '#fef9c3',
+                                      color: (line.serialNumbers?.length || 0) === Number(line.quantity || 0) ? '#166534' : '#854d0e',
+                                      border: `1px solid ${(line.serialNumbers?.length || 0) === Number(line.quantity || 0) ? '#bbf7d0' : '#fef08a'}`,
+                                      borderRadius: '4px',
+                                      padding: '2px 8px',
+                                      fontSize: '12px',
+                                      fontWeight: 500,
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '4px',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                    onClick={() => setSerialModalLineIndex(idx)}
+                                  >
+                                    <i className="bi bi-upc-scan"></i>
+                                    {(line.serialNumbers?.length || 0)} / {Number(line.quantity || 0)}
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           )}
                           <td>
@@ -807,6 +828,7 @@ function CreateSalesOrderPage() {
 
       <CustomerModal
         isOpen={showCustomerModal}
+        editData={null}
         onClose={() => setShowCustomerModal(false)}
         onSuccess={(newCustomer) => {
           setCustomers(prev => [newCustomer, ...prev]);
@@ -818,6 +840,42 @@ function CreateSalesOrderPage() {
           setShowCustomerModal(false);
         }}
       />
+
+      {serialModalLineIndex !== null && selectedSerialProduct && (
+        <ManageSerialModal
+          isOpen={true}
+          onClose={(serials) => {
+            if (Array.isArray(serials)) {
+              updateLine(serialModalLineIndex, 'serialNumbers', serials);
+            }
+            setSerialModalLineIndex(null);
+          }}
+          productName={selectedSerialProduct.variantName || selectedSerialProduct.productName}
+          targetQuantity={Number(selectedSerialLine.quantity || 0)}
+          initialSerials={selectedSerialLine.serialNumbers || []}
+          mode="export"
+          warehouseId={form.warehouseId}
+          variantId={selectedSerialProduct.id}
+          onValidateSerial={async (serialValue) => {
+            try {
+              const response = await exportApi.resolveScan({
+                code: serialValue,
+                warehouseId: form.warehouseId,
+              });
+              const scanResult = unwrap(response);
+              if (!scanResult.serialNumber) {
+                throw new Error('Mã này không tồn tại hoặc không phải là serial.');
+              }
+              if (String(scanResult.variantId) !== String(selectedSerialProduct.id)) {
+                throw new Error('Serial này thuộc về sản phẩm khác.');
+              }
+              return true;
+            } catch (err) {
+              throw new Error(err?.response?.data?.userMessage || err.message || 'Mã Serial không hợp lệ.', { cause: err });
+            }
+          }}
+        />
+      )}
     </AdminLayout>
   );
 }

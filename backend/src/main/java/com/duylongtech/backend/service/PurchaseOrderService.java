@@ -224,16 +224,7 @@ public class PurchaseOrderService {
         PurchaseOrder approved = purchaseOrderRepository.save(po);
         log.info("Duyệt đơn mua hàng {} bởi {}", approved.getPoCode(), actor);
 
-        // Ghi nhận tăng công nợ phải trả (nhà cung cấp) vào sổ partner_ledger
-        partnerLedgerService.recordLedger(
-                approved.getPartnerId(),
-                "PURCHASE_ORDER",
-                approved.getId(),
-                approved.getPoCode(),
-                approved.getTotalAmount(),   // amountDebt  ← tăng nợ phải trả
-                BigDecimal.ZERO,             // amountReceipt
-                "Ghi nhận công nợ đơn mua hàng " + approved.getPoCode()
-        );
+
 
         return toDetailResponse(approved);
     }
@@ -251,23 +242,9 @@ public class PurchaseOrderService {
             throw new BusinessException("Không thể hủy đơn ở trạng thái: " + po.getStatus());
         }
 
-        boolean wasApproved = "APPROVED".equals(po.getStatus());
         po.setStatus("CANCELLED");
         PurchaseOrder cancelled = purchaseOrderRepository.save(po);
         log.info("Hủy đơn mua hàng {} bởi {}", cancelled.getPoCode(), actor);
-
-        // Nếu đã APPROVED → rollback công nợ bằng cách ghi âm
-        if (wasApproved) {
-            partnerLedgerService.recordLedger(
-                    cancelled.getPartnerId(),
-                    "PURCHASE_ORDER_CANCEL",
-                    cancelled.getId(),
-                    cancelled.getPoCode(),
-                    BigDecimal.ZERO,
-                    cancelled.getTotalAmount(), // amountReceipt  ← giảm nợ phải trả
-                    "Hủy đơn mua hàng " + cancelled.getPoCode() + " — rollback công nợ"
-            );
-        }
 
         return toSummaryResponse(cancelled);
     }

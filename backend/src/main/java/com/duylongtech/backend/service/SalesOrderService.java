@@ -287,16 +287,7 @@ public class SalesOrderService {
         SalesOrder approved = salesOrderRepository.save(so);
         log.info("Duyệt đơn bán hàng {} bởi {}", approved.getSoCode(), actor);
 
-        // Ghi nhận tăng công nợ khách hàng trong sổ partner_ledger
-        partnerLedgerService.recordLedger(
-                approved.getPartnerId(),
-                "SALES_ORDER",
-                approved.getId(),
-                approved.getSoCode(),
-                approved.getTotalAmount(),
-                BigDecimal.ZERO,
-                "Ghi nhận công nợ đơn bán hàng " + approved.getSoCode()
-        );
+
 
         List<StockReservation> reservations = stockReservationRepository.findBySalesOrderId(id);
         return toDetailResponse(approved, reservations);
