@@ -13,8 +13,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -35,6 +37,9 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final PermissionRepository permissionRepository;
     private final CloudinaryService cloudinaryService;
+    private final EmailService emailService;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final String PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
 
     private Optional<RoleEntity> findRoleByCode(String roleCode) {
         if (roleCode == null || roleCode.isBlank()) {
@@ -74,6 +79,32 @@ public class UserService {
                 .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         UploadResponse uploaded = cloudinaryService.uploadImage(file, "avatars");
         user.setAvatarUrl(uploaded.getSecureUrl() != null ? uploaded.getSecureUrl() : uploaded.getUrl());
+        User saved = userRepository.save(user);
+        return mapToDetailDto(saved);
+    }
+
+    public UserDetailResponseDTO updateCurrentUserProfile(UserDto userDto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+        User user = userRepository.findWithRolesById(userDetails.getId())
+                .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
+
+        String fullName = normalizeFullName(userDto.getFullName());
+
+        String phone = normalizePhone(userDto.getPhone());
+        if (phone == null || phone.isEmpty()) {
+            throw new BusinessException(SystemMessage.FIELD_REQUIRED);
+        }
+        if (!phone.matches(AppConstants.MOBILE_REGEX)) {
+            throw new BusinessException(SystemMessage.INVALID_PHONE);
+        }
+        if (!phone.equals(user.getPhone()) && userRepository.existsByPhoneAndIdNot(phone, user.getId())) {
+            throw new BusinessException(SystemMessage.PHONE_EXISTS);
+        }
+
+        user.setFullName(fullName);
+        user.setPhone(phone);
         User saved = userRepository.save(user);
         return mapToDetailDto(saved);
     }
@@ -145,10 +176,13 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public UserDto createUser(UserDto userDto) {
         String username = userDto.getUsername().trim();
+        String fullName = normalizeFullName(userDto.getFullName());
         String email = userDto.getEmail().trim();
         String phone = normalizePhone(userDto.getPhone());
+        String temporaryPassword = generateTemporaryPassword();
 
         if (userRepository.existsByUsername(username)) {
             throw new BusinessException(SystemMessage.USERNAME_EXISTS);
@@ -162,11 +196,11 @@ public class UserService {
 
         User user = new User();
         user.setUsername(username);
-        user.setFullName(userDto.getFullName().trim());
+        user.setFullName(fullName);
         user.setEmail(email);
         user.setPhone(phone);
         user.setStatus("APPROVED");
-        user.setPasswordHash(passwordEncoder.encode("123456")); // Default password
+        user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
         user.setIdCard(userDto.getIdCard());
         user.setDob(userDto.getDob());
         user.setGender(userDto.getGender());
@@ -186,6 +220,7 @@ public class UserService {
         user.setRoles(roles);
 
         User savedUser = userRepository.save(user);
+        emailService.sendNewEmployeeCredentialsEmail(email, fullName, username, temporaryPassword);
         return mapToDto(savedUser);
     }
 
@@ -232,11 +267,7 @@ public class UserService {
     public UserDto updateUser(Long id, UserDto userDto) {
         User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
         if (userDto.getFullName() != null) {
-            String fullName = userDto.getFullName().trim();
-            if (fullName.isEmpty()) {
-                throw new BusinessException(SystemMessage.FIELD_REQUIRED);
-            }
-            user.setFullName(fullName);
+            user.setFullName(normalizeFullName(userDto.getFullName()));
         }
 
         if (userDto.getEmail() != null) {
@@ -301,6 +332,25 @@ public class UserService {
         return phone == null ? null : phone.trim().replaceAll("[\\s.-]", "");
     }
 
+    private String normalizeFullName(String fullName) {
+        String normalized = fullName == null ? "" : fullName.trim().replaceAll("\\s+", " ");
+        if (normalized.isEmpty()) {
+            throw new BusinessException(SystemMessage.FIELD_REQUIRED);
+        }
+        if (!normalized.matches(AppConstants.FULL_NAME_REGEX)) {
+            throw new BusinessException(SystemMessage.INVALID_FULL_NAME);
+        }
+        return normalized;
+    }
+
+    private String generateTemporaryPassword() {
+        StringBuilder password = new StringBuilder(12);
+        for (int i = 0; i < 12; i++) {
+            password.append(PASSWORD_CHARS.charAt(SECURE_RANDOM.nextInt(PASSWORD_CHARS.length())));
+        }
+        return password.toString();
+    }
+
     private UserDto mapToDto(User user) {
         UserDto dto = new UserDto();
         dto.setId(user.getId());
@@ -309,6 +359,7 @@ public class UserService {
         dto.setEmail(user.getEmail());
         dto.setPhone(user.getPhone());
         dto.setStatus(user.getStatus());
+        dto.setAvatarUrl(user.getAvatarUrl());
         dto.setIdCard(user.getIdCard());
         dto.setDob(user.getDob());
         dto.setGender(user.getGender());

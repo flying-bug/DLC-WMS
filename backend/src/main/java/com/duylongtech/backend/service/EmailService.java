@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 import com.duylongtech.backend.exception.BusinessException;
 
 @Service
@@ -29,10 +30,10 @@ public class EmailService {
             String htmlMsg = "<div style='font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px;'>"
                     + "<h2 style='color: #007bff; text-align: center;'>Khôi phục mật khẩu</h2>"
                     + "<p>Chào bạn,</p>"
-                    + "<p>Chúng tôi đã nhận được yêu cầu khôi phục mật khẩu cho tài khoản DLC-WMS của bạn.</p>"
+                    + "<p>Chúng tôi đã nhận được yêu cầu khôi phục mật khẩu cho tài khoản hệ thống Duy Long Computer Warehouse Management của bạn.</p>"
                     + "<p>Mã OTP của bạn là: <strong style='font-size: 24px; letter-spacing: 4px; color: #d9534f; display: block; text-align: center; margin: 20px 0;'>" + newPassword + "</strong></p>"
                     + "<p>Mã OTP này có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>"
-                    + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ DLC-WMS</p>"
+                    + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ Duy Long Computer Warehouse Management</p>"
                     + "</div>";
 
             helper.setText(htmlMsg, true);
@@ -40,6 +41,36 @@ public class EmailService {
         } catch (Exception e) {
             System.err.println("Failed to send email: " + e.getMessage());
             throw new BusinessException("Lỗi khi gửi email: " + e.getMessage());
+        }
+    }
+
+    public void sendNewEmployeeCredentialsEmail(String toEmail, String fullName, String username, String password) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            String displayName = fullName == null || fullName.isBlank() ? "bạn" : fullName.trim();
+            helper.setFrom(fromEmail, "DLC-WMS System");
+            helper.setTo(toEmail.trim());
+            helper.setSubject("Thông tin tài khoản DLC-WMS");
+
+            String htmlMsg = "<div style='font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px;'>"
+                    + "<h2 style='color: #007bff; text-align: center;'>Tài khoản DLC-WMS của bạn</h2>"
+                    + "<p>Chào " + HtmlUtils.htmlEscape(displayName) + ",</p>"
+                    + "<p>Tài khoản của bạn đã được tạo trên hệ thống Duy Long Computer Warehouse Management.</p>"
+                    + "<div style='background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;'>"
+                    + "<p><strong>Tên đăng nhập:</strong> " + HtmlUtils.htmlEscape(username) + "</p>"
+                    + "<p><strong>Mật khẩu tạm thời:</strong> <span style='font-size: 18px; letter-spacing: 2px; color: #d9534f; font-weight: bold;'>" + HtmlUtils.htmlEscape(password) + "</span></p>"
+                    + "</div>"
+                    + "<p>Vui lòng đăng nhập và đổi mật khẩu sau khi nhận được email này.</p>"
+                    + "<p>Trân trọng,<br/>Đội ngũ Hỗ trợ Duy Long Computer Warehouse Management</p>"
+                    + "</div>";
+
+            helper.setText(htmlMsg, true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Failed to send new employee credentials email: " + e.getMessage());
+            throw new BusinessException("Lỗi khi gửi email tài khoản nhân viên: " + e.getMessage());
         }
     }
 
@@ -71,7 +102,7 @@ public class EmailService {
                     + "<li><strong>Thời gian:</strong> " + timeNow + "</li>"
                     + (isSuccess ? "" : "<li><strong>Chi tiết lỗi:</strong> " + errorDetails + "</li>")
                     + "</ul>"
-                    + "<p style='margin-top: 20px;'>Trân trọng,<br/>Đội ngũ Quản trị DLC-WMS</p>"
+                    + "<p style='margin-top: 20px;'>Trân trọng,<br/>Đội ngũ Quản trị Duy Long Computer Warehouse Management</p>"
                     + "</div>";
 
             helper.setText(htmlMsg, true);
@@ -162,7 +193,7 @@ public class EmailService {
 
                     + "<div style='border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 13px; color: #64748b; line-height: 1.5;'>"
                     + "<p>Nếu Quý khách có bất kỳ thắc mắc nào, xin vui lòng liên hệ với chúng tôi để được hỗ trợ tốt nhất.</p>"
-                    + "<p>Trân trọng,<br/><strong>Hệ thống Quản lý Bán hàng DLC-WMS</strong></p>"
+                    + "<p>Trân trọng,<br/><strong>Hệ thống Quản lý Bán hàng Duy Long Computer Warehouse Management</strong></p>"
                     + "</div>"
                     + "</div>";
 
