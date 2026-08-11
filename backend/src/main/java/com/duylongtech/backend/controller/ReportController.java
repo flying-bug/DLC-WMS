@@ -109,10 +109,13 @@ public class ReportController {
 
     @GetMapping("/dashboard")
     @PreAuthorize("hasAuthority('report_summary:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
-    public ResponseEntity<ApiResponse<DashboardResponse>> getDashboardMetrics() {
+    public ResponseEntity<ApiResponse<DashboardResponse>> getDashboardMetrics(
+            @RequestParam(required = false, defaultValue = "7days") String inventoryFlowRange,
+            @RequestParam(required = false, defaultValue = "all") String categoryScope,
+            @RequestParam(required = false) String financeRange) {
         return ResponseEntity.ok(ApiResponse.<DashboardResponse>builder()
                 .success(true)
-                .data(reportService.getDashboardMetrics())
+                .data(reportService.getDashboardMetrics(inventoryFlowRange, categoryScope, financeRange))
                 .build());
     }
 
