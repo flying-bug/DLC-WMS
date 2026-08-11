@@ -10,6 +10,8 @@ import styles from './PaymentManagementPage.module.css';
 import { formatDateTime, formatDateOnly } from '../../utils/dateFormat';
 import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import { exportToExcel } from '../../utils/excelExport';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -267,10 +269,10 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                   </div>
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Phương thức</label>
-                    <select className={styles.input} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
+                    <SearchableSelect className={styles.input} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
                       <option value="CASH">Tiền mặt</option>
                       <option value="BANK_TRANSFER">Chuyển khoản</option>
-                    </select>
+                    </SearchableSelect>
                   </div>
                 </div>
 

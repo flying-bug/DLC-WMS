@@ -9,6 +9,8 @@ import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import { exportToExcel } from '../../utils/excelExport';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import styles from './AssemblyOrderPage.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
@@ -314,7 +316,7 @@ function AssemblyBomPage() {
                     <div className={styles.pagination}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span>Hiển thị</span>
-                            <select
+                            <SearchableSelect
                                 className="misa-select"
                                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
                                 value={pageSize}
@@ -323,7 +325,7 @@ function AssemblyBomPage() {
                                 <option value={10}>10</option>
                                 <option value={20}>20</option>
                                 <option value={50}>50</option>
-                            </select>
+                            </SearchableSelect>
                             <span>trên tổng số {totalElements} bản ghi</span>
                         </div>
 

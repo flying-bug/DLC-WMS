@@ -57,12 +57,20 @@ public class AiChatService {
         String message = rawMessage == null ? "" : rawMessage.trim();
         String normalized = normalize(message);
 
+        if (isGreeting(normalized)) {
+            return enhance(message, answerGreeting());
+        }
+
         if (isSystemOverviewQuestion(normalized)) {
             return enhance(message, answerSystemOverview());
         }
 
         if (isLowStockQuestion(normalized)) {
             return enhance(message, answerLowStock());
+        }
+
+        if (isWarehouseListQuestion(normalized)) {
+            return enhance(message, answerWarehouseList());
         }
 
         if (isWarehouseStockQuestion(normalized)) {
@@ -136,6 +144,19 @@ public class AiChatService {
                 .intent("SYSTEM_OVERVIEW")
                 .answer(answer)
                 .sources(allSystemSources())
+                .suggestions(defaultSuggestions())
+                .build();
+    }
+
+    private AiChatResponse answerGreeting() {
+        return AiChatResponse.builder()
+                .intent("GREETING")
+                .answer("Chào bạn! Mình là trợ lý ảo AI của hệ thống quản lý kho DLC WMS. Mình có thể giúp bạn tra cứu thông tin sản phẩm, tồn kho, khách hàng, bảo hành hoặc hướng dẫn sử dụng hệ thống. Bạn cần mình giúp gì nào?")
+                .sources(List.of(AiSourceResponse.builder()
+                        .type("system")
+                        .name("AI router")
+                        .description("Nhận diện lời chào")
+                        .build()))
                 .suggestions(defaultSuggestions())
                 .build();
     }
@@ -458,6 +479,13 @@ public class AiChatService {
                 || normalized.contains("bom");
     }
 
+    private boolean isGreeting(String normalized) {
+        String regex = "^(hi|hello|chao|xin chao|helo|alo|ê|hey)(.*)?$";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(normalized);
+        return matcher.matches();
+    }
+
     private boolean isCountQuestion(String normalized) {
         return normalized.contains("co may")
                 || normalized.contains("bao nhieu")
@@ -676,6 +704,31 @@ public class AiChatService {
                 || normalized.contains("so luong")
                 || normalized.contains("bao nhieu");
         return mentionsWarehouse && mentionsStock;
+    }
+
+    private boolean isWarehouseListQuestion(String normalized) {
+        return (normalized.contains("kho") || normalized.contains("warehouse"))
+                && (normalized.contains("nhung") || normalized.contains("danh sach") || normalized.contains("liet ke") || normalized.contains("cac"));
+    }
+
+    private AiChatResponse answerWarehouseList() {
+        List<Warehouse> warehouses = warehouseRepository.findAll();
+        StringBuilder answer = new StringBuilder("Hệ thống hiện tại có " + warehouses.size() + " kho:\n");
+        for (Warehouse w : warehouses) {
+            answer.append("- Kho ").append(w.getName()).append(" (Mã: ").append(w.getCode()).append(")\n");
+        }
+        answer.append("\nBạn có thể hỏi chi tiết về một kho cụ thể, ví dụ: \"Tồn kho của kho ").append(warehouses.isEmpty() ? "A" : warehouses.get(0).getName()).append("\"");
+
+        return AiChatResponse.builder()
+                .intent("WAREHOUSE_LIST_QUERY")
+                .answer(answer.toString())
+                .sources(List.of(AiSourceResponse.builder()
+                        .type("database")
+                        .name("WAREHOUSES")
+                        .description("Danh sách tất cả các kho trong hệ thống")
+                        .build()))
+                .suggestions(List.of("Tồn kho kho " + (warehouses.isEmpty() ? "A" : warehouses.get(0).getName()), "Sản phẩm nào sắp hết hàng?"))
+                .build();
     }
 
     private boolean isLowStockQuestion(String normalized) {

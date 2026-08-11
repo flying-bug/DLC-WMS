@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './StocktakeInitModal.module.css';
 import { getTodayIsoDate } from '../../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 function StocktakeInitModal({ onClose, warehouses = [] }) {
   const navigate = useNavigate();
@@ -41,7 +43,7 @@ function StocktakeInitModal({ onClose, warehouses = [] }) {
         <div className={styles.modalBody}>
           <div className={styles.fieldGroup}>
             <label className={styles.fieldLabel}>Kiểm kê kho</label>
-            <select
+            <SearchableSelect
               className={styles.selectControl}
               name="warehouseId"
               value={formData.warehouseId}
@@ -51,7 +53,7 @@ function StocktakeInitModal({ onClose, warehouses = [] }) {
               {warehouses.map(wh => (
                 <option key={wh.id} value={wh.id}>{wh.name}</option>
               ))}
-            </select>
+            </SearchableSelect>
           </div>
 
           <div className={styles.fieldGroup}>

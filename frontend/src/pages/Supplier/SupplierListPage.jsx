@@ -8,6 +8,8 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './SupplierListPage.module.css';
 
 import axiosClient from '../../api/axiosClient';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const STATUS_LABELS = {
     APPROVED: { label: 'Đang hoạt động', code: 'success' },
@@ -187,7 +189,7 @@ const SupplierListPage = () => {
                         </div>
                         <div className={styles.filterField}>
                             <span className={styles.filterLabel}>TÌNH TRẠNG</span>
-                            <select
+                            <SearchableSelect
                                 className={styles.filterSelect}
                                 value={filters.status}
                                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
@@ -195,7 +197,7 @@ const SupplierListPage = () => {
                                 <option value="">Tất cả trạng thái</option>
                                 <option value="APPROVED">Đang hoạt động</option>
                                 <option value="INACTIVE">Ngừng hoạt động</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
                     </div>
                     <div className={styles.filterActions}>
@@ -322,7 +324,7 @@ const SupplierListPage = () => {
                     <div className={styles.pagination}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span>Hiển thị</span>
-                            <select
+                            <SearchableSelect
                                 className="misa-select"
                                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
                                 value={pageSize}
@@ -332,7 +334,7 @@ const SupplierListPage = () => {
                                 <option value={20}>20</option>
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
-                            </select>
+                            </SearchableSelect>
                             <span>trên tổng số {totalItems} bản ghi</span>
                         </div>
 

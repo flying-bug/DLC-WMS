@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axiosClient from '../../../api/axiosClient';
 import Modal from '../../../components/ui/Modal/Modal';
 import styles from './QuickProductModal.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 export default function QuickProductModal({ isOpen, onClose, onSaved, fixedType }) {
     const [formData, setFormData] = useState({
@@ -143,28 +145,28 @@ export default function QuickProductModal({ isOpen, onClose, onSaved, fixedType 
 
                     <div className={styles.formGroup}>
                         <label>Đơn vị <span className="text-danger">*</span></label>
-                        <select className="form-select" value={formData.unitId} onChange={e => setFormData({...formData, unitId: e.target.value})}>
+                        <SearchableSelect className="form-select" value={formData.unitId} onChange={e => setFormData({...formData, unitId: e.target.value})}>
                             <option value="">Chọn đơn vị</option>
                             {options.units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                        </select>
+                        </SearchableSelect>
                     </div>
 
                     {fixedType !== 'Dịch vụ' && (
                         <>
                             <div className={styles.formGroup}>
                                 <label>Danh mục <span className="text-danger">*</span></label>
-                                <select className="form-select" value={formData.categoryId} onChange={e => setFormData({...formData, categoryId: e.target.value})}>
+                                <SearchableSelect className="form-select" value={formData.categoryId} onChange={e => setFormData({...formData, categoryId: e.target.value})}>
                                     <option value="">Chọn danh mục</option>
                                     {options.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </select>
+                                </SearchableSelect>
                             </div>
 
                             <div className={styles.formGroup}>
                                 <label>Thương hiệu <span className="text-danger">*</span></label>
-                                <select className="form-select" value={formData.brandId} onChange={e => setFormData({...formData, brandId: e.target.value})}>
+                                <SearchableSelect className="form-select" value={formData.brandId} onChange={e => setFormData({...formData, brandId: e.target.value})}>
                                     <option value="">Chọn thương hiệu</option>
                                     {options.brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                </select>
+                                </SearchableSelect>
                             </div>
                         </>
                     )}

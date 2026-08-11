@@ -9,6 +9,8 @@ import SuperAdminLayout from '../components/layout/SuperAdminLayout';
 import EmployeeDrawer from '../components/ui/EmployeeDrawer/EmployeeDrawer';
 import Pagination from '../components/ui/Pagination/Pagination';
 import { USER_EVENT } from '../auth/session';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 function UsersPage() {
     const navigate = useNavigate();
@@ -344,7 +346,7 @@ function UsersPage() {
                                 />
                             </div>
                             <div className={styles.filterSelectGroup}>
-                                <select
+                                <SearchableSelect
                                     className={styles.filterSelect}
                                     value={roleFilter}
                                     onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
@@ -354,7 +356,7 @@ function UsersPage() {
                                     <option value="SUPER_ADMIN">Super Admin</option>
                                     <option value="MANAGER">Quản lý</option>
                                     <option value="STAFF">Nhân viên</option>
-                                </select>
+                                </SearchableSelect>
                             </div>
                         </div>
                         <div className={styles.filterActions}>

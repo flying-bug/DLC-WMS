@@ -7,8 +7,22 @@ import {
 } from 'recharts';
 import styles from './AnalyticsDashboard.module.css';
 
+import axiosClient from '../../api/axiosClient';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
+
 function AnalyticsDashboard() {
     const navigate = useNavigate();
+    const [aiInsights, setAiInsights] = React.useState([]);
+
+    React.useEffect(() => {
+        axiosClient.get('/ai/insights/frequent-questions')
+            .then(res => {
+                const data = res.data?.data || [];
+                setAiInsights(data.slice(0, 5));
+            })
+            .catch(err => console.error('Failed to load AI insights:', err));
+    }, []);
 
     // KPI Data with sparkline trend data
     const kpis = [
@@ -133,11 +147,11 @@ function AnalyticsDashboard() {
                     <div className={styles.mainChartCard}>
                         <div className={styles.cardHeader}>
                             <h3 className={styles.cardTitle}>Lưu Lượng Nhập / Xuất Kho</h3>
-                            <select className={styles.chartFilter}>
+                            <SearchableSelect className={styles.chartFilter}>
                                 <option value="7days">7 Ngày Qua</option>
                                 <option value="thisMonth">Tháng Này</option>
                                 <option value="lastMonth">Tháng Trước</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
                         <div className={styles.chartBody}>
                             <ResponsiveContainer width="100%" height={320}>
@@ -158,11 +172,11 @@ function AnalyticsDashboard() {
                     <div className={styles.pieChartCard}>
                         <div className={styles.cardHeader}>
                             <h3 className={styles.cardTitle}>Cơ Cấu Giá Trị Tồn Kho</h3>
-                            <select className={styles.chartFilter}>
+                            <SearchableSelect className={styles.chartFilter}>
                                 <option value="all">Tất Cả Kho</option>
                                 <option value="kho1">Kho Linh Kiện</option>
                                 <option value="kho2">Kho Thành Phẩm</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
                         <div className={styles.chartBody} style={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', paddingBottom: '30px'}}>
                             <ResponsiveContainer width="100%" height={220}>
@@ -192,11 +206,11 @@ function AnalyticsDashboard() {
                     <div className={styles.mainChartCard}>
                         <div className={styles.cardHeader}>
                             <h3 className={styles.cardTitle}>Báo Cáo Thu Chi & Công Nợ</h3>
-                            <select className={styles.chartFilter}>
+                            <SearchableSelect className={styles.chartFilter}>
                                 <option value="2026">Năm 2026</option>
                                 <option value="2025">Năm 2025</option>
                                 <option value="quarter">Theo Quý (2026)</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
                         <div className={styles.chartBody}>
                             <ResponsiveContainer width="100%" height={320}>
@@ -272,11 +286,11 @@ function AnalyticsDashboard() {
                         <div className={styles.topProductsCard}>
                             <div className={styles.cardHeader}>
                                 <h3 className={styles.cardTitle}>Top 5 Hàng Xuất Kho Nhiều</h3>
-                                <select className={styles.chartFilter}>
+                                <SearchableSelect className={styles.chartFilter}>
                                     <option value="thisMonth">Tháng này</option>
                                     <option value="thisWeek">Tuần này</option>
                                     <option value="thisYear">Năm nay</option>
-                                </select>
+                                </SearchableSelect>
                             </div>
                             <div className={styles.topProductsList}>
                                 {topProducts.map((prod, idx) => (
@@ -313,6 +327,30 @@ function AnalyticsDashboard() {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+
+                        {/* AI Insights Card */}
+                        <div className={styles.pendingTasksCard} style={{marginTop: '24px'}}>
+                            <div className={styles.cardHeader}>
+                                <h3 className={styles.cardTitle}>Góc nhìn từ AI (Câu hỏi thường gặp)</h3>
+                            </div>
+                            <div className={styles.taskList}>
+                                {aiInsights.length === 0 ? (
+                                    <p style={{color: 'var(--color-text-muted)', fontSize: '13px', padding: '10px'}}>Chưa có đủ dữ liệu chat.</p>
+                                ) : (
+                                    aiInsights.map((insight, idx) => (
+                                        <div key={idx} className={styles.taskItem}>
+                                            <div className={`${styles.taskIcon} ${styles.bgPrimarySoft}`}>
+                                                <i className="fas fa-comment-dots" style={{color: 'var(--color-primary)'}}></i>
+                                            </div>
+                                            <div className={styles.taskInfo}>
+                                                <p className={styles.taskTitle}>{insight}</p>
+                                                <span className={styles.taskTime}>Câu hỏi phổ biến</span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>

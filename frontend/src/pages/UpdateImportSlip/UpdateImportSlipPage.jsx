@@ -1,3 +1,4 @@
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -197,7 +198,12 @@ function UpdateImportSlipPage() {
         const list = pageContent(unwrap(res));
         const invMap = new Map();
         list.forEach(b => {
-          if (b.variantId) invMap.set(String(b.variantId), Number(b.totalQuantity || 0));
+          const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+          const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+          const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+          const stock = Math.max(0, availableQuantity);
+          if (b.variantId) invMap.set(String(b.variantId), stock);
+          else if (b.itemId) invMap.set(String(b.itemId), stock);
         });
         setInventoryMap(invMap);
       })
@@ -862,9 +868,9 @@ function UpdateImportSlipPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '350px' }}>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-                    <select style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
+                    <SearchableSelect style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
                       <option>20 bản ghi trên 1 trang</option>
-                    </select>
+                    </SearchableSelect>
                     <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280' }}>
                       <span style={{ cursor: 'pointer' }}>Trước</span>
                       <span style={{ fontWeight: 'bold', color: '#111827' }}>1</span>

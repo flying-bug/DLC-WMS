@@ -7,6 +7,8 @@ import * as assemblyOrderApi from '../api/assemblyOrderApi';
 import * as stocktakeApi from '../api/stocktakeApi';
 import * as stockTransferApi from '../api/stockTransferApi';
 import * as warrantyApi from '../api/warrantyApi';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const DOC_TYPES = [
   { value: 'IMPORT_SLIP', label: 'Phiếu nhập kho' },
@@ -116,7 +118,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
             <div style={{ display: 'flex', gap: '24px' }}>
               <div style={{ flex: '0 0 250px' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Loại chứng từ</label>
-                <select
+                <SearchableSelect
                   className="misa-input"
                   value={docType}
                   onChange={(e) => { setDocType(e.target.value); setPage(1); setKeyword(''); }}
@@ -125,7 +127,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
                   {DOC_TYPES.map(t => (
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
-                </select>
+                </SearchableSelect>
               </div>
             </div>
           </div>

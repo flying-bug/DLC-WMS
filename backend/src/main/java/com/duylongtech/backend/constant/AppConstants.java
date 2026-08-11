@@ -18,7 +18,7 @@ public interface AppConstants {
      * VNSKY       : 077
      * Local       : 089
      */
-    String MOBILE_REGEX = "(\\+84|0)[\\s.-]?(3[2-9]|5[5689]|7[06-9]|8[1-9]|9[0-9])([\\s.-]?\\d){7}";
+    String MOBILE_REGEX = "(\\+84|0)[\\s.-]?(2[0-9]|3[2-9]|5[5689]|7[06-9]|8[1-9]|9[0-9])([\\s.-]?\\d){7,8}";
 
     /**
      * PAGINATION

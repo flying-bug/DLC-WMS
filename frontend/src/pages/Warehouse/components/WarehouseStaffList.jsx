@@ -3,6 +3,8 @@ import warehouseStaffApi from '../../../api/warehouseStaffApi';
 import AssignStaffModal from './AssignStaffModal';
 import Toast from '../../../components/ui/Toast/Toast';
 import styles from './WarehouseStaffList.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const WarehouseStaffList = ({ warehouseId }) => {
     const [staffs, setStaffs] = useState([]);
@@ -129,7 +131,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                         />
                     </div>
                     <div className={styles.filterField}>
-                        <select 
+                        <SearchableSelect 
                             className={styles.filterSelect}
                             value={roleId}
                             onChange={(e) => { setRoleId(e.target.value); setPage(1); }}
@@ -138,7 +140,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                             {roles.map(r => (
                                 <option key={r.id} value={r.id}>{r.name}</option>
                             ))}
-                        </select>
+                        </SearchableSelect>
                     </div>
                 </div>
                 <div className={styles.filterActions}>
@@ -229,7 +231,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                 <div className={styles.pagination} style={{ borderTop: '1px solid #e5e7eb' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>Hiển thị</span>
-                        <select 
+                        <SearchableSelect 
                             className="misa-select" 
                             style={{ width: '70px', height: '32px', padding: '0 8px', border: '1px solid #d1d5db', borderRadius: '4px' }} 
                             value={pageSize} 
@@ -239,7 +241,7 @@ const WarehouseStaffList = ({ warehouseId }) => {
                             <option value={20}>20</option>
                             <option value={50}>50</option>
                             <option value={100}>100</option>
-                        </select>
+                        </SearchableSelect>
                         <span>trên tổng số {totalItems} bản ghi</span>
                     </div>
                     

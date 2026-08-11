@@ -7,6 +7,8 @@ import * as soApi from '../../api/salesOrderApi';
 import styles from './SalesOrderListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { exportToExcel } from '../../utils/excelExport';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
@@ -159,14 +161,14 @@ function SalesOrderListPage() {
 
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>TRẠNG THÁI</span>
-              <select
+              <SearchableSelect
                 className={styles.filterSelect}
                 value={filters.status}
                 onChange={e => setFilters(p => ({ ...p, status: e.target.value }))}
               >
                 <option value="">Tất cả</option>
                 {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className={styles.filterField}>
@@ -320,12 +322,12 @@ function SalesOrderListPage() {
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>Hiển thị</span>
-              <select className="misa-select" style={{ width: 70, height: 32, padding: '0 8px' }}
+              <SearchableSelect className="misa-select" style={{ width: 70, height: 32, padding: '0 8px' }}
                 value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
                 <option value={10}>10</option>
                 <option value={20}>20</option>
                 <option value={50}>50</option>
-              </select>
+              </SearchableSelect>
               <span>trên tổng số {totalItems} bản ghi</span>
             </div>
             {totalPages > 1 && (

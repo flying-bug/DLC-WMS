@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import axiosClient from '../../../api/axiosClient';
 import Modal from '../../../components/ui/Modal/Modal';
 import styles from './ProductCategoryModal.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const STATUS_OPTIONS = [
     { value: 'APPROVED', label: 'Đang sử dụng' },
@@ -166,7 +168,7 @@ const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onErr
 
                     <div className={`${styles.formGroup} ${styles.col6}`}>
                         <label className={styles.formLabel}>Danh mục cha</label>
-                        <select
+                        <SearchableSelect
                             className={styles.select}
                             name="parentId"
                             value={form.parentId}
@@ -176,12 +178,12 @@ const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onErr
                             {filteredParentOptions.map(opt => (
                                 <option key={opt.id} value={opt.id}>{opt.code} - {opt.name}</option>
                             ))}
-                        </select>
+                        </SearchableSelect>
                     </div>
 
                     <div className={`${styles.formGroup} ${styles.col6}`}>
                         <label className={styles.formLabel}>Trạng thái</label>
-                        <select
+                        <SearchableSelect
                             className={styles.select}
                             name="status"
                             value={form.status}
@@ -190,7 +192,7 @@ const ProductCategoryModal = ({ isOpen, onClose, onSaved, editData = null, onErr
                             {STATUS_OPTIONS.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
-                        </select>
+                        </SearchableSelect>
                     </div>
 
                     <div className={`${styles.formGroup} ${styles.col12}`}>
