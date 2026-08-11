@@ -130,18 +130,18 @@ public class InventoryDocumentService {
     }
 
     @Transactional(readOnly = true)
-    public List<InventoryDocumentResponse> getExportHistory(String docCode, LocalDate fromDate, LocalDate toDate,
+    public List<InventoryDocumentResponse> getExportHistory(String keyword, LocalDate fromDate, LocalDate toDate,
             String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId) {
-        String normalizedDocCode = trimToNull(docCode);
+        String normalizedKeyword = trimToNull(keyword);
         String normalizedStatus = normalizeOptionalStatus(status);
         String normalizedIssuePurpose = normalizeOptionalReference(issuePurpose);
         String normalizedReferenceType = normalizeOptionalReference(referenceType);
-        boolean noFilters = normalizedDocCode == null && fromDate == null && toDate == null && normalizedStatus == null
+        boolean noFilters = normalizedKeyword == null && fromDate == null && toDate == null && normalizedStatus == null
                 && warehouseId == null && normalizedIssuePurpose == null && normalizedReferenceType == null
                 && referenceId == null;
         List<InventoryDocument> docs = noFilters
                 ? inventoryDocumentRepository.findAllExports()
-                : inventoryDocumentRepository.searchExports(normalizedDocCode, fromDate, toDate, normalizedStatus,
+                : inventoryDocumentRepository.searchExports(normalizedKeyword, fromDate, toDate, normalizedStatus,
                         warehouseId, normalizedIssuePurpose, normalizedReferenceType, referenceId);
         return docs.stream().map(this::toResponse).collect(Collectors.toList());
     }
@@ -152,17 +152,17 @@ public class InventoryDocumentService {
     }
 
     @Transactional(readOnly = true)
-    public List<InventoryDocumentResponse> getImportHistory(String docCode, LocalDate fromDate, LocalDate toDate,
+    public List<InventoryDocumentResponse> getImportHistory(String keyword, LocalDate fromDate, LocalDate toDate,
             String status, Long warehouseId, String issuePurpose, String referenceType, Long referenceId) {
-        String normalizedDocCode = trimToNull(docCode);
+        String normalizedKeyword = trimToNull(keyword);
         String normalizedStatus = normalizeOptionalStatus(status);
         String normalizedIssuePurpose = normalizeOptionalReference(issuePurpose);
         String normalizedReferenceType = normalizeOptionalReference(referenceType);
-        boolean noFilters = normalizedDocCode == null && fromDate == null && toDate == null && normalizedStatus == null
+        boolean noFilters = normalizedKeyword == null && fromDate == null && toDate == null && normalizedStatus == null
                 && warehouseId == null && normalizedIssuePurpose == null && normalizedReferenceType == null && referenceId == null;
         List<InventoryDocument> docs = noFilters
                 ? inventoryDocumentRepository.findAllImports()
-                : inventoryDocumentRepository.searchImports(normalizedDocCode, fromDate, toDate, normalizedStatus,
+                : inventoryDocumentRepository.searchImports(normalizedKeyword, fromDate, toDate, normalizedStatus,
                         warehouseId, normalizedIssuePurpose, normalizedReferenceType, referenceId);
         return docs.stream().map(this::toResponse).collect(Collectors.toList());
     }
