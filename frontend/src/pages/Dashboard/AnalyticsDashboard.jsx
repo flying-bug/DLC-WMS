@@ -55,33 +55,6 @@ function AnalyticsDashboard() {
         { title: 'Chờ Bảo Hành', value: formatNumber(newWarrantyTickets) + ' Máy', icon: 'fas fa-tools', color: 'purple', trend: 'Cần xử lý' }
     ];
 
-    // Pie Chart Data -> Map from inventoryValues
-    const COLORS = ['var(--color-primary)', '#10b981', '#f59e0b', '#ef4444', '#9333ea', '#64748b'];
-    let categoryData = [];
-    if (dashboardData?.inventoryValues && dashboardData.inventoryValues.length > 0) {
-        // Sort descending by value and take top 5
-        const sorted = [...dashboardData.inventoryValues].sort((a, b) => b.inventoryValue - a.inventoryValue);
-        const top5 = sorted.slice(0, 5);
-        const others = sorted.slice(5).reduce((sum, item) => sum + item.inventoryValue, 0);
-        
-        categoryData = top5.map((item, index) => ({
-            name: item.productName || 'Sản phẩm',
-            value: item.inventoryValue,
-            color: COLORS[index % COLORS.length]
-        }));
-        
-        if (others > 0) {
-            categoryData.push({
-                name: 'Khác',
-                value: others,
-                color: '#64748b'
-            });
-        }
-    } else {
-        categoryData = [
-            { name: 'Chưa có dữ liệu', value: 100, color: '#e5e7eb' }
-        ];
-    }
 
     // Low Stock Products
     const lowStockProducts = dashboardData?.lowStockItems?.slice(0, 5).map((item, idx) => ({

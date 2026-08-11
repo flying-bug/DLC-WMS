@@ -40,6 +40,10 @@ export default function MobileScannerPage() {
     }
   }, [sentCount, sessionId]);
 
+  const triggerCamera = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
   if (!sessionId) {
     return (
       <div className={styles.container} style={{ justifyContent: 'center', textAlign: 'center', padding: '20px' }}>
@@ -49,9 +53,7 @@ export default function MobileScannerPage() {
     );
   }
 
-  const triggerCamera = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
+
 
   return (
     <div className={styles.container}>
