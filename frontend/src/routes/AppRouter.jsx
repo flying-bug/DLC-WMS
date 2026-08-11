@@ -120,6 +120,7 @@ function AppRouter() {
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/change-password" element={<ChangePasswordPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/profile/edit" element={<ProfilePage />} />
                     <Route path="/ai-chat" element={<AiChatPage />} />
                 </Route>
 

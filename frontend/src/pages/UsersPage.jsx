@@ -10,6 +10,22 @@ import EmployeeDrawer from '../components/ui/EmployeeDrawer/EmployeeDrawer';
 import Pagination from '../components/ui/Pagination/Pagination';
 import { USER_EVENT } from '../auth/session';
 
+const GENDER_LABELS = {
+    male: 'Nam',
+    female: 'Nữ',
+    other: 'Khác',
+    nam: 'Nam',
+    nữ: 'Nữ',
+    nu: 'Nữ',
+    khác: 'Khác',
+    khac: 'Khác'
+};
+
+const toVietnameseGender = (value) => {
+    const key = String(value || '').trim().toLowerCase();
+    return GENDER_LABELS[key] || value || '';
+};
+
 function UsersPage() {
     const navigate = useNavigate();
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -75,8 +91,8 @@ function UsersPage() {
             status: u.status,
             statusLabel: u.status === 'APPROVED' ? 'Đang hoạt động' : 'Đã khóa',
             statusClass: u.status === 'APPROVED' ? styles.statusActive : styles.statusInactive,
-            dob: u.dob || 'Chưa cập nhật',
-            gender: u.gender || 'Chưa cập nhật',
+            dob: u.dob || '',
+            gender: toVietnameseGender(u.gender) || 'Chưa cập nhật',
             address: u.address || 'Chưa cập nhật',
             idCard: u.idCard || 'Chưa cập nhật',
             startDate: u.startDate || 'Chưa cập nhật',
@@ -202,7 +218,7 @@ function UsersPage() {
                 email: updatedData.email,
                 phone: (updatedData.phone || '').replace(/[\s.-]/g, ''),
                 idCard: updatedData.idCard === 'Chưa cập nhật' ? 'Chưa cập nhật' : updatedData.idCard,
-                dob: updatedData.dob === 'Chưa cập nhật' ? null : updatedData.dob,
+                dob: updatedData.dob || null,
                 gender: updatedData.gender === 'Chưa cập nhật' ? null : updatedData.gender,
                 startDate: updatedData.startDate === 'Chưa cập nhật' ? null : updatedData.startDate,
                 position: updatedData.position === 'Chưa xác định' ? null : updatedData.position,
