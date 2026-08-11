@@ -5,6 +5,24 @@ import styles from './CreateEmployeePage.module.css';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import { useToast } from '../../contexts/ToastContext';
 
+const parseDisplayDateToIso = (value) => {
+    const text = String(value || '').trim();
+    if (!text) return null;
+    const match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return null;
+
+    const [, day, month, year] = match;
+    const date = new Date(Number(year), Number(month) - 1, Number(day));
+    if (
+        date.getFullYear() !== Number(year) ||
+        date.getMonth() !== Number(month) - 1 ||
+        date.getDate() !== Number(day)
+    ) {
+        return null;
+    }
+    return `${year}-${month}-${day}`;
+};
+
 function CreateEmployeePage() {
     const navigate = useNavigate();
     const { showToast } = useToast();
@@ -55,6 +73,11 @@ function CreateEmployeePage() {
             showToast('warning', 'Số CCCD/CMND không hợp lệ (chỉ được nhập số).');
             return;
         }
+        const dob = parseDisplayDateToIso(formData.dob);
+        if (formData.dob.trim() && !dob) {
+            showToast('warning', 'Ngày sinh không hợp lệ. Vui lòng nhập theo định dạng ngày/tháng/năm, ví dụ 31/12/2000.');
+            return;
+        }
 
         try {
             setIsSaving(true);
@@ -65,7 +88,7 @@ function CreateEmployeePage() {
                 email: formData.email.trim(),
                 phone: formData.phone.replace(/[\s.-]/g, ''),
                 idCard: formData.idCard.trim() || 'Chưa cập nhật',
-                dob: formData.dob || null,
+                dob,
                 startDate: formData.startDate || null,
                 gender: formData.gender,
                 position: formData.position,
@@ -186,12 +209,14 @@ function CreateEmployeePage() {
                                 <label className={styles.label} htmlFor="dob">Ngày sinh</label>
                                 <div className={styles.inputWrapper}>
                                     <input
-                                        type="date"
+                                        type="text"
                                         id="dob"
                                         className={styles.input}
                                         name="dob"
                                         value={formData.dob}
                                         onChange={handleChange}
+                                        inputMode="numeric"
+                                        placeholder="dd/mm/yyyy"
                                     />
                                 </div>
                             </div>

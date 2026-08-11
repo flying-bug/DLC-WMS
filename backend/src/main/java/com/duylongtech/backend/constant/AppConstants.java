@@ -6,6 +6,7 @@ public interface AppConstants {
      * REGEX
      */
     String SORT_TYPE_REGEX = "\\b(asc|desc)\\b";
+    String FULL_NAME_REGEX = "^[\\p{L}][\\p{L}\\s'.-]{1,99}$";
 
     /**
      * Vinaphone   : 081, 082, 083, 084, 085, 088, 091, 094

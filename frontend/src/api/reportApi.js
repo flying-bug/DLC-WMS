@@ -41,8 +41,8 @@ export const getInventorySummaryReport = (params = {}) => {
 /**
  * Lấy các chỉ số dashboard tổng quan
  */
-export const getDashboardMetrics = () => {
-    return axiosClient.get(`${REPORT_BASE}/dashboard`);
+export const getDashboardMetrics = (params = {}) => {
+    return axiosClient.get(`${REPORT_BASE}/dashboard`, { params });
 };
 
 /**

@@ -50,9 +50,9 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
-    public DashboardResponse getDashboardMetrics() {
-        log.info("Fetching Dashboard Metrics");
-        DashboardResponse dashboard = reportRepository.getDashboardMetrics();
+    public DashboardResponse getDashboardMetrics(String inventoryFlowRange, String categoryScope, String financeRange) {
+        log.info("Fetching Dashboard Metrics. inventoryFlowRange={}, categoryScope={}, financeRange={}", inventoryFlowRange, categoryScope, financeRange);
+        DashboardResponse dashboard = reportRepository.getDashboardMetrics(inventoryFlowRange, categoryScope, financeRange);
         var stockAlerts = productService.getStockAlertSummary();
         dashboard.setLowStockItemsCount(stockAlerts.getLowStockCount());
         dashboard.setOutOfStockItemsCount(stockAlerts.getOutOfStockCount());

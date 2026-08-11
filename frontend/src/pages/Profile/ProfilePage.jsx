@@ -1,25 +1,77 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import { emitUserUpdated } from '../../auth/session';
 import AdminLayout from '../../components/layout/AdminLayout';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
+import { useToast } from '../../contexts/ToastContext';
+import { formatDateTime } from '../../utils/dateFormat';
 import styles from './ProfilePage.module.css';
+
+const ROLE_LABELS = {
+    role_super_admin: 'Quản trị hệ thống',
+    super_admin: 'Quản trị hệ thống',
+    role_manager: 'Quản lý',
+    manager: 'Quản lý',
+    role_staff: 'Nhân viên',
+    staff: 'Nhân viên',
+    admin: 'Quản trị viên',
+    'super admin': 'Quản trị hệ thống'
+};
+
+const DEPARTMENT_LABELS = {
+    warehouse: 'Kho bãi',
+    technical: 'Kỹ thuật - Bảo hành',
+    admin: 'Kế toán - Hành chính'
+};
+
+const POSITION_LABELS = {
+    manager: 'Quản lý kho',
+    staff: 'Nhân viên kho',
+    technician: 'Kỹ thuật viên'
+};
+
+const FULL_NAME_REGEX = /^[\p{L}][\p{L}\s'.-]{1,99}$/u;
+const PHONE_REGEX = /^(?:\+84|0)(?:3[2-9]|5[5689]|7[06-9]|8[1-9]|9[0-9])\d{7}$/;
+
+const toVietnameseLabel = (value, labels) => {
+    if (!value) {
+        return '';
+    }
+    const text = String(value).trim();
+    return labels[text.toLowerCase()] || text;
+};
 
 function ProfilePage() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const { showToast } = useToast();
+    const isEditing = location.pathname.endsWith('/edit');
     const userRole = sessionStorage.getItem('role') || 'STAFF';
     const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN';
     const Layout = isSuperAdmin ? SuperAdminLayout : AdminLayout;
 
     const [profile, setProfile] = useState(null);
+    const [formData, setFormData] = useState({ fullName: '', phone: '' });
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [error, setError] = useState('');
 
     const roles = profile?.roles?.length ? profile.roles : [{ code: userRole, name: userRole }];
-    const displayRole = roles.map((role) => role.name || role.code).join(', ');
+    const displayRole = roles.map((role) => toVietnameseLabel(role.name || role.code, ROLE_LABELS)).join(', ');
     const fullName = profile?.fullName || profile?.username || 'Người dùng';
+    const isActive = profile?.active ?? profile?.isActive;
+    const displayStatus = isActive == null ? '-' : isActive ? 'Đang hoạt động' : 'Không hoạt động';
+    const statusClass = isActive == null ? styles.statusNeutral : isActive ? styles.statusActive : styles.statusInactive;
+    const readOnlyDetails = [
+        ['Tên đăng nhập', profile?.username],
+        ['Email', profile?.email],
+        ['Vai trò hệ thống', displayRole],
+        ['Trạng thái tài khoản', displayStatus],
+        ['Bộ phận', toVietnameseLabel(profile?.department, DEPARTMENT_LABELS)],
+        ['Chức danh', toVietnameseLabel(profile?.position, POSITION_LABELS)],
+        ['Ngày tạo tài khoản', formatDateTime(profile?.createdAt, { withSeconds: false })]
+    ];
     const initials = useMemo(() => {
         return fullName
             .split(' ')
@@ -35,16 +87,70 @@ function ProfilePage() {
             try {
                 setLoading(true);
                 const response = await axiosClient.get('/users/me');
-                setProfile(response.data?.data || null);
+                const user = response.data?.data || null;
+                setProfile(user);
+                setFormData({
+                    fullName: user?.fullName || '',
+                    phone: user?.phone || ''
+                });
             } catch (err) {
-                setError(err.response?.data?.userMessage || 'Không thể tải thông tin cá nhân.');
+                showToast('error', err.response?.data?.userMessage || 'Không thể tải thông tin cá nhân.');
             } finally {
                 setLoading(false);
             }
         };
 
         fetchProfile();
-    }, []);
+    }, [showToast]);
+
+    useEffect(() => {
+        if (location.state?.profileSaved) {
+            showToast('success', 'Cập nhật thông tin cá nhân thành công.');
+            navigate('/profile', { replace: true });
+        }
+    }, [location.state, navigate, showToast]);
+
+    const handleInputChange = (event) => {
+        const { name, value } = event.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleProfileSubmit = async (event) => {
+        event.preventDefault();
+        const fullName = formData.fullName.trim().replace(/\s+/g, ' ');
+        const phone = formData.phone.trim().replace(/[\s.-]/g, '');
+        if (!fullName) {
+            showToast('warning', 'Vui lòng nhập họ và tên.');
+            return;
+        }
+        if (!FULL_NAME_REGEX.test(fullName)) {
+            showToast('warning', 'Họ và tên phải có 2-100 ký tự và không chứa số hoặc ký tự đặc biệt.');
+            return;
+        }
+        if (!phone) {
+            showToast('warning', 'Vui lòng nhập số điện thoại.');
+            return;
+        }
+        if (!PHONE_REGEX.test(phone)) {
+            showToast('warning', 'Số điện thoại không hợp lệ. Vui lòng nhập số di động Việt Nam.');
+            return;
+        }
+        try {
+            setSaving(true);
+            const response = await axiosClient.put('/users/me', {
+                fullName,
+                phone
+            });
+            const updatedProfile = response.data?.data || null;
+            setProfile(updatedProfile);
+            emitUserUpdated({ type: 'profile-updated', user: updatedProfile });
+            navigate('/profile', { replace: true, state: { profileSaved: true } });
+        } catch (err) {
+            showToast('error', err.response?.data?.userMessage || 'Không thể cập nhật thông tin cá nhân.');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const handleAvatarChange = async (event) => {
         const file = event.target.files?.[0];
@@ -53,99 +159,187 @@ function ProfilePage() {
             return;
         }
 
-        const formData = new FormData();
-        formData.append('file', file);
+        const avatarData = new FormData();
+        avatarData.append('file', file);
 
         try {
             setUploading(true);
-            setError('');
-            const response = await axiosClient.put('/users/me/avatar', formData, {
+            const response = await axiosClient.put('/users/me/avatar', avatarData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             const updatedProfile = response.data?.data || null;
             setProfile(updatedProfile);
             emitUserUpdated({ type: 'avatar-updated', user: updatedProfile });
+            showToast('success', 'Cập nhật ảnh đại diện thành công.');
         } catch (err) {
-            setError(err.response?.data?.userMessage || 'Không thể tải ảnh đại diện.');
+            showToast('error', err.response?.data?.userMessage || 'Không thể tải ảnh đại diện.');
         } finally {
             setUploading(false);
         }
+    };
+
+    const cancelEdit = () => {
+        setFormData({
+            fullName: profile?.fullName || '',
+            phone: profile?.phone || ''
+        });
+        navigate('/profile');
     };
 
     return (
         <Layout>
             <div className={styles.container}>
                 <div className={styles.header}>
-                    <h2>Thông tin cá nhân</h2>
+                    <div>
+                        <h2>{isEditing ? 'Chỉnh sửa hồ sơ' : 'Thông tin cá nhân'}</h2>
+                        <p>{isEditing ? 'Cập nhật thông tin liên hệ của bạn.' : 'Xem thông tin tài khoản và thông tin nhân sự.'}</p>
+                    </div>
                     <div className={styles.breadcrumb}>
                         <span className={styles.breadcrumbLink} onClick={() => navigate('/dashboard')}>Dashboard</span>
                         <i className="fas fa-chevron-right"></i>
-                        <span>Thông tin cá nhân</span>
+                        <span>{isEditing ? 'Chỉnh sửa hồ sơ' : 'Thông tin cá nhân'}</span>
                     </div>
                 </div>
 
-                <div className={styles.profileCard}>
+                <section className={styles.profileCard}>
                     {loading ? (
                         <div className={styles.loadingState}>Đang tải thông tin...</div>
                     ) : (
                         <>
-                            {error && <div className={styles.errorState}>{error}</div>}
+                            <div className={styles.hero}>
+                                <div className={styles.avatarWrap}>
+                                    {isEditing ? (
+                                        <label className={styles.avatarUpload}>
+                                            <span className={styles.avatarCircle}>
+                                                {profile?.avatarUrl ? (
+                                                    <img src={profile.avatarUrl} alt={fullName} className={styles.avatarImage} />
+                                                ) : initials}
+                                            </span>
+                                            <input
+                                                type="file"
+                                                accept="image/png,image/jpeg,image/webp,image/gif"
+                                                onChange={handleAvatarChange}
+                                                disabled={uploading}
+                                            />
+                                            <span className={styles.avatarAction}>
+                                                <i className={uploading ? 'fas fa-spinner fa-spin' : 'fas fa-camera'}></i>
+                                                {uploading ? 'Đang tải...' : 'Đổi ảnh'}
+                                            </span>
+                                        </label>
+                                    ) : (
+                                        <span className={styles.avatarCircle}>
+                                            {profile?.avatarUrl ? (
+                                                <img src={profile.avatarUrl} alt={fullName} className={styles.avatarImage} />
+                                            ) : initials}
+                                        </span>
+                                    )}
+                                </div>
 
-                            <div className={styles.avatarSection}>
-                                <label className={styles.avatarUpload}>
-                                    <span className={styles.avatarCircle}>
-                                        {profile?.avatarUrl ? (
-                                            <img src={profile.avatarUrl} alt={fullName} className={styles.avatarImage} />
-                                        ) : initials}
-                                    </span>
-                                    <input
-                                        type="file"
-                                        accept="image/png,image/jpeg,image/webp,image/gif"
-                                        onChange={handleAvatarChange}
-                                        disabled={uploading}
-                                    />
-                                    <span className={styles.avatarAction}>
-                                        <i className={uploading ? 'fas fa-spinner fa-spin' : 'fas fa-camera'}></i>
-                                        {uploading ? 'Đang tải...' : 'Đổi ảnh'}
-                                    </span>
-                                </label>
-                                <h3 className={styles.profileName}>{fullName}</h3>
-                                <span className={styles.roleBadge}>{displayRole}</span>
+                                <div className={styles.heroInfo}>
+                                    <h3>{fullName}</h3>
+                                    <div className={styles.badgeRow}>
+                                        <span className={styles.roleBadge}>{displayRole}</span>
+                                        <span className={`${styles.statusBadge} ${statusClass}`}>
+                                            {displayStatus}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {!isEditing && (
+                                    <div className={styles.heroActions}>
+                                        <button className={styles.btnSecondary} type="button" onClick={() => navigate('/change-password')}>
+                                            <i className="fas fa-key"></i> Đổi mật khẩu
+                                        </button>
+                                        <button className={styles.btnPrimary} type="button" onClick={() => navigate('/profile/edit')}>
+                                            <i className="fas fa-pen"></i> Chỉnh sửa
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
-                            <div className={styles.detailsSection}>
-                                <div className={styles.detailGroup}>
-                                    <label className={styles.detailLabel}>Họ và tên</label>
-                                    <div className={styles.detailValue}>{fullName}</div>
-                                </div>
+                            {isEditing ? (
+                                <form className={styles.formPanel} onSubmit={handleProfileSubmit} noValidate>
+                                    <div className={styles.fieldGrid}>
+                                        <div className={styles.detailGroup}>
+                                            <label className={styles.detailLabel} htmlFor="fullName">Họ và tên</label>
+                                            <input
+                                                id="fullName"
+                                                name="fullName"
+                                                className={styles.detailInput}
+                                                value={formData.fullName}
+                                                onChange={handleInputChange}
+                                                disabled={saving}
+                                                minLength={2}
+                                                maxLength={100}
+                                                pattern="^[\p{L}][\p{L}\s'.-]{1,99}$"
+                                                title="Họ và tên phải có 2-100 ký tự và không chứa số hoặc ký tự đặc biệt."
+                                                required
+                                            />
+                                        </div>
 
-                                <div className={styles.detailGroup}>
-                                    <label className={styles.detailLabel}>Email</label>
-                                    <div className={styles.detailValue}>{profile?.email || '-'}</div>
-                                </div>
+                                        <div className={styles.detailGroup}>
+                                            <label className={styles.detailLabel} htmlFor="phone">Số điện thoại</label>
+                                            <input
+                                                id="phone"
+                                                name="phone"
+                                                className={styles.detailInput}
+                                                value={formData.phone}
+                                                onChange={handleInputChange}
+                                                disabled={saving}
+                                                inputMode="tel"
+                                                placeholder="VD: 0912345678"
+                                                title="Nhập số di động Việt Nam, ví dụ 0912345678 hoặc +84912345678."
+                                                required
+                                            />
+                                        </div>
 
-                                <div className={styles.detailGroup}>
-                                    <label className={styles.detailLabel}>Số điện thoại</label>
-                                    <div className={styles.detailValue}>{profile?.phone || '-'}</div>
-                                </div>
+                                        {readOnlyDetails.map(([label, value]) => (
+                                            <div className={styles.detailGroup} key={label}>
+                                                <label className={styles.detailLabel}>{label}</label>
+                                                <div className={styles.detailValue}>{value || '-'}</div>
+                                            </div>
+                                        ))}
+                                    </div>
 
-                                <div className={styles.detailGroup}>
-                                    <label className={styles.detailLabel}>Vai trò hệ thống</label>
-                                    <div className={styles.detailValue}>{displayRole}</div>
+                                    <div className={styles.formActions}>
+                                        <button className={styles.btnPrimary} type="submit" disabled={saving}>
+                                            <i className={saving ? 'fas fa-spinner fa-spin' : 'fas fa-save'}></i>
+                                            {saving ? 'Đang lưu...' : 'Lưu thông tin'}
+                                        </button>
+                                        <button className={styles.btnSecondary} type="button" onClick={cancelEdit} disabled={saving}>
+                                            Hủy thay đổi
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <div className={styles.infoGrid}>
+                                    <div className={styles.detailGroup}>
+                                        <label className={styles.detailLabel}>Họ và tên</label>
+                                        <div className={styles.detailValue}>{fullName}</div>
+                                    </div>
+                                    <div className={styles.detailGroup}>
+                                        <label className={styles.detailLabel}>Số điện thoại</label>
+                                        <div className={styles.detailValue}>{profile?.phone || '-'}</div>
+                                    </div>
+                                    {readOnlyDetails.map(([label, value]) => (
+                                        <div className={styles.detailGroup} key={label}>
+                                            <label className={styles.detailLabel}>{label}</label>
+                                            <div className={styles.detailValue}>{value || '-'}</div>
+                                        </div>
+                                    ))}
                                 </div>
-                            </div>
+                            )}
 
-                            <div className={styles.actionsSection}>
-                                <button className={styles.btnPrimary} onClick={() => navigate('/change-password')}>
-                                    <i className="fas fa-key"></i> Đổi mật khẩu
-                                </button>
-                                <button className={styles.btnSecondary} onClick={() => navigate('/dashboard')}>
-                                    Quay lại Dashboard
-                                </button>
-                            </div>
+                            {!isEditing && (
+                                <div className={styles.actionsSection}>
+                                    <button className={styles.btnGhost} type="button" onClick={() => navigate('/dashboard')}>
+                                        Quay lại Dashboard
+                                    </button>
+                                </div>
+                            )}
                         </>
                     )}
-                </div>
+                </section>
             </div>
         </Layout>
     );
