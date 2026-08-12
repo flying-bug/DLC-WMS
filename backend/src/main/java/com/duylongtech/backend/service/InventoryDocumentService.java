@@ -945,6 +945,10 @@ public class InventoryDocumentService {
         }
 
         for (String serialValue : serialValues) {
+            if (serialNumberRepository.findBySerialNumber(serialValue).stream()
+                    .anyMatch(existing -> !existing.getVariantId().equals(line.getVariantId()))) {
+                throw new BusinessException("Serial da ton tai tren SKU khac: " + serialValue);
+            }
             Optional<SerialNumber> existingOpt = serialNumberRepository
                     .findByVariantIdAndSerialNumber(line.getVariantId(), serialValue);
             if (existingOpt.isPresent()) {

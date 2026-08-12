@@ -7,6 +7,7 @@ import { executeAssemblyOrder } from '../../api/assemblyOrderApi';
 import { getAvailableSerials, checkSerialExists } from '../../api/warehouseApi';
 
 const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
+    const sameVariant = (a, b) => String(a) === String(b);
     const [scannedInput, setScannedInput] = useState('');
     const [assembledSets, setAssembledSets] = useState([]);
     const [currentSetIndex, setCurrentSetIndex] = useState(0);
@@ -123,9 +124,9 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
     // ─── Add a serial (from picker or scan) ──────────────────────────────────
     const addComponentSerial = (variantId, serial, reqName) => {
         const currentSet = assembledSets[currentSetIndex];
-        const req = requirementsPerSet.find(r => r.variantId === variantId);
+        const req = requirementsPerSet.find(r => sameVariant(r.variantId, variantId));
 
-        const currentScanned = currentSet.components.filter(c => c.variantId === variantId).length;
+        const currentScanned = currentSet.components.filter(c => sameVariant(c.variantId, variantId)).length;
         if (currentScanned >= req.requiredQty) {
             showToast('error', `Linh kiện "${reqName}" đã đủ số lượng cho bộ này.`);
             return;
@@ -186,26 +187,27 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
             const res = order.orderType === 'DISASSEMBLY'
                 ? await resolveBarcode({ code })
                 : await resolveScan({ warehouseId: order.warehouseId, code });
-            const scanData = res.data;
+            const scanData = res?.data?.data ?? res?.data;
             const { variantId, serialNumber: serial, productName, trackSerial } = scanData;
-            
-            if (scanData.type !== 'SERIAL') {
-                if (scanData.type === 'BARCODE' && trackSerial === false) {
-                    // Allowed: This component does not track serials
-                } else {
-                    showToast('error', 'Đây là mã SKU, không phải Serial. Hãy nhập đúng mã Serial linh kiện.');
-                    return;
-                }
-            }
-            const req = requirementsPerSet.find(r => r.variantId === variantId);
+            const req = requirementsPerSet.find(r => sameVariant(r.variantId, variantId));
             if (!req) {
                 showToast('error', `Linh kiện "${productName || code}" không có trong danh sách cần tháo/lắp.`);
                 return;
             }
+            const requiresSerial = req.trackSerial !== false;
+
+            if (requiresSerial && !serial) {
+                showToast('error', `Linh kiện "${req.name}" quản lý serial. Hãy quét đúng mã serial của linh kiện này.`);
+                return;
+            }
+            if (!requiresSerial && scanData.type !== 'SERIAL' && scanData.type !== 'BARCODE') {
+                showToast('error', 'Không tìm thấy thông tin mã quét.');
+                return;
+            }
 
             // ── Kiểm tra serial tồn kho ──
-            if (scanData.type === 'SERIAL') {
-                const availableSet = await fetchAvailableSerials(variantId);
+            if (serial) {
+                const availableSet = await fetchAvailableSerials(req.variantId);
                 if (order.orderType === 'ASSEMBLY' && !availableSet.has(serial)) {
                     showToast('error', `⚠️ Serial "${serial}" đã được sử dụng hoặc không còn tồn tại trong kho.`, 8000);
                     return;
@@ -216,7 +218,11 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
                 }
             }
 
-            addComponentSerial(variantId, serial || `SKU-${scanData.code}-${new Date().getTime()}`, productName || req.name);
+            addComponentSerial(
+                req.variantId,
+                serial || `SKU-${variantId}-${Date.now()}`,
+                productName || req.name
+            );
         } catch (error) {
             showToast('error', error.response?.data?.userMessage || error.response?.data?.message || 'Không tìm thấy thông tin mã quét.');
         }
@@ -251,7 +257,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
         const set = sets[index];
         if (!set.parentSerial) return;
         const isFull = requirementsPerSet.every(req =>
-            sets[index].components.filter(c => c.variantId === req.variantId).length >= req.requiredQty
+            sets[index].components.filter(c => sameVariant(c.variantId, req.variantId)).length >= req.requiredQty
         );
         if (isFull) {
             showToast('success', `🎉 Hoàn tất thu hồi/lắp bộ số ${alreadyProduced + index + 1}!`);
@@ -264,7 +270,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
     const isSetComplete = (set) => {
         if (!set.parentSerial) return false;
         if (order.orderType === 'DISASSEMBLY') return true;
-        return requirementsPerSet.every(req => set.components.filter(c => c.variantId === req.variantId).length >= req.requiredQty);
+        return requirementsPerSet.every(req => set.components.filter(c => sameVariant(c.variantId, req.variantId)).length >= req.requiredQty);
     };
 
     const handleExecute = async () => {
@@ -401,7 +407,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
                                         value={scannedInput}
                                         onChange={e => setScannedInput(e.target.value)}
                                         onKeyDown={e => e.key === 'Enter' && handleConfirm()}
-                                        placeholder={needParentSerial ? 'Quét hoặc nhập tay mã Serial thành phẩm...' : 'Quét mã Serial linh kiện (hoặc bấm vào danh sách dưới)...'}
+                                        placeholder={needParentSerial ? 'Quét hoặc nhập tay mã Serial thành phẩm...' : 'Quét mã Barcode / Serial / SKU linh kiện...'}
                                         autoFocus
                                     />
                                 </div>
@@ -440,7 +446,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
                             </div>
 
                             {requirementsPerSet.map(req => {
-                                const scannedComps = currentSet.components.filter(c => c.variantId === req.variantId);
+                                const scannedComps = currentSet.components.filter(c => sameVariant(c.variantId, req.variantId));
                                 const isDone = scannedComps.length >= req.requiredQty;
                                 const picker = pickerState[req.variantId] || {};
                                 const isPickerOpen = picker.open && !needParentSerial;
