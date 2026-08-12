@@ -986,6 +986,9 @@ public class AssemblyOrderService {
             throw new BusinessException("Lệnh không có thành phẩm");
         }
 
+        java.util.Map<Long, BigDecimal> bomUnitPrices = buildBomUnitPriceMap(order);
+        BigDecimal targetUnitPrice = calculateTargetUnitPrice(order);
+
         List<com.duylongtech.backend.dto.request.InventoryDocumentLineRequest> exportLines = new java.util.ArrayList<>();
         List<com.duylongtech.backend.dto.request.InventoryDocumentLineRequest> importLines = new java.util.ArrayList<>();
         List<AssemblyOrderSerialRequest> serialMappings = new java.util.ArrayList<>();
@@ -997,8 +1000,8 @@ public class AssemblyOrderService {
             targetLine.setVariantId(targetVariant.getId());
             targetLine.setQuantityIn(BigDecimal.ONE);
             targetLine.setQuantityOut(BigDecimal.ONE); // Sets both, we will only use one based on the order type later
-            targetLine.setUnitCost(BigDecimal.ZERO);
-            targetLine.setUnitPrice(BigDecimal.ZERO);
+            targetLine.setUnitCost(targetUnitPrice);
+            targetLine.setUnitPrice(targetUnitPrice);
             targetLine.setSerialNumbers(List.of(set.getParentSerial()));
             
             if (ASSEMBLY.equals(order.getOrderType())) {
@@ -1024,8 +1027,9 @@ public class AssemblyOrderService {
         for (java.util.Map.Entry<Long, java.util.List<String>> entry : componentsToExport.entrySet()) {
             com.duylongtech.backend.dto.request.InventoryDocumentLineRequest compLine = new com.duylongtech.backend.dto.request.InventoryDocumentLineRequest();
             compLine.setVariantId(entry.getKey());
-            compLine.setUnitCost(BigDecimal.ZERO);
-            compLine.setUnitPrice(BigDecimal.ZERO);
+            BigDecimal componentUnitPrice = bomUnitPrices.getOrDefault(entry.getKey(), ZERO);
+            compLine.setUnitCost(componentUnitPrice);
+            compLine.setUnitPrice(componentUnitPrice);
             compLine.setSerialNumbers(entry.getValue());
             
             if (ASSEMBLY.equals(order.getOrderType())) {
@@ -1103,6 +1107,43 @@ public class AssemblyOrderService {
         }
         order.setUpdatedAt(LocalDateTime.now());
         assemblyOrderRepository.save(order);
+    }
+
+    private java.util.Map<Long, BigDecimal> buildBomUnitPriceMap(AssemblyOrder order) {
+        if (order.getBom() == null || order.getBom().getId() == null) {
+            return java.util.Map.of();
+        }
+
+        AssemblyBom bom = assemblyBomRepository.findByIdWithLines(order.getBom().getId()).orElse(null);
+        if (bom == null || bom.getLines() == null) {
+            return java.util.Map.of();
+        }
+
+        return bom.getLines().stream()
+                .filter(line -> line.getComponentVariant() != null && line.getComponentVariant().getId() != null)
+                .collect(Collectors.toMap(
+                        line -> line.getComponentVariant().getId(),
+                        line -> line.getUnitPrice() != null ? line.getUnitPrice() : ZERO,
+                        (first, second) -> first));
+    }
+
+    private BigDecimal calculateTargetUnitPrice(AssemblyOrder order) {
+        if (order.getBom() == null || order.getBom().getId() == null) {
+            return ZERO;
+        }
+
+        AssemblyBom bom = assemblyBomRepository.findByIdWithLines(order.getBom().getId()).orElse(null);
+        if (bom == null || bom.getLines() == null) {
+            return ZERO;
+        }
+
+        return bom.getLines().stream()
+                .map(line -> {
+                    BigDecimal unitPrice = line.getUnitPrice() != null ? line.getUnitPrice() : ZERO;
+                    BigDecimal quantity = line.getQuantity() != null ? line.getQuantity() : BigDecimal.ONE;
+                    return unitPrice.multiply(quantity);
+                })
+                .reduce(ZERO, BigDecimal::add);
     }
 
     private void updateDeviceComponentsForDisassembly(AssemblyOrder order,
