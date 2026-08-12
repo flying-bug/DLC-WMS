@@ -145,8 +145,31 @@ function SalesOrderDetailPage() {
   };
 
   const handleCreateExport = () => {
-    // Navigate trực tiếp sang trang tạo phiếu xuất kho mới,
-    // truyền toàn bộ thông tin SO qua location.state để tự điền
+    const exportableLines = (so.lines || [])
+      .map(l => {
+        const rem = l.remainingQuantity !== undefined && l.remainingQuantity !== null
+          ? Number(l.remainingQuantity)
+          : Number(l.quantity || 1);
+        return {
+          variantId: String(l.variantId),
+          quantity: rem,
+          maxQuantity: rem,
+          orderedQuantity: l.quantity,
+          exportedQuantity: l.exportedQuantity || 0,
+          price: l.unitPrice || l.price || 0,
+          unitName: l.unitName || '',
+          vatPercent: l.vatRate || l.vatPercent || 0,
+          warrantyMonths: l.warrantyMonths || 0,
+          note: l.note || '',
+        };
+      })
+      .filter(l => l.quantity > 0);
+
+    if (exportableLines.length === 0) {
+      showToast('info', 'Đơn hàng này đã xuất kho đủ toàn bộ sản phẩm');
+      return;
+    }
+
     navigate('/export-slips/create', {
       state: {
         soData: {
@@ -160,15 +183,7 @@ function SalesOrderDetailPage() {
           partnerAddress: so.partnerAddress,
           note: so.note || `Xuất kho theo đơn hàng ${so.soCode}`,
           salespersonId: so.salespersonId,
-          lines: (so.lines || []).map(l => ({
-            variantId: String(l.variantId),
-            quantity: l.quantity || 1,
-            price: l.unitPrice || l.price || 0,
-            unitName: l.unitName || '',
-            vatPercent: l.vatRate || l.vatPercent || 0,
-            warrantyMonths: l.warrantyMonths || 0,
-            note: l.note || '',
-          })),
+          lines: exportableLines,
         },
         returnUrl: `/sales-orders/${id}`,
       }
@@ -301,6 +316,10 @@ function SalesOrderDetailPage() {
                     onClick={() => navigate(`/export-slips/${existingDraftExport.id}/edit`)}
                   >
                     <i className="bi bi-arrow-right-circle" /> Tiếp tục xuất kho
+                  </button>
+                ) : so.isFullyExported ? (
+                  <button className={styles.btnSecondary} disabled title="Đơn hàng này đã xuất kho đủ 100%">
+                    <i className="bi bi-check-all" /> Đã xuất kho đủ
                   </button>
                 ) : (
                   <button

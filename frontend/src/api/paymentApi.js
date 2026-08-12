@@ -16,3 +16,6 @@ export const getPartnerDebtBalance = (partnerId) =>
 
 export const getPartnerPaymentHistory = (partnerId) =>
   axiosClient.get(`${BASE}/history/${partnerId}`);
+
+export const getPartnerLedgerDetails = (partnerId) =>
+  axiosClient.get(`${BASE}/ledger/${partnerId}`);

@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
 import com.duylongtech.backend.dto.request.PaymentRequest;
+import com.duylongtech.backend.dto.response.PartnerLedgerResponse;
 import com.duylongtech.backend.dto.response.PaymentResponse;
 import com.duylongtech.backend.entity.Partner;
 import com.duylongtech.backend.entity.PartnerLedger;
@@ -125,6 +126,29 @@ public class PaymentServiceImpl implements PaymentService {
         return paymentTransactionRepository.findByPartnerIdOrderByCreatedAtDesc(partnerId)
                 .stream()
                 .map(txn -> toResponse(txn, partner))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PartnerLedgerResponse> getPartnerLedgerDetails(Long partnerId) {
+        if (partnerId == null) {
+            return List.of();
+        }
+        return partnerLedgerRepository.findByPartnerIdOrderByIdDesc(partnerId)
+                .stream()
+                .map(ledger -> PartnerLedgerResponse.builder()
+                        .id(ledger.getId())
+                        .partnerId(ledger.getPartnerId())
+                        .entityType(ledger.getEntityType())
+                        .entityId(ledger.getEntityId())
+                        .referenceCode(ledger.getReferenceCode())
+                        .amountDebt(ledger.getAmountDebt())
+                        .amountReceipt(ledger.getAmountReceipt())
+                        .balanceAfter(ledger.getBalanceAfter())
+                        .note(ledger.getNote())
+                        .createdAt(ledger.getCreatedAt())
+                        .build())
                 .collect(Collectors.toList());
     }
 

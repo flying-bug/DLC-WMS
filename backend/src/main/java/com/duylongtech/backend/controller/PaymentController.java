@@ -1,6 +1,7 @@
 package com.duylongtech.backend.controller;
 
 import com.duylongtech.backend.dto.request.PaymentRequest;
+import com.duylongtech.backend.dto.response.PartnerLedgerResponse;
 import com.duylongtech.backend.dto.response.PaymentResponse;
 import com.duylongtech.backend.service.PaymentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -54,5 +55,12 @@ public class PaymentController {
     @Operation(summary = "Get receipt/voucher history for a partner")
     public ResponseEntity<List<PaymentResponse>> getPartnerHistory(@PathVariable Long partnerId) {
         return ResponseEntity.ok(paymentService.getPartnerPaymentHistory(partnerId));
+    }
+
+    @GetMapping("/ledger/{partnerId}")
+    @PreAuthorize("hasAuthority('payment:view')")
+    @Operation(summary = "Get full ledger details (invoices & payments) for a partner")
+    public ResponseEntity<List<PartnerLedgerResponse>> getPartnerLedger(@PathVariable Long partnerId) {
+        return ResponseEntity.ok(paymentService.getPartnerLedgerDetails(partnerId));
     }
 }

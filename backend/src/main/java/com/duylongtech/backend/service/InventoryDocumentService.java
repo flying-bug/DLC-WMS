@@ -32,6 +32,9 @@ import com.duylongtech.backend.repository.AssemblyOrderRepository;
 import com.duylongtech.backend.repository.SalesOrderRepository;
 import com.duylongtech.backend.entity.SalesOrder;
 import com.duylongtech.backend.entity.SalesOrderLine;
+import com.duylongtech.backend.entity.PurchaseOrder;
+import com.duylongtech.backend.entity.PurchaseOrderLine;
+import java.util.Map;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
 import com.duylongtech.backend.repository.DeviceComponentSerialRepository;
 import com.duylongtech.backend.repository.StocktakeRepository;
@@ -177,6 +180,7 @@ public class InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse createExport(InventoryDocumentRequest req) {
         validateCreateRequest(req);
+        validateOrderLineQuantities(req, null);
         InventoryDocument doc = buildBaseDocument(req, EXPORT_DOC_TYPE, resolveCreateDocCode(req.getDocCode()));
         for (int i = 0; i < req.getLines().size(); i++) {
             doc.getLines().add(toExportLineEntity(doc, req.getLines().get(i), i));
@@ -189,6 +193,7 @@ public class InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse createImport(InventoryDocumentRequest req) {
         validateCreateImportRequest(req);
+        validateOrderLineQuantities(req, null);
         InventoryDocument doc = buildBaseDocument(req, IMPORT_DOC_TYPE, resolveCreateImportDocCode(req.getDocCode()));
         for (int i = 0; i < req.getLines().size(); i++) {
             doc.getLines().add(toImportLineEntity(doc, req.getLines().get(i), i));
@@ -228,6 +233,7 @@ public class InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse updateExport(Long id, InventoryDocumentRequest req) {
         validateUpdateRequest(req);
+        validateOrderLineQuantities(req, id);
         InventoryDocument doc = findExportOrThrow(id);
         ensureEditable(doc);
         updateBaseDocument(id, doc, req, "Mã phiếu xuất kho đã tồn tại", false);
@@ -241,6 +247,7 @@ public class InventoryDocumentService {
     @Transactional
     public InventoryDocumentResponse updateImport(Long id, InventoryDocumentRequest req) {
         validateUpdateImportRequest(req);
+        validateOrderLineQuantities(req, id);
         InventoryDocument doc = findImportOrThrow(id);
         ensureEditable(doc);
         updateBaseDocument(id, doc, req, "Mã phiếu nhập kho đã tồn tại", true);
@@ -249,6 +256,82 @@ public class InventoryDocumentService {
             doc.getLines().add(toImportLineEntity(doc, req.getLines().get(i), i));
         }
         return toResponse(inventoryDocumentRepository.save(doc));
+    }
+
+    private void validateOrderLineQuantities(InventoryDocumentRequest req, Long excludeDocId) {
+        Long soId = req.getSalesOrderId();
+        if (soId == null && "SALES_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType()))) {
+            soId = req.getReferenceId();
+        }
+        if (soId != null) {
+            SalesOrder so = salesOrderRepository.findByIdWithDetails(soId).orElse(null);
+            if (so != null && so.getLines() != null && req.getLines() != null) {
+                Map<Long, BigDecimal> orderedMap = so.getLines().stream()
+                        .collect(Collectors.toMap(SalesOrderLine::getVariantId, SalesOrderLine::getQuantity,
+                                (a, b) -> a));
+                for (InventoryDocumentLineRequest lineReq : req.getLines()) {
+                    if (lineReq.getVariantId() == null)
+                        continue;
+                    BigDecimal orderedQty = orderedMap.get(lineReq.getVariantId());
+                    if (orderedQty != null) {
+                        BigDecimal exportedAlready = inventoryDocumentLineRepository
+                                .sumExportedQuantityBySalesOrderIdAndVariantIdExcludingDoc(so.getId(),
+                                        lineReq.getVariantId(), excludeDocId);
+                        if (exportedAlready == null)
+                            exportedAlready = ZERO;
+                        BigDecimal remaining = orderedQty.subtract(exportedAlready);
+                        if (remaining.compareTo(ZERO) < 0)
+                            remaining = ZERO;
+
+                        BigDecimal qtyOut = lineReq.getQuantityOut() != null ? lineReq.getQuantityOut() : ZERO;
+                        if (qtyOut.compareTo(remaining) > 0) {
+                            ProductVariant pv = productVariantRepository.findById(lineReq.getVariantId()).orElse(null);
+                            String skuName = pv != null ? pv.getSku() : String.valueOf(lineReq.getVariantId());
+                            throw new BusinessException("Số lượng xuất kho (" + qtyOut
+                                    + ") vượt quá số lượng còn lại trong đơn bán hàng " + so.getSoCode() + " (tối đa "
+                                    + remaining + ") cho sản phẩm SKU: " + skuName);
+                        }
+                    }
+                }
+            }
+        }
+
+        Long poId = req.getPurchaseOrderId();
+        if (poId == null && "PURCHASE_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType()))) {
+            poId = req.getReferenceId();
+        }
+        if (poId != null) {
+            PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(poId).orElse(null);
+            if (po != null && po.getLines() != null && req.getLines() != null) {
+                Map<Long, BigDecimal> orderedMap = po.getLines().stream()
+                        .collect(Collectors.toMap(PurchaseOrderLine::getVariantId, PurchaseOrderLine::getQuantity,
+                                (a, b) -> a));
+                for (InventoryDocumentLineRequest lineReq : req.getLines()) {
+                    if (lineReq.getVariantId() == null)
+                        continue;
+                    BigDecimal orderedQty = orderedMap.get(lineReq.getVariantId());
+                    if (orderedQty != null) {
+                        BigDecimal importedAlready = inventoryDocumentLineRepository
+                                .sumImportedQuantityByPurchaseOrderIdAndVariantIdExcludingDoc(po.getId(),
+                                        lineReq.getVariantId(), excludeDocId);
+                        if (importedAlready == null)
+                            importedAlready = ZERO;
+                        BigDecimal remaining = orderedQty.subtract(importedAlready);
+                        if (remaining.compareTo(ZERO) < 0)
+                            remaining = ZERO;
+
+                        BigDecimal qtyIn = lineReq.getQuantityIn() != null ? lineReq.getQuantityIn() : ZERO;
+                        if (qtyIn.compareTo(remaining) > 0) {
+                            ProductVariant pv = productVariantRepository.findById(lineReq.getVariantId()).orElse(null);
+                            String skuName = pv != null ? pv.getSku() : String.valueOf(lineReq.getVariantId());
+                            throw new BusinessException("Số lượng nhập kho (" + qtyIn
+                                    + ") vượt quá số lượng còn lại trong đơn mua hàng " + po.getPoCode() + " (tối đa "
+                                    + remaining + ") cho sản phẩm SKU: " + skuName);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -532,8 +615,19 @@ public class InventoryDocumentService {
         // partnerId)
         if (savedImport.getPartnerId() != null) {
             BigDecimal totalImportValue = savedImport.getLines().stream()
-                    .map(l -> (l.getQuantityIn() != null ? l.getQuantityIn() : BigDecimal.ZERO)
-                            .multiply(l.getUnitCost() != null ? l.getUnitCost() : BigDecimal.ZERO))
+                    .map(l -> {
+                        if (l.getLineAmount() != null && l.getLineAmount().compareTo(BigDecimal.ZERO) > 0) {
+                            return l.getLineAmount();
+                        }
+                        BigDecimal qty = l.getQuantityIn() != null ? l.getQuantityIn() : BigDecimal.ZERO;
+                        BigDecimal cost = l.getUnitCost() != null ? l.getUnitCost() : BigDecimal.ZERO;
+                        BigDecimal subtotal = qty.multiply(cost);
+                        BigDecimal vatRate = l.getVatRate() != null ? l.getVatRate()
+                                : (l.getVatPercent() != null ? l.getVatPercent() : BigDecimal.ZERO);
+                        BigDecimal vatAmount = subtotal.multiply(vatRate).divide(BigDecimal.valueOf(100), 2,
+                                RoundingMode.HALF_UP);
+                        return subtotal.add(vatAmount);
+                    })
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             partnerLedgerService.recordLedger(
@@ -1368,19 +1462,32 @@ public class InventoryDocumentService {
         doc.setIssuePurpose(ISSUE_PURPOSE_SALES);
 
         for (SalesOrderLine soLine : so.getLines()) {
+            BigDecimal exported = inventoryDocumentLineRepository
+                    .sumExportedQuantityBySalesOrderIdAndVariantId(so.getId(), soLine.getVariantId());
+            if (exported == null)
+                exported = ZERO;
+            BigDecimal remaining = soLine.getQuantity().subtract(exported);
+            if (remaining.compareTo(ZERO) <= 0) {
+                continue;
+            }
+
             InventoryDocumentLine line = new InventoryDocumentLine();
             line.setInventoryDocument(doc);
             line.setVariantId(soLine.getVariantId());
-            line.setQuantityOut(soLine.getQuantity());
+            line.setQuantityOut(remaining);
             line.setQuantityIn(ZERO);
             line.setUnitCost(ZERO);
             line.setUnitPrice(soLine.getUnitPrice());
             line.setVatRate(soLine.getVatRate());
             line.setVatPercent(soLine.getVatRate());
             line.setWarrantyMonths(soLine.getWarrantyMonths());
-            line.setLineAmount(soLine.getLineAmount());
+            line.setLineAmount(soLine.getUnitPrice().multiply(remaining));
             line.setNote(soLine.getNote());
             doc.getLines().add(line);
+        }
+
+        if (doc.getLines().isEmpty()) {
+            throw new BusinessException("Đơn bán hàng này đã xuất kho đủ toàn bộ sản phẩm");
         }
 
         return toResponse(inventoryDocumentRepository.save(doc));

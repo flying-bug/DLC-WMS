@@ -132,6 +132,7 @@ public class BackupService {
                 "-P", port,
                 "-u", dbUser,
                 "--password=" + dbPass,
+                "--skip-ssl",
                 "--single-transaction",
                 "--routines",
                 "--triggers",

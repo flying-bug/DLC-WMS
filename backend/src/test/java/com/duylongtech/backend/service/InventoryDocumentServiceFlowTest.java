@@ -15,6 +15,7 @@ import com.duylongtech.backend.entity.Warranty;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
 import com.duylongtech.backend.repository.AssemblyOrderRepository;
+import com.duylongtech.backend.repository.DeviceComponentSerialRepository;
 import com.duylongtech.backend.repository.InventoryBalanceRepository;
 import com.duylongtech.backend.repository.InventoryCostLayerRepository;
 import com.duylongtech.backend.repository.InventoryDocumentLineRepository;
@@ -87,6 +88,7 @@ class InventoryDocumentServiceFlowTest {
     @Mock private RepairRepository repairRepository;
     @Mock private PurchaseOrderRepository purchaseOrderRepository;
     @Mock private SalesOrderService salesOrderService;
+    @Mock private DeviceComponentSerialRepository deviceComponentSerialRepository;
 
     @InjectMocks
     private InventoryDocumentService service;
@@ -260,6 +262,24 @@ class InventoryDocumentServiceFlowTest {
     }
 
     @Test
+    void postImport_partnerWithVat_recordsSupplierDebtWithVat() {
+        InventoryDocument document = importDocument("DRAFT", decimal("10"), decimal("100"));
+        document.setPartnerId(20L);
+        // Line subtotal = 1000, vat 10% = 100 => lineAmount = 1100
+        document.getLines().get(0).setVatRate(decimal("10"));
+        document.getLines().get(0).setLineAmount(decimal("1100"));
+        stubImportDocument(document);
+        when(inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(WAREHOUSE_ID, VARIANT_ID, "GOOD"))
+                .thenReturn(Optional.of(balance(decimal("0"), decimal("0"))));
+
+        service.postImport(DOCUMENT_ID);
+
+        verify(partnerLedgerService).recordLedger(
+                eq(20L), eq("INVENTORY_IMPORT"), eq(DOCUMENT_ID), eq("NK00050"),
+                eq(decimal("1100")), eq(BigDecimal.ZERO), any());
+    }
+
+    @Test
     void postImport_serialTrackedProduct_createsSerialsAndPerSerialBalances() {
         InventoryDocument document = importDocument("DRAFT", decimal("2"), decimal("90"));
         document.getLines().get(0).setSerialNumbersText("SN-001\nSN-002");
@@ -348,7 +368,7 @@ class InventoryDocumentServiceFlowTest {
     }
 
     @Test
-    void postImport_purchaseOrderReference_doesNotRecordSupplierDebtAgain() {
+    void postImport_purchaseOrderReference_recordsSupplierDebt() {
         InventoryDocument document = importDocument("DRAFT", decimal("2"), decimal("100"));
         document.setPartnerId(20L);
         document.setReferenceType("PO");
@@ -358,7 +378,9 @@ class InventoryDocumentServiceFlowTest {
 
         service.postImport(DOCUMENT_ID);
 
-        verify(partnerLedgerService, never()).recordLedger(any(), any(), any(), any(), any(), any(), any());
+        verify(partnerLedgerService).recordLedger(
+                eq(20L), eq("INVENTORY_IMPORT"), eq(DOCUMENT_ID), eq("NK00050"),
+                eq(decimal("200")), eq(BigDecimal.ZERO), any());
     }
 
     @Test
