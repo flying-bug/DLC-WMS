@@ -32,6 +32,7 @@ public class SalesOrderService {
     private final AuditLogService auditLogService;
     private final PartnerLedgerService partnerLedgerService;
     private final EmailService emailService;
+    private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
 
     // =========================================================
     // QUERY
@@ -496,6 +497,12 @@ public class SalesOrderService {
                     BigDecimal available = inventoryBalanceRepository
                             .sumAvailableQuantityByWarehouseAndVariant(so.getWarehouseId(), line.getVariantId(), "GOOD");
 
+                    BigDecimal exported = inventoryDocumentLineRepository
+                            .sumExportedQuantityBySalesOrderIdAndVariantId(so.getId(), line.getVariantId());
+                    if (exported == null) exported = BigDecimal.ZERO;
+                    BigDecimal remaining = line.getQuantity().subtract(exported);
+                    if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
+
                     return SalesOrderResponse.SalesOrderLineResponse.builder()
                             .id(line.getId())
                             .variantId(line.getVariantId())
@@ -511,9 +518,14 @@ public class SalesOrderService {
                             .lineAmount(line.getLineAmount())
                             .note(line.getNote())
                             .availableQuantity(available != null ? available : BigDecimal.ZERO)
+                            .exportedQuantity(exported)
+                            .remainingQuantity(remaining)
                             .build();
                 })
                 .collect(Collectors.toList());
+
+        boolean isFullyExported = !lineResponses.isEmpty() && lineResponses.stream()
+                .allMatch(l -> l.getRemainingQuantity().compareTo(BigDecimal.ZERO) <= 0);
 
         List<SalesOrderResponse.StockReservationResponse> reservationResponses = reservations.stream()
                 .map(r -> SalesOrderResponse.StockReservationResponse.builder()
@@ -531,6 +543,7 @@ public class SalesOrderService {
                 .collect(Collectors.toList());
 
         SalesOrderResponse response = toSummaryResponse(so);
+        response.setIsFullyExported(isFullyExported);
         response.setLines(lineResponses);
         response.setReservations(reservationResponses);
         return response;

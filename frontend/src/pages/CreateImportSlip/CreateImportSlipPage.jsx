@@ -620,6 +620,13 @@ function CreateImportSlipPage() {
       }
       return showToast('error', 'Vui lòng điền đầy đủ thông tin bắt buộc.');
     }
+
+    for (const item of items) {
+      if (item.maxQuantity !== undefined && item.maxQuantity !== null && Number(item.quantity) > Number(item.maxQuantity)) {
+        const sku = productById.get(String(item.variantId))?.sku || '';
+        return showToast('error', `Số lượng nhập (${item.quantity}) vượt quá số lượng còn lại trong đơn mua hàng (tối đa ${item.maxQuantity}) ${sku ? `cho sản phẩm SKU ${sku}` : ''}`);
+      }
+    }
     setSaving(true);
     let createdId = null;
     try {

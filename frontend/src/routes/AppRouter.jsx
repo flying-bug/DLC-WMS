@@ -166,8 +166,8 @@ function AppRouter() {
                     <Route path="/stocktakes/:id" element={<StocktakeDetailPage />} />
                     <Route path="/stocktakes/:id/edit" element={<CreateStocktakePage />} />
                     <Route path="/reports" element={<ReportListPage />} />
-                    <Route path="/payments" element={<Navigate to="/payments/overview" replace />} />
-                    <Route path="/payments/overview" element={<PaymentOverviewPage />} />
+                    <Route path="/payments" element={<Navigate to="/payments/receipt" replace />} />
+                    <Route path="/payments/overview" element={<Navigate to="/payments/receipt" replace />} />
                     <Route path="/payments/expense" element={<PaymentManagementPage initialMode="VOUCHER" />} />
                     <Route path="/payments/receipt" element={<PaymentManagementPage initialMode="RECEIPT" />} />
                     <Route path="/payments/history/:partnerId" element={<PaymentHistoryPage />} />

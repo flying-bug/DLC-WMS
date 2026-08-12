@@ -77,9 +77,8 @@ const AdminLayout = ({ children }) => {
             { path: '/sales-orders', label: 'Đơn bán hàng' }
         ],
         finance: [
-            { path: '/payments/overview', label: 'Tổng quan' },
-            { path: '/payments/expense', label: 'Phiếu Chi' },
-            { path: '/payments/receipt', label: 'Phiếu Thu' }
+            { path: '/payments/receipt', label: 'Phiếu Thu' },
+            { path: '/payments/expense', label: 'Phiếu Chi' }
         ],
         service: [
             { path: '/warranties', label: 'Bảo hành' },

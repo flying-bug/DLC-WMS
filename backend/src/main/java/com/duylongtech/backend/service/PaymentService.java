@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.PaymentRequest;
+import com.duylongtech.backend.dto.response.PartnerLedgerResponse;
 import com.duylongtech.backend.dto.response.PaymentResponse;
 
 import java.math.BigDecimal;
@@ -17,4 +18,6 @@ public interface PaymentService {
     BigDecimal getPartnerDebtBalance(Long partnerId);
 
     List<PaymentResponse> getPartnerPaymentHistory(Long partnerId);
+
+    List<PartnerLedgerResponse> getPartnerLedgerDetails(Long partnerId);
 }

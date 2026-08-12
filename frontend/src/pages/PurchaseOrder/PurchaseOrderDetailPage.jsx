@@ -88,6 +88,35 @@ function PurchaseOrderDetailPage() {
     }
   };
 
+  const handleCreateImport = () => {
+    const importableLines = (po.lines || [])
+      .map(l => {
+        const rem = l.remainingQuantity !== undefined && l.remainingQuantity !== null
+          ? Number(l.remainingQuantity)
+          : Number(l.quantity || 1);
+        return {
+          ...l,
+          remainingQuantity: rem,
+          quantity: rem,
+        };
+      })
+      .filter(l => l.remainingQuantity > 0);
+
+    if (importableLines.length === 0) {
+      showToast('info', 'Đơn mua hàng này đã nhập kho đủ toàn bộ sản phẩm');
+      return;
+    }
+
+    navigate('/import-history/create', {
+      state: {
+        poData: {
+          ...po,
+          lines: importableLines,
+        }
+      }
+    });
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -145,9 +174,15 @@ function PurchaseOrderDetailPage() {
               </button>
             )}
             {(po.status === 'APPROVED' || po.status === 'POSTED') && (
-              <button className={styles.btnPrimary} onClick={() => navigate('/import-history/create', { state: { poData: po } })}>
-                <i className="bi bi-box-seam" /> Tạo phiếu nhập
-              </button>
+              po.isFullyImported ? (
+                <button className={styles.btnSecondary} disabled title="Đơn hàng này đã nhập kho đủ 100%">
+                  <i className="bi bi-check-all" /> Đã nhập kho đủ
+                </button>
+              ) : (
+                <button className={styles.btnPrimary} onClick={handleCreateImport}>
+                  <i className="bi bi-box-seam" /> Tạo phiếu nhập
+                </button>
+              )
             )}
             {(po.status === 'DRAFT' || po.status === 'APPROVED') && (
               <button className={styles.btnCancel} onClick={() => setConfirmCancel(true)}>

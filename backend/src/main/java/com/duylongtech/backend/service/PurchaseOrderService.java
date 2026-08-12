@@ -26,6 +26,7 @@ public class PurchaseOrderService {
     private final PartnerRepository partnerRepository;
     private final UserRepository userRepository;
     private final PartnerLedgerService partnerLedgerService;
+    private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
 
     // =========================================================
     // QUERY
@@ -290,6 +291,12 @@ public class PurchaseOrderService {
                             && variant.getProduct().getUnit() != null)
                             ? variant.getProduct().getUnit().getName() : null;
 
+                    BigDecimal imported = inventoryDocumentLineRepository
+                            .sumImportedQuantityByPurchaseOrderIdAndVariantId(po.getId(), line.getVariantId());
+                    if (imported == null) imported = BigDecimal.ZERO;
+                    BigDecimal remaining = line.getQuantity().subtract(imported);
+                    if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
+
                     return PurchaseOrderResponse.PurchaseOrderLineResponse.builder()
                             .id(line.getId())
                             .variantId(line.getVariantId())
@@ -305,11 +312,17 @@ public class PurchaseOrderService {
                             .vatAmount(line.getVatAmount())
                             .lineAmount(line.getLineAmount())
                             .note(line.getNote())
+                            .importedQuantity(imported)
+                            .remainingQuantity(remaining)
                             .build();
                 })
                 .collect(Collectors.toList());
 
+        boolean isFullyImported = !lineResponses.isEmpty() && lineResponses.stream()
+                .allMatch(l -> l.getRemainingQuantity().compareTo(BigDecimal.ZERO) <= 0);
+
         PurchaseOrderResponse response = toSummaryResponse(po);
+        response.setIsFullyImported(isFullyImported);
         response.setLines(lineResponses);
         return response;
     }

@@ -30,8 +30,8 @@ const selectStyles = {
     minHeight: 36,
     height: 36,
     fontSize: 13,
-    borderColor: state.isFocused ? '#0075c0' : '#d1d5db',
-    boxShadow: state.isFocused ? '0 0 0 1px #0075c0' : 'none',
+    borderColor: state.isFocused ? 'var(--color-primary)' : '#d1d5db',
+    boxShadow: state.isFocused ? '0 0 0 1px var(--color-primary)' : 'none',
   }),
   valueContainer: (base) => ({ ...base, height: 36, padding: '0 8px' }),
   input: (base) => ({ ...base, margin: 0, padding: 0 }),
@@ -250,8 +250,21 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                   />
                 </div>
 
-                <div className={styles.debtPanel}>
-                  <span>Công nợ hiện tại</span>
+                <div
+                  className={`${styles.debtPanel} ${partnerId ? styles.debtPanelClickable : ''}`}
+                  onClick={openFullHistory}
+                  title={partnerId ? 'Bấm để xem lịch sử công nợ & hóa đơn chi tiết' : 'Vui lòng chọn đối tác'}
+                >
+                  <div className={styles.debtPanelLabelGroup}>
+                    <span>Công nợ hiện tại</span>
+                    {partnerId ? (
+                      <span className={styles.debtPanelBadge}>
+                        <i className="bi bi-box-arrow-up-right" /> Chi tiết
+                      </span>
+                    ) : (
+                      <span className={styles.debtPanelHint}>(Chọn đối tác để xem chi tiết)</span>
+                    )}
+                  </div>
                   <strong>{money(debtBalance)} đ</strong>
                 </div>
 
