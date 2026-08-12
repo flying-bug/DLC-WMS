@@ -9,6 +9,7 @@ import styles from './PaymentHistoryPage.module.css';
 import { formatDateTime } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
+
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 const statusText = (status) => (status === 'POSTED' ? 'Ghi sổ' : status === 'DRAFT' ? 'Nháp' : status || '-');
@@ -228,6 +229,12 @@ function PaymentHistoryPage() {
                 <option value="SALES_ORDER">Đơn bán hàng</option>
               </SearchableSelect>
             </div>
+            <SearchableSelect className={styles.select} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="POSTED">Ghi sổ</option>
+              <option value="DRAFT">Nháp</option>
+            </SearchableSelect>
+          </div>
 
             <div className={styles.tableWrap}>
               <table className={styles.table}>

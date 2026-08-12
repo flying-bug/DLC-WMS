@@ -611,7 +611,8 @@ public class InventoryDocumentService {
         InventoryDocument savedImport = inventoryDocumentRepository.save(savedDoc);
         syncStocktakeReference(savedImport);
 
-        // Ghi nhận tăng công nợ nhà cung cấp khi nhập kho (bao gồm %VAT nếu có)
+        // Ghi nhận tăng công nợ nhà cung cấp khi nhập kho (luôn luôn ghi nhận nếu có
+        // partnerId)
         if (savedImport.getPartnerId() != null) {
             BigDecimal totalImportValue = savedImport.getLines().stream()
                     .map(l -> {
