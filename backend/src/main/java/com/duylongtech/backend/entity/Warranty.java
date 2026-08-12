@@ -29,6 +29,13 @@ public class Warranty {
     @Column(name = "sales_order_id")
     private Long salesOrderId;
 
+    @Column(name = "export_slip_id")
+    private Long exportSlipId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "export_slip_id", insertable = false, updatable = false)
+    private InventoryDocument exportSlip;
+
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 

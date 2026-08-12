@@ -5,9 +5,6 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import * as warrantyApi from '../../api/warrantyApi';
 import styles from './WarrantyDetailPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
-import { useReactToPrint } from 'react-to-print';
-import { useRef } from 'react';
-import WarrantySlipTemplate from './components/WarrantySlipTemplate';
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
@@ -37,12 +34,6 @@ function WarrantyDetailPage() {
   const [warranty, setWarranty] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  const printRef = useRef(null);
-  const handlePrintQuote = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `Phieu_Bao_Hanh_${id}`
-  });
 
   const loadWarranty = useCallback(async () => {
     setLoading(true);
@@ -108,9 +99,7 @@ function WarrantyDetailPage() {
             </span>
           </div>
           <div className={styles.headerRight} style={{ display: 'flex', gap: '8px' }}>
-            <button className={styles.btnEdit} style={{ backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={handlePrintQuote}>
-              <i className="bi bi-printer"></i> In phiếu bảo hành
-            </button>
+
             <button className={styles.btnEdit} onClick={() => navigate(`/repairs/create?warrantyId=${id}`)}>
               <i className="bi bi-tools"></i> Tạo phiếu sửa
             </button>
@@ -135,6 +124,22 @@ function WarrantyDetailPage() {
                     <p>{formatDate(warranty.startDate)}</p>
                   </div>
                   <div className={styles.infoItem}>
+                    <label>Kèm theo chứng từ</label>
+                    <p>
+                      {warranty.exportSlipId ? (
+                        <span style={{ color: 'var(--color-primary)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate(`/export-slips/${warranty.exportSlipId}/edit`)}>
+                          {warranty.exportSlipCode || 'Phiếu xuất kho'}
+                        </span>
+                      ) : warranty.salesOrderId ? (
+                        <span style={{ color: 'var(--color-primary)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate(`/sales-orders/${warranty.salesOrderId}`)}>
+                          {`Đơn hàng #${warranty.salesOrderId}`}
+                        </span>
+                      ) : (
+                        'Không có chứng từ kèm theo'
+                      )}
+                    </p>
+                  </div>
+                  <div className={styles.infoItem}>
                     <label>Ngày hết hạn</label>
                     <p>{formatDate(warranty.endDate)}</p>
                   </div>
@@ -151,7 +156,7 @@ function WarrantyDetailPage() {
                       <table className="misa-table" style={{ width: '100%' }}>
                         <thead>
                           <tr>
-                            <th style={{ width: '40px', textAlign: 'center' }}>STT</th>
+                            <th style={{ width: '50px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
                             <th>Mã SKU</th>
                             <th>Sản phẩm</th>
                             <th>Serial</th>
@@ -196,48 +201,48 @@ function WarrantyDetailPage() {
                         <th style={{ minWidth: '120px', textAlign: 'right' }}>Chi phí (VNĐ)</th>
                       </tr>
                     </thead>
-                  <tbody>
-                    {repairs.length > 0 ? (
-                      repairs.map(repair => {
-                        const rStatus = REPAIR_STATUS_LABELS[repair.repairStatus] || { label: repair.repairStatus || 'Không rõ' };
-                        return (
-                          <tr key={repair.id} className="cursor-pointer hover-highlight" onClick={() => navigate(`/repairs/${repair.id}`)}>
-                            <td>
-                              <span style={{ color: 'var(--color-primary)', fontWeight: '500' }}>
-                                {repair.repairCode}
-                              </span>
-                            </td>
-                            <td>{formatDate(repair.receivedDate)}</td>
-                            <td>
-                              <span style={{
-                                padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500', display: 'inline-block',
-                                backgroundColor: rStatus.code === 'success' ? '#dcfce7' : rStatus.code === 'danger' ? '#fee2e2' : rStatus.code === 'warning' ? '#fef3c7' : '#dbeafe',
-                                color: rStatus.code === 'success' ? '#166534' : rStatus.code === 'danger' ? '#991b1b' : rStatus.code === 'warning' ? '#92400e' : '#1e40af'
-                              }}>
-                                {rStatus.label}
-                              </span>
-                            </td>
-                            <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={repair.issueDescription || ''}>{repair.issueDescription || 'Chưa ghi nhận'}</td>
-                            <td>{repair.responsiblePerson || 'Chưa phân công'}</td>
-                            <td style={{ textAlign: 'right', fontWeight: '500' }}>{money(repair.totalAmount)}</td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-                          Sản phẩm chưa từng được sửa chữa
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                    <tbody>
+                      {repairs.length > 0 ? (
+                        repairs.map(repair => {
+                          const rStatus = REPAIR_STATUS_LABELS[repair.repairStatus] || { label: repair.repairStatus || 'Không rõ' };
+                          return (
+                            <tr key={repair.id} className="cursor-pointer hover-highlight" onClick={() => navigate(`/repairs/${repair.id}`)}>
+                              <td>
+                                <span style={{ color: 'var(--color-primary)', fontWeight: '500' }}>
+                                  {repair.repairCode}
+                                </span>
+                              </td>
+                              <td>{formatDate(repair.receivedDate)}</td>
+                              <td>
+                                <span style={{
+                                  padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500', display: 'inline-block',
+                                  backgroundColor: rStatus.code === 'success' ? '#dcfce7' : rStatus.code === 'danger' ? '#fee2e2' : rStatus.code === 'warning' ? '#fef3c7' : '#dbeafe',
+                                  color: rStatus.code === 'success' ? '#166534' : rStatus.code === 'danger' ? '#991b1b' : rStatus.code === 'warning' ? '#92400e' : '#1e40af'
+                                }}>
+                                  {rStatus.label}
+                                </span>
+                              </td>
+                              <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={repair.issueDescription || ''}>{repair.issueDescription || 'Chưa ghi nhận'}</td>
+                              <td>{repair.responsiblePerson || 'Chưa phân công'}</td>
+                              <td style={{ textAlign: 'right', fontWeight: '500' }}>{money(repair.totalAmount)}</td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                            Sản phẩm chưa từng được sửa chữa
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div>
+          <div>
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <i className="bi bi-person"></i>
@@ -266,9 +271,6 @@ function WarrantyDetailPage() {
             </div>
           </div>
         </div>
-      </div>
-      <div style={{ display: 'none' }}>
-        <WarrantySlipTemplate ref={printRef} warranty={warranty} />
       </div>
     </AdminLayout>
   );

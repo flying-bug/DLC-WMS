@@ -39,6 +39,8 @@ export default function SearchableSelect({ children, value, onChange, name, clas
         }
     };
 
+    const { padding, height, minHeight, ...cleanStyle } = style || {};
+
     return (
         <Select
             id={id}
@@ -51,12 +53,29 @@ export default function SearchableSelect({ children, value, onChange, name, clas
             placeholder="Chọn..."
             isClearable={false}
             classNamePrefix="react-select"
+            menuPortalTarget={document.body}
             styles={{
                 control: (base) => ({
                     ...base,
-                    minHeight: '36px',
+                    minHeight: '32px',
                     borderColor: '#d1d5db',
-                    ...(style || {})
+                    flexWrap: 'nowrap',
+                    ...cleanStyle
+                }),
+                valueContainer: (base) => ({
+                    ...base,
+                    padding: '0 8px',
+                }),
+                dropdownIndicator: (base) => ({
+                    ...base,
+                    padding: '4px',
+                }),
+                indicatorSeparator: () => ({
+                    display: 'none',
+                }),
+                menuPortal: (base) => ({
+                    ...base,
+                    zIndex: 9999
                 }),
                 menu: (base) => ({
                     ...base,

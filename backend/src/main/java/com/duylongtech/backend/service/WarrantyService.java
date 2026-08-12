@@ -57,6 +57,8 @@ public class WarrantyService {
                 .partnerEmail(partner != null ? partner.getEmail() : null)
                 .partnerAddress(partner != null ? partner.getAddress() : null)
                 .salesOrderId(warranty.getSalesOrderId())
+                .exportSlipId(warranty.getExportSlipId())
+                .exportSlipCode(warranty.getExportSlip() != null ? warranty.getExportSlip().getDocCode() : null)
                 .startDate(warranty.getStartDate())
                 .endDate(warranty.getEndDate())
                 .warrantyStatus(warranty.getWarrantyStatus())
