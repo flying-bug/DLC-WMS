@@ -8,6 +8,8 @@ import * as assemblyApi from '../../api/assemblyOrderApi';
 import axiosClient from '../../api/axiosClient';
 import { exportBomToExcel } from '../../utils/bomExcelExport';
 import styles from './AssemblyOrderPage.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
@@ -381,7 +383,7 @@ function AssemblyBomFormPage() {
                         <label className={styles.field}>
                             <span>Thành phẩm <span style={{ color: 'red' }}>*</span></span>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <select
+                                <SearchableSelect
                                     value={form.productId}
                                     onChange={(event) => handleProductChange(event.target.value)}
                                     disabled={!canEdit}
@@ -391,7 +393,7 @@ function AssemblyBomFormPage() {
                                     {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
                                         <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
                                     ))}
-                                </select>
+                                </SearchableSelect>
                                 {canEdit && (
                                     <button
                                         type="button"

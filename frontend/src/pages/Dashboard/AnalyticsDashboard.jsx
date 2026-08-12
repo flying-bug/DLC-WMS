@@ -19,7 +19,7 @@ import {
     ComposedChart
 } from 'recharts';
 import { getDashboardMetrics } from '../../api/reportApi';
-import { formatDateOnly } from '../../utils/dateFormat';
+import { formatDateOnly, formatDateTime as utilsFormatDateTime } from '../../utils/dateFormat';
 import styles from './AnalyticsDashboard.module.css';
 
 const money = (value) =>
@@ -32,9 +32,9 @@ const formatDate = (value) => (value ? formatDateOnly(value) : 'Chưa có');
 
 const formatDateTime = (value) => {
     if (!value) return 'Chưa có';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return date.toLocaleString('vi-VN');
+    // Remove any trailing Z or offset to force it to be treated as local time
+    const localValue = String(value).replace(/[zZ].*|[+-]\d{2}:?\d{2}$/, '');
+    return utilsFormatDateTime(localValue);
 };
 
 const shortMoney = (value) => {

@@ -20,6 +20,8 @@ import * as exportApi from '../../api/inventoryExportApi';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import styles from './RepairFormPage.module.css';
 import { formatDateTime, getTodayIsoDate } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -1193,11 +1195,11 @@ function RepairFormPage() {
                   <tr key={line.id || line._key}>
                     <td>
                       {isEditable ? (
-                        <select className="misa-input" style={{ padding: '2px 28px 2px 8px', height: '28px', minWidth: '126px', width: '126px' }} value={line.actionType} onChange={(e) => handleChangeLineActionType(line.id, line._key, e.target.value)}>
+                        <SearchableSelect className="misa-input" style={{ padding: '2px 28px 2px 8px', height: '28px', minWidth: '126px', width: '126px' }} value={line.actionType} onChange={(e) => handleChangeLineActionType(line.id, line._key, e.target.value)}>
                           <option value="ADD">Thêm</option>
                           <option value="REPLACE">Thay thế</option>
                           <option value="REMOVE">Loại bỏ</option>
-                        </select>
+                        </SearchableSelect>
                       ) : (line.actionType === 'ADD' ? 'Thêm' : line.actionType === 'REPLACE' ? 'Thay thế' : 'Loại bỏ')}
                     </td>
                     <td style={{ minWidth: '220px' }}>
@@ -1779,7 +1781,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
     <tr>
       {/* 1. Loại */}
       <td>
-        <select
+        <SearchableSelect
           className="misa-input"
           value={form.actionType}
           disabled={isSaving}
@@ -1793,7 +1795,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
           <option value="ADD">Thêm</option>
           <option value="REPLACE">Thay thế</option>
           <option value="REMOVE">Loại bỏ</option>
-        </select>
+        </SearchableSelect>
       </td>
       {/* 2. Hạng mục */}
       <td>

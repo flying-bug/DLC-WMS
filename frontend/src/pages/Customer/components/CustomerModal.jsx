@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { createCustomer, updateCustomer } from '../../../api/customerApi';
 import Modal from '../../../components/ui/Modal/Modal';
 import styles from './CustomerModal.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const GROUP_OPTIONS = [
     { value: 'RETAIL', label: 'Khách lẻ' },
@@ -167,7 +169,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
 
                     <div className={`${styles.formGroup} ${styles.col6}`}>
                         <label className={styles.formLabel}>Nhóm khách hàng</label>
-                        <select 
+                        <SearchableSelect 
                             className={styles.select} 
                             name="groupType"
                             value={form.groupType}
@@ -176,7 +178,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
                             {GROUP_OPTIONS.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
-                        </select>
+                        </SearchableSelect>
                     </div>
 
                     <div className={`${styles.formGroup} ${styles.col12}`}>

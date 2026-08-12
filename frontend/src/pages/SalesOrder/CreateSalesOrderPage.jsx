@@ -653,6 +653,7 @@ function CreateSalesOrderPage() {
                               }}
                               displayMode="code-name"
                               placeholder="Chọn mã hoặc tên hàng"
+
                             />
                             {line.variantId && (
                               <div style={{ marginTop: 4, fontSize: 11, color: availableQty >= Number(line.quantity || 0) ? '#16a34a' : '#dc2626' }}>

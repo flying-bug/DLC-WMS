@@ -8,6 +8,8 @@ import Modal from '../../components/ui/Modal/Modal';
 import { useToast } from '../../contexts/ToastContext';
 import styles from './AuditLogPage.module.css';
 import { formatDateTime as formatVietnamDateTime } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const formatDateTime = (isoString) => isoString ? formatVietnamDateTime(isoString, { withSeconds: false }) : '';
 
@@ -275,7 +277,7 @@ function AuditLogPage() {
                                 onChange={(e) => { setToDateInput(e.target.value); setPage(0); }}
                             />
                         </div>
-                        <select
+                        <SearchableSelect
                             className={styles.filterSelect}
                             value={selectedModule}
                             onChange={(e) => { setSelectedModule(e.target.value); setPage(0); }}
@@ -285,7 +287,7 @@ function AuditLogPage() {
                             {Object.entries(MODULE_LABELS).map(([key, label]) => (
                                 <option key={key} value={key}>{label}</option>
                             ))}
-                        </select>
+                        </SearchableSelect>
                     </div>
 
                     <div className={styles.filterActions}>

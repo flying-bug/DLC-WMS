@@ -13,6 +13,8 @@ import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import { printExportSlip } from '../../utils/printExportSlip';
 import { formatDateOnly } from '../../utils/dateFormat';
 import styles from './ExportSlipPage.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const DEFAULT_COLUMNS = {
   date: true,
@@ -181,7 +183,7 @@ function ExportSlipPage() {
 
     try {
       const response = await exportApi.getExportHistory({
-        docCode: filters.docCode || undefined,
+        keyword: filters.keyword || undefined,
         fromDate: filters.fromDate || undefined,
         toDate: filters.toDate || undefined,
         status: filters.status || undefined,
@@ -558,7 +560,7 @@ function ExportSlipPage() {
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>Hiển thị</span>
-              <select
+              <SearchableSelect
                 className="misa-select"
                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
                 value={pageSize}
@@ -568,7 +570,7 @@ function ExportSlipPage() {
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-              </select>
+              </SearchableSelect>
               <span>trên tổng số {totalItems} bản ghi</span>
             </div>
 

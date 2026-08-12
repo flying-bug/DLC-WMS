@@ -8,6 +8,8 @@ import StocktakeInitModal from './components/StocktakeInitModal';
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './StocktakeListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Lưu tạm', code: 'info' },
@@ -152,7 +154,7 @@ function StocktakeListPage() {
             </div>
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>TRẠNG THÁI</span>
-              <select
+              <SearchableSelect
                 className={styles.filterSelect}
                 value={filters.status}
                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
@@ -160,7 +162,7 @@ function StocktakeListPage() {
                 <option value="">Tất cả</option>
                 <option value="DRAFT">Lưu tạm</option>
                 <option value="POSTED">Đã xử lý</option>
-              </select>
+              </SearchableSelect>
             </div>
           </div>
           <div className={styles.filterActions}>

@@ -19,6 +19,8 @@ import axiosClient from '../../api/axiosClient';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import styles from './CreateExportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -1084,12 +1086,12 @@ function CreateExportSlipPage({ mode: propMode }) {
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '350px' }}>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-                  <select style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
+                  <SearchableSelect style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
                     <option>5 bản ghi trên 1 trang</option>
                     <option>10 bản ghi trên 1 trang</option>
                     <option>20 bản ghi trên 1 trang</option>
                     <option>50 bản ghi trên 1 trang</option>
-                  </select>
+                  </SearchableSelect>
                   <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280' }}>
                     <span style={{ cursor: 'pointer' }}>Trước</span>
                     <span style={{ fontWeight: 'bold', color: '#111827' }}>1</span>

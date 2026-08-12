@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../../utils/datePresets';
 import styles from './FilterPopover.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const FilterPopover = ({
   filters,
@@ -112,7 +114,7 @@ const FilterPopover = ({
                 {/* Field: Quick Date Presets */}
                 <div className={styles.formGroup}>
                   <label className={styles.label}>KHOẢNG THỜI GIAN</label>
-                  <select
+                  <SearchableSelect
                     className={styles.select}
                     value={localFilters.preset || 'ALL'}
                     onChange={(e) => handlePresetChange(e.target.value)}
@@ -120,7 +122,7 @@ const FilterPopover = ({
                     {DATE_PRESET_OPTIONS.map(opt => (
                       <option key={opt.id} value={opt.id}>{opt.label}</option>
                     ))}
-                  </select>
+                  </SearchableSelect>
                 </div>
 
                 {/* Date Pickers */}
@@ -152,7 +154,7 @@ const FilterPopover = ({
               {purposeOptions.length > 0 && (
                 <div className={styles.formGroup}>
                   <label className={styles.label}>{purposeLabel.toUpperCase()}</label>
-                  <select
+                  <SearchableSelect
                     className={styles.select}
                     value={localFilters[purposeField] || ''}
                     onChange={(e) => handleFieldChange(purposeField, e.target.value)}
@@ -161,14 +163,14 @@ const FilterPopover = ({
                     {purposeOptions.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
-                  </select>
+                  </SearchableSelect>
                 </div>
               )}
 
               {statusOptions.length > 0 && (
                 <div className={styles.formGroup}>
                   <label className={styles.label}>TRẠNG THÁI</label>
-                  <select
+                  <SearchableSelect
                     className={styles.select}
                     value={localFilters.status || ''}
                     onChange={(e) => handleFieldChange('status', e.target.value)}
@@ -177,7 +179,7 @@ const FilterPopover = ({
                     {statusOptions.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
-                  </select>
+                  </SearchableSelect>
                 </div>
               )}
             </div>
@@ -186,7 +188,7 @@ const FilterPopover = ({
             {warehouses.length > 0 && (
               <div className={styles.formGroup}>
                 <label className={styles.label}>KHO HÀNG</label>
-                <select
+                <SearchableSelect
                   className={styles.select}
                   value={localFilters.warehouseId || ''}
                   onChange={(e) => handleFieldChange('warehouseId', e.target.value)}
@@ -195,7 +197,7 @@ const FilterPopover = ({
                   {warehouses.map(wh => (
                     <option key={wh.id} value={wh.id}>{wh.name || wh.code}</option>
                   ))}
-                </select>
+                </SearchableSelect>
               </div>
             )}
 
@@ -203,7 +205,7 @@ const FilterPopover = ({
             {partners.length > 0 && (
               <div className={styles.formGroup}>
                 <label className={styles.label}>{partnerLabel.toUpperCase()}</label>
-                <select
+                <SearchableSelect
                   className={styles.select}
                   value={localFilters.partnerId || ''}
                   onChange={(e) => handleFieldChange('partnerId', e.target.value)}
@@ -212,7 +214,7 @@ const FilterPopover = ({
                   {partners.map(p => (
                     <option key={p.id} value={p.id}>{p.name || p.code}</option>
                   ))}
-                </select>
+                </SearchableSelect>
               </div>
             )}
 
@@ -220,7 +222,7 @@ const FilterPopover = ({
             {staffList.length > 0 && (
               <div className={styles.formGroup}>
                 <label className={styles.label}>{staffLabel.toUpperCase()}</label>
-                <select
+                <SearchableSelect
                   className={styles.select}
                   value={localFilters.staffId || ''}
                   onChange={(e) => handleFieldChange('staffId', e.target.value)}
@@ -229,7 +231,7 @@ const FilterPopover = ({
                   {staffList.map(st => (
                     <option key={st.id} value={st.id}>{st.fullName || st.username || st.name}</option>
                   ))}
-                </select>
+                </SearchableSelect>
               </div>
             )}
 
@@ -239,7 +241,7 @@ const FilterPopover = ({
                 {customSelects.map(sel => (
                   <div className={styles.formGroup} key={sel.name}>
                     <label className={styles.label}>{sel.label.toUpperCase()}</label>
-                    <select
+                    <SearchableSelect
                       className={styles.select}
                       value={localFilters[sel.name] || ''}
                       onChange={(e) => handleFieldChange(sel.name, e.target.value)}
@@ -248,7 +250,7 @@ const FilterPopover = ({
                       {sel.options.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
-                    </select>
+                    </SearchableSelect>
                   </div>
                 ))}
               </div>

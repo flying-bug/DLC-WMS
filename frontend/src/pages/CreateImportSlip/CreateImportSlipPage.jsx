@@ -24,6 +24,8 @@ import Select from 'react-select';
 import axiosClient from '../../api/axiosClient';
 import styles from './CreateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -306,7 +308,12 @@ function CreateImportSlipPage() {
         const list = pageContent(unwrap(res));
         const invMap = new Map();
         list.forEach(b => {
-          if (b.variantId) invMap.set(String(b.variantId), Number(b.totalQuantity || 0));
+          const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+          const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+          const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+          const stock = Math.max(0, availableQuantity);
+          if (b.variantId) invMap.set(String(b.variantId), stock);
+          else if (b.itemId) invMap.set(String(b.itemId), stock);
         });
         setInventoryMap(invMap);
       })
@@ -1104,12 +1111,12 @@ function CreateImportSlipPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '350px' }}>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-                <select style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
+                <SearchableSelect style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
                   <option>5 bản ghi trên 1 trang</option>
                   <option>10 bản ghi trên 1 trang</option>
                   <option>20 bản ghi trên 1 trang</option>
                   <option>50 bản ghi trên 1 trang</option>
-                </select>
+                </SearchableSelect>
                 <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280' }}>
                   <span style={{ cursor: 'pointer' }}>Trước</span>
                   <span style={{ fontWeight: 'bold', color: '#111827' }}>1</span>

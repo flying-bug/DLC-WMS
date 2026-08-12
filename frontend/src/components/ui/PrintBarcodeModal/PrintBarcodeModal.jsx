@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import BarcodeLabel from './BarcodeLabel';
 import Toast from '../Toast/Toast';
 import styles from './PrintBarcodeModal.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const PrintBarcodeModal = ({ isOpen, onClose, product }) => {
     const [barcodeType, setBarcodeType] = useState('BARCODE'); // 'BARCODE' or 'QRCODE'
@@ -109,26 +111,26 @@ const PrintBarcodeModal = ({ isOpen, onClose, product }) => {
                     <div className={styles.configSection}>
                         <div className={styles.formGroup}>
                             <label>Loại mã</label>
-                            <select value={barcodeType} onChange={e => setBarcodeType(e.target.value)} className="misa-input">
+                            <SearchableSelect value={barcodeType} onChange={e => setBarcodeType(e.target.value)} className="misa-input">
                                 <option value="BARCODE">Mã vạch (Barcode 1D)</option>
                                 <option value="QRCODE">Mã QR (2D)</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
 
                         <div className={styles.formGroup}>
                             <label>Kích thước tem</label>
-                            <select value={labelSize} onChange={e => setLabelSize(e.target.value)} className="misa-input">
+                            <SearchableSelect value={labelSize} onChange={e => setLabelSize(e.target.value)} className="misa-input">
                                 <option value="35x22">35x22 mm</option>
                                 <option value="50x30">50x30 mm</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
 
                         <div className={styles.formGroup}>
                             <label>Khổ giấy in</label>
-                            <select value={paperSize} onChange={e => setPaperSize(e.target.value)} className="misa-input">
+                            <SearchableSelect value={paperSize} onChange={e => setPaperSize(e.target.value)} className="misa-input">
                                 <option value="A4">Máy in thường</option>
                                 <option value="ROLL">Máy in mã vạch</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
 
                         <div className={styles.formGroup}>

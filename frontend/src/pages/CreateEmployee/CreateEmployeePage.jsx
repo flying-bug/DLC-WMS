@@ -4,6 +4,8 @@ import axiosClient from '../../api/axiosClient';
 import styles from './CreateEmployeePage.module.css';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import { useToast } from '../../contexts/ToastContext';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const parseDisplayDateToIso = (value) => {
     const text = String(value || '').trim();
@@ -261,24 +263,24 @@ function CreateEmployeePage() {
                             <div className={styles.formGroup}>
                                 <label className={styles.label} htmlFor="position">Chức danh nhân sự</label>
                                 <div className={styles.inputWrapper}>
-                                    <select id="position" className={`${styles.input} ${styles.select}`} name="position" value={formData.position} onChange={handleChange}>
+                                    <SearchableSelect id="position" className={`${styles.input} ${styles.select}`} name="position" value={formData.position} onChange={handleChange}>
                                         <option value="">Chọn chức danh</option>
                                         <option value="manager">Quản lý kho</option>
                                         <option value="staff">Nhân viên kho</option>
                                         <option value="technician">Kỹ thuật viên</option>
 
-                                    </select>
+                                    </SearchableSelect>
                                 </div>
                             </div>
                             <div className={styles.formGroup}>
                                 <label className={styles.label} htmlFor="department">Phòng ban</label>
                                 <div className={styles.inputWrapper}>
-                                    <select id="department" className={`${styles.input} ${styles.select}`} name="department" value={formData.department} onChange={handleChange}>
+                                    <SearchableSelect id="department" className={`${styles.input} ${styles.select}`} name="department" value={formData.department} onChange={handleChange}>
                                         <option value="">Chọn phòng ban</option>
                                         <option value="warehouse">Kho bãi</option>
                                         <option value="technical">Kỹ thuật - Bảo hành</option>
                                         <option value="admin">Kế toán - Hành chính</option>
-                                    </select>
+                                    </SearchableSelect>
                                 </div>
                             </div>
 

@@ -14,6 +14,8 @@ import { printTransferSlip } from '../../utils/printTransferSlip';
 import axiosClient from '../../api/axiosClient';
 import styles from './CreateTransferSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -122,7 +124,7 @@ function CreateTransferSlipPage() {
   const [showReferenceModal, setShowReferenceModal] = useState(false);
 
   const handleSerialModalClose = (serials) => {
-    if (serials) {
+    if (Array.isArray(serials)) {
       handleItemChange(serialModalItemId, 'serialNumbers', serials);
       if (serials.length > 0 && items.find(i => i.localId === serialModalItemId)?.quantity < serials.length) {
         handleItemChange(serialModalItemId, 'quantity', serials.length);
@@ -453,17 +455,17 @@ function CreateTransferSlipPage() {
               <div className="misa-form-row">
                 <div className="misa-form-group">
                   <label className="misa-label">Từ kho (Xuất) <span className="required">*</span></label>
-                  <select className="misa-select" value={form.fromWarehouseId} onChange={(e) => handleFormChange('fromWarehouseId', e.target.value)}>
+                  <SearchableSelect className="misa-select" value={form.fromWarehouseId} onChange={(e) => handleFormChange('fromWarehouseId', e.target.value)}>
                     <option value="">Chọn kho xuất</option>
                     {warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} - {warehouse.name}</option>)}
-                  </select>
+                  </SearchableSelect>
                 </div>
                 <div className="misa-form-group">
                   <label className="misa-label">Đến kho (Nhập) <span className="required">*</span></label>
-                  <select className="misa-select" value={form.toWarehouseId} onChange={(e) => handleFormChange('toWarehouseId', e.target.value)}>
+                  <SearchableSelect className="misa-select" value={form.toWarehouseId} onChange={(e) => handleFormChange('toWarehouseId', e.target.value)}>
                     <option value="">Chọn kho nhập</option>
                     {warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} - {warehouse.name}</option>)}
-                  </select>
+                  </SearchableSelect>
                 </div>
               </div>
 

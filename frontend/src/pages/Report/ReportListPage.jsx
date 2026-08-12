@@ -14,6 +14,8 @@ import {
 import styles from './ReportListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { getDateRangePreset } from '../../utils/datePresets';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const MOCK_CATEGORIES = [
     {
@@ -403,7 +405,7 @@ const ReportListPage = () => {
                                 {activeReport.id !== 'debt' && (
                                     <div className={styles.filterGroup}>
                                         <label>Kho chứa</label>
-                                        <select
+                                        <SearchableSelect
                                             className={styles.filterSelect}
                                             value={filters.warehouseId}
                                             onChange={(e) => setFilters({ ...filters, warehouseId: e.target.value })}
@@ -412,7 +414,7 @@ const ReportListPage = () => {
                                             {warehouses.map((w) => (
                                                 <option key={w.id} value={w.id}>{w.warehouseCode} - {w.name}</option>
                                             ))}
-                                        </select>
+                                        </SearchableSelect>
                                     </div>
                                 )}
 
@@ -444,7 +446,7 @@ const ReportListPage = () => {
                                 {activeReport.id === 'debt' && (
                                     <div className={styles.filterGroup}>
                                         <label>Loại đối tác</label>
-                                        <select
+                                        <SearchableSelect
                                             className={styles.filterSelect}
                                             value={filters.partnerType}
                                             onChange={(e) => setFilters({ ...filters, partnerType: e.target.value })}
@@ -452,7 +454,7 @@ const ReportListPage = () => {
                                             <option value="ALL">Tất cả đối tác</option>
                                             <option value="CUSTOMER">Khách hàng</option>
                                             <option value="SUPPLIER">Nhà cung cấp</option>
-                                        </select>
+                                        </SearchableSelect>
                                     </div>
                                 )}
 
@@ -460,7 +462,7 @@ const ReportListPage = () => {
                                 {activeReport.id === 'stock-transfers' && (
                                     <div className={styles.filterGroup}>
                                         <label>Trạng thái</label>
-                                        <select
+                                        <SearchableSelect
                                             className={styles.filterSelect}
                                             value={filters.status}
                                             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -469,7 +471,7 @@ const ReportListPage = () => {
                                             <option value="COMPLETED">Hoàn thành</option>
                                             <option value="PENDING">Chờ duyệt</option>
                                             <option value="CANCELLED">Đã hủy</option>
-                                        </select>
+                                        </SearchableSelect>
                                     </div>
                                 )}
 

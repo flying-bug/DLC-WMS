@@ -8,6 +8,8 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import { printStocktakeReport } from '../../utils/printStocktakeReport';
 import { getTodayIsoDate, getCurrentDateTimeInput, toDateTimeInputValue } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 function StocktakeDetailPage() {
   const navigate = useNavigate();
@@ -435,12 +437,12 @@ function StocktakeDetailPage() {
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Kiểm kê kho</label>
-                <select className={styles.formSelect} name="warehouseId" value={formData.warehouseId} onChange={handleChange} disabled={isSaved}>
+                <SearchableSelect className={styles.formSelect} name="warehouseId" value={formData.warehouseId} onChange={handleChange} disabled={isSaved}>
                   <option value="all">Tất cả kho</option>
                   {warehouses.map(wh => (
                     <option key={wh.id} value={wh.id}>{wh.name}</option>
                   ))}
-                </select>
+                </SearchableSelect>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Đến ngày</label>
@@ -653,14 +655,14 @@ function StocktakeDetailPage() {
                     </td>
                     <td>
                       {isSaved ? line.action : (
-                        <select
+                        <SearchableSelect
                           value={line.action}
                           onChange={(e) => handleActionChange(idx, e.target.value)}
                           style={{ border: '1px solid #cbd5e1', borderRadius: '3px', padding: '2px 4px' }}
                         >
                           <option value="Không xử lý">Không xử lý</option>
                           <option value="Xử lý chênh lệch">Xử lý chênh lệch</option>
-                        </select>
+                        </SearchableSelect>
                       )}
                     </td>
                     {!isSaved && (

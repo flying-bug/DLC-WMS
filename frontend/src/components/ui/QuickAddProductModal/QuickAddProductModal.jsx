@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import axiosClient from '../../../api/axiosClient';
 import styles from './QuickAddProductModal.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -399,21 +401,21 @@ const QuickAddProductModal = ({
                         <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
                             <div className={styles.field} style={{ flex: 1 }}>
                                 <label>Danh mục <span style={{color: 'red'}}>*</span></label>
-                                <select value={formData.categoryId} onChange={e => setFormData(f => ({...f, categoryId: e.target.value}))}>
+                                <SearchableSelect value={formData.categoryId} onChange={e => setFormData(f => ({...f, categoryId: e.target.value}))}>
                                     <option value="">Chọn danh mục</option>
                                     {categories.map(c => (
                                         <option key={c.id} value={c.id}>{c.name}</option>
                                     ))}
-                                </select>
+                                </SearchableSelect>
                             </div>
                             <div className={styles.field} style={{ flex: 1 }}>
                                 <label>Đơn vị tính <span style={{color: 'red'}}>*</span></label>
-                                <select value={formData.unitId} onChange={e => setFormData(f => ({...f, unitId: e.target.value}))}>
+                                <SearchableSelect value={formData.unitId} onChange={e => setFormData(f => ({...f, unitId: e.target.value}))}>
                                     <option value="">Chọn ĐVT</option>
                                     {units.map(u => (
                                         <option key={u.id} value={u.id}>{u.name}</option>
                                     ))}
-                                </select>
+                                </SearchableSelect>
                             </div>
                         </div>
 

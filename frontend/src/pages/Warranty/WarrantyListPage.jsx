@@ -8,7 +8,8 @@ import styles from './WarrantyListPage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 import Modal from '../../components/ui/Modal/Modal';
 import { formatDateOnly } from '../../utils/dateFormat';
-import { printWarrantyCard } from '../../utils/printWarrantyCard';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
@@ -196,17 +197,6 @@ function WarrantyListPage() {
     return pages;
   };
 
-  const handlePrintCard = async (item, e) => {
-    e.stopPropagation();
-    try {
-      const res = await warrantyApi.getWarrantyById(item.id);
-      const detail = res?.data?.data || res?.data || item;
-      printWarrantyCard(detail);
-    } catch {
-      printWarrantyCard(item);
-    }
-  };
-
   return (
     <AdminLayout>
       <div className={styles.pageBody}>
@@ -247,7 +237,7 @@ function WarrantyListPage() {
             </div>
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>TÌNH TRẠNG</span>
-              <select
+              <SearchableSelect
                 className={styles.filterSelect}
                 value={filters.status}
                 onChange={(e) => { setFilters(prev => ({ ...prev, status: e.target.value })); setCurrentPage(1); }}
@@ -256,7 +246,7 @@ function WarrantyListPage() {
                 {Object.entries(STATUS_LABELS).map(([value, meta]) => (
                   <option key={value} value={value}>{meta.label}</option>
                 ))}
-              </select>
+              </SearchableSelect>
             </div>
           </div>
           <div className={styles.filterActions}>
@@ -370,12 +360,6 @@ function WarrantyListPage() {
                     )}
                     <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
                       <i
-                        className="bi bi-printer"
-                        style={{ cursor: 'pointer', color: '#0284c7', fontSize: '16px', marginRight: '12px' }}
-                        title="In phiếu bảo hành"
-                        onClick={(e) => handlePrintCard(item, e)}
-                      ></i>
-                      <i
                         className="bi bi-eye"
                         style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px' }}
                         title="Xem chi tiết"
@@ -391,7 +375,7 @@ function WarrantyListPage() {
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>Hiển thị</span>
-              <select
+              <SearchableSelect
                 className="misa-select"
                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
                 value={pageSize}
@@ -401,7 +385,7 @@ function WarrantyListPage() {
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-              </select>
+              </SearchableSelect>
               <span>trên tổng số {totalItems} bản ghi</span>
             </div>
 

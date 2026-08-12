@@ -14,6 +14,8 @@ import { saveAs } from 'file-saver';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import Modal from '../../components/ui/Modal/Modal';
 import ProductDetailModal from './components/ProductDetailModal';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 const defaultFormData = {
     id: null,
     productCode: '',
@@ -239,7 +241,7 @@ const ProductPage = () => {
         return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
     });
     const [showSettingsModal, setShowSettingsModal] = useState(false);
-    
+
     const handleColumnChange = (colId) => {
         setColumns(prev => {
             const next = { ...prev, [colId]: !prev[colId] };
@@ -392,13 +394,12 @@ const ProductPage = () => {
         inst4.value = '- Các dòng dữ liệu phía dưới chỉ là ví dụ minh họa, vui lòng xóa đi trước khi nhập';
         inst4.font = { name: 'Arial', size: 11 };
         inst4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE0B2' } };
-        
         worksheet.mergeCells('A6:K6');
 
         const headerRow = worksheet.getRow(7);
         headerRow.values = [
-            'Mã sản phẩm (*)', 'Tên sản phẩm (*)', 'Loại sản phẩm (*)', 'Danh mục (*)', 
-            'Thương hiệu (*)', 'Đơn vị tính (*)', 'Giá bán (VNĐ)', 'Cảnh báo hết hàng', 
+            'Mã sản phẩm (*)', 'Tên sản phẩm (*)', 'Loại sản phẩm (*)', 'Danh mục (*)',
+            'Thương hiệu (*)', 'Đơn vị tính (*)', 'Giá bán (VNĐ)', 'Cảnh báo hết hàng',
             'Bảo hành (tháng)', 'Quản lý Serial (Có/Không)', 'Mô tả'
         ];
         headerRow.height = 30;
@@ -467,12 +468,10 @@ const ProductPage = () => {
                 }
 
                 const headers = rawArray[headerRowIndex].map(h => String(h || '').replace(/\(\*\)/g, '').trim());
-                
                 const rawData = [];
                 for (let i = headerRowIndex + 1; i < rawArray.length; i++) {
                     const rowArr = rawArray[i];
                     if (!rowArr || rowArr.length === 0) continue;
-                    
                     // Skip completely empty rows
                     if (rowArr.every(cell => cell === null || cell === undefined || String(cell).trim() === '')) continue;
 
@@ -581,7 +580,7 @@ const ProductPage = () => {
                                 const pNorm = String(p.productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
                                 return pNorm === normName;
                             });
-                            
+
                             if (similarProduct) {
                                 warnings.push(`Trùng tên với SP trên hệ thống: ${similarProduct.productCode}`);
                             } else {
@@ -635,15 +634,14 @@ const ProductPage = () => {
         setExcelPreviewData(prevData => {
             const newData = [...prevData];
             const row = { ...newData[index], [field]: value };
-            
+
             let isValid = true;
             const rowErrors = [];
-            
+
             if (!row.productName || !String(row.productName).trim()) {
                 isValid = false;
                 rowErrors.push('Thiếu Tên sản phẩm');
             }
-            
             const isService = isServiceType(row.productType);
             if (!isService && !row.categoryId) {
                 isValid = false;
@@ -657,7 +655,6 @@ const ProductPage = () => {
                 isValid = false;
                 rowErrors.push('Thiếu Đơn vị tính');
             }
-            
             row.isValid = isValid;
             row.errors = rowErrors;
 
@@ -671,7 +668,6 @@ const ProductPage = () => {
                         const pNorm = String(p.productName).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
                         return pNorm === normName;
                     });
-                    
                     if (similarProduct) {
                         row.warnings.push(`Trùng tên với SP trên hệ thống: ${similarProduct.productCode}`);
                     } else {
@@ -721,9 +717,9 @@ const ProductPage = () => {
             setExcelPreviewData(prevData => {
                 return prevData.map(row => {
                     const errorMsgToMatch = type === 'category' ? `Danh mục '${name}' không tồn tại`
-                                          : type === 'brand' ? `Thương hiệu '${name}' không tồn tại`
-                                          : `Đơn vị tính '${name}' không tồn tại`;
-                    
+                        : type === 'brand' ? `Thương hiệu '${name}' không tồn tại`
+                            : `Đơn vị tính '${name}' không tồn tại`;
+
                     if (row.errors && row.errors.includes(errorMsgToMatch)) {
                         const newRow = { ...row };
                         newRow[fieldName] = newEntity.id;
@@ -857,7 +853,7 @@ const ProductPage = () => {
             const typeQuery = typeFilter ? `&productType=${encodeURIComponent(typeFilter)}` : '';
             const brandQuery = brandFilter ? `&brandId=${brandFilter}` : '';
             const unitQuery = unitFilter ? `&unitId=${unitFilter}` : '';
-            
+
             const [productsResult, stockSummaryResult] = await Promise.allSettled([
                 axiosClient.get(`/products?page=${page}&size=${size}${searchQuery}${categoryQuery}${typeQuery}${brandQuery}${unitQuery}`),
                 axiosClient.get('/products/stock-alert-summary')
@@ -1368,7 +1364,7 @@ const ProductPage = () => {
     const handleExportExcel = async () => {
         try {
             const res = await axiosClient.get('/products/export', {
-                params: { 
+                params: {
                     search: searchTerm || undefined,
                     categoryId: categoryFilter || undefined,
                     productType: typeFilter || undefined,
@@ -1546,19 +1542,19 @@ const ProductPage = () => {
 
                         <FilterPopover
                             filters={{ issuePurpose: categoryFilter, type: typeFilter, brand: brandFilter, unit: unitFilter }}
-                            onApply={(f) => { 
-                                setCategoryFilter(f.issuePurpose || ''); 
+                            onApply={(f) => {
+                                setCategoryFilter(f.issuePurpose || '');
                                 setTypeFilter(f.type || '');
                                 setBrandFilter(f.brand || '');
                                 setUnitFilter(f.unit || '');
-                                setPage(0); 
+                                setPage(0);
                             }}
-                            onReset={() => { 
-                                setCategoryFilter(''); 
+                            onReset={() => {
+                                setCategoryFilter('');
                                 setTypeFilter('');
                                 setBrandFilter('');
                                 setUnitFilter('');
-                                setPage(0); 
+                                setPage(0);
                             }}
                             purposeOptions={categories.map(c => ({ value: String(c.id), label: c.name }))}
                             purposeLabel="Danh mục"
@@ -1589,15 +1585,15 @@ const ProductPage = () => {
                     <div className={styles.filterActions}>
                         <button
                             className={styles.iconBtn}
-                            onClick={() => { 
-                                setTempSearch(''); 
-                                setSearchTerm(''); 
-                                setCategoryFilter(''); 
+                            onClick={() => {
+                                setTempSearch('');
+                                setSearchTerm('');
+                                setCategoryFilter('');
                                 setTypeFilter('');
                                 setBrandFilter('');
                                 setUnitFilter('');
-                                setStockFilter('ALL'); 
-                                setPage(0); 
+                                setStockFilter('ALL');
+                                setPage(0);
                             }}
                             title="Đặt lại bộ lọc"
                         >
@@ -1733,7 +1729,7 @@ const ProductPage = () => {
                 <div className={styles.pagination}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>Hiển thị</span>
-                        <select
+                        <SearchableSelect
                             className="misa-select"
                             style={{ width: '70px', height: '32px', padding: '0 8px' }}
                             value={size}
@@ -1743,7 +1739,7 @@ const ProductPage = () => {
                             <option value={20}>20</option>
                             <option value={50}>50</option>
                             <option value={100}>100</option>
-                        </select>
+                        </SearchableSelect>
                         <span>trên tổng số {totalElements} bản ghi</span>
                     </div>
 
@@ -1867,7 +1863,7 @@ const ProductPage = () => {
                                                 <div className={styles.formField} style={{ flex: 1 }}>
                                                     <label className={styles.fieldLabel}>Danh mục</label>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
-                                                        <select
+                                                        <SearchableSelect
                                                             className={styles.fieldInput}
                                                             value={formData.categoryId}
                                                             onChange={(e) => setFormData(fd => ({ ...fd, categoryId: e.target.value }))}
@@ -1876,7 +1872,7 @@ const ProductPage = () => {
                                                             {categories.map(cat => (
                                                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                                                             ))}
-                                                        </select>
+                                                        </SearchableSelect>
                                                         <button
                                                             className={styles.addInlineBtn}
                                                             title="Thêm nhanh danh mục"
@@ -1897,7 +1893,7 @@ const ProductPage = () => {
                                                 <div className={styles.formField} style={{ flex: 1 }}>
                                                     <label className={styles.fieldLabel}>Đơn vị tính</label>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
-                                                        <select
+                                                        <SearchableSelect
                                                             className={styles.fieldInput}
                                                             value={formData.unitId}
                                                             onChange={(e) => setFormData(fd => ({ ...fd, unitId: e.target.value }))}
@@ -1906,7 +1902,7 @@ const ProductPage = () => {
                                                             {units.map(u => (
                                                                 <option key={u.id} value={u.id}>{u.name}</option>
                                                             ))}
-                                                        </select>
+                                                        </SearchableSelect>
                                                         <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => {
                                                             const nextState = !showQuickAddUnit;
                                                             setShowQuickAddUnit(nextState);
@@ -2020,7 +2016,7 @@ const ProductPage = () => {
                                                 <div className={styles.formField} style={{ flex: 1 }}>
                                                     <label className={styles.fieldLabel}>Đơn vị tính</label>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
-                                                        <select
+                                                        <SearchableSelect
                                                             className={styles.fieldInput}
                                                             value={formData.unitId}
                                                             onChange={(e) => setFormData(fd => ({ ...fd, unitId: e.target.value }))}
@@ -2029,7 +2025,7 @@ const ProductPage = () => {
                                                             {units.map(u => (
                                                                 <option key={u.id} value={u.id}>{u.name}</option>
                                                             ))}
-                                                        </select>
+                                                        </SearchableSelect>
                                                         <button className={styles.addInlineBtn} title="Thêm đơn vị tính mới" type="button" onClick={() => {
                                                             const nextState = !showQuickAddUnit;
                                                             setShowQuickAddUnit(nextState);
@@ -2048,7 +2044,7 @@ const ProductPage = () => {
                                                 <div className={styles.formField} style={{ flex: 1 }}>
                                                     <label className={styles.fieldLabel}>Thương hiệu</label>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
-                                                        <select
+                                                        <SearchableSelect
                                                             className={styles.fieldInput}
                                                             value={formData.brandId}
                                                             onChange={(e) => setFormData(fd => ({ ...fd, brandId: e.target.value }))}
@@ -2057,7 +2053,7 @@ const ProductPage = () => {
                                                             {brands && brands.map(b => (
                                                                 <option key={b.id} value={b.id}>{b.name}</option>
                                                             ))}
-                                                        </select>
+                                                        </SearchableSelect>
                                                         <button className={styles.addInlineBtn} title="Thêm nhanh thương hiệu" type="button" onClick={() => {
                                                             const nextState = !showQuickAddBrand;
                                                             setShowQuickAddBrand(nextState);
@@ -2083,13 +2079,13 @@ const ProductPage = () => {
                                                             }}
                                                             placeholder="0"
                                                         />
-                                                        <select
+                                                        <SearchableSelect
                                                             className={styles.fieldInput} style={{ width: '110px', flexShrink: 0 }}
                                                             value={warrantyUnit} onChange={(e) => setWarrantyUnit(e.target.value)}
                                                         >
                                                             <option value="Tháng">Tháng</option>
                                                             <option value="Năm">Năm</option>
-                                                        </select>
+                                                        </SearchableSelect>
                                                     </div>
                                                 </div>
                                             )}
@@ -2107,13 +2103,13 @@ const ProductPage = () => {
                                                                 }}
                                                                 placeholder="0"
                                                             />
-                                                            <select
+                                                            <SearchableSelect
                                                                 className={styles.fieldInput} style={{ width: '110px', flexShrink: 0 }}
                                                                 value={warrantyUnit} onChange={(e) => setWarrantyUnit(e.target.value)}
                                                             >
                                                                 <option value="Tháng">Tháng</option>
                                                                 <option value="Năm">Năm</option>
-                                                            </select>
+                                                            </SearchableSelect>
                                                         </div>
                                                     </div>
                                                     <div className={styles.formField} style={{ flex: 1 }}>
@@ -2329,13 +2325,13 @@ const ProductPage = () => {
                                                             setWarrantyQty(val ? Number(val) : '');
                                                         }}
                                                     />
-                                                    <select
+                                                    <SearchableSelect
                                                         className={styles.fieldInput} style={{ width: '110px', flexShrink: 0 }}
                                                         value={warrantyUnit} onChange={(e) => setWarrantyUnit(e.target.value)}
                                                     >
                                                         <option value="Tháng">Tháng</option>
                                                         <option value="Năm">Năm</option>
-                                                    </select>
+                                                    </SearchableSelect>
                                                 </div>
                                             </div>
                                         )}
@@ -2766,53 +2762,53 @@ const ProductPage = () => {
                         </div>
                     </div>
                 )}
-            <Modal
-                isOpen={showSettingsModal}
-                onClose={() => setShowSettingsModal(false)}
-                ariaLabel="Thiết lập cột hiển thị"
-            >
-                <div className={styles.settingsModalHeader}>
-                    <h3>Thiết lập cột hiển thị</h3>
-                    <button className={styles.settingsModalCloseBtn} onClick={() => setShowSettingsModal(false)}>
-                        <i className="bi bi-x-lg"></i>
-                    </button>
-                </div>
-                <div className={styles.settingsModalBody}>
-                    <div className={styles.checkboxGrid}>
-                        {[
-                            { id: 'image', label: 'Hình ảnh' },
-                            { id: 'productCode', label: 'Mã sản phẩm' },
-                            { id: 'productName', label: 'Tên sản phẩm' },
-                            { id: 'productType', label: 'Loại' },
-                            { id: 'category', label: 'Danh mục' },
-                            { id: 'brand', label: 'Thương hiệu' },
-                            { id: 'unit', label: 'Đơn vị tính' },
-                            { id: 'salePrice', label: 'Giá bán' },
-                            { id: 'stockQty', label: 'Tồn kho' }
-                        ].map(col => (
-                            <label key={col.id} className={styles.checkboxLabel}>
-                                <input
-                                    type="checkbox"
-                                    checked={columns[col.id]}
-                                    onChange={() => handleColumnChange(col.id)}
-                                />
-                                <span className={styles.checkboxText}>{col.label}</span>
-                            </label>
-                        ))}
+                <Modal
+                    isOpen={showSettingsModal}
+                    onClose={() => setShowSettingsModal(false)}
+                    ariaLabel="Thiết lập cột hiển thị"
+                >
+                    <div className={styles.settingsModalHeader}>
+                        <h3>Thiết lập cột hiển thị</h3>
+                        <button className={styles.settingsModalCloseBtn} onClick={() => setShowSettingsModal(false)}>
+                            <i className="bi bi-x-lg"></i>
+                        </button>
                     </div>
-                </div>
-                <div className={styles.settingsModalFooter}>
-                    <button className={styles.btnSecondary} onClick={() => {
-                        setColumns(DEFAULT_COLUMNS);
-                        localStorage.setItem('dlc_product_columns', JSON.stringify(DEFAULT_COLUMNS));
-                    }}>
-                        Đặt lại
-                    </button>
-                    <button className={styles.btnPrimary} onClick={() => setShowSettingsModal(false)}>
-                        Hoàn tất
-                    </button>
-                </div>
-            </Modal>
+                    <div className={styles.settingsModalBody}>
+                        <div className={styles.checkboxGrid}>
+                            {[
+                                { id: 'image', label: 'Hình ảnh' },
+                                { id: 'productCode', label: 'Mã sản phẩm' },
+                                { id: 'productName', label: 'Tên sản phẩm' },
+                                { id: 'productType', label: 'Loại' },
+                                { id: 'category', label: 'Danh mục' },
+                                { id: 'brand', label: 'Thương hiệu' },
+                                { id: 'unit', label: 'Đơn vị tính' },
+                                { id: 'salePrice', label: 'Giá bán' },
+                                { id: 'stockQty', label: 'Tồn kho' }
+                            ].map(col => (
+                                <label key={col.id} className={styles.checkboxLabel}>
+                                    <input
+                                        type="checkbox"
+                                        checked={columns[col.id]}
+                                        onChange={() => handleColumnChange(col.id)}
+                                    />
+                                    <span className={styles.checkboxText}>{col.label}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                    <div className={styles.settingsModalFooter}>
+                        <button className={styles.btnSecondary} onClick={() => {
+                            setColumns(DEFAULT_COLUMNS);
+                            localStorage.setItem('dlc_product_columns', JSON.stringify(DEFAULT_COLUMNS));
+                        }}>
+                            Đặt lại
+                        </button>
+                        <button className={styles.btnPrimary} onClick={() => setShowSettingsModal(false)}>
+                            Hoàn tất
+                        </button>
+                    </div>
+                </Modal>
             </div>
 
             <Toast
@@ -2849,8 +2845,8 @@ const ProductPage = () => {
             >
                 <div className={styles.settingsModalHeader}>
                     <h3>Xem trước dữ liệu nhập Excel</h3>
-                    <button 
-                        className={styles.settingsModalCloseBtn} 
+                    <button
+                        className={styles.settingsModalCloseBtn}
                         onClick={() => setShowExcelPreviewModal(false)}
                         disabled={isSavingExcel}
                     >
@@ -2865,8 +2861,8 @@ const ProductPage = () => {
                             <span style={{ color: '#dc2626' }}><i className="bi bi-exclamation-circle-fill"></i> Lỗi: <strong style={{ fontSize: '16px' }}>{excelPreviewData.filter(r => !r.isValid).length}</strong></span>
                         </div>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <select 
-                                className={styles.inlineSelect} 
+                            <SearchableSelect
+                                className={styles.inlineSelect}
                                 style={{ width: '160px', backgroundColor: '#f1f5f9', border: 'none', fontWeight: 500, padding: '8px 12px', cursor: 'pointer' }}
                                 value={previewFilter}
                                 onChange={e => setPreviewFilter(e.target.value)}
@@ -2874,14 +2870,14 @@ const ProductPage = () => {
                                 <option value="ALL">Hiển thị: Tất cả</option>
                                 <option value="VALID">Hiển thị: Hợp lệ</option>
                                 <option value="INVALID">Hiển thị: Bị lỗi</option>
-                            </select>
+                            </SearchableSelect>
                             <div style={{ fontSize: '14px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '8px 16px', borderRadius: '20px' }}>
                                 <i className="bi bi-info-circle-fill" style={{ color: '#3b82f6', marginRight: '6px' }}></i>
                                 Sửa các ô bị lỗi trực tiếp trên bảng dưới đây
                             </div>
                         </div>
                     </div>
-                    
+
                     <div className={styles.previewTableContainer} style={{ flex: 1, overflowY: 'auto' }}>
                         <table className={styles.previewTable}>
                             <thead>
@@ -2911,123 +2907,123 @@ const ProductPage = () => {
                                                         {row.isValid ? 'Hợp lệ' : 'Lỗi'}
                                                     </span>
                                                 </td>
-                                            <td>
-                                            <input 
-                                                type="text" 
-                                                className={styles.inlineInput} 
-                                                value={row.productCode} 
-                                                onChange={e => handlePreviewEdit(idx, 'productCode', e.target.value)}
-                                                disabled={isSavingExcel}
-                                            />
-                                            {row.existingProduct && <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: 4 }}><i className="bi bi-exclamation-triangle"></i> Sẽ ghi đè</div>}
-                                        </td>
-                                        <td>
-                                            <input 
-                                                type="text" 
-                                                className={styles.inlineInput} 
-                                                value={row.productName} 
-                                                onChange={e => handlePreviewEdit(idx, 'productName', e.target.value)}
-                                                disabled={isSavingExcel}
-                                                style={{ borderColor: !row.productName ? '#ef4444' : '' }}
-                                            />
-                                            {row.warnings && row.warnings.length > 0 && (
-                                                <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: 4 }}>
-                                                    {row.warnings.map((w, i) => <div key={i}><i className="bi bi-exclamation-triangle"></i> {w}</div>)}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <select 
-                                                className={styles.inlineSelect}
-                                                value={row.productType}
-                                                onChange={e => handlePreviewEdit(idx, 'productType', e.target.value)}
-                                                disabled={isSavingExcel}
-                                            >
-                                                <option value="Hàng hóa">Hàng hóa</option>
-                                                <option value="Dịch vụ">Dịch vụ</option>
-                                                <option value="Thành phẩm">Thành phẩm</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select 
-                                                className={styles.inlineSelect}
-                                                value={row.categoryId || ''}
-                                                onChange={e => handlePreviewEdit(idx, 'categoryId', e.target.value)}
-                                                disabled={isSavingExcel || isServiceType(row.productType)}
-                                                style={{ borderColor: (!isServiceType(row.productType) && !row.categoryId) ? '#ef4444' : '' }}
-                                            >
-                                                <option value="">-- Chọn --</option>
-                                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select 
-                                                className={styles.inlineSelect}
-                                                value={row.brandId || ''}
-                                                onChange={e => handlePreviewEdit(idx, 'brandId', e.target.value)}
-                                                disabled={isSavingExcel || isServiceType(row.productType)}
-                                                style={{ borderColor: (!isServiceType(row.productType) && !row.brandId) ? '#ef4444' : '' }}
-                                            >
-                                                <option value="">-- Chọn --</option>
-                                                {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select 
-                                                className={styles.inlineSelect}
-                                                value={row.unitId || ''}
-                                                onChange={e => handlePreviewEdit(idx, 'unitId', e.target.value)}
-                                                disabled={isSavingExcel}
-                                                style={{ borderColor: !row.unitId ? '#ef4444' : '' }}
-                                            >
-                                                <option value="">-- Chọn --</option>
-                                                {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                                            </select>
-                                        </td>
-                                        <td>{formatCurrency(row.salePrice)}</td>
-                                        </tr>
-                                        {!row.isValid && (
-                                            <tr className={styles.rowInvalidError}>
-                                                <td colSpan={9} style={{ padding: '4px 12px 12px 12px', borderTop: 'none' }}>
-                                                    <div className={styles.errorReasonInline}>
-                                                        {row.errors.map((e, i) => {
-                                                            let quickAddType = null;
-                                                            let quickAddName = null;
-                                                            const catMatch = e.match(/Danh mục '(.*)' không tồn tại/);
-                                                            if (catMatch) { quickAddType = 'category'; quickAddName = catMatch[1]; }
-                                                            else {
-                                                                const brandMatch = e.match(/Thương hiệu '(.*)' không tồn tại/);
-                                                                if (brandMatch) { quickAddType = 'brand'; quickAddName = brandMatch[1]; }
-                                                                else {
-                                                                    const unitMatch = e.match(/Đơn vị tính '(.*)' không tồn tại/);
-                                                                    if (unitMatch) { quickAddType = 'unit'; quickAddName = unitMatch[1]; }
-                                                                }
-                                                            }
-
-                                                            return (
-                                                                <span key={i} style={{ marginRight: '24px', display: 'inline-flex', alignItems: 'center' }}>
-                                                                    <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: '4px' }}></i> {e}
-                                                                    {quickAddType && (
-                                                                        <button 
-                                                                            type="button"
-                                                                            className={styles.quickAddBtn}
-                                                                            onClick={() => handleQuickAddEntity(quickAddType, quickAddName)}
-                                                                            title="Thêm nhanh vào hệ thống"
-                                                                            disabled={isSavingExcel}
-                                                                        >
-                                                                            <i className="bi bi-plus-circle"></i> Thêm
-                                                                        </button>
-                                                                    )}
-                                                                </span>
-                                                            );
-                                                        })}
-                                                    </div>
+                                                <td>
+                                                    <input
+                                                        type="text"
+                                                        className={styles.inlineInput}
+                                                        value={row.productCode}
+                                                        onChange={e => handlePreviewEdit(idx, 'productCode', e.target.value)}
+                                                        disabled={isSavingExcel}
+                                                    />
+                                                    {row.existingProduct && <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: 4 }}><i className="bi bi-exclamation-triangle"></i> Sẽ ghi đè</div>}
                                                 </td>
+                                                <td>
+                                                    <input
+                                                        type="text"
+                                                        className={styles.inlineInput}
+                                                        value={row.productName}
+                                                        onChange={e => handlePreviewEdit(idx, 'productName', e.target.value)}
+                                                        disabled={isSavingExcel}
+                                                        style={{ borderColor: !row.productName ? '#ef4444' : '' }}
+                                                    />
+                                                    {row.warnings && row.warnings.length > 0 && (
+                                                        <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: 4 }}>
+                                                            {row.warnings.map((w, i) => <div key={i}><i className="bi bi-exclamation-triangle"></i> {w}</div>)}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    <SearchableSelect
+                                                        className={styles.inlineSelect}
+                                                        value={row.productType}
+                                                        onChange={e => handlePreviewEdit(idx, 'productType', e.target.value)}
+                                                        disabled={isSavingExcel}
+                                                    >
+                                                        <option value="Hàng hóa">Hàng hóa</option>
+                                                        <option value="Dịch vụ">Dịch vụ</option>
+                                                        <option value="Thành phẩm">Thành phẩm</option>
+                                                    </SearchableSelect>
+                                                </td>
+                                                <td>
+                                                    <SearchableSelect
+                                                        className={styles.inlineSelect}
+                                                        value={row.categoryId || ''}
+                                                        onChange={e => handlePreviewEdit(idx, 'categoryId', e.target.value)}
+                                                        disabled={isSavingExcel || isServiceType(row.productType)}
+                                                        style={{ borderColor: (!isServiceType(row.productType) && !row.categoryId) ? '#ef4444' : '' }}
+                                                    >
+                                                        <option value="">-- Chọn --</option>
+                                                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                                    </SearchableSelect>
+                                                </td>
+                                                <td>
+                                                    <SearchableSelect
+                                                        className={styles.inlineSelect}
+                                                        value={row.brandId || ''}
+                                                        onChange={e => handlePreviewEdit(idx, 'brandId', e.target.value)}
+                                                        disabled={isSavingExcel || isServiceType(row.productType)}
+                                                        style={{ borderColor: (!isServiceType(row.productType) && !row.brandId) ? '#ef4444' : '' }}
+                                                    >
+                                                        <option value="">-- Chọn --</option>
+                                                        {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                                    </SearchableSelect>
+                                                </td>
+                                                <td>
+                                                    <SearchableSelect
+                                                        className={styles.inlineSelect}
+                                                        value={row.unitId || ''}
+                                                        onChange={e => handlePreviewEdit(idx, 'unitId', e.target.value)}
+                                                        disabled={isSavingExcel}
+                                                        style={{ borderColor: !row.unitId ? '#ef4444' : '' }}
+                                                    >
+                                                        <option value="">-- Chọn --</option>
+                                                        {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                                    </SearchableSelect>
+                                                </td>
+                                                <td>{formatCurrency(row.salePrice)}</td>
                                             </tr>
-                                        )}
-                                    </Fragment>
-                                );
-                            })}
+                                            {!row.isValid && (
+                                                <tr className={styles.rowInvalidError}>
+                                                    <td colSpan={9} style={{ padding: '4px 12px 12px 12px', borderTop: 'none' }}>
+                                                        <div className={styles.errorReasonInline}>
+                                                            {row.errors.map((e, i) => {
+                                                                let quickAddType = null;
+                                                                let quickAddName = null;
+                                                                const catMatch = e.match(/Danh mục '(.*)' không tồn tại/);
+                                                                if (catMatch) { quickAddType = 'category'; quickAddName = catMatch[1]; }
+                                                                else {
+                                                                    const brandMatch = e.match(/Thương hiệu '(.*)' không tồn tại/);
+                                                                    if (brandMatch) { quickAddType = 'brand'; quickAddName = brandMatch[1]; }
+                                                                    else {
+                                                                        const unitMatch = e.match(/Đơn vị tính '(.*)' không tồn tại/);
+                                                                        if (unitMatch) { quickAddType = 'unit'; quickAddName = unitMatch[1]; }
+                                                                    }
+                                                                }
+
+                                                                return (
+                                                                    <span key={i} style={{ marginRight: '24px', display: 'inline-flex', alignItems: 'center' }}>
+                                                                        <i className="bi bi-exclamation-triangle-fill" style={{ marginRight: '4px' }}></i> {e}
+                                                                        {quickAddType && (
+                                                                            <button
+                                                                                type="button"
+                                                                                className={styles.quickAddBtn}
+                                                                                onClick={() => handleQuickAddEntity(quickAddType, quickAddName)}
+                                                                                title="Thêm nhanh vào hệ thống"
+                                                                                disabled={isSavingExcel}
+                                                                            >
+                                                                                <i className="bi bi-plus-circle"></i> Thêm
+                                                                            </button>
+                                                                        )}
+                                                                    </span>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </Fragment>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -3036,8 +3032,8 @@ const ProductPage = () => {
                     <button className={styles.btnSecondary} onClick={() => setShowExcelPreviewModal(false)} disabled={isSavingExcel}>
                         Hủy
                     </button>
-                    <button 
-                        className={styles.btnPrimary} 
+                    <button
+                        className={styles.btnPrimary}
                         onClick={handleSaveValidExcelRows}
                         disabled={isSavingExcel || excelPreviewData.filter(r => r.isValid).length === 0}
                     >

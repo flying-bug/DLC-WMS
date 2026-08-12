@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import Modal from '../Modal/Modal';
 import { formatDateOnly } from '../../../utils/dateFormat';
 import styles from './EmployeeDrawer.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
     const navigate = useNavigate();
@@ -177,21 +179,21 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                     <>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Bộ phận</label>
-                            <select name="department" value={formData.department} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Bộ phận">
+                            <SearchableSelect name="department" value={formData.department} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Bộ phận">
                                 <option value="Phòng Kỹ thuật & Bảo hành">Phòng Kỹ thuật & Bảo hành</option>
                                 <option value="Phòng Kinh doanh">Phòng Kinh doanh</option>
                                 <option value="Kho bãi">Kho bãi</option>
                                 <option value="Kế toán - Hành chính">Kế toán - Hành chính</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Chức danh</label>
-                            <select name="position" value={formData.position} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Chức danh">
+                            <SearchableSelect name="position" value={formData.position} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Chức danh">
                                 <option value="Trưởng nhóm Kỹ thuật">Trưởng nhóm Kỹ thuật</option>
                                 <option value="Kỹ thuật viên">Kỹ thuật viên</option>
                                 <option value="Nhân viên kinh doanh">Nhân viên kinh doanh</option>
                                 <option value="Nhân viên kho">Nhân viên kho</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
                     </>
                 ) : (
@@ -222,11 +224,11 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                         </div>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Giới tính</label>
-                            <select name="gender" value={formData.gender} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Giới tính">
+                            <SearchableSelect name="gender" value={formData.gender} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Giới tính">
                                 <option value="Nam">Nam</option>
                                 <option value="Nữ">Nữ</option>
                                 <option value="Khác">Khác</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
                     </>
                 ) : (
@@ -280,11 +282,11 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                         </div>
                         <div className={styles.formGroup}>
                             <label className={styles.detailLabel}>Loại hợp đồng</label>
-                            <select name="contractType" value={formData.contractType} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Loại hợp đồng">
+                            <SearchableSelect name="contractType" value={formData.contractType} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Loại hợp đồng">
                                 <option value="Chính thức">Chính thức</option>
                                 <option value="Thử việc">Thử việc</option>
                                 <option value="Thời vụ">Thời vụ</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
                     </>
                 ) : (
@@ -304,11 +306,11 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                 {isEditMode ? (
                     <div className={styles.formGroup}>
                         <label className={styles.detailLabel}>Trạng thái</label>
-                        <select name="statusLabel" value={formData.statusLabel} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Trạng thái">
+                        <SearchableSelect name="statusLabel" value={formData.statusLabel} onChange={handleChange} className={`${styles.input} ${styles.select}`} aria-label="Trạng thái">
                             <option value="Đang hoạt động">Đang hoạt động</option>
                             <option value="Chờ duyệt">Chờ duyệt</option>
                             <option value="Ngừng hoạt động">Ngừng hoạt động</option>
-                        </select>
+                        </SearchableSelect>
                     </div>
                 ) : (
                     <div className={styles.detailItem}>

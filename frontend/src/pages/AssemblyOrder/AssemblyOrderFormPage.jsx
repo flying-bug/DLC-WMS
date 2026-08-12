@@ -14,6 +14,8 @@ import styles from './AssemblyOrderFormPage.module.css';
 import bomStyles from './AssemblyOrderPage.module.css';
 import AssemblyExecutionModal from './AssemblyExecutionModal';
 import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
@@ -755,10 +757,10 @@ function AssemblyOrderFormPage() {
                                 <div className="misa-form-row" style={{ marginTop: '12px' }}>
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                                         <label className="misa-label">Chọn Kho <span className="required">*</span></label>
-                                        <select className="misa-input" value={form.warehouseId} onChange={(event) => setField('warehouseId', event.target.value)} disabled={!canEdit || loading}>
+                                        <SearchableSelect className="misa-input" value={form.warehouseId} onChange={(event) => setField('warehouseId', event.target.value)} disabled={!canEdit || loading}>
                                             <option value="">Chọn kho thực hiện</option>
                                             {warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name || warehouse.warehouseName}</option>)}
-                                        </select>
+                                        </SearchableSelect>
                                     </div>
                                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                                         <label className="misa-label">Số lượng <span className="required">*</span></label>
@@ -769,10 +771,10 @@ function AssemblyOrderFormPage() {
                                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
                                     <label className="misa-label">Cấu hình máy <span className="required">*</span></label>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <select className="misa-input" style={{ flex: 1 }} value={form.bomId} onChange={(event) => setField('bomId', event.target.value)} disabled={!canEdit || loading}>
+                                        <SearchableSelect className="misa-input" style={{ flex: 1 }} value={form.bomId} onChange={(event) => setField('bomId', event.target.value)} disabled={!canEdit || loading}>
                                             <option value="">{loading ? 'Đang tải cấu hình...' : 'Chọn cấu hình đã duyệt'}</option>
                                             {boms.map((bom) => <option key={bom.id} value={bom.id}>{bom.bomCode ? `${bom.bomCode} - ` : ''}{bom.bomName} (Phiên bản: {bom.versionNo || '1.0'}) - SP: {bom.productName}</option>)}
-                                        </select>
+                                        </SearchableSelect>
                                         <button className={styles.btnOutline} type="button" onClick={openBomModal} disabled={!canEdit} style={{ whiteSpace: 'nowrap', padding: '0 12px', height: '32px' }}>
                                             <i className="bi bi-plus-lg"></i> Tạo cấu hình
                                         </button>
@@ -1121,12 +1123,12 @@ function AssemblyOrderFormPage() {
                             <div className="misa-form-row">
                                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                                     <label className="misa-label">Thành phẩm</label>
-                                    <select className="misa-input" value={bomForm.productId} onChange={(event) => handleBomProductChange(event.target.value)}>
+                                    <SearchableSelect className="misa-input" value={bomForm.productId} onChange={(event) => handleBomProductChange(event.target.value)}>
                                         <option value="">Chọn thành phẩm</option>
                                         {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
                                             <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
                                         ))}
-                                    </select>
+                                    </SearchableSelect>
                                 </div>
                                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                                     <label className="misa-label">Mã cấu hình</label>

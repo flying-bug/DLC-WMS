@@ -118,7 +118,8 @@ public class InventoryDocumentService {
 
         List<SerialNumber> serials = serialNumberRepository.findBySerialNumber(code);
         if (req.getVariantId() != null) {
-            serials = serials.stream().filter(s -> s.getVariantId().equals(req.getVariantId())).collect(Collectors.toList());
+            serials = serials.stream().filter(s -> s.getVariantId().equals(req.getVariantId()))
+                    .collect(Collectors.toList());
         }
         if (serials.size() > 1) {
             throw new BusinessException("Mã serial tồn tại trên nhiều sản phẩm, vui lòng chọn mẫu sản phẩm trước");
@@ -159,7 +160,8 @@ public class InventoryDocumentService {
         String normalizedIssuePurpose = normalizeOptionalReference(issuePurpose);
         String normalizedReferenceType = normalizeOptionalReference(referenceType);
         boolean noFilters = normalizedKeyword == null && fromDate == null && toDate == null && normalizedStatus == null
-                && warehouseId == null && normalizedIssuePurpose == null && normalizedReferenceType == null && referenceId == null;
+                && warehouseId == null && normalizedIssuePurpose == null && normalizedReferenceType == null
+                && referenceId == null;
         List<InventoryDocument> docs = noFilters
                 ? inventoryDocumentRepository.findAllImports()
                 : inventoryDocumentRepository.searchImports(normalizedKeyword, fromDate, toDate, normalizedStatus,
@@ -264,11 +266,12 @@ public class InventoryDocumentService {
             ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
 
             Long targetSerialId = line.getSerialNumberId();
-            if (targetSerialId == null && line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
+            if (targetSerialId == null && line.getSerialNumbersText() != null
+                    && !line.getSerialNumbersText().isBlank()) {
                 List<String> serials = parseSerialNumbers(line.getSerialNumbersText());
                 for (String sn : serials) {
                     serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), sn)
-                        .ifPresent(serialsToExport::add);
+                            .ifPresent(serialsToExport::add);
                 }
                 if (!serialsToExport.isEmpty() && targetSerialId == null) {
                     line.setSerialNumberId(serialsToExport.get(0).getId());
@@ -281,7 +284,8 @@ public class InventoryDocumentService {
 
             for (SerialNumber snObj : serialsToExport) {
                 if (!"AVAILABLE".equals(snObj.getStatus())) {
-                    throw new BusinessException("Serial " + snObj.getSerialNumber() + " không có sẵn trong kho (trạng thái hiện tại: " + snObj.getStatus() + ")");
+                    throw new BusinessException("Serial " + snObj.getSerialNumber()
+                            + " không có sẵn trong kho (trạng thái hiện tại: " + snObj.getStatus() + ")");
                 }
                 if (!doc.getWarehouseId().equals(snObj.getWarehouseId())) {
                     throw new BusinessException("Serial " + snObj.getSerialNumber() + " không nằm trong kho xuất");
@@ -369,16 +373,21 @@ public class InventoryDocumentService {
 
             for (SerialNumber snObj : serialsToExport) {
                 updateExportedSerialBalance(doc, line, snObj, avgUnitCost);
-                com.duylongtech.backend.dto.request.WarrantyLineRequest wl = generateWarrantyLineIfNeeded(doc, line, snObj);
-                if (wl != null) warrantyLines.add(wl);
+                com.duylongtech.backend.dto.request.WarrantyLineRequest wl = generateWarrantyLineIfNeeded(doc, line,
+                        snObj);
+                if (wl != null)
+                    warrantyLines.add(wl);
             }
             if (serialsToExport.isEmpty()) {
-                com.duylongtech.backend.dto.request.WarrantyLineRequest wl = generateWarrantyLineIfNeeded(doc, line, null);
-                if (wl != null) warrantyLines.add(wl);
+                com.duylongtech.backend.dto.request.WarrantyLineRequest wl = generateWarrantyLineIfNeeded(doc, line,
+                        null);
+                if (wl != null)
+                    warrantyLines.add(wl);
             }
 
             if (doc.getSalesOrderId() != null) {
-                salesOrderService.fulfillReservation(doc.getSalesOrderId(), line.getVariantId(), doc.getWarehouseId(), qtyToExport);
+                salesOrderService.fulfillReservation(doc.getSalesOrderId(), line.getVariantId(), doc.getWarehouseId(),
+                        qtyToExport);
             }
         }
 
@@ -387,8 +396,11 @@ public class InventoryDocumentService {
             w.setWarrantyCode(codeGeneratorService.generateCode("WARRANTIES", "warranty_code", "WAR", 5));
             w.setPartnerId(doc.getPartnerId());
             w.setSalesOrderId(doc.getSalesOrderId());
+            w.setExportSlipId(doc.getId());
             w.setStartDate(LocalDate.now());
-            LocalDate maxEndDate = warrantyLines.stream().map(com.duylongtech.backend.dto.request.WarrantyLineRequest::getEndDate).max(LocalDate::compareTo).orElse(LocalDate.now());
+            LocalDate maxEndDate = warrantyLines.stream()
+                    .map(com.duylongtech.backend.dto.request.WarrantyLineRequest::getEndDate).max(LocalDate::compareTo)
+                    .orElse(LocalDate.now());
             w.setEndDate(maxEndDate);
             w.setWarrantyStatus("ACTIVE");
             w.setNote("Tự động sinh từ phiếu xuất " + doc.getDocCode());
@@ -420,7 +432,8 @@ public class InventoryDocumentService {
                         BigDecimal unitPrice = soLine.getUnitPrice();
                         BigDecimal lineAmount = qtyToExport.multiply(unitPrice);
                         BigDecimal vatRate = soLine.getVatRate() != null ? soLine.getVatRate() : BigDecimal.ZERO;
-                        BigDecimal vatAmount = lineAmount.multiply(vatRate).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                        BigDecimal vatAmount = lineAmount.multiply(vatRate).divide(BigDecimal.valueOf(100), 2,
+                                RoundingMode.HALF_UP);
 
                         totalDebt = totalDebt.add(lineAmount).add(vatAmount);
                     }
@@ -434,8 +447,7 @@ public class InventoryDocumentService {
                             doc.getDocCode(),
                             totalDebt,
                             BigDecimal.ZERO,
-                            "Ghi nhận công nợ xuất kho bán hàng " + doc.getDocCode()
-                    );
+                            "Ghi nhận công nợ xuất kho bán hàng " + doc.getDocCode());
                 }
             }
         }
@@ -516,7 +528,8 @@ public class InventoryDocumentService {
         InventoryDocument savedImport = inventoryDocumentRepository.save(savedDoc);
         syncStocktakeReference(savedImport);
 
-        // Ghi nhận tăng công nợ nhà cung cấp khi nhập kho (luôn luôn ghi nhận nếu có partnerId)
+        // Ghi nhận tăng công nợ nhà cung cấp khi nhập kho (luôn luôn ghi nhận nếu có
+        // partnerId)
         if (savedImport.getPartnerId() != null) {
             BigDecimal totalImportValue = savedImport.getLines().stream()
                     .map(l -> (l.getQuantityIn() != null ? l.getQuantityIn() : BigDecimal.ZERO)
@@ -530,8 +543,7 @@ public class InventoryDocumentService {
                     savedImport.getDocCode(),
                     totalImportValue,
                     BigDecimal.ZERO,
-                    "Ghi nhận công nợ phiếu nhập kho " + savedImport.getDocCode()
-            );
+                    "Ghi nhận công nợ phiếu nhập kho " + savedImport.getDocCode());
         }
 
         return toResponse(savedImport);
@@ -680,7 +692,8 @@ public class InventoryDocumentService {
         }
         List<SerialNumber> serials = serialNumberRepository.findBySerialNumber(code);
         if (req != null && req.getVariantId() != null) {
-            serials = serials.stream().filter(s -> s.getVariantId().equals(req.getVariantId())).collect(Collectors.toList());
+            serials = serials.stream().filter(s -> s.getVariantId().equals(req.getVariantId()))
+                    .collect(Collectors.toList());
         }
         if (serials.size() > 1) {
             throw new BusinessException("Mã serial tồn tại trên nhiều sản phẩm");
@@ -726,7 +739,10 @@ public class InventoryDocumentService {
                 .trackSerial(product != null ? product.getTrackSerial() : false)
                 .salePrice(variant.getSalePrice())
                 .costPrice(variant.getCostPrice())
-                .warrantyMonths((variant.getWarrantyMonths() == null || variant.getWarrantyMonths() <= 0) && product != null ? product.getWarrantyPeriodMonths() : variant.getWarrantyMonths())
+                .warrantyMonths(
+                        (variant.getWarrantyMonths() == null || variant.getWarrantyMonths() <= 0) && product != null
+                                ? product.getWarrantyPeriodMonths()
+                                : variant.getWarrantyMonths())
                 .build();
     }
 
@@ -780,7 +796,8 @@ public class InventoryDocumentService {
      * Phiếu bảo hành sẽ không được tạo nếu serial đó đã có warranty tồn tại
      * (tránh duplicate khi gọi lại postExport do lỗi retry).
      */
-    private com.duylongtech.backend.dto.request.WarrantyLineRequest generateWarrantyLineIfNeeded(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial) {
+    private com.duylongtech.backend.dto.request.WarrantyLineRequest generateWarrantyLineIfNeeded(InventoryDocument doc,
+            InventoryDocumentLine line, SerialNumber serial) {
         // Chỉ tự động sinh phiếu bảo hành khi mục đích là SALES (Xuất kho bán hàng)
         // USAGE (Xuất sử dụng nội bộ) và TRANSFER_EXPORT (Chuyển kho) đều KHÔNG sinh
         // bảo hành
@@ -1023,7 +1040,8 @@ public class InventoryDocumentService {
         for (String code : allCodes) {
             try {
                 int num = Integer.parseInt(code.substring(2));
-                if (num != expected) break; // phát hiện khoảng trống, dừng
+                if (num != expected)
+                    break; // phát hiện khoảng trống, dừng
                 expected++;
             } catch (NumberFormatException ignored) {
                 // bỏ qua mã không hợp lệ
@@ -1044,7 +1062,8 @@ public class InventoryDocumentService {
         for (String code : allCodes) {
             try {
                 int num = Integer.parseInt(code.substring(2));
-                if (num != expected) break;
+                if (num != expected)
+                    break;
                 expected++;
             } catch (NumberFormatException ignored) {
                 // bỏ qua mã không hợp lệ
@@ -1137,16 +1156,21 @@ public class InventoryDocumentService {
 
         if (lr.getSerialNumbers() != null && !lr.getSerialNumbers().isEmpty()) {
             for (String snValue : lr.getSerialNumbers()) {
-                if (snValue == null || snValue.trim().isEmpty()) continue;
-                SerialNumber snObj = serialNumberRepository.findByVariantIdAndSerialNumber(lr.getVariantId(), snValue.trim()).orElse(null);
+                if (snValue == null || snValue.trim().isEmpty())
+                    continue;
+                SerialNumber snObj = serialNumberRepository
+                        .findByVariantIdAndSerialNumber(lr.getVariantId(), snValue.trim()).orElse(null);
                 if (snObj != null) {
                     if (!"AVAILABLE".equals(snObj.getStatus())) {
-                        throw new BusinessException("Serial " + snValue + " không có sẵn trong kho (trạng thái: " + snObj.getStatus() + ")");
+                        throw new BusinessException("Serial " + snValue + " không có sẵn trong kho (trạng thái: "
+                                + snObj.getStatus() + ")");
                     }
                     ensureSerialNotInstalledInPc(snObj, doc);
-                    boolean isLocked = inventoryDocumentLineRepository.isSerialLockedInDrafts(snObj.getId(), doc.getId());
+                    boolean isLocked = inventoryDocumentLineRepository.isSerialLockedInDrafts(snObj.getId(),
+                            doc.getId());
                     if (isLocked) {
-                        throw new BusinessException("Serial " + snValue + " đang nằm trong một phiếu xuất nháp khác, vui lòng kiểm tra lại");
+                        throw new BusinessException("Serial " + snValue
+                                + " đang nằm trong một phiếu xuất nháp khác, vui lòng kiểm tra lại");
                     }
                 }
             }
@@ -1154,12 +1178,14 @@ public class InventoryDocumentService {
             SerialNumber snObj = serialNumberRepository.findById(serialNumberId).orElse(null);
             if (snObj != null) {
                 if (!"AVAILABLE".equals(snObj.getStatus())) {
-                    throw new BusinessException("Serial " + snObj.getSerialNumber() + " không có sẵn trong kho (trạng thái: " + snObj.getStatus() + ")");
+                    throw new BusinessException("Serial " + snObj.getSerialNumber()
+                            + " không có sẵn trong kho (trạng thái: " + snObj.getStatus() + ")");
                 }
                 ensureSerialNotInstalledInPc(snObj, doc);
                 boolean isLocked = inventoryDocumentLineRepository.isSerialLockedInDrafts(serialNumberId, doc.getId());
                 if (isLocked) {
-                    throw new BusinessException("Serial " + snObj.getSerialNumber() + " đang nằm trong một phiếu xuất nháp khác, vui lòng kiểm tra lại");
+                    throw new BusinessException("Serial " + snObj.getSerialNumber()
+                            + " đang nằm trong một phiếu xuất nháp khác, vui lòng kiểm tra lại");
                 }
             }
         }
@@ -1320,8 +1346,6 @@ public class InventoryDocumentService {
         return toResponse(doc, false);
     }
 
-
-
     @Transactional
     public InventoryDocumentResponse createExportFromSalesOrder(Long soId, Long actorUserId) {
         SalesOrder so = salesOrderRepository.findById(soId)
@@ -1416,7 +1440,8 @@ public class InventoryDocumentService {
             } else if ("REPAIR".equals(refType)) {
                 repairRepository.findById(doc.getReferenceId())
                         .ifPresent(repair -> r.setReferenceCode(repair.getRepairCode()));
-            } else if ("STOCKTAKE".equals(refType) || "STOCK_TAKE".equals(refType) || "STOCKTAKE_ADJUSTMENT".equals(refType)) {
+            } else if ("STOCKTAKE".equals(refType) || "STOCK_TAKE".equals(refType)
+                    || "STOCKTAKE_ADJUSTMENT".equals(refType)) {
                 stocktakeRepository.findById(doc.getReferenceId())
                         .ifPresent(st -> r.setReferenceCode(st.getStocktakeCode()));
             } else if ("PURCHASE_ORDER".equals(refType) || "PO".equals(refType)) {
@@ -1426,13 +1451,13 @@ public class InventoryDocumentService {
         }
 
         if (r.getReferenceCode() == null && doc.getSalesOrderId() != null) {
-             salesOrderRepository.findById(doc.getSalesOrderId())
-                        .ifPresent(so -> {
-                            r.setReferenceCode(so.getSoCode());
-                            if (r.getReferenceType() == null) {
-                                r.setReferenceType("SALES_ORDER");
-                            }
-                        });
+            salesOrderRepository.findById(doc.getSalesOrderId())
+                    .ifPresent(so -> {
+                        r.setReferenceCode(so.getSoCode());
+                        if (r.getReferenceType() == null) {
+                            r.setReferenceType("SALES_ORDER");
+                        }
+                    });
         }
 
         if (doc.getLines() != null) {

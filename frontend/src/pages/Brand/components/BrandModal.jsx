@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal/Modal';
 import styles from './BrandModal.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const BrandModal = ({ onClose, onSave, initialData = null }) => {
     const [formData, setFormData] = useState({
@@ -42,7 +44,7 @@ const BrandModal = ({ onClose, onSave, initialData = null }) => {
             newErrors.contactEmail = 'Email không đúng định dạng!';
         }
 
-        if (formData.hotline && !/^(0[3|5|7|8|9])+([0-9]{8})$/.test(formData.hotline)) {
+        if (formData.hotline && !/^0[235789]\d{8,9}$/.test(formData.hotline)) {
             newErrors.hotline = 'Số điện thoại không hợp lệ (VD: 0912345678)!';
         }
 
@@ -61,7 +63,7 @@ const BrandModal = ({ onClose, onSave, initialData = null }) => {
         const newErrors = {};
         if (!formData.name.trim()) newErrors.name = 'Vui lòng nhập tên thương hiệu!';
         if (formData.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail)) newErrors.contactEmail = 'Email không đúng định dạng!';
-        if (formData.hotline && !/^(0[3|5|7|8|9])+([0-9]{8})$/.test(formData.hotline)) newErrors.hotline = 'Số điện thoại không hợp lệ (VD: 0912345678)!';
+        if (formData.hotline && !/^0[235789]\d{8,9}$/.test(formData.hotline)) newErrors.hotline = 'Số điện thoại không hợp lệ (VD: 0912345678)!';
 
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
@@ -107,7 +109,7 @@ const BrandModal = ({ onClose, onSave, initialData = null }) => {
                             <>
                                 <label className={styles.formLabel}>Trạng thái</label>
                                 <div className={styles.inputWrapper}>
-                                    <select 
+                                    <SearchableSelect 
                                         className={styles.select} 
                                         name="status"
                                         value={formData.status}
@@ -115,7 +117,7 @@ const BrandModal = ({ onClose, onSave, initialData = null }) => {
                                     >
                                         <option value="APPROVED">Đang hoạt động</option>
                                         <option value="INACTIVE">Ngừng hoạt động</option>
-                                    </select>
+                                    </SearchableSelect>
                                     <i className={`bi bi-chevron-down ${styles.selectIcon}`}></i>
                                 </div>
                             </>

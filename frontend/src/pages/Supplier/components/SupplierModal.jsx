@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal/Modal';
 import styles from './SupplierModal.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const SupplierModal = ({ isOpen = true, onClose, onSave, initialData = null }) => {
     const [formData, setFormData] = useState({
@@ -48,7 +50,7 @@ const SupplierModal = ({ isOpen = true, onClose, onSave, initialData = null }) =
             newErrors.email = 'Email không đúng định dạng!';
         }
 
-        if (formData.phone && !/^(0[3|5|7|8|9])+([0-9]{8})$/.test(formData.phone)) {
+        if (formData.phone && !/^0[235789]\d{8,9}$/.test(formData.phone)) {
             newErrors.phone = 'Số điện thoại không hợp lệ (VD: 0912345678)!';
         }
 
@@ -106,7 +108,7 @@ const SupplierModal = ({ isOpen = true, onClose, onSave, initialData = null }) =
                             <>
                                 <label className={styles.formLabel}>Trạng thái</label>
                                 <div className={styles.inputWrapper}>
-                                    <select 
+                                    <SearchableSelect 
                                         className={styles.select} 
                                         name="status"
                                         value={formData.status}
@@ -114,7 +116,7 @@ const SupplierModal = ({ isOpen = true, onClose, onSave, initialData = null }) =
                                     >
                                         <option value="APPROVED">Đang hoạt động</option>
                                         <option value="INACTIVE">Ngừng hoạt động</option>
-                                    </select>
+                                    </SearchableSelect>
                                     <i className={`bi bi-chevron-down ${styles.selectIcon}`}></i>
                                 </div>
                             </>
@@ -137,7 +139,7 @@ const SupplierModal = ({ isOpen = true, onClose, onSave, initialData = null }) =
                     <div className={`${styles.formGroup} ${styles.col6}`}>
                         <label className={styles.formLabel}>Nhóm nhà cung cấp</label>
                         <div className={styles.inputWrapper}>
-                            <select 
+                            <SearchableSelect 
                                 className={styles.select} 
                                 name="groupType"
                                 value={formData.groupType}
@@ -145,7 +147,7 @@ const SupplierModal = ({ isOpen = true, onClose, onSave, initialData = null }) =
                             >
                                 <option value="RETAIL">Bán lẻ</option>
                                 <option value="WHOLESALE">Bán buôn</option>
-                            </select>
+                            </SearchableSelect>
                             <i className={`bi bi-chevron-down ${styles.selectIcon}`}></i>
                         </div>
                     </div>

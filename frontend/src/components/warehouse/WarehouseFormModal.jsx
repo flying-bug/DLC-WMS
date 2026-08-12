@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import styles from './WarehouseFormModal.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 /**
  * Modal tạo mới / chỉnh sửa kho.
@@ -220,7 +222,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
 
                         <div className={styles.formGroup}>
                             <label>Loại kho</label>
-                            <select
+                            <SearchableSelect
                                 className={styles.selectField}
                                 value={formData.type}
                                 onChange={(e) => handleChange('type', e.target.value)}
@@ -228,12 +230,12 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                             >
                                 <option value="STANDARD">Kho tiêu chuẩn</option>
                                 <option value="SCRAP">Kho phế liệu</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
 
                         <div className={styles.formGroup}>
                             <label>Trạng thái</label>
-                            <select
+                            <SearchableSelect
                                 className={styles.selectField}
                                 value={formData.status}
                                 onChange={(e) => handleChange('status', e.target.value)}
@@ -241,7 +243,7 @@ function WarehouseFormModal({ isOpen, onClose, onSave, isEdit = false, initialDa
                             >
                                 <option value="APPROVED">Đang hoạt động</option>
                                 <option value="INACTIVE">Ngừng sử dụng</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
                     </div>
 

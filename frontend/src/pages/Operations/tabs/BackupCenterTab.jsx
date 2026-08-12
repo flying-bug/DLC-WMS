@@ -8,6 +8,8 @@ import { useToast } from '../../../contexts/ToastContext';
 import ConfirmModal from '../../../components/ui/ConfirmModal/ConfirmModal';
 import styles from './BackupCenterTab.module.css';
 import { formatDateTime as formatVietnamDateTime } from '../../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const STATUS_CONFIG = {
     LOCAL:     { label: 'Chỉ Local',   color: '#f59e0b', icon: 'bi bi-hdd-fill' },
@@ -357,7 +359,7 @@ function BackupCenterTab() {
 
                         <div className={styles.formRow}>
                             <label className={styles.formLabel}>Loại lịch</label>
-                            <select
+                            <SearchableSelect
                                 className={styles.formSelect}
                                 value={schedule.scheduleType}
                                 onChange={e => setSchedule(s => ({ ...s, scheduleType: e.target.value }))}
@@ -365,7 +367,7 @@ function BackupCenterTab() {
                                 <option value="DAILY">Hàng ngày</option>
                                 <option value="WEEKLY">Hàng tuần</option>
                                 <option value="MONTHLY">Hàng tháng</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
 
                         <div className={styles.formRow}>
@@ -381,7 +383,7 @@ function BackupCenterTab() {
                         {schedule.scheduleType === 'WEEKLY' && (
                             <div className={styles.formRow}>
                                 <label className={styles.formLabel}>Ngày trong tuần</label>
-                                <select
+                                <SearchableSelect
                                     className={styles.formSelect}
                                     value={schedule.scheduleDay}
                                     onChange={e => setSchedule(s => ({ ...s, scheduleDay: Number(e.target.value) }))}
@@ -389,7 +391,7 @@ function BackupCenterTab() {
                                     {['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','Chủ nhật'].map((d,i) => (
                                         <option key={i+1} value={i+1}>{d}</option>
                                     ))}
-                                </select>
+                                </SearchableSelect>
                             </div>
                         )}
 

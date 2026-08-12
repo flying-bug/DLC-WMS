@@ -8,6 +8,8 @@ import styles from './RepairListPage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 import Modal from '../../components/ui/Modal/Modal';
 import { formatDateOnly } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
@@ -220,7 +222,7 @@ function RepairListPage() {
             </div>
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>TÌNH TRẠNG</span>
-              <select
+              <SearchableSelect
                 className={styles.filterSelect}
                 value={filters.status}
                 onChange={(e) => { setFilters(prev => ({ ...prev, status: e.target.value })); setCurrentPage(1); }}
@@ -229,7 +231,7 @@ function RepairListPage() {
                 {Object.entries(STATUS_LABELS).map(([value, meta]) => (
                   <option key={value} value={value}>{meta.label}</option>
                 ))}
-              </select>
+              </SearchableSelect>
             </div>
           </div>
           <div className={styles.filterActions}>
@@ -351,7 +353,7 @@ function RepairListPage() {
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>Hiển thị</span>
-              <select
+              <SearchableSelect
                 className="misa-select"
                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
                 value={pageSize}
@@ -361,7 +363,7 @@ function RepairListPage() {
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-              </select>
+              </SearchableSelect>
               <span>trên tổng số {totalItems} bản ghi</span>
             </div>
 

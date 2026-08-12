@@ -48,19 +48,42 @@ function formatSource(source) {
 }
 
 function AiChatPage() {
-    const [messages, setMessages] = useState(initialMessages);
+    const [messages, setMessages] = useState(() => {
+        const saved = localStorage.getItem('dlc_ai_chat_history');
+        return saved ? JSON.parse(saved) : initialMessages;
+    });
     const [input, setInput] = useState('');
     const [isThinking, setIsThinking] = useState(false);
+    const [prompts, setPrompts] = useState(suggestedPrompts);
     const textareaRef = useRef(null);
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 50);
     };
 
     useEffect(() => {
         scrollToBottom();
+        localStorage.setItem('dlc_ai_chat_history', JSON.stringify(messages));
     }, [messages, isThinking]);
+
+    useEffect(() => {
+        axiosClient.get('/ai/insights/frequent-questions')
+            .then(res => {
+                const data = res.data?.data || [];
+                if (data.length > 0) {
+                    setPrompts(data.slice(0, 4));
+                }
+            })
+            .catch(err => console.error('Failed to load frequent questions:', err));
+    }, []);
+
+    const clearHistory = () => {
+        setMessages(initialMessages);
+        localStorage.removeItem('dlc_ai_chat_history');
+    };
 
     const canSend = input.trim().length > 0 && !isThinking;
 
@@ -141,10 +164,17 @@ function AiChatPage() {
                             <div className={styles.assistantIcon}>
                                 <i className="fas fa-robot" aria-hidden="true" />
                             </div>
-                            <div>
+                            <div style={{ flex: 1 }}>
                                 <h2>AI Assistant</h2>
                                 <p>RAG chatbot cho DLC WMS</p>
                             </div>
+                            <button 
+                                onClick={clearHistory} 
+                                className={styles.clearHistoryBtn}
+                                title="Xóa lịch sử trò chuyện"
+                            >
+                                <i className="bi bi-trash"></i>
+                            </button>
                         </div>
 
                         <div className={styles.statusBox}>
@@ -156,10 +186,10 @@ function AiChatPage() {
                         </div>
 
                         <div className={styles.promptGroup}>
-                            <h3>Gợi ý câu hỏi</h3>
-                            {suggestedPrompts.map((prompt) => (
+                            <h3>GỢI Ý CÂU HỎI</h3>
+                            {prompts.map((prompt, index) => (
                                 <button
-                                    key={prompt}
+                                    key={index}
                                     type="button"
                                     className={styles.promptButton}
                                     onClick={() => sendMessage(prompt)}
