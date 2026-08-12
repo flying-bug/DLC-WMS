@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -12,7 +12,6 @@ import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import { exportToExcel } from '../../utils/excelExport';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
-
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
@@ -21,7 +20,7 @@ const formatMoneyInput = (value) => {
   const digits = digitsOnly(value);
   return digits ? Number(digits).toLocaleString('vi-VN') : '';
 };
-const statusText = (status) => (status === 'POSTED' ? 'Ghi sß╗ò' : status === 'DRAFT' ? 'Nh├íp' : status || '-');
+const statusText = (status) => (status === 'POSTED' ? 'Ghi sổ' : status === 'DRAFT' ? 'Nháp' : status || '-');
 const formatPaymentDateTime = (value) => value ? formatDateTime(value, { withSeconds: false }) : '-';
 
 const selectStyles = {
@@ -47,6 +46,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
   useEffect(() => {
     setMode(initialMode);
   }, [initialMode]);
+
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [partnerId, setPartnerId] = useState(null);
@@ -132,16 +132,16 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
 
   const validate = () => {
     if (!partnerId) {
-      showToast('error', mode === 'RECEIPT' ? 'Vui l├▓ng chß╗ìn kh├ích h├áng' : 'Vui l├▓ng chß╗ìn nh├á cung cß║Ñp');
+      showToast('error', mode === 'RECEIPT' ? 'Vui lòng chọn khách hàng' : 'Vui lòng chọn nhà cung cấp');
       return false;
     }
     const numericAmount = Number(digitsOnly(amount) || 0);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      showToast('error', 'Sß╗æ tiß╗ün phß║úi lß╗¢n h╞ín 0');
+      showToast('error', 'Số tiền phải lớn hơn 0');
       return false;
     }
     if (numericAmount > Number(debtBalance || 0)) {
-      showToast('error', 'Sß╗æ tiß╗ün kh├┤ng ─æ╞░ß╗úc v╞░ß╗út qu├í c├┤ng nß╗ú hiß╗çn tß║íi');
+      showToast('error', 'Số tiền không được vượt quá công nợ hiện tại');
       return false;
     }
     return true;
@@ -166,9 +166,9 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
       setAmount('');
       setNote('');
       await reloadPartnerSnapshot(partnerId);
-      showToast('success', nextStatus === 'POSTED' ? 'Ghi sß╗ò th├ánh c├┤ng' : 'L╞░u tß║ím th├ánh c├┤ng');
+      showToast('success', nextStatus === 'POSTED' ? 'Ghi sổ thành công' : 'Lưu tạm thành công');
     } catch (err) {
-      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Kh├┤ng thß╗â lß║¡p phiß║┐u thu/chi');
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể lập phiếu thu/chi');
     } finally {
       setSaving(false);
     }
@@ -182,9 +182,9 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
       const saved = unwrap(res);
       setDebtBalance(Number(saved?.partnerDebtBalance || 0));
       await reloadPartnerSnapshot(partnerId);
-      showToast('success', 'Ghi sß╗ò phiß║┐u nh├íp th├ánh c├┤ng');
+      showToast('success', 'Ghi sổ phiếu nháp thành công');
     } catch (err) {
-      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Kh├┤ng thß╗â ghi sß╗ò phiß║┐u nh├íp');
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể ghi sổ phiếu nháp');
     } finally {
       setPostingId(null);
     }
@@ -201,21 +201,21 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
 
   const handleExportExcel = () => {
     if (!history || history.length === 0) {
-      showToast('warning', 'Kh├┤ng c├│ lß╗ïch sß╗¡ thu chi ─æß╗â xuß║Ñt Excel');
+      showToast('warning', 'Không có lịch sử thu chi để xuất Excel');
       return;
     }
-    const headers = ['M├ú phiß║┐u', 'Ng├áy tß║ío', 'Loß║íi phiß║┐u', 'Sß╗æ tiß╗ün', 'Ph╞░╞íng thß╗⌐c', 'Trß║íng th├íi', 'Ghi ch├║'];
+    const headers = ['Mã phiếu', 'Ngày tạo', 'Loại phiếu', 'Số tiền', 'Phương thức', 'Trạng thái', 'Ghi chú'];
     const data = history.map(item => [
       item.code,
       item.createdAt ? formatDateOnly(item.createdAt) : '',
-      item.type === 'RECEIPT' ? 'Phiß║┐u thu' : 'Phiß║┐u chi',
+      item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi',
       item.amount,
-      item.paymentMethod === 'BANK_TRANSFER' ? 'Chuyß╗ân khoß║ún' : 'Tiß╗ün mß║╖t',
-      item.status === 'POSTED' ? '─É├ú ghi sß╗ò' : 'L╞░u tß║ím',
+      item.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Tiền mặt',
+      item.status === 'POSTED' ? 'Đã ghi sổ' : 'Lưu tạm',
       item.note || ''
     ]);
     exportToExcel(headers, data, `Lich_su_thu_chi_${partnerId || 'tat_ca'}`);
-    showToast('success', 'Xuß║Ñt Excel th├ánh c├┤ng!');
+    showToast('success', 'Xuất Excel thành công!');
   };
 
   return (
@@ -224,27 +224,27 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
         <div className={styles.pageHeader}>
           <div>
             <div className={styles.breadcrumb}>Thu chi</div>
-            <h1 className={styles.pageTitle}>{mode === 'RECEIPT' ? 'Quß║ún l├╜ phiß║┐u thu' : 'Quß║ún l├╜ phiß║┐u chi'}</h1>
+            <h1 className={styles.pageTitle}>{mode === 'RECEIPT' ? 'Quản lý phiếu thu' : 'Quản lý phiếu chi'}</h1>
           </div>
         </div>
 
         <div className={styles.topGrid}>
           <section className={styles.card}>
             <div className={styles.cardTitle}>
-              <i className="bi bi-person-vcard" /> {mode === 'RECEIPT' ? 'Thu tiß╗ün kh├ích h├áng' : 'Trß║ú c├┤ng nß╗ú nh├á cung cß║Ñp'}
+              <i className="bi bi-person-vcard" /> {mode === 'RECEIPT' ? 'Thu tiền khách hàng' : 'Trả công nợ nhà cung cấp'}
             </div>
             {loading ? (
-              <div className={styles.loading}>─Éang tß║úi dß╗» liß╗çu...</div>
+              <div className={styles.loading}>Đang tải dữ liệu...</div>
             ) : (
               <>
                 <div className={styles.fieldRow}>
-                  <label className={styles.label}>{mode === 'RECEIPT' ? 'Kh├ích h├áng' : 'Nh├á cung cß║Ñp'} <span>*</span></label>
+                  <label className={styles.label}>{mode === 'RECEIPT' ? 'Khách hàng' : 'Nhà cung cấp'} <span>*</span></label>
                   <Select
                     options={partnerOptions}
                     value={selectedPartner}
                     onChange={opt => setPartnerId(opt?.value || null)}
                     isClearable
-                    placeholder={mode === 'RECEIPT' ? 'Chß╗ìn kh├ích h├áng...' : 'Chß╗ìn nh├á cung cß║Ñp...'}
+                    placeholder={mode === 'RECEIPT' ? 'Chọn khách hàng...' : 'Chọn nhà cung cấp...'}
                     styles={selectStyles}
                     menuPortalTarget={document.body}
                   />
@@ -253,59 +253,59 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                 <div
                   className={`${styles.debtPanel} ${partnerId ? styles.debtPanelClickable : ''}`}
                   onClick={openFullHistory}
-                  title={partnerId ? 'Bß║Ñm ─æß╗â xem lß╗ïch sß╗¡ c├┤ng nß╗ú & h├│a ─æ╞ín chi tiß║┐t' : 'Vui l├▓ng chß╗ìn ─æß╗æi t├íc'}
+                  title={partnerId ? 'Bấm để xem lịch sử công nợ & hóa đơn chi tiết' : 'Vui lòng chọn đối tác'}
                 >
                   <div className={styles.debtPanelLabelGroup}>
-                    <span>C├┤ng nß╗ú hiß╗çn tß║íi</span>
+                    <span>Công nợ hiện tại</span>
                     {partnerId ? (
                       <span className={styles.debtPanelBadge}>
-                        <i className="bi bi-box-arrow-up-right" /> Chi tiß║┐t
+                        <i className="bi bi-box-arrow-up-right" /> Chi tiết
                       </span>
                     ) : (
-                      <span className={styles.debtPanelHint}>(Chß╗ìn ─æß╗æi t├íc ─æß╗â xem chi tiß║┐t)</span>
+                      <span className={styles.debtPanelHint}>(Chọn đối tác để xem chi tiết)</span>
                     )}
                   </div>
-                  <strong>{money(debtBalance)} ─æ</strong>
+                  <strong>{money(debtBalance)} đ</strong>
                 </div>
 
                 <div className={styles.formGrid}>
                   <div className={styles.fieldRow}>
-                    <label className={styles.label}>Sß╗æ tiß╗ün <span>*</span></label>
+                    <label className={styles.label}>Số tiền <span>*</span></label>
                     <input
                       className={styles.input}
                       inputMode="numeric"
                       type="text"
                       value={formattedAmount}
                       onChange={e => setAmount(digitsOnly(e.target.value))}
-                      placeholder="Nhß║¡p sß╗æ tiß╗ün"
+                      placeholder="Nhập số tiền"
                     />
                   </div>
                   <div className={styles.fieldRow}>
-                    <label className={styles.label}>Ph╞░╞íng thß╗⌐c</label>
+                    <label className={styles.label}>Phương thức</label>
                     <SearchableSelect className={styles.input} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
-                      <option value="CASH">Tiß╗ün mß║╖t</option>
-                      <option value="BANK_TRANSFER">Chuyß╗ân khoß║ún</option>
+                      <option value="CASH">Tiền mặt</option>
+                      <option value="BANK_TRANSFER">Chuyển khoản</option>
                     </SearchableSelect>
                   </div>
                 </div>
 
                 <div className={styles.fieldRow}>
-                  <label className={styles.label}>Ghi ch├║</label>
+                  <label className={styles.label}>Ghi chú</label>
                   <textarea
                     className={styles.textarea}
                     rows={3}
                     value={note}
                     onChange={e => setNote(e.target.value)}
-                    placeholder="Nß╗Öi dung thu/chi"
+                    placeholder="Nội dung thu/chi"
                   />
                 </div>
 
                 <div className={styles.formActions}>
                   <button className={styles.btnDraft} disabled={saving} onClick={() => submit('DRAFT')} type="button">
-                    L╞░u tß║ím
+                    Lưu tạm
                   </button>
                   <button className={styles.btnPost} disabled={saving || Number(debtBalance || 0) <= 0} onClick={() => submit('POSTED')} type="button">
-                    <i className="bi bi-check2-circle" /> Ghi sß╗ò
+                    <i className="bi bi-check2-circle" /> Ghi sổ
                   </button>
                 </div>
               </>
@@ -315,18 +315,18 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
           <section className={styles.card}>
             <div className={styles.cardTitleRow}>
               <div className={styles.cardTitle}>
-                <i className="bi bi-clock-history" /> Lß╗ïch sß╗¡ thu chi
+                <i className="bi bi-clock-history" /> Lịch sử thu chi
               </div>
               <div className={styles.historyTools}>
-                <span className={styles.historyCount}>{Math.min(history.length, 5)} gß║ºn nhß║Ñt</span>
+                <span className={styles.historyCount}>{Math.min(history.length, 5)} gần nhất</span>
                 {history.length > 0 && (
-                  <button className={styles.linkButton} onClick={handleExportExcel} type="button" title="Xuß║Ñt tß╗çp Excel" style={{ marginRight: 8 }}>
-                    <i className="bi bi-file-earmark-excel" /> Xuß║Ñt Excel
+                  <button className={styles.linkButton} onClick={handleExportExcel} type="button" title="Xuất tệp Excel" style={{ marginRight: 8 }}>
+                    <i className="bi bi-file-earmark-excel" /> Xuất Excel
                   </button>
                 )}
                 {partnerId && (
                   <button className={styles.linkButton} onClick={openFullHistory} type="button">
-                    Xem tß║Ñt cß║ú
+                    Xem tất cả
                   </button>
                 )}
               </div>
@@ -334,12 +334,12 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
             <div className={styles.historyList}>
               {recentHistory.length > 0 && (
                 <div className={styles.historyHeader}>
-                  <span>Chß╗⌐ng tß╗½</span>
-                  <span className={styles.textRight}>Sß╗æ tiß╗ün</span>
+                  <span>Chứng từ</span>
+                  <span className={styles.textRight}>Số tiền</span>
                 </div>
               )}
               {history.length === 0 ? (
-                <div className={styles.empty}>Ch╞░a c├│ phiß║┐u thu/chi</div>
+                <div className={styles.empty}>Chưa có phiếu thu/chi</div>
               ) : recentHistory.map(item => (
                 <div className={styles.historyItem} key={item.id}>
                   <div className={styles.historyMain}>
@@ -350,23 +350,23 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                           className={styles.btnPostInline}
                           style={{ padding: '2px 6px', fontSize: '12px', backgroundColor: '#fff', border: '1px solid #d1d5db', color: '#374151' }}
                           onClick={() => printPaymentReceipt(item, { partnerName: selectedPartner?.label?.split(' - ')[1] || selectedPartner?.label, salespersonName: '' })}
-                          title="In phiß║┐u"
+                          title="In phiếu"
                         >
                           <i className="bi bi-printer"></i>
                         </button>
                         <span className={item.status === 'POSTED' ? styles.statusPosted : styles.statusDraft}>{statusText(item.status)}</span>
                       </div>
                     </div>
-                    <span>{item.type === 'RECEIPT' ? 'Phiß║┐u thu' : 'Phiß║┐u chi'} - {item.paymentMethod === 'CASH' ? 'Tiß╗ün mß║╖t' : 'Chuyß╗ân khoß║ún'}</span>
+                    <span>{item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'} - {item.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</span>
                     <span className={styles.historyMeta}>
                       <i className="bi bi-calendar3" /> {formatPaymentDateTime(item.createdAt)}
                     </span>
                     <span className={styles.historyNote}>
-                      <i className="bi bi-chat-left-text" /> {item.note || 'Kh├┤ng c├│ ghi ch├║'}
+                      <i className="bi bi-chat-left-text" /> {item.note || 'Không có ghi chú'}
                     </span>
                   </div>
                   <div className={styles.historyAmount}>
-                    <strong>{money(item.amount)} ─æ</strong>
+                    <strong>{money(item.amount)} đ</strong>
                     {item.status === 'DRAFT' && (
                       <button
                         className={styles.btnPostInline}
@@ -374,7 +374,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                         onClick={() => postDraftPayment(item)}
                         type="button"
                       >
-                        <i className="bi bi-check2-circle" /> Ghi sß╗ò
+                        <i className="bi bi-check2-circle" /> Ghi sổ
                       </button>
                     )}
                   </div>
