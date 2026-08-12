@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -12,25 +12,25 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
-const statusText = (status) => (status === 'POSTED' ? 'Ghi sổ' : status === 'DRAFT' ? 'Nháp' : status || '-');
+const statusText = (status) => (status === 'POSTED' ? 'Ghi sß╗ò' : status === 'DRAFT' ? 'Nh├íp' : status || '-');
 const formatPaymentDateTime = (value) => value ? formatDateTime(value, { withSeconds: false }) : '-';
 
 const entityTypeLabel = (type) => {
   switch (type) {
     case 'INVENTORY_IMPORT':
-      return { text: 'Nhập kho', className: styles.typeImport, icon: 'bi-box-arrow-in-down' };
+      return { text: 'Nhß║¡p kho', className: styles.typeImport, icon: 'bi-box-arrow-in-down' };
     case 'INVENTORY_EXPORT_SO':
-      return { text: 'Xuất kho bán', className: styles.typeExport, icon: 'bi-box-arrow-up-right' };
+      return { text: 'Xuß║Ñt kho b├ín', className: styles.typeExport, icon: 'bi-box-arrow-up-right' };
     case 'SALES_ORDER':
-      return { text: 'Đơn bán hàng', className: styles.typeOrder, icon: 'bi-cart-check' };
+      return { text: '─É╞ín b├ín h├áng', className: styles.typeOrder, icon: 'bi-cart-check' };
     case 'PURCHASE_ORDER':
-      return { text: 'Đơn mua hàng', className: styles.typePo, icon: 'bi-bag-plus' };
+      return { text: '─É╞ín mua h├áng', className: styles.typePo, icon: 'bi-bag-plus' };
     case 'PAYMENT_RECEIPT':
-      return { text: 'Phiếu thu', className: styles.typeReceipt, icon: 'bi-arrow-down-circle' };
+      return { text: 'Phiß║┐u thu', className: styles.typeReceipt, icon: 'bi-arrow-down-circle' };
     case 'PAYMENT_VOUCHER':
-      return { text: 'Phiếu chi', className: styles.typeVoucher, icon: 'bi-arrow-up-circle' };
+      return { text: 'Phiß║┐u chi', className: styles.typeVoucher, icon: 'bi-arrow-up-circle' };
     default:
-      return { text: type || 'Chứng từ', className: styles.typeDefault, icon: 'bi-file-text' };
+      return { text: type || 'Chß╗⌐ng tß╗½', className: styles.typeDefault, icon: 'bi-file-text' };
   }
 };
 
@@ -40,7 +40,7 @@ function PaymentHistoryPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const mode = searchParams.get('mode') === 'VOUCHER' ? 'VOUCHER' : 'RECEIPT';
-  const partnerTypeLabel = mode === 'RECEIPT' ? 'khách hàng' : 'nhà cung cấp';
+  const partnerTypeLabel = mode === 'RECEIPT' ? 'kh├ích h├áng' : 'nh├á cung cß║Ñp';
 
   const [partner, setPartner] = useState(null);
   const [debtBalance, setDebtBalance] = useState(0);
@@ -91,7 +91,7 @@ function PaymentHistoryPage() {
       }
     } catch (err) {
       console.error(err);
-      showToast('error', 'Không thể tải chi tiết công nợ đối tác');
+      showToast('error', 'Kh├┤ng thß╗â tß║úi chi tiß║┐t c├┤ng nß╗ú ─æß╗æi t├íc');
     } finally {
       setLoading(false);
     }
@@ -152,9 +152,9 @@ function PaymentHistoryPage() {
     try {
       await paymentApi.postPayment(item.id);
       await loadData();
-      showToast('success', 'Ghi sổ phiếu nháp thành công');
+      showToast('success', 'Ghi sß╗ò phiß║┐u nh├íp th├ánh c├┤ng');
     } catch (err) {
-      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể ghi sổ phiếu nháp');
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Kh├┤ng thß╗â ghi sß╗ò phiß║┐u nh├íp');
     } finally {
       setPostingId(null);
     }
@@ -165,47 +165,47 @@ function PaymentHistoryPage() {
       <div className={styles.page}>
         <div className={styles.header}>
           <div>
-            <div className={styles.breadcrumb}>Thu chi &amp; Công nợ / Chi tiết công nợ đối tác</div>
-            <h1 className={styles.title}>Chi tiết công nợ {partnerTypeLabel}</h1>
+            <div className={styles.breadcrumb}>Thu chi &amp; C├┤ng nß╗ú / Chi tiß║┐t c├┤ng nß╗ú ─æß╗æi t├íc</div>
+            <h1 className={styles.title}>Chi tiß║┐t c├┤ng nß╗ú {partnerTypeLabel}</h1>
             <p className={styles.subtitle}>
-              <i className="bi bi-person-lines-fill" /> {partnerLabel} {partner?.phone ? ` | SĐT: ${partner.phone}` : ''}
+              <i className="bi bi-person-lines-fill" /> {partnerLabel} {partner?.phone ? ` | S─ÉT: ${partner.phone}` : ''}
             </p>
           </div>
           <button className={styles.backButton} onClick={() => navigate('/payments')} type="button">
-            <i className="bi bi-arrow-left" /> Quay lại thu chi
+            <i className="bi bi-arrow-left" /> Quay lß║íi thu chi
           </button>
         </div>
 
         {/* Summary Metric Cards */}
         <div className={styles.summaryGrid}>
           <div className={`${styles.summaryCard} ${styles.summaryCardPrimary}`}>
-            <span>Công nợ hiện tại</span>
-            <strong>{money(debtBalance)} đ</strong>
+            <span>C├┤ng nß╗ú hiß╗çn tß║íi</span>
+            <strong>{money(debtBalance)} ─æ</strong>
           </div>
           <div className={styles.summaryCard}>
-            <span>Tổng giá trị phát sinh nợ (Hóa đơn)</span>
-            <strong>{money(totals.totalInvoiceAmount)} đ</strong>
-            <small>{totals.invoiceCount} chứng từ</small>
+            <span>Tß╗òng gi├í trß╗ï ph├ít sinh nß╗ú (H├│a ─æ╞ín)</span>
+            <strong>{money(totals.totalInvoiceAmount)} ─æ</strong>
+            <small>{totals.invoiceCount} chß╗⌐ng tß╗½</small>
           </div>
           <div className={styles.summaryCard}>
-            <span>Tổng tiền đã thu / chi (Đã ghi sổ)</span>
-            <strong className={styles.textSuccess}>{money(totals.totalPaymentAmount)} đ</strong>
-            <small>{totals.paymentCount} phiếu ({totals.draftPaymentCount} nháp)</small>
+            <span>Tß╗òng tiß╗ün ─æ├ú thu / chi (─É├ú ghi sß╗ò)</span>
+            <strong className={styles.textSuccess}>{money(totals.totalPaymentAmount)} ─æ</strong>
+            <small>{totals.paymentCount} phiß║┐u ({totals.draftPaymentCount} nh├íp)</small>
           </div>
           <div className={styles.summaryCard}>
-            <span>Tổng số giao dịch phát sinh</span>
+            <span>Tß╗òng sß╗æ giao dß╗ïch ph├ít sinh</span>
             <strong>{totals.invoiceCount + totals.paymentCount}</strong>
-            <small>Cập nhật tự động từ sổ cái</small>
+            <small>Cß║¡p nhß║¡t tß╗▒ ─æß╗Öng tß╗½ sß╗ò c├íi</small>
           </div>
         </div>
 
         {/* Split 2-Column Main Layout */}
         <div className={styles.splitGrid}>
-          {/* Left Column: Hóa đơn Nhập / Xuất kho & Chứng từ phát sinh nợ */}
+          {/* Left Column: H├│a ─æ╞ín Nhß║¡p / Xuß║Ñt kho & Chß╗⌐ng tß╗½ ph├ít sinh nß╗ú */}
           <section className={styles.columnCard}>
             <div className={styles.columnHeader}>
               <div className={styles.columnTitle}>
-                <i className="bi bi-journal-bookmark-fill" /> Hóa đơn &amp; Chứng từ Nhập/Xuất ({filteredInvoices.length})
+                <i className="bi bi-journal-bookmark-fill" /> H├│a ─æ╞ín &amp; Chß╗⌐ng tß╗½ Nhß║¡p/Xuß║Ñt ({filteredInvoices.length})
               </div>
             </div>
 
@@ -215,7 +215,7 @@ function PaymentHistoryPage() {
                 <input
                   value={leftKeyword}
                   onChange={e => setLeftKeyword(e.target.value)}
-                  placeholder="Tìm mã chứng từ, ghi chú..."
+                  placeholder="T├¼m m├ú chß╗⌐ng tß╗½, ghi ch├║..."
                 />
               </div>
               <SearchableSelect
@@ -223,16 +223,16 @@ function PaymentHistoryPage() {
                 value={leftTypeFilter}
                 onChange={e => setLeftTypeFilter(e.target.value)}
               >
-                <option value="ALL">Tất cả loại chứng từ</option>
-                <option value="INVENTORY_IMPORT">Nhập kho nhà cung cấp</option>
-                <option value="INVENTORY_EXPORT_SO">Xuất kho bán hàng</option>
-                <option value="SALES_ORDER">Đơn bán hàng</option>
+                <option value="ALL">Tß║Ñt cß║ú loß║íi chß╗⌐ng tß╗½</option>
+                <option value="INVENTORY_IMPORT">Nhß║¡p kho nh├á cung cß║Ñp</option>
+                <option value="INVENTORY_EXPORT_SO">Xuß║Ñt kho b├ín h├áng</option>
+                <option value="SALES_ORDER">─É╞ín b├ín h├áng</option>
               </SearchableSelect>
             </div>
             <SearchableSelect className={styles.select} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="ALL">Tất cả trạng thái</option>
-              <option value="POSTED">Ghi sổ</option>
-              <option value="DRAFT">Nháp</option>
+              <option value="ALL">Tß║Ñt cß║ú trß║íng th├íi</option>
+              <option value="POSTED">Ghi sß╗ò</option>
+              <option value="DRAFT">Nh├íp</option>
             </SearchableSelect>
           </div>
 
@@ -240,20 +240,20 @@ function PaymentHistoryPage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Mã chứng từ</th>
-                    <th>Loại</th>
-                    <th>Thời gian</th>
-                    <th className={styles.textRight}>Số tiền phát sinh</th>
+                    <th>M├ú chß╗⌐ng tß╗½</th>
+                    <th>Loß║íi</th>
+                    <th>Thß╗¥i gian</th>
+                    <th className={styles.textRight}>Sß╗æ tiß╗ün ph├ít sinh</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={4} className={styles.empty}>Đang tải hóa đơn...</td>
+                      <td colSpan={4} className={styles.empty}>─Éang tß║úi h├│a ─æ╞ín...</td>
                     </tr>
                   ) : filteredInvoices.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className={styles.empty}>Chưa có hóa đơn / chứng từ nhập xuất</td>
+                      <td colSpan={4} className={styles.empty}>Ch╞░a c├│ h├│a ─æ╞ín / chß╗⌐ng tß╗½ nhß║¡p xuß║Ñt</td>
                     </tr>
                   ) : (
                     filteredInvoices.map(item => {
@@ -270,7 +270,7 @@ function PaymentHistoryPage() {
                           </td>
                           <td className={styles.dateCell}>{formatPaymentDateTime(item.createdAt)}</td>
                           <td className={`${styles.textRight} ${styles.amountDebt}`}>
-                            +{money(item.amountDebt)} đ
+                            +{money(item.amountDebt)} ─æ
                           </td>
                         </tr>
                       );
@@ -281,11 +281,11 @@ function PaymentHistoryPage() {
             </div>
           </section>
 
-          {/* Right Column: Lịch sử Thu / Chi tiền thanh toán */}
+          {/* Right Column: Lß╗ïch sß╗¡ Thu / Chi tiß╗ün thanh to├ín */}
           <section className={styles.columnCard}>
             <div className={styles.columnHeader}>
               <div className={styles.columnTitle}>
-                <i className="bi bi-cash-stack" /> Lịch sử Thu / Chi thanh toán ({filteredPayments.length})
+                <i className="bi bi-cash-stack" /> Lß╗ïch sß╗¡ Thu / Chi thanh to├ín ({filteredPayments.length})
               </div>
             </div>
 
@@ -295,7 +295,7 @@ function PaymentHistoryPage() {
                 <input
                   value={rightKeyword}
                   onChange={e => setRightKeyword(e.target.value)}
-                  placeholder="Tìm mã phiếu thu/chi..."
+                  placeholder="T├¼m m├ú phiß║┐u thu/chi..."
                 />
               </div>
               <SearchableSelect
@@ -303,9 +303,9 @@ function PaymentHistoryPage() {
                 value={rightStatusFilter}
                 onChange={e => setRightStatusFilter(e.target.value)}
               >
-                <option value="ALL">Tất cả trạng thái</option>
-                <option value="POSTED">Ghi sổ</option>
-                <option value="DRAFT">Nháp</option>
+                <option value="ALL">Tß║Ñt cß║ú trß║íng th├íi</option>
+                <option value="POSTED">Ghi sß╗ò</option>
+                <option value="DRAFT">Nh├íp</option>
               </SearchableSelect>
             </div>
 
@@ -313,21 +313,21 @@ function PaymentHistoryPage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Mã phiếu</th>
-                    <th>Loại</th>
-                    <th>Phương thức</th>
-                    <th>Trạng thái</th>
-                    <th className={styles.textRight}>Số tiền</th>
+                    <th>M├ú phiß║┐u</th>
+                    <th>Loß║íi</th>
+                    <th>Ph╞░╞íng thß╗⌐c</th>
+                    <th>Trß║íng th├íi</th>
+                    <th className={styles.textRight}>Sß╗æ tiß╗ün</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className={styles.empty}>Đang tải phiếu thu/chi...</td>
+                      <td colSpan={5} className={styles.empty}>─Éang tß║úi phiß║┐u thu/chi...</td>
                     </tr>
                   ) : filteredPayments.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className={styles.empty}>Chưa có phiếu thu / chi thanh toán</td>
+                      <td colSpan={5} className={styles.empty}>Ch╞░a c├│ phiß║┐u thu / chi thanh to├ín</td>
                     </tr>
                   ) : (
                     filteredPayments.map(item => (
@@ -335,17 +335,17 @@ function PaymentHistoryPage() {
                         <td className={styles.codeCell}>{item.code}</td>
                         <td>
                           <span className={item.type === 'RECEIPT' ? styles.typeReceipt : styles.typeVoucher}>
-                            {item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'}
+                            {item.type === 'RECEIPT' ? 'Phiß║┐u thu' : 'Phiß║┐u chi'}
                           </span>
                         </td>
-                        <td>{item.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</td>
+                        <td>{item.paymentMethod === 'CASH' ? 'Tiß╗ün mß║╖t' : 'Chuyß╗ân khoß║ún'}</td>
                         <td>
                           <span className={item.status === 'POSTED' ? styles.statusPosted : styles.statusDraft}>
                             {statusText(item.status)}
                           </span>
                         </td>
                         <td className={`${styles.textRight} ${styles.amountReceipt}`}>
-                          -{money(item.amount)} đ
+                          -{money(item.amount)} ─æ
                         </td>
                       </tr>
                     ))
