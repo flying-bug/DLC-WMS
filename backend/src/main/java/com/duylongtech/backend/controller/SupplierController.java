@@ -83,10 +83,11 @@ public class SupplierController {
     @PreAuthorize("hasAuthority('supplier:view')")
     public ApiResponse<List<SupplierResponse>> getAllSuppliers(
             @RequestParam(value = "search", required = false) String search,
-            @RequestParam(required = false) String keyword
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status
     ) {
         String actualKeyword = (search != null && !search.isBlank()) ? search : keyword;
-        return ApiResponse.success(supplierService.getAllSuppliers(actualKeyword));
+        return ApiResponse.success(supplierService.getAllSuppliers(actualKeyword, status));
     }
 
     /**

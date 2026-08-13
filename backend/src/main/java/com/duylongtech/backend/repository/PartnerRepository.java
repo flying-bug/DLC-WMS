@@ -29,17 +29,20 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
     /**
      * Lấy danh sách tất cả nhà cung cấp (is_supplier = true).
      */
-    @Query("SELECT p FROM Partner p WHERE p.isSupplier = true ORDER BY p.createdAt DESC")
-    List<Partner> findAllSuppliers();
+    @Query("SELECT p FROM Partner p WHERE p.isSupplier = true " +
+           "AND (:status IS NULL OR :status = '' OR p.status = :status) " +
+           "ORDER BY p.createdAt DESC")
+    List<Partner> findAllSuppliers(@Param("status") String status);
 
     /**
-     * Tìm kiếm nhà cung cấp theo tên hoặc mã (case-insensitive).
+     * Tìm kiếm nhà cung cấp theo tên hoặc mã (case-insensitive) và status (nếu có).
      */
     @Query("SELECT p FROM Partner p WHERE p.isSupplier = true " +
-           "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "AND (:keyword IS NULL OR :keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "     OR LOWER(p.code) LIKE LOWER(CONCAT('%', :keyword, '%')))" +
+           "AND (:status IS NULL OR :status = '' OR p.status = :status) " +
            "ORDER BY p.createdAt DESC")
-    List<Partner> searchSuppliers(@Param("keyword") String keyword);
+    List<Partner> searchSuppliers(@Param("keyword") String keyword, @Param("status") String status);
 
     /**
      * Kiểm tra nhà cung cấp có liên kết giao dịch không (purchase orders).

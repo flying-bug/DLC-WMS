@@ -47,6 +47,135 @@ function formatSource(source) {
     return source.name;
 }
 
+function getMessageSources(message) {
+    if (Array.isArray(message.sources) && message.sources.length > 0) {
+        return message.sources;
+    }
+    if (typeof message.content === 'string' && message.content.includes('Nguồn dữ liệu:')) {
+        const match = message.content.match(/Nguồn dữ liệu:\s*([^\n]+)/);
+        if (match && match[1]) {
+            return match[1].split(',').map(s => s.trim()).filter(Boolean);
+        }
+    }
+    return [];
+}
+
+function cleanMessageContent(content) {
+    if (!content) return '';
+    return content.replace(/\n*Nguồn dữ liệu:\s*[\s\S]*$/i, '').trim();
+}
+
+function renderInlineMarkdown(text) {
+    if (!text) return null;
+    const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+
+    return parts.map((part, i) => {
+        if (!part) return null;
+        if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={i} className={styles.strongText}>{part.slice(2, -2)}</strong>;
+        }
+        if (part.startsWith('`') && part.endsWith('`')) {
+            return <code key={i} className={styles.inlineCode}>{part.slice(1, -1)}</code>;
+        }
+        return part;
+    });
+}
+
+function FormattedMessage({ content }) {
+    const cleaned = cleanMessageContent(content);
+    if (!cleaned) return null;
+
+    const lines = cleaned.split('\n');
+    const elements = [];
+    let currentList = [];
+    let listType = null;
+
+    const flushList = () => {
+        if (currentList.length > 0) {
+            if (listType === 'ul') {
+                elements.push(
+                    <ul key={`ul-${elements.length}`} className={styles.chatList}>
+                        {currentList.map((item, idx) => (
+                            <li key={idx} className={styles.chatListItem}>
+                                {renderInlineMarkdown(item)}
+                            </li>
+                        ))}
+                    </ul>
+                );
+            } else if (listType === 'ol') {
+                elements.push(
+                    <ol key={`ol-${elements.length}`} className={styles.chatOrderedList}>
+                        {currentList.map((item, idx) => (
+                            <li key={idx} className={styles.chatListItem}>
+                                {renderInlineMarkdown(item)}
+                            </li>
+                        ))}
+                    </ol>
+                );
+            }
+            currentList = [];
+            listType = null;
+        }
+    };
+
+    lines.forEach((line, index) => {
+        const trimmed = line.trim();
+
+        if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
+            if (listType && listType !== 'ul') flushList();
+            listType = 'ul';
+            currentList.push(trimmed.replace(/^[*|-]\s+/, ''));
+            return;
+        }
+
+        const orderedMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
+        if (orderedMatch) {
+            if (listType && listType !== 'ol') flushList();
+            listType = 'ol';
+            currentList.push(orderedMatch[2]);
+            return;
+        }
+
+        flushList();
+
+        if (!trimmed) return;
+
+        if (trimmed.startsWith('### ')) {
+            elements.push(<h4 key={index} className={styles.chatH4}>{renderInlineMarkdown(trimmed.replace(/^###\s+/, ''))}</h4>);
+        } else if (trimmed.startsWith('## ')) {
+            elements.push(<h3 key={index} className={styles.chatH3}>{renderInlineMarkdown(trimmed.replace(/^##\s+/, ''))}</h3>);
+        } else {
+            elements.push(<p key={index} className={styles.chatParagraph}>{renderInlineMarkdown(trimmed)}</p>);
+        }
+    });
+
+    flushList();
+    return <div className={styles.formattedContent}>{elements}</div>;
+}
+
+function CopyButton({ text }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        const cleaned = cleanMessageContent(text);
+        navigator.clipboard.writeText(cleaned);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <button
+            type="button"
+            className={styles.copyBtn}
+            onClick={handleCopy}
+            title="Sao chép câu trả lời"
+        >
+            <i className={copied ? "bi bi-check-lg" : "bi bi-copy"} />
+            <span>{copied ? 'Đã sao chép' : 'Sao chép'}</span>
+        </button>
+    );
+}
+
 function AiChatPage() {
     const [messages, setMessages] = useState(() => {
         const saved = localStorage.getItem('dlc_ai_chat_history');
@@ -112,16 +241,14 @@ function AiChatPage() {
                 const data = response.data?.data;
                 const sources = Array.isArray(data?.sources) ? data.sources : [];
                 const sourceNames = sources.map(formatSource).filter(Boolean);
-                const sourceText = sourceNames.length > 0
-                    ? `\n\nNguồn dữ liệu: ${sourceNames.join(', ')}`
-                    : '';
 
                 setMessages((prev) => [
                     ...prev,
                     {
                         id: Date.now() + 1,
                         role: 'assistant',
-                        content: `${data?.answer || 'Backend đã phản hồi nhưng không có nội dung trả lời.'}${sourceText}`,
+                        content: data?.answer || 'Backend đã phản hồi nhưng không có nội dung trả lời.',
+                        sources: sourceNames,
                         time: formatTime()
                     }
                 ]);
@@ -162,11 +289,11 @@ function AiChatPage() {
                     <aside className={styles.sidebar}>
                         <div className={styles.assistantHeader}>
                             <div className={styles.assistantIcon}>
-                                <i className="fas fa-robot" aria-hidden="true" />
+                                <i className="bi bi-robot" aria-hidden="true" />
                             </div>
                             <div style={{ flex: 1 }}>
                                 <h2>AI Assistant</h2>
-                                <p>RAG chatbot cho DLC WMS</p>
+                                <p>Trợ lý thông minh DLC WMS</p>
                             </div>
                             <button 
                                 onClick={clearHistory} 
@@ -180,13 +307,13 @@ function AiChatPage() {
                         <div className={styles.statusBox}>
                             <span className={styles.statusDot} />
                             <div>
-                                <strong>Đã nối backend</strong>
-                                <p>Đọc dữ liệu hệ thống và gọi model khi được bật</p>
+                                <strong>Hệ thống AI sẵn sàng</strong>
+                                <p>Đọc dữ liệu thời gian thực & mô hình RAG</p>
                             </div>
                         </div>
 
                         <div className={styles.promptGroup}>
-                            <h3>GỢI Ý CÂU HỎI</h3>
+                            <h3><i className="bi bi-lightbulb-fill" style={{ color: '#eab308', marginRight: '6px' }} /> GỢI Ý CÂU HỎI</h3>
                             {prompts.map((prompt, index) => (
                                 <button
                                     key={index}
@@ -195,7 +322,7 @@ function AiChatPage() {
                                     onClick={() => sendMessage(prompt)}
                                     disabled={isThinking}
                                 >
-                                    <i className="fas fa-wand-magic-sparkles" aria-hidden="true" />
+                                    <i className="bi bi-stars" aria-hidden="true" />
                                     <span>{prompt}</span>
                                 </button>
                             ))}
@@ -206,38 +333,70 @@ function AiChatPage() {
                         <div className={styles.chatHeader}>
                             <div>
                                 <h1>Trợ lý hỏi đáp AI</h1>
-                                <p>Hỏi nhanh về nghiệp vụ kho, sản phẩm, bảo hành và sửa chữa.</p>
+                                <p>Hỏi nhanh về tồn kho, sản phẩm, bảo hành và quy trình nghiệp vụ kho.</p>
                             </div>
-                            <span className={styles.badge}>RAG ready</span>
+                            <span className={styles.badge}>
+                                <i className="bi bi-cpu-fill" style={{ marginRight: '6px' }} /> RAG Powered
+                            </span>
                         </div>
 
                         <div className={styles.messages} aria-live="polite">
-                            {messages.map((message) => (
-                                <article
-                                    key={message.id}
-                                    className={`${styles.messageRow} ${message.role === 'user' ? styles.userRow : ''}`}
-                                >
-                                    {message.role !== 'user' && (
-                                        <div className={styles.avatar} aria-hidden="true">
-                                            <i className="fas fa-robot" />
+                            {messages.map((message) => {
+                                const sources = getMessageSources(message);
+                                const isAssistant = message.role !== 'user';
+
+                                return (
+                                    <article
+                                        key={message.id}
+                                        className={`${styles.messageRow} ${!isAssistant ? styles.userRow : ''}`}
+                                    >
+                                        {isAssistant && (
+                                            <div className={styles.avatar} aria-hidden="true">
+                                                <i className="bi bi-robot" />
+                                            </div>
+                                        )}
+                                        <div className={styles.messageContentWrapper}>
+                                            <div className={styles.messageMeta}>
+                                                {isAssistant && <strong>AI Assistant</strong>}
+                                                <span>{message.time}</span>
+                                                {isAssistant && <CopyButton text={message.content} />}
+                                            </div>
+                                            <div className={`${styles.messageBubble} ${isAssistant ? styles.assistantBubble : ''}`}>
+                                                {isAssistant ? (
+                                                    <FormattedMessage content={message.content} />
+                                                ) : (
+                                                    <p>{message.content}</p>
+                                                )}
+
+                                                {isAssistant && sources.length > 0 && (
+                                                    <div className={styles.sourcesContainer}>
+                                                        <div className={styles.sourcesHeader}>
+                                                            <i className="bi bi-diagram-3-fill" />
+                                                            <span>Nguồn dữ liệu tham chiếu:</span>
+                                                        </div>
+                                                        <div className={styles.sourceBadges}>
+                                                            {sources.map((src, idx) => {
+                                                                const isModel = src.toLowerCase().includes('gemini') || src.toLowerCase().includes('gpt');
+                                                                return (
+                                                                    <span key={idx} className={isModel ? styles.modelTag : styles.sourceTag}>
+                                                                        <i className={isModel ? "bi bi-cpu-fill" : "bi bi-database-check"} />
+                                                                        {src}
+                                                                    </span>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    )}
-                                    <div className={styles.messageContentWrapper}>
-                                        <div className={styles.messageMeta}>
-                                            {message.role !== 'user' && <strong>AI Assistant</strong>}
-                                            <span>{message.time}</span>
-                                        </div>
-                                        <div className={styles.messageBubble}>
-                                            <p>{message.content}</p>
-                                        </div>
-                                    </div>
-                                </article>
-                            ))}
+                                    </article>
+                                );
+                            })}
 
                             {isThinking && (
                                 <article className={styles.messageRow}>
                                     <div className={styles.avatar} aria-hidden="true">
-                                        <i className="fas fa-robot" />
+                                        <i className="bi bi-robot" />
                                     </div>
                                     <div className={styles.messageContentWrapper}>
                                         <div className={styles.messageMeta}>
@@ -260,11 +419,11 @@ function AiChatPage() {
                                 value={input}
                                 onChange={(event) => setInput(event.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder="Nhập câu hỏi cho AI..."
+                                placeholder="Nhập câu hỏi cho AI (VD: Tồn kho sản phẩm RAM DDR4 là bao nhiêu?)..."
                                 rows={2}
                             />
                             <button type="submit" disabled={!canSend} title="Gửi câu hỏi">
-                                <i className="fas fa-paper-plane" aria-hidden="true" />
+                                <i className="bi bi-send-fill" aria-hidden="true" />
                             </button>
                         </form>
                     </main>

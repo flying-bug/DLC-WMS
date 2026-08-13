@@ -358,7 +358,7 @@ public class ImportOcrService {
 
         // Priority 2: Match by Tax Code (exact)
         if (taxCode != null && !taxCode.isBlank()) {
-            List<Partner> allSuppliers = partnerRepository.findAllSuppliers();
+            List<Partner> allSuppliers = partnerRepository.findAllSuppliers(null);
             Optional<Partner> match = allSuppliers.stream()
                     .filter(p -> taxCode.equals(p.getTaxCode()))
                     .findFirst();
@@ -369,7 +369,7 @@ public class ImportOcrService {
 
         // Priority 3: Match by name (fuzzy)
         if (rawName != null && !rawName.isBlank()) {
-            List<Partner> suppliers = partnerRepository.searchSuppliers(null);
+            List<Partner> suppliers = partnerRepository.searchSuppliers(null, null);
             String normalizedRaw = normalize(rawName);
 
             Partner bestMatch = null;

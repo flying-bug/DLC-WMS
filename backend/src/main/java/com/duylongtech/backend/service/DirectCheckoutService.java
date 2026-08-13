@@ -83,6 +83,13 @@ public class DirectCheckoutService {
     }
 
     private Partner resolveCustomer(DirectCheckoutRequest request) {
+        if (request.getPartnerId() != null) {
+            Partner customer = partnerRepository.findById(request.getPartnerId())
+                    .orElseThrow(() -> new BusinessException("Khách hàng không tồn tại: " + request.getPartnerId()));
+            requireActiveCustomer(customer);
+            return customer;
+        }
+
         String phone = trimToNull(request.getCustomerPhone());
         if (phone == null) {
             return partnerRepository.findByCode(WALK_IN_CUSTOMER_CODE)

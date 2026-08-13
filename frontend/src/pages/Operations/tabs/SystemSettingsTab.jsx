@@ -108,6 +108,31 @@ function SystemSettingsTab() {
             </div>
 
             <div className={styles.settingsGrid}>
+                {/* ── Daily Inventory Snapshot Config ─────────────────────────── */}
+                <div className={styles.settingSection}>
+                    <div className={styles.sectionHeader}>
+                        <i className="bi bi-clock-history" style={{ color: 'var(--color-primary)' }} />
+                        <span>Daily Inventory Snapshot (Chốt Sổ Kho Hàng Ngày)</span>
+                    </div>
+                    <div className={styles.sectionBody}>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Giờ tự động chốt sổ kho mỗi ngày</label>
+                            <div className={styles.inputWithIcon}>
+                                <i className="bi bi-alarm" />
+                                <input
+                                    type="time"
+                                    className={styles.input}
+                                    value={settings.snapshotTime || '00:05'}
+                                    onChange={e => setSettings(s => ({ ...s, snapshotTime: e.target.value }))}
+                                />
+                            </div>
+                            <p className={styles.hint}>
+                                Hệ thống sẽ tự động tổng hợp và chốt số lượng tồn kho của ngày hôm trước vào thời điểm được thiết lập này mỗi ngày.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* ── Storage Config ─────────────────────────────────────────── */}
                 <div className={styles.settingSection}>
                     <div className={styles.sectionHeader}>

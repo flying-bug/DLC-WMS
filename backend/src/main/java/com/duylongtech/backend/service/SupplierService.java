@@ -67,10 +67,14 @@ public class SupplierService {
      */
     @Transactional(readOnly = true)
     public List<SupplierResponse> getAllSuppliers(String keyword) {
+        return getAllSuppliers(keyword, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SupplierResponse> getAllSuppliers(String keyword, String status) {
         String normalizedKeyword = trimToNull(keyword);
-        List<Partner> suppliers = (normalizedKeyword == null)
-                ? partnerRepository.findAllSuppliers()
-                : partnerRepository.searchSuppliers(normalizedKeyword);
+        String normalizedStatus = trimToNull(status);
+        List<Partner> suppliers = partnerRepository.searchSuppliers(normalizedKeyword, normalizedStatus);
         return suppliers.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());

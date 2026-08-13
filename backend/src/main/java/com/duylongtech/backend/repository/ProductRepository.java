@@ -35,23 +35,26 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                  @Param("unitId") Long unitId,
                                  Pageable pageable);
 
+    public interface StockAlertSummaryProjection {
+        Integer getLowStockCount();
+        Integer getOutOfStockCount();
+    }
+
     @Query(value = """
             SELECT
                 COALESCE(SUM(CASE
                     WHEN stock_summary.stock_qty > 0
                      AND stock_summary.min_stock_qty > 0
                      AND stock_summary.stock_qty <= stock_summary.min_stock_qty
-                    THEN 1 ELSE 0 END), 0) AS low_stock_count,
+                    THEN 1 ELSE 0 END), 0) AS lowStockCount,
                 COALESCE(SUM(CASE
                     WHEN stock_summary.stock_qty <= 0
-                    THEN 1 ELSE 0 END), 0) AS out_of_stock_count
+                    THEN 1 ELSE 0 END), 0) AS outOfStockCount
             FROM (
                 SELECT
                     p.id,
                     COALESCE(p.min_stock_qty, 0) AS min_stock_qty,
-                    COALESCE(SUM(CASE
-                        WHEN ib.serial_number_id IS NULL THEN ib.quantity_on_hand
-                        ELSE 0 END), 0) AS stock_qty
+                    COALESCE(SUM(ib.quantity_on_hand), 0) AS stock_qty
                 FROM products p
                 LEFT JOIN product_variants pv
                     ON pv.product_id = p.id
@@ -63,7 +66,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                 GROUP BY p.id, p.min_stock_qty
             ) stock_summary
             """, nativeQuery = true)
-    Object[] getStockAlertSummary();
+    StockAlertSummaryProjection getStockAlertSummary();
 
     boolean existsByCategoryId(Long categoryId);
 }

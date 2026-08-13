@@ -377,14 +377,13 @@ public class InventoryDocumentService {
                     throw new BusinessException("Serial " + snObj.getSerialNumber() + " không thuộc SKU này");
                 }
                 ensureSerialNotInstalledInPc(snObj, doc);
-                snObj.setStatus("SOLD"); // HOẶC "EXPORTED" tùy logic của dự án
-                serialNumberRepository.save(snObj);
             }
+
             InventoryBalance balance = inventoryBalanceRepository
                     .findByWarehouseAndVariantForUpdate(doc.getWarehouseId(), line.getVariantId(), "GOOD")
                     .orElse(null);
 
-            if (balance == null) {
+            if (balance == null || balance.getQuantityOnHand().compareTo(ZERO) <= 0) {
                 List<InventoryBalance> balances = inventoryBalanceRepository
                         .findByWarehouseAndVariantForUpdate(doc.getWarehouseId(), line.getVariantId());
                 balance = balances.stream()
@@ -393,7 +392,7 @@ public class InventoryDocumentService {
                         .orElse(balances.isEmpty() ? null : balances.get(0));
             }
 
-            if (balance == null) {
+            if (balance == null || balance.getQuantityOnHand().compareTo(qtyToExport) < 0) {
                 String productDisplayName = variant != null && variant.getProduct() != null
                         ? variant.getProduct().getProductName()
                         : variant != null ? variant.getVariantName() : null;
@@ -402,11 +401,7 @@ public class InventoryDocumentService {
                             ? variant.getSku()
                             : String.valueOf(line.getVariantId());
                 }
-                throw new BusinessException("Không tìm thấy tồn kho cho sản phẩm " + productDisplayName);
-            }
-
-            if (balance.getQuantityOnHand().compareTo(qtyToExport) < 0) {
-                throw new BusinessException("Số lượng xuất lớn hơn số lượng tồn kho, vui lòng điều chỉnh");
+                throw new BusinessException("Số lượng xuất lớn hơn số lượng tồn kho cho sản phẩm " + productDisplayName + ", vui lòng điều chỉnh");
             }
 
             balance.setQuantityOnHand(balance.getQuantityOnHand().subtract(qtyToExport));
@@ -451,8 +446,9 @@ public class InventoryDocumentService {
 
             BigDecimal avgUnitCost = totalCost.divide(qtyToExport, 4, RoundingMode.HALF_UP);
             line.setUnitCost(avgUnitCost);
+            BigDecimal currentOnHand = balance != null ? balance.getQuantityOnHand() : ZERO;
             inventoryLedgerRepository
-                    .save(buildLedger(doc, line, "OUT", ZERO, qtyToExport, avgUnitCost, balance.getQuantityOnHand()));
+                    .save(buildLedger(doc, line, "OUT", ZERO, qtyToExport, avgUnitCost, currentOnHand));
 
             for (SerialNumber snObj : serialsToExport) {
                 updateExportedSerialBalance(doc, line, snObj, avgUnitCost);
@@ -861,14 +857,15 @@ public class InventoryDocumentService {
         InventoryBalance serialBalance = inventoryBalanceRepository
                 .findByWarehouseVariantSerialForUpdate(doc.getWarehouseId(), line.getVariantId(), serial.getId(),
                         "GOOD")
-                .orElseThrow(
-                        () -> new BusinessException("Không tìm thấy tồn kho cho serial " + serial.getSerialNumber()));
-        if (serialBalance.getQuantityOnHand().compareTo(BigDecimal.ONE) < 0) {
-            throw new BusinessException("Serial " + serial.getSerialNumber() + " không còn tồn kho");
+                .orElse(null);
+        if (serialBalance != null) {
+            if (serialBalance.getQuantityOnHand().compareTo(BigDecimal.ONE) < 0) {
+                throw new BusinessException("Serial " + serial.getSerialNumber() + " không còn tồn kho");
+            }
+            serialBalance.setQuantityOnHand(ZERO);
+            serialBalance.setUpdatedAt(LocalDateTime.now());
+            inventoryBalanceRepository.save(serialBalance);
         }
-        serialBalance.setQuantityOnHand(ZERO);
-        serialBalance.setUpdatedAt(LocalDateTime.now());
-        inventoryBalanceRepository.save(serialBalance);
 
         if (ISSUE_PURPOSE_TRANSFER_OUT.equals(doc.getIssuePurpose())) {
             serial.setStatus("IN_TRANSIT");
@@ -1110,20 +1107,13 @@ public class InventoryDocumentService {
                 continue;
 
             BigDecimal qtyToExport = line.getQuantityOut();
-            InventoryBalance balance = inventoryBalanceRepository
-                    .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId(), "GOOD")
-                    .orElse(null);
-
-            if (balance == null) {
-                List<InventoryBalance> balances = inventoryBalanceRepository
-                        .findByWarehouseAndVariantForUpdate(warehouseId, line.getVariantId());
-                balance = balances.stream()
-                        .filter(b -> b.getQuantityOnHand().compareTo(BigDecimal.ZERO) > 0)
-                        .findFirst()
-                        .orElse(balances.isEmpty() ? null : balances.get(0));
+            BigDecimal totalAvailable = inventoryBalanceRepository
+                    .sumAvailableQuantityByWarehouseAndVariant(warehouseId, line.getVariantId(), "GOOD");
+            if (totalAvailable == null) {
+                totalAvailable = BigDecimal.ZERO;
             }
 
-            if (balance == null || balance.getQuantityOnHand().compareTo(qtyToExport) < 0) {
+            if (totalAvailable.compareTo(qtyToExport) < 0) {
                 throw new BusinessException("Số lượng xuất lớn hơn số lượng tồn kho, vui lòng điều chỉnh");
             }
         }

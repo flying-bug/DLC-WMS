@@ -880,7 +880,6 @@ const ProductPage = () => {
             showToast('error', 'Không thể tải danh sách sản phẩm.');
         } finally {
             setLoading(false);
-            setStockFilter('ALL');
         }
     }, [page, size, searchTerm, categoryFilter, typeFilter, brandFilter, unitFilter]);
 

@@ -12,7 +12,6 @@ import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import { exportToExcel } from '../../utils/excelExport';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
-
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
@@ -47,6 +46,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
   useEffect(() => {
     setMode(initialMode);
   }, [initialMode]);
+
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [partnerId, setPartnerId] = useState(null);

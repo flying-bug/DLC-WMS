@@ -227,7 +227,7 @@ function CreateExportSlipPage({ mode: propMode }) {
       const [warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
         exportApi.getWarehouses({ size: 100 }),
         exportApi.getProducts({ size: 1000 }),
-        exportApi.getCustomers({ size: 1000 }),
+        exportApi.getCustomers({ status: 'APPROVED', size: 1000 }),
         exportApi.getUsers({ size: 1000 }).catch(() => null),
       ]);
 
@@ -241,7 +241,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         setProducts(data);
       }
       if (customerRes.status === 'fulfilled') {
-        const data = pageContent(unwrap(customerRes.value));
+        const data = pageContent(unwrap(customerRes.value)).filter(c => c.status === 'APPROVED');
         setCustomers(data);
       }
       if (userRes.status === 'fulfilled' && userRes.value) {

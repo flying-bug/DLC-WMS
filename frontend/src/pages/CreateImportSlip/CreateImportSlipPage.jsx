@@ -334,7 +334,7 @@ function CreateImportSlipPage() {
 
       const [warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes] = await Promise.allSettled([
         importApi.getWarehouses({ size: 100 }),
-        importApi.getSuppliers(),
+        importApi.getSuppliers({ status: 'APPROVED' }),
         importApi.getProducts({ size: 1000 }),
         customerApi.searchCustomers('', 'APPROVED', '', 0, 1000),
         assemblyOrderApi.getAssemblyOrders({ size: 100 }),
@@ -346,7 +346,7 @@ function CreateImportSlipPage() {
         setForm(prev => ({ ...prev, warehouseId: prev.warehouseId || '' }));
       }
       if (supplierRes.status === 'fulfilled') {
-        const data = pageContent(unwrap(supplierRes.value)).filter(s => s.status !== 'INACTIVE');
+        const data = pageContent(unwrap(supplierRes.value)).filter(s => s.status === 'APPROVED');
         setSuppliers(data);
       }
       if (productRes.status === 'fulfilled') {

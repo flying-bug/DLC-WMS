@@ -70,7 +70,7 @@ function CreatePurchaseOrderPage() {
       setLoading(true);
       try {
         const [supplierRes, variantRes, codeRes] = await Promise.allSettled([
-          poApi.getSuppliers({ isSupplier: true, size: 1000 }),
+          poApi.getSuppliers({ isSupplier: true, status: 'APPROVED', size: 1000 }),
           poApi.getProducts({ size: 500 }),
           !isEdit ? poApi.getNextPoCode() : Promise.resolve(null),
         ]);
@@ -256,7 +256,9 @@ function CreatePurchaseOrderPage() {
   };
 
   // ── react-select options ──
-  const supplierOptions = suppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` }));
+  const supplierOptions = suppliers
+    .filter(s => s.status === 'APPROVED' || s.id === form.partnerId)
+    .map(s => ({ value: s.id, label: `${s.code} — ${s.name}` }));
   const productOptions = variants.map(v => ({
     ...v,
     productName: v.productName || v.variantName || `Sản phẩm #${v.id}`,

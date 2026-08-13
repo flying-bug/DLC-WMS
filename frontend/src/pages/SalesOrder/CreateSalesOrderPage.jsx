@@ -74,6 +74,7 @@ function CreateSalesOrderPage() {
     address: '',
   });
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [isPaymentUserEdited, setIsPaymentUserEdited] = useState(false);
   const [lines, setLines] = useState([emptyLine()]);
 
   const selectedSerialLine = serialModalLineIndex !== null ? lines[serialModalLineIndex] : null;
@@ -89,7 +90,7 @@ function CreateSalesOrderPage() {
       try {
         const [warehouseRes, customerRes, variantRes, codeRes] = await Promise.allSettled([
           soApi.getWarehouses({ size: 100 }),
-          soApi.getCustomers({ isCustomer: true, size: 1000 }),
+          soApi.getCustomers({ isCustomer: true, status: 'APPROVED', size: 1000 }),
           soApi.getProducts({ size: 500 }),
           !isEdit ? soApi.getNextSoCode() : Promise.resolve(null),
         ]);
@@ -209,10 +210,10 @@ function CreateSalesOrderPage() {
   const grandTotal = subTotalAmount + totalVatAmount;
 
   useEffect(() => {
-    if (mode === 'direct') {
+    if (mode === 'direct' && !isPaymentUserEdited) {
       setPaymentAmount(Math.round(grandTotal).toString());
     }
-  }, [grandTotal, mode]);
+  }, [grandTotal, mode, isPaymentUserEdited]);
 
   // ── Save ──
   const buildPayload = () => ({
@@ -234,6 +235,7 @@ function CreateSalesOrderPage() {
   });
 
   const buildDirectPayload = () => ({
+    partnerId: form.partnerId ? Number(form.partnerId) : undefined,
     customerPhone: directCustomer.phone.trim() || undefined,
     customerName: directCustomer.name.trim() || undefined,
     customerAddress: directCustomer.address.trim() || undefined,
@@ -354,7 +356,9 @@ function CreateSalesOrderPage() {
   };
 
   // ── Options for react-select ──
-  const customerOptions = customers.map(c => ({ value: c.id, label: `${c.code} — ${c.name}` }));
+  const customerOptions = customers
+    .filter(c => c.status === 'APPROVED' || c.id === form.partnerId)
+    .map(c => ({ value: c.id, label: `${c.code} — ${c.name}${c.phone ? ' (' + c.phone + ')' : ''}` }));
   const warehouseOptions = warehouses.map(w => ({ value: w.id, label: `${w.code} — ${w.name}` }));
   const productOptions = variants.map(v => ({
     ...v,
@@ -418,7 +422,47 @@ function CreateSalesOrderPage() {
                     <i className="bi bi-person" /> {mode === 'direct' ? 'Khách mua tại quầy' : 'Thông tin khách hàng'}
                   </div>
 
-                  {mode === 'direct' && (
+                  <div className={styles.fieldRow}>
+                    <label className={styles.label}>
+                      Khách hàng {mode !== 'direct' && <span className={styles.required}>*</span>}
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ flex: 1 }}>
+                        <Select
+                          options={customerOptions}
+                          value={customerOptions.find(o => o.value === form.partnerId) || null}
+                          onChange={opt => {
+                            const cust = customers.find(c => c.id === opt?.value);
+                            setForm(p => ({
+                              ...p,
+                              partnerId: opt?.value || null,
+                              deliveryAddress: cust ? cust.address || '' : ''
+                            }));
+                            if (cust) {
+                              setDirectCustomer({
+                                phone: cust.phone || '',
+                                name: cust.name || '',
+                                address: cust.address || '',
+                              });
+                            }
+                          }}
+                          placeholder={mode === 'direct' ? "Chọn khách hàng (hoặc để trống nếu là khách vãng lai)..." : "Chọn khách hàng..."}
+                          isClearable
+                          styles={customSelectStyles}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomerModal(true)}
+                        title="Tạo khách hàng mới"
+                        style={{ width: '38px', height: '38px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary)' }}></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  {mode === 'direct' && !form.partnerId && (
                     <>
                       <div className={styles.directGrid}>
                         <div className={styles.fieldRow}>
@@ -455,42 +499,18 @@ function CreateSalesOrderPage() {
                     </>
                   )}
 
-                  {mode !== 'direct' && <div className={styles.fieldRow}>
-                    <label className={styles.label}>Khách hàng <span className={styles.required}>*</span></label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <div style={{ flex: 1 }}>
-                        <Select
-                          options={customerOptions}
-                          value={customerOptions.find(o => o.value === form.partnerId) || null}
-                          onChange={opt => {
-                            const cust = customers.find(c => c.id === opt?.value);
-                            setForm(p => ({
-                              ...p,
-                              partnerId: opt?.value || null,
-                              deliveryAddress: cust ? cust.address || '' : ''
-                            }));
-                          }}
-                          placeholder="Chọn khách hàng..."
-                          isClearable
-                          styles={customSelectStyles}
-                        />
-                      </div>
-                      <button type="button" onClick={() => setShowCustomerModal(true)} style={{ width: '38px', height: '38px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary)' }}></i>
-                      </button>
+                  {mode !== 'direct' && (
+                    <div className={styles.fieldRow}>
+                      <label className={styles.label}>Địa chỉ giao hàng</label>
+                      <textarea
+                        className={styles.textarea}
+                        rows={2}
+                        value={form.deliveryAddress}
+                        onChange={e => setForm(p => ({ ...p, deliveryAddress: e.target.value }))}
+                        placeholder="Địa chỉ giao hàng..."
+                      />
                     </div>
-                  </div>}
-
-                  {mode !== 'direct' && <div className={styles.fieldRow}>
-                    <label className={styles.label}>Địa chỉ giao hàng</label>
-                    <textarea
-                      className={styles.textarea}
-                      rows={2}
-                      value={form.deliveryAddress}
-                      onChange={e => setForm(p => ({ ...p, deliveryAddress: e.target.value }))}
-                      placeholder="Địa chỉ giao hàng..."
-                    />
-                  </div>}
+                  )}
 
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Kho xuất hàng <span className={styles.required}>*</span></label>
@@ -548,13 +568,40 @@ function CreateSalesOrderPage() {
 
                   {mode === 'direct' ? (
                     <div className={styles.fieldRow}>
-                      <label className={styles.label}>Khách trả</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <label className={styles.label} style={{ marginBottom: 0 }}>Khách trả</label>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            style={{ fontSize: 11, padding: '2px 6px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 4, cursor: 'pointer' }}
+                            onClick={() => {
+                              setIsPaymentUserEdited(false);
+                              setPaymentAmount(Math.round(grandTotal).toString());
+                            }}
+                          >
+                            Trả đủ
+                          </button>
+                          <button
+                            type="button"
+                            style={{ fontSize: 11, padding: '2px 6px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 4, cursor: 'pointer' }}
+                            onClick={() => {
+                              setIsPaymentUserEdited(true);
+                              setPaymentAmount('0');
+                            }}
+                          >
+                            Nợ 100%
+                          </button>
+                        </div>
+                      </div>
                       <input
                         inputMode="numeric"
                         type="text"
                         className={styles.input}
                         value={formatMoneyInput(paymentAmount)}
-                        onChange={e => setPaymentAmount(digitsOnly(e.target.value))}
+                        onChange={e => {
+                          setIsPaymentUserEdited(true);
+                          setPaymentAmount(digitsOnly(e.target.value));
+                        }}
                       />
                     </div>
                   ) : (
@@ -590,6 +637,20 @@ function CreateSalesOrderPage() {
                       <span>Tổng thanh toán:</span>
                       <strong className={styles.totalAmount}>{money(grandTotal)} đ</strong>
                     </div>
+                    {mode === 'direct' && (
+                      <>
+                        <div className={styles.summaryRow} style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
+                          <span>Khách trả:</span>
+                          <strong style={{ color: '#166534' }}>{money(Number(paymentAmount || 0))} đ</strong>
+                        </div>
+                        <div className={styles.summaryRow}>
+                          <span>Còn nợ:</span>
+                          <strong style={{ color: Math.max(0, grandTotal - Number(paymentAmount || 0)) > 0 ? '#dc2626' : '#166534' }}>
+                            {money(Math.max(0, grandTotal - Number(paymentAmount || 0)))} đ
+                          </strong>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -831,13 +892,36 @@ function CreateSalesOrderPage() {
         isOpen={showCustomerModal}
         editData={null}
         onClose={() => setShowCustomerModal(false)}
+        onSaved={(isEdit, isContinue, newCustomer) => {
+          if (newCustomer && newCustomer.id) {
+            setCustomers(prev => [newCustomer, ...prev.filter(c => c.id !== newCustomer.id)]);
+            setForm(prev => ({
+              ...prev,
+              partnerId: newCustomer.id,
+              deliveryAddress: newCustomer.address || ''
+            }));
+            setDirectCustomer({
+              phone: newCustomer.phone || '',
+              name: newCustomer.name || '',
+              address: newCustomer.address || '',
+            });
+          }
+          setShowCustomerModal(false);
+        }}
         onSuccess={(newCustomer) => {
-          setCustomers(prev => [newCustomer, ...prev]);
-          setForm(prev => ({
-            ...prev,
-            partnerId: newCustomer.id,
-            deliveryAddress: newCustomer.address || ''
-          }));
+          if (newCustomer && newCustomer.id) {
+            setCustomers(prev => [newCustomer, ...prev.filter(c => c.id !== newCustomer.id)]);
+            setForm(prev => ({
+              ...prev,
+              partnerId: newCustomer.id,
+              deliveryAddress: newCustomer.address || ''
+            }));
+            setDirectCustomer({
+              phone: newCustomer.phone || '',
+              name: newCustomer.name || '',
+              address: newCustomer.address || '',
+            });
+          }
           setShowCustomerModal(false);
         }}
       />
