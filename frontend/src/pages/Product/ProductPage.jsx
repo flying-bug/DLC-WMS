@@ -43,8 +43,7 @@ const DEFAULT_COLUMNS = {
     category: true,
     brand: true,
     unit: true,
-    salePrice: true,
-    stockQty: true
+    salePrice: true
 };
 
 const defaultVariantData = {
@@ -1421,7 +1420,6 @@ const ProductPage = () => {
     };
 
     const filteredProducts = getFilteredProducts();
-    const showStockColumn = columns.stockQty && !isServiceType(typeFilter);
 
     return (
         <AdminLayout>
@@ -1633,7 +1631,6 @@ const ProductPage = () => {
                                 {columns.brand && <th style={{ width: '110px' }}>Thương hiệu</th>}
                                 {columns.unit && <th style={{ width: '90px' }}>Đơn vị tính</th>}
                                 {columns.salePrice && <th className={styles.textRight} style={{ width: '110px' }}>Giá bán</th>}
-                                {showStockColumn && <th className={styles.textRight} style={{ width: '90px' }}>Tồn kho</th>}
                                 <th className={styles.textCenter} style={{ width: '130px' }}>Thao Tác</th>
                             </tr>
                         </thead>
@@ -1684,11 +1681,6 @@ const ProductPage = () => {
                                         {columns.brand && <td>{item.brandName || '-'}</td>}
                                         {columns.unit && <td>{item.unitName || '-'}</td>}
                                         {columns.salePrice && <td className={`${styles.money} ${styles.textRight}`}>{formatCurrency(item.salePrice)}</td>}
-                                        {showStockColumn && (
-                                            <td className={styles.textRight}>
-                                                {isStockTrackedProduct(item) ? formatQuantity(item.stockQty) : '-'}
-                                            </td>
-                                        )}
                                         <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }} onClick={(event) => event.stopPropagation()}>
                                             <i
                                                 className="bi bi-pencil"

@@ -9,6 +9,7 @@ import styles from './PaymentHistoryPage.module.css';
 import { formatDateTime } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
+
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 const statusText = (status) => (status === 'POSTED' ? 'Ghi sổ' : status === 'DRAFT' ? 'Nháp' : status || '-');
@@ -51,6 +52,7 @@ function PaymentHistoryPage() {
   // Filters for left column (Invoices & Import/Export Docs)
   const [leftKeyword, setLeftKeyword] = useState('');
   const [leftTypeFilter, setLeftTypeFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   // Filters for right column (Payments - Receipts / Vouchers)
   const [rightKeyword, setRightKeyword] = useState('');
