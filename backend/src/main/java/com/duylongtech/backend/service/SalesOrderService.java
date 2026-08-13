@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.SalesOrderRequest;
+import com.duylongtech.backend.dto.request.PaymentRequest;
 import com.duylongtech.backend.dto.response.SalesOrderResponse;
 import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.exception.BusinessException;
@@ -33,6 +34,7 @@ public class SalesOrderService {
     private final PartnerLedgerService partnerLedgerService;
     private final EmailService emailService;
     private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
+    private final PaymentService paymentService;
 
     // =========================================================
     // QUERY
@@ -303,7 +305,7 @@ public class SalesOrderService {
         SalesOrder so = salesOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng ID: " + id));
 
-        if ("POSTED".equals(so.getStatus()) || "CANCELLED".equals(so.getStatus())) {
+        if ("POSTED".equals(so.getStatus()) || "CANCELLED".equals(so.getStatus()) || "APPROVED".equals(so.getStatus())) {
             throw new BusinessException(
                     "Không thể hủy đơn hàng ở trạng thái: " + so.getStatus());
         }
@@ -427,16 +429,15 @@ public class SalesOrderService {
 
         salesOrderRepository.save(so);
         
-        // Ghi nhận thu tiền (giảm nợ khách hàng) trong sổ partner_ledger
-        partnerLedgerService.recordLedger(
-                so.getPartnerId(),
-                "PAYMENT_RECEIPT",
-                so.getId(),
-                so.getSoCode(),
-                BigDecimal.ZERO,
-                amount,
-                "Thanh toán cho đơn hàng " + so.getSoCode()
-        );
+        // Tự động tạo và ghi sổ phiếu thu
+        PaymentRequest paymentRequest = new PaymentRequest();
+        paymentRequest.setPartnerId(so.getPartnerId());
+        paymentRequest.setAmount(amount);
+        paymentRequest.setPaymentMethod("CASH"); // Mặc định tiền mặt
+        paymentRequest.setNote("Thanh toán cho đơn hàng " + so.getSoCode());
+        paymentRequest.setStatus("POSTED"); // Ghi sổ luôn
+        
+        paymentService.createPaymentReceipt(paymentRequest);
 
         auditLogService.logEvent(
                 actor,

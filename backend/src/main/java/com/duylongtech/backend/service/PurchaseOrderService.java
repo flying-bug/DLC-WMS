@@ -239,7 +239,7 @@ public class PurchaseOrderService {
         PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
 
-        if ("POSTED".equals(po.getStatus()) || "CANCELLED".equals(po.getStatus())) {
+        if ("POSTED".equals(po.getStatus()) || "CANCELLED".equals(po.getStatus()) || "APPROVED".equals(po.getStatus())) {
             throw new BusinessException("Không thể hủy đơn ở trạng thái: " + po.getStatus());
         }
 

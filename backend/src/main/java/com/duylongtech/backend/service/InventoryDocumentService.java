@@ -379,6 +379,13 @@ public class InventoryDocumentService {
                 ensureSerialNotInstalledInPc(snObj, doc);
             }
 
+            if (variant != null && variant.getProduct() != null && Boolean.TRUE.equals(variant.getProduct().getTrackSerial())) {
+                int expected = line.getQuantityOut().stripTrailingZeros().intValueExact();
+                if (serialsToExport.size() != expected) {
+                    throw new BusinessException("Sản phẩm SKU: " + variant.getSku() + " có quản lý Serial. Vui lòng quét/nhập đúng " + expected + " mã serial trước khi ghi sổ.");
+                }
+            }
+
             InventoryBalance balance = inventoryBalanceRepository
                     .findByWarehouseAndVariantForUpdate(doc.getWarehouseId(), line.getVariantId(), "GOOD")
                     .orElse(null);
@@ -634,6 +641,22 @@ public class InventoryDocumentService {
                     totalImportValue,
                     BigDecimal.ZERO,
                     "Ghi nhận công nợ phiếu nhập kho " + savedImport.getDocCode());
+        }
+
+        if (savedImport.getPurchaseOrderId() != null) {
+            PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(savedImport.getPurchaseOrderId()).orElse(null);
+            if (po != null && !"POSTED".equals(po.getStatus()) && !"CANCELLED".equals(po.getStatus())) {
+                boolean fullyImported = !po.getLines().isEmpty() && po.getLines().stream().allMatch(l -> {
+                    BigDecimal imported = inventoryDocumentLineRepository
+                            .sumImportedQuantityByPurchaseOrderIdAndVariantId(po.getId(), l.getVariantId());
+                    if (imported == null) imported = BigDecimal.ZERO;
+                    return l.getQuantity().subtract(imported).compareTo(BigDecimal.ZERO) <= 0;
+                });
+                if (fullyImported) {
+                    po.setStatus("POSTED");
+                    purchaseOrderRepository.save(po);
+                }
+            }
         }
 
         return toResponse(savedImport);

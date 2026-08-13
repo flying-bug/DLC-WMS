@@ -13,6 +13,11 @@ import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const money = (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
+const digitsOnly = (value) => String(value || '').replace(/\D/g, '');
+const formatMoneyInput = (value) => {
+  const digits = digitsOnly(value);
+  return digits ? Number(digits).toLocaleString('vi-VN') : '';
+};
 const fmtDate = (v) => (v ? formatDateOnly(v) : '—');
 const fmtDateTime = (v) => (v ? formatDateTime(v) : '—');
 
@@ -520,9 +525,10 @@ function SalesOrderDetailPage() {
                 <div style={{ marginBottom: 20 }}>
                   <label style={{ display: 'block', marginBottom: 5, fontWeight: 500, fontSize: 14 }}>Số tiền khách đưa</label>
                   <input
-                    type="number"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatMoneyInput(paymentAmount)}
+                    onChange={(e) => setPaymentAmount(digitsOnly(e.target.value))}
                     placeholder="Nhập số tiền..."
                     style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 4 }}
                     autoFocus
