@@ -144,7 +144,12 @@ function CreateTransferSlipPage() {
         const list = pageContent(unwrap(res));
         const invMap = new Map();
         list.forEach(b => {
-          if (b.variantId) invMap.set(String(b.variantId), Number(b.totalQuantity || 0));
+          if (b.variantId) {
+            const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+            const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+            const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+            invMap.set(String(b.variantId), Math.max(0, availableQuantity));
+          }
         });
         setSourceInventory(invMap);
       } catch (err) {
