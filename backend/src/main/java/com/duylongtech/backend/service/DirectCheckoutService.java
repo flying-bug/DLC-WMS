@@ -3,6 +3,7 @@ package com.duylongtech.backend.service;
 import com.duylongtech.backend.dto.request.DirectCheckoutRequest;
 import com.duylongtech.backend.dto.request.InventoryDocumentLineRequest;
 import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
+import com.duylongtech.backend.dto.request.PaymentRequest;
 import com.duylongtech.backend.dto.response.InventoryDocumentResponse;
 import com.duylongtech.backend.dto.response.SalesOrderResponse;
 import com.duylongtech.backend.entity.Partner;
@@ -40,6 +41,7 @@ public class DirectCheckoutService {
     private final CodeGeneratorService codeGeneratorService;
     private final InventoryDocumentService inventoryDocumentService;
     private final PartnerLedgerService partnerLedgerService;
+    private final PaymentService paymentService;
 
     @Transactional(rollbackFor = Exception.class)
     public SalesOrderResponse directCheckout(DirectCheckoutRequest request, String actor) {
@@ -234,27 +236,20 @@ public class DirectCheckoutService {
     }
 
     private void recordDirectCheckoutLedger(SalesOrder order, BigDecimal requestedPayment, String exportCode) {
-        partnerLedgerService.recordLedger(
-                order.getPartnerId(),
-                "SALES_ORDER",
-                order.getId(),
-                order.getSoCode(),
-                order.getTotalAmount(),
-                ZERO,
-                "Ghi nhận doanh thu bán hàng trực tiếp " + order.getSoCode()
-        );
+        // Ghi chú: Việc tăng công nợ (Debt) đã được thực hiện tự động trong hàm postExport 
+        // của InventoryDocumentService, do đó không ghi nhận lại ở đây để tránh bị nhân đôi công nợ.
 
         BigDecimal paidAmount = normalizePaymentAmount(requestedPayment, order.getTotalAmount());
         if (paidAmount.compareTo(ZERO) > 0) {
-            partnerLedgerService.recordLedger(
-                    order.getPartnerId(),
-                    "PAYMENT_RECEIPT",
-                    order.getId(),
-                    order.getSoCode(),
-                    ZERO,
-                    paidAmount,
-                    "Thu tiền bán hàng trực tiếp " + order.getSoCode() + " / " + exportCode
-            );
+            // Tự động tạo và ghi sổ phiếu thu
+            PaymentRequest paymentRequest = new PaymentRequest();
+            paymentRequest.setPartnerId(order.getPartnerId());
+            paymentRequest.setAmount(paidAmount);
+            paymentRequest.setPaymentMethod("CASH"); // Mặc định bán hàng trực tiếp dùng tiền mặt
+            paymentRequest.setNote("Thu tiền bán hàng trực tiếp " + order.getSoCode() + " / " + exportCode);
+            paymentRequest.setStatus("POSTED"); // Ghi sổ luôn
+            
+            paymentService.createPaymentReceipt(paymentRequest);
         }
     }
 
