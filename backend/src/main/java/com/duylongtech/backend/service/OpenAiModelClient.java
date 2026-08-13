@@ -104,7 +104,7 @@ public class OpenAiModelClient implements AiModelClient {
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("model", openAiModel);
         request.put("input", buildPrompt(userQuestion, groundedResponse));
-        request.put("max_output_tokens", 700);
+        request.put("max_output_tokens", 2048);
 
         String rawResponse = restClient.post()
                 .uri(openAiBaseUrl + "/responses")
@@ -141,7 +141,7 @@ public class OpenAiModelClient implements AiModelClient {
         content.put("parts", List.of(textPart));
 
         Map<String, Object> generationConfig = new LinkedHashMap<>();
-        generationConfig.put("maxOutputTokens", 700);
+        generationConfig.put("maxOutputTokens", 2048);
 
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("contents", List.of(content));
@@ -269,10 +269,11 @@ public class OpenAiModelClient implements AiModelClient {
 
         return """
                 Bạn là trợ lý AI của hệ thống DLC WMS.
+                Hãy trả lời đầy đủ, chi tiết, danh sách rõ ràng và tuyệt đối không cắt dở câu hay bỏ dở nội dung.
                 Chỉ được trả lời dựa trên dữ liệu hệ thống đã cung cấp bên dưới.
                 Không bịa số liệu, không tự tạo bản ghi, không nói chắc nếu dữ liệu không có.
                 Nếu dữ liệu chưa đủ, hãy nói rõ cần thêm thông tin nào.
-                Trả lời bằng tiếng Việt có dấu, ngắn gọn, dễ hiểu cho nhân viên vận hành kho.
+                Trả lời bằng tiếng Việt có dấu, dễ hiểu cho nhân viên vận hành kho.
 
                 Câu hỏi người dùng:
                 %s
