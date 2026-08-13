@@ -108,6 +108,7 @@ public class InventoryDocumentService {
     private final RepairRepository repairRepository;
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final SalesOrderService salesOrderService;
+    private final com.duylongtech.backend.repository.StockReservationRepository stockReservationRepository;
 
     @Transactional(readOnly = true)
     public ScanResolveResponse resolveExportScan(ScanResolveRequest req) {
@@ -181,6 +182,7 @@ public class InventoryDocumentService {
     public InventoryDocumentResponse createExport(InventoryDocumentRequest req) {
         validateCreateRequest(req);
         validateOrderLineQuantities(req, null);
+        validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getLines());
         InventoryDocument doc = buildBaseDocument(req, EXPORT_DOC_TYPE, resolveCreateDocCode(req.getDocCode()));
         for (int i = 0; i < req.getLines().size(); i++) {
             doc.getLines().add(toExportLineEntity(doc, req.getLines().get(i), i));
@@ -234,6 +236,7 @@ public class InventoryDocumentService {
     public InventoryDocumentResponse updateExport(Long id, InventoryDocumentRequest req) {
         validateUpdateRequest(req);
         validateOrderLineQuantities(req, id);
+        validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getLines());
         InventoryDocument doc = findExportOrThrow(id);
         ensureEditable(doc);
         updateBaseDocument(id, doc, req, "Mã phiếu xuất kho đã tồn tại", false);
@@ -349,8 +352,7 @@ public class InventoryDocumentService {
             ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
 
             Long targetSerialId = line.getSerialNumberId();
-            if (targetSerialId == null && line.getSerialNumbersText() != null
-                    && !line.getSerialNumbersText().isBlank()) {
+            if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
                 List<String> serials = parseSerialNumbers(line.getSerialNumbersText());
                 for (String sn : serials) {
                     serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), sn)
@@ -473,7 +475,7 @@ public class InventoryDocumentService {
 
             if (doc.getSalesOrderId() != null) {
                 salesOrderService.fulfillReservation(doc.getSalesOrderId(), line.getVariantId(), doc.getWarehouseId(),
-                        qtyToExport);
+                        qtyToExport, totalCost);
             }
         }
 
@@ -1121,7 +1123,7 @@ public class InventoryDocumentService {
         }
     }
 
-    private void validateExportInventoryBalance(Long warehouseId, List<InventoryDocumentLineRequest> lines) {
+    private void validateExportInventoryBalance(Long warehouseId, Long salesOrderId, List<InventoryDocumentLineRequest> lines) {
         if (warehouseId == null || lines == null)
             return;
         for (int i = 0; i < lines.size(); i++) {
@@ -1135,9 +1137,25 @@ public class InventoryDocumentService {
             if (totalAvailable == null) {
                 totalAvailable = BigDecimal.ZERO;
             }
+            
+            if (salesOrderId != null) {
+                BigDecimal reservedForThisOrder = stockReservationRepository
+                        .findBySalesOrderIdAndVariantIdAndWarehouseId(salesOrderId, line.getVariantId(), warehouseId)
+                        .filter(r -> "HOLDING".equals(r.getStatus()))
+                        .map(com.duylongtech.backend.entity.StockReservation::getQuantityReserved)
+                        .orElse(BigDecimal.ZERO);
+                totalAvailable = totalAvailable.add(reservedForThisOrder);
+            }
 
             if (totalAvailable.compareTo(qtyToExport) < 0) {
-                throw new BusinessException("Số lượng xuất lớn hơn số lượng tồn kho, vui lòng điều chỉnh");
+                String variantName = "";
+                productVariantRepository.findById(line.getVariantId()).ifPresent(v -> {
+                    if (v.getProduct() != null) {
+                        v.getProduct().setProductName(v.getProduct().getProductName()); // dummy
+                    }
+                });
+                
+                throw new BusinessException("Số lượng xuất lớn hơn số lượng tồn kho khả dụng, không thể xuất kho. (Đã bỏ qua các mặt hàng đang bị giữ chỗ cho đơn khác)");
             }
         }
     }
@@ -1580,6 +1598,22 @@ public class InventoryDocumentService {
                         r.setReferenceCode(so.getSoCode());
                         if (r.getReferenceType() == null) {
                             r.setReferenceType("SALES_ORDER");
+                        }
+                        if (r.getReferenceId() == null) {
+                            r.setReferenceId(so.getId());
+                        }
+                    });
+        }
+
+        if (r.getReferenceCode() == null && doc.getPurchaseOrderId() != null) {
+            purchaseOrderRepository.findById(doc.getPurchaseOrderId())
+                    .ifPresent(po -> {
+                        r.setReferenceCode(po.getPoCode());
+                        if (r.getReferenceType() == null) {
+                            r.setReferenceType("PURCHASE_ORDER");
+                        }
+                        if (r.getReferenceId() == null) {
+                            r.setReferenceId(po.getId());
                         }
                     });
         }

@@ -19,6 +19,7 @@ public class ReportServiceImpl implements ReportService {
 
     private final ReportRepository reportRepository;
     private final ProductService productService;
+    private final com.duylongtech.backend.repository.SalesOrderRepository salesOrderRepository;
 
     @Override
     public List<InventoryBalanceReportResponse> getInventoryBalanceReport(String search, Long warehouseId) {
@@ -57,6 +58,30 @@ public class ReportServiceImpl implements ReportService {
         dashboard.setLowStockItemsCount(stockAlerts.getLowStockCount());
         dashboard.setOutOfStockItemsCount(stockAlerts.getOutOfStockCount());
         return dashboard;
+    }
+
+    @Override
+    public List<SalesProfitReportResponse> getSalesProfitReport(LocalDateTime startDate, LocalDateTime endDate, String search) {
+        log.info("Fetching Sales Profit Report. startDate={}, endDate={}, search={}", startDate, endDate, search);
+        
+        LocalDate start = startDate != null ? startDate.toLocalDate() : null;
+        LocalDate end = endDate != null ? endDate.toLocalDate() : null;
+        
+        List<SalesProfitReportResponse> results = salesOrderRepository.findSalesProfitReport(search, start, end);
+        
+        // Calculate profitMarginPercent safely in Java to avoid JPQL casting issues
+        for (SalesProfitReportResponse r : results) {
+            if (r.getSalesAmount() != null && r.getSalesAmount().compareTo(java.math.BigDecimal.ZERO) > 0 && r.getGrossProfit() != null) {
+                java.math.BigDecimal margin = r.getGrossProfit()
+                    .divide(r.getSalesAmount(), 4, java.math.RoundingMode.HALF_UP)
+                    .multiply(new java.math.BigDecimal("100"));
+                r.setProfitMarginPercent(margin);
+            } else {
+                r.setProfitMarginPercent(java.math.BigDecimal.ZERO);
+            }
+        }
+        
+        return results;
     }
 
     @Override
@@ -278,6 +303,38 @@ public class ReportServiceImpl implements ReportService {
                     row.createCell(4).setCellValue(item.getDebitIncrease() != null ? item.getDebitIncrease().doubleValue() : 0.0);
                     row.createCell(5).setCellValue(item.getCreditDecrease() != null ? item.getCreditDecrease().doubleValue() : 0.0);
                     row.createCell(6).setCellValue(item.getClosingBalance() != null ? item.getClosingBalance().doubleValue() : 0.0);
+                    
+                    for (int i = 0; i < columns.length; i++) {
+                        row.getCell(i).setCellStyle(borderStyle);
+                    }
+                }
+                
+                for (int i = 0; i < columns.length; i++) {
+                    sheet.autoSizeColumn(i);
+                }
+            } else if ("sales-profit".equals(reportType)) {
+                reportTitle = "BAO CAO DOANH THU & LOI NHUAN GOP";
+                List<SalesProfitReportResponse> data = getSalesProfitReport(startDate, endDate, search);
+                columns = new String[]{"Mã hàng", "Tên hàng", "ĐVT", "Số lượng bán", "Doanh thu", "Giá vốn", "Lợi nhuận gộp", "Tỷ suất LN (%)"};
+                
+                org.apache.poi.ss.usermodel.Row header = sheet.createRow(3);
+                for (int i = 0; i < columns.length; i++) {
+                    org.apache.poi.ss.usermodel.Cell cell = header.createCell(i);
+                    cell.setCellValue(columns[i]);
+                    cell.setCellStyle(headerStyle);
+                }
+                
+                int rowIdx = 4;
+                for (SalesProfitReportResponse item : data) {
+                    org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowIdx++);
+                    row.createCell(0).setCellValue(item.getSku());
+                    row.createCell(1).setCellValue(item.getVariantName());
+                    row.createCell(2).setCellValue(item.getUnitName() != null ? item.getUnitName() : "");
+                    row.createCell(3).setCellValue(item.getQuantitySold() != null ? item.getQuantitySold().doubleValue() : 0.0);
+                    row.createCell(4).setCellValue(item.getSalesAmount() != null ? item.getSalesAmount().doubleValue() : 0.0);
+                    row.createCell(5).setCellValue(item.getCostAmount() != null ? item.getCostAmount().doubleValue() : 0.0);
+                    row.createCell(6).setCellValue(item.getGrossProfit() != null ? item.getGrossProfit().doubleValue() : 0.0);
+                    row.createCell(7).setCellValue(item.getProfitMarginPercent() != null ? item.getProfitMarginPercent().doubleValue() : 0.0);
                     
                     for (int i = 0; i < columns.length; i++) {
                         row.getCell(i).setCellStyle(borderStyle);

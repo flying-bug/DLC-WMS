@@ -41,7 +41,16 @@ function SalesOrderListPage() {
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({ keyword: '', status: '', fromDate: '', toDate: '' });
+  const [filters, setFilters] = useState(() => {
+    const searchParams = new URLSearchParams(location.search);
+    return {
+      keyword: '',
+      status: searchParams.get('status') || '',
+      reservationStatus: searchParams.get('backordered') === 'true' ? 'BACKORDERED' : '',
+      fromDate: '',
+      toDate: ''
+    };
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
@@ -57,6 +66,7 @@ function SalesOrderListPage() {
       const res = await soApi.getSalesOrders({
         keyword: filters.keyword || undefined,
         status: filters.status || undefined,
+        reservationStatus: filters.reservationStatus || undefined,
         fromDate: filters.fromDate || undefined,
         toDate: filters.toDate || undefined,
       });
@@ -193,7 +203,7 @@ function SalesOrderListPage() {
           </div>
 
           <div className={styles.filterActions}>
-            <button className={styles.iconBtn} onClick={() => setFilters({ keyword: '', status: '', fromDate: '', toDate: '' })} title="Đặt lại">
+            <button className={styles.iconBtn} onClick={() => setFilters({ keyword: '', status: '', reservationStatus: '', fromDate: '', toDate: '' })} title="Đặt lại">
               <i className="bi bi-arrow-clockwise" />
             </button>
             <button

@@ -23,4 +23,7 @@ public class SystemSettingsDto {
     // Notifications
     private boolean notifyEmailEnabled;
     private String notifyEmailTo;
+
+    // Sales Orders
+    private Integer reservationExpiryHours;
 }

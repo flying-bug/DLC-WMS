@@ -7,12 +7,16 @@ import * as assemblyOrderApi from '../api/assemblyOrderApi';
 import * as stocktakeApi from '../api/stocktakeApi';
 import * as stockTransferApi from '../api/stockTransferApi';
 import * as warrantyApi from '../api/warrantyApi';
+import * as purchaseOrderApi from '../api/purchaseOrderApi';
+import * as salesOrderApi from '../api/salesOrderApi';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 
 const DOC_TYPES = [
   { value: 'IMPORT_SLIP', label: 'Phiếu nhập kho' },
   { value: 'EXPORT_SLIP', label: 'Phiếu xuất kho' },
+  { value: 'PURCHASE_ORDER', label: 'Đơn mua hàng' },
+  { value: 'SALES_ORDER', label: 'Đơn bán hàng' },
   { value: 'ASSEMBLY_ORDER', label: 'Lệnh sản xuất' },
   { value: 'STOCKTAKE', label: 'Kiểm kê' },
   { value: 'STOCK_TRANSFER', label: 'Chuyển kho' },
@@ -39,6 +43,12 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
           break;
         case 'EXPORT_SLIP':
           res = await exportApi.getExportHistory(params).catch(() => null);
+          break;
+        case 'PURCHASE_ORDER':
+          res = await purchaseOrderApi.getPurchaseOrders(params).catch(() => null);
+          break;
+        case 'SALES_ORDER':
+          res = await salesOrderApi.getSalesOrders(params).catch(() => null);
           break;
         case 'ASSEMBLY_ORDER':
           res = await assemblyOrderApi.getAssemblyOrders({ ...params, keywordSearch: undefined, docCode: keyword }).catch(() => null);
@@ -176,7 +186,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
                       onSelect({
                         referenceType: docType,
                         referenceId: item.id,
-                        docCode: item.docCode || item.code || item.orderCode || item.stocktakeCode || item.warrantyCode
+                        docCode: item.docCode || item.code || item.orderCode || item.stocktakeCode || item.warrantyCode || item.poCode || item.soCode
                       });
                       onClose();
                     }}>
@@ -187,7 +197,7 @@ const ReferenceDocumentModal = ({ isOpen, onClose, onSelect }) => {
                         {getDocDate(item)}
                       </td>
                       <td style={{ padding: '10px 16px', borderRight: '1px solid #e5e7eb', color: '#0070cc' }}>
-                        {item.docCode || item.code || item.orderCode || item.stocktakeCode || item.warrantyCode}
+                        {item.docCode || item.code || item.orderCode || item.stocktakeCode || item.warrantyCode || item.poCode || item.soCode}
                       </td>
                       <td style={{ padding: '10px 16px', color: '#374151' }}>
                         {item.note || item.issuePurpose || item.description || item.targetName || (item.partnerName ? `Bảo hành cho KH: ${item.partnerName}` : '') || ''}

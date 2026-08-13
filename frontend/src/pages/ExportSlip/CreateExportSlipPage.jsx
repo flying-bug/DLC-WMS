@@ -586,6 +586,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   const submit = async (status, shouldPost = false) => {
     if (!isFormValid) {
       if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho xuất.');
+      if (exportMode === 'SALE' && !form.referenceId) return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
       if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày lập phiếu.');
       const invalidVat = items.some(item => {
         const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
@@ -894,7 +895,10 @@ function CreateExportSlipPage({ mode: propMode }) {
               {/* Kèm theo chứng từ (Matching Nhập Kho + Hỗ trợ nhập số chứng từ đính kèm) */}
               <div className="misa-form-group" style={{ marginTop: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
+                  <label className="misa-label" style={{ marginBottom: 0 }}>
+                    Kèm theo chứng từ
+                    {exportMode === 'SALE' && <span className="required" style={{ marginLeft: '4px' }}>*</span>}
+                  </label>
                   {!form.referenceId && (
                     <button
                       type="button"

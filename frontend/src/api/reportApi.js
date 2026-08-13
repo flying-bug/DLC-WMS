@@ -39,6 +39,13 @@ export const getInventorySummaryReport = (params = {}) => {
 };
 
 /**
+ * Lấy báo cáo doanh thu và lợi nhuận gộp
+ */
+export const getSalesProfitReport = (params = {}) => {
+    return axiosClient.get(`${REPORT_BASE}/sales-profit`, { params });
+};
+
+/**
  * Lấy các chỉ số dashboard tổng quan
  */
 export const getDashboardMetrics = (params = {}) => {

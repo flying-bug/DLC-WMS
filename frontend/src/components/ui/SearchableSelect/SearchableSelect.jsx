@@ -39,7 +39,10 @@ export default function SearchableSelect({ children, value, onChange, name, clas
         }
     };
 
-    const { padding, height, minHeight, ...cleanStyle } = style || {};
+    const { padding, height, minHeight, width, flex, ...cleanStyle } = style || {};
+
+    const isFilterSelect = className && className.includes('filterSelect');
+    const computedMinWidth = isFilterSelect ? '200px' : undefined;
 
     return (
         <Select
@@ -55,11 +58,18 @@ export default function SearchableSelect({ children, value, onChange, name, clas
             classNamePrefix="react-select"
             menuPortalTarget={document.body}
             styles={{
+                container: (base) => ({
+                    ...base,
+                    minWidth: computedMinWidth,
+                    width: width || '100%',
+                    flex: flex
+                }),
                 control: (base) => ({
                     ...base,
                     minHeight: '32px',
                     borderColor: '#d1d5db',
                     flexWrap: 'nowrap',
+                    minWidth: computedMinWidth,
                     ...cleanStyle
                 }),
                 valueContainer: (base) => ({
@@ -79,7 +89,8 @@ export default function SearchableSelect({ children, value, onChange, name, clas
                 }),
                 menu: (base) => ({
                     ...base,
-                    zIndex: 9999
+                    zIndex: 9999,
+                    minWidth: '100%'
                 })
             }}
         />

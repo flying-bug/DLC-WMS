@@ -49,32 +49,24 @@ public class ReportRepository {
                         "  ) " +
                         "  OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
                         ") THEN ib.quantity_on_hand ELSE 0 END) AS totalQuantity, " +
-                        "SUM(CASE WHEN ( " +
-                        "  (COALESCE(p.track_serial, FALSE) = TRUE " +
-                        "    AND ib.serial_number_id IS NOT NULL " +
-                        "    AND sn.status = 'AVAILABLE' " +
-                        "    AND NOT EXISTS ( " +
-                        "      SELECT 1 FROM device_component_serials dcs " +
-                        "      WHERE dcs.component_variant_id = ib.variant_id " +
-                        "        AND LOWER(dcs.component_serial) = LOWER(sn.serial_number) " +
-                        "        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
+                        "SUM(CASE WHEN ib.serial_number_id IS NULL THEN ib.quantity_reserved ELSE 0 END) AS totalReserved, " +
+                        "( " +
+                        "  SUM(CASE WHEN ( " +
+                        "    (COALESCE(p.track_serial, FALSE) = TRUE " +
+                        "      AND ib.serial_number_id IS NOT NULL " +
+                        "      AND sn.status = 'AVAILABLE' " +
+                        "      AND NOT EXISTS ( " +
+                        "        SELECT 1 FROM device_component_serials dcs " +
+                        "        WHERE dcs.component_variant_id = ib.variant_id " +
+                        "          AND LOWER(dcs.component_serial) = LOWER(sn.serial_number) " +
+                        "          AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
+                        "      ) " +
                         "    ) " +
-                        "  ) " +
-                        "  OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
-                        ") THEN ib.quantity_reserved ELSE 0 END) AS totalReserved, " +
-                        "SUM(CASE WHEN ( " +
-                        "  (COALESCE(p.track_serial, FALSE) = TRUE " +
-                        "    AND ib.serial_number_id IS NOT NULL " +
-                        "    AND sn.status = 'AVAILABLE' " +
-                        "    AND NOT EXISTS ( " +
-                        "      SELECT 1 FROM device_component_serials dcs " +
-                        "      WHERE dcs.component_variant_id = ib.variant_id " +
-                        "        AND LOWER(dcs.component_serial) = LOWER(sn.serial_number) " +
-                        "        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
-                        "    ) " +
-                        "  ) " +
-                        "  OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
-                        ") THEN ib.quantity_on_hand - ib.quantity_reserved ELSE 0 END) AS availableQuantity, " +
+                        "    OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
+                        "  ) THEN ib.quantity_on_hand ELSE 0 END) " +
+                        "  - " +
+                        "  SUM(CASE WHEN ib.serial_number_id IS NULL THEN ib.quantity_reserved ELSE 0 END) " +
+                        ") AS availableQuantity, " +
                         "SUM(CASE WHEN ( " +
                         "  (COALESCE(p.track_serial, FALSE) = TRUE " +
                         "    AND ib.serial_number_id IS NOT NULL " +
@@ -96,7 +88,7 @@ public class ReportRepository {
                         "LEFT JOIN serial_numbers sn ON ib.serial_number_id = sn.id " +
                         "WHERE ib.stock_status = 'GOOD' " +
                         "AND ( " +
-                        "  (COALESCE(p.track_serial, FALSE) = TRUE AND ib.serial_number_id IS NOT NULL) " +
+                        "  (COALESCE(p.track_serial, FALSE) = TRUE) " +
                         "  OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
                         ") "
         );
@@ -425,6 +417,7 @@ public class ReportRepository {
         List<DashboardResponse.FinishedGoodInventoryDto> finishedGoodInventoryItems = getFinishedGoodInventoryItems();
         List<DashboardResponse.OrderSummaryDto> approvedPurchaseOrders = getApprovedPurchaseOrders();
         List<DashboardResponse.OrderSummaryDto> approvedSalesOrders = getApprovedSalesOrders();
+        List<DashboardResponse.OrderSummaryDto> backorderedSalesOrders = getBackorderedSalesOrders();
         List<DashboardResponse.ConfiguredLowStockProductDto> configuredLowStockProducts = getConfiguredLowStockProducts();
         List<DashboardResponse.RepairSummaryDto> confirmedWarrantyRepairs = getConfirmedWarrantyRepairs();
         Map<String, Object> importExportMap = getImportExportMetrics(startOfMonth, endOfMonth);
@@ -444,10 +437,12 @@ public class ReportRepository {
                 .finishedGoodInventoryItems(finishedGoodInventoryItems)
                 .approvedPurchaseOrders(approvedPurchaseOrders)
                 .approvedSalesOrders(approvedSalesOrders)
+                .backorderedSalesOrders(backorderedSalesOrders)
                 .configuredLowStockProducts(configuredLowStockProducts)
                 .confirmedWarrantyRepairs(confirmedWarrantyRepairs)
                 .approvedPurchaseOrdersCount(approvedPurchaseOrders.size())
                 .approvedSalesOrdersCount(approvedSalesOrders.size())
+                .backorderedSalesOrdersCount(backorderedSalesOrders.size())
                 .configuredLowStockProductsCount(getConfiguredLowStockProductsCount())
                 .confirmedWarrantyRepairsCount(confirmedWarrantyRepairs.size())
                 .inventoryFlow7Days(getInventoryFlowData(inventoryFlowRange))
@@ -979,6 +974,35 @@ public class ReportRepository {
                 .status(rs.getString("status"))
                 .build());
     }
+
+    private List<DashboardResponse.OrderSummaryDto> getBackorderedSalesOrders() {
+        String sql = """
+                SELECT DISTINCT
+                    so.id,
+                    so.so_code AS code,
+                    so.so_date AS documentDate,
+                    pt.name AS partnerName,
+                    w.name AS warehouseName,
+                    so.total_amount AS totalAmount,
+                    so.status
+                FROM sales_orders so
+                JOIN stock_reservations sr ON so.id = sr.sales_order_id
+                LEFT JOIN partners pt ON so.partner_id = pt.id
+                LEFT JOIN warehouses w ON so.warehouse_id = w.id
+                WHERE so.status = 'APPROVED' AND sr.status = 'BACKORDERED'
+                ORDER BY so.so_date DESC, so.id DESC
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> DashboardResponse.OrderSummaryDto.builder()
+                .id(rs.getLong("id"))
+                .code(rs.getString("code"))
+                .documentDate(rs.getDate("documentDate") != null ? rs.getDate("documentDate").toLocalDate() : null)
+                .partnerName(rs.getString("partnerName"))
+                .warehouseName(rs.getString("warehouseName"))
+                .totalAmount(rs.getBigDecimal("totalAmount"))
+                .status(rs.getString("status"))
+                .build());
+    }
+
 
     private int getConfiguredLowStockProductsCount() {
         String sql = """

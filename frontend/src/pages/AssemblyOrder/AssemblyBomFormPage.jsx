@@ -383,17 +383,18 @@ function AssemblyBomFormPage() {
                         <label className={styles.field}>
                             <span>Thành phẩm <span style={{ color: 'red' }}>*</span></span>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <SearchableSelect
-                                    value={form.productId}
-                                    onChange={(event) => handleProductChange(event.target.value)}
-                                    disabled={!canEdit}
-                                    style={{ flex: 1 }}
-                                >
-                                    <option value="">Chọn thành phẩm</option>
-                                    {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
-                                        <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
-                                    ))}
-                                </SearchableSelect>
+                                <div style={{ flex: 1 }}>
+                                    <SearchableSelect
+                                        value={form.productId}
+                                        onChange={(event) => handleProductChange(event.target.value)}
+                                        disabled={!canEdit}
+                                    >
+                                        <option value="">Chọn thành phẩm</option>
+                                        {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
+                                            <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
+                                        ))}
+                                    </SearchableSelect>
+                                </div>
                                 {canEdit && (
                                     <button
                                         type="button"

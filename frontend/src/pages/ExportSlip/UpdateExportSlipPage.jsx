@@ -536,6 +536,7 @@ function UpdateExportSlipPage() {
   const submit = async (status, shouldPost = false) => {
     if (!isFormValid) {
       if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho xuất.');
+      if (form.issuePurpose === 'SALES' && !form.referenceId) return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
       if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày ghi nhận.');
       const invalidVat = items.some(item => {
         const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
@@ -674,7 +675,10 @@ function UpdateExportSlipPage() {
 
                   <div className="misa-form-group" style={{ marginTop: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
+                      <label className="misa-label" style={{ marginBottom: 0 }}>
+                        Kèm theo chứng từ
+                        {form.issuePurpose === 'SALES' && <span className="required" style={{ marginLeft: '4px' }}>*</span>}
+                      </label>
                       {!form.referenceId && (
                         <button
                           type="button"
@@ -915,12 +919,12 @@ function UpdateExportSlipPage() {
       <ReferenceDocumentModal
         isOpen={showReferenceModal}
         onClose={() => setShowReferenceModal(false)}
-        onSelect={(doc) => {
+        onSelect={(data) => {
           setForm(prev => ({
             ...prev,
-            referenceType: doc.type,
-            referenceId: doc.id,
-            referenceCode: doc.code
+            referenceType: data.referenceType,
+            referenceId: data.referenceId,
+            referenceCode: data.docCode
           }));
           setShowReferenceModal(false);
         }}

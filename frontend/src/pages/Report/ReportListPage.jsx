@@ -9,6 +9,7 @@ import {
     getStockTransferReport,
     getDebtReport,
     getInventorySummaryReport,
+    getSalesProfitReport,
     exportReportExcel
 } from '../../api/reportApi';
 import styles from './ReportListPage.module.css';
@@ -51,6 +52,14 @@ const MOCK_CATEGORIES = [
         icon: 'fas fa-file-invoice-dollar',
         reports: [
             { id: 'debt', name: 'Báo cáo công nợ đối tác (Khách hàng / Nhà cung cấp)', desc: 'Xem số dư nợ đầu kỳ, phát sinh tăng/giảm và nợ cuối kỳ của đối tác.' }
+        ]
+    },
+    {
+        id: 'sales-reports',
+        title: 'Báo cáo kinh doanh',
+        icon: 'fas fa-chart-line',
+        reports: [
+            { id: 'sales-profit', name: 'Báo cáo Doanh thu & Lợi nhuận gộp', desc: 'Thống kê lượng hàng bán ra, tổng doanh thu, giá vốn và lợi nhuận gộp theo từng mặt hàng.' }
         ]
     }
 ];
@@ -188,6 +197,9 @@ const ReportListPage = () => {
                 case 'debt':
                     params.partnerType = filters.partnerType !== 'ALL' ? filters.partnerType : undefined;
                     response = await getDebtReport(params);
+                    break;
+                case 'sales-profit':
+                    response = await getSalesProfitReport(params);
                     break;
                 default:
                     throw new Error('Loại báo cáo không hợp lệ');
@@ -709,6 +721,42 @@ const ReportListPage = () => {
                                                             <td className={`${styles.textRight} ${styles.textDanger}`}>{formatCurrency(item.creditDecrease)}</td>
                                                             <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: item.closingBalance >= 0 ? 'var(--color-primary)' : 'var(--color-danger)' }}>
                                                                 {formatCurrency(item.closingBalance)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        )}
+
+                                        {/* 6. SALES & PROFIT REPORT */}
+                                        {activeReport.id === 'sales-profit' && (
+                                            <table className={styles.reportTable}>
+                                                <thead>
+                                                    <tr>
+                                                        <th style={{ whiteSpace: 'nowrap' }}>Mã hàng</th>
+                                                        <th>Tên hàng</th>
+                                                        <th>ĐVT</th>
+                                                        <th className={styles.textRight}>Số lượng bán</th>
+                                                        <th className={styles.textRight}>Tổng doanh thu</th>
+                                                        <th className={styles.textRight}>Tổng giá vốn</th>
+                                                        <th className={styles.textRight}>Lợi nhuận gộp</th>
+                                                        <th className={styles.textRight}>Tỷ suất LN (%)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {reportData.map((item, idx) => (
+                                                        <tr key={idx}>
+                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.sku}</td>
+                                                            <td>{item.variantName}</td>
+                                                            <td>{item.unitName || '-'}</td>
+                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: 'var(--color-primary)' }}>{formatQuantity(item.quantitySold)}</td>
+                                                            <td className={`${styles.textRight} ${styles.textSuccess}`}>{formatCurrency(item.salesAmount)}</td>
+                                                            <td className={styles.textRight}>{formatCurrency(item.costAmount)}</td>
+                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: item.grossProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                                                                {formatCurrency(item.grossProfit)}
+                                                            </td>
+                                                            <td className={styles.textRight}>
+                                                                {item.profitMarginPercent != null ? item.profitMarginPercent.toFixed(2) + '%' : '0%'}
                                                             </td>
                                                         </tr>
                                                     ))}
