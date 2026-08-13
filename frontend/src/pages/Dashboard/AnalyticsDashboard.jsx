@@ -144,6 +144,36 @@ function AnalyticsDashboard() {
     const [categoryScope, setCategoryScope] = useState('all');
     const [financeRange, setFinanceRange] = useState(String(currentYear));
 
+    const handleRowClick = (transaction) => {
+        if (!transaction.entityId) return;
+        switch(transaction.entityType) {
+            case 'IMPORT_DOCUMENT':
+                navigate(`/import-slips/${transaction.entityId}/edit`);
+                break;
+            case 'EXPORT_DOCUMENT':
+                navigate(`/export-slips/${transaction.entityId}/edit`);
+                break;
+            case 'PURCHASE_ORDER':
+                navigate(`/purchase-orders/${transaction.entityId}`);
+                break;
+            case 'SALES_ORDER':
+                navigate(`/sales-orders/${transaction.entityId}`);
+                break;
+            case 'ASSEMBLY_ORDER':
+            case 'DISASSEMBLY_ORDER':
+                navigate(`/assembly-orders/${transaction.entityId}?mode=view`);
+                break;
+            case 'WARRANTY_REPAIR':
+                navigate(`/warranties/${transaction.entityId}`);
+                break;
+            case 'REPAIR':
+                navigate(`/repairs/${transaction.entityId}/edit`);
+                break;
+            default:
+                break;
+        }
+    };
+
     useEffect(() => {
         let isMounted = true;
 
@@ -221,7 +251,7 @@ function AnalyticsDashboard() {
         confirmedWarrantyRepairs[0]
             ? {
                 id: `repair-${confirmedWarrantyRepairs[0].id}`,
-                title: `${confirmedWarrantyRepairs[0].repairCode} dang cho xu ly bao hanh`,
+                title: `${confirmedWarrantyRepairs[0].repairCode} đang chờ xử lý bảo hành`,
                 time: confirmedWarrantyRepairs[0].partnerName || 'Chưa có khách hàng',
                 icon: 'fas fa-tools',
                 color: 'purple',
@@ -242,15 +272,6 @@ function AnalyticsDashboard() {
 
     const kpis = [
         {
-            key: 'inventory',
-            title: 'Tổng tồn kho',
-            value: money(dashboard?.standardWarehouseInventoryValue || 0),
-            icon: 'fas fa-wallet',
-            color: 'primary',
-            trend: `${finishedGoodInventoryItems.length} thành phẩm đang có tồn`,
-            data: KPI_SPARKLINES.inventory
-        },
-        {
             key: 'purchaseOrders',
             title: 'Đơn mua',
             value: quantity(dashboard?.approvedPurchaseOrdersCount || 0),
@@ -258,6 +279,16 @@ function AnalyticsDashboard() {
             color: 'orange',
             trend: 'Các đơn mua đang ở trạng thái đã duyệt',
             data: KPI_SPARKLINES.purchaseOrders
+        },
+        {
+            key: 'backorderedSalesOrders',
+            title: 'Đơn chờ nhập',
+            value: quantity(dashboard?.backorderedSalesOrdersCount || 0),
+            icon: 'fas fa-hourglass-half',
+            color: 'primary',
+            trend: 'Đơn bán duyệt nhưng chờ nhập hàng',
+            data: KPI_SPARKLINES.salesOrders,
+            onClick: () => navigate('/sales-orders?status=APPROVED&backordered=true')
         },
         {
             key: 'salesOrders',
@@ -280,7 +311,7 @@ function AnalyticsDashboard() {
         {
             key: 'repairs',
             title: 'Chờ bảo hành',
-            value: `${quantity(dashboard?.confirmedWarrantyRepairsCount || 0)} don`,
+            value: `${quantity(dashboard?.confirmedWarrantyRepairsCount || 0)} đơn`,
             icon: 'fas fa-tools',
             color: 'purple',
             trend: 'Các đơn bảo hành đã xác nhận sửa chữa',
@@ -449,7 +480,14 @@ function AnalyticsDashboard() {
                             <div
                                 key={kpi.key}
                                 className={`${styles.kpiCard} ${styles[kpi.color]} ${loading ? styles.kpiCardDisabled : ''}`}
-                                onClick={() => !loading && setActiveDetail(kpi.key)}
+                                onClick={() => {
+                                    if (loading) return;
+                                    if (kpi.onClick) {
+                                        kpi.onClick();
+                                    } else {
+                                        setActiveDetail(kpi.key);
+                                    }
+                                }}
                             >
                                 <div className={styles.kpiTop}>
                                     <div className={styles.kpiInfo}>
@@ -614,7 +652,11 @@ function AnalyticsDashboard() {
                                 </thead>
                                 <tbody>
                                     {recentTransactions.length > 0 ? recentTransactions.map((transaction, index) => (
-                                        <tr key={`${transaction.entityType}-${transaction.entityId}-${index}`}>
+                                        <tr 
+                                            key={`${transaction.entityType}-${transaction.entityId}-${index}`}
+                                            onClick={() => handleRowClick(transaction)}
+                                            style={{ cursor: 'pointer' }}
+                                        >
                                             <td>
                                                 <div className={styles.txType}>
                                                     <div

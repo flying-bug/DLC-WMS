@@ -13,6 +13,7 @@ function SystemSettingsTab() {
         encryptKey: '',
         notifyEmailEnabled: false,
         notifyEmailTo: '',
+        reservationExpiryHours: 72,
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -128,6 +129,33 @@ function SystemSettingsTab() {
                             </div>
                             <p className={styles.hint}>
                                 Hệ thống sẽ tự động tổng hợp và chốt số lượng tồn kho của ngày hôm trước vào thời điểm được thiết lập này mỗi ngày.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Sales Config ───────────────────────────────────────────── */}
+                <div className={styles.settingSection}>
+                    <div className={styles.sectionHeader}>
+                        <i className="bi bi-cart-check-fill" style={{ color: '#0ea5e9' }} />
+                        <span>Sales Configuration</span>
+                    </div>
+                    <div className={styles.sectionBody}>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Thời gian giữ hàng đơn bán (Giờ)</label>
+                            <div className={styles.inputWithIcon}>
+                                <i className="bi bi-hourglass-bottom" />
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="720"
+                                    className={styles.input}
+                                    value={settings.reservationExpiryHours !== undefined ? settings.reservationExpiryHours : ''}
+                                    onChange={e => setSettings(s => ({ ...s, reservationExpiryHours: e.target.value }))}
+                                />
+                            </div>
+                            <p className={styles.hint}>
+                                Số giờ tối đa hệ thống tạm giữ tồn kho cho Đơn bán hàng trước khi tự động hủy giữ hàng nếu chưa thanh toán (Mặc định: 72 giờ).
                             </p>
                         </div>
                     </div>

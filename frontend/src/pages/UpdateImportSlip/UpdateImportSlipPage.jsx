@@ -398,6 +398,12 @@ function UpdateImportSlipPage() {
 
   const submit = async (status, shouldPost = false) => {
     if (!isFormValid) {
+      if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho nhập.');
+      if (importType === 'PURCHASE' && !form.partnerId) return showToast('error', 'Vui lòng chọn nhà cung cấp.');
+      if ((importType === 'PRODUCTION' || importType === 'SCRAP') && !form.assemblyOrderId) return showToast('error', 'Vui lòng chọn lệnh quản lý cấu hình.');
+      if (importType === 'RETURN' && !form.customerId) return showToast('error', 'Vui lòng chọn khách hàng.');
+      if ((importType === 'PURCHASE' || importType === 'RETURN') && !form.referenceId) return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
+      if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày nhập kho.');
       const invalidVat = items.some(item => {
         const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
         return isNaN(vat) || vat < 0 || vat > 10;
@@ -699,7 +705,10 @@ function UpdateImportSlipPage() {
 
                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
+                    <label className="misa-label" style={{ marginBottom: 0 }}>
+                      Kèm theo chứng từ
+                      {(importType === 'PURCHASE' || importType === 'RETURN') && <span className="required" style={{ marginLeft: '4px' }}>*</span>}
+                    </label>
                     {!form.referenceId && (
                       <button
                         type="button"
@@ -958,8 +967,8 @@ function UpdateImportSlipPage() {
       <ReferenceDocumentModal
         isOpen={showReferenceModal}
         onClose={() => setShowReferenceModal(false)}
-        onSelect={(docType, docId, docCode) => {
-          setForm(prev => ({ ...prev, referenceType: docType, referenceId: docId, referenceCode: docCode }));
+        onSelect={(data) => {
+          setForm(prev => ({ ...prev, referenceType: data.referenceType, referenceId: data.referenceId, referenceCode: data.docCode }));
           setShowReferenceModal(false);
         }}
       />

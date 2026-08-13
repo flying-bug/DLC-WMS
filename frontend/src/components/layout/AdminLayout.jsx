@@ -66,7 +66,7 @@ const AdminLayout = ({ children }) => {
             { path: '/transfer-history', label: 'Chuyển kho' },
             { path: '/stocktakes', label: 'Kiểm kê' },
             { path: '/assembly-orders', label: 'Lắp ráp / Tháo dỡ' },
-            { path: '/assembly-boms', label: 'Cấu hình BOM' },
+            { path: '/assembly-boms', label: 'Cấu hình máy' },
             { path: '/warehouses', label: 'Quản lý kho' },
             { path: '/reports', label: 'Báo cáo kho' }
         ],

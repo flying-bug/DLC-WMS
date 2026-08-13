@@ -49,8 +49,6 @@
 }
 
 .kpiCard {
-    background: var(--color-surface);
-    border-radius: var(--radius-card);
     padding: 20px 24px 0 24px;
     display: flex;
     flex-direction: column;
@@ -677,7 +675,7 @@
 
 @media (max-width: 1200px) {
     .kpiGrid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
     }
     .chartsGrid, .bottomGrid {
         grid-template-columns: 1fr;

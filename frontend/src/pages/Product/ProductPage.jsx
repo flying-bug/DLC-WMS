@@ -1829,7 +1829,7 @@ const ProductPage = () => {
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         {/* Row 1: Tên */}
                                         <div className={styles.formField}>
-                                            <label className={styles.fieldLabel}>Tên <span className="required">*</span></label>
+                                            <label className={styles.fieldLabel}>Tên <span className={styles.required}>(*)</span></label>
                                             <input
                                                 type="text"
                                                 className={styles.fieldInput}
@@ -1855,7 +1855,7 @@ const ProductPage = () => {
 
                                             {formData.productType !== 'Dịch vụ' ? (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>Danh mục</label>
+                                                    <label className={styles.fieldLabel}>Danh mục <span className={styles.required}>(*)</span></label>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
                                                         <SearchableSelect
                                                             className={styles.fieldInput}
@@ -1885,7 +1885,7 @@ const ProductPage = () => {
                                                 </div>
                                             ) : (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>Đơn vị tính</label>
+                                                    <label className={styles.fieldLabel}>Đơn vị tính <span className={styles.required}>(*)</span></label>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
                                                         <SearchableSelect
                                                             className={styles.fieldInput}
@@ -1916,7 +1916,7 @@ const ProductPage = () => {
                                             <div className={styles.quickAddPanel}>
                                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                                                     <div style={{ flex: 1 }}>
-                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên danh mục <span className="required">*</span></label>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên danh mục <span className={styles.required}>(*)</span></label>
                                                         <input
                                                             type="text"
                                                             className={styles.fieldInput}
@@ -2008,7 +2008,7 @@ const ProductPage = () => {
                                             {/* Đơn vị tính chính cho Hàng hóa / Thành phẩm */}
                                             {formData.productType !== 'Dịch vụ' && (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>Đơn vị tính</label>
+                                                    <label className={styles.fieldLabel}>Đơn vị tính <span className={styles.required}>(*)</span></label>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
                                                         <SearchableSelect
                                                             className={styles.fieldInput}
@@ -2036,7 +2036,7 @@ const ProductPage = () => {
                                             {/* Slot 2 of Row 3 */}
                                             {formData.productType === 'Hàng hóa' && (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>Thương hiệu</label>
+                                                    <label className={styles.fieldLabel}>Thương hiệu <span className={styles.required}>(*)</span></label>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
                                                         <SearchableSelect
                                                             className={styles.fieldInput}
@@ -2106,18 +2106,7 @@ const ProductPage = () => {
                                                             </SearchableSelect>
                                                         </div>
                                                     </div>
-                                                    <div className={styles.formField} style={{ flex: 1 }}>
-                                                        <label className={styles.fieldLabel}>Giá dịch vụ</label>
-                                                        <input
-                                                            type="text" className={styles.fieldInput}
-                                                            value={formData.salePrice ? new Intl.NumberFormat('vi-VN').format(formData.salePrice) : ''}
-                                                            onChange={(e) => {
-                                                                const val = e.target.value.replace(/\D/g, '');
-                                                                setFormData(fd => ({ ...fd, salePrice: val ? parseInt(val, 10) : 0 }));
-                                                            }}
-                                                            placeholder="0"
-                                                        />
-                                                    </div>
+
                                                 </>
                                             )}
                                         </div>
@@ -2128,7 +2117,7 @@ const ProductPage = () => {
                                             <div className={styles.quickAddPanel} style={{ marginBottom: '12px' }}>
                                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                                                     <div style={{ flex: 1 }}>
-                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên ĐVT <span className="required">*</span></label>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên ĐVT <span className={styles.required}>(*)</span></label>
                                                         <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
                                                             value={quickUnitForm.name} onChange={e => setQuickUnitForm(f => ({ ...f, name: e.target.value }))}
                                                             placeholder="Tên đơn vị tính" autoFocus
@@ -2205,7 +2194,7 @@ const ProductPage = () => {
                                             <div className={styles.quickAddPanel} style={{ marginBottom: '12px' }}>
                                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                                                     <div style={{ flex: 1 }}>
-                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên thương hiệu <span className="required">*</span></label>
+                                                        <label className={styles.fieldLabel} style={{ fontSize: '11px' }}>Tên thương hiệu <span className={styles.required}>(*)</span></label>
                                                         <input type="text" className={styles.fieldInput} style={{ fontSize: '12px', padding: '5px 8px' }}
                                                             value={quickBrandForm.name} onChange={e => setQuickBrandForm(f => ({ ...f, name: e.target.value }))}
                                                             placeholder="Tên thương hiệu" autoFocus
@@ -2277,7 +2266,7 @@ const ProductPage = () => {
                                             </div>
                                         )}
 
-                                        {/* Row 4: Hàng hóa -> Tồn kho tối thiểu + Giá bán, Thành phẩm -> none, Dịch vụ -> none */}
+                                        {/* Row 4: Hàng hóa -> Tồn kho tối thiểu + Thời hạn bảo hành */}
                                         {formData.productType === 'Hàng hóa' && (
                                             <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                                                 <div className={styles.formField} style={{ flex: 1 }}>
@@ -2293,39 +2282,23 @@ const ProductPage = () => {
                                                 </div>
 
                                                 <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>Giá bán</label>
-                                                    <input
-                                                        type="text" className={styles.fieldInput}
-                                                        value={formData.salePrice ? new Intl.NumberFormat('vi-VN').format(formData.salePrice) : ''}
-                                                        onChange={(e) => {
-                                                            const val = e.target.value.replace(/\D/g, '');
-                                                            setFormData(fd => ({ ...fd, salePrice: val ? parseInt(val, 10) : 0 }));
-                                                        }}
-                                                        placeholder="0"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Row 5: Hàng hóa -> Thời hạn bảo hành */}
-                                        {formData.productType === 'Hàng hóa' && (
-                                            <div className={styles.formField} style={{ marginTop: '12px' }}>
-                                                <label className={styles.fieldLabel}>Thời hạn bảo hành</label>
-                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                    <input
-                                                        type="text" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
-                                                        value={warrantyQty} onChange={(e) => {
-                                                            const val = e.target.value.replace(/\D/g, '');
-                                                            setWarrantyQty(val ? Number(val) : '');
-                                                        }}
-                                                    />
-                                                    <SearchableSelect
-                                                        className={styles.fieldInput} style={{ width: '110px', flexShrink: 0 }}
-                                                        value={warrantyUnit} onChange={(e) => setWarrantyUnit(e.target.value)}
-                                                    >
-                                                        <option value="Tháng">Tháng</option>
-                                                        <option value="Năm">Năm</option>
-                                                    </SearchableSelect>
+                                                    <label className={styles.fieldLabel}>Thời hạn bảo hành</label>
+                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                        <input
+                                                            type="text" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
+                                                            value={warrantyQty} onChange={(e) => {
+                                                                const val = e.target.value.replace(/\D/g, '');
+                                                                setWarrantyQty(val ? Number(val) : '');
+                                                            }}
+                                                        />
+                                                        <SearchableSelect
+                                                            className={styles.fieldInput} style={{ width: '110px', flexShrink: 0 }}
+                                                            value={warrantyUnit} onChange={(e) => setWarrantyUnit(e.target.value)}
+                                                        >
+                                                            <option value="Tháng">Tháng</option>
+                                                            <option value="Năm">Năm</option>
+                                                        </SearchableSelect>
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
@@ -2547,7 +2520,7 @@ const ProductPage = () => {
 
                                 <div className="misa-form-row">
                                     <div className="misa-form-group">
-                                        <label>SKU <span className="required">*</span></label>
+                                        <label>SKU <span className={styles.required}>(*)</span></label>
                                         <input
                                             type="text"
                                             value={variantForm.sku}
@@ -2557,7 +2530,7 @@ const ProductPage = () => {
                                         />
                                     </div>
                                     <div className="misa-form-group">
-                                        <label>Tên SKU <span className="required">*</span></label>
+                                        <label>Tên SKU <span className={styles.required}>(*)</span></label>
                                         <input
                                             type="text"
                                             value={variantForm.variantName}
@@ -2582,7 +2555,7 @@ const ProductPage = () => {
                                         />
                                     </div>
                                     <div className="misa-form-group">
-                                        <label>Giá bán <span className="required">*</span></label>
+                                        <label>Giá bán <span className={styles.required}>(*)</span></label>
                                         <input
                                             type="text"
                                             value={variantForm.salePrice ? new Intl.NumberFormat('vi-VN').format(variantForm.salePrice) : ''}

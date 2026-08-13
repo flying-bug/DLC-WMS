@@ -771,10 +771,12 @@ function AssemblyOrderFormPage() {
                                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
                                     <label className="misa-label">Cấu hình máy <span className="required">*</span></label>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <SearchableSelect className="misa-input" style={{ flex: 1 }} value={form.bomId} onChange={(event) => setField('bomId', event.target.value)} disabled={!canEdit || loading}>
-                                            <option value="">{loading ? 'Đang tải cấu hình...' : 'Chọn cấu hình đã duyệt'}</option>
-                                            {boms.map((bom) => <option key={bom.id} value={bom.id}>{bom.bomCode ? `${bom.bomCode} - ` : ''}{bom.bomName} (Phiên bản: {bom.versionNo || '1.0'}) - SP: {bom.productName}</option>)}
-                                        </SearchableSelect>
+                                        <div style={{ flex: 1 }}>
+                                            <SearchableSelect className="misa-input" value={form.bomId} onChange={(event) => setField('bomId', event.target.value)} disabled={!canEdit || loading}>
+                                                <option value="">{loading ? 'Đang tải cấu hình...' : 'Chọn cấu hình đã duyệt'}</option>
+                                                {boms.map((bom) => <option key={bom.id} value={bom.id}>{bom.bomCode ? `${bom.bomCode} - ` : ''}{bom.bomName} (Phiên bản: {bom.versionNo || '1.0'}) - SP: {bom.productName}</option>)}
+                                            </SearchableSelect>
+                                        </div>
                                         <button className={styles.btnOutline} type="button" onClick={openBomModal} disabled={!canEdit} style={{ whiteSpace: 'nowrap', padding: '0 12px', height: '32px' }}>
                                             <i className="bi bi-plus-lg"></i> Tạo cấu hình
                                         </button>
