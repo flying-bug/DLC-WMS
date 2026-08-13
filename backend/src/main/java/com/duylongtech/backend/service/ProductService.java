@@ -91,12 +91,12 @@ public class ProductService {
     }
 
     public StockAlertSummaryResponse getStockAlertSummary() {
-        Object[] summary = productRepository.getStockAlertSummary();
-        int lowStockCount = summary != null && summary.length > 0 && summary[0] instanceof Number
-                ? ((Number) summary[0]).intValue()
+        ProductRepository.StockAlertSummaryProjection summary = productRepository.getStockAlertSummary();
+        int lowStockCount = summary != null && summary.getLowStockCount() != null
+                ? summary.getLowStockCount()
                 : 0;
-        int outOfStockCount = summary != null && summary.length > 1 && summary[1] instanceof Number
-                ? ((Number) summary[1]).intValue()
+        int outOfStockCount = summary != null && summary.getOutOfStockCount() != null
+                ? summary.getOutOfStockCount()
                 : 0;
 
         return StockAlertSummaryResponse.builder()

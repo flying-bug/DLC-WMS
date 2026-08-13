@@ -12,6 +12,7 @@ import java.util.List;
 
 @Data
 public class DirectCheckoutRequest {
+    private Long partnerId;
     private String customerPhone;
     private String customerName;
     private String customerAddress;
