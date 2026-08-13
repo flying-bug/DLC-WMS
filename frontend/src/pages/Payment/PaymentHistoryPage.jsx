@@ -230,12 +230,6 @@ function PaymentHistoryPage() {
                 <option value="SALES_ORDER">Đơn bán hàng</option>
               </SearchableSelect>
             </div>
-            <SearchableSelect className={styles.select} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="ALL">Tất cả trạng thái</option>
-              <option value="POSTED">Ghi sổ</option>
-              <option value="DRAFT">Nháp</option>
-            </SearchableSelect>
-          </div>
 
             <div className={styles.tableWrap}>
               <table className={styles.table}>
