@@ -28,6 +28,7 @@ public class DashboardResponse {
     private Integer newWarrantyTickets;
     private Integer approvedPurchaseOrdersCount;
     private Integer approvedSalesOrdersCount;
+    private Integer backorderedSalesOrdersCount;
     private Integer configuredLowStockProductsCount;
     private Integer confirmedWarrantyRepairsCount;
     
@@ -37,6 +38,7 @@ public class DashboardResponse {
     private List<FinishedGoodInventoryDto> finishedGoodInventoryItems;
     private List<OrderSummaryDto> approvedPurchaseOrders;
     private List<OrderSummaryDto> approvedSalesOrders;
+    private List<OrderSummaryDto> backorderedSalesOrders;
     private List<ConfiguredLowStockProductDto> configuredLowStockProducts;
     private List<RepairSummaryDto> confirmedWarrantyRepairs;
     private List<InventoryFlowDto> inventoryFlow7Days;

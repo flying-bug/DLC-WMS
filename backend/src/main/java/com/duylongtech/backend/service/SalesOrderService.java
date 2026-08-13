@@ -35,6 +35,7 @@ public class SalesOrderService {
     private final EmailService emailService;
     private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
     private final PaymentService paymentService;
+    private final SystemSettingsService systemSettingsService;
 
     // =========================================================
     // QUERY
@@ -42,9 +43,18 @@ public class SalesOrderService {
 
     @Transactional(readOnly = true)
     public List<SalesOrderResponse> getSalesOrders(
-            String keyword, String status, Long partnerId,
+            String keyword, String status, String reservationStatus, String exportDocumentStatus, Long partnerId,
             Long warehouseId, LocalDate fromDate, LocalDate toDate) {
-        return salesOrderRepository.findAllWithFilters(keyword, status, partnerId, warehouseId, fromDate, toDate)
+        return salesOrderRepository.findAllWithFilters(
+                        keyword,
+                        status,
+                        reservationStatus,
+                        exportDocumentStatus,
+                        partnerId,
+                        warehouseId,
+                        fromDate,
+                        toDate
+                )
                 .stream().map(this::toSummaryResponse).collect(Collectors.toList());
     }
 
@@ -244,7 +254,14 @@ public class SalesOrderService {
 
         requireActiveCustomer(so.getPartnerId());
 
-        LocalDateTime expiresAt = LocalDateTime.now().plusHours(72); // giữ chỗ 72 giờ
+        int expiryHours = 24;
+        try {
+            expiryHours = Integer.parseInt(systemSettingsService.getSetting("sales.reservation.expiry_hours", "24"));
+            if (expiryHours <= 0) expiryHours = 24;
+        } catch (Exception e) {
+            log.warn("Invalid expiry_hours setting, defaulting to 24", e);
+        }
+        LocalDateTime expiresAt = LocalDateTime.now().plusHours(expiryHours);
 
         for (SalesOrderLine line : so.getLines()) {
             // Kiểm tra tồn kho khả dụng (on_hand - reserved)
@@ -363,7 +380,7 @@ public class SalesOrderService {
      * Sau khi phiếu xuất kho EX_SO được POST, gọi method này để fulfill reservation.
      */
     @Transactional
-    public void fulfillReservation(Long salesOrderId, Long variantId, Long warehouseId, BigDecimal quantityFulfilled) {
+    public void fulfillReservation(Long salesOrderId, Long variantId, Long warehouseId, BigDecimal quantityFulfilled, BigDecimal costAmountFulfilled) {
         stockReservationRepository
                 .findBySalesOrderIdAndVariantIdAndWarehouseId(salesOrderId, variantId, warehouseId)
                 .ifPresent(r -> {
@@ -386,6 +403,22 @@ public class SalesOrderService {
                     }
                     stockReservationRepository.save(r);
                 });
+
+        // Cập nhật giá vốn FIFO vào SalesOrderLine
+        salesOrderRepository.findByIdWithDetails(salesOrderId).ifPresent(so -> {
+            boolean isUpdated = false;
+            for (SalesOrderLine line : so.getLines()) {
+                if (line.getVariantId().equals(variantId)) {
+                    BigDecimal currentCost = line.getCostAmount() != null ? line.getCostAmount() : BigDecimal.ZERO;
+                    line.setCostAmount(currentCost.add(costAmountFulfilled != null ? costAmountFulfilled : BigDecimal.ZERO));
+                    isUpdated = true;
+                    break;
+                }
+            }
+            if (isUpdated) {
+                salesOrderRepository.save(so);
+            }
+        });
 
         // Kiểm tra nếu tất cả reservations đều FULFILLED → SO = POSTED
         List<StockReservation> all = stockReservationRepository.findBySalesOrderId(salesOrderId);

@@ -204,6 +204,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         moduleActions.put("report_transfer", new String[]{"view", "export"});
         moduleActions.put("report_debt", new String[]{"view", "export"});
         moduleActions.put("report_summary", new String[]{"view", "export"});
+        moduleActions.put("report_sales", new String[]{"view", "export"});
         moduleActions.put("ai_chat", new String[]{"view"});
         moduleActions.put("account", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("auth", new String[]{"view", "edit"});
@@ -257,7 +258,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 if (java.util.Arrays.asList(
                         "import", "export", "purchase_order", "sales_order", "payment",
                         "transfer", "stocktake", "assembly_config", "assembly", "warranty", "repair",
-                        "product", "report_balance", "ai_chat"
+                        "product", "report_balance", "report_sales", "ai_chat"
                 ).contains(perm.getModule())) {
                     staffPerms.add(perm);
                 }

@@ -47,12 +47,25 @@ public class SalesOrderController {
     public ApiResponse<List<SalesOrderResponse>> getSalesOrders(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String reservationStatus,
+            @RequestParam(required = false) String exportDocumentStatus,
             @RequestParam(required = false) Long partnerId,
             @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate
     ) {
-        return ApiResponse.success(salesOrderService.getSalesOrders(keyword, status, partnerId, warehouseId, fromDate, toDate));
+        return ApiResponse.success(
+                salesOrderService.getSalesOrders(
+                        keyword,
+                        status,
+                        reservationStatus,
+                        exportDocumentStatus,
+                        partnerId,
+                        warehouseId,
+                        fromDate,
+                        toDate
+                )
+        );
     }
 
     // ─── GET: Sinh mã SO tự động ────────────────────────────────────────

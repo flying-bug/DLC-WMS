@@ -24,6 +24,14 @@ public class CloudinaryService {
             "image/gif"
     );
 
+    private static final Set<String> ALLOWED_DOC_CONTENT_TYPES = Set.of(
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+            "application/pdf"
+    );
+
     private final Cloudinary cloudinary;
 
     @Value("${cloudinary.folder:duy-long-computer}")
@@ -59,6 +67,33 @@ public class CloudinaryService {
         }
     }
 
+    public UploadResponse uploadDocument(MultipartFile file, String folder) {
+        validateDocument(file);
+
+        String targetFolder = buildFolder(folder);
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", targetFolder,
+                            "resource_type", "auto",
+                            "use_filename", true,
+                            "unique_filename", true,
+                            "overwrite", false
+                    )
+            );
+
+            return UploadResponse.builder()
+                    .url(asString(result.get("url")))
+                    .secureUrl(asString(result.get("secure_url")))
+                    .publicId(asString(result.get("public_id")))
+                    .originalFilename(file.getOriginalFilename())
+                    .build();
+        } catch (IOException e) {
+            throw new BusinessException("Khong the tai tai lieu len Cloudinary.", e);
+        }
+    }
+
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException("Vui long chon anh de tai len.");
@@ -69,6 +104,19 @@ public class CloudinaryService {
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
             throw new BusinessException("Chi ho tro anh JPG, PNG, WEBP hoac GIF.");
+        }
+    }
+
+    private void validateDocument(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("Vui long chon file de tai len.");
+        }
+        if (file.getSize() > maxFileSize) {
+            throw new BusinessException("File khong duoc vuot qua 5MB.");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_DOC_CONTENT_TYPES.contains(contentType.toLowerCase())) {
+            throw new BusinessException("Chi ho tro anh (JPG, PNG, WEBP) hoac PDF.");
         }
     }
 

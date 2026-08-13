@@ -827,7 +827,7 @@ class InventoryDocumentServiceFlowTest {
                 () -> assertEquals("ACTIVE", warranty.getWarrantyStatus()),
                 () -> assertEquals(1, warranty.getLines().size()),
                 () -> assertEquals(LocalDate.of(2027, 8, 9), warranty.getEndDate()));
-        verify(salesOrderService).fulfillReservation(30L, VARIANT_ID, WAREHOUSE_ID, BigDecimal.ONE);
+        verify(salesOrderService).fulfillReservation(eq(30L), eq(VARIANT_ID), eq(WAREHOUSE_ID), eq(BigDecimal.ONE), any());
     }
 
     private void stubDocumentSave() {
