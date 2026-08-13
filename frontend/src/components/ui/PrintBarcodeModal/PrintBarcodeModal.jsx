@@ -3,15 +3,17 @@ import BarcodeLabel from './BarcodeLabel';
 import Toast from '../Toast/Toast';
 import styles from './PrintBarcodeModal.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import axiosClient from '../../../api/axiosClient';
 
 
-const PrintBarcodeModal = ({ isOpen, onClose, product }) => {
+const PrintBarcodeModal = ({ isOpen, onClose, product, productVariants = [] }) => {
     const [barcodeType, setBarcodeType] = useState('BARCODE'); // 'BARCODE' or 'QRCODE'
     const [labelSize, setLabelSize] = useState('35x22');
     const [paperSize, setPaperSize] = useState('A4'); // 'ROLL' or 'A4'
     const [showProductName, setShowProductName] = useState(true);
     const [showSKU, setShowSKU] = useState(true);
     const [showSerial, setShowSerial] = useState(true);
+    const [selectedVariantId, setSelectedVariantId] = useState('');
 
     // For non-serial tracking
     const [quantity, setQuantity] = useState(1);
@@ -19,6 +21,7 @@ const PrintBarcodeModal = ({ isOpen, onClose, product }) => {
     // For serial tracking
     const [serialsText, setSerialsText] = useState('');
     const [autoGenQty, setAutoGenQty] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const componentRef = useRef(null);
     const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
@@ -35,9 +38,12 @@ const PrintBarcodeModal = ({ isOpen, onClose, product }) => {
             setShowProductName(true);
             setShowSKU(true);
             setShowSerial(true);
+            const firstVariant = productVariants.find(item => item.productId === product.id && item.active !== false)
+                || productVariants.find(item => item.productId === product.id);
+            setSelectedVariantId(firstVariant ? String(firstVariant.id) : '');
             setToast({ isVisible: false, type: 'success', message: '' });
         }
-    }, [isOpen, product]);
+    }, [isOpen, product, productVariants]);
 
     const handlePrint = () => {
         if (totalLabels === 0) {
@@ -59,44 +65,43 @@ const PrintBarcodeModal = ({ isOpen, onClose, product }) => {
     if (!isOpen || !product) return null;
 
     const isTrackSerial = product.trackSerial;
+    const availableVariants = productVariants.filter(item => item.productId === product.id);
+    const selectedVariant = availableVariants.find(item => String(item.id) === selectedVariantId) || availableVariants[0];
     const serialList = isTrackSerial ? serialsText.split('\n').map(s => s.trim()).filter(s => s.length > 0) : [];
 
     // Total labels to print
     const totalLabels = isTrackSerial ? serialList.length : quantity;
 
-    const handleAutoGenerateSerials = () => {
+    const handleAutoGenerateSerials = async () => {
         if (!autoGenQty || autoGenQty <= 0) return;
         if (autoGenQty > 1000) {
             setToast({ isVisible: true, type: 'error', message: 'Chỉ hỗ trợ sinh tối đa 1000 mã/lần để đảm bảo hiệu suất!' });
             return;
         }
-
-        const skuPrefix = product.productCode || 'SP';
-        
-        // Sử dụng timestamp (hệ cơ số 36) để đảm bảo mã lô sinh ra là độc nhất tuyệt đối theo từng mili-giây
-        const batchId = Date.now().toString(36).toUpperCase().slice(-5);
-
-        // Lấy danh sách các mã đang có trong khung để đối chiếu, tránh trùng lặp 100%
-        const existingSerials = new Set(
-            (serialsText || '').split('\n').map(s => s.trim()).filter(s => s.length > 0)
-        );
-
-        const generated = [];
-        let count = 1;
-        while (generated.length < autoGenQty) {
-            const sequence = String(count).padStart(3, '0');
-            const newSerial = `${skuPrefix}-${batchId}-${sequence}`;
-            
-            // Nếu mã này chưa từng tồn tại trong danh sách thì mới thêm vào
-            if (!existingSerials.has(newSerial)) {
-                generated.push(newSerial);
-            }
-            count++;
+        if (!selectedVariant) {
+            setToast({ isVisible: true, type: 'error', message: 'Vui lòng chọn SKU cần sinh serial.' });
+            return;
         }
 
-        // Thêm vào danh sách hiện tại
-        const existing = serialsText ? serialsText + '\n' : '';
-        setSerialsText(existing + generated.join('\n'));
+        setIsGenerating(true);
+        try {
+            const response = await axiosClient.post(
+                `/products/${product.id}/variants/${selectedVariant.id}/serial-codes`,
+                null,
+                { params: { quantity: autoGenQty } }
+            );
+            const generated = response.data?.data || [];
+            const existing = serialsText ? serialsText + '\n' : '';
+            setSerialsText(existing + generated.join('\n'));
+        } catch (error) {
+            setToast({
+                isVisible: true,
+                type: 'error',
+                message: error.response?.data?.userMessage || 'Không thể sinh serial. Vui lòng thử lại.'
+            });
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     return (
@@ -109,6 +114,18 @@ const PrintBarcodeModal = ({ isOpen, onClose, product }) => {
 
                 <div className={`misa-modal-body ${styles.modalBody}`}>
                     <div className={styles.configSection}>
+                        {availableVariants.length > 0 && (
+                            <div className={styles.formGroup}>
+                                <label>SKU cần in</label>
+                                <SearchableSelect value={selectedVariantId} onChange={e => setSelectedVariantId(e.target.value)} className="misa-input">
+                                    {availableVariants.map(item => (
+                                        <option key={item.id} value={item.id}>
+                                            {item.sku}{item.barcode && item.barcode !== item.sku ? ` - ${item.barcode}` : ''}
+                                        </option>
+                                    ))}
+                                </SearchableSelect>
+                            </div>
+                        )}
                         <div className={styles.formGroup}>
                             <label>Loại mã</label>
                             <SearchableSelect value={barcodeType} onChange={e => setBarcodeType(e.target.value)} className="misa-input">
@@ -186,9 +203,10 @@ const PrintBarcodeModal = ({ isOpen, onClose, product }) => {
                                         className="btn-misa-save"
                                         style={{ flex: '1 1 auto', backgroundColor: '#10b981', padding: '6px 12px', display: 'flex', justifyContent: 'center', alignItems: 'center', whiteSpace: 'nowrap', minWidth: '150px' }}
                                         onClick={handleAutoGenerateSerials}
+                                        disabled={isGenerating}
                                     >
                                         <i className="fas fa-magic" style={{ marginRight: '6px' }}></i>
-                                        Tự động sinh mã
+                                        {isGenerating ? 'Đang sinh mã...' : 'Tự động sinh mã'}
                                     </button>
                                     {serialsText.length > 0 && (
                                         <button
@@ -230,6 +248,7 @@ const PrintBarcodeModal = ({ isOpen, onClose, product }) => {
                                         <BarcodeLabel
                                             key={idx}
                                             product={product}
+                                            variant={selectedVariant}
                                             barcodeType={barcodeType}
                                             labelSize={labelSize}
                                             showProductName={showProductName}
@@ -268,6 +287,7 @@ const PrintBarcodeModal = ({ isOpen, onClose, product }) => {
                         <div key={idx} className={paperSize === 'ROLL' ? styles.pageBreak : styles.a4Item}>
                             <BarcodeLabel
                                 product={product}
+                                variant={selectedVariant}
                                 barcodeType={barcodeType}
                                 labelSize={labelSize}
                                 showProductName={showProductName}

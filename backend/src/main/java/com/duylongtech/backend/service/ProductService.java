@@ -44,14 +44,22 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ProductService {
+    private static final SecureRandom SERIAL_RANDOM = new SecureRandom();
+    private static final long SERIAL_MIN = 100_000_000_000L;
+    private static final long SERIAL_RANGE = 900_000_000_000L;
+    private static final int MAX_SERIAL_ATTEMPTS_PER_CODE = 20;
+
     private final ProductRepository productRepository;
     private final BrandRepository brandRepository;
     private final ProductCategoryRepository categoryRepository;
@@ -314,6 +322,38 @@ public class ProductService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<String> generateSerialCodes(Long productId, Long variantId, int quantity) {
+        if (quantity < 1 || quantity > 1000) {
+            throw new BusinessException("So luong serial phai tu 1 den 1000.");
+        }
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new BusinessException("SKU khong ton tai."));
+        if (variant.getProduct() == null || !variant.getProduct().getId().equals(productId)) {
+            throw new BusinessException("SKU khong thuoc san pham nay.");
+        }
+        if (!Boolean.TRUE.equals(variant.getProduct().getTrackSerial())) {
+            throw new BusinessException("San pham khong theo doi serial.");
+        }
+
+        Set<String> codes = new LinkedHashSet<>(quantity);
+        int maxAttempts = quantity * MAX_SERIAL_ATTEMPTS_PER_CODE;
+        for (int attempts = 0; codes.size() < quantity && attempts < maxAttempts; attempts++) {
+            String code = generateRandomSerialCode();
+            if (!codes.contains(code) && !serialNumberRepository.existsBySerialNumber(code)) {
+                codes.add(code);
+            }
+        }
+        if (codes.size() < quantity) {
+            throw new BusinessException("Khong the sinh du serial khong trung. Vui long thu lai.");
+        }
+        return List.copyOf(codes);
+    }
+
+    static String generateRandomSerialCode() {
+        return String.valueOf(SERIAL_MIN + Math.floorMod(SERIAL_RANDOM.nextLong(), SERIAL_RANGE));
+    }
+
     @Transactional
     public ProductVariantResponse createVariant(Long productId, ProductVariantRequest request) {
         Product product = getProductEntity(productId);
@@ -324,7 +364,7 @@ public class ProductService {
         }
         String barcode = trimToNull(request.getBarcode());
         if (barcode == null) {
-            barcode = sku;
+            barcode = generateBarcode();
         }
         if (barcode != null && productVariantRepository.findByBarcode(barcode).isPresent()) {
             throw new BusinessException("Barcode da ton tai.");
@@ -362,7 +402,7 @@ public class ProductService {
                 });
         String barcode = trimToNull(request.getBarcode());
         if (barcode == null) {
-            barcode = sku;
+            barcode = variant.getBarcode();
         }
         if (barcode != null) {
             productVariantRepository.findByBarcode(barcode)
@@ -422,7 +462,7 @@ public class ProductService {
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
                 .sku(sku)
-                .barcode(sku)
+                .barcode(generateBarcode())
                 .variantName(dto.getProductName().trim())
                 .costPrice(BigDecimal.ZERO)
                 .salePrice(resolveMoney(dto.getSalePrice()))
@@ -430,6 +470,10 @@ public class ProductService {
                 .warrantyMonths(dto.getWarrantyPeriodMonths())
                 .build();
         productVariantRepository.save(variant);
+    }
+
+    private String generateBarcode() {
+        return codeGeneratorService.generateCode("product_variants", "barcode", "BC", 8);
     }
 
     private Product getProductEntity(Long productId) {

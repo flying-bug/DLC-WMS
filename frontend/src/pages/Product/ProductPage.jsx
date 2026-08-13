@@ -50,6 +50,7 @@ const DEFAULT_COLUMNS = {
 const defaultVariantData = {
     id: null,
     sku: '',
+    barcode: '',
     variantName: '',
     costPrice: 0,
     salePrice: 0,
@@ -1275,6 +1276,7 @@ const ProductPage = () => {
         setVariantForm({
             id: variant.id,
             sku: variant.sku || '',
+            barcode: variant.barcode || '',
             variantName: variant.variantName || '',
             costPrice: Number(variant.costPrice || 0),
             salePrice: Number(variant.salePrice || 0),
@@ -1323,6 +1325,7 @@ const ProductPage = () => {
 
             const payload = {
                 sku: variantForm.sku.trim().toUpperCase(),
+                barcode: variantForm.barcode?.trim().toUpperCase() || null,
                 variantName: variantForm.variantName.trim(),
                 costPrice: Number(variantForm.costPrice || 0),
                 salePrice: Number(variantForm.salePrice || 0),
@@ -2830,6 +2833,7 @@ const ProductPage = () => {
                 isOpen={!!printBarcodeProduct}
                 onClose={() => setPrintBarcodeProduct(null)}
                 product={printBarcodeProduct}
+                productVariants={allVariants}
             />
 
             <ProductDetailModal

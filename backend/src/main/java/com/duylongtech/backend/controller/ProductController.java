@@ -102,6 +102,15 @@ public class ProductController {
         return ResponseEntity.ok(productService.getVariantsByProduct(id));
     }
 
+    @PostMapping("/{id}/variants/{variantId}/serial-codes")
+    @PreAuthorize("hasAuthority('product:view')")
+    public ResponseEntity<ApiResponse<java.util.List<String>>> generateSerialCodes(
+            @PathVariable Long id,
+            @PathVariable Long variantId,
+            @RequestParam int quantity) {
+        return ResponseEntity.ok(ApiResponse.success(productService.generateSerialCodes(id, variantId, quantity)));
+    }
+
     @PostMapping("/{id}/variants")
     @PreAuthorize("hasAuthority('product:add')")
     public ResponseEntity<ApiResponse<ProductVariantResponse>> createProductVariant(
