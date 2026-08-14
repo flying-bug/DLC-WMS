@@ -41,7 +41,7 @@ backup:
 google:
   client-id: ${GMAIL_CLIENT_ID:889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com}
   client-secret: ${GMAIL_CLIENT_SECRET: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}
-  refresh-token: ${GMAIL_REFRESH_TOKEN:1//04r_huLp3CGjLCgYIARAAGAQSNgF-L9IruxTRi1RfR3nF2bXEio5AOmicfwAEFudp6c5keNISsei6Tz_LAtAiTXP6b6NGaKRwDA}
+  refresh-token: ${GMAIL_REFRESH_TOKEN:1//04KBPq7hKygPUCgYIARAAGAQSNgF-L9Irb_g6d0iM3EJgsq6OGRXOQ-oPiugQgXmRjf5eylrUB013TdaOuRW5Fy-KdPNb--XHXQ}
 
 cloudinary:
   url: ${CLOUDINARY_URL:}

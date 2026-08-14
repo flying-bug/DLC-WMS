@@ -272,7 +272,6 @@ public class BackupService {
 
     // ─── Restore ───────────────────────────────────────────────────────────────
 
-    @Transactional
     public void restoreBackup(Long id, String userEncryptionKey) throws Exception {
         BackupRecord record = backupRecordRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Backup không tồn tại: " + id));
@@ -304,9 +303,6 @@ public class BackupService {
             if (hostPort.contains(":")) { host = hostPort.split(":")[0]; port = hostPort.split(":")[1]; }
             else host = hostPort;
         } catch (Exception ignored) {}
-
-        record.setStatus(BackupRecord.BackupStatus.RESTORING);
-        backupRecordRepo.save(record);
 
         ensureNativePasswordAuth(dbUser, dbPass);
 
@@ -349,8 +345,6 @@ public class BackupService {
                     mysqlIn.write(buf, 0, read);
                 }
             } catch (Exception e) {
-                record.setStatus(BackupRecord.BackupStatus.FAILED);
-                backupRecordRepo.save(record);
                 String procErr = "";
                 try {
                     procErr = new String(process.getInputStream().readAllBytes());
@@ -366,13 +360,10 @@ public class BackupService {
         int exitCode = process.waitFor();
         if (exitCode != 0) {
             String errMsg = new String(process.getInputStream().readAllBytes());
-            record.setStatus(BackupRecord.BackupStatus.FAILED);
-            backupRecordRepo.save(record);
             throw new RuntimeException(String.format(SystemMessage.BACKUP_ERR_002.getMessage(), exitCode, errMsg));
         }
 
-        record.setStatus(BackupRecord.BackupStatus.LOCAL);
-        backupRecordRepo.save(record);
+        entityManager.clear();
         syncDiskBackupsWithDb();
         log.info("Database restored from: {}", record.getFilename());
     }
