@@ -1,9 +1,11 @@
 package com.duylongtech.backend.controller;
 
 import com.duylongtech.backend.dto.SystemHealthDto;
+import com.duylongtech.backend.dto.SystemLogDto;
 import com.duylongtech.backend.dto.SystemSettingsDto;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.service.SystemHealthService;
+import com.duylongtech.backend.service.SystemLogService;
 import com.duylongtech.backend.service.SystemSettingsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -25,6 +28,7 @@ public class SystemController {
 
     private final SystemHealthService healthService;
     private final SystemSettingsService settingsService;
+    private final SystemLogService logService;
 
     // ── System Health ──────────────────────────────────────────────────────────
 
@@ -81,6 +85,24 @@ public class SystemController {
             return ApiResponse.error("DRIVE_NOT_CONNECTED",
                     "Không thể kết nối Google Drive: " + e.getMessage());
         }
+    }
+
+    // ── Application Logs ───────────────────────────────────────────────────────
+
+    @GetMapping("/logs")
+    @Operation(summary = "Get recent application runtime logs")
+    public ApiResponse<List<SystemLogDto>> getLogs(
+            @RequestParam(defaultValue = "ALL") String level,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "100") int limit) {
+        return ApiResponse.success(logService.getLogs(level, search, limit));
+    }
+
+    @DeleteMapping("/logs")
+    @Operation(summary = "Clear application runtime logs buffer")
+    public ApiResponse<Map<String, String>> clearLogs() {
+        logService.clearLogs();
+        return ApiResponse.success(Map.of("message", "Đã xóa toàn bộ nhật ký ứng dụng."));
     }
 
 }

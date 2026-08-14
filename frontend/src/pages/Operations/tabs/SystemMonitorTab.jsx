@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { getSystemHealth } from '../../../api/backupApi';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { getSystemHealth, getSystemLogs, clearSystemLogs } from '../../../api/backupApi';
 import styles from './SystemMonitorTab.module.css';
-import { formatTime } from '../../../utils/dateFormat';
 
 // Simple gauge bar component
 function GaugeBar({ label, value, max, unit, color }) {
@@ -22,8 +21,14 @@ function SystemMonitorTab() {
     const [health, setHealth] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeSubTab, setActiveSubTab] = useState('resources');
+    
+    // Logs state
     const [logLines, setLogLines] = useState([]);
     const [logFilter, setLogFilter] = useState('ALL');
+    const [logSearch, setLogSearch] = useState('');
+    const [logsLoading, setLogsLoading] = useState(false);
+    const [autoScroll, setAutoScroll] = useState(true);
+    const [isLive, setIsLive] = useState(true);
     const logRef = useRef(null);
 
     useEffect(() => {
@@ -40,23 +45,51 @@ function SystemMonitorTab() {
         return () => clearInterval(t);
     }, []);
 
-    // Simulate log streaming (real implementation would use SSE or polling /api/v1/system/logs)
-    useEffect(() => {
-        const mockLogs = [
-            { level: 'INFO',  time: formatTime(), msg: 'Application started successfully on port 8080' },
-            { level: 'INFO',  time: formatTime(), msg: 'Connected to MySQL database: duylongcomputer' },
-            { level: 'INFO',  time: formatTime(), msg: 'Flyway migrations: 21 applied, 0 pending' },
-            { level: 'INFO',  time: formatTime(), msg: 'Scheduled task registered: BackupSchedulerService' },
-            { level: 'INFO',  time: formatTime(), msg: 'CORS configured for localhost:5173, localhost:80, localhost:3000' },
-            { level: 'WARN',  time: formatTime(), msg: 'Drive service account not configured — auto upload disabled' },
-            { level: 'INFO',  time: formatTime(), msg: 'WebSocket endpoint registered: /ws' },
-        ];
-        setLogLines(mockLogs);
-    }, []);
+    const fetchLogs = useCallback(async (isSilent = false) => {
+        if (!isSilent) setLogsLoading(true);
+        try {
+            const res = await getSystemLogs({ level: logFilter, search: logSearch, limit: 150 });
+            if (res.success && Array.isArray(res.data)) {
+                setLogLines(res.data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch system logs:', err);
+        } finally {
+            if (!isSilent) setLogsLoading(false);
+        }
+    }, [logFilter, logSearch]);
 
-    const filteredLogs = logFilter === 'ALL'
-        ? logLines
-        : logLines.filter(l => l.level === logFilter);
+    // Fetch logs when subtab is logs or filter/search changes
+    useEffect(() => {
+        if (activeSubTab !== 'logs') return;
+        fetchLogs();
+    }, [activeSubTab, fetchLogs]);
+
+    // Live polling
+    useEffect(() => {
+        if (activeSubTab !== 'logs' || !isLive) return;
+        const interval = setInterval(() => {
+            fetchLogs(true);
+        }, 3500);
+        return () => clearInterval(interval);
+    }, [activeSubTab, isLive, fetchLogs]);
+
+    // Auto-scroll
+    useEffect(() => {
+        if (autoScroll && logRef.current) {
+            logRef.current.scrollTop = logRef.current.scrollHeight;
+        }
+    }, [logLines, autoScroll]);
+
+    const handleClearLogs = async () => {
+        if (!window.confirm('Bạn có chắc chắn muốn xóa bộ nhớ đệm nhật ký hệ thống?')) return;
+        try {
+            await clearSystemLogs();
+            setLogLines([]);
+        } catch (err) {
+            console.error('Failed to clear logs:', err);
+        }
+    };
 
     const services = [
         { name: 'dlc-mysql-db',   label: 'MySQL Database',   icon: 'bi bi-database-fill', status: health?.dbOnline ? 'UP' : 'DOWN' },
@@ -222,22 +255,74 @@ function SystemMonitorTab() {
                                 {f}
                             </button>
                         ))}
-                        <span className={styles.logCount}>{filteredLogs.length} dòng</span>
+
+                        <div className={styles.logSearchBox}>
+                            <i className={`bi bi-search ${styles.logSearchIcon}`} />
+                            <input
+                                type="text"
+                                className={styles.logSearchInput}
+                                placeholder="Tìm kiếm log..."
+                                value={logSearch}
+                                onChange={(e) => setLogSearch(e.target.value)}
+                            />
+                        </div>
+
+                        <div className={styles.logActions}>
+                            <button
+                                className={`${styles.actionBtn} ${isLive ? styles.actionBtnActive : ''}`}
+                                onClick={() => setIsLive(!isLive)}
+                                title={isLive ? 'Tạm dừng live stream' : 'Bật live stream'}
+                            >
+                                <i className={`bi ${isLive ? 'bi-broadcast' : 'bi-pause-circle'}`} />
+                                {isLive ? 'Live' : 'Paused'}
+                            </button>
+                            <button
+                                className={`${styles.actionBtn} ${autoScroll ? styles.actionBtnActive : ''}`}
+                                onClick={() => setAutoScroll(!autoScroll)}
+                                title="Tự động cuộn xuống cuối"
+                            >
+                                <i className="bi bi-arrow-down-circle" />
+                                Auto-scroll
+                            </button>
+                            <button
+                                className={styles.actionBtn}
+                                onClick={() => fetchLogs()}
+                                disabled={logsLoading}
+                                title="Tải lại ngay"
+                            >
+                                <i className={`bi bi-arrow-clockwise ${logsLoading ? 'bi-spin' : ''}`} />
+                                Làm mới
+                            </button>
+                            <button
+                                className={styles.actionBtn}
+                                onClick={handleClearLogs}
+                                title="Xóa bộ đệm log"
+                            >
+                                <i className="bi bi-trash" />
+                                Xóa
+                            </button>
+                        </div>
+                        <span className={styles.logCount}>{logLines.length} dòng</span>
                     </div>
+
                     <div className={styles.logViewer} ref={logRef}>
-                        {filteredLogs.length === 0 ? (
+                        {logsLoading && logLines.length === 0 ? (
+                            <div className={styles.loadingState}><div className={styles.spinner} /> Đang tải nhật ký hệ thống...</div>
+                        ) : logLines.length === 0 ? (
                             <div className={styles.logEmpty}>Không có log nào khớp bộ lọc.</div>
-                        ) : filteredLogs.map((l, i) => (
+                        ) : logLines.map((l, i) => (
                             <div key={i} className={`${styles.logLine} ${styles['log' + l.level]}`}>
                                 <span className={styles.logTime}>{l.time}</span>
                                 <span className={`${styles.logLevel} ${styles['level' + l.level]}`}>{l.level}</span>
+                                {l.logger && <span className={styles.logLogger}>[{l.logger}]</span>}
                                 <span className={styles.logMsg}>{l.msg}</span>
                             </div>
                         ))}
                     </div>
+
                     <div className={styles.logNote}>
                         <i className="bi bi-info-circle" />
-                        <span>Để xem log thời gian thực từ Docker, cần mount file log qua Docker volume và cấu hình log endpoint.</span>
+                        <span>Nhật ký thời gian thực từ Spring Boot SLF4J / Logback (tự động cập nhật mỗi 3.5s khi ở chế độ Live).</span>
                     </div>
                 </div>
             )}

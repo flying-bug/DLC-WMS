@@ -22,6 +22,13 @@ export const uploadServiceAccount = (file) => {
 export const testDriveConnection = () =>
     axiosClient.post('/system/test-drive').then(r => r.data);
 
+// ── System Logs ──────────────────────────────────────────────────────────────
+export const getSystemLogs = ({ level = 'ALL', search = '', limit = 100 } = {}) =>
+    axiosClient.get('/system/logs', { params: { level, search, limit } }).then(r => r.data);
+
+export const clearSystemLogs = () =>
+    axiosClient.delete('/system/logs').then(r => r.data);
+
 // ── Backup Operations ─────────────────────────────────────────────────────────
 export const createBackup = () =>
     axiosClient.post('/backup/create').then(r => r.data);
