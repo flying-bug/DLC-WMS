@@ -657,6 +657,12 @@ public class InventoryDocumentService {
             }
         }
 
+        // Tự động kiểm tra và chuyển BACKORDERED thành HOLDING cho các đơn hàng bị thiếu hàng trước đây
+        savedImport.getLines().stream()
+                .map(InventoryDocumentLine::getVariantId)
+                .distinct()
+                .forEach(variantId -> salesOrderService.reEvaluateBackorders(savedImport.getWarehouseId(), variantId));
+
         return toResponse(savedImport);
     }
 

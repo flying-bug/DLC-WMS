@@ -59,4 +59,14 @@ public interface StockReservationRepository extends JpaRepository<StockReservati
         @Param("oldStatus") String oldStatus,
         @Param("newStatus") String newStatus
     );
+
+    @Query("""
+        SELECT r FROM StockReservation r
+        WHERE r.variantId = :variantId AND r.warehouseId = :warehouseId AND r.status = 'BACKORDERED'
+        ORDER BY r.createdAt ASC
+    """)
+    List<StockReservation> findBackorderedByVariantAndWarehouseOrderByCreatedAtAsc(
+        @Param("variantId") Long variantId,
+        @Param("warehouseId") Long warehouseId
+    );
 }
