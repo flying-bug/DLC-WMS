@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.cloudinary.Cloudinary;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.cloudinary.utils.ObjectUtils;
 import com.duylongtech.backend.dto.response.UploadResponse;
 import com.duylongtech.backend.exception.BusinessException;
@@ -63,7 +64,7 @@ public class CloudinaryService {
                     .originalFilename(file.getOriginalFilename())
                     .build();
         } catch (IOException e) {
-            throw new BusinessException("Khong the tai anh len Cloudinary.", e);
+            throw new BusinessException(SystemMessage.CLOUD_ERR_008.getMessage(), e);
         }
     }
 
@@ -90,33 +91,33 @@ public class CloudinaryService {
                     .originalFilename(file.getOriginalFilename())
                     .build();
         } catch (IOException e) {
-            throw new BusinessException("Khong the tai tai lieu len Cloudinary.", e);
+            throw new BusinessException(SystemMessage.CLOUD_ERR_007.getMessage(), e);
         }
     }
 
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new BusinessException("Vui long chon anh de tai len.");
+            throw new BusinessException(SystemMessage.CLOUD_ERR_006.getMessage());
         }
         if (file.getSize() > maxFileSize) {
-            throw new BusinessException("Anh khong duoc vuot qua 5MB.");
+            throw new BusinessException(SystemMessage.CLOUD_ERR_005.getMessage());
         }
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
-            throw new BusinessException("Chi ho tro anh JPG, PNG, WEBP hoac GIF.");
+            throw new BusinessException(SystemMessage.CLOUD_ERR_004.getMessage());
         }
     }
 
     private void validateDocument(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new BusinessException("Vui long chon file de tai len.");
+            throw new BusinessException(SystemMessage.CLOUD_ERR_003.getMessage());
         }
         if (file.getSize() > maxFileSize) {
-            throw new BusinessException("File khong duoc vuot qua 5MB.");
+            throw new BusinessException(SystemMessage.CLOUD_ERR_002.getMessage());
         }
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_DOC_CONTENT_TYPES.contains(contentType.toLowerCase())) {
-            throw new BusinessException("Chi ho tro anh (JPG, PNG, WEBP) hoac PDF.");
+            throw new BusinessException(SystemMessage.CLOUD_ERR_001.getMessage());
         }
     }
 
