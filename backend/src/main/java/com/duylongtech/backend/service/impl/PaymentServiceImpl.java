@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service.impl;
 
 import com.duylongtech.backend.dto.request.PaymentRequest;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.response.PartnerLedgerResponse;
 import com.duylongtech.backend.dto.response.PaymentResponse;
 import com.duylongtech.backend.entity.Partner;
@@ -50,14 +51,14 @@ public class PaymentServiceImpl implements PaymentService {
 
     private PaymentResponse processPayment(PaymentRequest request, String type, String prefix) {
         if (request == null || request.getPartnerId() == null) {
-            throw new BusinessException("Đối tác là bắt buộc");
+            throw new BusinessException(SystemMessage.PAY_ERR_006.getMessage());
         }
         Partner partner = partnerRepository.findById(request.getPartnerId())
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác với ID: " + request.getPartnerId()));
 
         BigDecimal amount = request.getAmount();
         if (amount == null || amount.compareTo(ZERO) <= 0) {
-            throw new BusinessException("Số tiền giao dịch phải lớn hơn 0");
+            throw new BusinessException(SystemMessage.PAY_ERR_005.getMessage());
         }
 
         String status = normalizeStatus(request.getStatus());
@@ -96,7 +97,7 @@ public class PaymentServiceImpl implements PaymentService {
             return toResponse(payment, partner);
         }
         if (!"DRAFT".equals(payment.getStatus())) {
-            throw new BusinessException("Chỉ có thể ghi sổ phiếu ở trạng thái DRAFT");
+            throw new BusinessException(SystemMessage.PAY_ERR_004.getMessage());
         }
 
         ensurePaymentDoesNotExceedDebt(payment.getPartnerId(), payment.getAmount());
@@ -171,7 +172,7 @@ public class PaymentServiceImpl implements PaymentService {
     private void ensurePaymentDoesNotExceedDebt(Long partnerId, BigDecimal amount) {
         BigDecimal currentDebt = getPartnerDebtBalance(partnerId);
         if (amount.compareTo(currentDebt) > 0) {
-            throw new BusinessException("Số tiền thu/chi không được vượt quá số công nợ hiện tại");
+            throw new BusinessException(SystemMessage.PAY_ERR_003.getMessage());
         }
     }
 
@@ -197,7 +198,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
         String normalized = paymentMethod.trim().toUpperCase();
         if (!"CASH".equals(normalized) && !"BANK_TRANSFER".equals(normalized)) {
-            throw new BusinessException("Phương thức thanh toán chỉ chấp nhận CASH hoặc BANK_TRANSFER");
+            throw new BusinessException(SystemMessage.PAY_ERR_002.getMessage());
         }
         return normalized;
     }
@@ -208,7 +209,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
         String normalized = status.trim().toUpperCase();
         if (!"DRAFT".equals(normalized) && !"POSTED".equals(normalized)) {
-            throw new BusinessException("Trạng thái phiếu thu/chi chỉ chấp nhận DRAFT hoặc POSTED");
+            throw new BusinessException(SystemMessage.PAY_ERR_001.getMessage());
         }
         return normalized;
     }

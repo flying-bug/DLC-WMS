@@ -177,7 +177,7 @@ public class RepairService {
 
         if (repair.getExpectedDate() != null && repair.getReceivedDate() != null
                 && repair.getExpectedDate().isBefore(repair.getReceivedDate())) {
-            throw new BusinessException("Ngày dự kiến không thể nhỏ hơn ngày tiếp nhận.");
+            throw new BusinessException(SystemMessage.REP_ERR_004.getMessage());
         }
 
         Repair saved = repairRepository.save(repair);
@@ -269,14 +269,14 @@ public class RepairService {
         }
         if (request.getQuantity() != null) {
             if (request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new BusinessException("quantity phải lớn hơn 0");
+                throw new BusinessException(SystemMessage.REP_ERR_001.getMessage());
             }
             line.setQuantity(request.getQuantity());
         }
         if (request.getActionType() != null) {
             String normalizedActionType = request.getActionType().toUpperCase();
             if (!VALID_ACTION_TYPES.contains(normalizedActionType)) {
-                throw new BusinessException("actionType phải là ADD, REPLACE hoặc REMOVE");
+                throw new BusinessException(SystemMessage.REP_ERR_002.getMessage());
             }
             if (!normalizedActionType.equals(line.getActionType())) {
                 line.setActionType(normalizedActionType);
@@ -743,23 +743,23 @@ public class RepairService {
             throw new BusinessException(SystemMessage.REP_PARTNER_REQUIRED);
         }
         if (request.getProductId() == null) {
-            throw new BusinessException("productId là bắt buộc");
+            throw new BusinessException(SystemMessage.REP_ERR_005.getMessage());
         }
         if (request.getExpectedDate() != null && request.getReceivedDate() != null
                 && request.getExpectedDate().isBefore(request.getReceivedDate())) {
-            throw new BusinessException("Ngày dự kiến không thể nhỏ hơn ngày tiếp nhận.");
+            throw new BusinessException(SystemMessage.REP_ERR_004.getMessage());
         }
     }
 
     private void validateLineRequest(RepairLineRequest request) {
         if (request.getComponentVariantId() == null) {
-            throw new BusinessException("componentVariantId là bắt buộc");
+            throw new BusinessException(SystemMessage.REP_ERR_003.getMessage());
         }
         if (!VALID_ACTION_TYPES.contains(request.getActionType().toUpperCase())) {
-            throw new BusinessException("actionType phải là ADD, REPLACE hoặc REMOVE");
+            throw new BusinessException(SystemMessage.REP_ERR_002.getMessage());
         }
         if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("quantity phải lớn hơn 0");
+            throw new BusinessException(SystemMessage.REP_ERR_001.getMessage());
         }
     }
 

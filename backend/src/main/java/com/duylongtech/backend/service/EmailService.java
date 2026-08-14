@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 import com.duylongtech.backend.exception.BusinessException;
@@ -18,6 +19,7 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    @Async
     public void sendResetPasswordEmail(String toEmail, String newPassword) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -37,6 +39,7 @@ public class EmailService {
                     + "</div>";
 
             helper.setText(htmlMsg, true);
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("Failed to send email: " + e.getMessage());
@@ -44,6 +47,7 @@ public class EmailService {
         }
     }
 
+    @Async
     public void sendNewEmployeeCredentialsEmail(String toEmail, String fullName, String username, String password) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -67,6 +71,7 @@ public class EmailService {
                     + "</div>";
 
             helper.setText(htmlMsg, true);
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("Failed to send new employee credentials email: " + e.getMessage());
@@ -74,6 +79,7 @@ public class EmailService {
         }
     }
 
+    @Async
     public void sendBackupNotificationEmail(String toEmail, String filename, String fileSizeFormatted, boolean isSuccess, String errorDetails) {
         if (toEmail == null || toEmail.trim().isEmpty()) return;
         try {
@@ -106,15 +112,17 @@ public class EmailService {
                     + "</div>";
 
             helper.setText(htmlMsg, true);
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("Failed to send backup notification email: " + e.getMessage());
         }
     }
 
+    @Async
     public void sendSalesOrderQuoteEmail(String toEmail, com.duylongtech.backend.dto.response.SalesOrderResponse so, String customMessage) {
         if (toEmail == null || toEmail.trim().isEmpty()) {
-            throw new BusinessException("Email người nhận không được để trống");
+            throw new BusinessException(SystemMessage.EMAIL_ERR_002.getMessage());
         }
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -198,6 +206,7 @@ public class EmailService {
                     + "</div>";
 
             helper.setText(htmlMsg, true);
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("Failed to send quote email: " + e.getMessage());

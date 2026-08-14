@@ -277,7 +277,7 @@ public class RepairWorkflowService {
                 log.info("[Repair {}] Đã tạo và POST phiếu xuất kho {} thành công qua InventoryDocumentService", repair.getRepairCode(), docCode);
             } catch (Exception e) {
                 log.error("[Repair {}] Lỗi khi POST phiếu xuất kho {}: {}", repair.getRepairCode(), docCode, e.getMessage());
-                throw new BusinessException("Lỗi khi ghi sổ phiếu xuất linh kiện: " + e.getMessage());
+                throw new BusinessException(String.format(SystemMessage.REP_ERR_009.getMessage(), e.getMessage()));
             }
         }
     }
@@ -347,7 +347,7 @@ public class RepairWorkflowService {
                 log.info("[Repair {}] Đã tạo và POST phiếu Scrap {} thành công qua InventoryDocumentService", repair.getRepairCode(), scrapDocCode);
             } catch (Exception e) {
                 log.error("[Repair {}] Lỗi khi POST phiếu Scrap {}: {}", repair.getRepairCode(), scrapDocCode, e.getMessage());
-                throw new BusinessException("Lỗi khi ghi sổ phiếu Scrap: " + e.getMessage());
+                throw new BusinessException(String.format(SystemMessage.REP_ERR_008.getMessage(), e.getMessage()));
             }
         }
     }
@@ -488,12 +488,10 @@ public class RepairWorkflowService {
             String replacementSerial = resolveReplacementLineSerial(replaceLine);
             DeviceComponentSerial currentMapping = findActiveMapping(mappings, replaceLine.getComponentVariantId(), removedSerial);
             if (currentMapping == null) {
-                throw new BusinessException("Serial " + removedSerial
-                        + " không nằm trong cấu hình hiện tại của PC " + targetSerial + ".");
+                throw new BusinessException(String.format(SystemMessage.REP_ERR_007.getMessage(), removedSerial, targetSerial));
             }
             if (findActiveMapping(mappings, replaceLine.getComponentVariantId(), replacementSerial) != null) {
-                throw new BusinessException("Serial " + replacementSerial
-                        + " đã tồn tại trong cấu hình hiện tại của PC " + targetSerial + ".");
+                throw new BusinessException(String.format(SystemMessage.REP_ERR_006.getMessage(), replacementSerial, targetSerial));
             }
 
             currentMapping.setStatus(COMPONENT_STATUS_REPLACED);
@@ -514,8 +512,7 @@ public class RepairWorkflowService {
             String removedSerial = resolveLineSerial(removeLine);
             DeviceComponentSerial currentMapping = findActiveMapping(mappings, removeLine.getComponentVariantId(), removedSerial);
             if (currentMapping == null) {
-                throw new BusinessException("Serial " + removedSerial
-                        + " không nằm trong cấu hình hiện tại của PC " + targetSerial + ".");
+                throw new BusinessException(String.format(SystemMessage.REP_ERR_007.getMessage(), removedSerial, targetSerial));
             }
 
             currentMapping.setStatus(COMPONENT_STATUS_REMOVED);
@@ -529,8 +526,7 @@ public class RepairWorkflowService {
         for (RepairLine addLine : serialAddLines) {
             String addedSerial = resolveLineSerial(addLine);
             if (findActiveMapping(mappings, addLine.getComponentVariantId(), addedSerial) != null) {
-                throw new BusinessException("Serial " + addedSerial
-                        + " đã tồn tại trong cấu hình hiện tại của PC " + targetSerial + ".");
+                throw new BusinessException(String.format(SystemMessage.REP_ERR_006.getMessage(), addedSerial, targetSerial));
             }
 
             DeviceComponentSerial newMapping = buildActiveRepairMapping(

@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.WarrantyRequest;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.request.WarrantyStatusRequest;
 import com.duylongtech.backend.dto.request.WarrantyLineRequest;
 import com.duylongtech.backend.dto.response.WarrantyLineResponse;
@@ -90,7 +91,7 @@ public class WarrantyLifecycleService {
         Warranty warranty = findWarrantyOrThrow(id);
         String status = normalizeStatusOrDefault(request != null ? request.getWarrantyStatus() : null, null);
         if (status == null || !VALID_STATUSES.contains(status)) {
-            throw new BusinessException("Trang thai bao hanh khong hop le");
+            throw new BusinessException(SystemMessage.WARR_ERR_002.getMessage());
         }
         warranty.setWarrantyStatus(status);
         if (request != null && trimToNull(request.getNote()) != null) {
@@ -101,7 +102,7 @@ public class WarrantyLifecycleService {
 
     private Warranty findWarrantyOrThrow(Long id) {
         if (id == null) {
-            throw new BusinessException("ID bao hanh la bat buoc");
+            throw new BusinessException(SystemMessage.WARR_ERR_009.getMessage());
         }
         return warrantyRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu bảo hành"));
@@ -109,29 +110,29 @@ public class WarrantyLifecycleService {
 
     private void validateRequest(WarrantyRequest request, Long currentId) {
         if (request == null) {
-            throw new BusinessException("Du lieu bao hanh la bat buoc");
+            throw new BusinessException(SystemMessage.WARR_ERR_008.getMessage());
         }
         if (request.getLines() == null || request.getLines().isEmpty()) {
-            throw new BusinessException("Phieu bao hanh phai co it nhat mot mat hang");
+            throw new BusinessException(SystemMessage.WARR_ERR_007.getMessage());
         }
         for (WarrantyLineRequest line : request.getLines()) {
             if (line.getSerialNumberId() == null && (line.getProductVariantId() == null || line.getQuantity() == null)) {
-                throw new BusinessException("Phai cung cap Serial hoac SKU va so luong bao hanh cho moi mat hang");
+                throw new BusinessException(SystemMessage.WARR_ERR_006.getMessage());
             }
         }
         if (request.getPartnerId() == null) {
-            throw new BusinessException("Khach hang bao hanh la bat buoc");
+            throw new BusinessException(SystemMessage.WARR_ERR_005.getMessage());
         }
         // Don ban hang lien quan co the khong bat buoc neu xuat ban truc tiep (POS)
         if (request.getStartDate() == null || request.getEndDate() == null) {
-            throw new BusinessException("Ngay bat dau va ngay het han bao hanh la bat buoc");
+            throw new BusinessException(SystemMessage.WARR_ERR_004.getMessage());
         }
         if (request.getEndDate().isBefore(request.getStartDate())) {
-            throw new BusinessException("Ngay het han khong duoc truoc ngay bat dau");
+            throw new BusinessException(SystemMessage.WARR_ERR_003.getMessage());
         }
         String status = normalizeStatusOrDefault(request.getWarrantyStatus(), "APPROVED");
         if (!VALID_STATUSES.contains(status)) {
-            throw new BusinessException("Trang thai bao hanh khong hop le");
+            throw new BusinessException(SystemMessage.WARR_ERR_002.getMessage());
         }
         String code = trimToNull(request.getWarrantyCode());
         if (code != null) {
@@ -139,7 +140,7 @@ public class WarrantyLifecycleService {
                     ? warrantyRepository.existsByWarrantyCode(code.toUpperCase())
                     : warrantyRepository.existsByWarrantyCodeAndIdNot(code.toUpperCase(), currentId);
             if (duplicated) {
-                throw new BusinessException("Ma bao hanh da ton tai");
+                throw new BusinessException(SystemMessage.WARR_ERR_001.getMessage());
             }
         }
     }
@@ -212,7 +213,7 @@ public class WarrantyLifecycleService {
         }
         String normalized = code.toUpperCase();
         if (warrantyRepository.existsByWarrantyCodeAndIdNot(normalized, id)) {
-            throw new BusinessException("Ma bao hanh da ton tai");
+            throw new BusinessException(SystemMessage.WARR_ERR_001.getMessage());
         }
         return normalized;
     }

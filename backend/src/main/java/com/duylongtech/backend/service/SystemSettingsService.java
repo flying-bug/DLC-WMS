@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.SystemSettingsDto;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.entity.SystemSetting;
 import com.duylongtech.backend.repository.SystemSettingRepository;
 import lombok.RequiredArgsConstructor;
@@ -116,7 +117,7 @@ public class SystemSettingsService {
                 log.warn("OAuth2 exchange returned no refresh_token: {}", respMap);
             }
         } else {
-            throw new IllegalStateException("Đổi mã Google OAuth2 thất bại.");
+            throw new IllegalStateException(SystemMessage.SYS_SET_ERR_001.getMessage());
         }
     }
 

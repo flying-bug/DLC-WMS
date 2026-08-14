@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.response.OcrImportResponse;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.response.OcrImportResponse.OcrItemLine;
 import com.duylongtech.backend.dto.response.OcrImportResponse.VariantSuggestion;
 import com.duylongtech.backend.entity.Partner;
@@ -143,7 +144,7 @@ public class ImportOcrService {
     public void scanDocumentForSession(String sessionId, MultipartFile file) {
         OcrSessionData session = ocrSessions.get(sessionId);
         if (session == null) {
-            throw new RuntimeException("Mã quét không hợp lệ hoặc đã hết hạn.");
+            throw new RuntimeException(SystemMessage.OCR_ERR_003.getMessage());
         }
         
         session.setStatus("PROCESSING");
@@ -198,7 +199,7 @@ public class ImportOcrService {
                     .build();
         } catch (Exception e) {
             log.error("OCR scan failed", e);
-            throw new RuntimeException("Không thể trích xuất dữ liệu từ chứng từ: " + e.getMessage());
+            throw new RuntimeException(String.format(SystemMessage.OCR_ERR_002.getMessage(), e.getMessage()));
         }
     }
 
@@ -241,7 +242,7 @@ public class ImportOcrService {
         if (openAiEnabled) {
             return callOpenAiVision(base64Image, mimeType);
         }
-        throw new RuntimeException("Không có AI provider nào được bật. Hãy cấu hình OPENAI_ENABLED hoặc GEMINI_ENABLED.");
+        throw new RuntimeException(SystemMessage.OCR_ERR_001.getMessage());
     }
 
     private String callOpenAiVision(String base64Image, String mimeType) throws Exception {
