@@ -1,6 +1,8 @@
 package com.duylongtech.backend.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,13 +15,18 @@ import org.springframework.web.util.HtmlUtils;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.constant.SystemMessage;
 
+import java.io.ByteArrayOutputStream;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.List;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.Map;
+import java.util.Properties;
 
 @Slf4j
 @Service
@@ -32,12 +39,21 @@ public class EmailService {
     @Value("${spring.mail.username:computerduylong@gmail.com}")
     private String fromEmail;
 
-    @Value("${spring.mail.resend-api-key:${RESEND_API_KEY:re_EGxNGyQR_21h1vChjzkYwK7iWJGDZ1NLw}}")
-    private String resendApiKey;
+    @Value("${google.client-id:${GMAIL_CLIENT_ID:889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com}}")
+    private String gmailClientId;
+
+    @Value("${google.client-secret:${GMAIL_CLIENT_SECRET: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}}")
+    private String gmailClientSecret;
+
+    @Value("${google.refresh-token:${GMAIL_REFRESH_TOKEN:1//04r_huLp3CGjLCgYIARAAGAQSNgF-L9IruxTRi1RfR3nF2bXEio5AOmicfwAEFudp6c5keNISsei6Tz_LAtAiTXP6b6NGaKRwDA}}")
+    private String gmailRefreshToken;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
+
+    private volatile String cachedAccessToken = null;
+    private volatile Instant tokenExpiry = Instant.MIN;
 
     public void sendEmail(String toEmail, String subject, String htmlMsg, String senderDisplayName) {
         if (toEmail == null || toEmail.trim().isEmpty()) {
@@ -47,17 +63,19 @@ public class EmailService {
         String displayName = (senderDisplayName != null && !senderDisplayName.isBlank())
                 ? senderDisplayName : "DLC-WMS System";
 
-        // 1. Try Resend REST API (HTTPS - Port 443 - không bị DigitalOcean chặn)
-        if (resendApiKey != null && !resendApiKey.isBlank()) {
+        // 1. Try Google Gmail REST API (HTTPS - Port 443 - Không bao giờ bị DigitalOcean chặn)
+        if (gmailRefreshToken != null && !gmailRefreshToken.isBlank()
+                && gmailClientId != null && !gmailClientId.isBlank()
+                && gmailClientSecret != null && !gmailClientSecret.isBlank()) {
             try {
-                sendViaResendApi(toEmail.trim(), subject, htmlMsg, displayName);
-                log.info("Email sent successfully to {} via Resend REST API", toEmail);
+                sendViaGmailApi(toEmail.trim(), subject, htmlMsg, displayName);
+                log.info("Email sent successfully to {} via Google Gmail REST API (port 443)", toEmail);
                 return;
             } catch (Exception e) {
-                log.error("Resend API send failed to {}: {}", toEmail, e.getMessage(), e);
+                log.error("Google Gmail API send failed to {}: {}", toEmail, e.getMessage(), e);
             }
         } else {
-            log.warn("Resend API key is not configured, falling back to SMTP...");
+            log.warn("Gmail OAuth credentials not configured, falling back to SMTP...");
         }
 
         // 2. Fallback to standard SMTP (JavaMailSender)
@@ -70,30 +88,71 @@ public class EmailService {
         }
     }
 
-    private void sendViaResendApi(String toEmail, String subject, String htmlMsg, String senderDisplayName) throws Exception {
-        String senderEmail = (fromEmail != null && !fromEmail.endsWith("@gmail.com") && fromEmail.contains("@"))
-                ? fromEmail : "onboarding@resend.dev";
-        String fromHeader = senderDisplayName + " <" + senderEmail + ">";
-        Map<String, Object> payload = Map.of(
-                "from", fromHeader,
-                "to", List.of(toEmail),
-                "subject", subject,
-                "html", htmlMsg
-        );
+    private synchronized String getValidAccessToken() throws Exception {
+        if (cachedAccessToken != null && Instant.now().isBefore(tokenExpiry.minusSeconds(60))) {
+            return cachedAccessToken;
+        }
 
-        String json = objectMapper.writeValueAsString(payload);
+        String formBody = "client_id=" + URLEncoder.encode(gmailClientId.trim(), StandardCharsets.UTF_8)
+                + "&client_secret=" + URLEncoder.encode(gmailClientSecret.trim(), StandardCharsets.UTF_8)
+                + "&refresh_token=" + URLEncoder.encode(gmailRefreshToken.trim(), StandardCharsets.UTF_8)
+                + "&grant_type=refresh_token";
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.resend.com/emails"))
-                .header("Authorization", "Bearer " + resendApiKey.trim())
-                .header("Content-Type", "application/json")
+                .uri(URI.create("https://oauth2.googleapis.com/token"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
                 .timeout(Duration.ofSeconds(10))
-                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .POST(HttpRequest.BodyPublishers.ofString(formBody))
                 .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new RuntimeException("Resend API HTTP " + response.statusCode() + ": " + response.body());
+            throw new RuntimeException("Failed to refresh Google OAuth token (HTTP " + response.statusCode() + "): " + response.body());
+        }
+
+        JsonNode root = objectMapper.readTree(response.body());
+        String accessToken = root.path("access_token").asText();
+        int expiresIn = root.path("expires_in").asInt(3600);
+
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new RuntimeException("No access_token returned by Google: " + response.body());
+        }
+
+        this.cachedAccessToken = accessToken;
+        this.tokenExpiry = Instant.now().plusSeconds(expiresIn);
+        return accessToken;
+    }
+
+    private void sendViaGmailApi(String toEmail, String subject, String htmlMsg, String senderDisplayName) throws Exception {
+        String accessToken = getValidAccessToken();
+
+        Session session = Session.getDefaultInstance(new Properties(), null);
+        MimeMessage message = new MimeMessage(session);
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        helper.setFrom(fromEmail, senderDisplayName);
+        helper.setTo(toEmail);
+        helper.setSubject(subject);
+        helper.setText(htmlMsg, true);
+
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        message.writeTo(buffer);
+        byte[] bytes = buffer.toByteArray();
+        String encodedRaw = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+
+        Map<String, String> payload = Map.of("raw", encodedRaw);
+        String jsonPayload = objectMapper.writeValueAsString(payload);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://gmail.googleapis.com/gmail/v1/users/me/messages/send"))
+                .header("Authorization", "Bearer " + accessToken)
+                .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(15))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new RuntimeException("Gmail API send failed (HTTP " + response.statusCode() + "): " + response.body());
         }
     }
 

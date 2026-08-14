@@ -11,7 +11,6 @@ spring:
     port: ${SPRING_MAIL_PORT:587}
     username: ${SPRING_MAIL_USERNAME:computerduylong@gmail.com}
     password: ${SPRING_MAIL_PASSWORD:sjvbpvpcyjcdqdun}
-    resend-api-key: ${RESEND_API_KEY:re_EGxNGyQR_21h1vChjzkYwK7iWJGDZ1NLw}
     properties:
       mail:
         smtp:
@@ -40,7 +39,9 @@ backup:
   path: ${BACKUP_PATH:/tmp/backups}
 
 google:
-  client-id: 889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com
+  client-id: ${GMAIL_CLIENT_ID:889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com}
+  client-secret: ${GMAIL_CLIENT_SECRET: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}
+  refresh-token: ${GMAIL_REFRESH_TOKEN:1//04r_huLp3CGjLCgYIARAAGAQSNgF-L9IruxTRi1RfR3nF2bXEio5AOmicfwAEFudp6c5keNISsei6Tz_LAtAiTXP6b6NGaKRwDA}
 
 cloudinary:
   url: ${CLOUDINARY_URL:}
