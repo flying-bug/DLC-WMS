@@ -21,6 +21,7 @@ public class RepairFeeResponse {
     private BigDecimal quantity;
     private String unitName;
     private Boolean isFreeWarranty;
+    private BigDecimal vatPercent;
     private String note;
 
     private LocalDateTime createdAt;

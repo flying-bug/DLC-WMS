@@ -477,7 +477,7 @@ public class InventoryDocumentService {
 
         if (!warrantyLines.isEmpty()) {
             Warranty w = new Warranty();
-            w.setWarrantyCode(codeGeneratorService.generateCode("WARRANTIES", "warranty_code", "WAR", 5));
+            w.setWarrantyCode(codeGeneratorService.generateCode("WARRANTIES", "warranty_code", "BH", 5));
             w.setPartnerId(doc.getPartnerId());
             w.setSalesOrderId(doc.getSalesOrderId());
             w.setExportSlipId(doc.getId());

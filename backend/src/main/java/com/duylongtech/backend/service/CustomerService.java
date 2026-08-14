@@ -431,17 +431,21 @@ public class CustomerService {
         Page<Object[]> results = salesOrderLineRepository.findSalesHistoryByCustomerId(customerId, pageReq);
         
         return results.map(row -> {
-            Object orderDateValue = row[1];
+            Object orderDateValue = row[2];
             LocalDate orderDate = orderDateValue instanceof java.sql.Date date
                     ? date.toLocalDate()
                     : orderDateValue instanceof LocalDate localDate ? localDate : null;
 
             return SalesHistoryResponse.builder()
-                    .orderCode((String) row[0])
+                    .orderId((Long) row[0])
+                    .orderCode((String) row[1])
                     .orderDate(orderDate)
-                    .productName((String) row[2])
-                    .quantity((java.math.BigDecimal) row[3])
-                    .serialNumber((String) row[4])
+                    .productName((String) row[3])
+                    .quantity((java.math.BigDecimal) row[4])
+                    .unitPrice((java.math.BigDecimal) row[5])
+                    .lineAmount((java.math.BigDecimal) row[6])
+                    .status((String) row[7])
+                    .serialNumber((String) row[8])
                     .build();
         });
     }
@@ -459,6 +463,7 @@ public class CustomerService {
             java.util.List<Repair> repairs = repairRepository.findByWarrantyId(w.getId());
             java.util.List<WarrantyHistoryResponse.RepairHistory> repairDtos = repairs.stream()
                 .map(r -> WarrantyHistoryResponse.RepairHistory.builder()
+                        .repairId(r.getId())
                         .repairCode(r.getRepairCode())
                         .receivedDate(r.getReceivedDate())
                         .repairStatus(r.getRepairStatus())
@@ -471,6 +476,7 @@ public class CustomerService {
                 .collect(java.util.stream.Collectors.joining(", "));
 
             return WarrantyHistoryResponse.builder()
+                    .warrantyId(w.getId())
                     .warrantyCode(w.getWarrantyCode())
                     .serialNumber(serials.isEmpty() ? null : serials)
                     .startDate(w.getStartDate())
@@ -493,19 +499,20 @@ public class CustomerService {
         Page<Object[]> receiptsPage = partnerRepository.findPaymentHistoryByCustomerId(customerId, pageReq);
         
         Page<ReceiptHistoryResponse.ReceiptItem> items = receiptsPage.map(row -> {
-            Object createdAtValue = row[4];
+            Object createdAtValue = row[5];
             LocalDateTime createdAt = createdAtValue instanceof java.sql.Timestamp timestamp
                     ? timestamp.toLocalDateTime()
                     : createdAtValue instanceof LocalDateTime localDateTime ? localDateTime : null;
 
             return ReceiptHistoryResponse.ReceiptItem.builder()
-                    .receiptCode((String) row[0])
-                    .amount((java.math.BigDecimal) row[1])
-                    .status((String) row[2])
-                    .paymentMethod((String) row[3])
+                    .receiptId(((Number) row[0]).longValue())
+                    .receiptCode((String) row[1])
+                    .amount((java.math.BigDecimal) row[2])
+                    .status((String) row[3])
+                    .paymentMethod((String) row[4])
                     .createdAt(createdAt)
-                    .type((String) row[5])
-                    .note((String) row[6])
+                    .type((String) row[6])
+                    .note((String) row[7])
                     .build();
         });
 
