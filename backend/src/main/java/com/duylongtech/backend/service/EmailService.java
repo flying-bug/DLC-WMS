@@ -27,7 +27,7 @@ import java.util.Map;
 public class EmailService {
 
     private final JavaMailSender mailSender;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${spring.mail.username:computerduylong@gmail.com}")
     private String fromEmail;
