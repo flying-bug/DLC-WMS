@@ -84,7 +84,20 @@ public class BackupService {
         return dir;
     }
 
-    // ─── Create Backup ─────────────────────────────────────────────────────────
+    private List<String> getSslDisableArgs(String executable) {
+        try {
+            Process p = new ProcessBuilder(executable, "--help").start();
+            String helpText = new String(p.getInputStream().readAllBytes());
+            if (helpText.contains("--ssl-mode")) {
+                return List.of("--ssl-mode=DISABLED");
+            } else if (helpText.contains("--skip-ssl")) {
+                return List.of("--skip-ssl");
+            }
+        } catch (Exception ignored) {}
+        return (executable != null && executable.contains("mariadb"))
+                ? List.of("--skip-ssl")
+                : List.of("--ssl-mode=DISABLED");
+    }
 
     // ─── Create Backup ─────────────────────────────────────────────────────────
 
@@ -131,17 +144,11 @@ public class BackupService {
         // ── Find dump executable & run dump ──────────────────────────────────
         String dumpCmd = new File("/usr/bin/mariadb-dump").exists() ? "/usr/bin/mariadb-dump" : "mysqldump";
 
-        List<String> dumpArgs = new java.util.ArrayList<>(List.of(
-                dumpCmd,
-                "-h", host,
-                "-P", port,
-                "-u", dbUser,
-                "--password=" + dbPass,
-                "--single-transaction",
-                "--routines",
-                "--triggers",
-                dbName
-        ));
+        List<String> dumpArgs = new java.util.ArrayList<>();
+        dumpArgs.add(dumpCmd);
+        dumpArgs.addAll(List.of("-h", host, "-P", port, "-u", dbUser, "--password=" + dbPass));
+        dumpArgs.addAll(getSslDisableArgs(dumpCmd));
+        dumpArgs.addAll(List.of("--single-transaction", "--routines", "--triggers", dbName));
 
         ProcessBuilder pb = new ProcessBuilder(dumpArgs);
         pb.redirectErrorStream(false);
@@ -305,14 +312,11 @@ public class BackupService {
 
         // Decompress (and Cipher decrypt if encrypted) and pipe to mysql / mariadb
         String mysqlCmd = new File("/usr/bin/mariadb").exists() ? "/usr/bin/mariadb" : "mysql";
-        List<String> restoreArgs = new java.util.ArrayList<>(List.of(
-                mysqlCmd,
-                "-h", host,
-                "-P", port,
-                "-u", dbUser,
-                "--password=" + dbPass,
-                dbName
-        ));
+        List<String> restoreArgs = new java.util.ArrayList<>();
+        restoreArgs.add(mysqlCmd);
+        restoreArgs.addAll(List.of("-h", host, "-P", port, "-u", dbUser, "--password=" + dbPass));
+        restoreArgs.addAll(getSslDisableArgs(mysqlCmd));
+        restoreArgs.addAll(List.of("--default-character-set=utf8mb4", dbName));
 
         ProcessBuilder pb = new ProcessBuilder(restoreArgs);
         pb.redirectErrorStream(true);
@@ -347,6 +351,13 @@ public class BackupService {
             } catch (Exception e) {
                 record.setStatus(BackupRecord.BackupStatus.FAILED);
                 backupRecordRepo.save(record);
+                String procErr = "";
+                try {
+                    procErr = new String(process.getInputStream().readAllBytes());
+                } catch (Exception ignored) {}
+                if (procErr != null && !procErr.isBlank()) {
+                    throw new com.duylongtech.backend.exception.BusinessException("Lỗi Database khi nạp dữ liệu: " + procErr);
+                }
                 throw new com.duylongtech.backend.exception.BusinessException(
                         "Khóa giải mã (Encryption Key) không đúng hoặc file backup bị hỏng: " + e.getMessage());
             }
