@@ -138,12 +138,9 @@ public class BackupService {
                 "--password=" + dbPass,
                 "--single-transaction",
                 "--routines",
-                "--triggers"
+                "--triggers",
+                dbName
         ));
-        if (dbUrl.contains("useSSL=false") || dbUrl.contains("sslMode=DISABLED")) {
-            dumpArgs.add("--skip-ssl");
-        }
-        dumpArgs.add(dbName);
 
         ProcessBuilder pb = new ProcessBuilder(dumpArgs);
         pb.redirectErrorStream(false);
@@ -312,12 +309,9 @@ public class BackupService {
                 "-h", host,
                 "-P", port,
                 "-u", dbUser,
-                "--password=" + dbPass
+                "--password=" + dbPass,
+                dbName
         ));
-        if (dbUrl.contains("useSSL=false") || dbUrl.contains("sslMode=DISABLED")) {
-            restoreArgs.add("--skip-ssl");
-        }
-        restoreArgs.add(dbName);
 
         ProcessBuilder pb = new ProcessBuilder(restoreArgs);
         pb.redirectErrorStream(true);
