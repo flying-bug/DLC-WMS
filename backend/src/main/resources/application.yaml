@@ -11,7 +11,6 @@ spring:
     port: ${SPRING_MAIL_PORT:587}
     username: ${SPRING_MAIL_USERNAME:computerduylong@gmail.com}
     password: ${SPRING_MAIL_PASSWORD:sjvbpvpcyjcdqdun}
-    brevo-api-key: ${BREVO_API_KEY:}
     resend-api-key: ${RESEND_API_KEY:}
     properties:
       mail:

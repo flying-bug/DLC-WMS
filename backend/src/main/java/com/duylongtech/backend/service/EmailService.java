@@ -32,9 +32,6 @@ public class EmailService {
     @Value("${spring.mail.username:computerduylong@gmail.com}")
     private String fromEmail;
 
-    @Value("${spring.mail.brevo-api-key:${BREVO_API_KEY:}}")
-    private String brevoApiKey;
-
     @Value("${spring.mail.resend-api-key:${RESEND_API_KEY:}}")
     private String resendApiKey;
 
@@ -50,18 +47,7 @@ public class EmailService {
         String displayName = (senderDisplayName != null && !senderDisplayName.isBlank())
                 ? senderDisplayName : "DLC-WMS System";
 
-        // 1. Try Brevo REST API (HTTPS - Port 443)
-        if (brevoApiKey != null && !brevoApiKey.isBlank()) {
-            try {
-                sendViaBrevoApi(toEmail.trim(), subject, htmlMsg, displayName);
-                log.info("Email sent successfully to {} via Brevo REST API", toEmail);
-                return;
-            } catch (Exception e) {
-                log.error("Brevo API send failed: {}", e.getMessage());
-            }
-        }
-
-        // 2. Try Resend REST API (HTTPS - Port 443)
+        // 1. Try Resend REST API (HTTPS - Port 443 - không bị DigitalOcean chặn)
         if (resendApiKey != null && !resendApiKey.isBlank()) {
             try {
                 sendViaResendApi(toEmail.trim(), subject, htmlMsg, displayName);
@@ -72,7 +58,7 @@ public class EmailService {
             }
         }
 
-        // 3. Fallback to standard SMTP (JavaMailSender)
+        // 2. Fallback to standard SMTP (JavaMailSender)
         try {
             sendViaSmtp(toEmail.trim(), subject, htmlMsg, displayName);
             log.info("Email sent successfully to {} via SMTP", toEmail);
@@ -82,33 +68,10 @@ public class EmailService {
         }
     }
 
-    private void sendViaBrevoApi(String toEmail, String subject, String htmlMsg, String senderDisplayName) throws Exception {
-        Map<String, Object> payload = Map.of(
-                "sender", Map.of("name", senderDisplayName, "email", fromEmail),
-                "to", List.of(Map.of("email", toEmail)),
-                "subject", subject,
-                "htmlContent", htmlMsg
-        );
-
-        String json = objectMapper.writeValueAsString(payload);
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
-                .header("api-key", brevoApiKey.trim())
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json")
-                .timeout(Duration.ofSeconds(10))
-                .POST(HttpRequest.BodyPublishers.ofString(json))
-                .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new RuntimeException("Brevo API HTTP " + response.statusCode() + ": " + response.body());
-        }
-    }
-
     private void sendViaResendApi(String toEmail, String subject, String htmlMsg, String senderDisplayName) throws Exception {
-        String fromHeader = senderDisplayName + " <" + (fromEmail != null && fromEmail.contains("@") ? fromEmail : "onboarding@resend.dev") + ">";
+        String senderEmail = (fromEmail != null && !fromEmail.endsWith("@gmail.com") && fromEmail.contains("@"))
+                ? fromEmail : "onboarding@resend.dev";
+        String fromHeader = senderDisplayName + " <" + senderEmail + ">";
         Map<String, Object> payload = Map.of(
                 "from", fromHeader,
                 "to", List.of(toEmail),
