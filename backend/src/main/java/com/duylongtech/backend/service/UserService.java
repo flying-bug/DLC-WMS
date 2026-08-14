@@ -220,7 +220,11 @@ public class UserService {
         user.setRoles(roles);
 
         User savedUser = userRepository.save(user);
-        emailService.sendNewEmployeeCredentialsEmail(email, fullName, username, temporaryPassword);
+        try {
+            emailService.sendNewEmployeeCredentialsEmail(email, fullName, username, temporaryPassword);
+        } catch (Exception e) {
+            System.err.println("Không thể gửi email tài khoản nhân viên (" + email + "): " + e.getMessage());
+        }
         return mapToDto(savedUser);
     }
 
