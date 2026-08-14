@@ -306,7 +306,7 @@ function SalesOrderListPage() {
                             onClick={() => handleCreateExport(so)}
                           />
                         )}
-                        {(so.status === 'DRAFT' || so.status === 'APPROVED') && (
+                        {so.status === 'DRAFT' && (
                           <i
                             className="bi bi-x-circle"
                             title="Hủy đơn"

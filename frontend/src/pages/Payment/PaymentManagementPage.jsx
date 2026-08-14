@@ -313,9 +313,13 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
           </section>
 
           <section className={styles.card}>
-            <div className={styles.cardTitleRow}>
-              <div className={styles.cardTitle}>
-                <i className="bi bi-clock-history" /> Lịch sử thu chi
+            <div className={styles.cardTitleRow} style={{ alignItems: 'center' }}>
+              <div className={styles.cardTitle} style={{ borderBottom: 'none', padding: 0, minHeight: 'auto', whiteSpace: 'normal', alignItems: 'flex-start', gap: '8px' }}>
+                <i className="bi bi-clock-history" style={{ marginTop: '2px' }} /> 
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.3' }}>
+                  <span>Lịch sử</span>
+                  <span>thu chi</span>
+                </div>
               </div>
               <div className={styles.historyTools}>
                 <span className={styles.historyCount}>{Math.min(history.length, 5)} gần nhất</span>

@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class WarrantyLifecycleService {
 
     private static final Set<String> VALID_STATUSES = Set.of(
-            "DRAFT", "APPROVED", "POSTED", "CANCELLED", "EXPIRED", "VOIDED"
+            "ACTIVE", "EXPIRED", "VOIDED"
     );
 
     private final WarrantyRepository warrantyRepository;
@@ -42,7 +42,7 @@ public class WarrantyLifecycleService {
                 .salesOrderId(request.getSalesOrderId())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
-                .warrantyStatus(normalizeStatusOrDefault(request.getWarrantyStatus(), "APPROVED"))
+                .warrantyStatus(normalizeStatusOrDefault(request.getWarrantyStatus(), "ACTIVE"))
                 .note(trimToNull(request.getNote()))
                 .build();
         
@@ -130,7 +130,7 @@ public class WarrantyLifecycleService {
         if (request.getEndDate().isBefore(request.getStartDate())) {
             throw new BusinessException(SystemMessage.WARR_ERR_003.getMessage());
         }
-        String status = normalizeStatusOrDefault(request.getWarrantyStatus(), "APPROVED");
+        String status = normalizeStatusOrDefault(request.getWarrantyStatus(), "ACTIVE");
         if (!VALID_STATUSES.contains(status)) {
             throw new BusinessException(SystemMessage.WARR_ERR_002.getMessage());
         }

@@ -13,9 +13,13 @@ import java.time.LocalDate;
 @Data
 @Builder
 public class SalesHistoryResponse {
+    private Long orderId;
     private String orderCode;
     private LocalDate orderDate;
     private String productName;
     private BigDecimal quantity;
+    private BigDecimal unitPrice;
+    private BigDecimal lineAmount;
+    private String status;
     private String serialNumber; // Có thể null nếu sản phẩm không quản lý theo Serial
 }
