@@ -715,16 +715,7 @@ function AssemblyOrderFormPage() {
                 <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate('/assembly-orders'); }}>
                     <i className="bi bi-arrow-left"></i> {getPageTitle()}
                 </a>
-                {editing && orderDetail && (
-                    <button
-                        type="button"
-                        className="btn-misa-post"
-                        style={{ marginLeft: 'auto', backgroundColor: '#3b82f6', borderColor: '#3b82f6', padding: '6px 16px', fontSize: '13px' }}
-                        onClick={handlePrint}
-                    >
-                        <i className="bi bi-printer" style={{ marginRight: '6px' }}></i> In phiếu lệnh
-                    </button>
-                )}
+
             </div>
             <div className={styles.pageBody}>
 

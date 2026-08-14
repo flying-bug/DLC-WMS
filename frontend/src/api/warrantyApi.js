@@ -9,3 +9,7 @@ export const getWarranties = (params = {}) => {
 export const getWarrantyById = (id) => {
     return axiosClient.get(`${WARRANTY_BASE}/${id}`);
 };
+
+export const updateWarrantyStatus = (id, data) => {
+    return axiosClient.patch(`${WARRANTY_BASE}/${id}/status`, data);
+};

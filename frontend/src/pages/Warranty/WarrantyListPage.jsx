@@ -12,13 +12,9 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 
 
 const STATUS_LABELS = {
-  DRAFT: { label: 'Nháp', code: 'info' },
-  APPROVED: { label: 'Còn hiệu lực', code: 'success' },
-  POSTED: { label: 'Đã ghi nhận', code: 'success' },
   ACTIVE: { label: 'Còn hiệu lực', code: 'success' },
-  CANCELLED: { label: 'Đã hủy', code: 'danger' },
   EXPIRED: { label: 'Hết hạn', code: 'warning' },
-  VOIDED: { label: 'Không hợp lệ', code: 'danger' }
+  VOIDED: { label: 'Bị hủy', code: 'danger' }
 };
 
 const DEFAULT_FILTERS = {
@@ -113,7 +109,9 @@ function WarrantyListPage() {
   }, [location, navigate]);
 
   const rows = warranties.map(item => {
-    const status = STATUS_LABELS[item.warrantyStatus] || { label: item.warrantyStatus || 'Không rõ', code: 'info' };
+    let currentStatus = item.warrantyStatus;
+    if (currentStatus === 'APPROVED' || currentStatus === 'POSTED') currentStatus = 'ACTIVE';
+    const status = STATUS_LABELS[currentStatus] || { label: currentStatus || 'Không rõ', code: 'info' };
     const pName = item.partnerName || item.customerName || item.partner?.name || 'Khách lẻ';
 
     const validSerials = item.lines

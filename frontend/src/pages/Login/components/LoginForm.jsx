@@ -6,9 +6,9 @@ import { setAuthSession } from '../../../auth/session';
 
 function LoginForm() {
     const [formData, setFormData] = useState({
-        usernameOrEmail: '',
+        usernameOrEmail: localStorage.getItem('rememberedUser') || '',
         password: '',
-        rememberMe: false,
+        rememberMe: !!localStorage.getItem('rememberedUser'),
     });
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState({});

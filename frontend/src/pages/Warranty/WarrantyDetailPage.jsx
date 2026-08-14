@@ -3,17 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warrantyApi from '../../api/warrantyApi';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import Toast from '../../components/ui/Toast/Toast';
 import styles from './WarrantyDetailPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
 
 const STATUS_LABELS = {
-  DRAFT: { label: 'Nháp', code: 'info' },
-  APPROVED: { label: 'Còn hiệu lực', code: 'success' },
-  POSTED: { label: 'Đã ghi nhận', code: 'success' },
   ACTIVE: { label: 'Còn hiệu lực', code: 'success' },
-  CANCELLED: { label: 'Đã hủy', code: 'danger' },
   EXPIRED: { label: 'Hết hạn', code: 'warning' },
-  VOIDED: { label: 'Không hợp lệ', code: 'danger' }
+  VOIDED: { label: 'Bị hủy', code: 'danger' }
 };
 
 const REPAIR_STATUS_LABELS = {
@@ -34,6 +32,15 @@ function WarrantyDetailPage() {
   const [warranty, setWarranty] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showVoidModal, setShowVoidModal] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
+  const [voiding, setVoiding] = useState(false);
+  const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
+
+  const showToast = (type, message) => {
+    setToast({ isVisible: true, type, message });
+    setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
+  };
 
   const loadWarranty = useCallback(async () => {
     setLoading(true);
@@ -49,6 +56,25 @@ function WarrantyDetailPage() {
     }
   }, [id]);
 
+  const handleVoidWarranty = async () => {
+    if (!voidReason.trim()) {
+      showToast('error', 'Vui lòng nhập lý do vô hiệu hóa.');
+      return;
+    }
+    setVoiding(true);
+    try {
+      await warrantyApi.updateWarrantyStatus(id, { warrantyStatus: 'VOIDED', note: voidReason.trim() });
+      showToast('success', 'Đã vô hiệu hóa phiếu bảo hành thành công.');
+      setShowVoidModal(false);
+      setVoidReason('');
+      loadWarranty();
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || 'Không thể vô hiệu hóa phiếu bảo hành.');
+    } finally {
+      setVoiding(false);
+    }
+  };
+
   useEffect(() => {
     loadWarranty();
   }, [loadWarranty]);
@@ -61,7 +87,9 @@ function WarrantyDetailPage() {
   const lines = warranty?.lines || [];
 
   const repairs = warranty?.repairs || warranty?.repairHistory || [];
-  const statusInfo = STATUS_LABELS[warranty?.warrantyStatus] || { label: warranty?.warrantyStatus || 'Chưa rõ', code: 'info' };
+  let currentStatus = warranty?.warrantyStatus;
+  if (currentStatus === 'APPROVED' || currentStatus === 'POSTED') currentStatus = 'ACTIVE';
+  const statusInfo = STATUS_LABELS[currentStatus] || { label: currentStatus || 'Chưa rõ', code: 'info' };
 
   if (loading && !warranty) {
     return (
@@ -100,9 +128,16 @@ function WarrantyDetailPage() {
           </div>
           <div className={styles.headerRight} style={{ display: 'flex', gap: '8px' }}>
 
-            <button className={styles.btnEdit} onClick={() => navigate(`/repairs/create?warrantyId=${id}`)}>
-              <i className="bi bi-tools"></i> Tạo phiếu sửa
-            </button>
+            {currentStatus === 'ACTIVE' && (
+              <button className={styles.btnDelete} onClick={() => setShowVoidModal(true)}>
+                <i className="bi bi-shield-x"></i> Vô hiệu hóa
+              </button>
+            )}
+            {currentStatus !== 'VOIDED' && (
+              <button className={styles.btnEdit} onClick={() => navigate(`/repairs/create?warrantyId=${id}`)} style={{ marginLeft: 8 }}>
+                <i className="bi bi-tools"></i> Tạo phiếu sửa
+              </button>
+            )}
           </div>
         </div>
 
@@ -272,6 +307,34 @@ function WarrantyDetailPage() {
           </div>
         </div>
       </div>
+
+      {showVoidModal && (
+        <ConfirmModal
+          isOpen={showVoidModal}
+          onClose={() => setShowVoidModal(false)}
+          onCancel={() => setShowVoidModal(false)}
+          onConfirm={handleVoidWarranty}
+          title="Vô hiệu hóa bảo hành"
+          message={
+            <div>
+              <p style={{ marginBottom: 12 }}>Bạn có chắc chắn muốn vô hiệu hóa phiếu bảo hành này không? Hành động này không thể hoàn tác.</p>
+              <textarea
+                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d1d5db', fontSize: 14 }}
+                rows={3}
+                placeholder="Nhập lý do vô hiệu hóa (Bắt buộc)..."
+                value={voidReason}
+                onChange={e => setVoidReason(e.target.value)}
+              />
+            </div>
+          }
+          confirmText={voiding ? 'Đang xử lý...' : 'Xác nhận'}
+          cancelText="Hủy"
+        />
+      )}
+
+      {toast.isVisible && (
+        <Toast type={toast.type} message={toast.message} onClose={() => setToast(prev => ({ ...prev, isVisible: false }))} />
+      )}
     </AdminLayout>
   );
 }
