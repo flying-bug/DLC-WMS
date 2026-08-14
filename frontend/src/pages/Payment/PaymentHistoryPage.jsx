@@ -276,11 +276,11 @@ function PaymentHistoryPage() {
             </div>
           </section>
 
-          {/* Right Column: Lịch sử Thu / Chi tiền thanh toán */}
+          {/* Right Column: Lịch sử thanh toán */}
           <section className={styles.columnCard}>
             <div className={styles.columnHeader}>
               <div className={styles.columnTitle}>
-                <i className="bi bi-cash-stack" /> Lịch sử Thu / Chi thanh toán ({filteredPayments.length})
+                <i className="bi bi-cash-stack" /> Lịch sử {mode === 'RECEIPT' ? 'thu' : 'chi'} thanh toán ({filteredPayments.length})
               </div>
             </div>
 
@@ -290,7 +290,7 @@ function PaymentHistoryPage() {
                 <input
                   value={rightKeyword}
                   onChange={e => setRightKeyword(e.target.value)}
-                  placeholder="Tìm mã phiếu thu/chi..."
+                  placeholder={`Tìm mã phiếu ${mode === 'RECEIPT' ? 'thu' : 'chi'}...`}
                 />
               </div>
               <SearchableSelect
@@ -318,11 +318,11 @@ function PaymentHistoryPage() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className={styles.empty}>Đang tải phiếu thu/chi...</td>
+                      <td colSpan={5} className={styles.empty}>Đang tải phiếu {mode === 'RECEIPT' ? 'thu' : 'chi'}...</td>
                     </tr>
                   ) : filteredPayments.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className={styles.empty}>Chưa có phiếu thu / chi thanh toán</td>
+                      <td colSpan={5} className={styles.empty}>Chưa có phiếu {mode === 'RECEIPT' ? 'thu' : 'chi'} thanh toán</td>
                     </tr>
                   ) : (
                     filteredPayments.map(item => (
