@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.BackupRecordDto;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.BackupScheduleDto;
 import com.duylongtech.backend.entity.BackupRecord;
 import com.duylongtech.backend.entity.SystemSetting;
@@ -150,9 +151,9 @@ public class BackupService {
             process = pb.start();
         } catch (IOException e) {
             if (e.getMessage().contains("CreateProcess error=2") || e.getMessage().contains("No such file or directory") || e.getMessage().contains("Cannot run program")) {
-                throw new RuntimeException("Lỗi: Không tìm thấy công cụ 'mysqldump' trên máy chủ. Vui lòng cài đặt MySQL/MariaDB Tools hoặc kiểm tra biến môi trường PATH.");
+                throw new RuntimeException(SystemMessage.BACKUP_ERR_007.getMessage());
             }
-            throw new RuntimeException("Lỗi khi khởi chạy tiến trình sao lưu: " + e.getMessage());
+            throw new RuntimeException(String.format(SystemMessage.BACKUP_ERR_006.getMessage(), e.getMessage()));
         }
 
         // Stream mysqldump stdout → GZIP (and Cipher if AES enabled)
@@ -186,7 +187,7 @@ public class BackupService {
         if (exitCode != 0) {
             String errMsg = new String(process.getErrorStream().readAllBytes());
             Files.deleteIfExists(outPath);
-            throw new RuntimeException("mysqldump thất bại (exit " + exitCode + "): " + errMsg);
+            throw new RuntimeException(String.format(SystemMessage.BACKUP_ERR_005.getMessage(), exitCode, errMsg));
         }
 
         long fileSize = Files.size(outPath);
@@ -239,7 +240,7 @@ public class BackupService {
         File file = backupDir.resolve(record.getFilename()).toFile();
 
         if (!file.exists()) {
-            throw new FileNotFoundException("File không tồn tại: " + record.getFilename());
+            throw new FileNotFoundException(String.format(SystemMessage.BACKUP_ERR_004.getMessage(), record.getFilename()));
         }
 
         String driveFileId = driveService.uploadFile(file, MIME_GZIP);
@@ -273,7 +274,7 @@ public class BackupService {
         Path filePath  = backupDir.resolve(record.getFilename());
 
         if (!Files.exists(filePath)) {
-            throw new FileNotFoundException("File backup không tồn tại: " + record.getFilename());
+            throw new FileNotFoundException(String.format(SystemMessage.BACKUP_ERR_003.getMessage(), record.getFilename()));
         }
 
         boolean isEncryptedFile = record.getFilename().endsWith(".enc");
@@ -356,7 +357,7 @@ public class BackupService {
             String errMsg = new String(process.getInputStream().readAllBytes());
             record.setStatus(BackupRecord.BackupStatus.FAILED);
             backupRecordRepo.save(record);
-            throw new RuntimeException("Restore thất bại (exit " + exitCode + "): " + errMsg);
+            throw new RuntimeException(String.format(SystemMessage.BACKUP_ERR_002.getMessage(), exitCode, errMsg));
         }
 
         record.setStatus(BackupRecord.BackupStatus.LOCAL);
@@ -432,7 +433,7 @@ public class BackupService {
                 .orElseThrow(() -> new IllegalArgumentException("Backup không tồn tại: " + id));
         Path filePath = ensureBackupDir().resolve(record.getFilename());
         if (!Files.exists(filePath)) {
-            throw new FileNotFoundException("File không tồn tại trên disk: " + record.getFilename());
+            throw new FileNotFoundException(String.format(SystemMessage.BACKUP_ERR_001.getMessage(), record.getFilename()));
         }
         return filePath;
     }

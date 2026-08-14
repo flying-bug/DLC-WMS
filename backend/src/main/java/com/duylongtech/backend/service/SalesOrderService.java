@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.SalesOrderRequest;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.request.PaymentRequest;
 import com.duylongtech.backend.dto.response.SalesOrderResponse;
 import com.duylongtech.backend.entity.*;
@@ -96,10 +97,10 @@ public class SalesOrderService {
 
         if (request.getPaymentDueDate() != null) {
             if (request.getPaymentDueDate().isBefore(request.getSoDate())) {
-                throw new BusinessException("Hạn thanh toán không được nhỏ hơn ngày lập đơn");
+                throw new BusinessException(SystemMessage.SO_ERR_008.getMessage());
             }
             if (request.getPaymentDueDate().isBefore(LocalDate.now())) {
-                throw new BusinessException("Hạn thanh toán không được nằm trong quá khứ");
+                throw new BusinessException(SystemMessage.SO_ERR_007.getMessage());
             }
         }
 
@@ -108,7 +109,7 @@ public class SalesOrderService {
                 ? request.getSoCode() : generateNextSoCode();
 
         if (salesOrderRepository.existsBySoCode(soCode)) {
-            throw new BusinessException("Mã đơn hàng '" + soCode + "' đã tồn tại");
+            throw new BusinessException(String.format(SystemMessage.PO_ERR_005.getMessage(), soCode));
         }
 
         // Resolve createdBy từ username
@@ -181,18 +182,17 @@ public class SalesOrderService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng ID: " + id));
 
         if (!"DRAFT".equals(so.getStatus())) {
-            throw new BusinessException(
-                    "Chỉ được sửa đơn hàng ở trạng thái Nháp (DRAFT). Trạng thái hiện tại: " + so.getStatus());
+            throw new BusinessException(String.format(SystemMessage.SO_ERR_009.getMessage(), so.getStatus()));
         }
 
         requireActiveCustomer(request.getPartnerId());
 
         if (request.getPaymentDueDate() != null) {
             if (request.getPaymentDueDate().isBefore(request.getSoDate())) {
-                throw new BusinessException("Hạn thanh toán không được nhỏ hơn ngày lập đơn");
+                throw new BusinessException(SystemMessage.SO_ERR_008.getMessage());
             }
             if (request.getPaymentDueDate().isBefore(LocalDate.now())) {
-                throw new BusinessException("Hạn thanh toán không được nằm trong quá khứ");
+                throw new BusinessException(SystemMessage.SO_ERR_007.getMessage());
             }
         }
 
@@ -248,8 +248,7 @@ public class SalesOrderService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng ID: " + id));
 
         if (!"DRAFT".equals(so.getStatus())) {
-            throw new BusinessException(
-                    "Chỉ được duyệt đơn hàng ở trạng thái Nháp. Trạng thái hiện tại: " + so.getStatus());
+            throw new BusinessException(String.format(SystemMessage.SO_ERR_006.getMessage(), so.getStatus()));
         }
 
         requireActiveCustomer(so.getPartnerId());
@@ -323,8 +322,7 @@ public class SalesOrderService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng ID: " + id));
 
         if ("POSTED".equals(so.getStatus()) || "CANCELLED".equals(so.getStatus()) || "APPROVED".equals(so.getStatus())) {
-            throw new BusinessException(
-                    "Không thể hủy đơn hàng ở trạng thái: " + so.getStatus());
+            throw new BusinessException(String.format(SystemMessage.SO_ERR_005.getMessage(), so.getStatus()));
         }
 
         // Release tất cả reservations HOLDING
@@ -342,13 +340,13 @@ public class SalesOrderService {
 
     private Partner requireActiveCustomer(Long partnerId) {
         if (partnerId == null) {
-            throw new BusinessException("Khách hàng là bắt buộc");
+            throw new BusinessException(SystemMessage.SO_ERR_004.getMessage());
         }
 
         Partner customer = partnerRepository.findByIdAndIsCustomerTrue(partnerId)
                 .orElseThrow(() -> new BusinessException("Khách hàng không tồn tại"));
         if (!"APPROVED".equals(customer.getStatus())) {
-            throw new BusinessException("Khách hàng đã ngừng hoạt động, không thể tạo đơn bán hàng");
+            throw new BusinessException(SystemMessage.CHK_ERR_004.getMessage());
         }
         return customer;
     }
@@ -437,17 +435,17 @@ public class SalesOrderService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng"));
         
         if ("CANCELLED".equals(so.getStatus())) {
-            throw new BusinessException("Không thể ghi nhận thanh toán cho đơn hàng đã hủy");
+            throw new BusinessException(SystemMessage.SO_ERR_003.getMessage());
         }
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("Số tiền thanh toán phải lớn hơn 0");
+            throw new BusinessException(SystemMessage.SO_ERR_002.getMessage());
         }
 
         BigDecimal currentPaidAmount = so.getPaidAmount() != null ? so.getPaidAmount() : BigDecimal.ZERO;
         BigDecimal newPaidAmount = currentPaidAmount.add(amount);
         if (newPaidAmount.compareTo(so.getTotalAmount()) > 0) {
-            throw new BusinessException("Số tiền thanh toán vượt quá tổng giá trị đơn hàng");
+            throw new BusinessException(SystemMessage.SO_ERR_001.getMessage());
         }
 
         so.setPaidAmount(newPaidAmount);

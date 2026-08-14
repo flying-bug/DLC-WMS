@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.AssemblyBomLineRequest;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.request.AssemblyBomRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderLineRequest;
@@ -91,7 +92,7 @@ public class AssemblyOrderService {
                 nextVersion = existingBom.getVersionNo().add(BigDecimal.ONE);
             }
             if (isSameComponents(existingBom.getLines(), request.getLines())) {
-                throw new BusinessException("Cấu hình này trùng với cấu hình " + existingBom.getBomCode());
+                throw new BusinessException(String.format(SystemMessage.ASM_ERR_039.getMessage(), existingBom.getBomCode()));
             }
         }
         
@@ -125,14 +126,14 @@ public class AssemblyOrderService {
         List<AssemblyBom> existingBoms = assemblyBomRepository.findAllWithLines(null, product.getId());
         for (AssemblyBom existingBom : existingBoms) {
             if (!existingBom.getId().equals(id) && isSameComponents(existingBom.getLines(), request.getLines())) {
-                throw new BusinessException("Cấu hình này trùng với cấu hình " + existingBom.getBomCode());
+                throw new BusinessException(String.format(SystemMessage.ASM_ERR_039.getMessage(), existingBom.getBomCode()));
             }
         }
         
         String bomCode = trimToNull(request.getBomCode());
         if (bomCode != null && !bomCode.equals(bom.getBomCode())) {
             if (assemblyBomRepository.existsByBomCodeAndIdNot(bomCode, id)) {
-                throw new BusinessException("Mã cấu hình đã tồn tại");
+                throw new BusinessException(SystemMessage.ASM_ERR_012.getMessage());
             }
             bom.setBomCode(bomCode);
         }
@@ -151,7 +152,7 @@ public class AssemblyOrderService {
         String normalizedType = normalizeOptionalType(orderType);
         String normalizedStatus = normalizeOptionalStatus(status);
         if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
-            throw new BusinessException("Từ ngày không được lớn hơn đến ngày");
+            throw new BusinessException(SystemMessage.ASM_ERR_038.getMessage());
         }
         return assemblyOrderRepository.search(trimToNull(keyword), normalizedType, normalizedStatus, warehouseId, fromDate, toDate)
                 .stream()
@@ -184,7 +185,7 @@ public class AssemblyOrderService {
         String requestedCode = trimToNull(request.getOrderCode());
         if (requestedCode != null && !requestedCode.equals(order.getOrderCode())) {
             if (assemblyOrderRepository.existsByOrderCodeAndIdNot(requestedCode, id)) {
-                throw new BusinessException("Mã lệnh lắp ráp/tháo dỡ đã tồn tại");
+                throw new BusinessException(SystemMessage.ASM_ERR_013.getMessage());
             }
             order.setOrderCode(requestedCode);
         }
@@ -220,7 +221,7 @@ public class AssemblyOrderService {
                                imports.stream().anyMatch(d -> "DRAFT".equals(d.getStatus()));
                                
             if (anyDraft) {
-                throw new BusinessException("Các phiếu xuất và nhập kho liên kết đang lưu nháp phải được ghi sổ hoặc hủy bỏ.");
+                throw new BusinessException(SystemMessage.ASM_ERR_037.getMessage());
             }
             
             BigDecimal requiredComponents = order.getLines().stream()
@@ -263,7 +264,7 @@ public class AssemblyOrderService {
 
             if (ASSEMBLY.equals(order.getOrderType())) {
                 if (exportedComponents.compareTo(requiredComponents) < 0 || importedTarget.compareTo(requiredTarget) < 0) {
-                    throw new BusinessException("Chưa hoàn tất xuất/nhập đủ số lượng yêu cầu để hoàn thành lệnh.");
+                    throw new BusinessException(SystemMessage.ASM_ERR_035.getMessage());
                 }
                 
                 // Validate Serial Mapping if Target tracks serial
@@ -276,7 +277,7 @@ public class AssemblyOrderService {
                     
                     // We expect the number of unique target serials mapped to be at least requiredTarget
                     if (mappedTargetSerials.size() < requiredTarget.intValue()) {
-                        throw new BusinessException("Chưa gắn đủ Serial thành phẩm. Vui lòng vào mục Cấu hình Serial để hoàn tất.");
+                        throw new BusinessException(SystemMessage.ASM_ERR_036.getMessage());
                     }
                     
                     // Also check if component mapping is full?
@@ -285,7 +286,7 @@ public class AssemblyOrderService {
                 }
             } else {
                 if (exportedTarget.compareTo(requiredTarget) < 0 || importedComponents.compareTo(requiredComponents) < 0) {
-                    throw new BusinessException("Chưa hoàn tất xuất/nhập đủ số lượng yêu cầu để hoàn thành lệnh.");
+                    throw new BusinessException(SystemMessage.ASM_ERR_035.getMessage());
                 }
             }
         }
@@ -299,7 +300,7 @@ public class AssemblyOrderService {
     public AssemblyOrderResponse updateNote(Long id, AssemblyOrderRequest request) {
         AssemblyOrder order = findOrderOrThrow(id);
         if ("SUBMITTED".equals(order.getStatus())) {
-            throw new BusinessException("Lệnh đã hoàn thành, không thể sửa ghi chú");
+            throw new BusinessException(SystemMessage.ASM_ERR_034.getMessage());
         }
         order.setNote(request.getNote());
         order.setUpdatedAt(LocalDateTime.now());
@@ -310,7 +311,7 @@ public class AssemblyOrderService {
     public void generateInventoryDocument(Long id, com.duylongtech.backend.dto.request.GenerateInventoryDocumentRequest request, String actor) {
         AssemblyOrder order = findOrderOrThrow(id);
         if (!"SUBMITTED".equals(order.getStatus()) && !"APPROVED".equals(order.getStatus())) {
-            throw new BusinessException("Chỉ có thể tạo phiếu kho cho lệnh đã hoàn thành hoặc được duyệt");
+            throw new BusinessException(SystemMessage.ASM_ERR_033.getMessage());
         }
         
         com.duylongtech.backend.dto.request.InventoryDocumentRequest docReq = new com.duylongtech.backend.dto.request.InventoryDocumentRequest();
@@ -342,7 +343,7 @@ public class AssemblyOrderService {
         } else if ("GOODS_RECEIPT".equals(request.getDocumentType())) {
             inventoryDocumentService.createImport(docReq);
         } else {
-            throw new BusinessException("Loại phiếu không hợp lệ");
+            throw new BusinessException(SystemMessage.ASM_ERR_032.getMessage());
         }
     }
 
@@ -371,40 +372,40 @@ public class AssemblyOrderService {
 
     private void validateRequest(AssemblyOrderRequest request, boolean create) {
         if (request == null) {
-            throw new BusinessException("Dữ liệu lệnh lắp ráp/tháo dỡ là bắt buộc");
+            throw new BusinessException(SystemMessage.ASM_ERR_031.getMessage());
         }
         if (request.getBomId() == null) {
-            throw new BusinessException("Cấu hình là bắt buộc");
+            throw new BusinessException(SystemMessage.ASM_ERR_030.getMessage());
         }
         if (request.getWarehouseId() == null) {
-            throw new BusinessException("Kho là bắt buộc");
+            throw new BusinessException(SystemMessage.ASM_ERR_029.getMessage());
         }
         if (request.getQuantity() == null || request.getQuantity().compareTo(ZERO) <= 0) {
-            throw new BusinessException("Số lượng phải lớn hơn 0");
+            throw new BusinessException(SystemMessage.ASM_ERR_028.getMessage());
         }
         if (request.getExecutionDate() == null) {
-            throw new BusinessException("Ngày thực hiện là bắt buộc");
+            throw new BusinessException(SystemMessage.ASM_ERR_027.getMessage());
         }
         if (create && request.getCreatedBy() == null) {
-            throw new BusinessException("Người tạo là bắt buộc");
+            throw new BusinessException(SystemMessage.ASM_ERR_026.getMessage());
         }
     }
 
     private void validateBomRequest(AssemblyBomRequest request, boolean create) {
         if (request == null) {
-            throw new BusinessException("Dữ liệu Cấu hình là bắt buộc");
+            throw new BusinessException(SystemMessage.ASM_ERR_025.getMessage());
         }
         if (request.getProductId() == null) {
-            throw new BusinessException("Sản phẩm thành phẩm là bắt buộc");
+            throw new BusinessException(SystemMessage.ASM_ERR_024.getMessage());
         }
         if (create && trimToNull(request.getBomCode()) != null && assemblyBomRepository.existsByBomCode(request.getBomCode().trim())) {
-            throw new BusinessException("Mã cấu hình đã tồn tại");
+            throw new BusinessException(SystemMessage.ASM_ERR_012.getMessage());
         }
         if (request.getVersionNo() != null && request.getVersionNo().compareTo(ZERO) <= 0) {
-            throw new BusinessException("Phiên bản cấu hình phải lớn hơn 0");
+            throw new BusinessException(SystemMessage.ASM_ERR_023.getMessage());
         }
         if (request.getLines() == null || request.getLines().isEmpty()) {
-            throw new BusinessException("Cấu hình phải có ít nhất một linh kiện");
+            throw new BusinessException(SystemMessage.ASM_ERR_022.getMessage());
         }
 
         boolean isApproved = "APPROVED".equals(request.getStatus());
@@ -414,15 +415,15 @@ public class AssemblyOrderService {
             
             if (isApproved) {
                 if (line == null || line.getComponentVariantId() == null) {
-                    throw new BusinessException("Linh kiện dòng " + (i + 1) + " là bắt buộc");
+                    throw new BusinessException(String.format(SystemMessage.ASM_ERR_021.getMessage(), (i + 1)));
                 }
                 if (line.getQuantity() == null || line.getQuantity().compareTo(ZERO) <= 0) {
-                    throw new BusinessException("Định mức dòng " + (i + 1) + " phải lớn hơn 0");
+                    throw new BusinessException(String.format(SystemMessage.ASM_ERR_020.getMessage(), (i + 1)));
                 }
                 try {
                     line.getQuantity().stripTrailingZeros().intValueExact();
                 } catch (ArithmeticException ex) {
-                    throw new BusinessException("Định mức dòng " + (i + 1) + " phải là số nguyên");
+                    throw new BusinessException(String.format(SystemMessage.ASM_ERR_019.getMessage(), (i + 1)));
                 }
             }
         }
@@ -479,17 +480,17 @@ public class AssemblyOrderService {
         AssemblyBom bom = assemblyBomRepository.findByIdWithLines(bomId)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy định mức vật tư"));
         if (!"APPROVED".equalsIgnoreCase(bom.getStatus())) {
-            throw new BusinessException("Chỉ được tạo lệnh từ cấu hình đã duyệt");
+            throw new BusinessException(SystemMessage.ASM_ERR_018.getMessage());
         }
         if (bom.getLines() == null || bom.getLines().isEmpty()) {
-            throw new BusinessException("Cấu hình chưa có linh kiện");
+            throw new BusinessException(SystemMessage.ASM_ERR_017.getMessage());
         }
         return bom;
     }
 
     private AssemblyOrder findOrderOrThrow(Long id) {
         if (id == null) {
-            throw new BusinessException("ID lệnh là bắt buộc");
+            throw new BusinessException(SystemMessage.ASM_ERR_016.getMessage());
         }
         return assemblyOrderRepository.findByIdWithLines(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy lệnh lắp ráp/tháo dỡ"));
@@ -498,11 +499,11 @@ public class AssemblyOrderService {
     private ProductVariant resolveTargetVariant(AssemblyBom bom) {
         Product product = bom.getProduct();
         if (product == null) {
-            throw new BusinessException("Sản phẩm thành phẩm của cấu hình chưa có SKU");
+            throw new BusinessException(SystemMessage.ASM_ERR_015.getMessage());
         }
         List<ProductVariant> variants = productVariantRepository.findByProductIdOrderByIdAsc(product.getId());
         if (variants.isEmpty()) {
-            throw new BusinessException("Sản phẩm thành phẩm của cấu hình chưa có SKU");
+            throw new BusinessException(SystemMessage.ASM_ERR_015.getMessage());
         }
         return variants.stream()
                 .filter(variant -> Boolean.TRUE.equals(variant.getActive()))
@@ -547,7 +548,7 @@ public class AssemblyOrderService {
     private void ensureEditable(AssemblyOrder order) {
         String status = normalizeStatus(order.getStatus(), DEFAULT_STATUS);
         if (!EDITABLE_STATUSES.contains(status)) {
-            throw new BusinessException("Chỉ có thể cập nhật lệnh DRAFT hoặc SUBMITTED");
+            throw new BusinessException(SystemMessage.ASM_ERR_014.getMessage());
         }
     }
 
@@ -557,7 +558,7 @@ public class AssemblyOrderService {
             orderCode = (ASSEMBLY.equals(orderType) ? "LR-" : "TD-") + System.currentTimeMillis();
         }
         if (assemblyOrderRepository.existsByOrderCode(orderCode)) {
-            throw new BusinessException("Mã lệnh lắp ráp/tháo dỡ đã tồn tại");
+            throw new BusinessException(SystemMessage.ASM_ERR_013.getMessage());
         }
         return orderCode;
     }
@@ -569,7 +570,7 @@ public class AssemblyOrderService {
             bomCode = "CH-" + productCode + "-" + System.currentTimeMillis();
         }
         if (assemblyBomRepository.existsByBomCode(bomCode)) {
-            throw new BusinessException("Mã cấu hình đã tồn tại");
+            throw new BusinessException(SystemMessage.ASM_ERR_012.getMessage());
         }
         return bomCode;
     }
@@ -581,7 +582,7 @@ public class AssemblyOrderService {
         }
         normalized = normalized.toUpperCase(Locale.ROOT);
         if (!VALID_BOM_STATUSES.contains(normalized)) {
-            throw new BusinessException("Trạng thái cấu hình không hợp lệ");
+            throw new BusinessException(SystemMessage.ASM_ERR_011.getMessage());
         }
         return normalized;
     }
@@ -593,7 +594,7 @@ public class AssemblyOrderService {
         }
         normalized = normalized.toUpperCase(Locale.ROOT);
         if (!VALID_BOM_STATUSES.contains(normalized)) {
-            throw new BusinessException("Trạng thái cấu hình không hợp lệ");
+            throw new BusinessException(SystemMessage.ASM_ERR_011.getMessage());
         }
         return normalized;
     }
@@ -605,7 +606,7 @@ public class AssemblyOrderService {
         }
         normalized = normalized.toUpperCase(Locale.ROOT);
         if (!VALID_TYPES.contains(normalized)) {
-            throw new BusinessException("Loại lệnh không hợp lệ");
+            throw new BusinessException(SystemMessage.ASM_ERR_010.getMessage());
         }
         return normalized;
     }
@@ -618,7 +619,7 @@ public class AssemblyOrderService {
     private String normalizeEditableStatus(String status, String fallback) {
         String normalized = normalizeStatus(status, fallback);
         if (!EDITABLE_STATUSES.contains(normalized)) {
-            throw new BusinessException("Trạng thái lệnh phải là DRAFT hoặc SUBMITTED");
+            throw new BusinessException(SystemMessage.ASM_ERR_009.getMessage());
         }
         return normalized;
     }
@@ -633,7 +634,7 @@ public class AssemblyOrderService {
         }
         normalized = normalized.toUpperCase(Locale.ROOT);
         if (!VALID_STATUSES.contains(normalized)) {
-            throw new BusinessException("Trạng thái lệnh không hợp lệ");
+            throw new BusinessException(SystemMessage.ASM_ERR_008.getMessage());
         }
         return normalized;
     }
@@ -779,7 +780,7 @@ public class AssemblyOrderService {
         }
 
         if (normalizedTargetSerial == null) {
-            throw new BusinessException("Serial thành phẩm là bắt buộc");
+            throw new BusinessException(SystemMessage.ASM_ERR_007.getMessage());
         }
 
         List<DeviceComponentSerial> mappings = resolvedTargetVariantId != null
@@ -900,7 +901,7 @@ public class AssemblyOrderService {
                 .stream()
                 .anyMatch(this::isDeviceSerialChangeHistory);
         if (hasRepairHistory) {
-            throw new BusinessException("Cấu hình serial đã có lịch sử sửa chữa, không thể ghi đè toàn bộ.");
+            throw new BusinessException(SystemMessage.ASM_ERR_006.getMessage());
         }
 
         assemblyOrderSerialRepository.deleteByAssemblyOrderId(orderId);
@@ -947,13 +948,12 @@ public class AssemblyOrderService {
                 .orElseThrow(() -> new EntityNotFoundException("Component variant not found: " + req.getComponentVariantId()));
         String componentSerial = trimToNull(req.getComponentSerial());
         if (componentSerial == null) {
-            throw new BusinessException("Serial linh kiện là bắt buộc");
+            throw new BusinessException(SystemMessage.ASM_ERR_005.getMessage());
         }
 
         if (ASSEMBLY.equals(order.getOrderType())
                 && deviceComponentSerialRepository.existsActiveComponentSerial(compVar.getId(), componentSerial)) {
-            throw new BusinessException("Serial " + componentSerial
-                    + " đang nằm trong cấu hình PC, không thể lắp vào PC khác.");
+            throw new BusinessException(String.format(SystemMessage.ASM_ERR_004.getMessage(), componentSerial));
         }
 
         return DeviceComponentSerial.builder()
@@ -975,15 +975,15 @@ public class AssemblyOrderService {
     public void executeAssemblyOrder(Long id, AssemblyExecutionRequest request, Long userId) {
         AssemblyOrder order = findOrderOrThrow(id);
         if (!"APPROVED".equals(order.getStatus())) {
-            throw new BusinessException("Chỉ có thể thực thi lệnh đã được duyệt");
+            throw new BusinessException(SystemMessage.ASM_ERR_003.getMessage());
         }
         if (!ASSEMBLY.equals(order.getOrderType()) && !"DISASSEMBLY".equals(order.getOrderType())) {
-            throw new BusinessException("Tính năng thực thi quét mã vạch hiện tại chỉ hỗ trợ Lắp ráp và Tháo dỡ");
+            throw new BusinessException(SystemMessage.ASM_ERR_002.getMessage());
         }
 
         ProductVariant targetVariant = order.getTargetVariant();
         if (targetVariant == null) {
-            throw new BusinessException("Lệnh không có thành phẩm");
+            throw new BusinessException(SystemMessage.ASM_ERR_001.getMessage());
         }
 
         java.util.Map<Long, BigDecimal> bomUnitPrices = buildBomUnitPriceMap(order);

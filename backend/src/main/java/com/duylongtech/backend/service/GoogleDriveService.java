@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
@@ -61,7 +62,7 @@ public class GoogleDriveService {
                 .orElse("");
 
         if (base64Json == null || base64Json.isBlank()) {
-            throw new IllegalStateException("Cần cấu hình Google Drive (Service Account JSON hoặc OAuth2 Refresh Token).");
+            throw new IllegalStateException(SystemMessage.DRIVE_ERR_003.getMessage());
         }
 
         byte[] jsonBytes = Base64.getDecoder().decode(base64Json);
@@ -88,8 +89,7 @@ public class GoogleDriveService {
                 .map(s -> s.getSettingValue()).orElse("").trim();
 
         if (folderId.isBlank()) {
-            throw new IllegalStateException(
-                    "Chưa nhập Google Drive Folder ID. Vui lòng vào System Settings nhập Folder ID và nhấn 'Lưu tất cả'.");
+            throw new IllegalStateException(SystemMessage.DRIVE_ERR_002.getMessage());
         }
 
         FileContent content = new FileContent(mimeType, localFile);
@@ -220,10 +220,7 @@ public class GoogleDriveService {
         } catch (com.google.api.client.googleapis.json.GoogleJsonResponseException e) {
             if (e.getStatusCode() == 404) {
                 String saEmail = getServiceAccountEmail();
-                throw new IllegalStateException("Thư mục Google Drive (ID: " + folderId
-                        + ") chưa được Chia sẻ (Share) cho email Service Account: [" + saEmail
-                        + "]. Vui lòng mở Google Drive -> Chuột phải vào Thư mục -> Chia sẻ cho email [" + saEmail
-                        + "] quyền Editor.");
+                throw new IllegalStateException(String.format(SystemMessage.DRIVE_ERR_001.getMessage(), folderId, saEmail, saEmail));
             }
             throw e;
         }

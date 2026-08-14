@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.InventoryDocumentLineRequest;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
 import com.duylongtech.backend.dto.request.ScanResolveRequest;
 import com.duylongtech.backend.dto.response.InventoryDocumentLineResponse;
@@ -114,10 +115,10 @@ public class InventoryDocumentService {
     public ScanResolveResponse resolveExportScan(ScanResolveRequest req) {
         String code = trimToNull(req != null ? req.getCode() : null);
         if (code == null) {
-            throw new BusinessException("Mã quét là bắt buộc");
+            throw new BusinessException(SystemMessage.INV_ERR_035.getMessage());
         }
         if (req.getWarehouseId() == null) {
-            throw new BusinessException("warehouseId là bắt buộc");
+            throw new BusinessException(SystemMessage.INV_ERR_018.getMessage());
         }
 
         List<SerialNumber> serials = serialNumberRepository.findBySerialNumber(code);
@@ -126,7 +127,7 @@ public class InventoryDocumentService {
                     .collect(Collectors.toList());
         }
         if (serials.size() > 1) {
-            throw new BusinessException("Mã serial tồn tại trên nhiều sản phẩm, vui lòng chọn mẫu sản phẩm trước");
+            throw new BusinessException(SystemMessage.INV_ERR_049.getMessage());
         }
         if (serials.size() == 1) {
             return resolveSerialScan(serials.get(0), req.getWarehouseId(), code);
@@ -290,9 +291,7 @@ public class InventoryDocumentService {
                         if (qtyOut.compareTo(remaining) > 0) {
                             ProductVariant pv = productVariantRepository.findById(lineReq.getVariantId()).orElse(null);
                             String skuName = pv != null ? pv.getSku() : String.valueOf(lineReq.getVariantId());
-                            throw new BusinessException("Số lượng xuất kho (" + qtyOut
-                                    + ") vượt quá số lượng còn lại trong đơn bán hàng " + so.getSoCode() + " (tối đa "
-                                    + remaining + ") cho sản phẩm SKU: " + skuName);
+                            throw new BusinessException(String.format(SystemMessage.INV_ERR_048.getMessage(), qtyOut, so.getSoCode(), remaining, skuName));
                         }
                     }
                 }
@@ -327,9 +326,7 @@ public class InventoryDocumentService {
                         if (qtyIn.compareTo(remaining) > 0) {
                             ProductVariant pv = productVariantRepository.findById(lineReq.getVariantId()).orElse(null);
                             String skuName = pv != null ? pv.getSku() : String.valueOf(lineReq.getVariantId());
-                            throw new BusinessException("Số lượng nhập kho (" + qtyIn
-                                    + ") vượt quá số lượng còn lại trong đơn mua hàng " + po.getPoCode() + " (tối đa "
-                                    + remaining + ") cho sản phẩm SKU: " + skuName);
+                            throw new BusinessException(String.format(SystemMessage.INV_ERR_047.getMessage(), qtyIn, po.getPoCode(), remaining, skuName));
                         }
                     }
                 }
@@ -341,7 +338,7 @@ public class InventoryDocumentService {
     public InventoryDocumentResponse postExport(Long id) {
         InventoryDocument doc = findExportOrThrow(id);
         if (!"DRAFT".equals(doc.getStatus()) && !"SUBMITTED".equals(doc.getStatus())) {
-            throw new BusinessException("Chỉ phiếu xuất kho lưu tạm mới có thể ghi sổ");
+            throw new BusinessException(SystemMessage.INV_ERR_046.getMessage());
         }
 
         List<com.duylongtech.backend.dto.request.WarrantyLineRequest> warrantyLines = new java.util.ArrayList<>();
@@ -369,14 +366,13 @@ public class InventoryDocumentService {
 
             for (SerialNumber snObj : serialsToExport) {
                 if (!"AVAILABLE".equals(snObj.getStatus())) {
-                    throw new BusinessException("Serial " + snObj.getSerialNumber()
-                            + " không có sẵn trong kho (trạng thái hiện tại: " + snObj.getStatus() + ")");
+                    throw new BusinessException(String.format(SystemMessage.INV_ERR_045.getMessage(), snObj.getSerialNumber(), snObj.getStatus()));
                 }
                 if (!doc.getWarehouseId().equals(snObj.getWarehouseId())) {
-                    throw new BusinessException("Serial " + snObj.getSerialNumber() + " không nằm trong kho xuất");
+                    throw new BusinessException(String.format(SystemMessage.INV_ERR_044.getMessage(), snObj.getSerialNumber()));
                 }
                 if (!line.getVariantId().equals(snObj.getVariantId())) {
-                    throw new BusinessException("Serial " + snObj.getSerialNumber() + " không thuộc SKU này");
+                    throw new BusinessException(String.format(SystemMessage.INV_ERR_043.getMessage(), snObj.getSerialNumber()));
                 }
                 ensureSerialNotInstalledInPc(snObj, doc);
             }
@@ -384,7 +380,7 @@ public class InventoryDocumentService {
             if (variant != null && variant.getProduct() != null && Boolean.TRUE.equals(variant.getProduct().getTrackSerial())) {
                 int expected = line.getQuantityOut().stripTrailingZeros().intValueExact();
                 if (serialsToExport.size() != expected) {
-                    throw new BusinessException("Sản phẩm SKU: " + variant.getSku() + " có quản lý Serial. Vui lòng quét/nhập đúng " + expected + " mã serial trước khi ghi sổ.");
+                    throw new BusinessException(String.format(SystemMessage.INV_ERR_042.getMessage(), variant.getSku(), expected));
                 }
             }
 
@@ -410,7 +406,7 @@ public class InventoryDocumentService {
                             ? variant.getSku()
                             : String.valueOf(line.getVariantId());
                 }
-                throw new BusinessException("Số lượng xuất lớn hơn số lượng tồn kho cho sản phẩm " + productDisplayName + ", vui lòng điều chỉnh");
+                throw new BusinessException(String.format(SystemMessage.INV_ERR_041.getMessage(), productDisplayName));
             }
 
             balance.setQuantityOnHand(balance.getQuantityOnHand().subtract(qtyToExport));
@@ -550,7 +546,7 @@ public class InventoryDocumentService {
     public InventoryDocumentResponse postImport(Long id) {
         InventoryDocument doc = findImportOrThrow(id);
         if (!"DRAFT".equals(doc.getStatus()) && !"SUBMITTED".equals(doc.getStatus())) {
-            throw new BusinessException("Chỉ phiếu nhập kho lưu tạm mới có thể ghi sổ");
+            throw new BusinessException(SystemMessage.INV_ERR_040.getMessage());
         }
 
         InventoryDocument savedDoc = inventoryDocumentRepository.saveAndFlush(doc);
@@ -670,8 +666,7 @@ public class InventoryDocumentService {
             // Kiểm tra issuePurpose có thuộc danh sách hợp lệ toàn bộ không
             // (bao gồm cả TRANSFER_EXPORT được dùng nội bộ bởi module Chuyển kho)
             if (!VALID_ALL_EXPORT_PURPOSES.contains(issuePurpose)) {
-                throw new BusinessException(
-                        "Mục đích xuất kho không hợp lệ. Chỉ chấp nhận: SALES (Bán hàng), USAGE (Xuất sử dụng) hoặc ASSEMBLY (Xuất lắp ráp)");
+                throw new BusinessException(SystemMessage.INV_ERR_039.getMessage());
             }
         }
 
@@ -708,8 +703,7 @@ public class InventoryDocumentService {
         if (issuePurpose != null && !importDocument) {
             // Khi cập nhật phiếu, cũng chỉ cho phép 2 mục đích thủ công
             if (!VALID_MANUAL_EXPORT_PURPOSES.contains(issuePurpose)) {
-                throw new BusinessException(
-                        "Mục đích xuất kho không hợp lệ. Chỉ chấp nhận: SALES (Bán hàng), USAGE (Xuất sử dụng) hoặc ASSEMBLY (Xuất lắp ráp)");
+                throw new BusinessException(SystemMessage.INV_ERR_039.getMessage());
             }
         }
 
@@ -759,15 +753,15 @@ public class InventoryDocumentService {
 
     private ScanResolveResponse resolveSerialScan(SerialNumber serial, Long warehouseId, String code) {
         if (!"AVAILABLE".equalsIgnoreCase(serial.getStatus())) {
-            throw new BusinessException("Serial không khả dụng để xuất kho: " + code);
+            throw new BusinessException(String.format(SystemMessage.INV_ERR_038.getMessage(), code));
         }
         if (!warehouseId.equals(serial.getWarehouseId())) {
-            throw new BusinessException("Serial không nằm trong kho đang chọn");
+            throw new BusinessException(SystemMessage.INV_ERR_037.getMessage());
         }
         ensureSerialNotInstalledInPc(serial);
         ProductVariant variant = serial.getVariant();
         if (variant == null) {
-            throw new BusinessException("Serial chưa gắn SKU sản phẩm");
+            throw new BusinessException(SystemMessage.INV_ERR_033.getMessage());
         }
         return buildScanResponse("SERIAL", code, variant, serial);
     }
@@ -779,8 +773,7 @@ public class InventoryDocumentService {
         boolean installedInPc = deviceComponentSerialRepository.existsActiveComponentSerial(
                 serial.getVariantId(), serial.getSerialNumber().trim());
         if (installedInPc) {
-            throw new BusinessException("Serial " + serial.getSerialNumber()
-                    + " đang nằm trong cấu hình PC, không thể xuất như linh kiện rời.");
+            throw new BusinessException(String.format(SystemMessage.INV_ERR_036.getMessage(), serial.getSerialNumber()));
         }
     }
 
@@ -803,7 +796,7 @@ public class InventoryDocumentService {
     public ScanResolveResponse resolveGenericScan(ScanResolveRequest req) {
         String code = trimToNull(req != null ? req.getCode() : null);
         if (code == null) {
-            throw new BusinessException("Mã quét là bắt buộc");
+            throw new BusinessException(SystemMessage.INV_ERR_035.getMessage());
         }
         List<SerialNumber> serials = serialNumberRepository.findBySerialNumber(code);
         if (req != null && req.getVariantId() != null) {
@@ -811,13 +804,13 @@ public class InventoryDocumentService {
                     .collect(Collectors.toList());
         }
         if (serials.size() > 1) {
-            throw new BusinessException("Mã serial tồn tại trên nhiều sản phẩm");
+            throw new BusinessException(SystemMessage.INV_ERR_034.getMessage());
         }
         if (serials.size() == 1) {
             SerialNumber serial = serials.get(0);
             ProductVariant variant = serial.getVariant();
             if (variant == null) {
-                throw new BusinessException("Serial chưa gắn SKU sản phẩm");
+                throw new BusinessException(SystemMessage.INV_ERR_033.getMessage());
             }
             return buildScanResponse("SERIAL", code, variant, serial);
         }
@@ -830,7 +823,7 @@ public class InventoryDocumentService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy SKU hoặc serial cho mã: " + code));
         Product product = variant.getProduct();
         if (Boolean.TRUE.equals(product != null ? product.getTrackSerial() : null)) {
-            throw new BusinessException("Sản phẩm quản lý serial, vui lòng quét serial của từng sản phẩm");
+            throw new BusinessException(SystemMessage.INV_ERR_032.getMessage());
         }
         return buildScanResponse("BARCODE", code, variant, null);
     }
@@ -864,16 +857,16 @@ public class InventoryDocumentService {
     private void validateExportSerial(InventoryDocument doc, InventoryDocumentLine line, SerialNumber serial,
             BigDecimal quantityOut) {
         if (quantityOut.compareTo(BigDecimal.ONE) != 0) {
-            throw new BusinessException("Mỗi dòng xuất serial phải có số lượng bằng 1");
+            throw new BusinessException(SystemMessage.INV_ERR_031.getMessage());
         }
         if (!line.getVariantId().equals(serial.getVariantId())) {
-            throw new BusinessException("Serial không thuộc SKU trên dòng xuất");
+            throw new BusinessException(SystemMessage.INV_ERR_030.getMessage());
         }
         if (!doc.getWarehouseId().equals(serial.getWarehouseId())) {
-            throw new BusinessException("Serial không nằm trong kho xuất");
+            throw new BusinessException(SystemMessage.INV_ERR_029.getMessage());
         }
         if (!"AVAILABLE".equalsIgnoreCase(serial.getStatus())) {
-            throw new BusinessException("Serial không khả dụng để xuất kho");
+            throw new BusinessException(SystemMessage.INV_ERR_028.getMessage());
         }
     }
 
@@ -885,7 +878,7 @@ public class InventoryDocumentService {
                 .orElse(null);
         if (serialBalance != null) {
             if (serialBalance.getQuantityOnHand().compareTo(BigDecimal.ONE) < 0) {
-                throw new BusinessException("Serial " + serial.getSerialNumber() + " không còn tồn kho");
+                throw new BusinessException(String.format(SystemMessage.INV_ERR_027.getMessage(), serial.getSerialNumber()));
             }
             serialBalance.setQuantityOnHand(ZERO);
             serialBalance.setUpdatedAt(LocalDateTime.now());
@@ -963,13 +956,13 @@ public class InventoryDocumentService {
         List<String> serialValues = parseSerialNumbers(line.getSerialNumbersText());
         int expectedQuantity = requireWholeNumber(line.getQuantityIn(), "So luong nhap serial");
         if (serialValues.size() != expectedQuantity) {
-            throw new BusinessException("Sản phẩm quản lý serial phải có đúng " + expectedQuantity + " serial");
+            throw new BusinessException(String.format(SystemMessage.INV_ERR_026.getMessage(), expectedQuantity));
         }
 
         for (String serialValue : serialValues) {
             if (serialNumberRepository.findBySerialNumber(serialValue).stream()
                     .anyMatch(existing -> !existing.getVariantId().equals(line.getVariantId()))) {
-                throw new BusinessException("Serial da ton tai tren SKU khac: " + serialValue);
+                throw new BusinessException(String.format(SystemMessage.INV_ERR_025.getMessage(), serialValue));
             }
             Optional<SerialNumber> existingOpt = serialNumberRepository
                     .findByVariantIdAndSerialNumber(line.getVariantId(), serialValue);
@@ -994,7 +987,7 @@ public class InventoryDocumentService {
                 } else if (ISSUE_PURPOSE_TRANSFER_IN.equals(doc.getIssuePurpose())) {
                     SerialNumber serial = existingOpt.get();
                     if (!"IN_TRANSIT".equals(serial.getStatus())) {
-                        throw new BusinessException("Serial " + serialValue + " không ở trạng thái IN_TRANSIT");
+                        throw new BusinessException(String.format(SystemMessage.INV_ERR_024.getMessage(), serialValue));
                     }
                     serial.setStatus("AVAILABLE");
                     serial.setWarehouseId(doc.getWarehouseId());
@@ -1012,7 +1005,7 @@ public class InventoryDocumentService {
                             .build());
                     continue;
                 } else {
-                    throw new BusinessException("Serial đã tồn tại: " + serialValue);
+                    throw new BusinessException(String.format(SystemMessage.INV_ERR_023.getMessage(), serialValue));
                 }
             }
             SerialNumber serial = SerialNumber.builder()
@@ -1046,7 +1039,7 @@ public class InventoryDocumentService {
 
     private InventoryDocument findExportOrThrow(Long id) {
         if (id == null) {
-            throw new BusinessException("ID phiếu xuất kho là bắt buộc");
+            throw new BusinessException(SystemMessage.INV_ERR_022.getMessage());
         }
         return inventoryDocumentRepository.findExportByIdWithLines(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu xuất kho"));
@@ -1054,7 +1047,7 @@ public class InventoryDocumentService {
 
     private InventoryDocument findImportOrThrow(Long id) {
         if (id == null) {
-            throw new BusinessException("ID phiếu nhập kho là bắt buộc");
+            throw new BusinessException(SystemMessage.INV_ERR_021.getMessage());
         }
         return inventoryDocumentRepository.findImportByIdWithLines(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu nhập kho"));
@@ -1063,7 +1056,7 @@ public class InventoryDocumentService {
     private void validateCreateRequest(InventoryDocumentRequest req) {
         validateRequiredExportFields(req);
         if (req.getCreatedBy() == null) {
-            throw new BusinessException("Người tạo phiếu (createdBy) là bắt buộc");
+            throw new BusinessException(SystemMessage.INV_ERR_020.getMessage());
         }
     }
 
@@ -1074,7 +1067,7 @@ public class InventoryDocumentService {
     private void validateCreateImportRequest(InventoryDocumentRequest req) {
         validateRequiredImportFields(req);
         if (req.getCreatedBy() == null) {
-            throw new BusinessException("Người tạo phiếu (createdBy) là bắt buộc");
+            throw new BusinessException(SystemMessage.INV_ERR_020.getMessage());
         }
     }
 
@@ -1092,21 +1085,21 @@ public class InventoryDocumentService {
 
     private void validateCommonRequiredFields(InventoryDocumentRequest req, String label, boolean exportDocument) {
         if (req == null) {
-            throw new BusinessException("Dữ liệu yêu cầu phiếu " + label + " kho là bắt buộc");
+            throw new BusinessException(String.format(SystemMessage.INV_ERR_019.getMessage(), label));
         }
         if (req.getWarehouseId() == null) {
-            throw new BusinessException("warehouseId là bắt buộc");
+            throw new BusinessException(SystemMessage.INV_ERR_018.getMessage());
         }
         if (req.getDocDate() == null) {
-            throw new BusinessException("docDate là bắt buộc");
+            throw new BusinessException(SystemMessage.INV_ERR_017.getMessage());
         }
         if (req.getLines() == null || req.getLines().isEmpty()) {
-            throw new BusinessException("Phiếu " + label + " kho phải có ít nhất một dòng chi tiết");
+            throw new BusinessException(String.format(SystemMessage.INV_ERR_016.getMessage(), label));
         }
         for (int i = 0; i < req.getLines().size(); i++) {
             InventoryDocumentLineRequest line = req.getLines().get(i);
             if (line == null || line.getVariantId() == null) {
-                throw new BusinessException("lines[" + i + "].variantId la bat buoc");
+                throw new BusinessException(String.format(SystemMessage.INV_ERR_015.getMessage(), i));
             }
             if (exportDocument) {
                 requirePositive(line.getQuantityOut(), "lines[" + i + "].quantityOut");
@@ -1119,7 +1112,7 @@ public class InventoryDocumentService {
     private void ensureEditable(InventoryDocument doc) {
         String status = normalizeStatusValue(doc.getStatus(), DEFAULT_STATUS);
         if (!EDITABLE_STATUSES.contains(status)) {
-            throw new BusinessException("Chỉ có thể cập nhật phiếu lưu tạm");
+            throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
         }
     }
 
@@ -1155,7 +1148,7 @@ public class InventoryDocumentService {
                     }
                 });
                 
-                throw new BusinessException("Số lượng xuất lớn hơn số lượng tồn kho khả dụng, không thể xuất kho. (Đã bỏ qua các mặt hàng đang bị giữ chỗ cho đơn khác)");
+                throw new BusinessException(SystemMessage.INV_ERR_013.getMessage());
             }
         }
     }
@@ -1220,7 +1213,7 @@ public class InventoryDocumentService {
             }
         } else {
             if (inventoryDocumentRepository.existsByDocCode(docCode)) {
-                throw new BusinessException("Mã phiếu xuất kho đã tồn tại");
+                throw new BusinessException(SystemMessage.INV_ERR_012.getMessage());
             }
         }
         return docCode;
@@ -1241,7 +1234,7 @@ public class InventoryDocumentService {
             }
         } else {
             if (inventoryDocumentRepository.existsByDocCode(docCode)) {
-                throw new BusinessException("Mã phiếu nhập kho đã tồn tại");
+                throw new BusinessException(SystemMessage.INV_ERR_011.getMessage());
             }
         }
         return docCode;
@@ -1250,7 +1243,7 @@ public class InventoryDocumentService {
     private InventoryDocumentLine toExportLineEntity(InventoryDocument doc, InventoryDocumentLineRequest lr,
             int index) {
         if (lr.getQuantityIn() != null && lr.getQuantityIn().compareTo(ZERO) > 0) {
-            throw new BusinessException("Phiếu xuất kho không được có quantityIn");
+            throw new BusinessException(SystemMessage.INV_ERR_010.getMessage());
         }
         BigDecimal quantityOut = requirePositive(lr.getQuantityOut(), "lines[" + index + "].quantityOut");
         BigDecimal unitCost = nonNegativeOrZero(lr.getUnitCost(), "lines[" + index + "].unitCost");
@@ -1291,15 +1284,13 @@ public class InventoryDocumentService {
                         .findByVariantIdAndSerialNumber(lr.getVariantId(), snValue.trim()).orElse(null);
                 if (snObj != null) {
                     if (!"AVAILABLE".equals(snObj.getStatus())) {
-                        throw new BusinessException("Serial " + snValue + " không có sẵn trong kho (trạng thái: "
-                                + snObj.getStatus() + ")");
+                        throw new BusinessException(String.format(SystemMessage.INV_ERR_009.getMessage(), snValue, snObj.getStatus()));
                     }
                     ensureSerialNotInstalledInPc(snObj, doc);
                     boolean isLocked = inventoryDocumentLineRepository.isSerialLockedInDrafts(snObj.getId(),
                             doc.getId());
                     if (isLocked) {
-                        throw new BusinessException("Serial " + snValue
-                                + " đang nằm trong một phiếu xuất nháp khác, vui lòng kiểm tra lại");
+                        throw new BusinessException(String.format(SystemMessage.INV_ERR_008.getMessage(), snValue));
                     }
                 }
             }
@@ -1307,14 +1298,12 @@ public class InventoryDocumentService {
             SerialNumber snObj = serialNumberRepository.findById(serialNumberId).orElse(null);
             if (snObj != null) {
                 if (!"AVAILABLE".equals(snObj.getStatus())) {
-                    throw new BusinessException("Serial " + snObj.getSerialNumber()
-                            + " không có sẵn trong kho (trạng thái: " + snObj.getStatus() + ")");
+                    throw new BusinessException(String.format(SystemMessage.INV_ERR_009.getMessage(), snObj.getSerialNumber(), snObj.getStatus()));
                 }
                 ensureSerialNotInstalledInPc(snObj, doc);
                 boolean isLocked = inventoryDocumentLineRepository.isSerialLockedInDrafts(serialNumberId, doc.getId());
                 if (isLocked) {
-                    throw new BusinessException("Serial " + snObj.getSerialNumber()
-                            + " đang nằm trong một phiếu xuất nháp khác, vui lòng kiểm tra lại");
+                    throw new BusinessException(String.format(SystemMessage.INV_ERR_008.getMessage(), snObj.getSerialNumber()));
                 }
             }
         }
@@ -1340,7 +1329,7 @@ public class InventoryDocumentService {
     private InventoryDocumentLine toImportLineEntity(InventoryDocument doc, InventoryDocumentLineRequest lr,
             int index) {
         if (lr.getQuantityOut() != null && lr.getQuantityOut().compareTo(ZERO) > 0) {
-            throw new BusinessException("Phiếu nhập kho không được có quantityOut");
+            throw new BusinessException(SystemMessage.INV_ERR_007.getMessage());
         }
         BigDecimal quantityIn = requirePositive(lr.getQuantityIn(), "lines[" + index + "].quantityIn");
         BigDecimal unitCost = nonNegativeOrZero(lr.getUnitCost(), "lines[" + index + "].unitCost");
@@ -1372,7 +1361,7 @@ public class InventoryDocumentService {
             return ZERO;
         }
         if (value.compareTo(ZERO) < 0 || value.compareTo(new BigDecimal("10")) > 0) {
-            throw new BusinessException("Thuế VAT phải nằm trong khoảng từ 0% đến 10%");
+            throw new BusinessException(SystemMessage.INV_ERR_006.getMessage());
         }
         return value;
     }
@@ -1405,7 +1394,7 @@ public class InventoryDocumentService {
     private String normalizeEditableStatus(String status, String fallback) {
         String normalized = normalizeStatusValue(status, fallback);
         if (!EDITABLE_STATUSES.contains(normalized)) {
-            throw new BusinessException("Trạng thái phiếu xuất kho phải là lưu tạm");
+            throw new BusinessException(SystemMessage.INV_ERR_005.getMessage());
         }
         return normalized;
     }
@@ -1418,7 +1407,7 @@ public class InventoryDocumentService {
     private String normalizeEditableImportStatus(String status, String fallback) {
         String normalized = normalizeStatusValue(status, fallback);
         if (!EDITABLE_STATUSES.contains(normalized)) {
-            throw new BusinessException("Trạng thái phiếu nhập kho phải là lưu tạm");
+            throw new BusinessException(SystemMessage.INV_ERR_004.getMessage());
         }
         return normalized;
     }
@@ -1433,7 +1422,7 @@ public class InventoryDocumentService {
         }
         normalized = normalized.toUpperCase(Locale.ROOT);
         if (!VALID_STATUSES.contains(normalized)) {
-            throw new BusinessException("Trạng thái phiếu kho không hợp lệ");
+            throw new BusinessException(SystemMessage.INV_ERR_003.getMessage());
         }
         return normalized;
     }
@@ -1480,7 +1469,7 @@ public class InventoryDocumentService {
         SalesOrder so = salesOrderRepository.findById(soId)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn hàng SO " + soId));
         if (!"APPROVED".equals(so.getStatus())) {
-            throw new BusinessException("Chỉ có thể tạo phiếu xuất kho cho đơn hàng ĐÃ DUYỆT");
+            throw new BusinessException(SystemMessage.INV_ERR_002.getMessage());
         }
 
         InventoryDocument doc = new InventoryDocument();
@@ -1522,7 +1511,7 @@ public class InventoryDocumentService {
         }
 
         if (doc.getLines().isEmpty()) {
-            throw new BusinessException("Đơn bán hàng này đã xuất kho đủ toàn bộ sản phẩm");
+            throw new BusinessException(SystemMessage.INV_ERR_001.getMessage());
         }
 
         return toResponse(inventoryDocumentRepository.save(doc));

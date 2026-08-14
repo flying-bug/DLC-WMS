@@ -58,6 +58,7 @@ function PermissionDetailPage() {
         report_transfer: { full: false, view: false, export: false },
         report_debt: { full: false, view: false, export: false },
         report_summary: { full: false, view: false, export: false },
+        report_sales: { full: false, view: false, export: false },
 
         // Quản trị hệ thống
         ai_chat: { full: false, view: false },
@@ -116,7 +117,7 @@ function PermissionDetailPage() {
                                 const defaultStaffModules = [
                                     'import', 'export', 'purchase_order', 'sales_order', 'payment',
                                     'transfer', 'stocktake', 'assembly_config', 'assembly', 'warranty', 'repair',
-                                    'product', 'report_balance', 'ai_chat'
+                                    'product', 'report_balance', 'report_sales', 'ai_chat'
                                 ];
                                 Object.keys(newPerms).forEach(mod => {
                                     const isDefaultStaffModule = defaultStaffModules.includes(mod);
@@ -284,6 +285,7 @@ function PermissionDetailPage() {
                         {renderRow('report_transfer', 'Báo cáo chuyển kho nội bộ', 'bi-arrow-left-right')}
                         {renderRow('report_debt', 'Báo cáo công nợ đối tác', 'bi-receipt')}
                         {renderRow('report_summary', 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)', 'bi-file-earmark-bar-graph')}
+                        {renderRow('report_sales', 'Báo cáo lợi nhuận bán hàng', 'bi-currency-dollar')}
                     </>
                 );
             case 'system':

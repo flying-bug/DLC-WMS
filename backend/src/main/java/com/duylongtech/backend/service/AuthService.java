@@ -96,7 +96,7 @@ public class AuthService {
             if (e instanceof BusinessException) {
                 throw (BusinessException) e;
             }
-            throw new BusinessException("Google Login Failed: " + e.getMessage());
+            throw new BusinessException(String.format(SystemMessage.AUTH_ERR_001.getMessage(), e.getMessage()));
         }
     }
 

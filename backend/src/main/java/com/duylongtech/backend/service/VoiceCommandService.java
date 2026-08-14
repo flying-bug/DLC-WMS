@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.response.VoiceCommandResponse;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -305,7 +306,7 @@ public class VoiceCommandService {
 
     private String callOpenAi(String transcript) throws Exception {
         if (!openAiEnabled || openAiApiKey == null || openAiApiKey.isBlank()) {
-            throw new IllegalStateException("OpenAI chưa được bật hoặc chưa cấu hình API key.");
+            throw new IllegalStateException(SystemMessage.VOICE_ERR_002.getMessage());
         }
 
         Map<String, Object> request = new LinkedHashMap<>();
@@ -342,7 +343,7 @@ public class VoiceCommandService {
 
     private String callGemini(String transcript) throws Exception {
         if (!geminiEnabled || geminiApiKey == null || geminiApiKey.isBlank()) {
-            throw new IllegalStateException("Gemini chưa được bật hoặc chưa cấu hình API key.");
+            throw new IllegalStateException(SystemMessage.VOICE_ERR_001.getMessage());
         }
 
         Map<String, Object> textPart = new LinkedHashMap<>();

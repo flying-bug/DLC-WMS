@@ -168,7 +168,7 @@ public class CustomerService {
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {
-            throw new RuntimeException("Lỗi khi tạo file Excel Template: " + e.getMessage());
+            throw new RuntimeException(String.format(SystemMessage.CUST_ERR_003.getMessage(), e.getMessage()));
         }
     }
 
@@ -246,7 +246,7 @@ public class CustomerService {
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {
-            throw new RuntimeException("Lỗi khi tạo file Excel: " + e.getMessage());
+            throw new RuntimeException(String.format(SystemMessage.CUST_ERR_002.getMessage(), e.getMessage()));
         }
     }
 
@@ -317,7 +317,7 @@ public class CustomerService {
                     .build();
 
         } catch (Exception e) {
-            throw new RuntimeException("Không thể đọc file Excel: " + e.getMessage());
+            throw new RuntimeException(String.format(SystemMessage.CUST_ERR_001.getMessage(), e.getMessage()));
         }
     }
 
