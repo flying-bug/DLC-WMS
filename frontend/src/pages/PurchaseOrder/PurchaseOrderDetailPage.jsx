@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useReactToPrint } from 'react-to-print';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as poApi from '../../api/purchaseOrderApi';
 import * as importApi from '../../api/inventoryImportApi';
-import PurchaseOrderQuotationTemplate from './components/PurchaseOrderQuotationTemplate';
+import { printPurchaseOrder } from '../../utils/printPurchaseOrder';
 import styles from './PurchaseOrderDetailPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
@@ -33,12 +32,6 @@ function PurchaseOrderDetailPage() {
   const [toast,           setToast]           = useState({ isVisible: false, type: 'info', message: '' });
   const [confirmApprove,  setConfirmApprove]  = useState(false);
   const [confirmCancel,   setConfirmCancel]   = useState(false);
-  const printRef = useRef(null);
-
-  const handlePrintQuote = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `Don-Mua-Hang-${po?.poCode || 'PO'}`,
-  });
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(p => ({ ...p, isVisible: false }));
@@ -160,8 +153,8 @@ function PurchaseOrderDetailPage() {
           </div>
 
           <div className={styles.headerActions}>
-            <button className={styles.btnPrimary} onClick={handlePrintQuote}>
-              <i className="bi bi-printer" /> In báo giá
+            <button className={styles.btnPrimary} onClick={() => printPurchaseOrder(po)}>
+              <i className="bi bi-printer" /> In đơn mua hàng
             </button>
             {po.status === 'DRAFT' && (
               <button className={styles.btnEdit} onClick={() => navigate(`/purchase-orders/${id}/edit`)}>
@@ -414,10 +407,6 @@ function PurchaseOrderDetailPage() {
         onCancel={() => setConfirmCancel(false)}
       />
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
-
-      <div style={{ display: 'none' }}>
-        <PurchaseOrderQuotationTemplate ref={printRef} order={po} />
-      </div>
     </AdminLayout>
   );
 }
