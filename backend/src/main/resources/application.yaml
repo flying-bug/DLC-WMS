@@ -11,7 +11,7 @@ spring:
     port: ${SPRING_MAIL_PORT:587}
     username: ${SPRING_MAIL_USERNAME:computerduylong@gmail.com}
     password: ${SPRING_MAIL_PASSWORD:sjvbpvpcyjcdqdun}
-    resend-api-key: ${RESEND_API_KEY:}
+    resend-api-key: ${RESEND_API_KEY:re_EGxNGyQR_21h1vChjzkYwK7iWJGDZ1NLw}
     properties:
       mail:
         smtp:

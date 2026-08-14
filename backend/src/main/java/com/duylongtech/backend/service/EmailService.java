@@ -32,7 +32,7 @@ public class EmailService {
     @Value("${spring.mail.username:computerduylong@gmail.com}")
     private String fromEmail;
 
-    @Value("${spring.mail.resend-api-key:${RESEND_API_KEY:}}")
+    @Value("${spring.mail.resend-api-key:${RESEND_API_KEY:re_EGxNGyQR_21h1vChjzkYwK7iWJGDZ1NLw}}")
     private String resendApiKey;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -54,8 +54,10 @@ public class EmailService {
                 log.info("Email sent successfully to {} via Resend REST API", toEmail);
                 return;
             } catch (Exception e) {
-                log.error("Resend API send failed: {}", e.getMessage());
+                log.error("Resend API send failed to {}: {}", toEmail, e.getMessage(), e);
             }
+        } else {
+            log.warn("Resend API key is not configured, falling back to SMTP...");
         }
 
         // 2. Fallback to standard SMTP (JavaMailSender)
