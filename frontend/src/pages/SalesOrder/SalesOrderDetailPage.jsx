@@ -1,13 +1,12 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useReactToPrint } from 'react-to-print';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as soApi from '../../api/salesOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
-import QuotationTemplate from './components/QuotationTemplate';
 import { printSalesInvoice } from '../../utils/printSalesInvoice';
+import { printQuotation } from '../../utils/printQuotation';
 import styles from './SalesOrderDetailPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
@@ -63,11 +62,9 @@ function SalesOrderDetailPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
 
-  const printRef = useRef(null);
-  const handlePrintQuote = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `Bao-Gia-${so?.soCode || 'SO'}`,
-  });
+  const handlePrintQuote = () => {
+    printQuotation(so);
+  };
 
   const handlePrintInvoice = () => {
     printSalesInvoice(so);
@@ -659,15 +656,11 @@ function SalesOrderDetailPage() {
           </div>
         )}
         <Toast
-        isVisible={toast.isVisible}
-        type={toast.type}
-        message={toast.message}
-        onClose={hideToast}
-      />
-
-      <div style={{ display: 'none' }}>
-        <QuotationTemplate ref={printRef} order={so} />
-      </div>
+          isVisible={toast.isVisible}
+          type={toast.type}
+          message={toast.message}
+          onClose={hideToast}
+        />
       </div>
     </AdminLayout>
   );

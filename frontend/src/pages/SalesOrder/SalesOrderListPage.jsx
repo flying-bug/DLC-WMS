@@ -7,6 +7,7 @@ import * as soApi from '../../api/salesOrderApi';
 import styles from './SalesOrderListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { exportToExcel } from '../../utils/excelExport';
+import { printQuotation } from '../../utils/printQuotation';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 
@@ -134,6 +135,20 @@ function SalesOrderListPage() {
       setTimeout(() => navigate(`/export-slips/${exportId}/edit`), 800);
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || 'Không thể tạo phiếu xuất kho');
+    }
+  };
+
+  const handlePrintQuote = async (soSummary, e) => {
+    e.stopPropagation();
+    try {
+      let fullSo = soSummary;
+      if (!fullSo.lines || fullSo.lines.length === 0) {
+        const res = await soApi.getSalesOrderById(soSummary.id);
+        fullSo = unwrap(res);
+      }
+      printQuotation(fullSo);
+    } catch {
+      showToast('error', 'Không thể tải dữ liệu để in báo giá');
     }
   };
 
@@ -281,6 +296,12 @@ function SalesOrderListPage() {
                           title="Xem chi tiết"
                           style={{ cursor: 'pointer', marginRight: 10, color: 'var(--color-text-muted-2)', fontSize: 15 }}
                           onClick={() => navigate(`/sales-orders/${so.id}`)}
+                        />
+                        <i
+                          className="bi bi-printer"
+                          title="In báo giá"
+                          style={{ cursor: 'pointer', marginRight: 10, color: '#0284c7', fontSize: 15 }}
+                          onClick={(e) => handlePrintQuote(so, e)}
                         />
                         {so.status === 'DRAFT' && (
                           <i
