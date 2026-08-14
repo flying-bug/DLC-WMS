@@ -20,6 +20,7 @@ import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import styles from './CreateExportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { findBestMatch } from '../../utils/fuzzyMatch';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -121,6 +122,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   const stocktakeData = location.state?.stocktakeData || null;
   const soData = location.state?.soData || null;
   const returnUrl = location.state?.returnUrl || null;
+  const voiceData = location.state?.voiceData || null;
   const initialType = propMode || searchParams.get('type')?.toUpperCase() || (stocktakeData ? 'OTHER' : 'SALE');
 
   const [exportMode, setExportMode] = useState(initialType);
@@ -262,6 +264,61 @@ function CreateExportSlipPage({ mode: propMode }) {
 
     loadLookups();
   }, []);
+
+  // ── Voice Data auto-fill ──────────────────────────────────
+  useEffect(() => {
+    if (!voiceData) return;
+
+    if (voiceData.exportMode) {
+      setExportMode(voiceData.exportMode.toUpperCase());
+    }
+
+    // Auto-select warehouse
+    if (voiceData.warehouseKeyword && warehouses.length > 0) {
+      const matchWh = findBestMatch(warehouses, voiceData.warehouseKeyword, w => [w.name, w.code]);
+      if (matchWh) {
+        setForm(prev => ({ ...prev, warehouseId: String(matchWh.id) }));
+      }
+    }
+
+    // Auto-select customer
+    if (voiceData.customerKeyword && customers.length > 0) {
+      const matchCust = findBestMatch(customers, voiceData.customerKeyword, c => [c.name, c.code, c.phone]);
+      if (matchCust) {
+        setForm(prev => ({
+          ...prev,
+          partnerId: String(matchCust.id),
+          receiverName: matchCust.name || prev.receiverName,
+          receiverPhone: matchCust.phone || prev.receiverPhone,
+          customerAddress: matchCust.address || prev.customerAddress,
+          receiverAddress: matchCust.address || prev.receiverAddress,
+        }));
+      }
+    }
+
+    // Auto-fill note
+    if (voiceData.note) {
+      setForm(prev => ({ ...prev, note: prev.note ? `${prev.note} - ${voiceData.note}` : voiceData.note }));
+    }
+
+    // Auto-add product line
+    if (voiceData.productKeyword && products.length > 0) {
+      const matchProd = findBestMatch(products, voiceData.productKeyword, p => [p.productName, p.variantName, p.sku]);
+      if (matchProd) {
+        const qty = Number(voiceData.quantity) || 1;
+        const price = voiceData.unitPrice != null ? Number(voiceData.unitPrice) : (Number(matchProd.retailPrice || matchProd.price || 0));
+        setItems([{
+          ...emptyLine(),
+          variantId: String(matchProd.id),
+          quantity: qty,
+          price: price,
+          vatPercent: matchProd.vatPercent != null ? Number(matchProd.vatPercent) : 0,
+          warrantyMonths: matchProd.warrantyMonths != null ? Number(matchProd.warrantyMonths) : 0,
+          isNew: false,
+        }]);
+      }
+    }
+  }, [voiceData, warehouses, customers, products]);
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const userById = useMemo(() => new Map(users.map(user => [String(user.id), user])), [users]);

@@ -25,6 +25,7 @@ import axiosClient from '../../api/axiosClient';
 import styles from './CreateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { findBestMatch } from '../../utils/fuzzyMatch';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -385,33 +386,45 @@ function CreateImportSlipPage() {
   useEffect(() => {
     if (!voiceData) return;
 
+    // Auto-select warehouse by keyword
+    if (voiceData.warehouseKeyword && warehouses.length > 0) {
+      const matchWh = findBestMatch(warehouses, voiceData.warehouseKeyword, w => [w.name, w.code]);
+      if (matchWh) {
+        setForm(prev => ({ ...prev, warehouseId: String(matchWh.id) }));
+      }
+    }
+
     // Auto-select supplier by keyword
     if (voiceData.supplierKeyword && suppliers.length > 0) {
-      const kw = voiceData.supplierKeyword.toLowerCase();
-      const match = suppliers.find(s => s.name?.toLowerCase().includes(kw));
-      if (match) {
-        setForm(prev => ({ ...prev, partnerId: match.id, partnerName: match.name }));
+      const matchSupp = findBestMatch(suppliers, voiceData.supplierKeyword, s => [s.name, s.code, s.phone]);
+      if (matchSupp) {
+        setForm(prev => ({ ...prev, partnerId: matchSupp.id, partnerName: matchSupp.name }));
       }
+    }
+
+    // Auto-fill note
+    if (voiceData.note) {
+      setForm(prev => ({ ...prev, note: prev.note ? `${prev.note} - ${voiceData.note}` : voiceData.note }));
     }
 
     // Auto-add product line by keyword
     if (voiceData.productKeyword && products.length > 0) {
-      const kw = voiceData.productKeyword.toLowerCase();
-      const match = products.find(p =>
-        p.productName?.toLowerCase().includes(kw)
-        || p.variantName?.toLowerCase().includes(kw)
-      );
-      if (match) {
+      const matchProd = findBestMatch(products, voiceData.productKeyword, p => [p.productName, p.variantName, p.sku]);
+      if (matchProd) {
         const qty = Number(voiceData.quantity) || 1;
+        const price = voiceData.unitPrice != null ? Number(voiceData.unitPrice) : (Number(matchProd.importPrice || matchProd.costPrice || matchProd.price || 0));
         setItems([{
           ...emptyLine(),
-          variantId: String(match.id),
+          variantId: String(matchProd.id),
           quantity: qty,
+          price: price,
+          vatPercent: matchProd.vatPercent != null ? Number(matchProd.vatPercent) : 0,
+          warrantyMonths: matchProd.warrantyMonths != null ? Number(matchProd.warrantyMonths) : 0,
           isNew: false,
         }]);
       }
     }
-  }, [voiceData, suppliers, products]);
+  }, [voiceData, warehouses, suppliers, products]);
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Select from 'react-select';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -14,6 +14,7 @@ import * as soApi from '../../api/salesOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import styles from './CreateSalesOrderPage.module.css';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
+import { findBestMatch } from '../../utils/fuzzyMatch';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p) => p?.content ?? p ?? [];
@@ -42,8 +43,10 @@ const emptyLine = () => ({ variantId: null, quantity: 1, unitPrice: 0, unitName:
 
 function CreateSalesOrderPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams(); // nếu có id → chế độ edit
   const isEdit = Boolean(id);
+  const voiceData = location.state?.voiceData || null;
 
   const [customers, setCustomers] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
@@ -113,6 +116,72 @@ function CreateSalesOrderPage() {
     };
     load();
   }, [isEdit]);
+
+  // ── Voice Data auto-fill ──────────────────────────────────
+  useEffect(() => {
+    if (!voiceData || isEdit) return;
+
+    if (voiceData.mode) {
+      setMode(voiceData.mode);
+    }
+
+    // Auto-select warehouse
+    if (voiceData.warehouseKeyword && warehouses.length > 0) {
+      const matchWh = findBestMatch(warehouses, voiceData.warehouseKeyword, w => [w.name, w.code]);
+      if (matchWh) {
+        setForm(prev => ({ ...prev, warehouseId: matchWh.id }));
+      }
+    }
+
+    // Auto-select customer
+    if (voiceData.customerKeyword) {
+      if (customers.length > 0) {
+        const matchCust = findBestMatch(customers, voiceData.customerKeyword, c => [c.name, c.code, c.phone]);
+        if (matchCust) {
+          setForm(prev => ({
+            ...prev,
+            partnerId: matchCust.id,
+            deliveryAddress: matchCust.address || prev.deliveryAddress,
+          }));
+        } else {
+          setDirectCustomer(prev => ({
+            ...prev,
+            name: voiceData.customerKeyword,
+            phone: voiceData.customerPhone || prev.phone,
+            address: voiceData.deliveryAddress || prev.address,
+          }));
+        }
+      }
+    }
+
+    if (voiceData.customerPhone) {
+      setDirectCustomer(prev => ({ ...prev, phone: voiceData.customerPhone }));
+    }
+
+    // Auto-fill note
+    if (voiceData.note) {
+      setForm(prev => ({ ...prev, note: prev.note ? `${prev.note} - ${voiceData.note}` : voiceData.note }));
+    }
+
+    // Auto-add product line
+    if (voiceData.productKeyword && variants.length > 0) {
+      const matchProd = findBestMatch(variants, voiceData.productKeyword, v => [v.productName, v.variantName, v.sku]);
+      if (matchProd) {
+        const qty = Number(voiceData.quantity) || 1;
+        const price = voiceData.unitPrice != null ? Number(voiceData.unitPrice) : (Number(matchProd.retailPrice || matchProd.price || 0));
+        setLines([{
+          variantId: matchProd.id,
+          quantity: qty,
+          unitPrice: price,
+          unitName: matchProd.unitName || 'Cái',
+          warrantyMonths: Number(matchProd.warrantyMonths || 0),
+          vatRate: Number(matchProd.vatPercent || matchProd.vatRate || 0),
+          serialNumbers: [],
+          note: '',
+        }]);
+      }
+    }
+  }, [voiceData, isEdit, warehouses, customers, variants]);
 
   // Load SO data if editing
   useEffect(() => {

@@ -15,6 +15,7 @@ import axiosClient from '../../api/axiosClient';
 import styles from './CreateTransferSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { findBestMatch } from '../../utils/fuzzyMatch';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -194,33 +195,32 @@ function CreateTransferSlipPage() {
 
     // Auto-select warehouses by keyword
     if (voiceData.fromWarehouseKeyword && warehouses.length > 0) {
-      const kw = voiceData.fromWarehouseKeyword.toLowerCase();
-      const match = warehouses.find(w => w.name?.toLowerCase().includes(kw) || w.code?.toLowerCase().includes(kw));
-      if (match) {
-        setForm(prev => ({ ...prev, fromWarehouseId: match.id }));
+      const matchFrom = findBestMatch(warehouses, voiceData.fromWarehouseKeyword, w => [w.name, w.code]);
+      if (matchFrom) {
+        setForm(prev => ({ ...prev, fromWarehouseId: matchFrom.id }));
       }
     }
 
     if (voiceData.toWarehouseKeyword && warehouses.length > 0) {
-      const kw = voiceData.toWarehouseKeyword.toLowerCase();
-      const match = warehouses.find(w => w.name?.toLowerCase().includes(kw) || w.code?.toLowerCase().includes(kw));
-      if (match) {
-        setForm(prev => ({ ...prev, toWarehouseId: match.id }));
+      const matchTo = findBestMatch(warehouses, voiceData.toWarehouseKeyword, w => [w.name, w.code]);
+      if (matchTo) {
+        setForm(prev => ({ ...prev, toWarehouseId: matchTo.id }));
       }
+    }
+
+    // Auto-fill note
+    if (voiceData.note) {
+      setForm(prev => ({ ...prev, note: prev.note ? `${prev.note} - ${voiceData.note}` : voiceData.note }));
     }
 
     // Auto-add product line by keyword
     if (voiceData.productKeyword && products.length > 0) {
-      const kw = voiceData.productKeyword.toLowerCase();
-      const match = products.find(p =>
-        p.productName?.toLowerCase().includes(kw)
-        || p.variantName?.toLowerCase().includes(kw)
-      );
-      if (match) {
+      const matchProd = findBestMatch(products, voiceData.productKeyword, p => [p.productName, p.variantName, p.sku]);
+      if (matchProd) {
         const qty = Number(voiceData.quantity) || 1;
         setItems([{
           ...emptyLine(),
-          variantId: String(match.id),
+          variantId: String(matchProd.id),
           quantity: qty,
         }]);
       }

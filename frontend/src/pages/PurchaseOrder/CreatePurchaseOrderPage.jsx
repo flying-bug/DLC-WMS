@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -9,6 +9,7 @@ import SupplierModal from '../Supplier/components/SupplierModal';
 import * as poApi from '../../api/purchaseOrderApi';
 import styles from './CreatePurchaseOrderPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import { findBestMatch } from '../../utils/fuzzyMatch';
 
 const unwrap      = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p)   => p?.content ?? p ?? [];
@@ -39,8 +40,10 @@ const emptyLine = () => ({
 
 function CreatePurchaseOrderPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id }   = useParams();
   const isEdit   = Boolean(id);
+  const voiceData = location.state?.voiceData || null;
 
   const [suppliers, setSuppliers] = useState([]);
   const [variants,  setVariants]  = useState([]);
@@ -91,6 +94,41 @@ function CreatePurchaseOrderPage() {
     };
     load();
   }, [isEdit]);
+
+  // ── Voice Data auto-fill ──────────────────────────────────
+  useEffect(() => {
+    if (!voiceData || isEdit) return;
+
+    // Auto-select supplier
+    if (voiceData.supplierKeyword && suppliers.length > 0) {
+      const matchSupp = findBestMatch(suppliers, voiceData.supplierKeyword, s => [s.name, s.code, s.phone]);
+      if (matchSupp) {
+        setForm(prev => ({ ...prev, partnerId: matchSupp.id }));
+      }
+    }
+
+    // Auto-fill note
+    if (voiceData.note) {
+      setForm(prev => ({ ...prev, note: prev.note ? `${prev.note} - ${voiceData.note}` : voiceData.note }));
+    }
+
+    // Auto-add product line
+    if (voiceData.productKeyword && variants.length > 0) {
+      const matchProd = findBestMatch(variants, voiceData.productKeyword, v => [v.productName, v.variantName, v.sku]);
+      if (matchProd) {
+        const qty = Number(voiceData.quantity) || 1;
+        const price = voiceData.unitPrice != null ? Number(voiceData.unitPrice) : (Number(matchProd.importPrice || matchProd.costPrice || matchProd.price || 0));
+        setLines([{
+          variantId: matchProd.id,
+          quantity: qty,
+          unitPrice: price,
+          unitName: matchProd.unitName || 'Cái',
+          vatRate: Number(matchProd.vatPercent || matchProd.vatRate || 0),
+          note: '',
+        }]);
+      }
+    }
+  }, [voiceData, isEdit, suppliers, variants]);
 
   // Load PO data if editing
   useEffect(() => {
