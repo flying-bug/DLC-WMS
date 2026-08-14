@@ -19,6 +19,7 @@ function SystemSettingsTab() {
     const [saving, setSaving] = useState(false);
     const [testing, setTesting] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [testResult, setTestResult] = useState(null); // { success: boolean, message: string }
     const { showToast } = useToast();
     const fileInputRef = useRef(null);
 
@@ -38,10 +39,14 @@ function SystemSettingsTab() {
         setSaving(true);
         try {
             const res = await saveSystemSettings(settings);
-            if (res.success) showToast('success', 'Cập nhật thành công.');
-            else showToast('error', 'Thao tác thất bại.');
-        } catch {
-            showToast('error', 'Thao tác thất bại.');
+            const msg = res.data?.message || res.message || 'Cài đặt hệ thống đã được lưu thành công.';
+            if (res.success) {
+                showToast('success', msg);
+            } else {
+                showToast('error', res.message || 'Lưu cài đặt thất bại.');
+            }
+        } catch (err) {
+            showToast('error', err.response?.data?.message || err.message || 'Lưu cài đặt thất bại.');
         } finally {
             setSaving(false);
         }
@@ -49,17 +54,24 @@ function SystemSettingsTab() {
 
     const handleTestDrive = async () => {
         setTesting(true);
+        setTestResult(null);
         try {
             // Auto save current form inputs (Folder ID, etc.) to backend before testing
             await saveSystemSettings(settings);
             const res = await testDriveConnection();
             if (res.success && res.data?.connected) {
-                showToast('success', 'Cập nhật thành công.');
+                const msg = res.data?.message || 'Kết nối Google Drive thành công!';
+                setTestResult({ success: true, message: msg });
+                showToast('success', msg);
             } else {
-                showToast('error', 'Thao tác thất bại.');
+                const msg = res.message || 'Không thể kết nối Google Drive. Vui lòng kiểm tra lại cấu hình.';
+                setTestResult({ success: false, message: msg });
+                showToast('error', msg);
             }
-        } catch {
-            showToast('error', 'Thao tác thất bại.');
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message || 'Lỗi kết nối Google Drive.';
+            setTestResult({ success: false, message: msg });
+            showToast('error', msg);
         } finally {
             setTesting(false);
         }
@@ -71,14 +83,16 @@ function SystemSettingsTab() {
         setUploading(true);
         try {
             const res = await uploadServiceAccount(file);
+            const msg = res.data?.message || res.message || 'Tải lên Service Account JSON thành công!';
             if (res.success) {
-                showToast('success', 'Cập nhật thành công.');
+                showToast('success', msg);
                 setSettings(s => ({ ...s, driveConfigured: true }));
+                setTestResult(null);
             } else {
-                showToast('error', 'Thao tác thất bại.');
+                showToast('error', res.message || 'Tải lên thất bại.');
             }
-        } catch {
-            showToast('error', 'Thao tác thất bại.');
+        } catch (err) {
+            showToast('error', err.response?.data?.message || err.message || 'Tải lên file JSON thất bại.');
         } finally {
             setUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -267,6 +281,13 @@ function SystemSettingsTab() {
                             <i className={testing ? 'bi bi-hourglass-split' : 'bi bi-wifi'} />
                             {testing ? 'Đang kiểm tra...' : 'Kiểm tra kết nối Drive'}
                         </button>
+
+                        {testResult && (
+                            <div className={`${styles.testStatusBox} ${testResult.success ? styles.testStatusSuccess : styles.testStatusError}`}>
+                                <i className={testResult.success ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-triangle-fill'} />
+                                <span>{testResult.message}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
