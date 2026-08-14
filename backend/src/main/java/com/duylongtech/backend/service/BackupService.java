@@ -39,20 +39,24 @@ public class BackupService {
     private final Environment env;
 
     private void ensureNativePasswordAuth(String user, String pass) {
-        org.hibernate.Session session = entityManager.unwrap(org.hibernate.Session.class);
-        session.doWork(connection -> {
-            try (java.sql.Statement stmt = connection.createStatement()) {
-                try {
-                    stmt.executeUpdate("ALTER USER '" + user + "'@'%' IDENTIFIED WITH mysql_native_password BY '" + pass + "'");
-                    stmt.executeUpdate("FLUSH PRIVILEGES");
-                } catch (Exception e) {
+        try {
+            org.hibernate.Session session = entityManager.unwrap(org.hibernate.Session.class);
+            session.doWork(connection -> {
+                try (java.sql.Statement stmt = connection.createStatement()) {
                     try {
-                        stmt.executeUpdate("ALTER USER '" + user + "'@'localhost' IDENTIFIED WITH mysql_native_password BY '" + pass + "'");
+                        stmt.executeUpdate("ALTER USER '" + user + "'@'%' IDENTIFIED WITH mysql_native_password BY '" + pass + "'");
                         stmt.executeUpdate("FLUSH PRIVILEGES");
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) {
+                        try {
+                            stmt.executeUpdate("ALTER USER '" + user + "'@'localhost' IDENTIFIED WITH mysql_native_password BY '" + pass + "'");
+                            stmt.executeUpdate("FLUSH PRIVILEGES");
+                        } catch (Exception ignored) {}
+                    }
                 }
-            }
-        });
+            });
+        } catch (Exception e) {
+            log.debug("ensureNativePasswordAuth skipped: {}", e.getMessage());
+        }
     }
 
 
@@ -126,18 +130,22 @@ public class BackupService {
         // ── Find dump executable & run dump ──────────────────────────────────
         String dumpCmd = new File("/usr/bin/mariadb-dump").exists() ? "/usr/bin/mariadb-dump" : "mysqldump";
 
-        ProcessBuilder pb = new ProcessBuilder(
+        List<String> dumpArgs = new java.util.ArrayList<>(List.of(
                 dumpCmd,
                 "-h", host,
                 "-P", port,
                 "-u", dbUser,
                 "--password=" + dbPass,
-                "--skip-ssl",
                 "--single-transaction",
                 "--routines",
-                "--triggers",
-                dbName
-        );
+                "--triggers"
+        ));
+        if (dbUrl.contains("useSSL=false") || dbUrl.contains("sslMode=DISABLED")) {
+            dumpArgs.add("--skip-ssl");
+        }
+        dumpArgs.add(dbName);
+
+        ProcessBuilder pb = new ProcessBuilder(dumpArgs);
         pb.redirectErrorStream(false);
 
         Process process;
@@ -299,14 +307,19 @@ public class BackupService {
 
         // Decompress (and Cipher decrypt if encrypted) and pipe to mysql / mariadb
         String mysqlCmd = new File("/usr/bin/mariadb").exists() ? "/usr/bin/mariadb" : "mysql";
-        ProcessBuilder pb = new ProcessBuilder(
+        List<String> restoreArgs = new java.util.ArrayList<>(List.of(
                 mysqlCmd,
-                "-h", host, "-P", port,
+                "-h", host,
+                "-P", port,
                 "-u", dbUser,
-                "--password=" + dbPass,
-                "--skip-ssl",
-                dbName
-        );
+                "--password=" + dbPass
+        ));
+        if (dbUrl.contains("useSSL=false") || dbUrl.contains("sslMode=DISABLED")) {
+            restoreArgs.add("--skip-ssl");
+        }
+        restoreArgs.add(dbName);
+
+        ProcessBuilder pb = new ProcessBuilder(restoreArgs);
         pb.redirectErrorStream(true);
 
         Process process = pb.start();
