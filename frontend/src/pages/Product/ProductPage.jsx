@@ -8,6 +8,7 @@ import PrintBarcodeModal from '../../components/ui/PrintBarcodeModal/PrintBarcod
 import axiosClient from '../../api/axiosClient';
 import styles from './ProductPage.module.css';
 import { getVietnamTimestamp } from '../../utils/dateFormat';
+import { compressImage } from '../../utils/imageCompressor';
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -1074,13 +1075,17 @@ const ProductPage = () => {
             return;
         }
 
-        const uploadData = new FormData();
-        uploadData.append('file', file);
-        uploadData.append('folder', 'products');
-
         try {
             setUploadingImage(true);
             setErrorMsg('');
+
+            // Nén ảnh sản phẩm ở Client (tối đa 1200x1200px, quality 0.85, giảm từ 5MB-10MB xuống ~100KB-200KB)
+            const compressedFile = await compressImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
+
+            const uploadData = new FormData();
+            uploadData.append('file', compressedFile);
+            uploadData.append('folder', 'products');
+
             const response = await axiosClient.post('/uploads/images', uploadData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });

@@ -53,7 +53,9 @@ public class CloudinaryService {
                             "resource_type", "image",
                             "use_filename", true,
                             "unique_filename", true,
-                            "overwrite", false
+                            "overwrite", false,
+                            "quality", "auto",
+                            "fetch_format", "auto"
                     )
             );
 
