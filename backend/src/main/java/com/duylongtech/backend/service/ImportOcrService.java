@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
@@ -117,9 +118,25 @@ public class ImportOcrService {
         private String status; // PENDING, PROCESSING, SUCCESS, ERROR
         private OcrImportResponse result;
         private String errorMessage;
+        private long createdAt = System.currentTimeMillis();
     }
 
     private final Map<String, OcrSessionData> ocrSessions = new ConcurrentHashMap<>();
+
+    /**
+     * Tự động dọn dẹp các session quét QR đã hết hạn (> 15 phút) mỗi 5 phút một lần.
+     */
+    @Scheduled(fixedRate = 300000)
+    public void cleanupExpiredSessions() {
+        long now = System.currentTimeMillis();
+        long maxAgeMillis = 15 * 60 * 1000L; // 15 phút
+        int initialSize = ocrSessions.size();
+        ocrSessions.entrySet().removeIf(entry -> (now - entry.getValue().getCreatedAt()) > maxAgeMillis);
+        int removedCount = initialSize - ocrSessions.size();
+        if (removedCount > 0) {
+            log.info("Cleaned up {} expired OCR sessions. Active sessions remaining: {}", removedCount, ocrSessions.size());
+        }
+    }
 
     /**
      * Khởi tạo session quét từ Desktop
@@ -147,13 +164,25 @@ public class ImportOcrService {
         if (session == null) {
             throw new RuntimeException(SystemMessage.OCR_ERR_003.getMessage());
         }
-        
+
+        final byte[] imageBytes;
+        final String mimeType;
+        try {
+            imageBytes = file.getBytes();
+            mimeType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
+        } catch (Exception e) {
+            log.error("Failed to read uploaded file for OCR session", e);
+            session.setStatus("ERROR");
+            session.setErrorMessage("Không thể đọc file ảnh: " + e.getMessage());
+            return;
+        }
+
         session.setStatus("PROCESSING");
-        
+
         // Gọi bất đồng bộ (chạy nền) để trả response nhanh cho Mobile
         new Thread(() -> {
             try {
-                OcrImportResponse result = scanDocument(file);
+                OcrImportResponse result = scanDocumentBytes(imageBytes, mimeType);
                 session.setResult(result);
                 session.setStatus("SUCCESS");
             } catch (Exception e) {
@@ -165,20 +194,35 @@ public class ImportOcrService {
     }
 
     /**
-     * Xử lý OCR: Upload ảnh -> Gọi Vision AI -> Smart Match -> Trả DTO
+     * Xử lý OCR từ MultipartFile
      */
     @Transactional(readOnly = true)
     public OcrImportResponse scanDocument(MultipartFile file) {
+        try {
+            byte[] bytes = file.getBytes();
+            String mimeType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
+            return scanDocumentBytes(bytes, mimeType);
+        } catch (Exception e) {
+            log.error("OCR scan failed", e);
+            throw new RuntimeException(String.format(SystemMessage.OCR_ERR_002.getMessage(), e.getMessage()));
+        }
+    }
+
+    /**
+     * Xử lý OCR từ mảng byte ảnh: Convert Base64 -> Gọi Vision AI -> Smart Match -> Trả DTO
+     */
+    @Transactional(readOnly = true)
+    public OcrImportResponse scanDocumentBytes(byte[] imageBytes, String mimeType) {
         if (!systemSettingsService.isAiEnabled()) {
             throw new RuntimeException("Tính năng quét AI OCR hiện đang tạm khóa bởi Quản trị viên.");
         }
         try {
             // 1. Convert file thành Base64
-            String base64Image = Base64.getEncoder().encodeToString(file.getBytes());
-            String mimeType = file.getContentType() != null ? file.getContentType() : "image/jpeg";
+            String base64Image = Base64.getEncoder().encodeToString(imageBytes);
+            String effectiveMimeType = (mimeType != null && !mimeType.isBlank()) ? mimeType : "image/jpeg";
 
             // 2. Gọi Vision AI
-            String rawJson = callVisionAi(base64Image, mimeType);
+            String rawJson = callVisionAi(base64Image, effectiveMimeType);
 
             // 3. Parse JSON response
             JsonNode ocrResult = objectMapper.readTree(rawJson);
