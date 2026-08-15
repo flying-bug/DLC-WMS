@@ -333,7 +333,7 @@ function SalesOrderDetailPage() {
                 )}
               </>
             )}
-            {(so.status === 'DRAFT' || so.status === 'APPROVED') && (
+            {so.status === 'DRAFT' && (
               <button className={styles.btnDanger} onClick={() => setConfirmCancel(true)}>
                 <i className="bi bi-x-circle" /> Hủy đơn
               </button>

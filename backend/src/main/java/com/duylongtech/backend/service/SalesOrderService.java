@@ -429,6 +429,58 @@ public class SalesOrderService {
         }
     }
 
+    /**
+     * Tự động rà soát các reservation BACKORDERED và chuyển sang HOLDING nếu tồn kho đã đủ.
+     */
+    @Transactional
+    public void reEvaluateBackorders(Long warehouseId, Long variantId) {
+        // Tìm tất cả BACKORDERED reservation theo FIFO
+        List<StockReservation> backorderedList = stockReservationRepository
+            .findBackorderedByVariantAndWarehouseOrderByCreatedAtAsc(variantId, warehouseId);
+        
+        if (backorderedList.isEmpty()) {
+            return;
+        }
+        
+        // Lấy quantityOnHand
+        InventoryBalance balance = inventoryBalanceRepository
+            .findByWarehouseAndVariant(warehouseId, variantId, "GOOD")
+            .orElse(null);
+            
+        if (balance == null || balance.getQuantityOnHand().compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        
+        BigDecimal onHand = balance.getQuantityOnHand();
+        
+        // Tổng số lượng đang HOLDING
+        BigDecimal holdingSum = stockReservationRepository.sumHoldingQuantity(variantId, warehouseId);
+        if (holdingSum == null) holdingSum = BigDecimal.ZERO;
+        
+        // Đọc cài đặt thời gian giữ chỗ
+        int expiryHours = 24;
+        try {
+            expiryHours = Integer.parseInt(systemSettingsService.getSetting("sales.reservation.expiry_hours", "24"));
+            if (expiryHours <= 0) expiryHours = 24;
+        } catch (Exception e) {
+            log.warn("Invalid expiry_hours setting, defaulting to 24", e);
+        }
+        LocalDateTime newExpiresAt = LocalDateTime.now().plusHours(expiryHours);
+        
+        for (StockReservation r : backorderedList) {
+            BigDecimal needed = holdingSum.add(r.getQuantityReserved());
+            if (onHand.compareTo(needed) >= 0) {
+                r.setStatus("HOLDING");
+                r.setExpiresAt(newExpiresAt);
+                stockReservationRepository.save(r);
+                holdingSum = holdingSum.add(r.getQuantityReserved());
+                log.info("Chuyển trạng thái reservation {} từ BACKORDERED sang HOLDING. ExpiresAt mới: {}", r.getId(), newExpiresAt);
+            } else {
+                break;
+            }
+        }
+    }
+
     @Transactional
     public SalesOrderResponse recordPayment(Long id, BigDecimal amount, String actor) {
         SalesOrder so = salesOrderRepository.findById(id)

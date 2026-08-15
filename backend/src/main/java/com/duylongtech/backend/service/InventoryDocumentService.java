@@ -477,7 +477,7 @@ public class InventoryDocumentService {
 
         if (!warrantyLines.isEmpty()) {
             Warranty w = new Warranty();
-            w.setWarrantyCode(codeGeneratorService.generateCode("WARRANTIES", "warranty_code", "WAR", 5));
+            w.setWarrantyCode(codeGeneratorService.generateCode("WARRANTIES", "warranty_code", "BH", 5));
             w.setPartnerId(doc.getPartnerId());
             w.setSalesOrderId(doc.getSalesOrderId());
             w.setExportSlipId(doc.getId());
@@ -656,6 +656,12 @@ public class InventoryDocumentService {
                 }
             }
         }
+
+        // Tự động kiểm tra và chuyển BACKORDERED thành HOLDING cho các đơn hàng bị thiếu hàng trước đây
+        savedImport.getLines().stream()
+                .map(InventoryDocumentLine::getVariantId)
+                .distinct()
+                .forEach(variantId -> salesOrderService.reEvaluateBackorders(savedImport.getWarehouseId(), variantId));
 
         return toResponse(savedImport);
     }

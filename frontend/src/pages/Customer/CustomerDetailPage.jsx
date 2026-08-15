@@ -247,10 +247,33 @@ const CustomerDetailPage = () => {
                             <i className={`bi bi-wallet2 ${styles.detailIcon}`}></i>
                             <h2 className={styles.detailTitle}>Tổng quan tài chính</h2>
                         </div>
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 24px 24px 24px' }}>
-                            <div>
-                                <div className={styles.detailLabel} style={{ marginBottom: '8px' }}>Dư nợ hiện tại</div>
-                                <h2 style={{ margin: 0, fontSize: '24px', color: 'var(--color-danger)' }}>{formatCurrency(customer?.currentDebt || 0)} ₫</h2>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 24px 24px 24px' }}>
+                            <div style={{ 
+                                backgroundColor: 'var(--color-bg-subtle)', 
+                                padding: '24px', 
+                                borderRadius: '12px', 
+                                border: '1px solid var(--color-border)',
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between'
+                            }}>
+                                <div>
+                                    <div className={styles.detailLabel} style={{ marginBottom: '8px' }}>Dư nợ hiện tại</div>
+                                    <h2 style={{ margin: 0, fontSize: '28px', color: 'var(--color-danger)' }}>{formatCurrency(customer?.currentDebt || 0)} <span style={{ fontSize: '20px', color: 'var(--color-text-muted)' }}>₫</span></h2>
+                                </div>
+                                <div style={{ 
+                                    width: '56px', 
+                                    height: '56px', 
+                                    backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+                                    color: 'var(--color-danger)', 
+                                    borderRadius: '50%', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    fontSize: '28px' 
+                                }}>
+                                    <i className="bi bi-cash-coin"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -281,13 +304,13 @@ const CustomerDetailPage = () => {
 
                     <div className={styles.tabContent}>
                         {activeTab === TABS.SALES && (
-                            <SalesHistoryTab data={salesData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} styles={styles} />
+                            <SalesHistoryTab data={salesData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} formatCurrency={formatCurrency} styles={styles} />
                         )}
                         {activeTab === TABS.WARRANTY && (
                             <WarrantyTab data={warrantyData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} styles={styles} />
                         )}
                         {activeTab === TABS.RECEIPT && (
-                            <ReceiptsTab data={receiptData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} formatCurrency={formatCurrency} styles={styles} />
+                            <ReceiptsTab data={receiptData} loading={loading} page={page} setPage={setPage} formatDate={formatDate} formatCurrency={formatCurrency} styles={styles} customerId={id} />
                         )}
                     </div>
                 </div>

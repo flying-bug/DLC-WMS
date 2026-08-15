@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { forceLogout } from '../auth/session';
+import { forceLogout, getAuthToken } from '../auth/session';
 
 const getBaseURL = () => {
     const envUrl = import.meta.env.VITE_API_URL;
@@ -29,7 +29,7 @@ const axiosClient = axios.create({
 // Interceptor cho Request: Gắn token vào header nếu có
 axiosClient.interceptors.request.use(
     (config) => {
-        const token = sessionStorage.getItem('token');
+        const token = getAuthToken();
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }

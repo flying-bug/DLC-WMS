@@ -83,7 +83,7 @@ function CreateEmployeePage() {
 
         try {
             setIsSaving(true);
-            const roles = formData.systemRole === 'admin' ? ['SUPER_ADMIN'] : ['STAFF'];
+            const roles = formData.systemRole === 'admin' ? ['MANAGER'] : ['STAFF'];
             const payload = {
                 username: formData.username.trim(),
                 fullName: formData.fullName.trim(),

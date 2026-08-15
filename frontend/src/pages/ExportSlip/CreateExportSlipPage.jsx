@@ -1160,7 +1160,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                     <option>20 bản ghi trên 1 trang</option>
                     <option>50 bản ghi trên 1 trang</option>
                   </SearchableSelect>
-                  <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280' }}>
+                  <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280', whiteSpace: 'nowrap', flexShrink: 0 }}>
                     <span style={{ cursor: 'pointer' }}>Trước</span>
                     <span style={{ fontWeight: 'bold', color: '#111827' }}>1</span>
                     <span style={{ cursor: 'pointer' }}>Sau</span>

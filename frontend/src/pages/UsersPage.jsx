@@ -213,7 +213,7 @@ function UsersPage() {
 
     const handleSaveUser = async (updatedData) => {
         try {
-            const targetRoleCode = updatedData.systemRole === 'admin' ? 'SUPER_ADMIN' : 'STAFF';
+            const targetRoleCode = updatedData.systemRole === 'admin' ? 'MANAGER' : 'STAFF';
             await axiosClient.put(`/users/${updatedData.id}`, {
                 username: updatedData.username || updatedData.code,
                 fullName: updatedData.name,

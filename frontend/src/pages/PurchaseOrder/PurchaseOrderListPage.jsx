@@ -280,7 +280,7 @@ function PurchaseOrderListPage() {
                             onClick={() => setConfirmApprove(po)}
                           />
                         )}
-                        {(po.status === 'DRAFT' || po.status === 'APPROVED') && (
+                        {po.status === 'DRAFT' && (
                           <i
                             className="bi bi-x-circle"
                             title="Hủy đơn"

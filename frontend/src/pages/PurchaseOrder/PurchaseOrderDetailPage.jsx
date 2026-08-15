@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as poApi from '../../api/purchaseOrderApi';
 import * as importApi from '../../api/inventoryImportApi';
+import * as exportApi from '../../api/inventoryExportApi';
 import { printPurchaseOrder } from '../../utils/printPurchaseOrder';
 import styles from './PurchaseOrderDetailPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
@@ -18,7 +19,7 @@ const fmtDateTime = (v)   => (v ? formatDateTime(v) : '—');
 const STATUS_CONFIG = {
   DRAFT:     { label: 'Nháp',       bg: '#f1f5f9', color: '#64748b', icon: 'bi-pencil-square' },
   APPROVED:  { label: 'Đã duyệt',   bg: '#dcfce7', color: '#16a34a', icon: 'bi-check-circle-fill' },
-  POSTED:    { label: 'Ghi sổ', bg: '#ede9fe', color: '#7c3aed', icon: 'bi-bag-check-fill' },
+  POSTED:    { label: 'Ghi sổ',     bg: '#ede9fe', color: '#7c3aed', icon: 'bi-bag-check-fill' },
   CANCELLED: { label: 'Đã hủy',     bg: '#fef2f2', color: '#dc2626', icon: 'bi-x-circle-fill' },
 };
 
@@ -28,10 +29,15 @@ function PurchaseOrderDetailPage() {
 
   const [po,              setPo]              = useState(null);
   const [importSlips,     setImportSlips]     = useState([]);
+  const [users,           setUsers]           = useState([]);
+  const [warehouses,      setWarehouses]      = useState([]);
   const [loading,         setLoading]         = useState(true);
   const [toast,           setToast]           = useState({ isVisible: false, type: 'info', message: '' });
   const [confirmApprove,  setConfirmApprove]  = useState(false);
   const [confirmCancel,   setConfirmCancel]   = useState(false);
+
+  const userById = useMemo(() => new Map(users.map(item => [item.id, item])), [users]);
+  const warehouseById = useMemo(() => new Map(warehouses.map(item => [item.id, item])), [warehouses]);
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(p => ({ ...p, isVisible: false }));
@@ -57,7 +63,25 @@ function PurchaseOrderDetailPage() {
     }
   };
 
-  useEffect(() => { loadPo(); loadImportSlips(); }, [id]);
+  const loadUsers = async () => {
+    try {
+      const res = await exportApi.getUsers({ size: 1000 });
+      setUsers(pageContent(unwrap(res)));
+    } catch (err) {
+      console.error('Failed to load users', err);
+    }
+  };
+
+  const loadWarehouses = async () => {
+    try {
+      const res = await importApi.getWarehouses({ size: 100 });
+      setWarehouses(pageContent(unwrap(res)));
+    } catch (err) {
+      console.error('Failed to load warehouses', err);
+    }
+  };
+
+  useEffect(() => { loadPo(); loadImportSlips(); loadUsers(); loadWarehouses(); }, [id]);
 
   const handleApprove = async () => {
     setConfirmApprove(false);
@@ -153,7 +177,7 @@ function PurchaseOrderDetailPage() {
           </div>
 
           <div className={styles.headerActions}>
-            <button className={styles.btnPrimary} onClick={() => printPurchaseOrder(po)}>
+            <button className={styles.btnPrimary} onClick={() => printPurchaseOrder(po, { userById })}>
               <i className="bi bi-printer" /> In đơn mua hàng
             </button>
             {po.status === 'DRAFT' && (
@@ -166,18 +190,12 @@ function PurchaseOrderDetailPage() {
                 <i className="bi bi-check2-circle" /> Duyệt đơn
               </button>
             )}
-            {(po.status === 'APPROVED' || po.status === 'POSTED') && (
-              po.isFullyImported ? (
-                <button className={styles.btnSecondary} disabled title="Đơn hàng này đã nhập kho đủ 100%">
-                  <i className="bi bi-check-all" /> Đã nhập kho đủ
-                </button>
-              ) : (
-                <button className={styles.btnPrimary} onClick={handleCreateImport}>
-                  <i className="bi bi-box-seam" /> Tạo phiếu nhập
-                </button>
-              )
+            {(po.status === 'APPROVED' || po.status === 'POSTED') && !po.isFullyImported && (
+              <button className={styles.btnPrimary} onClick={handleCreateImport}>
+                <i className="bi bi-box-seam" /> Tạo phiếu nhập
+              </button>
             )}
-            {(po.status === 'DRAFT' || po.status === 'APPROVED') && (
+            {po.status === 'DRAFT' && (
               <button className={styles.btnCancel} onClick={() => setConfirmCancel(true)}>
                 <i className="bi bi-x-circle" /> Hủy đơn
               </button>
@@ -242,7 +260,7 @@ function PurchaseOrderDetailPage() {
             )}
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Người tạo</span>
-              <span className={styles.infoValue}>{po.createdByName || `#${po.createdBy}`}</span>
+              <span className={styles.infoValue}>{po.createdByName || userById.get(po.createdBy)?.fullName || userById.get(po.createdBy)?.username || `#${po.createdBy}`}</span>
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Ngày tạo</span>
@@ -378,8 +396,8 @@ function PurchaseOrderDetailPage() {
                           </span>
                         </td>
                         <td>{fmtDateTime(slip.createdAt)}</td>
-                        <td>{slip.warehouseName || '—'}</td>
-                        <td>{slip.createdByName || `#${slip.createdBy}`}</td>
+                        <td>{slip.warehouseName || warehouseById.get(slip.warehouseId)?.name || '—'}</td>
+                        <td>{slip.createdByName || userById.get(slip.createdBy)?.fullName || userById.get(slip.createdBy)?.username || `#${slip.createdBy}`}</td>
                         <td style={{ color: '#64748b' }}>{slip.note || '—'}</td>
                       </tr>
                     ))
