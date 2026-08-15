@@ -1,17 +1,22 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useReactToPrint } from 'react-to-print';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as soApi from '../../api/salesOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
-import QuotationTemplate from './components/QuotationTemplate';
+import { printSalesInvoice } from '../../utils/printSalesInvoice';
+import { printQuotation } from '../../utils/printQuotation';
 import styles from './SalesOrderDetailPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const money = (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
+const digitsOnly = (value) => String(value || '').replace(/\D/g, '');
+const formatMoneyInput = (value) => {
+  const digits = digitsOnly(value);
+  return digits ? Number(digits).toLocaleString('vi-VN') : '';
+};
 const fmtDate = (v) => (v ? formatDateOnly(v) : '—');
 const fmtDateTime = (v) => (v ? formatDateTime(v) : '—');
 
@@ -57,11 +62,13 @@ function SalesOrderDetailPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
 
-  const printRef = useRef(null);
-  const handlePrintQuote = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `Bao-Gia-${so?.soCode || 'SO'}`,
-  });
+  const handlePrintQuote = () => {
+    printQuotation(so);
+  };
+
+  const handlePrintInvoice = () => {
+    printSalesInvoice(so);
+  };
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(p => ({ ...p, isVisible: false }));
@@ -140,8 +147,31 @@ function SalesOrderDetailPage() {
   };
 
   const handleCreateExport = () => {
-    // Navigate trực tiếp sang trang tạo phiếu xuất kho mới,
-    // truyền toàn bộ thông tin SO qua location.state để tự điền
+    const exportableLines = (so.lines || [])
+      .map(l => {
+        const rem = l.remainingQuantity !== undefined && l.remainingQuantity !== null
+          ? Number(l.remainingQuantity)
+          : Number(l.quantity || 1);
+        return {
+          variantId: String(l.variantId),
+          quantity: rem,
+          maxQuantity: rem,
+          orderedQuantity: l.quantity,
+          exportedQuantity: l.exportedQuantity || 0,
+          price: l.unitPrice || l.price || 0,
+          unitName: l.unitName || '',
+          vatPercent: l.vatRate || l.vatPercent || 0,
+          warrantyMonths: l.warrantyMonths || 0,
+          note: l.note || '',
+        };
+      })
+      .filter(l => l.quantity > 0);
+
+    if (exportableLines.length === 0) {
+      showToast('info', 'Đơn hàng này đã xuất kho đủ toàn bộ sản phẩm');
+      return;
+    }
+
     navigate('/export-slips/create', {
       state: {
         soData: {
@@ -155,15 +185,7 @@ function SalesOrderDetailPage() {
           partnerAddress: so.partnerAddress,
           note: so.note || `Xuất kho theo đơn hàng ${so.soCode}`,
           salespersonId: so.salespersonId,
-          lines: (so.lines || []).map(l => ({
-            variantId: String(l.variantId),
-            quantity: l.quantity || 1,
-            price: l.unitPrice || l.price || 0,
-            unitName: l.unitName || '',
-            vatPercent: l.vatRate || l.vatPercent || 0,
-            warrantyMonths: l.warrantyMonths || 0,
-            note: l.note || '',
-          })),
+          lines: exportableLines,
         },
         returnUrl: `/sales-orders/${id}`,
       }
@@ -252,12 +274,25 @@ function SalesOrderDetailPage() {
           <div className={styles.headerActions}>
             {so.status !== 'CANCELLED' && (
               <>
-                <button className={styles.btnPrimary} onClick={handlePrintQuote}>
-                  <i className="bi bi-printer" /> In Báo giá
-                </button>
-                <button className={styles.btnPrimary} onClick={handleOpenEmailModal} style={{ backgroundColor: '#0284c7' }}>
-                  <i className="bi bi-envelope" /> Gửi Email Báo giá
-                </button>
+                {so.status === 'POSTED' ? (
+                  <>
+                    <button className={styles.btnPrimary} onClick={handlePrintInvoice}>
+                      <i className="bi bi-printer" /> In Hóa đơn
+                    </button>
+                    <button className={styles.btnPrimary} onClick={handleOpenEmailModal} style={{ backgroundColor: '#0284c7' }}>
+                      <i className="bi bi-envelope" /> Gửi Email Hóa đơn
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button className={styles.btnPrimary} onClick={handlePrintQuote}>
+                      <i className="bi bi-printer" /> In Báo giá
+                    </button>
+                    <button className={styles.btnPrimary} onClick={handleOpenEmailModal} style={{ backgroundColor: '#0284c7' }}>
+                      <i className="bi bi-envelope" /> Gửi Email Báo giá
+                    </button>
+                  </>
+                )}
               </>
             )}
             {so.status === 'DRAFT' && (
@@ -284,6 +319,10 @@ function SalesOrderDetailPage() {
                   >
                     <i className="bi bi-arrow-right-circle" /> Tiếp tục xuất kho
                   </button>
+                ) : so.isFullyExported ? (
+                  <button className={styles.btnSecondary} disabled title="Đơn hàng này đã xuất kho đủ 100%">
+                    <i className="bi bi-check-all" /> Đã xuất kho đủ
+                  </button>
                 ) : (
                   <button
                     className={styles.btnPrimary}
@@ -294,7 +333,7 @@ function SalesOrderDetailPage() {
                 )}
               </>
             )}
-            {(so.status === 'DRAFT' || so.status === 'APPROVED') && (
+            {so.status === 'DRAFT' && (
               <button className={styles.btnDanger} onClick={() => setConfirmCancel(true)}>
                 <i className="bi bi-x-circle" /> Hủy đơn
               </button>
@@ -483,9 +522,10 @@ function SalesOrderDetailPage() {
                 <div style={{ marginBottom: 20 }}>
                   <label style={{ display: 'block', marginBottom: 5, fontWeight: 500, fontSize: 14 }}>Số tiền khách đưa</label>
                   <input
-                    type="number"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatMoneyInput(paymentAmount)}
+                    onChange={(e) => setPaymentAmount(digitsOnly(e.target.value))}
                     placeholder="Nhập số tiền..."
                     style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 4 }}
                     autoFocus
@@ -616,15 +656,11 @@ function SalesOrderDetailPage() {
           </div>
         )}
         <Toast
-        isVisible={toast.isVisible}
-        type={toast.type}
-        message={toast.message}
-        onClose={hideToast}
-      />
-
-      <div style={{ display: 'none' }}>
-        <QuotationTemplate ref={printRef} order={so} />
-      </div>
+          isVisible={toast.isVisible}
+          type={toast.type}
+          message={toast.message}
+          onClose={hideToast}
+        />
       </div>
     </AdminLayout>
   );

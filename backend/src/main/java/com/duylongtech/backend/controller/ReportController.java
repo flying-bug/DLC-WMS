@@ -23,13 +23,13 @@ public class ReportController {
     private final com.duylongtech.backend.repository.InventoryBalanceRepository inventoryBalanceRepository;
 
     @GetMapping("/debug-balances")
-    @PreAuthorize("hasAuthority('report:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
+    @PreAuthorize("hasAuthority('report_balance:view') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<com.duylongtech.backend.entity.InventoryBalance>> debugBalances() {
         return ResponseEntity.ok(inventoryBalanceRepository.findAll());
     }
 
     @GetMapping("/inventory-balance")
-    @PreAuthorize("hasAuthority('report:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
+    @PreAuthorize("hasAuthority('report_balance:view') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<InventoryBalanceReportResponse>>> getInventoryBalanceReport(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long warehouseId) {
@@ -40,7 +40,7 @@ public class ReportController {
     }
 
     @GetMapping("/stock-ledger")
-    @PreAuthorize("hasAuthority('report:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
+    @PreAuthorize("hasAuthority('report_ledger:view') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<StockLedgerReportResponse>>> getStockLedgerReport(
             @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
@@ -53,7 +53,7 @@ public class ReportController {
     }
 
     @GetMapping("/stock-transfers")
-    @PreAuthorize("hasAuthority('report:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
+    @PreAuthorize("hasAuthority('report_transfer:view') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<StockTransferReportResponse>>> getStockTransferReport(
             @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
@@ -71,7 +71,7 @@ public class ReportController {
     }
 
     @GetMapping("/debt")
-    @PreAuthorize("hasAuthority('report:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
+    @PreAuthorize("hasAuthority('report_debt:view') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<DebtReportResponse>>> getDebtReport(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
@@ -90,8 +90,27 @@ public class ReportController {
                 .build());
     }
 
+    @GetMapping("/sales-profit")
+    @PreAuthorize("hasAuthority('report_sales:view') or hasRole('SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<SalesProfitReportResponse>>> getSalesProfitReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) String search) {
+        if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        if (endDate == null) {
+            endDate = LocalDate.now().atTime(23, 59, 59);
+        } else if (endDate.toLocalTime().equals(LocalTime.MIDNIGHT)) {
+            endDate = endDate.with(LocalTime.MAX);
+        }
+
+        return ResponseEntity.ok(ApiResponse.<List<SalesProfitReportResponse>>builder()
+                .success(true)
+                .data(reportService.getSalesProfitReport(startDate, endDate, search))
+                .build());
+    }
+
     @GetMapping("/inventory-summary")
-    @PreAuthorize("hasAuthority('report:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
+    @PreAuthorize("hasAuthority('report_summary:view') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<List<InventorySummaryReportResponse>>> getInventorySummaryReport(
             @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
@@ -108,16 +127,25 @@ public class ReportController {
     }
 
     @GetMapping("/dashboard")
-    @PreAuthorize("hasAuthority('report:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
-    public ResponseEntity<ApiResponse<DashboardResponse>> getDashboardMetrics() {
+    @PreAuthorize("hasAuthority('report_summary:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
+    public ResponseEntity<ApiResponse<DashboardResponse>> getDashboardMetrics(
+            @RequestParam(required = false, defaultValue = "7days") String inventoryFlowRange,
+            @RequestParam(required = false, defaultValue = "all") String categoryScope,
+            @RequestParam(required = false) String financeRange) {
         return ResponseEntity.ok(ApiResponse.<DashboardResponse>builder()
                 .success(true)
-                .data(reportService.getDashboardMetrics())
+                .data(reportService.getDashboardMetrics(inventoryFlowRange, categoryScope, financeRange))
                 .build());
     }
 
     @GetMapping("/export/{reportType}")
-    @PreAuthorize("hasAuthority('report:view') or hasRole('SUPER_ADMIN') or hasRole('MANAGER') or hasRole('STAFF')")
+    @PreAuthorize("(#reportType == 'inventory-balance' and hasAuthority('report_balance:export'))"
+            + " or (#reportType == 'stock-ledger' and hasAuthority('report_ledger:export'))"
+            + " or (#reportType == 'stock-transfers' and hasAuthority('report_transfer:export'))"
+            + " or (#reportType == 'debt' and hasAuthority('report_debt:export'))"
+            + " or (#reportType == 'inventory-summary' and hasAuthority('report_summary:export'))"
+            + " or (#reportType == 'sales-profit' and hasAuthority('report_sales:export'))"
+            + " or hasRole('SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportReport(
             @PathVariable String reportType,
             @RequestParam(required = false) Long warehouseId,
@@ -128,7 +156,7 @@ public class ReportController {
             @RequestParam(required = false) String status) {
         
         // Defaults matching query methods
-        if ("debt".equals(reportType) || "inventory-summary".equals(reportType)) {
+        if ("debt".equals(reportType) || "inventory-summary".equals(reportType) || "sales-profit".equals(reportType)) {
             if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1).atStartOfDay();
             if (endDate == null) endDate = LocalDate.now().plusDays(1).atStartOfDay();
         }

@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.SystemSettingsDto;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.entity.SystemSetting;
 import com.duylongtech.backend.repository.SystemSettingRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,7 @@ public class SystemSettingsService {
     private final GoogleDriveService driveService;
     private final Environment env;
 
-    private String get(String key, String def) {
+    public String getSetting(String key, String def) {
         return settingRepo.findBySettingKey(key)
                 .map(SystemSetting::getSettingValue)
                 .filter(v -> v != null && !v.isBlank())
@@ -29,20 +30,27 @@ public class SystemSettingsService {
     }
 
     private boolean getBool(String key) {
-        return "true".equalsIgnoreCase(get(key, "false"));
+        return "true".equalsIgnoreCase(getSetting(key, "false"));
+    }
+
+    public boolean isAiEnabled() {
+        return "true".equalsIgnoreCase(getSetting("ai.enabled", "true"));
     }
 
     public SystemSettingsDto getSettings() {
-        String saJson = get("drive.service.account", "");
+        String saJson = getSetting("drive.service.account", "");
         return SystemSettingsDto.builder()
-                .backupPath(get("backup.path", "/tmp/backups"))
+                .backupPath(getSetting("backup.path", "/tmp/backups"))
                 .driveEnabled(getBool("drive.enabled"))
-                .driveFolderId(get("drive.folder.id", ""))
+                .driveFolderId(getSetting("drive.folder.id", ""))
                 .driveConfigured(!saJson.isBlank())
                 .encryptEnabled(getBool("backup.encrypt.enabled"))
                 .encryptKey("") // never expose key
                 .notifyEmailEnabled(getBool("notify.email.enabled"))
-                .notifyEmailTo(get("notify.email.to", ""))
+                .notifyEmailTo(getSetting("notify.email.to", ""))
+                .snapshotTime(getSetting("snapshot.time", "00:05"))
+                .reservationExpiryHours(Integer.parseInt(getSetting("sales.reservation.expiry_hours", "72")))
+                .aiEnabled(isAiEnabled())
                 .build();
     }
 
@@ -54,6 +62,17 @@ public class SystemSettingsService {
         upsert("backup.encrypt.enabled", String.valueOf(dto.isEncryptEnabled()));
         upsert("notify.email.enabled", String.valueOf(dto.isNotifyEmailEnabled()));
         upsert("notify.email.to", dto.getNotifyEmailTo());
+        upsert("ai.enabled", String.valueOf(dto.isAiEnabled()));
+
+        if (dto.getSnapshotTime() != null && !dto.getSnapshotTime().isBlank()) {
+            upsert("snapshot.time", dto.getSnapshotTime().trim());
+        }
+        
+        Integer expiry = dto.getReservationExpiryHours();
+        if (expiry == null || expiry <= 0) {
+            expiry = 24; // Mặc định an toàn là 24h nếu người dùng nhập linh tinh
+        }
+        upsert("sales.reservation.expiry_hours", String.valueOf(expiry));
 
         // Only update encrypt key if explicitly provided
         if (dto.getEncryptKey() != null && !dto.getEncryptKey().isBlank()) {
@@ -109,7 +128,7 @@ public class SystemSettingsService {
                 log.warn("OAuth2 exchange returned no refresh_token: {}", respMap);
             }
         } else {
-            throw new IllegalStateException("Đổi mã Google OAuth2 thất bại.");
+            throw new IllegalStateException(SystemMessage.SYS_SET_ERR_001.getMessage());
         }
     }
 

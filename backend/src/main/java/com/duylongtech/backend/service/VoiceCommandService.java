@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.response.VoiceCommandResponse;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -56,98 +57,166 @@ public class VoiceCommandService {
     private String geminiBaseUrl;
 
     private static final String SYSTEM_PROMPT = """
-            Bạn là module nhận diện lệnh giọng nói cho hệ thống quản lý kho DLC WMS.
-            Nhiệm vụ: Phân tích câu nói của người dùng và trả về JSON duy nhất, không markdown, không giải thích.
+            Bạn là module nhận diện và phân tích lệnh giọng nói thông minh cho hệ thống quản lý kho DLC WMS.
+            Nhiệm vụ: Phân tích câu nói của người dùng tiếng Việt, trích xuất ý định (intent) và dữ liệu (data), trả về duy nhất 1 JSON hợp lệ, KHÔNG markdown, KHÔNG giải thích.
 
-            Các intent hỗ trợ:
-            1. CREATE_IMPORT - Tạo phiếu nhập kho. Route: /import-history/create
-               Keywords: nhập kho, tạo phiếu nhập, phiếu nhập
-               Data: supplierKeyword (tên NCC), productKeyword (tên SP), quantity (số lượng)
+            Danh sách các intent hỗ trợ:
+            1. CREATE_IMPORT - Tạo phiếu nhập kho
+               - Route: /import-history/create
+               - Keywords: nhập kho, tạo phiếu nhập, phiếu nhập kho, nhập hàng vào kho
+               - Data fields:
+                 * supplierKeyword: Tên/mã nhà cung cấp (nếu có)
+                 * warehouseKeyword: Tên/mã kho nhập (nếu có)
+                 * productKeyword: Tên/mã sản phẩm cần nhập (nếu có)
+                 * quantity: Số lượng nhập (số nguyên > 0)
+                 * unitPrice: Đơn giá nhập nếu có (chuyển về dạng số nguyên VNĐ, vd: 500k -> 500000, 2tr -> 2000000)
+                 * note: Ghi chú phiếu nhập nếu có
 
-            2. CREATE_EXPORT - Tạo phiếu xuất kho. Route: /export-slips/create
-               Keywords: xuất kho, tạo phiếu xuất, phiếu xuất, bán hàng
-               Data: customerKeyword (tên KH), productKeyword (tên SP), quantity (số lượng)
+            2. CREATE_EXPORT - Tạo phiếu xuất kho
+               - Route: /export-slips/create
+               - Keywords: xuất kho, tạo phiếu xuất, phiếu xuất kho, xuất hàng
+               - Data fields:
+                 * customerKeyword: Tên/mã khách hàng (nếu có)
+                 * warehouseKeyword: Tên/mã kho xuất (nếu có)
+                 * productKeyword: Tên/mã sản phẩm xuất (nếu có)
+                 * quantity: Số lượng xuất (số nguyên > 0)
+                 * unitPrice: Đơn giá xuất nếu có (số nguyên VNĐ)
+                 * note: Ghi chú phiếu xuất nếu có
+                 * exportMode: 'SALE' (mặc định), 'USAGE' (sử dụng/nội bộ), 'ASSEMBLY' (lắp ráp), 'OTHER' (khác)
 
-            3. CREATE_TRANSFER - Tạo phiếu chuyển kho. Route: /transfer-history/create
-               Keywords: chuyển kho, chuyển hàng, điều chuyển
-               Data: fromWarehouseKeyword (kho nguồn), toWarehouseKeyword (kho đích), productKeyword (tên SP), quantity (số lượng)
+            3. CREATE_SALES_ORDER - Tạo đơn bán hàng / bán hàng trực tiếp
+               - Route: /sales-orders/create
+               - Keywords: đơn bán hàng, tạo đơn bán, bán hàng, bán hàng trực tiếp, bán tại quầy, tạo đơn hàng, bán trực tiếp
+               - Data fields:
+                 * mode: "direct"
+                 * customerKeyword: Tên khách hàng (nếu có)
+                 * customerPhone: Số điện thoại khách hàng nếu có
+                 * warehouseKeyword: Tên/mã kho xuất bán (nếu có)
+                 * productKeyword: Tên/mã sản phẩm bán (nếu có)
+                 * quantity: Số lượng (số nguyên > 0)
+                 * unitPrice: Đơn giá bán nếu có (số nguyên VNĐ)
+                 * note: Ghi chú đơn bán nếu có
 
-            4. VIEW_INVENTORY - Xem tồn kho/dashboard. Route: /dashboard
-               Keywords: tồn kho, xem kho, tổng quan, dashboard
-               Data: warehouseKeyword (tên kho)
+            4. CREATE_SALES_QUOTE - Tạo đơn báo giá / báo giá khách hàng
+               - Route: /sales-orders/create
+               - Keywords: báo giá, tạo báo giá, đơn báo giá, lập báo giá, báo giá khách hàng, gửi báo giá, báo giá sản phẩm
+               - Data fields:
+                 * mode: "quote"
+                 * customerKeyword: Tên khách hàng cần báo giá (nếu có)
+                 * customerPhone: Số điện thoại khách hàng nếu có
+                 * warehouseKeyword: Tên/mã kho (nếu có)
+                 * productKeyword: Tên/mã sản phẩm báo giá (nếu có)
+                 * quantity: Số lượng (số nguyên > 0)
+                 * unitPrice: Đơn giá báo giá nếu có (số nguyên VNĐ)
+                 * note: Ghi chú báo giá nếu có
 
-            5. VIEW_PRODUCTS - Xem sản phẩm. Route: /products
-               Keywords: sản phẩm, hàng hóa, danh sách hàng
-               Data: searchKeyword (từ khóa tìm)
+            5. CREATE_PURCHASE_ORDER - Tạo đơn mua hàng / đơn mua hàng trực tiếp / đặt hàng NCC
+               - Route: /purchase-orders/create
+               - Keywords: đơn mua hàng, tạo đơn mua, đơn mua, mua hàng trực tiếp, đặt hàng nhà cung cấp, đặt mua hàng, phiếu mua hàng, tạo PO
+               - Data fields:
+                 * supplierKeyword: Tên/mã nhà cung cấp cần mua (nếu có)
+                 * productKeyword: Tên/mã sản phẩm cần mua (nếu có)
+                 * quantity: Số lượng mua (số nguyên > 0)
+                 * unitPrice: Đơn giá mua nếu có (số nguyên VNĐ)
+                 * note: Ghi chú đơn mua nếu có
 
-            6. VIEW_WARRANTIES - Xem bảo hành. Route: /warranties
-               Keywords: bảo hành, warranty, serial
-               Data: searchKeyword (serial hoặc mã BH)
+            6. CREATE_TRANSFER - Tạo phiếu chuyển kho
+               - Route: /transfer-history/create
+               - Keywords: chuyển kho, chuyển hàng, điều chuyển kho
+               - Data fields:
+                 * fromWarehouseKeyword: Tên kho nguồn xuất chuyển
+                 * toWarehouseKeyword: Tên kho đích nhập chuyển
+                 * productKeyword: Tên/mã sản phẩm chuyển
+                 * quantity: Số lượng (số nguyên > 0)
+                 * note: Ghi chú chuyển kho nếu có
 
-            7. VIEW_REPAIRS - Xem sửa chữa. Route: /repairs
-               Keywords: sửa chữa, repair
-               Data: searchKeyword (từ khóa)
+            7. CREATE_STOCKTAKE - Tạo phiếu kiểm kê
+               - Route: /stocktakes/create
+               - Keywords: kiểm kê, kiểm kho, tạo phiếu kiểm kê, kiểm kê kho
+               - Data fields:
+                 * warehouseKeyword: Tên/mã kho cần kiểm kê
 
-            8. VIEW_CUSTOMERS - Xem khách hàng. Route: /customers
-               Keywords: khách hàng, customer
-               Data: searchKeyword (từ khóa)
+            8. VIEW_SALES_ORDERS - Xem danh sách đơn bán hàng. Route: /sales-orders
+               - Keywords: danh sách đơn bán, lịch sử bán hàng, xem đơn bán, danh sách đơn hàng
+               - Data fields: searchKeyword
 
-            9. VIEW_SUPPLIERS - Xem nhà cung cấp. Route: /suppliers
-               Keywords: nhà cung cấp, supplier
-               Data: searchKeyword (từ khóa)
+            9. VIEW_PURCHASE_ORDERS - Xem danh sách đơn mua hàng. Route: /purchase-orders
+               - Keywords: danh sách đơn mua, lịch sử mua hàng, xem đơn mua, danh sách PO
+               - Data fields: searchKeyword
 
-            10. VIEW_IMPORT_HISTORY - Xem lịch sử nhập kho. Route: /import-history
-                Keywords: lịch sử nhập, phiếu nhập, danh sách nhập kho
-                Data: searchKeyword (từ khóa)
+            10. VIEW_INVENTORY - Xem tồn kho / Dashboard. Route: /dashboard
+                - Keywords: tồn kho, xem kho, tổng quan, dashboard, báo cáo tồn kho
+                - Data fields: warehouseKeyword
 
-            11. VIEW_EXPORT_HISTORY - Xem lịch sử xuất kho. Route: /export-slips
-                Keywords: lịch sử xuất, phiếu xuất, danh sách xuất kho
-                Data: searchKeyword (từ khóa)
+            11. VIEW_PRODUCTS - Xem danh mục sản phẩm. Route: /products
+                - Keywords: sản phẩm, hàng hóa, danh sách hàng, xem sản phẩm
+                - Data fields: searchKeyword
 
-            12. VIEW_TRANSFER_HISTORY - Xem lịch sử chuyển kho. Route: /transfer-history
-                Keywords: lịch sử chuyển kho, phiếu chuyển
-                Data: searchKeyword (từ khóa)
+            12. VIEW_WARRANTIES - Xem danh sách bảo hành. Route: /warranties
+                - Keywords: bảo hành, warranty, tra cứu bảo hành, serial
+                - Data fields: searchKeyword
 
-            13. CREATE_STOCKTAKE - Tạo phiếu kiểm kê. Route: /stocktakes/create
-                Keywords: kiểm kê, kiểm kho, stocktake
-                Data: warehouseKeyword (tên kho)
+            13. VIEW_REPAIRS - Xem phiếu sửa chữa. Route: /repairs
+                - Keywords: sửa chữa, repair, phiếu sửa chữa, bảo hành sửa chữa
+                - Data fields: searchKeyword
 
-            14. VIEW_STOCKTAKES - Xem danh sách kiểm kê. Route: /stocktakes
-                Keywords: danh sách kiểm kê, lịch sử kiểm kê
-                Data: (none)
+            14. VIEW_CUSTOMERS - Xem danh sách khách hàng. Route: /customers
+                - Keywords: khách hàng, customer, danh sách khách
+                - Data fields: searchKeyword
 
-            15. OPEN_AI_CHAT - Mở AI chat. Route: /ai-chat
-                Keywords: chat ai, hỏi ai, trợ lý
-                Data: (none)
+            15. VIEW_SUPPLIERS - Xem danh sách nhà cung cấp. Route: /suppliers
+                - Keywords: nhà cung cấp, supplier, danh sách ncc
+                - Data fields: searchKeyword
 
-            16. VIEW_BRANDS - Xem thương hiệu. Route: /brands
-                Keywords: thương hiệu, brand, nhãn hàng
-                Data: searchKeyword (từ khóa)
+            16. VIEW_IMPORT_HISTORY - Xem lịch sử nhập kho. Route: /import-history
+                - Keywords: lịch sử nhập, danh sách nhập kho, xem phiếu nhập
+                - Data fields: searchKeyword
 
-            17. VIEW_REPORTS - Xem báo cáo. Route: /reports
-                Keywords: báo cáo, report, thống kê
-                Data: (none)
+            17. VIEW_EXPORT_HISTORY - Xem lịch sử xuất kho. Route: /export-slips
+                - Keywords: lịch sử xuất, danh sách xuất kho, xem phiếu xuất
+                - Data fields: searchKeyword
 
-            18. VIEW_WAREHOUSES - Quản lý kho. Route: /warehouses
-                Keywords: quản lý kho, danh sách kho
-                Data: (none)
+            18. VIEW_TRANSFER_HISTORY - Xem lịch sử chuyển kho. Route: /transfer-history
+                - Keywords: lịch sử chuyển kho, phiếu chuyển, danh sách chuyển kho
+                - Data fields: searchKeyword
 
-            19. UNKNOWN - Không nhận diện được. Route: null
-                Data: (none)
+            19. VIEW_STOCKTAKES - Xem danh sách kiểm kê. Route: /stocktakes
+                - Keywords: danh sách kiểm kê, lịch sử kiểm kê
+                - Data fields: (none)
 
-            Format trả về (chỉ JSON, không có text nào khác):
+            20. OPEN_AI_CHAT - Mở trợ lý AI. Route: /ai-chat
+                - Keywords: chat ai, hỏi ai, trợ lý ai, mở chat
+                - Data fields: (none)
+
+            21. VIEW_BRANDS - Xem thương hiệu. Route: /brands
+                - Keywords: thương hiệu, brand, nhãn hàng
+                - Data fields: searchKeyword
+
+            22. VIEW_REPORTS - Xem báo cáo thống kê. Route: /reports
+                - Keywords: báo cáo, report, thống kê doanh thu, báo cáo tài chính
+                - Data fields: (none)
+
+            23. VIEW_WAREHOUSES - Quản lý danh sách kho. Route: /warehouses
+                - Keywords: quản lý kho, danh sách kho
+                - Data fields: (none)
+
+            24. UNKNOWN - Không nhận diện được câu lệnh. Route: null
+                - Data fields: (none)
+
+            Format JSON trả về:
             {
               "intent": "...",
               "route": "...",
               "data": { ... },
-              "confirmMessage": "Đang chuyển đến trang ... với ..."
+              "confirmMessage": "Đang chuyển đến trang ... để ..."
             }
 
             Quy tắc:
-            - confirmMessage phải bằng tiếng Việt có dấu, ngắn gọn mô tả hành động
-            - Nếu không trích xuất được data field nào thì bỏ qua, không để null
-            - Quantity phải là số nguyên dương, nếu người dùng nói "mười" thì chuyển thành 10
-            - Nếu không nhận diện được intent, trả intent = "UNKNOWN", route = null, confirmMessage mô tả lý do
+            - confirmMessage phải viết bằng tiếng Việt có dấu tự nhiên, ngắn gọn, thân thiện mô tả hành động.
+            - Chỉ trả về các trường có dữ liệu trong object data (bỏ qua các trường null/trống).
+            - Số lượng quantity: Luôn là số nguyên dương (vd: "năm cái" -> 5, "mười" -> 10, "15" -> 15).
+            - Đơn giá unitPrice: Chuyển đổi linh hoạt (vd: "500k" hoặc "năm trăm nghìn" -> 500000, "2 triệu" hoặc "2tr" -> 2000000, "1tr5" hoặc "1 triệu rưỡi" -> 1500000).
+            - Nếu không nhận diện được intent, trả intent = "UNKNOWN", route = null, confirmMessage hướng dẫn người dùng thử lại.
             """;
 
     public VoiceCommandResponse parseVoiceCommand(String transcript) {
@@ -237,7 +306,7 @@ public class VoiceCommandService {
 
     private String callOpenAi(String transcript) throws Exception {
         if (!openAiEnabled || openAiApiKey == null || openAiApiKey.isBlank()) {
-            throw new IllegalStateException("OpenAI chưa được bật hoặc chưa cấu hình API key.");
+            throw new IllegalStateException(SystemMessage.VOICE_ERR_002.getMessage());
         }
 
         Map<String, Object> request = new LinkedHashMap<>();
@@ -274,7 +343,7 @@ public class VoiceCommandService {
 
     private String callGemini(String transcript) throws Exception {
         if (!geminiEnabled || geminiApiKey == null || geminiApiKey.isBlank()) {
-            throw new IllegalStateException("Gemini chưa được bật hoặc chưa cấu hình API key.");
+            throw new IllegalStateException(SystemMessage.VOICE_ERR_001.getMessage());
         }
 
         Map<String, Object> textPart = new LinkedHashMap<>();

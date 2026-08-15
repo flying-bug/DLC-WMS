@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { createCustomer, updateCustomer } from '../../../api/customerApi';
 import Modal from '../../../components/ui/Modal/Modal';
 import styles from './CustomerModal.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const GROUP_OPTIONS = [
     { value: 'RETAIL', label: 'Khách lẻ' },
@@ -9,7 +11,7 @@ const GROUP_OPTIONS = [
     { value: 'DISTRIBUTOR', label: 'Đại lý' },
 ];
 
-const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) => {
+const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, onError }) => {
     const isEditMode = !!editData;
 
     const [form, setForm] = useState({ 
@@ -94,12 +96,17 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
                 groupType: form.groupType,
             };
 
+            let savedRecord = null;
             if (isEditMode) {
-                await updateCustomer(editData.id, payload);
-                onSaved(true, isContinue);
+                const res = await updateCustomer(editData.id, payload);
+                savedRecord = res?.data?.data || res?.data || payload;
+                if (typeof onSaved === 'function') onSaved(true, isContinue, savedRecord);
+                if (typeof onSuccess === 'function') onSuccess(savedRecord, true, isContinue);
             } else {
-                await createCustomer(payload);
-                onSaved(false, isContinue);
+                const res = await createCustomer(payload);
+                savedRecord = res?.data?.data || res?.data || payload;
+                if (typeof onSaved === 'function') onSaved(false, isContinue, savedRecord);
+                if (typeof onSuccess === 'function') onSuccess(savedRecord, false, isContinue);
             }
         } catch (error) {
             const responseData = error.response?.data;
@@ -167,7 +174,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
 
                     <div className={`${styles.formGroup} ${styles.col6}`}>
                         <label className={styles.formLabel}>Nhóm khách hàng</label>
-                        <select 
+                        <SearchableSelect 
                             className={styles.select} 
                             name="groupType"
                             value={form.groupType}
@@ -176,7 +183,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, editData = null, onError }) =
                             {GROUP_OPTIONS.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
-                        </select>
+                        </SearchableSelect>
                     </div>
 
                     <div className={`${styles.formGroup} ${styles.col12}`}>

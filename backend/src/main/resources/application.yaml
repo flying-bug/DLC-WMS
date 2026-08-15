@@ -7,16 +7,20 @@ spring:
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: computerduylong@gmail.com
-    password: sjvbpvpcyjcdqdun
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:computerduylong@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:sjvbpvpcyjcdqdun}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+            required: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
   jpa:
     hibernate:
       ddl-auto: update
@@ -35,7 +39,9 @@ backup:
   path: ${BACKUP_PATH:/tmp/backups}
 
 google:
-  client-id: 889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com
+  client-id: ${GMAIL_CLIENT_ID:889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com}
+  client-secret: ${GMAIL_CLIENT_SECRET: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}
+  refresh-token: ${GMAIL_REFRESH_TOKEN:1//04KBPq7hKygPUCgYIARAAGAQSNgF-L9Irb_g6d0iM3EJgsq6OGRXOQ-oPiugQgXmRjf5eylrUB013TdaOuRW5Fy-KdPNb--XHXQ}
 
 cloudinary:
   url: ${CLOUDINARY_URL:}

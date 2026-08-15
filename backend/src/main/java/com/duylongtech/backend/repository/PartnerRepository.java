@@ -29,17 +29,20 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
     /**
      * Lấy danh sách tất cả nhà cung cấp (is_supplier = true).
      */
-    @Query("SELECT p FROM Partner p WHERE p.isSupplier = true ORDER BY p.createdAt DESC")
-    List<Partner> findAllSuppliers();
+    @Query("SELECT p FROM Partner p WHERE p.isSupplier = true " +
+           "AND (:status IS NULL OR :status = '' OR p.status = :status) " +
+           "ORDER BY p.createdAt DESC")
+    List<Partner> findAllSuppliers(@Param("status") String status);
 
     /**
-     * Tìm kiếm nhà cung cấp theo tên hoặc mã (case-insensitive).
+     * Tìm kiếm nhà cung cấp theo tên hoặc mã (case-insensitive) và status (nếu có).
      */
     @Query("SELECT p FROM Partner p WHERE p.isSupplier = true " +
-           "AND (:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "AND (:keyword IS NULL OR :keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "     OR LOWER(p.code) LIKE LOWER(CONCAT('%', :keyword, '%')))" +
+           "AND (:status IS NULL OR :status = '' OR p.status = :status) " +
            "ORDER BY p.createdAt DESC")
-    List<Partner> searchSuppliers(@Param("keyword") String keyword);
+    List<Partner> searchSuppliers(@Param("keyword") String keyword, @Param("status") String status);
 
     /**
      * Kiểm tra nhà cung cấp có liên kết giao dịch không (purchase orders).
@@ -124,36 +127,20 @@ public interface PartnerRepository extends JpaRepository<Partner, Long> {
     /**
      * Tính tổng tiền đã thu từ khách hàng (chỉ tính phiếu thu hoàn thành POSTED/APPROVED).
      */
-    @Query(value = "SELECT COALESCE(SUM(amount), 0) FROM (" +
-           "SELECT amount FROM payment_transactions " +
-           "WHERE partner_id = :customerId AND type = 'RECEIPT' AND status IN ('POSTED', 'APPROVED') " +
-           "UNION ALL " +
-           "SELECT amount FROM payment_receipts " +
-           "WHERE partner_id = :customerId AND status IN ('POSTED', 'APPROVED')" +
-           ") paid_transactions",
+    @Query(value = "SELECT COALESCE(SUM(amount), 0) " +
+           "FROM payment_transactions " +
+           "WHERE partner_id = :customerId AND type = 'RECEIPT' AND status IN ('POSTED', 'APPROVED')",
            nativeQuery = true)
     java.math.BigDecimal getTotalPaidByCustomerId(@Param("customerId") Long customerId);
 
     /**
      * Lấy lịch sử thu chi (UNION ALL giữa RECEIPTS và VOUCHERS).
      */
-     @Query(value = "SELECT history.code, history.amount, history.status, history.payment_method AS paymentMethod, " +
-           "history.created_at AS createdAt, history.type, history.note " +
-           "FROM (" +
-           "SELECT transaction_code AS code, amount, status, payment_method, created_at, type, note " +
+     @Query(value = "SELECT id AS receiptId, transaction_code AS code, amount, status, payment_method AS paymentMethod, " +
+           "created_at AS createdAt, type, note " +
            "FROM payment_transactions WHERE partner_id = :customerId " +
-           "UNION ALL " +
-           "SELECT receipt_code AS code, amount, status, payment_method, created_at, 'RECEIPT' AS type, NULL AS note " +
-           "FROM payment_receipts WHERE partner_id = :customerId " +
-           "UNION ALL " +
-           "SELECT voucher_code AS code, amount, status, payment_method, created_at, 'VOUCHER' AS type, NULL AS note " +
-           "FROM payment_vouchers WHERE partner_id = :customerId " +
-           ") history " +
-           "ORDER BY history.created_at DESC",
-           countQuery = "SELECT " +
-           "(SELECT COUNT(*) FROM payment_transactions WHERE partner_id = :customerId) + " +
-           "(SELECT COUNT(*) FROM payment_receipts WHERE partner_id = :customerId) + " +
-           "(SELECT COUNT(*) FROM payment_vouchers WHERE partner_id = :customerId)",
+           "ORDER BY created_at DESC",
+           countQuery = "SELECT COUNT(*) FROM payment_transactions WHERE partner_id = :customerId",
            nativeQuery = true)
     Page<Object[]> findPaymentHistoryByCustomerId(@Param("customerId") Long customerId, Pageable pageable);
 }

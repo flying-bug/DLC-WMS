@@ -7,6 +7,8 @@ import WarehouseDeleteModal from '../../components/warehouse/WarehouseDeleteModa
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './WarehouseListPage.module.css';
 import { getVietnamTimestamp } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const WarehouseListPage = () => {
     const navigate = useNavigate();
@@ -333,7 +335,7 @@ const WarehouseListPage = () => {
                         <div className={styles.pageInfo}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span>Hiển thị</span>
-                                <select 
+                                <SearchableSelect 
                                     className="misa-select"
                                     style={{ width: '70px', height: '32px', padding: '0 8px', border: '1px solid #d4d4d7', borderRadius: '4px', outline: 'none' }}
                                     value={size} 
@@ -345,7 +347,7 @@ const WarehouseListPage = () => {
                                     <option value={10}>10</option>
                                     <option value={20}>20</option>
                                     <option value={50}>50</option>
-                                </select>
+                                </SearchableSelect>
                                 <span>trên tổng số {totalElements} bản ghi</span>
                             </div>
                         </div>

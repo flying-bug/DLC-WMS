@@ -380,6 +380,40 @@
     border: 1px solid #94a3b8 !important;
 }
 
+/* Column Specific Sizing & Wrapping */
+.colWarehouse {
+    width: 140px;
+    min-width: 130px;
+    max-width: 160px;
+    white-space: normal !important;
+    word-break: break-word;
+}
+
+.colProductCode {
+    width: 110px;
+    min-width: 100px;
+    white-space: nowrap;
+}
+
+.colProductName {
+    min-width: 280px;
+    white-space: normal !important;
+    word-break: break-word;
+}
+
+.colUnit {
+    width: 70px;
+    min-width: 60px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.colPartnerName {
+    min-width: 220px;
+    white-space: normal !important;
+    word-break: break-word;
+}
+
 /* Specific Alignment and weights */
 .textLeft { text-align: left; }
 .textCenter { text-align: center; }
@@ -536,34 +570,44 @@
     border-color: var(--color-text-placeholder);
 }
 
+.paginationWrapper {
+    margin-top: 16px;
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    border: 1px solid var(--color-border-soft);
+}
+
 /* Print Overrides */
 @media print {
     body * {
         visibility: hidden;
     }
-    .misa-modal-overlay {
+    
+    .paginationWrapper {
+        display: none !important;
+    }
+    
+    /* Only show the report results area */
+    .report-results-view, .report-results-view * {
+        visibility: visible;
+    }
+    
+    .report-results-view {
         position: absolute;
         left: 0;
         top: 0;
-        width: 100%;
-        background: white;
-    }
-    .misa-modal {
-        box-shadow: none;
-        border: none;
         width: 100% !important;
-        max-width: 100% !important;
-        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
     }
-    .misa-modal-body, .misa-modal-body * {
-        visibility: visible;
-    }
-    .misa-modal-header, .misa-modal-footer {
-        display: none !important;
-    }
+    
     .reportTableContainer {
         border: none;
+        box-shadow: none;
     }
+    
     .reportTable th, .reportTable td {
         border: 1px solid #000 !important;
         color: #000 !important;

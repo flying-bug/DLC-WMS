@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Select from 'react-select';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -11,7 +11,10 @@ import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGrid
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import CustomerModal from '../Customer/components/CustomerModal';
 import * as soApi from '../../api/salesOrderApi';
+import * as exportApi from '../../api/inventoryExportApi';
 import styles from './CreateSalesOrderPage.module.css';
+import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
+import { findBestMatch } from '../../utils/fuzzyMatch';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p) => p?.content ?? p ?? [];
@@ -36,24 +39,28 @@ const customSelectStyles = {
   menuPortal: base => ({ ...base, zIndex: 9999 }),
 };
 
-const emptyLine = () => ({ variantId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, serialNumbers: '', note: '' });
+const emptyLine = () => ({ variantId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, serialNumbers: [], note: '' });
 
 function CreateSalesOrderPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams(); // nếu có id → chế độ edit
   const isEdit = Boolean(id);
+  const voiceData = location.state?.voiceData || null;
 
   const [customers, setCustomers] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [variants, setVariants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [mode, setMode] = useState('quote');
+  const [mode, setMode] = useState('direct');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
   const [inventoryBalances, setInventoryBalances] = useState([]);
   const [showQuickAddProduct, setShowQuickAddProduct] = useState(false);
   const [quickAddLineIndex, setQuickAddLineIndex] = useState(null);
+  const [serialModalLineIndex, setSerialModalLineIndex] = useState(null);
+
 
   const [form, setForm] = useState({
     soCode: '',
@@ -70,7 +77,11 @@ function CreateSalesOrderPage() {
     address: '',
   });
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [isPaymentUserEdited, setIsPaymentUserEdited] = useState(false);
   const [lines, setLines] = useState([emptyLine()]);
+
+  const selectedSerialLine = serialModalLineIndex !== null ? lines[serialModalLineIndex] : null;
+  const selectedSerialProduct = selectedSerialLine ? variants.find(v => String(v.id) === String(selectedSerialLine.variantId)) : null;
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(p => ({ ...p, isVisible: false }));
@@ -82,7 +93,7 @@ function CreateSalesOrderPage() {
       try {
         const [warehouseRes, customerRes, variantRes, codeRes] = await Promise.allSettled([
           soApi.getWarehouses({ size: 100 }),
-          soApi.getCustomers({ isCustomer: true, size: 1000 }),
+          soApi.getCustomers({ isCustomer: true, status: 'APPROVED', size: 1000 }),
           soApi.getProducts({ size: 500 }),
           !isEdit ? soApi.getNextSoCode() : Promise.resolve(null),
         ]);
@@ -105,6 +116,72 @@ function CreateSalesOrderPage() {
     };
     load();
   }, [isEdit]);
+
+  // ── Voice Data auto-fill ──────────────────────────────────
+  useEffect(() => {
+    if (!voiceData || isEdit) return;
+
+    if (voiceData.mode) {
+      setMode(voiceData.mode);
+    }
+
+    // Auto-select warehouse
+    if (voiceData.warehouseKeyword && warehouses.length > 0) {
+      const matchWh = findBestMatch(warehouses, voiceData.warehouseKeyword, w => [w.name, w.code]);
+      if (matchWh) {
+        setForm(prev => ({ ...prev, warehouseId: matchWh.id }));
+      }
+    }
+
+    // Auto-select customer
+    if (voiceData.customerKeyword) {
+      if (customers.length > 0) {
+        const matchCust = findBestMatch(customers, voiceData.customerKeyword, c => [c.name, c.code, c.phone]);
+        if (matchCust) {
+          setForm(prev => ({
+            ...prev,
+            partnerId: matchCust.id,
+            deliveryAddress: matchCust.address || prev.deliveryAddress,
+          }));
+        } else {
+          setDirectCustomer(prev => ({
+            ...prev,
+            name: voiceData.customerKeyword,
+            phone: voiceData.customerPhone || prev.phone,
+            address: voiceData.deliveryAddress || prev.address,
+          }));
+        }
+      }
+    }
+
+    if (voiceData.customerPhone) {
+      setDirectCustomer(prev => ({ ...prev, phone: voiceData.customerPhone }));
+    }
+
+    // Auto-fill note
+    if (voiceData.note) {
+      setForm(prev => ({ ...prev, note: prev.note ? `${prev.note} - ${voiceData.note}` : voiceData.note }));
+    }
+
+    // Auto-add product line
+    if (voiceData.productKeyword && variants.length > 0) {
+      const matchProd = findBestMatch(variants, voiceData.productKeyword, v => [v.productName, v.variantName, v.sku]);
+      if (matchProd) {
+        const qty = Number(voiceData.quantity) || 1;
+        const price = voiceData.unitPrice != null ? Number(voiceData.unitPrice) : (Number(matchProd.retailPrice || matchProd.price || 0));
+        setLines([{
+          variantId: matchProd.id,
+          quantity: qty,
+          unitPrice: price,
+          unitName: matchProd.unitName || 'Cái',
+          warrantyMonths: Number(matchProd.warrantyMonths || 0),
+          vatRate: Number(matchProd.vatPercent || matchProd.vatRate || 0),
+          serialNumbers: [],
+          note: '',
+        }]);
+      }
+    }
+  }, [voiceData, isEdit, warehouses, customers, variants]);
 
   // Load SO data if editing
   useEffect(() => {
@@ -202,10 +279,10 @@ function CreateSalesOrderPage() {
   const grandTotal = subTotalAmount + totalVatAmount;
 
   useEffect(() => {
-    if (mode === 'direct' && (paymentAmount === '' || Number(paymentAmount) === 0)) {
+    if (mode === 'direct' && !isPaymentUserEdited) {
       setPaymentAmount(Math.round(grandTotal).toString());
     }
-  }, [grandTotal, mode, paymentAmount]);
+  }, [grandTotal, mode, isPaymentUserEdited]);
 
   // ── Save ──
   const buildPayload = () => ({
@@ -227,6 +304,7 @@ function CreateSalesOrderPage() {
   });
 
   const buildDirectPayload = () => ({
+    partnerId: form.partnerId ? Number(form.partnerId) : undefined,
     customerPhone: directCustomer.phone.trim() || undefined,
     customerName: directCustomer.name.trim() || undefined,
     customerAddress: directCustomer.address.trim() || undefined,
@@ -240,10 +318,7 @@ function CreateSalesOrderPage() {
       unitPrice: Number(l.unitPrice),
       vatRate: Number(l.vatRate || 0),
       warrantyMonths: Number(l.warrantyMonths || 0),
-      serialNumbers: String(l.serialNumbers || '')
-        .split(/\r?\n|,/)
-        .map(s => s.trim())
-        .filter(Boolean),
+      serialNumbers: Array.isArray(l.serialNumbers) ? l.serialNumbers : [],
       note: l.note || undefined,
     })),
   });
@@ -289,10 +364,7 @@ function CreateSalesOrderPage() {
         showToast('error', `Dòng ${i + 1}: số lượng phải là số nguyên lớn hơn 0`);
         return false;
       }
-      const serialCount = String(lines[i].serialNumbers || '')
-        .split(/\r?\n|,/)
-        .map(s => s.trim())
-        .filter(Boolean).length;
+      const serialCount = Array.isArray(lines[i].serialNumbers) ? lines[i].serialNumbers.length : 0;
       if (serialCount > 0 && serialCount !== qty) {
         showToast('error', `Dòng ${i + 1}: số serial phải bằng số lượng`);
         return false;
@@ -353,7 +425,9 @@ function CreateSalesOrderPage() {
   };
 
   // ── Options for react-select ──
-  const customerOptions = customers.map(c => ({ value: c.id, label: `${c.code} — ${c.name}` }));
+  const customerOptions = customers
+    .filter(c => c.status === 'APPROVED' || c.id === form.partnerId)
+    .map(c => ({ value: c.id, label: `${c.code} — ${c.name}${c.phone ? ' (' + c.phone + ')' : ''}` }));
   const warehouseOptions = warehouses.map(w => ({ value: w.id, label: `${w.code} — ${w.name}` }));
   const productOptions = variants.map(v => ({
     ...v,
@@ -389,17 +463,17 @@ function CreateSalesOrderPage() {
           <div className={styles.modeTabs}>
             <button
               type="button"
-              className={`${styles.modeTab} ${mode === 'quote' ? styles.modeTabActive : ''}`}
-              onClick={() => setMode('quote')}
-            >
-              <i className="bi bi-file-earmark-text" /> Tạo đơn báo giá
-            </button>
-            <button
-              type="button"
               className={`${styles.modeTab} ${mode === 'direct' ? styles.modeTabActive : ''}`}
               onClick={() => setMode('direct')}
             >
               <i className="bi bi-cash-coin" /> Bán hàng trực tiếp
+            </button>
+            <button
+              type="button"
+              className={`${styles.modeTab} ${mode === 'quote' ? styles.modeTabActive : ''}`}
+              onClick={() => setMode('quote')}
+            >
+              <i className="bi bi-file-earmark-text" /> Tạo đơn báo giá
             </button>
           </div>
         )}
@@ -417,7 +491,47 @@ function CreateSalesOrderPage() {
                     <i className="bi bi-person" /> {mode === 'direct' ? 'Khách mua tại quầy' : 'Thông tin khách hàng'}
                   </div>
 
-                  {mode === 'direct' && (
+                  <div className={styles.fieldRow}>
+                    <label className={styles.label}>
+                      Khách hàng {mode !== 'direct' && <span className={styles.required}>*</span>}
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ flex: 1 }}>
+                        <Select
+                          options={customerOptions}
+                          value={customerOptions.find(o => o.value === form.partnerId) || null}
+                          onChange={opt => {
+                            const cust = customers.find(c => c.id === opt?.value);
+                            setForm(p => ({
+                              ...p,
+                              partnerId: opt?.value || null,
+                              deliveryAddress: cust ? cust.address || '' : ''
+                            }));
+                            if (cust) {
+                              setDirectCustomer({
+                                phone: cust.phone || '',
+                                name: cust.name || '',
+                                address: cust.address || '',
+                              });
+                            }
+                          }}
+                          placeholder={mode === 'direct' ? "Chọn khách hàng (hoặc để trống nếu là khách vãng lai)..." : "Chọn khách hàng..."}
+                          isClearable
+                          styles={customSelectStyles}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomerModal(true)}
+                        title="Tạo khách hàng mới"
+                        style={{ width: '38px', height: '38px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary)' }}></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  {mode === 'direct' && !form.partnerId && (
                     <>
                       <div className={styles.directGrid}>
                         <div className={styles.fieldRow}>
@@ -454,42 +568,18 @@ function CreateSalesOrderPage() {
                     </>
                   )}
 
-                  {mode !== 'direct' && <div className={styles.fieldRow}>
-                    <label className={styles.label}>Khách hàng <span className={styles.required}>*</span></label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <div style={{ flex: 1 }}>
-                        <Select
-                          options={customerOptions}
-                          value={customerOptions.find(o => o.value === form.partnerId) || null}
-                          onChange={opt => {
-                            const cust = customers.find(c => c.id === opt?.value);
-                            setForm(p => ({
-                              ...p,
-                              partnerId: opt?.value || null,
-                              deliveryAddress: cust ? cust.address || '' : ''
-                            }));
-                          }}
-                          placeholder="Chọn khách hàng..."
-                          isClearable
-                          styles={customSelectStyles}
-                        />
-                      </div>
-                      <button type="button" onClick={() => setShowCustomerModal(true)} style={{ width: '38px', height: '38px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary)' }}></i>
-                      </button>
+                  {mode !== 'direct' && (
+                    <div className={styles.fieldRow}>
+                      <label className={styles.label}>Địa chỉ giao hàng</label>
+                      <textarea
+                        className={styles.textarea}
+                        rows={2}
+                        value={form.deliveryAddress}
+                        onChange={e => setForm(p => ({ ...p, deliveryAddress: e.target.value }))}
+                        placeholder="Địa chỉ giao hàng..."
+                      />
                     </div>
-                  </div>}
-
-                  {mode !== 'direct' && <div className={styles.fieldRow}>
-                    <label className={styles.label}>Địa chỉ giao hàng</label>
-                    <textarea
-                      className={styles.textarea}
-                      rows={2}
-                      value={form.deliveryAddress}
-                      onChange={e => setForm(p => ({ ...p, deliveryAddress: e.target.value }))}
-                      placeholder="Địa chỉ giao hàng..."
-                    />
-                  </div>}
+                  )}
 
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Kho xuất hàng <span className={styles.required}>*</span></label>
@@ -547,13 +637,40 @@ function CreateSalesOrderPage() {
 
                   {mode === 'direct' ? (
                     <div className={styles.fieldRow}>
-                      <label className={styles.label}>Khách trả</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <label className={styles.label} style={{ marginBottom: 0 }}>Khách trả</label>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            style={{ fontSize: 11, padding: '2px 6px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 4, cursor: 'pointer' }}
+                            onClick={() => {
+                              setIsPaymentUserEdited(false);
+                              setPaymentAmount(Math.round(grandTotal).toString());
+                            }}
+                          >
+                            Trả đủ
+                          </button>
+                          <button
+                            type="button"
+                            style={{ fontSize: 11, padding: '2px 6px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 4, cursor: 'pointer' }}
+                            onClick={() => {
+                              setIsPaymentUserEdited(true);
+                              setPaymentAmount('0');
+                            }}
+                          >
+                            Nợ 100%
+                          </button>
+                        </div>
+                      </div>
                       <input
                         inputMode="numeric"
                         type="text"
                         className={styles.input}
                         value={formatMoneyInput(paymentAmount)}
-                        onChange={e => setPaymentAmount(digitsOnly(e.target.value))}
+                        onChange={e => {
+                          setIsPaymentUserEdited(true);
+                          setPaymentAmount(digitsOnly(e.target.value));
+                        }}
                       />
                     </div>
                   ) : (
@@ -589,6 +706,20 @@ function CreateSalesOrderPage() {
                       <span>Tổng thanh toán:</span>
                       <strong className={styles.totalAmount}>{money(grandTotal)} đ</strong>
                     </div>
+                    {mode === 'direct' && (
+                      <>
+                        <div className={styles.summaryRow} style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
+                          <span>Khách trả:</span>
+                          <strong style={{ color: '#166534' }}>{money(Number(paymentAmount || 0))} đ</strong>
+                        </div>
+                        <div className={styles.summaryRow}>
+                          <span>Còn nợ:</span>
+                          <strong style={{ color: Math.max(0, grandTotal - Number(paymentAmount || 0)) > 0 ? '#dc2626' : '#166534' }}>
+                            {money(Math.max(0, grandTotal - Number(paymentAmount || 0)))} đ
+                          </strong>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -652,6 +783,7 @@ function CreateSalesOrderPage() {
                               }}
                               displayMode="code-name"
                               placeholder="Chọn mã hoặc tên hàng"
+
                             />
                             {line.variantId && (
                               <div style={{ marginTop: 4, fontSize: 11, color: availableQty >= Number(line.quantity || 0) ? '#16a34a' : '#dc2626' }}>
@@ -704,13 +836,33 @@ function CreateSalesOrderPage() {
                             />
                           </td>
                           {mode === 'direct' && (
-                            <td>
-                              <textarea
-                                className={styles.lineTextarea}
-                                value={line.serialNumbers || ''}
-                                onChange={e => updateLine(idx, 'serialNumbers', e.target.value)}
-                                placeholder="Mỗi serial 1 dòng"
-                              />
+                            <td align="center">
+                              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                {line.variantId && (
+                                  <button
+                                    type="button"
+                                    style={{
+                                      background: (line.serialNumbers?.length || 0) === Number(line.quantity || 0) ? '#dcfce7' : '#fef9c3',
+                                      color: (line.serialNumbers?.length || 0) === Number(line.quantity || 0) ? '#166534' : '#854d0e',
+                                      border: `1px solid ${(line.serialNumbers?.length || 0) === Number(line.quantity || 0) ? '#bbf7d0' : '#fef08a'}`,
+                                      borderRadius: '4px',
+                                      padding: '2px 8px',
+                                      fontSize: '12px',
+                                      fontWeight: 500,
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '4px',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                    onClick={() => setSerialModalLineIndex(idx)}
+                                  >
+                                    <i className="bi bi-upc-scan"></i>
+                                    {(line.serialNumbers?.length || 0)} / {Number(line.quantity || 0)}
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           )}
                           <td>
@@ -807,17 +959,77 @@ function CreateSalesOrderPage() {
 
       <CustomerModal
         isOpen={showCustomerModal}
+        editData={null}
         onClose={() => setShowCustomerModal(false)}
+        onSaved={(isEdit, isContinue, newCustomer) => {
+          if (newCustomer && newCustomer.id) {
+            setCustomers(prev => [newCustomer, ...prev.filter(c => c.id !== newCustomer.id)]);
+            setForm(prev => ({
+              ...prev,
+              partnerId: newCustomer.id,
+              deliveryAddress: newCustomer.address || ''
+            }));
+            setDirectCustomer({
+              phone: newCustomer.phone || '',
+              name: newCustomer.name || '',
+              address: newCustomer.address || '',
+            });
+          }
+          setShowCustomerModal(false);
+        }}
         onSuccess={(newCustomer) => {
-          setCustomers(prev => [newCustomer, ...prev]);
-          setForm(prev => ({
-            ...prev,
-            partnerId: newCustomer.id,
-            deliveryAddress: newCustomer.address || ''
-          }));
+          if (newCustomer && newCustomer.id) {
+            setCustomers(prev => [newCustomer, ...prev.filter(c => c.id !== newCustomer.id)]);
+            setForm(prev => ({
+              ...prev,
+              partnerId: newCustomer.id,
+              deliveryAddress: newCustomer.address || ''
+            }));
+            setDirectCustomer({
+              phone: newCustomer.phone || '',
+              name: newCustomer.name || '',
+              address: newCustomer.address || '',
+            });
+          }
           setShowCustomerModal(false);
         }}
       />
+
+      {serialModalLineIndex !== null && selectedSerialProduct && (
+        <ManageSerialModal
+          isOpen={true}
+          onClose={(serials) => {
+            if (Array.isArray(serials)) {
+              updateLine(serialModalLineIndex, 'serialNumbers', serials);
+            }
+            setSerialModalLineIndex(null);
+          }}
+          productName={selectedSerialProduct.variantName || selectedSerialProduct.productName}
+          targetQuantity={Number(selectedSerialLine.quantity || 0)}
+          initialSerials={selectedSerialLine.serialNumbers || []}
+          mode="export"
+          warehouseId={form.warehouseId}
+          variantId={selectedSerialProduct.id}
+          onValidateSerial={async (serialValue) => {
+            try {
+              const response = await exportApi.resolveScan({
+                code: serialValue,
+                warehouseId: form.warehouseId,
+              });
+              const scanResult = unwrap(response);
+              if (!scanResult.serialNumber) {
+                throw new Error('Mã này không tồn tại hoặc không phải là serial.');
+              }
+              if (String(scanResult.variantId) !== String(selectedSerialProduct.id)) {
+                throw new Error('Serial này thuộc về sản phẩm khác.');
+              }
+              return true;
+            } catch (err) {
+              throw new Error(err?.response?.data?.userMessage || err.message || 'Mã Serial không hợp lệ.', { cause: err });
+            }
+          }}
+        />
+      )}
     </AdminLayout>
   );
 }

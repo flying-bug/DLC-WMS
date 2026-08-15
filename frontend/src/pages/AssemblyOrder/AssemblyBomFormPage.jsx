@@ -8,6 +8,8 @@ import * as assemblyApi from '../../api/assemblyOrderApi';
 import axiosClient from '../../api/axiosClient';
 import { exportBomToExcel } from '../../utils/bomExcelExport';
 import styles from './AssemblyOrderPage.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const listFrom = (payload) => payload?.content ?? payload ?? [];
@@ -381,17 +383,18 @@ function AssemblyBomFormPage() {
                         <label className={styles.field}>
                             <span>Thành phẩm <span style={{ color: 'red' }}>*</span></span>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <select
-                                    value={form.productId}
-                                    onChange={(event) => handleProductChange(event.target.value)}
-                                    disabled={!canEdit}
-                                    style={{ flex: 1 }}
-                                >
-                                    <option value="">Chọn thành phẩm</option>
-                                    {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
-                                        <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
-                                    ))}
-                                </select>
+                                <div style={{ flex: 1 }}>
+                                    <SearchableSelect
+                                        value={form.productId}
+                                        onChange={(event) => handleProductChange(event.target.value)}
+                                        disabled={!canEdit}
+                                    >
+                                        <option value="">Chọn thành phẩm</option>
+                                        {products.filter(p => p.productType === 'Thành phẩm').map((product) => (
+                                            <option key={product.id} value={product.id}>{product.productCode} - {product.productName}</option>
+                                        ))}
+                                    </SearchableSelect>
+                                </div>
                                 {canEdit && (
                                     <button
                                         type="button"
@@ -596,7 +599,7 @@ function AssemblyBomFormPage() {
 
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
                             <button className="btn-misa-cancel" style={{ border: '1px solid #10b981', color: '#10b981' }} type="button" onClick={handleExportExcel}>
-                                <i className="bi bi-file-earmark-excel"></i> Xuất Excel cấu hình
+                                <i className="bi bi-file-earmark-excel"></i>
                             </button>
                             {canEdit && (
                                 <>

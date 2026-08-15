@@ -8,15 +8,13 @@ import styles from './WarrantyListPage.module.css';
 import Toast from '../../components/ui/Toast/Toast';
 import Modal from '../../components/ui/Modal/Modal';
 import { formatDateOnly } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const STATUS_LABELS = {
-  DRAFT: { label: 'Nháp', code: 'info' },
-  APPROVED: { label: 'Còn hiệu lực', code: 'success' },
-  POSTED: { label: 'Đã ghi nhận', code: 'success' },
   ACTIVE: { label: 'Còn hiệu lực', code: 'success' },
-  CANCELLED: { label: 'Đã hủy', code: 'danger' },
   EXPIRED: { label: 'Hết hạn', code: 'warning' },
-  VOIDED: { label: 'Không hợp lệ', code: 'danger' }
+  VOIDED: { label: 'Bị hủy', code: 'danger' }
 };
 
 const DEFAULT_FILTERS = {
@@ -111,7 +109,9 @@ function WarrantyListPage() {
   }, [location, navigate]);
 
   const rows = warranties.map(item => {
-    const status = STATUS_LABELS[item.warrantyStatus] || { label: item.warrantyStatus || 'Không rõ', code: 'info' };
+    let currentStatus = item.warrantyStatus;
+    if (currentStatus === 'APPROVED' || currentStatus === 'POSTED') currentStatus = 'ACTIVE';
+    const status = STATUS_LABELS[currentStatus] || { label: currentStatus || 'Không rõ', code: 'info' };
     const pName = item.partnerName || item.customerName || item.partner?.name || 'Khách lẻ';
 
     const validSerials = item.lines
@@ -235,7 +235,7 @@ function WarrantyListPage() {
             </div>
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>TÌNH TRẠNG</span>
-              <select
+              <SearchableSelect
                 className={styles.filterSelect}
                 value={filters.status}
                 onChange={(e) => { setFilters(prev => ({ ...prev, status: e.target.value })); setCurrentPage(1); }}
@@ -244,7 +244,7 @@ function WarrantyListPage() {
                 {Object.entries(STATUS_LABELS).map(([value, meta]) => (
                   <option key={value} value={value}>{meta.label}</option>
                 ))}
-              </select>
+              </SearchableSelect>
             </div>
           </div>
           <div className={styles.filterActions}>
@@ -373,7 +373,7 @@ function WarrantyListPage() {
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>Hiển thị</span>
-              <select
+              <SearchableSelect
                 className="misa-select"
                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
                 value={pageSize}
@@ -383,7 +383,7 @@ function WarrantyListPage() {
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-              </select>
+              </SearchableSelect>
               <span>trên tổng số {totalItems} bản ghi</span>
             </div>
 

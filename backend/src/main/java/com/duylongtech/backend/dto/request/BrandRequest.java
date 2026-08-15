@@ -50,7 +50,7 @@ public class BrandRequest {
      * Hotline liên hệ thương hiệu (theo FR 3.7.3 Create Brand).
      * Validate định dạng số điện thoại Việt Nam.
      */
-    @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$", message = "INVALID_PHONE")
+    @Pattern(regexp = "^0[235789]\\d{8,9}$", message = "INVALID_PHONE")
     private String hotline;
 
     /**

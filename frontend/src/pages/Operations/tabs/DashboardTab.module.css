@@ -27,7 +27,8 @@
 .headerActions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
 .refreshBtn {
-    width: 36px; height: 36px;
+    width: var(--touch-target-min, 44px); height: var(--touch-target-min, 44px);
+    flex: 0 0 var(--touch-target-min, 44px);
     border: 1px solid var(--color-border-strong);
     border-radius: 8px;
     background: var(--color-primary-soft);
@@ -52,6 +53,7 @@
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: var(--shadow-primary);
+    min-height: var(--touch-target-min, 44px);
 }
 
 .backupNowBtn:hover { transform: translateY(-1px); box-shadow: var(--shadow-primary-raised); }

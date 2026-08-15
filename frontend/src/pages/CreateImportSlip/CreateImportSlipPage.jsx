@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as importApi from '../../api/inventoryImportApi';
+import { scanImportSlipOcr } from '../../api/inventoryImportApi';
+import OcrUploadModal from './components/OcrUploadModal';
+import OcrResultPreviewModal from './components/OcrResultPreviewModal';
 import * as customerApi from '../../api/customerApi';
 import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
@@ -14,13 +17,17 @@ import Toast from '../../components/ui/Toast/Toast';
 import ManageSerialModal from './ManageSerialModal';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
-import { printExportSlip } from '../../utils/printExportSlip';
+import { printImportSlip } from '../../utils/printImportSlip';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import Select from 'react-select';
 import axiosClient from '../../api/axiosClient';
+import { useAiFeature } from '../../contexts/AiFeatureContext';
 import styles from './CreateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { findBestMatch } from '../../utils/fuzzyMatch';
+
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -117,6 +124,7 @@ const emptyLine = () => ({
 function CreateImportSlipPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { aiEnabled } = useAiFeature();
   const voiceData = location.state?.voiceData || null;
   const assemblyData = location.state?.assemblyData || null;
   const stocktakeData = location.state?.stocktakeData || null;
@@ -138,6 +146,94 @@ function CreateImportSlipPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [savedSlip, setSavedSlip] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showOcrModal, setShowOcrModal] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrPreviewData, setOcrPreviewData] = useState(null);
+  const [ocrQuickAddPreviewIndex, setOcrQuickAddPreviewIndex] = useState(null);
+  const [ocrQuickAddProductName, setOcrQuickAddProductName] = useState('');
+  const [ocrQuickAddUnitName, setOcrQuickAddUnitName] = useState('');
+  const [ocrQuickAddCategoryName, setOcrQuickAddCategoryName] = useState('');
+  const [ocrQuickAddWarrantyMonths, setOcrQuickAddWarrantyMonths] = useState('');
+
+  const handleOcrPreviewQuickAdd = (index, rawProductName, unit, category, warrantyMonths) => {
+    setOcrQuickAddPreviewIndex(index);
+    setOcrQuickAddProductName(rawProductName);
+    setOcrQuickAddUnitName(unit || '');
+    setOcrQuickAddCategoryName(category || '');
+    setOcrQuickAddWarrantyMonths(warrantyMonths !== null && warrantyMonths !== undefined ? String(warrantyMonths) : '');
+    setShowQuickAddProduct(true);
+  };
+
+  const handleOcrSuccess = (data) => {
+    setShowOcrModal(false);
+    setOcrPreviewData(data);
+  };
+
+  const handleOcrFile = async (file) => {
+    setOcrLoading(true);
+    try {
+      const res = await scanImportSlipOcr(file);
+      const data = res?.data?.data ?? res?.data;
+      if (!data) {
+        showToast('error', 'Không nhận được dữ liệu từ AI');
+        return;
+      }
+      handleOcrSuccess(data);
+    } catch (err) {
+      console.error('OCR scan error:', err);
+      showToast('error', err.response?.data?.userMessage || 'Không thể trích xuất dữ liệu từ chứng từ');
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  const confirmOcrPreview = () => {
+    if (!ocrPreviewData) return;
+    const data = ocrPreviewData;
+    
+    // Auto-fill supplier
+    if (data.matchedSupplierId) {
+      setForm(prev => ({
+        ...prev,
+        partnerId: String(data.matchedSupplierId),
+        partnerName: data.matchedSupplierName || '',
+      }));
+      setImportType('PURCHASE');
+    }
+    // Auto-fill product lines
+    if (data.items && data.items.length > 0) {
+      const ocrLines = data.items.map(item => {
+        const variantId = item.matchedVariantId ? String(item.matchedVariantId) : '';
+        const product = variantId ? products.find(p => String(p.id) === variantId) : null;
+        return {
+          ...emptyLine(),
+          variantId,
+          quantity: Number(item.quantity) || 1,
+          price: Number(item.unitPrice) || 0,
+          note: item.rawProductName || '',
+          serialNumbers: item.serialNumbers || [],
+          warrantyMonths: product ? Number(product.warrantyMonths || 0) : 0,
+          vatPercent: item.vatPercent !== null && item.vatPercent !== undefined ? Number(item.vatPercent) : 0,
+          isNew: false,
+          _ocrConfidence: item.matchConfidence,
+          _ocrRawName: item.rawProductName,
+          _ocrSuggestions: item.alternativeSuggestions,
+        };
+      });
+      setItems(ocrLines);
+    }
+    // Auto-fill invoice info
+    if (data.invoiceCode) {
+      setForm(prev => ({
+        ...prev,
+        attachedDoc: data.invoiceCode,
+        note: prev.note || `Nhập từ hóa đơn ${data.invoiceCode}`,
+      }));
+    }
+    
+    setOcrPreviewData(null);
+    showToast('success', `Đã điền ${data.items?.length || 0} dòng sản phẩm vào phiếu nhập!`);
+  };
 
   const [form, setForm] = useState(() => ({
     docCode: '',
@@ -215,7 +311,12 @@ function CreateImportSlipPage() {
         const list = pageContent(unwrap(res));
         const invMap = new Map();
         list.forEach(b => {
-          if (b.variantId) invMap.set(String(b.variantId), Number(b.totalQuantity || 0));
+          const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+          const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+          const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+          const stock = Math.max(0, availableQuantity);
+          if (b.variantId) invMap.set(String(b.variantId), stock);
+          else if (b.itemId) invMap.set(String(b.itemId), stock);
         });
         setInventoryMap(invMap);
       })
@@ -236,7 +337,7 @@ function CreateImportSlipPage() {
 
       const [warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes] = await Promise.allSettled([
         importApi.getWarehouses({ size: 100 }),
-        importApi.getSuppliers(),
+        importApi.getSuppliers({ status: 'APPROVED' }),
         importApi.getProducts({ size: 1000 }),
         customerApi.searchCustomers('', 'APPROVED', '', 0, 1000),
         assemblyOrderApi.getAssemblyOrders({ size: 100 }),
@@ -248,7 +349,7 @@ function CreateImportSlipPage() {
         setForm(prev => ({ ...prev, warehouseId: prev.warehouseId || '' }));
       }
       if (supplierRes.status === 'fulfilled') {
-        const data = pageContent(unwrap(supplierRes.value)).filter(s => s.status !== 'INACTIVE');
+        const data = pageContent(unwrap(supplierRes.value)).filter(s => s.status === 'APPROVED');
         setSuppliers(data);
       }
       if (productRes.status === 'fulfilled') {
@@ -287,33 +388,45 @@ function CreateImportSlipPage() {
   useEffect(() => {
     if (!voiceData) return;
 
+    // Auto-select warehouse by keyword
+    if (voiceData.warehouseKeyword && warehouses.length > 0) {
+      const matchWh = findBestMatch(warehouses, voiceData.warehouseKeyword, w => [w.name, w.code]);
+      if (matchWh) {
+        setForm(prev => ({ ...prev, warehouseId: String(matchWh.id) }));
+      }
+    }
+
     // Auto-select supplier by keyword
     if (voiceData.supplierKeyword && suppliers.length > 0) {
-      const kw = voiceData.supplierKeyword.toLowerCase();
-      const match = suppliers.find(s => s.name?.toLowerCase().includes(kw));
-      if (match) {
-        setForm(prev => ({ ...prev, partnerId: match.id, partnerName: match.name }));
+      const matchSupp = findBestMatch(suppliers, voiceData.supplierKeyword, s => [s.name, s.code, s.phone]);
+      if (matchSupp) {
+        setForm(prev => ({ ...prev, partnerId: matchSupp.id, partnerName: matchSupp.name }));
       }
+    }
+
+    // Auto-fill note
+    if (voiceData.note) {
+      setForm(prev => ({ ...prev, note: prev.note ? `${prev.note} - ${voiceData.note}` : voiceData.note }));
     }
 
     // Auto-add product line by keyword
     if (voiceData.productKeyword && products.length > 0) {
-      const kw = voiceData.productKeyword.toLowerCase();
-      const match = products.find(p =>
-        p.productName?.toLowerCase().includes(kw)
-        || p.variantName?.toLowerCase().includes(kw)
-      );
-      if (match) {
+      const matchProd = findBestMatch(products, voiceData.productKeyword, p => [p.productName, p.variantName, p.sku]);
+      if (matchProd) {
         const qty = Number(voiceData.quantity) || 1;
+        const price = voiceData.unitPrice != null ? Number(voiceData.unitPrice) : (Number(matchProd.importPrice || matchProd.costPrice || matchProd.price || 0));
         setItems([{
           ...emptyLine(),
-          variantId: String(match.id),
+          variantId: String(matchProd.id),
           quantity: qty,
+          price: price,
+          vatPercent: matchProd.vatPercent != null ? Number(matchProd.vatPercent) : 0,
+          warrantyMonths: matchProd.warrantyMonths != null ? Number(matchProd.warrantyMonths) : 0,
           isNew: false,
         }]);
       }
     }
-  }, [voiceData, suppliers, products]);
+  }, [voiceData, warehouses, suppliers, products]);
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
 
@@ -324,7 +437,7 @@ function CreateImportSlipPage() {
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
-  const isLineValid = (item) => {
+    const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const quantity = Number(item.quantity || 0);
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
@@ -334,9 +447,9 @@ function CreateImportSlipPage() {
   const isFormValid = Boolean(
     form.warehouseId &&
     form.docDate &&
-    (importType === 'PURCHASE' ? form.partnerId
+    (importType === 'PURCHASE' ? (form.partnerId && form.referenceId)
       : (importType === 'PRODUCTION' || importType === 'SCRAP') ? form.assemblyOrderId
-        : importType === 'RETURN' ? form.customerId
+        : importType === 'RETURN' ? (form.customerId && form.referenceId)
           : true) && // OTHER type has no required partner field
     items.length && items.every(isLineValid)
   );
@@ -382,6 +495,20 @@ function CreateImportSlipPage() {
             }
           : item));
         showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
+      } else if (createdVariant && ocrQuickAddPreviewIndex !== null) {
+        setOcrPreviewData(prev => {
+          if (!prev) return prev;
+          const newData = { ...prev };
+          newData.items = [...prev.items];
+          newData.items[ocrQuickAddPreviewIndex] = {
+            ...newData.items[ocrQuickAddPreviewIndex],
+            matchedVariantId: createdVariant.id,
+            matchedVariantName: createdVariant.variantName,
+            matchedProductName: createdVariant.productName,
+          };
+          return newData;
+        });
+        showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
       } else {
         showToast('warning', 'Đã thêm sản phẩm nhưng chưa tìm thấy biến thể mặc định để chọn.');
       }
@@ -390,6 +517,11 @@ function CreateImportSlipPage() {
     } finally {
       setShowQuickAddProduct(false);
       setQuickAddLineId(null);
+      setOcrQuickAddPreviewIndex(null);
+      setOcrQuickAddProductName('');
+      setOcrQuickAddUnitName('');
+      setOcrQuickAddCategoryName('');
+      setOcrQuickAddWarrantyMonths('');
     }
   };
 
@@ -492,6 +624,7 @@ function CreateImportSlipPage() {
       if (importType === 'PURCHASE' && !form.partnerId) return showToast('error', 'Vui lòng chọn nhà cung cấp.');
       if ((importType === 'PRODUCTION' || importType === 'SCRAP') && !form.assemblyOrderId) return showToast('error', 'Vui lòng chọn lệnh quản lý cấu hình.');
       if (importType === 'RETURN' && !form.customerId) return showToast('error', 'Vui lòng chọn khách hàng.');
+      if ((importType === 'PURCHASE' || importType === 'RETURN') && !form.referenceId) return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
       if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày nhập kho.');
       const invalidVat = items.some(item => {
         const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
@@ -503,6 +636,13 @@ function CreateImportSlipPage() {
       }
       return showToast('error', 'Vui lòng điền đầy đủ thông tin bắt buộc.');
     }
+
+    for (const item of items) {
+      if (item.maxQuantity !== undefined && item.maxQuantity !== null && Number(item.quantity) > Number(item.maxQuantity)) {
+        const sku = productById.get(String(item.variantId))?.sku || '';
+        return showToast('error', `Số lượng nhập (${item.quantity}) vượt quá số lượng còn lại trong đơn mua hàng (tối đa ${item.maxQuantity}) ${sku ? `cho sản phẩm SKU ${sku}` : ''}`);
+      }
+    }
     setSaving(true);
     let createdId = null;
     try {
@@ -511,6 +651,16 @@ function CreateImportSlipPage() {
       createdId = created?.id;
       if (shouldPost && createdId) {
         await importApi.postImportSlip(createdId);
+      }
+      
+      // Trigger AI Learning for OCR
+      if (form.partnerId) {
+        items.forEach(item => {
+          if (item._ocrRawName && item.variantId) {
+            importApi.confirmOcrMapping(form.partnerId, item._ocrRawName, item.variantId)
+              .catch(e => console.warn('Lỗi lưu OCR mapping:', e));
+          }
+        });
       }
       const fullSlipData = {
         ...created,
@@ -586,6 +736,30 @@ function CreateImportSlipPage() {
             />
           </div>
         </div>
+        {aiEnabled && (
+          <button
+            type="button"
+            onClick={() => setShowOcrModal(true)}
+            style={{
+              padding: '7px 16px', borderRadius: '8px', border: 'none',
+              background: 'var(--brand-gradient, linear-gradient(135deg, var(--color-primary, #059669) 0%, var(--color-primary-accent, #10b981) 100%))',
+              color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+            }}
+          >
+            🤖 Quét AI (OCR)
+          </button>
+        )}
       </div>
 
       <div className={styles.pageBody}>
@@ -800,7 +974,10 @@ function CreateImportSlipPage() {
 
             <div className="misa-form-group" style={{ marginTop: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
+                <label className="misa-label" style={{ marginBottom: 0 }}>
+                  Kèm theo chứng từ
+                  {(importType === 'PURCHASE' || importType === 'RETURN') && <span className="required" style={{ marginLeft: '4px' }}>*</span>}
+                </label>
                 {!form.referenceId && (
                   <button
                     type="button"
@@ -968,13 +1145,13 @@ function CreateImportSlipPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '350px' }}>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-                <select style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
+                <SearchableSelect style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
                   <option>5 bản ghi trên 1 trang</option>
                   <option>10 bản ghi trên 1 trang</option>
                   <option>20 bản ghi trên 1 trang</option>
                   <option>50 bản ghi trên 1 trang</option>
-                </select>
-                <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280' }}>
+                </SearchableSelect>
+                <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <span style={{ cursor: 'pointer' }}>Trước</span>
                   <span style={{ fontWeight: 'bold', color: '#111827' }}>1</span>
                   <span style={{ cursor: 'pointer' }}>Sau</span>
@@ -1003,12 +1180,16 @@ function CreateImportSlipPage() {
 
       <div className={styles.fixedFooter}>
         <div className={styles.footerLeft}>
-          <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>Hủy bỏ</button>
+          <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>
+            <i className="bi bi-x-circle"></i> Hủy bỏ
+          </button>
         </div>
         <div className={styles.footerRight}>
-          <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>Lưu tạm</button>
+          <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>
+            <i className="bi bi-save"></i> Lưu tạm
+          </button>
           <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => setShowConfirm(true)}>
-            <i className="bi bi-printer"></i> Lưu và ghi sổ
+            <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
           </button>
         </div>
       </div>
@@ -1022,10 +1203,22 @@ function CreateImportSlipPage() {
       />
       <QuickAddProductModal
         isOpen={showQuickAddProduct}
-        onClose={() => { setShowQuickAddProduct(false); setQuickAddLineId(null); }}
+        onClose={() => { 
+          setShowQuickAddProduct(false); 
+          setQuickAddLineId(null); 
+          setOcrQuickAddPreviewIndex(null); 
+          setOcrQuickAddProductName('');
+          setOcrQuickAddUnitName('');
+          setOcrQuickAddCategoryName('');
+          setOcrQuickAddWarrantyMonths('');
+        }}
         onSuccess={handleQuickAddProductSuccess}
         productType={importType === 'PRODUCTION' ? 'Thành phẩm' : 'Hàng hóa'}
         allowedProductTypes={['Hàng hóa', 'Thành phẩm']}
+        initialProductName={ocrQuickAddProductName}
+        initialUnitName={ocrQuickAddUnitName}
+        initialCategoryName={ocrQuickAddCategoryName}
+        initialWarrantyMonths={ocrQuickAddWarrantyMonths}
       />
       {showPartnerModal && (
         <SupplierModal
@@ -1153,10 +1346,23 @@ function CreateImportSlipPage() {
         printBtnText="In phiếu nhập kho"
         onPrint={() => {
           const supplier = suppliers.find(s => String(s.id) === String(savedSlip?.partnerId || form.partnerId)) || {};
-          const warehouseName = warehouses.find(w => String(w.id) === String(savedSlip?.warehouseId || form.warehouseId))?.name || '';
-          printExportSlip(savedSlip || {}, {
-            customer: supplier,
-            warehouseName,
+          const customer = customers.find(c => String(c.id) === String(savedSlip?.partnerId || form.partnerId)) || {};
+          const warehouse = warehouses.find(w => String(w.id) === String(savedSlip?.warehouseId || form.warehouseId)) || {};
+          const productById = new Map(products.map(p => [p.id, p]));
+          const userById = new Map(users.map(u => [u.id, u]));
+          const supplierById = new Map(suppliers.map(s => [s.id, s]));
+          const warehouseById = new Map(warehouses.map(w => [w.id, w]));
+          const customerById = new Map(customers.map(c => [c.id, c]));
+          const assemblyOrderById = new Map(assemblyOrders.map(a => [a.id, a]));
+
+          printImportSlip(savedSlip || form || {}, {
+            supplier,
+            customer,
+            warehouseName: warehouse.name || '',
+            supplierById,
+            customerById,
+            warehouseById,
+            assemblyOrderById,
             productById,
             userById,
             isImport: true
@@ -1167,6 +1373,20 @@ function CreateImportSlipPage() {
         onClose={() => navigate(returnUrl || '/import-history')}
       />
 
+      <OcrUploadModal
+        open={showOcrModal}
+        onClose={() => setShowOcrModal(false)}
+        onFileSelected={handleOcrFile}
+        onOcrSuccess={handleOcrSuccess}
+        loading={ocrLoading}
+      />
+      <OcrResultPreviewModal
+        open={!!ocrPreviewData}
+        data={ocrPreviewData}
+        onConfirm={confirmOcrPreview}
+        onCancel={() => setOcrPreviewData(null)}
+        onQuickAdd={handleOcrPreviewQuickAdd}
+      />
       <Toast
         isVisible={toast.isVisible}
         message={toast.message}

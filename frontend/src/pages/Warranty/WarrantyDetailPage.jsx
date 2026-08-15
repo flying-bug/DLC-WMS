@@ -3,17 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as warrantyApi from '../../api/warrantyApi';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import Toast from '../../components/ui/Toast/Toast';
 import styles from './WarrantyDetailPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
 
 const STATUS_LABELS = {
-  DRAFT: { label: 'Nháp', code: 'info' },
-  APPROVED: { label: 'Còn hiệu lực', code: 'success' },
-  POSTED: { label: 'Đã ghi nhận', code: 'success' },
   ACTIVE: { label: 'Còn hiệu lực', code: 'success' },
-  CANCELLED: { label: 'Đã hủy', code: 'danger' },
   EXPIRED: { label: 'Hết hạn', code: 'warning' },
-  VOIDED: { label: 'Không hợp lệ', code: 'danger' }
+  VOIDED: { label: 'Bị hủy', code: 'danger' }
 };
 
 const REPAIR_STATUS_LABELS = {
@@ -34,6 +32,15 @@ function WarrantyDetailPage() {
   const [warranty, setWarranty] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showVoidModal, setShowVoidModal] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
+  const [voiding, setVoiding] = useState(false);
+  const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
+
+  const showToast = (type, message) => {
+    setToast({ isVisible: true, type, message });
+    setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
+  };
 
   const loadWarranty = useCallback(async () => {
     setLoading(true);
@@ -49,6 +56,25 @@ function WarrantyDetailPage() {
     }
   }, [id]);
 
+  const handleVoidWarranty = async () => {
+    if (!voidReason.trim()) {
+      showToast('error', 'Vui lòng nhập lý do vô hiệu hóa.');
+      return;
+    }
+    setVoiding(true);
+    try {
+      await warrantyApi.updateWarrantyStatus(id, { warrantyStatus: 'VOIDED', note: voidReason.trim() });
+      showToast('success', 'Đã vô hiệu hóa phiếu bảo hành thành công.');
+      setShowVoidModal(false);
+      setVoidReason('');
+      loadWarranty();
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || 'Không thể vô hiệu hóa phiếu bảo hành.');
+    } finally {
+      setVoiding(false);
+    }
+  };
+
   useEffect(() => {
     loadWarranty();
   }, [loadWarranty]);
@@ -61,7 +87,9 @@ function WarrantyDetailPage() {
   const lines = warranty?.lines || [];
 
   const repairs = warranty?.repairs || warranty?.repairHistory || [];
-  const statusInfo = STATUS_LABELS[warranty?.warrantyStatus] || { label: warranty?.warrantyStatus || 'Chưa rõ', code: 'info' };
+  let currentStatus = warranty?.warrantyStatus;
+  if (currentStatus === 'APPROVED' || currentStatus === 'POSTED') currentStatus = 'ACTIVE';
+  const statusInfo = STATUS_LABELS[currentStatus] || { label: currentStatus || 'Chưa rõ', code: 'info' };
 
   if (loading && !warranty) {
     return (
@@ -98,10 +126,18 @@ function WarrantyDetailPage() {
               {statusInfo.label}
             </span>
           </div>
-          <div className={styles.headerRight}>
-            <button className={styles.btnEdit} onClick={() => navigate(`/repairs/create?warrantyId=${id}`)}>
-              <i className="bi bi-tools"></i> Tạo phiếu sửa
-            </button>
+          <div className={styles.headerRight} style={{ display: 'flex', gap: '8px' }}>
+
+            {currentStatus === 'ACTIVE' && (
+              <button className={styles.btnDelete} onClick={() => setShowVoidModal(true)}>
+                <i className="bi bi-shield-x"></i> Vô hiệu hóa
+              </button>
+            )}
+            {currentStatus !== 'VOIDED' && (
+              <button className={styles.btnEdit} onClick={() => navigate(`/repairs/create?warrantyId=${id}`)} style={{ marginLeft: 8 }}>
+                <i className="bi bi-tools"></i> Tạo phiếu sửa
+              </button>
+            )}
           </div>
         </div>
 
@@ -123,6 +159,22 @@ function WarrantyDetailPage() {
                     <p>{formatDate(warranty.startDate)}</p>
                   </div>
                   <div className={styles.infoItem}>
+                    <label>Kèm theo chứng từ</label>
+                    <p>
+                      {warranty.exportSlipId ? (
+                        <span style={{ color: 'var(--color-primary)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate(`/export-slips/${warranty.exportSlipId}/edit`)}>
+                          {warranty.exportSlipCode || 'Phiếu xuất kho'}
+                        </span>
+                      ) : warranty.salesOrderId ? (
+                        <span style={{ color: 'var(--color-primary)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => navigate(`/sales-orders/${warranty.salesOrderId}`)}>
+                          {`Đơn hàng #${warranty.salesOrderId}`}
+                        </span>
+                      ) : (
+                        'Không có chứng từ kèm theo'
+                      )}
+                    </p>
+                  </div>
+                  <div className={styles.infoItem}>
                     <label>Ngày hết hạn</label>
                     <p>{formatDate(warranty.endDate)}</p>
                   </div>
@@ -139,7 +191,7 @@ function WarrantyDetailPage() {
                       <table className="misa-table" style={{ width: '100%' }}>
                         <thead>
                           <tr>
-                            <th style={{ width: '40px', textAlign: 'center' }}>STT</th>
+                            <th style={{ width: '50px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
                             <th>Mã SKU</th>
                             <th>Sản phẩm</th>
                             <th>Serial</th>
@@ -184,48 +236,48 @@ function WarrantyDetailPage() {
                         <th style={{ minWidth: '120px', textAlign: 'right' }}>Chi phí (VNĐ)</th>
                       </tr>
                     </thead>
-                  <tbody>
-                    {repairs.length > 0 ? (
-                      repairs.map(repair => {
-                        const rStatus = REPAIR_STATUS_LABELS[repair.repairStatus] || { label: repair.repairStatus || 'Không rõ' };
-                        return (
-                          <tr key={repair.id} className="cursor-pointer hover-highlight" onClick={() => navigate(`/repairs/${repair.id}`)}>
-                            <td>
-                              <span style={{ color: 'var(--color-primary)', fontWeight: '500' }}>
-                                {repair.repairCode}
-                              </span>
-                            </td>
-                            <td>{formatDate(repair.receivedDate)}</td>
-                            <td>
-                              <span style={{
-                                padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500', display: 'inline-block',
-                                backgroundColor: rStatus.code === 'success' ? '#dcfce7' : rStatus.code === 'danger' ? '#fee2e2' : rStatus.code === 'warning' ? '#fef3c7' : '#dbeafe',
-                                color: rStatus.code === 'success' ? '#166534' : rStatus.code === 'danger' ? '#991b1b' : rStatus.code === 'warning' ? '#92400e' : '#1e40af'
-                              }}>
-                                {rStatus.label}
-                              </span>
-                            </td>
-                            <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={repair.issueDescription || ''}>{repair.issueDescription || 'Chưa ghi nhận'}</td>
-                            <td>{repair.responsiblePerson || 'Chưa phân công'}</td>
-                            <td style={{ textAlign: 'right', fontWeight: '500' }}>{money(repair.totalAmount)}</td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
-                          Sản phẩm chưa từng được sửa chữa
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                    <tbody>
+                      {repairs.length > 0 ? (
+                        repairs.map(repair => {
+                          const rStatus = REPAIR_STATUS_LABELS[repair.repairStatus] || { label: repair.repairStatus || 'Không rõ' };
+                          return (
+                            <tr key={repair.id} className="cursor-pointer hover-highlight" onClick={() => navigate(`/repairs/${repair.id}`)}>
+                              <td>
+                                <span style={{ color: 'var(--color-primary)', fontWeight: '500' }}>
+                                  {repair.repairCode}
+                                </span>
+                              </td>
+                              <td>{formatDate(repair.receivedDate)}</td>
+                              <td>
+                                <span style={{
+                                  padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500', display: 'inline-block',
+                                  backgroundColor: rStatus.code === 'success' ? '#dcfce7' : rStatus.code === 'danger' ? '#fee2e2' : rStatus.code === 'warning' ? '#fef3c7' : '#dbeafe',
+                                  color: rStatus.code === 'success' ? '#166534' : rStatus.code === 'danger' ? '#991b1b' : rStatus.code === 'warning' ? '#92400e' : '#1e40af'
+                                }}>
+                                  {rStatus.label}
+                                </span>
+                              </td>
+                              <td style={{ maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={repair.issueDescription || ''}>{repair.issueDescription || 'Chưa ghi nhận'}</td>
+                              <td>{repair.responsiblePerson || 'Chưa phân công'}</td>
+                              <td style={{ textAlign: 'right', fontWeight: '500' }}>{money(repair.totalAmount)}</td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                            Sản phẩm chưa từng được sửa chữa
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div>
+          <div>
             <div className={styles.card}>
               <div className={styles.cardHeader}>
                 <i className="bi bi-person"></i>
@@ -255,6 +307,34 @@ function WarrantyDetailPage() {
           </div>
         </div>
       </div>
+
+      {showVoidModal && (
+        <ConfirmModal
+          isOpen={showVoidModal}
+          onClose={() => setShowVoidModal(false)}
+          onCancel={() => setShowVoidModal(false)}
+          onConfirm={handleVoidWarranty}
+          title="Vô hiệu hóa bảo hành"
+          message={
+            <div>
+              <p style={{ marginBottom: 12 }}>Bạn có chắc chắn muốn vô hiệu hóa phiếu bảo hành này không? Hành động này không thể hoàn tác.</p>
+              <textarea
+                style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #d1d5db', fontSize: 14 }}
+                rows={3}
+                placeholder="Nhập lý do vô hiệu hóa (Bắt buộc)..."
+                value={voidReason}
+                onChange={e => setVoidReason(e.target.value)}
+              />
+            </div>
+          }
+          confirmText={voiding ? 'Đang xử lý...' : 'Xác nhận'}
+          cancelText="Hủy"
+        />
+      )}
+
+      {toast.isVisible && (
+        <Toast type={toast.type} message={toast.message} onClose={() => setToast(prev => ({ ...prev, isVisible: false }))} />
+      )}
     </AdminLayout>
   );
 }

@@ -40,6 +40,10 @@ public class SalesOrderLine {
     @Column(name = "line_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal lineAmount;
 
+    @Column(name = "cost_amount", precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal costAmount = BigDecimal.ZERO;
+
     @Column(name = "vat_rate", precision = 5, scale = 2)
     private BigDecimal vatRate;
 

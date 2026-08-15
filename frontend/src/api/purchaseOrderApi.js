@@ -2,8 +2,13 @@ import axiosClient from './axiosClient';
 
 const BASE = '/purchase-orders';
 
+const cleanParams = (params = {}) =>
+  Object.fromEntries(
+    Object.entries(params).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
+  );
+
 export const getPurchaseOrders = (params = {}) =>
-  axiosClient.get(BASE, { params });
+  axiosClient.get(BASE, { params: cleanParams(params) });
 
 export const getPurchaseOrderById = (id) =>
   axiosClient.get(`${BASE}/${id}`);

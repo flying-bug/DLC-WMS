@@ -19,6 +19,9 @@ import axiosClient from '../../api/axiosClient';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import styles from './CreateExportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { findBestMatch } from '../../utils/fuzzyMatch';
+
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -119,6 +122,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   const stocktakeData = location.state?.stocktakeData || null;
   const soData = location.state?.soData || null;
   const returnUrl = location.state?.returnUrl || null;
+  const voiceData = location.state?.voiceData || null;
   const initialType = propMode || searchParams.get('type')?.toUpperCase() || (stocktakeData ? 'OTHER' : 'SALE');
 
   const [exportMode, setExportMode] = useState(initialType);
@@ -225,7 +229,7 @@ function CreateExportSlipPage({ mode: propMode }) {
       const [warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
         exportApi.getWarehouses({ size: 100 }),
         exportApi.getProducts({ size: 1000 }),
-        exportApi.getCustomers({ size: 1000 }),
+        exportApi.getCustomers({ status: 'APPROVED', size: 1000 }),
         exportApi.getUsers({ size: 1000 }).catch(() => null),
       ]);
 
@@ -239,7 +243,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         setProducts(data);
       }
       if (customerRes.status === 'fulfilled') {
-        const data = pageContent(unwrap(customerRes.value));
+        const data = pageContent(unwrap(customerRes.value)).filter(c => c.status === 'APPROVED');
         setCustomers(data);
       }
       if (userRes.status === 'fulfilled' && userRes.value) {
@@ -260,6 +264,61 @@ function CreateExportSlipPage({ mode: propMode }) {
 
     loadLookups();
   }, []);
+
+  // ── Voice Data auto-fill ──────────────────────────────────
+  useEffect(() => {
+    if (!voiceData) return;
+
+    if (voiceData.exportMode) {
+      setExportMode(voiceData.exportMode.toUpperCase());
+    }
+
+    // Auto-select warehouse
+    if (voiceData.warehouseKeyword && warehouses.length > 0) {
+      const matchWh = findBestMatch(warehouses, voiceData.warehouseKeyword, w => [w.name, w.code]);
+      if (matchWh) {
+        setForm(prev => ({ ...prev, warehouseId: String(matchWh.id) }));
+      }
+    }
+
+    // Auto-select customer
+    if (voiceData.customerKeyword && customers.length > 0) {
+      const matchCust = findBestMatch(customers, voiceData.customerKeyword, c => [c.name, c.code, c.phone]);
+      if (matchCust) {
+        setForm(prev => ({
+          ...prev,
+          partnerId: String(matchCust.id),
+          receiverName: matchCust.name || prev.receiverName,
+          receiverPhone: matchCust.phone || prev.receiverPhone,
+          customerAddress: matchCust.address || prev.customerAddress,
+          receiverAddress: matchCust.address || prev.receiverAddress,
+        }));
+      }
+    }
+
+    // Auto-fill note
+    if (voiceData.note) {
+      setForm(prev => ({ ...prev, note: prev.note ? `${prev.note} - ${voiceData.note}` : voiceData.note }));
+    }
+
+    // Auto-add product line
+    if (voiceData.productKeyword && products.length > 0) {
+      const matchProd = findBestMatch(products, voiceData.productKeyword, p => [p.productName, p.variantName, p.sku]);
+      if (matchProd) {
+        const qty = Number(voiceData.quantity) || 1;
+        const price = voiceData.unitPrice != null ? Number(voiceData.unitPrice) : (Number(matchProd.retailPrice || matchProd.price || 0));
+        setItems([{
+          ...emptyLine(),
+          variantId: String(matchProd.id),
+          quantity: qty,
+          price: price,
+          vatPercent: matchProd.vatPercent != null ? Number(matchProd.vatPercent) : 0,
+          warrantyMonths: matchProd.warrantyMonths != null ? Number(matchProd.warrantyMonths) : 0,
+          isNew: false,
+        }]);
+      }
+    }
+  }, [voiceData, warehouses, customers, products]);
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const userById = useMemo(() => new Map(users.map(user => [String(user.id), user])), [users]);
@@ -296,6 +355,9 @@ function CreateExportSlipPage({ mode: propMode }) {
   const isFormValid = Boolean(
     form.warehouseId &&
     form.docDate &&
+    (exportMode === 'SALE' ? (form.partnerId && form.referenceId)
+      : exportMode === 'ASSEMBLY' ? form.referenceId
+        : true) &&
     items.length &&
     items.every(isLineValid)
   );
@@ -584,6 +646,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   const submit = async (status, shouldPost = false) => {
     if (!isFormValid) {
       if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho xuất.');
+      if (exportMode === 'SALE' && !form.referenceId) return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
       if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày lập phiếu.');
       const invalidVat = items.some(item => {
         const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
@@ -594,6 +657,13 @@ function CreateExportSlipPage({ mode: propMode }) {
         return showToast('error', 'Vui lòng chọn hàng hóa và nhập số lượng > 0.');
       }
       return showToast('error', 'Vui lòng điền đầy đủ thông tin bắt buộc.');
+    }
+
+    for (const item of items) {
+      if (item.maxQuantity !== undefined && item.maxQuantity !== null && Number(item.quantity) > Number(item.maxQuantity)) {
+        const sku = productById.get(String(item.variantId))?.sku || '';
+        return showToast('error', `Số lượng xuất (${item.quantity}) vượt quá số lượng còn lại trong đơn bán hàng (tối đa ${item.maxQuantity}) ${sku ? `cho sản phẩm SKU ${sku}` : ''}`);
+      }
     }
 
     let hasOutOfStock = false;
@@ -885,7 +955,10 @@ function CreateExportSlipPage({ mode: propMode }) {
               {/* Kèm theo chứng từ (Matching Nhập Kho + Hỗ trợ nhập số chứng từ đính kèm) */}
               <div className="misa-form-group" style={{ marginTop: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
+                  <label className="misa-label" style={{ marginBottom: 0 }}>
+                    Kèm theo chứng từ
+                    {exportMode === 'SALE' && <span className="required" style={{ marginLeft: '4px' }}>*</span>}
+                  </label>
                   {!form.referenceId && (
                     <button
                       type="button"
@@ -1084,13 +1157,13 @@ function CreateExportSlipPage({ mode: propMode }) {
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '350px' }}>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-                  <select style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
+                  <SearchableSelect style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
                     <option>5 bản ghi trên 1 trang</option>
                     <option>10 bản ghi trên 1 trang</option>
                     <option>20 bản ghi trên 1 trang</option>
                     <option>50 bản ghi trên 1 trang</option>
-                  </select>
-                  <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280' }}>
+                  </SearchableSelect>
+                  <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280', whiteSpace: 'nowrap', flexShrink: 0 }}>
                     <span style={{ cursor: 'pointer' }}>Trước</span>
                     <span style={{ fontWeight: 'bold', color: '#111827' }}>1</span>
                     <span style={{ cursor: 'pointer' }}>Sau</span>
@@ -1121,14 +1194,14 @@ function CreateExportSlipPage({ mode: propMode }) {
       {/* Fixed Footer Bar (Identical Layout to Nhập Kho) */}
       <div className={styles.bottomBar}>
         <button className="btn-misa-cancel" onClick={() => navigate('/export-slips')}>
-          Hủy bỏ
+          <i className="bi bi-x-circle"></i> Hủy bỏ
         </button>
         <div className={styles.actionButtons}>
           <button className="btn-misa-draft" disabled={saving} onClick={() => submit('DRAFT')}>
-            Lưu tạm
+            <i className="bi bi-save"></i> Lưu tạm
           </button>
           <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => setShowConfirm(true)}>
-            <i className="bi bi-printer"></i> Lưu và ghi sổ
+            <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
           </button>
         </div>
       </div>

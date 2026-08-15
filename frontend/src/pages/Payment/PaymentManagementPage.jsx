@@ -3,11 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as customerApi from '../../api/customerApi';
 import * as purchaseOrderApi from '../../api/purchaseOrderApi';
 import * as paymentApi from '../../api/paymentApi';
 import styles from './PaymentManagementPage.module.css';
-import { formatDateTime } from '../../utils/dateFormat';
+import { formatDateTime, formatDateOnly } from '../../utils/dateFormat';
+import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
+import { exportToExcel } from '../../utils/excelExport';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -26,8 +30,8 @@ const selectStyles = {
     minHeight: 36,
     height: 36,
     fontSize: 13,
-    borderColor: state.isFocused ? '#0075c0' : '#d1d5db',
-    boxShadow: state.isFocused ? '0 0 0 1px #0075c0' : 'none',
+    borderColor: state.isFocused ? 'var(--color-primary)' : '#d1d5db',
+    boxShadow: state.isFocused ? '0 0 0 1px var(--color-primary)' : 'none',
   }),
   valueContainer: (base) => ({ ...base, height: 36, padding: '0 8px' }),
   input: (base) => ({ ...base, margin: 0, padding: 0 }),
@@ -36,9 +40,14 @@ const selectStyles = {
   menuPortal: (base) => ({ ...base, zIndex: 9999 }),
 };
 
-function PaymentManagementPage() {
+function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
   const navigate = useNavigate();
-  const [mode, setMode] = useState('RECEIPT');
+  const [mode, setMode] = useState(initialMode);
+
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
+
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [partnerId, setPartnerId] = useState(null);
@@ -50,6 +59,9 @@ function PaymentManagementPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [postingId, setPostingId] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
+  const [deletingItem, setDeletingItem] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
@@ -77,6 +89,7 @@ function PaymentManagementPage() {
   }, []);
 
   useEffect(() => {
+    setEditingItem(null);
     setPartnerId(null);
     setDebtBalance(0);
     setAmount('');
@@ -139,6 +152,20 @@ function PaymentManagementPage() {
     return true;
   };
 
+  const handleStartEdit = (item) => {
+    setEditingItem(item);
+    setPartnerId(item.partnerId);
+    setAmount(String(item.amount || ''));
+    setPaymentMethod(item.paymentMethod || 'CASH');
+    setNote(item.note || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItem(null);
+    setAmount('');
+    setNote('');
+  };
+
   const submit = async (nextStatus) => {
     if (!validate()) return;
     setSaving(true);
@@ -150,19 +177,49 @@ function PaymentManagementPage() {
         note: note || undefined,
         status: nextStatus,
       };
-      const res = mode === 'RECEIPT'
-        ? await paymentApi.createReceipt(payload)
-        : await paymentApi.createVoucher(payload);
-      const saved = unwrap(res);
+
+      let saved;
+      if (editingItem) {
+        const res = await paymentApi.updatePayment(editingItem.id, payload);
+        saved = unwrap(res);
+        setEditingItem(null);
+        showToast('success', nextStatus === 'POSTED' ? 'Cập nhật & ghi sổ thành công' : 'Cập nhật phiếu nháp thành công');
+      } else {
+        const res = mode === 'RECEIPT'
+          ? await paymentApi.createReceipt(payload)
+          : await paymentApi.createVoucher(payload);
+        saved = unwrap(res);
+        showToast('success', nextStatus === 'POSTED' ? 'Ghi sổ thành công' : 'Lưu tạm thành công');
+      }
+
       setDebtBalance(Number(saved?.partnerDebtBalance || 0));
       setAmount('');
       setNote('');
       await reloadPartnerSnapshot(partnerId);
-      showToast('success', nextStatus === 'POSTED' ? 'Ghi sổ thành công' : 'Lưu tạm thành công');
     } catch (err) {
-      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể lập phiếu thu/chi');
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể lưu phiếu thu/chi');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingItem?.id) return;
+    setDeleting(true);
+    try {
+      await paymentApi.deletePayment(deletingItem.id);
+      if (editingItem?.id === deletingItem.id) {
+        setEditingItem(null);
+        setAmount('');
+        setNote('');
+      }
+      await reloadPartnerSnapshot(partnerId);
+      showToast('success', `Đã xóa phiếu nháp ${deletingItem.code}`);
+      setDeletingItem(null);
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể xóa phiếu nháp');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -173,6 +230,11 @@ function PaymentManagementPage() {
       const res = await paymentApi.postPayment(item.id);
       const saved = unwrap(res);
       setDebtBalance(Number(saved?.partnerDebtBalance || 0));
+      if (editingItem?.id === item.id) {
+        setEditingItem(null);
+        setAmount('');
+        setNote('');
+      }
       await reloadPartnerSnapshot(partnerId);
       showToast('success', 'Ghi sổ phiếu nháp thành công');
     } catch (err) {
@@ -191,29 +253,32 @@ function PaymentManagementPage() {
     });
   };
 
+  const handleExportExcel = () => {
+    if (!history || history.length === 0) {
+      showToast('warning', 'Không có lịch sử thu chi để xuất Excel');
+      return;
+    }
+    const headers = ['Mã phiếu', 'Ngày tạo', 'Loại phiếu', 'Số tiền', 'Phương thức', 'Trạng thái', 'Ghi chú'];
+    const data = history.map(item => [
+      item.code,
+      item.createdAt ? formatDateOnly(item.createdAt) : '',
+      item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi',
+      item.amount,
+      item.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Tiền mặt',
+      item.status === 'POSTED' ? 'Đã ghi sổ' : 'Lưu tạm',
+      item.note || ''
+    ]);
+    exportToExcel(headers, data, `Lich_su_thu_chi_${partnerId || 'tat_ca'}`);
+    showToast('success', 'Xuất Excel thành công!');
+  };
+
   return (
     <AdminLayout>
       <div className={styles.page}>
         <div className={styles.pageHeader}>
           <div>
-            <div className={styles.breadcrumb}>Thu chi &amp; Công nợ</div>
-            <h1 className={styles.pageTitle}>Quản lý thu chi công nợ</h1>
-          </div>
-          <div className={styles.modeTabs}>
-            <button
-              className={`${styles.modeTab} ${mode === 'RECEIPT' ? styles.modeTabActive : ''}`}
-              onClick={() => setMode('RECEIPT')}
-              type="button"
-            >
-              <i className="bi bi-arrow-down-circle" /> Phiếu thu
-            </button>
-            <button
-              className={`${styles.modeTab} ${mode === 'VOUCHER' ? styles.modeTabActive : ''}`}
-              onClick={() => setMode('VOUCHER')}
-              type="button"
-            >
-              <i className="bi bi-arrow-up-circle" /> Phiếu chi
-            </button>
+            <div className={styles.breadcrumb}>Thu chi</div>
+            <h1 className={styles.pageTitle}>{mode === 'RECEIPT' ? 'Quản lý phiếu thu' : 'Quản lý phiếu chi'}</h1>
           </div>
         </div>
 
@@ -226,6 +291,18 @@ function PaymentManagementPage() {
               <div className={styles.loading}>Đang tải dữ liệu...</div>
             ) : (
               <>
+                {editingItem && (
+                  <div className={styles.editingBanner}>
+                    <div className={styles.editingInfo}>
+                      <i className="bi bi-pencil-square" />
+                      <span>Đang chỉnh sửa phiếu nháp <strong>{editingItem.code}</strong></span>
+                    </div>
+                    <button className={styles.btnCancelEdit} onClick={handleCancelEdit} type="button">
+                      <i className="bi bi-x" /> Hủy sửa
+                    </button>
+                  </div>
+                )}
+
                 <div className={styles.fieldRow}>
                   <label className={styles.label}>{mode === 'RECEIPT' ? 'Khách hàng' : 'Nhà cung cấp'} <span>*</span></label>
                   <Select
@@ -239,8 +316,21 @@ function PaymentManagementPage() {
                   />
                 </div>
 
-                <div className={styles.debtPanel}>
-                  <span>Công nợ hiện tại</span>
+                <div
+                  className={`${styles.debtPanel} ${partnerId ? styles.debtPanelClickable : ''}`}
+                  onClick={openFullHistory}
+                  title={partnerId ? 'Bấm để xem lịch sử công nợ & hóa đơn chi tiết' : 'Vui lòng chọn đối tác'}
+                >
+                  <div className={styles.debtPanelLabelGroup}>
+                    <span>Công nợ hiện tại</span>
+                    {partnerId ? (
+                      <span className={styles.debtPanelBadge}>
+                        <i className="bi bi-box-arrow-up-right" /> Chi tiết
+                      </span>
+                    ) : (
+                      <span className={styles.debtPanelHint}>(Chọn đối tác để xem chi tiết)</span>
+                    )}
+                  </div>
                   <strong>{money(debtBalance)} đ</strong>
                 </div>
 
@@ -258,10 +348,10 @@ function PaymentManagementPage() {
                   </div>
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Phương thức</label>
-                    <select className={styles.input} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
+                    <SearchableSelect className={styles.input} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
                       <option value="CASH">Tiền mặt</option>
                       <option value="BANK_TRANSFER">Chuyển khoản</option>
-                    </select>
+                    </SearchableSelect>
                   </div>
                 </div>
 
@@ -278,10 +368,10 @@ function PaymentManagementPage() {
 
                 <div className={styles.formActions}>
                   <button className={styles.btnDraft} disabled={saving} onClick={() => submit('DRAFT')} type="button">
-                    Lưu tạm
+                    {editingItem ? 'Cập nhật nháp' : 'Lưu tạm'}
                   </button>
                   <button className={styles.btnPost} disabled={saving || Number(debtBalance || 0) <= 0} onClick={() => submit('POSTED')} type="button">
-                    <i className="bi bi-check2-circle" /> Ghi sổ
+                    <i className="bi bi-check2-circle" /> {editingItem ? 'Cập nhật & Ghi sổ' : 'Ghi sổ'}
                   </button>
                 </div>
               </>
@@ -289,12 +379,21 @@ function PaymentManagementPage() {
           </section>
 
           <section className={styles.card}>
-            <div className={styles.cardTitleRow}>
-              <div className={styles.cardTitle}>
-                <i className="bi bi-clock-history" /> Lịch sử thu chi
+            <div className={styles.cardTitleRow} style={{ alignItems: 'center' }}>
+              <div className={styles.cardTitle} style={{ borderBottom: 'none', padding: 0, minHeight: 'auto', whiteSpace: 'normal', alignItems: 'flex-start', gap: '8px' }}>
+                <i className="bi bi-clock-history" style={{ marginTop: '2px' }} /> 
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.3' }}>
+                  <span>Lịch sử</span>
+                  <span>thu chi</span>
+                </div>
               </div>
               <div className={styles.historyTools}>
                 <span className={styles.historyCount}>{Math.min(history.length, 5)} gần nhất</span>
+                {history.length > 0 && (
+                  <button className={styles.linkButton} onClick={handleExportExcel} type="button" title="Xuất tệp Excel" style={{ marginRight: 8 }}>
+                    <i className="bi bi-file-earmark-excel" /> Xuất Excel
+                  </button>
+                )}
                 {partnerId && (
                   <button className={styles.linkButton} onClick={openFullHistory} type="button">
                     Xem tất cả
@@ -316,7 +415,34 @@ function PaymentManagementPage() {
                   <div className={styles.historyMain}>
                     <div className={styles.historyCodeRow}>
                       <strong>{item.code}</strong>
-                      <span className={item.status === 'POSTED' ? styles.statusPosted : styles.statusDraft}>{statusText(item.status)}</span>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <button 
+                          className={styles.btnActionSmall}
+                          onClick={() => printPaymentReceipt(item, { partnerName: selectedPartner?.label?.split(' - ')[1] || selectedPartner?.label, salespersonName: '' })}
+                          title="In phiếu"
+                        >
+                          <i className="bi bi-printer"></i>
+                        </button>
+                        {item.status === 'DRAFT' && (
+                          <>
+                            <button
+                              className={styles.btnActionSmallEdit}
+                              onClick={() => handleStartEdit(item)}
+                              title="Sửa phiếu nháp"
+                            >
+                              <i className="bi bi-pencil" />
+                            </button>
+                            <button
+                              className={styles.btnActionSmallDelete}
+                              onClick={() => setDeletingItem(item)}
+                              title="Xóa phiếu nháp"
+                            >
+                              <i className="bi bi-trash" />
+                            </button>
+                          </>
+                        )}
+                        <span className={item.status === 'POSTED' ? styles.statusPosted : styles.statusDraft}>{statusText(item.status)}</span>
+                      </div>
                     </div>
                     <span>{item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'} - {item.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</span>
                     <span className={styles.historyMeta}>
@@ -345,6 +471,17 @@ function PaymentManagementPage() {
           </section>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={!!deletingItem}
+        title="Xóa phiếu nháp"
+        message={`Bạn có chắc chắn muốn xóa phiếu nháp "${deletingItem?.code}" số tiền ${money(deletingItem?.amount)} đ không? Thao tác này không thể hoàn tác.`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeletingItem(null)}
+        confirmText="Xóa phiếu"
+        isDanger={true}
+      />
+
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
     </AdminLayout>
   );

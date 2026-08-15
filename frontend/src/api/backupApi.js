@@ -8,6 +8,9 @@ export const getSystemHealth = () =>
 export const getSystemSettings = () =>
     axiosClient.get('/system/settings').then(r => r.data);
 
+export const getSystemFeatures = () =>
+    axiosClient.get('/system/features').then(r => r.data);
+
 export const saveSystemSettings = (data) =>
     axiosClient.post('/system/settings', data).then(r => r.data);
 
@@ -21,6 +24,13 @@ export const uploadServiceAccount = (file) => {
 
 export const testDriveConnection = () =>
     axiosClient.post('/system/test-drive').then(r => r.data);
+
+// ── System Logs ──────────────────────────────────────────────────────────────
+export const getSystemLogs = ({ level = 'ALL', search = '', limit = 100 } = {}) =>
+    axiosClient.get('/system/logs', { params: { level, search, limit } }).then(r => r.data);
+
+export const clearSystemLogs = () =>
+    axiosClient.delete('/system/logs').then(r => r.data);
 
 // ── Backup Operations ─────────────────────────────────────────────────────────
 export const createBackup = () =>

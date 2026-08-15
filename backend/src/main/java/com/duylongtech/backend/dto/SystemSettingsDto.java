@@ -23,4 +23,13 @@ public class SystemSettingsDto {
     // Notifications
     private boolean notifyEmailEnabled;
     private String notifyEmailTo;
+
+    // Daily Inventory Snapshot
+    private String snapshotTime;
+
+    // Sales Orders
+    private Integer reservationExpiryHours;
+
+    // AI Features
+    private boolean aiEnabled;
 }

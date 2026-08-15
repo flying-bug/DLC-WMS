@@ -6,6 +6,10 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as soApi from '../../api/salesOrderApi';
 import styles from './SalesOrderListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { exportToExcel } from '../../utils/excelExport';
+import { printQuotation } from '../../utils/printQuotation';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const STATUS_LABELS = {
   DRAFT: { label: 'Nháp', code: 'info' },
@@ -38,7 +42,16 @@ function SalesOrderListPage() {
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({ keyword: '', status: '', fromDate: '', toDate: '' });
+  const [filters, setFilters] = useState(() => {
+    const searchParams = new URLSearchParams(location.search);
+    return {
+      keyword: '',
+      status: searchParams.get('status') || '',
+      reservationStatus: searchParams.get('backordered') === 'true' ? 'BACKORDERED' : '',
+      fromDate: '',
+      toDate: ''
+    };
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
@@ -54,6 +67,7 @@ function SalesOrderListPage() {
       const res = await soApi.getSalesOrders({
         keyword: filters.keyword || undefined,
         status: filters.status || undefined,
+        reservationStatus: filters.reservationStatus || undefined,
         fromDate: filters.fromDate || undefined,
         toDate: filters.toDate || undefined,
       });
@@ -64,6 +78,23 @@ function SalesOrderListPage() {
       setLoading(false);
     }
   }, [filters]);
+
+  const handleExport = () => {
+    if (!orders || orders.length === 0) {
+      showToast('warning', 'Không có dữ liệu để xuất Excel');
+      return;
+    }
+    const headers = ['Mã đơn', 'Ngày lập', 'Khách hàng', 'Tổng tiền', 'Trạng thái'];
+    const data = orders.map(so => [
+      so.soCode,
+      fmtDate(so.soDate),
+      so.customerName || `#${so.customerId}`,
+      money(so.totalAmount),
+      STATUS_LABELS[so.status]?.label || so.status
+    ]);
+    exportToExcel(headers, data, 'Danh_sach_don_ban_hang');
+    showToast('success', 'Xuất Excel thành công!');
+  };
 
   useEffect(() => { loadOrders(); }, [loadOrders]);
 
@@ -107,6 +138,20 @@ function SalesOrderListPage() {
     }
   };
 
+  const handlePrintQuote = async (soSummary, e) => {
+    e.stopPropagation();
+    try {
+      let fullSo = soSummary;
+      if (!fullSo.lines || fullSo.lines.length === 0) {
+        const res = await soApi.getSalesOrderById(soSummary.id);
+        fullSo = unwrap(res);
+      }
+      printQuotation(fullSo);
+    } catch {
+      showToast('error', 'Không thể tải dữ liệu để in báo giá');
+    }
+  };
+
   // Pagination
   const totalItems = orders.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -141,14 +186,14 @@ function SalesOrderListPage() {
 
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>TRẠNG THÁI</span>
-              <select
+              <SearchableSelect
                 className={styles.filterSelect}
                 value={filters.status}
                 onChange={e => setFilters(p => ({ ...p, status: e.target.value }))}
               >
                 <option value="">Tất cả</option>
                 {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className={styles.filterField}>
@@ -173,8 +218,15 @@ function SalesOrderListPage() {
           </div>
 
           <div className={styles.filterActions}>
-            <button className={styles.iconBtn} onClick={() => setFilters({ keyword: '', status: '', fromDate: '', toDate: '' })} title="Đặt lại">
+            <button className={styles.iconBtn} onClick={() => setFilters({ keyword: '', status: '', reservationStatus: '', fromDate: '', toDate: '' })} title="Đặt lại">
               <i className="bi bi-arrow-clockwise" />
+            </button>
+            <button
+              className={styles.iconBtn}
+              onClick={handleExport}
+              title="Xuất tệp Excel"
+            >
+              <i className="bi bi-file-earmark-excel" />
             </button>
             <button className={styles.btnPrimary} onClick={loadOrders}>
               <i className="bi bi-funnel" /> Lọc
@@ -245,6 +297,12 @@ function SalesOrderListPage() {
                           style={{ cursor: 'pointer', marginRight: 10, color: 'var(--color-text-muted-2)', fontSize: 15 }}
                           onClick={() => navigate(`/sales-orders/${so.id}`)}
                         />
+                        <i
+                          className="bi bi-printer"
+                          title="In báo giá"
+                          style={{ cursor: 'pointer', marginRight: 10, color: '#0284c7', fontSize: 15 }}
+                          onClick={(e) => handlePrintQuote(so, e)}
+                        />
                         {so.status === 'DRAFT' && (
                           <i
                             className="bi bi-pencil"
@@ -269,7 +327,7 @@ function SalesOrderListPage() {
                             onClick={() => handleCreateExport(so)}
                           />
                         )}
-                        {(so.status === 'DRAFT' || so.status === 'APPROVED') && (
+                        {so.status === 'DRAFT' && (
                           <i
                             className="bi bi-x-circle"
                             title="Hủy đơn"
@@ -295,12 +353,12 @@ function SalesOrderListPage() {
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>Hiển thị</span>
-              <select className="misa-select" style={{ width: 70, height: 32, padding: '0 8px' }}
+              <SearchableSelect className="misa-select" style={{ width: 70, height: 32, padding: '0 8px' }}
                 value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
                 <option value={10}>10</option>
                 <option value={20}>20</option>
                 <option value={50}>50</option>
-              </select>
+              </SearchableSelect>
               <span>trên tổng số {totalItems} bản ghi</span>
             </div>
             {totalPages > 1 && (

@@ -52,6 +52,11 @@ public class RepairFee {
     @Column(name = "unit_name")
     private String unitName;
 
+    // Thuế suất GTGT (%)
+    @Column(name = "vat_percent", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal vatPercent = BigDecimal.ZERO;
+
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 

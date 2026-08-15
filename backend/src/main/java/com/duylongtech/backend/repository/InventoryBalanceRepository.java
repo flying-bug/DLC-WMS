@@ -46,7 +46,7 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
 
     Optional<InventoryBalance> findFirstByWarehouseIdAndVariantIdAndStockStatus(Long warehouseId, Long variantId, String stockStatus);
 
-    @Query("SELECT COUNT(DISTINCT b.variantId) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.serialNumberId IS NULL")
+    @Query("SELECT COUNT(DISTINCT b.variantId) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId")
     Long countDistinctVariantsByWarehouseId(@Param("warehouseId") Long warehouseId);
 
     @Query("SELECT COALESCE(SUM(b.quantityOnHand), 0) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.serialNumberId IS NULL")
@@ -58,11 +58,21 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
     @Query("SELECT v.product.id, COALESCE(SUM(b.quantityOnHand), 0) FROM InventoryBalance b JOIN ProductVariant v ON v.id = b.variantId WHERE v.product.id IN :productIds AND b.serialNumberId IS NULL GROUP BY v.product.id")
     List<Object[]> sumQuantityOnHandByProductIds(@Param("productIds") List<Long> productIds);
 
-    @Query("SELECT COALESCE(SUM(b.quantityOnHand - b.quantityReserved), 0) FROM InventoryBalance b WHERE b.warehouseId = :warehouseId AND b.variantId = :variantId AND b.stockStatus = :stockStatus")
-    java.math.BigDecimal sumAvailableQuantityByWarehouseAndVariant(@Param("warehouseId") Long warehouseId, @Param("variantId") Long variantId, @Param("stockStatus") String stockStatus);
-
     @Query("""
-            SELECT COALESCE(SUM(b.quantityOnHand - b.quantityReserved), 0)
+            SELECT 
+                (
+                  COALESCE(SUM(CASE WHEN (
+                      (p.trackSerial = true AND b.serialNumberId IS NOT NULL AND sn.status = 'AVAILABLE' AND NOT EXISTS (
+                          SELECT 1 FROM DeviceComponentSerial dcs
+                          WHERE dcs.componentVariant.id = b.variantId
+                            AND LOWER(dcs.componentSerial) = LOWER(sn.serialNumber)
+                            AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                      ))
+                      OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+                  ) THEN b.quantityOnHand ELSE 0 END), 0)
+                  -
+                  COALESCE(SUM(CASE WHEN b.serialNumberId IS NULL THEN b.quantityReserved ELSE 0 END), 0)
+                )
             FROM InventoryBalance b
             JOIN ProductVariant v ON v.id = b.variantId
             JOIN v.product p
@@ -71,17 +81,36 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
               AND b.variantId = :variantId
               AND b.stockStatus = :stockStatus
               AND (
-                  (
-                      p.trackSerial = true
-                      AND b.serialNumberId IS NOT NULL
-                      AND sn.status = 'AVAILABLE'
-                      AND NOT EXISTS (
+                  (p.trackSerial = true)
+                  OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+              )
+            """)
+    java.math.BigDecimal sumAvailableQuantityByWarehouseAndVariant(@Param("warehouseId") Long warehouseId, @Param("variantId") Long variantId, @Param("stockStatus") String stockStatus);
+
+    @Query("""
+            SELECT 
+                (
+                  COALESCE(SUM(CASE WHEN (
+                      (p.trackSerial = true AND b.serialNumberId IS NOT NULL AND sn.status = 'AVAILABLE' AND NOT EXISTS (
                           SELECT 1 FROM DeviceComponentSerial dcs
                           WHERE dcs.componentVariant.id = b.variantId
                             AND LOWER(dcs.componentSerial) = LOWER(sn.serialNumber)
                             AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
-                      )
-                  )
+                      ))
+                      OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+                  ) THEN b.quantityOnHand ELSE 0 END), 0)
+                  -
+                  COALESCE(SUM(CASE WHEN b.serialNumberId IS NULL THEN b.quantityReserved ELSE 0 END), 0)
+                )
+            FROM InventoryBalance b
+            JOIN ProductVariant v ON v.id = b.variantId
+            JOIN v.product p
+            LEFT JOIN SerialNumber sn ON sn.id = b.serialNumberId
+            WHERE b.warehouseId = :warehouseId
+              AND b.variantId = :variantId
+              AND b.stockStatus = :stockStatus
+              AND (
+                  (p.trackSerial = true)
                   OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
               )
             """)
@@ -89,7 +118,7 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
 
 
     @Query("""
-            SELECT
+            SELECT 
                 v.id AS variantId,
                 w.code AS warehouseCode,
                 w.name AS warehouseName,
@@ -97,22 +126,56 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
                 p.productName AS productName,
                 v.sku AS sku,
                 v.variantName AS variantName,
-                COALESCE(SUM(b.quantityOnHand), 0) AS quantityOnHand,
-                COALESCE(SUM(b.quantityReserved), 0) AS quantityReserved,
-                COALESCE(SUM(b.quantityOnHand - b.quantityReserved), 0) AS availableQuantity,
-                COALESCE(SUM(b.quantityOnHand * b.averageCost), 0) AS inventoryValue
+                COALESCE(SUM(CASE WHEN (
+                  (p.trackSerial = true AND b.serialNumberId IS NOT NULL AND sn.status = 'AVAILABLE' AND NOT EXISTS (
+                      SELECT 1 FROM DeviceComponentSerial dcs 
+                      WHERE dcs.componentVariant.id = b.variantId 
+                        AND LOWER(dcs.componentSerial) = LOWER(sn.serialNumber) 
+                        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                  ))
+                  OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+                ) THEN b.quantityOnHand ELSE 0 END), 0) AS quantityOnHand,
+                COALESCE(SUM(CASE WHEN b.serialNumberId IS NULL THEN b.quantityReserved ELSE 0 END), 0) AS quantityReserved,
+                (
+                  COALESCE(SUM(CASE WHEN (
+                    (p.trackSerial = true AND b.serialNumberId IS NOT NULL AND sn.status = 'AVAILABLE' AND NOT EXISTS (
+                        SELECT 1 FROM DeviceComponentSerial dcs 
+                        WHERE dcs.componentVariant.id = b.variantId 
+                          AND LOWER(dcs.componentSerial) = LOWER(sn.serialNumber) 
+                          AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                    ))
+                    OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+                  ) THEN b.quantityOnHand ELSE 0 END), 0)
+                  -
+                  COALESCE(SUM(CASE WHEN b.serialNumberId IS NULL THEN b.quantityReserved ELSE 0 END), 0)
+                ) AS availableQuantity,
+                COALESCE(SUM(CASE WHEN (
+                  (p.trackSerial = true AND b.serialNumberId IS NOT NULL AND sn.status = 'AVAILABLE' AND NOT EXISTS (
+                      SELECT 1 FROM DeviceComponentSerial dcs 
+                      WHERE dcs.componentVariant.id = b.variantId 
+                        AND LOWER(dcs.componentSerial) = LOWER(sn.serialNumber) 
+                        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                  ))
+                  OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+                ) THEN (b.quantityOnHand * b.averageCost) ELSE 0 END), 0) AS inventoryValue
             FROM InventoryBalance b
             JOIN Warehouse w ON w.id = b.warehouseId
             JOIN ProductVariant v ON v.id = b.variantId
             JOIN v.product p
-            WHERE b.warehouseId = :warehouseId AND b.serialNumberId IS NULL
+            LEFT JOIN SerialNumber sn ON sn.id = b.serialNumberId
+            WHERE b.warehouseId = :warehouseId
+              AND b.stockStatus = 'GOOD'
+              AND (
+                  (p.trackSerial = true)
+                  OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+              )
             GROUP BY v.id, w.code, w.name, p.productCode, p.productName, v.sku, v.variantName
             ORDER BY COALESCE(SUM(b.quantityOnHand), 0) DESC
             """)
     List<WarehouseStockAiRow> findStockRowsForAiByWarehouseId(@Param("warehouseId") Long warehouseId);
 
     @Query("""
-            SELECT
+            SELECT 
                 v.id AS variantId,
                 w.code AS warehouseCode,
                 w.name AS warehouseName,
@@ -120,17 +183,62 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
                 p.productName AS productName,
                 v.sku AS sku,
                 v.variantName AS variantName,
-                COALESCE(SUM(b.quantityOnHand), 0) AS quantityOnHand,
-                COALESCE(SUM(b.quantityReserved), 0) AS quantityReserved,
-                COALESCE(SUM(b.quantityOnHand - b.quantityReserved), 0) AS availableQuantity,
-                COALESCE(SUM(b.quantityOnHand * b.averageCost), 0) AS inventoryValue
+                COALESCE(SUM(CASE WHEN (
+                  (p.trackSerial = true AND b.serialNumberId IS NOT NULL AND sn.status = 'AVAILABLE' AND NOT EXISTS (
+                      SELECT 1 FROM DeviceComponentSerial dcs 
+                      WHERE dcs.componentVariant.id = b.variantId 
+                        AND LOWER(dcs.componentSerial) = LOWER(sn.serialNumber) 
+                        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                  ))
+                  OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+                ) THEN b.quantityOnHand ELSE 0 END), 0) AS quantityOnHand,
+                COALESCE(SUM(CASE WHEN b.serialNumberId IS NULL THEN b.quantityReserved ELSE 0 END), 0) AS quantityReserved,
+                (
+                  COALESCE(SUM(CASE WHEN (
+                    (p.trackSerial = true AND b.serialNumberId IS NOT NULL AND sn.status = 'AVAILABLE' AND NOT EXISTS (
+                        SELECT 1 FROM DeviceComponentSerial dcs 
+                        WHERE dcs.componentVariant.id = b.variantId 
+                          AND LOWER(dcs.componentSerial) = LOWER(sn.serialNumber) 
+                          AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                    ))
+                    OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+                  ) THEN b.quantityOnHand ELSE 0 END), 0)
+                  -
+                  COALESCE(SUM(CASE WHEN b.serialNumberId IS NULL THEN b.quantityReserved ELSE 0 END), 0)
+                ) AS availableQuantity,
+                COALESCE(SUM(CASE WHEN (
+                  (p.trackSerial = true AND b.serialNumberId IS NOT NULL AND sn.status = 'AVAILABLE' AND NOT EXISTS (
+                      SELECT 1 FROM DeviceComponentSerial dcs 
+                      WHERE dcs.componentVariant.id = b.variantId 
+                        AND LOWER(dcs.componentSerial) = LOWER(sn.serialNumber) 
+                        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                  ))
+                  OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+                ) THEN (b.quantityOnHand * b.averageCost) ELSE 0 END), 0) AS inventoryValue
             FROM InventoryBalance b
             JOIN Warehouse w ON w.id = b.warehouseId
             JOIN ProductVariant v ON v.id = b.variantId
             JOIN v.product p
-            WHERE b.serialNumberId IS NULL
+            LEFT JOIN SerialNumber sn ON sn.id = b.serialNumberId
+            WHERE b.stockStatus = 'GOOD'
+              AND (
+                  (p.trackSerial = true)
+                  OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+              )
             GROUP BY v.id, w.code, w.name, p.productCode, p.productName, v.sku, v.variantName
-            ORDER BY COALESCE(SUM(b.quantityOnHand - b.quantityReserved), 0) ASC,
+            ORDER BY (
+                  COALESCE(SUM(CASE WHEN (
+                    (p.trackSerial = true AND b.serialNumberId IS NOT NULL AND sn.status = 'AVAILABLE' AND NOT EXISTS (
+                        SELECT 1 FROM DeviceComponentSerial dcs 
+                        WHERE dcs.componentVariant.id = b.variantId 
+                          AND LOWER(dcs.componentSerial) = LOWER(sn.serialNumber) 
+                          AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
+                    ))
+                    OR ((p.trackSerial IS NULL OR p.trackSerial = false) AND b.serialNumberId IS NULL)
+                  ) THEN b.quantityOnHand ELSE 0 END), 0)
+                  -
+                  COALESCE(SUM(CASE WHEN b.serialNumberId IS NULL THEN b.quantityReserved ELSE 0 END), 0)
+                ) ASC,
                      COALESCE(SUM(b.quantityOnHand), 0) ASC
             """)
     List<WarehouseStockAiRow> findLowStockRowsForAi(Pageable pageable);

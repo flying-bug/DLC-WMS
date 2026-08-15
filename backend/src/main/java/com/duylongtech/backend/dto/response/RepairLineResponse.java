@@ -33,6 +33,7 @@ public class RepairLineResponse {
     private String serialNumber;
     private Long replacementSerialNumberId;
     private String replacementSerialNumber;
+    private BigDecimal vatPercent;
 
     private String note;
     private LocalDateTime createdAt;

@@ -30,14 +30,14 @@ public class WarrantyLifecycleController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create warranty claim")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('warranty:add') or hasRole('MANAGER') or hasRole('SUPER_ADMIN')")
     public ApiResponse<WarrantyResponse> createWarranty(@RequestBody WarrantyRequest request) {
         return ApiResponse.success(warrantyLifecycleService.createWarranty(request));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update warranty claim")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('warranty:edit') or hasRole('MANAGER') or hasRole('SUPER_ADMIN')")
     public ApiResponse<WarrantyResponse> updateWarranty(@PathVariable Long id,
                                                         @RequestBody WarrantyRequest request) {
         return ApiResponse.success(warrantyLifecycleService.updateWarranty(id, request));
@@ -45,7 +45,7 @@ public class WarrantyLifecycleController {
 
     @PatchMapping("/{id}/status")
     @Operation(summary = "Update warranty status or close warranty")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('warranty:edit') or hasRole('MANAGER') or hasRole('SUPER_ADMIN')")
     public ApiResponse<WarrantyResponse> updateWarrantyStatus(@PathVariable Long id,
                                                               @RequestBody WarrantyStatusRequest request) {
         return ApiResponse.success(warrantyLifecycleService.updateWarrantyStatus(id, request));

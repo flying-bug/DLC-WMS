@@ -54,7 +54,7 @@ public class AuditLogService {
         return auditLogRepository.findByEntityNameAndEntityIdOrderByCreatedAtDesc(entityName, entityId, pageable);
     }
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void logEvent(String username, String action, String entityName, Long entityId,
                          String status, String description, String ipAddress, String detailJson) {
         try {

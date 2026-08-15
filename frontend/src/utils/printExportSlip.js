@@ -88,6 +88,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
           <td style="text-align: center;">${escapeHtml(warrantyText)}</td>
           <td style="text-align: center; font-weight: 500;">${qty.toLocaleString('vi-VN')}</td>
           <td style="text-align: right;">${price ? price.toLocaleString('vi-VN') : ''}</td>
+          <td style="text-align: center;">${vatPercent}</td>
           <td style="text-align: right; font-weight: 600;">${amount ? amount.toLocaleString('vi-VN') : ''}</td>
         </tr>
       `;
@@ -150,6 +151,7 @@ export function printExportSlip(slipOrSlips, options = {}) {
               <th style="width: 8%;">BH</th>
               <th style="width: 8%;">Số lượng</th>
               <th style="width: 12%;">Đơn giá</th>
+              <th style="width: 8%;">% VAT</th>
               <th style="width: 12%;">Thành tiền</th>
             </tr>
           </thead>
@@ -158,21 +160,21 @@ export function printExportSlip(slipOrSlips, options = {}) {
             <tr class="summary-row">
               <td colspan="4" style="text-align: right;">Cộng</td>
               <td style="text-align: center;">${totalQty.toLocaleString('vi-VN')}</td>
-              <td></td>
+              <td colspan="2"></td>
               <td style="text-align: right;">${totalAmount.toLocaleString('vi-VN')}</td>
             </tr>
             <tr class="summary-row">
-              <td colspan="6" style="text-align: right;">Cộng tiền hàng</td>
+              <td colspan="7" style="text-align: right;">Cộng tiền hàng</td>
               <td style="text-align: right;">${totalAmount.toLocaleString('vi-VN')}</td>
             </tr>
             ${totalVatAmount > 0 ? `
             <tr class="summary-row">
-              <td colspan="6" style="text-align: right;">Tiền thuế GTGT</td>
+              <td colspan="7" style="text-align: right;">Tiền thuế GTGT</td>
               <td style="text-align: right;">${totalVatAmount.toLocaleString('vi-VN')}</td>
             </tr>
             ` : ''}
             <tr class="summary-row" style="background-color: #f1f5f9; font-size: 13px;">
-              <td colspan="6" style="text-align: right; font-weight: 700;">Tổng tiền thanh toán</td>
+              <td colspan="7" style="text-align: right; font-weight: 700;">Tổng tiền thanh toán</td>
               <td style="text-align: right; font-weight: 800; color: #000;">${grandTotal.toLocaleString('vi-VN')}</td>
             </tr>
           </tbody>

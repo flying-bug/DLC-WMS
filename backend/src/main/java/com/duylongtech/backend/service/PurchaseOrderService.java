@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.PurchaseOrderRequest;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.response.PurchaseOrderResponse;
 import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.exception.BusinessException;
@@ -26,6 +27,7 @@ public class PurchaseOrderService {
     private final PartnerRepository partnerRepository;
     private final UserRepository userRepository;
     private final PartnerLedgerService partnerLedgerService;
+    private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
 
     // =========================================================
     // QUERY
@@ -74,11 +76,11 @@ public class PurchaseOrderService {
         Partner supplier = partnerRepository.findById(request.getPartnerId())
                 .orElseThrow(() -> new BusinessException("Nhà cung cấp không tồn tại"));
         if (!Boolean.TRUE.equals(supplier.getIsSupplier())) {
-            throw new BusinessException("Đối tác này không phải nhà cung cấp");
+            throw new BusinessException(SystemMessage.PO_ERR_006.getMessage());
         }
 
         if (request.getPaymentDueDate() != null && request.getPaymentDueDate().isBefore(request.getPoDate())) {
-            throw new BusinessException("Hạn công nợ không được nhỏ hơn ngày lập đơn");
+            throw new BusinessException(SystemMessage.PO_ERR_003.getMessage());
         }
 
         // Tự sinh mã nếu chưa có
@@ -86,7 +88,7 @@ public class PurchaseOrderService {
                 ? request.getPoCode() : generateNextPoCode();
 
         if (purchaseOrderRepository.existsByPoCode(poCode)) {
-            throw new BusinessException("Mã đơn hàng '" + poCode + "' đã tồn tại");
+            throw new BusinessException(String.format(SystemMessage.PO_ERR_005.getMessage(), poCode));
         }
 
         User actorUser = userRepository.findByUsername(actor)
@@ -158,12 +160,11 @@ public class PurchaseOrderService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
 
         if (!"DRAFT".equals(po.getStatus())) {
-            throw new BusinessException(
-                    "Chỉ được sửa đơn ở trạng thái Nháp. Trạng thái hiện tại: " + po.getStatus());
+            throw new BusinessException(String.format(SystemMessage.PO_ERR_004.getMessage(), po.getStatus()));
         }
 
         if (request.getPaymentDueDate() != null && request.getPaymentDueDate().isBefore(request.getPoDate())) {
-            throw new BusinessException("Hạn công nợ không được nhỏ hơn ngày lập đơn");
+            throw new BusinessException(SystemMessage.PO_ERR_003.getMessage());
         }
 
         po.setPartnerId(request.getPartnerId());
@@ -216,24 +217,14 @@ public class PurchaseOrderService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
 
         if (!"DRAFT".equals(po.getStatus())) {
-            throw new BusinessException(
-                    "Chỉ được duyệt đơn ở trạng thái Nháp. Trạng thái hiện tại: " + po.getStatus());
+            throw new BusinessException(String.format(SystemMessage.PO_ERR_002.getMessage(), po.getStatus()));
         }
 
         po.setStatus("APPROVED");
         PurchaseOrder approved = purchaseOrderRepository.save(po);
         log.info("Duyệt đơn mua hàng {} bởi {}", approved.getPoCode(), actor);
 
-        // Ghi nhận tăng công nợ phải trả (nhà cung cấp) vào sổ partner_ledger
-        partnerLedgerService.recordLedger(
-                approved.getPartnerId(),
-                "PURCHASE_ORDER",
-                approved.getId(),
-                approved.getPoCode(),
-                approved.getTotalAmount(),   // amountDebt  ← tăng nợ phải trả
-                BigDecimal.ZERO,             // amountReceipt
-                "Ghi nhận công nợ đơn mua hàng " + approved.getPoCode()
-        );
+
 
         return toDetailResponse(approved);
     }
@@ -247,27 +238,13 @@ public class PurchaseOrderService {
         PurchaseOrder po = purchaseOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn mua hàng ID: " + id));
 
-        if ("POSTED".equals(po.getStatus()) || "CANCELLED".equals(po.getStatus())) {
-            throw new BusinessException("Không thể hủy đơn ở trạng thái: " + po.getStatus());
+        if ("POSTED".equals(po.getStatus()) || "CANCELLED".equals(po.getStatus()) || "APPROVED".equals(po.getStatus())) {
+            throw new BusinessException(String.format(SystemMessage.PO_ERR_001.getMessage(), po.getStatus()));
         }
 
-        boolean wasApproved = "APPROVED".equals(po.getStatus());
         po.setStatus("CANCELLED");
         PurchaseOrder cancelled = purchaseOrderRepository.save(po);
         log.info("Hủy đơn mua hàng {} bởi {}", cancelled.getPoCode(), actor);
-
-        // Nếu đã APPROVED → rollback công nợ bằng cách ghi âm
-        if (wasApproved) {
-            partnerLedgerService.recordLedger(
-                    cancelled.getPartnerId(),
-                    "PURCHASE_ORDER_CANCEL",
-                    cancelled.getId(),
-                    cancelled.getPoCode(),
-                    BigDecimal.ZERO,
-                    cancelled.getTotalAmount(), // amountReceipt  ← giảm nợ phải trả
-                    "Hủy đơn mua hàng " + cancelled.getPoCode() + " — rollback công nợ"
-            );
-        }
 
         return toSummaryResponse(cancelled);
     }
@@ -313,6 +290,12 @@ public class PurchaseOrderService {
                             && variant.getProduct().getUnit() != null)
                             ? variant.getProduct().getUnit().getName() : null;
 
+                    BigDecimal imported = inventoryDocumentLineRepository
+                            .sumImportedQuantityByPurchaseOrderIdAndVariantId(po.getId(), line.getVariantId());
+                    if (imported == null) imported = BigDecimal.ZERO;
+                    BigDecimal remaining = line.getQuantity().subtract(imported);
+                    if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
+
                     return PurchaseOrderResponse.PurchaseOrderLineResponse.builder()
                             .id(line.getId())
                             .variantId(line.getVariantId())
@@ -328,11 +311,17 @@ public class PurchaseOrderService {
                             .vatAmount(line.getVatAmount())
                             .lineAmount(line.getLineAmount())
                             .note(line.getNote())
+                            .importedQuantity(imported)
+                            .remainingQuantity(remaining)
                             .build();
                 })
                 .collect(Collectors.toList());
 
+        boolean isFullyImported = !lineResponses.isEmpty() && lineResponses.stream()
+                .allMatch(l -> l.getRemainingQuantity().compareTo(BigDecimal.ZERO) <= 0);
+
         PurchaseOrderResponse response = toSummaryResponse(po);
+        response.setIsFullyImported(isFullyImported);
         response.setLines(lineResponses);
         return response;
     }
