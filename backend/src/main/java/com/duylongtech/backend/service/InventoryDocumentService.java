@@ -352,14 +352,14 @@ public class InventoryDocumentService {
             if (line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()) {
                 List<String> serials = parseSerialNumbers(line.getSerialNumbersText());
                 for (String sn : serials) {
-                    serialNumberRepository.findByVariantIdAndSerialNumber(line.getVariantId(), sn)
+                    serialNumberRepository.findByVariantIdAndSerialNumberForUpdate(line.getVariantId(), sn)
                             .ifPresent(serialsToExport::add);
                 }
                 if (!serialsToExport.isEmpty() && targetSerialId == null) {
                     line.setSerialNumberId(serialsToExport.get(0).getId());
                 }
             } else if (targetSerialId != null) {
-                SerialNumber snObj = serialNumberRepository.findById(targetSerialId)
+                SerialNumber snObj = serialNumberRepository.findByIdForUpdate(targetSerialId)
                         .orElseThrow(() -> new BusinessException("Không tìm thấy serial cần xuất"));
                 serialsToExport.add(snObj);
             }

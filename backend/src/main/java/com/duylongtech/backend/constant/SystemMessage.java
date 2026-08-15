@@ -30,6 +30,8 @@ public enum SystemMessage {
     USERNAME_EXISTS("AUTH11", "Tên đăng nhập đã tồn tại. Vui lòng chọn tên đăng nhập khác."),
     EMAIL_EXISTS("AUTH12", "Email đã tồn tại. Vui lòng sử dụng email khác."),
     PHONE_EXISTS("AUTH13", "Số điện thoại đã được đăng ký cho tài khoản khác. Vui lòng sử dụng số điện thoại khác."),
+    TOO_MANY_OTP_ATTEMPTS("AUTH14", "Bạn đã nhập sai OTP quá 5 lần. Mã OTP này đã bị vô hiệu hóa vì lý do bảo mật, vui lòng yêu cầu mã mới."),
+    OTP_REQUEST_TOO_FAST("AUTH15", "Vui lòng chờ ít nhất 60 giây trước khi yêu cầu gửi lại mã OTP mới."),
 
     // Unit & Product
     UNIT_NOT_FOUND("UNIT01", "Không tìm thấy đơn vị tính."),
