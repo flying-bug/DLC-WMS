@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,6 +27,7 @@ public class DailyInventorySnapshotJob {
     private final EmailService emailService;
     private final SystemSettingRepository settingRepo;
     private final UserRepository userRepository;
+    private final TransactionTemplate transactionTemplate;
 
     private static final java.time.format.DateTimeFormatter TIME_FMT = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
     private static final java.time.ZoneId VIETNAM_ZONE = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
@@ -64,11 +65,13 @@ public class DailyInventorySnapshotJob {
     /**
      * Chốt sổ cho một ngày cụ thể (có thể dùng gọi thủ công hoặc re-calculate).
      */
-    @Transactional
     public void snapshotDate(LocalDate date) {
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
         try {
-            snapshotRepository.upsertDailySnapshotForDate(date, endOfDay);
+            // Chạy trong transaction để đảm bảo @Modifying query thực thi thành công
+            transactionTemplate.executeWithoutResult(status -> {
+                snapshotRepository.upsertDailySnapshotForDate(date, endOfDay);
+            });
             log.info("[DailyInventorySnapshotJob] Đã upsert snapshot cho ngày {}", date);
 
             // Thu thập số liệu thống kê sau khi chốt sổ
