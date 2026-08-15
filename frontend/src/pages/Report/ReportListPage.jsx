@@ -539,10 +539,10 @@ const ReportListPage = () => {
                                             <table className={`${styles.reportTable} ${styles.summaryTable}`}>
                                                 <thead>
                                                     <tr>
-                                                        <th rowSpan="2" className={styles.fixedHeaderBold} style={{ whiteSpace: 'nowrap' }}>Kho</th>
-                                                        <th rowSpan="2" className={styles.fixedHeaderBold} style={{ whiteSpace: 'nowrap' }}>Mã hàng</th>
-                                                        <th rowSpan="2" className={styles.fixedHeaderBold}>Tên hàng</th>
-                                                        <th rowSpan="2" className={styles.fixedHeaderBold} style={{ whiteSpace: 'nowrap' }}>ĐVT</th>
+                                                        <th rowSpan="2" className={`${styles.fixedHeaderBold} ${styles.colWarehouse}`}>Kho</th>
+                                                        <th rowSpan="2" className={`${styles.fixedHeaderBold} ${styles.colProductCode}`}>Mã hàng</th>
+                                                        <th rowSpan="2" className={`${styles.fixedHeaderBold} ${styles.colProductName}`}>Tên hàng</th>
+                                                        <th rowSpan="2" className={`${styles.fixedHeaderBold} ${styles.colUnit}`}>ĐVT</th>
                                                         <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Tồn đầu kỳ</th>
                                                         <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Nhập trong kỳ</th>
                                                         <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Xuất trong kỳ</th>
@@ -562,10 +562,10 @@ const ReportListPage = () => {
                                                 <tbody>
                                                     {reportData.map((item, idx) => (
                                                         <tr key={idx}>
-                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.warehouseName || '-'}</td>
-                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.productCode}</td>
-                                                            <td className={styles.fontSemibold}>{item.productName}</td>
-                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.unitName || '-'}</td>
+                                                            <td className={`${styles.fontSemibold} ${styles.colWarehouse}`}>{item.warehouseName || '-'}</td>
+                                                            <td className={`${styles.fontSemibold} ${styles.colProductCode}`}>{item.productCode}</td>
+                                                            <td className={`${styles.fontSemibold} ${styles.colProductName}`}>{item.productName}</td>
+                                                            <td className={`${styles.fontSemibold} ${styles.colUnit}`}>{item.unitName || '-'}</td>
                                                             <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.openingQuantity)}</td>
                                                             <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.openingValue)}</td>
                                                             <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.receiptQuantity)}</td>
@@ -585,10 +585,10 @@ const ReportListPage = () => {
                                             <table className={styles.reportTable}>
                                                 <thead>
                                                     <tr>
-                                                        <th>Mã hàng</th>
-                                                        <th>Tên hàng</th>
-                                                        <th>Đơn vị tính</th>
-                                                        <th>Kho chứa</th>
+                                                        <th className={styles.colProductCode}>Mã hàng</th>
+                                                        <th className={styles.colProductName}>Tên hàng</th>
+                                                        <th className={styles.colUnit}>Đơn vị tính</th>
+                                                        <th className={styles.colWarehouse}>Kho chứa</th>
                                                         <th className={styles.textRight}>Số lượng tồn</th>
                                                         <th className={styles.textRight}>Giá trị tồn</th>
                                                     </tr>
@@ -596,10 +596,10 @@ const ReportListPage = () => {
                                                 <tbody>
                                                     {reportData.map((item, idx) => (
                                                         <tr key={idx}>
-                                                            <td className={styles.fontSemibold}>{item.itemCode}</td>
-                                                            <td>{item.itemName}</td>
-                                                            <td>{item.unitName || '-'}</td>
-                                                            <td>{item.warehouseCode ? `${item.warehouseCode} - ${item.warehouseName}` : '-'}</td>
+                                                            <td className={`${styles.fontSemibold} ${styles.colProductCode}`}>{item.itemCode}</td>
+                                                            <td className={styles.colProductName}>{item.itemName}</td>
+                                                            <td className={styles.colUnit}>{item.unitName || '-'}</td>
+                                                            <td className={styles.colWarehouse}>{item.warehouseCode ? `${item.warehouseCode} - ${item.warehouseName}` : '-'}</td>
                                                             <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: 'var(--color-success)' }}>{formatQuantity(item.totalQuantity)}</td>
                                                             <td className={styles.textRight}>{formatCurrency(item.totalValue)}</td>
                                                         </tr>
@@ -613,13 +613,13 @@ const ReportListPage = () => {
                                             <table className={styles.reportTable}>
                                                 <thead>
                                                     <tr>
-                                                        <th>Ngày CT</th>
-                                                        <th>Số chứng từ</th>
-                                                        <th>Loại CT</th>
-                                                        <th>Mã hàng</th>
-                                                        <th>Tên hàng</th>
-                                                        <th>Kho</th>
-                                                        <th>ĐVT</th>
+                                                        <th style={{ whiteSpace: 'nowrap' }}>Ngày CT</th>
+                                                        <th style={{ whiteSpace: 'nowrap' }}>Số chứng từ</th>
+                                                        <th style={{ whiteSpace: 'nowrap' }}>Loại CT</th>
+                                                        <th className={styles.colProductCode}>Mã hàng</th>
+                                                        <th className={styles.colProductName}>Tên hàng</th>
+                                                        <th className={styles.colWarehouse}>Kho</th>
+                                                        <th className={styles.colUnit}>ĐVT</th>
                                                         <th className={styles.textRight}>Đơn giá</th>
                                                         <th className={styles.textRight}>Số lượng nhập</th>
                                                         <th className={styles.textRight}>Số lượng xuất</th>
@@ -629,17 +629,17 @@ const ReportListPage = () => {
                                                 <tbody>
                                                     {reportData.map((item, idx) => (
                                                         <tr key={idx}>
-                                                            <td>{formatDate(item.documentDate)}</td>
-                                                            <td className={styles.fontSemibold}>{item.documentNumber}</td>
+                                                            <td style={{ whiteSpace: 'nowrap' }}>{formatDate(item.documentDate)}</td>
+                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.documentNumber}</td>
                                                             <td>
                                                                 <span className={`${styles.badge} ${item.documentType?.includes('NHAP') || item.documentType?.includes('IMPORT') ? styles.badgeImport : styles.badgeExport}`}>
                                                                     {item.documentType}
                                                                 </span>
                                                             </td>
-                                                            <td>{item.productCode}</td>
-                                                            <td>{item.productName}</td>
-                                                            <td>{item.warehouseName}</td>
-                                                            <td>{item.unitName || '-'}</td>
+                                                            <td className={styles.colProductCode}>{item.productCode}</td>
+                                                            <td className={styles.colProductName}>{item.productName}</td>
+                                                            <td className={styles.colWarehouse}>{item.warehouseName}</td>
+                                                            <td className={styles.colUnit}>{item.unitName || '-'}</td>
                                                             <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>
                                                             <td className={`${styles.textRight} ${styles.textSuccess}`}>{item.quantityIn > 0 ? `+${formatQuantity(item.quantityIn)}` : '-'}</td>
                                                             <td className={`${styles.textRight} ${styles.textDanger}`}>{item.quantityOut > 0 ? `-${formatQuantity(item.quantityOut)}` : '-'}</td>
@@ -655,13 +655,13 @@ const ReportListPage = () => {
                                             <table className={styles.reportTable}>
                                                 <thead>
                                                     <tr>
-                                                        <th>Ngày CT</th>
-                                                        <th>Số chứng từ</th>
-                                                        <th>Mã hàng</th>
-                                                        <th>Tên hàng</th>
-                                                        <th>Kho chuyển</th>
-                                                        <th>Kho nhận</th>
-                                                        <th>ĐVT</th>
+                                                        <th style={{ whiteSpace: 'nowrap' }}>Ngày CT</th>
+                                                        <th style={{ whiteSpace: 'nowrap' }}>Số chứng từ</th>
+                                                        <th className={styles.colProductCode}>Mã hàng</th>
+                                                        <th className={styles.colProductName}>Tên hàng</th>
+                                                        <th className={styles.colWarehouse}>Kho chuyển</th>
+                                                        <th className={styles.colWarehouse}>Kho nhận</th>
+                                                        <th className={styles.colUnit}>ĐVT</th>
                                                         <th className={styles.textRight}>Số lượng</th>
                                                         <th className={styles.textRight}>Đơn giá</th>
                                                         <th className={styles.textRight}>Thành tiền</th>
@@ -671,13 +671,13 @@ const ReportListPage = () => {
                                                 <tbody>
                                                     {reportData.map((item, idx) => (
                                                         <tr key={idx}>
-                                                            <td>{formatDate(item.documentDate)}</td>
-                                                            <td className={styles.fontSemibold}>{item.documentNumber}</td>
-                                                            <td>{item.itemCode}</td>
-                                                            <td>{item.itemName}</td>
-                                                            <td>{item.sourceWarehouse}</td>
-                                                            <td>{item.destinationWarehouse}</td>
-                                                            <td>{item.unitName}</td>
+                                                            <td style={{ whiteSpace: 'nowrap' }}>{formatDate(item.documentDate)}</td>
+                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.documentNumber}</td>
+                                                            <td className={styles.colProductCode}>{item.itemCode}</td>
+                                                            <td className={styles.colProductName}>{item.itemName}</td>
+                                                            <td className={styles.colWarehouse}>{item.sourceWarehouse}</td>
+                                                            <td className={styles.colWarehouse}>{item.destinationWarehouse}</td>
+                                                            <td className={styles.colUnit}>{item.unitName}</td>
                                                             <td className={styles.textRight}>{formatQuantity(item.quantity)}</td>
                                                             <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>
                                                             <td className={styles.textRight}>{formatCurrency(item.amount)}</td>
@@ -697,8 +697,8 @@ const ReportListPage = () => {
                                             <table className={styles.reportTable}>
                                                 <thead>
                                                     <tr>
-                                                        <th>Mã đối tác</th>
-                                                        <th>Tên đối tác</th>
+                                                        <th className={styles.colProductCode}>Mã đối tác</th>
+                                                        <th className={styles.colPartnerName}>Tên đối tác</th>
                                                         <th>Phân loại</th>
                                                         <th className={styles.textRight}>Dư đầu kỳ</th>
                                                         <th className={styles.textRight}>Phát sinh tăng (Nợ)</th>
@@ -709,8 +709,8 @@ const ReportListPage = () => {
                                                 <tbody>
                                                     {reportData.map((item, idx) => (
                                                         <tr key={idx}>
-                                                            <td className={styles.fontSemibold}>{item.partnerCode}</td>
-                                                            <td>{item.partnerName}</td>
+                                                            <td className={`${styles.fontSemibold} ${styles.colProductCode}`}>{item.partnerCode}</td>
+                                                            <td className={styles.colPartnerName}>{item.partnerName}</td>
                                                             <td>
                                                                 <span className={`${styles.badge} ${item.partnerType === 'SUPPLIER' ? styles.badgeSupplier : styles.badgeCustomer}`}>
                                                                     {item.partnerType === 'SUPPLIER' ? 'Nhà cung cấp' : 'Khách hàng'}
@@ -733,9 +733,9 @@ const ReportListPage = () => {
                                             <table className={styles.reportTable}>
                                                 <thead>
                                                     <tr>
-                                                        <th style={{ whiteSpace: 'nowrap' }}>Mã hàng</th>
-                                                        <th>Tên hàng</th>
-                                                        <th>ĐVT</th>
+                                                        <th className={styles.colProductCode}>Mã hàng</th>
+                                                        <th className={styles.colProductName}>Tên hàng</th>
+                                                        <th className={styles.colUnit}>ĐVT</th>
                                                         <th className={styles.textRight}>Số lượng bán</th>
                                                         <th className={styles.textRight}>Tổng doanh thu</th>
                                                         <th className={styles.textRight}>Tổng giá vốn</th>
@@ -746,9 +746,9 @@ const ReportListPage = () => {
                                                 <tbody>
                                                     {reportData.map((item, idx) => (
                                                         <tr key={idx}>
-                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.sku}</td>
-                                                            <td>{item.variantName}</td>
-                                                            <td>{item.unitName || '-'}</td>
+                                                            <td className={`${styles.fontSemibold} ${styles.colProductCode}`}>{item.sku}</td>
+                                                            <td className={styles.colProductName}>{item.variantName}</td>
+                                                            <td className={styles.colUnit}>{item.unitName || '-'}</td>
                                                             <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: 'var(--color-primary)' }}>{formatQuantity(item.quantitySold)}</td>
                                                             <td className={`${styles.textRight} ${styles.textSuccess}`}>{formatCurrency(item.salesAmount)}</td>
                                                             <td className={styles.textRight}>{formatCurrency(item.costAmount)}</td>

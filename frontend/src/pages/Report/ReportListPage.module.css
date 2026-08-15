@@ -380,6 +380,40 @@
     border: 1px solid #94a3b8 !important;
 }
 
+/* Column Specific Sizing & Wrapping */
+.colWarehouse {
+    width: 140px;
+    min-width: 130px;
+    max-width: 160px;
+    white-space: normal !important;
+    word-break: break-word;
+}
+
+.colProductCode {
+    width: 110px;
+    min-width: 100px;
+    white-space: nowrap;
+}
+
+.colProductName {
+    min-width: 280px;
+    white-space: normal !important;
+    word-break: break-word;
+}
+
+.colUnit {
+    width: 70px;
+    min-width: 60px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.colPartnerName {
+    min-width: 220px;
+    white-space: normal !important;
+    word-break: break-word;
+}
+
 /* Specific Alignment and weights */
 .textLeft { text-align: left; }
 .textCenter { text-align: center; }
