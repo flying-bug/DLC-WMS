@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { getSystemSettings, saveSystemSettings, uploadServiceAccount, testDriveConnection } from '../../../api/backupApi';
 import { useToast } from '../../../contexts/ToastContext';
+import { useAiFeature } from '../../../contexts/AiFeatureContext';
 import styles from './SystemSettingsTab.module.css';
 
 function SystemSettingsTab() {
+    const { setAiEnabled: updateGlobalAiState } = useAiFeature();
     const [settings, setSettings] = useState({
         backupPath: '/tmp/backups',
         driveEnabled: false,
@@ -14,6 +16,7 @@ function SystemSettingsTab() {
         notifyEmailEnabled: false,
         notifyEmailTo: '',
         reservationExpiryHours: 72,
+        aiEnabled: true,
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -27,13 +30,18 @@ function SystemSettingsTab() {
         const fetch = async () => {
             try {
                 const res = await getSystemSettings();
-                if (res.success) setSettings(res.data);
+                if (res.success) {
+                    setSettings(res.data);
+                    if (typeof res.data?.aiEnabled === 'boolean') {
+                        updateGlobalAiState(res.data.aiEnabled);
+                    }
+                }
             } finally {
                 setLoading(false);
             }
         };
         fetch();
-    }, []);
+    }, [updateGlobalAiState]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -42,6 +50,9 @@ function SystemSettingsTab() {
             const msg = res.data?.message || res.message || 'Cài đặt hệ thống đã được lưu thành công.';
             if (res.success) {
                 showToast('success', msg);
+                if (typeof settings.aiEnabled === 'boolean') {
+                    updateGlobalAiState(settings.aiEnabled);
+                }
             } else {
                 showToast('error', res.message || 'Lưu cài đặt thất bại.');
             }
@@ -123,6 +134,48 @@ function SystemSettingsTab() {
             </div>
 
             <div className={styles.settingsGrid}>
+                {/* ── AI & Vision Integration (Trí Tuệ Nhân Tạo AI) ─────────────────────────── */}
+                <div className={styles.settingSection} style={{ borderLeft: '4px solid var(--color-primary, #059669)' }}>
+                    <div className={styles.sectionHeader}>
+                        <i className="bi bi-robot" style={{ color: 'var(--color-primary, #059669)', fontSize: '18px' }} />
+                        <span style={{ fontWeight: 700 }}>Cấu hình Tính năng AI (AI &amp; Vision Integration)</span>
+                        <span style={{
+                            marginLeft: 'auto',
+                            padding: '3px 10px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            backgroundColor: settings.aiEnabled ? '#ecfdf5' : '#fef2f2',
+                            color: settings.aiEnabled ? '#059669' : '#dc2626',
+                            border: `1px solid ${settings.aiEnabled ? '#a7f3d0' : '#fecaca'}`
+                        }}>
+                            {settings.aiEnabled ? '🟢 Đang Bật' : '🔴 Đã Tắt'}
+                        </span>
+                    </div>
+                    <div className={styles.sectionBody}>
+                        <div className={styles.formGroup}>
+                            <div className={styles.formRow}>
+                                <div style={{ flex: 1, paddingRight: '16px' }}>
+                                    <label className={styles.label} style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>
+                                        Cho phép sử dụng AI trên toàn hệ thống
+                                    </label>
+                                    <p className={styles.hint} style={{ marginTop: '4px', lineHeight: 1.5 }}>
+                                        Bật / Tắt tất cả các chức năng AI: <strong>Trợ lý AI Chat</strong>, <strong>Quét hóa đơn OCR bằng AI (Vision AI)</strong> tại Đơn mua hàng &amp; Nhập kho, và <strong>Nhập liệu giọng nói (Voice AI)</strong>. Khi tắt, các chức năng này sẽ tự động ẩn hoàn toàn đối với Quản lý (Manager) và Nhân viên (Staff).
+                                    </p>
+                                </div>
+                                <label className={styles.toggle}>
+                                    <input
+                                        type="checkbox"
+                                        checked={Boolean(settings.aiEnabled)}
+                                        onChange={e => setSettings(s => ({ ...s, aiEnabled: e.target.checked }))}
+                                    />
+                                    <span className={styles.toggleSlider} />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* ── Daily Inventory Snapshot Config ─────────────────────────── */}
                 <div className={styles.settingSection}>
                     <div className={styles.sectionHeader}>

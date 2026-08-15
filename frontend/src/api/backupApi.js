@@ -8,6 +8,9 @@ export const getSystemHealth = () =>
 export const getSystemSettings = () =>
     axiosClient.get('/system/settings').then(r => r.data);
 
+export const getSystemFeatures = () =>
+    axiosClient.get('/system/features').then(r => r.data);
+
 export const saveSystemSettings = (data) =>
     axiosClient.post('/system/settings', data).then(r => r.data);
 

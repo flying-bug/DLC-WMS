@@ -33,6 +33,10 @@ public class SystemSettingsService {
         return "true".equalsIgnoreCase(getSetting(key, "false"));
     }
 
+    public boolean isAiEnabled() {
+        return "true".equalsIgnoreCase(getSetting("ai.enabled", "true"));
+    }
+
     public SystemSettingsDto getSettings() {
         String saJson = getSetting("drive.service.account", "");
         return SystemSettingsDto.builder()
@@ -45,6 +49,7 @@ public class SystemSettingsService {
                 .notifyEmailEnabled(getBool("notify.email.enabled"))
                 .notifyEmailTo(getSetting("notify.email.to", ""))
                 .reservationExpiryHours(Integer.parseInt(getSetting("sales.reservation.expiry_hours", "72")))
+                .aiEnabled(isAiEnabled())
                 .build();
     }
 
@@ -56,6 +61,7 @@ public class SystemSettingsService {
         upsert("backup.encrypt.enabled", String.valueOf(dto.isEncryptEnabled()));
         upsert("notify.email.enabled", String.valueOf(dto.isNotifyEmailEnabled()));
         upsert("notify.email.to", dto.getNotifyEmailTo());
+        upsert("ai.enabled", String.valueOf(dto.isAiEnabled()));
         
         Integer expiry = dto.getReservationExpiryHours();
         if (expiry == null || expiry <= 0) {

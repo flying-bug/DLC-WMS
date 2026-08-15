@@ -22,6 +22,7 @@ import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGrid
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import Select from 'react-select';
 import axiosClient from '../../api/axiosClient';
+import { useAiFeature } from '../../contexts/AiFeatureContext';
 import styles from './CreateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
@@ -123,6 +124,7 @@ const emptyLine = () => ({
 function CreateImportSlipPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { aiEnabled } = useAiFeature();
   const voiceData = location.state?.voiceData || null;
   const assemblyData = location.state?.assemblyData || null;
   const stocktakeData = location.state?.stocktakeData || null;
@@ -734,22 +736,30 @@ function CreateImportSlipPage() {
             />
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowOcrModal(true)}
-          style={{
-            padding: '7px 16px', borderRadius: '8px', border: 'none',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px',
-            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)',
-            transition: 'transform 0.15s',
-          }}
-          onMouseOver={e => e.currentTarget.style.transform = 'scale(1.03)'}
-          onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          🤖 Quét AI (OCR)
-        </button>
+        {aiEnabled && (
+          <button
+            type="button"
+            onClick={() => setShowOcrModal(true)}
+            style={{
+              padding: '7px 16px', borderRadius: '8px', border: 'none',
+              background: 'var(--brand-gradient, linear-gradient(135deg, var(--color-primary, #059669) 0%, var(--color-primary-accent, #10b981) 100%))',
+              color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+            }}
+          >
+            🤖 Quét AI (OCR)
+          </button>
+        )}
       </div>
 
       <div className={styles.pageBody}>

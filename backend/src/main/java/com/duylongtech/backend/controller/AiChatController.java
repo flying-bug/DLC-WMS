@@ -31,10 +31,14 @@ public class AiChatController {
     private final AiChatService aiChatService;
     private final VoiceCommandService voiceCommandService;
     private final AiChatLogRepository aiChatLogRepository;
+    private final com.duylongtech.backend.service.SystemSettingsService settingsService;
 
     @PostMapping("/chat")
     @PreAuthorize("hasAuthority('ai_chat:view')")
     public ResponseEntity<ApiResponse<AiChatResponse>> chat(@Valid @RequestBody AiChatRequest request) {
+        if (!settingsService.isAiEnabled()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("AI_DISABLED", "Tính năng Trí tuệ nhân tạo (AI) hiện đang tạm khóa bởi Quản trị viên."));
+        }
         AiChatResponse response = aiChatService.chat(request.getMessage());
         
         Long userId = null;
@@ -56,6 +60,9 @@ public class AiChatController {
     @PostMapping("/voice-command")
     @PreAuthorize("hasAuthority('ai_chat:view')")
     public ResponseEntity<ApiResponse<VoiceCommandResponse>> voiceCommand(@Valid @RequestBody AiChatRequest request) {
+        if (!settingsService.isAiEnabled()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("AI_DISABLED", "Tính năng Trí tuệ nhân tạo (AI) hiện đang tạm khóa bởi Quản trị viên."));
+        }
         return ResponseEntity.ok(ApiResponse.success(voiceCommandService.parseVoiceCommand(request.getMessage())));
     }
 

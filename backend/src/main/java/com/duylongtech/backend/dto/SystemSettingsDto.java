@@ -26,4 +26,7 @@ public class SystemSettingsDto {
 
     // Sales Orders
     private Integer reservationExpiryHours;
+
+    // AI Features
+    private boolean aiEnabled;
 }

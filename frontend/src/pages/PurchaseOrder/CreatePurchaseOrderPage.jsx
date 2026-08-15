@@ -13,6 +13,7 @@ import * as poApi from '../../api/purchaseOrderApi';
 import styles from './CreatePurchaseOrderPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { findBestMatch } from '../../utils/fuzzyMatch';
+import { useAiFeature } from '../../contexts/AiFeatureContext';
 
 const unwrap      = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p)   => p?.content ?? p ?? [];
@@ -47,6 +48,7 @@ function CreatePurchaseOrderPage() {
   const { id }   = useParams();
   const isEdit   = Boolean(id);
   const voiceData = location.state?.voiceData || null;
+  const { aiEnabled } = useAiFeature();
 
   const [suppliers, setSuppliers] = useState([]);
   const [variants,  setVariants]  = useState([]);
@@ -451,7 +453,7 @@ function CreatePurchaseOrderPage() {
               </h1>
             </div>
 
-            {!isEdit && (
+            {!isEdit && aiEnabled && (
               <button
                 type="button"
                 onClick={() => setShowOcrModal(true)}
@@ -460,18 +462,24 @@ function CreatePurchaseOrderPage() {
                   alignItems: 'center',
                   gap: '8px',
                   padding: '9px 18px',
-                  backgroundColor: '#7c3aed',
+                  background: 'var(--brand-gradient, linear-gradient(135deg, var(--color-primary, #059669) 0%, var(--color-primary-accent, #10b981) 100%))',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
                   fontWeight: 600,
                   fontSize: '13px',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 6px rgba(124, 58, 237, 0.3)',
-                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                  transition: 'all 0.15s ease',
                 }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#6d28d9'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#7c3aed'}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+                }}
               >
                 <i className="bi bi-robot" style={{ fontSize: '15px' }}></i> 🤖 Quét AI (OCR Báo giá / Hóa đơn)
               </button>

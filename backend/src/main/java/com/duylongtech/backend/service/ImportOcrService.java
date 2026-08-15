@@ -48,6 +48,7 @@ public class ImportOcrService {
     private final PartnerRepository partnerRepository;
     private final ProductVariantRepository productVariantRepository;
     private final VendorProductMappingRepository vendorProductMappingRepository;
+    private final SystemSettingsService systemSettingsService;
 
     @Value("${ai.provider:openai}")
     private String provider;
@@ -168,6 +169,9 @@ public class ImportOcrService {
      */
     @Transactional(readOnly = true)
     public OcrImportResponse scanDocument(MultipartFile file) {
+        if (!systemSettingsService.isAiEnabled()) {
+            throw new RuntimeException("Tính năng quét AI OCR hiện đang tạm khóa bởi Quản trị viên.");
+        }
         try {
             // 1. Convert file thành Base64
             String base64Image = Base64.getEncoder().encodeToString(file.getBytes());

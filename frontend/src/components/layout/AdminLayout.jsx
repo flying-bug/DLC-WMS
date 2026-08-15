@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { getAuthRole } from '../../auth/session';
+import { useAiFeature } from '../../contexts/AiFeatureContext';
 import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
 import VoiceCommandButton from '../ui/VoiceCommandButton/VoiceCommandButton';
 import ActiveWorkflowGuide from '../workflow/ActiveWorkflowGuide';
@@ -53,6 +54,7 @@ const AdminLayout = ({ children }) => {
 
     const userRole = getAuthRole() || 'STAFF';
     const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'ROLE_ADMIN';
+    const { aiEnabled } = useAiFeature();
     
     // Configuration for top header tabs based on active module
     const TABS_CONFIG = {
@@ -115,7 +117,11 @@ const AdminLayout = ({ children }) => {
     };
 
     const activeModule = getActiveModule();
-    const activeTabs = TABS_CONFIG[activeModule] || [];
+    const activeTabs = (TABS_CONFIG[activeModule] || []).filter(tab => {
+        if (tab.adminOnly && !isSuperAdmin) return false;
+        if (tab.path === '/ai-chat' && !aiEnabled) return false;
+        return true;
+    });
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const navMenuRef = useRef(null);
@@ -159,7 +165,11 @@ const AdminLayout = ({ children }) => {
 
     const visibleMenuGroups = MENU_CONFIG.map(group => ({
         ...group,
-        items: group.items.filter(item => !item.adminOnly || isSuperAdmin)
+        items: group.items.filter(item => {
+            if (item.adminOnly && !isSuperAdmin) return false;
+            if (item.path === '/ai-chat' && !aiEnabled) return false;
+            return true;
+        })
     })).filter(group => group.items.length > 0);
 
     const activeGroup = visibleMenuGroups.find(group => group.items.some(item => (
@@ -321,7 +331,7 @@ const AdminLayout = ({ children }) => {
                         })}
                     </nav>
                     <div className={styles.headerRight}>
-                        <UserProfileDropdown voiceEnabled={voiceEnabled} onToggleVoice={toggleVoice} />
+                        <UserProfileDropdown voiceEnabled={voiceEnabled} onToggleVoice={toggleVoice} aiEnabled={aiEnabled} />
                     </div>
                 </header>
 
@@ -331,7 +341,7 @@ const AdminLayout = ({ children }) => {
                 <ActiveWorkflowGuide />
             </div>
 
-            {voiceEnabled && <VoiceCommandButton />}
+            {aiEnabled && voiceEnabled && <VoiceCommandButton />}
         </div>
     );
 };
