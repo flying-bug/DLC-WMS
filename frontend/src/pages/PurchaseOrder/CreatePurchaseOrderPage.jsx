@@ -8,12 +8,12 @@ import QuickAddProductModal from '../../components/ui/QuickAddProductModal/Quick
 import SupplierModal from '../Supplier/components/SupplierModal';
 import OcrUploadModal from '../CreateImportSlip/components/OcrUploadModal';
 import OcrResultPreviewModal from '../CreateImportSlip/components/OcrResultPreviewModal';
+import { useAiFeature } from '../../contexts/AiFeatureContext';
 import { scanImportSlipOcr, confirmOcrMapping } from '../../api/inventoryImportApi';
 import * as poApi from '../../api/purchaseOrderApi';
 import styles from './CreatePurchaseOrderPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { findBestMatch } from '../../utils/fuzzyMatch';
-import { useAiFeature } from '../../contexts/AiFeatureContext';
 
 const unwrap      = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p)   => p?.content ?? p ?? [];
@@ -152,16 +152,14 @@ function CreatePurchaseOrderPage() {
           unitName: item.unitName || matchedVariant?.unitName || 'Cái',
           vatRate: item.vatRate !== undefined && item.vatRate !== null ? Number(item.vatRate) : Number(matchedVariant?.vatPercent || matchedVariant?.vatRate || 0),
           note: item.rawProductName && item.rawProductName !== item.matchedVariantName ? `Tên gốc: ${item.rawProductName}` : '',
-          _ocrConfidence: item.matchConfidence,
           _ocrRawName: item.rawProductName,
-          _ocrSuggestions: item.alternativeSuggestions,
         };
       });
       setLines(ocrLines);
     }
 
-    showToast('success', `Trích xuất thành công ${data.items?.length || 0} sản phẩm từ hóa đơn / báo giá!`);
     setOcrPreviewData(null);
+    showToast('success', 'Đã áp dụng dữ liệu từ chứng từ AI vào đơn mua hàng!');
   };
 
   // Load lookups
@@ -297,7 +295,7 @@ function CreatePurchaseOrderPage() {
         });
         showToast('success', `Đã tạo và khớp sản phẩm: ${createdVariant.productName || ''}`);
       } else {
-        showToast('warning', 'Đã thêm sản phẩm thành công.');
+        showToast('warning', 'Đã thêm sản phẩm nhưng chưa tìm thấy biến thể để chọn.');
       }
     } catch {
       showToast('error', 'Thêm sản phẩm thành công nhưng không tải lại được danh sách hàng hóa.');
@@ -365,8 +363,7 @@ function CreatePurchaseOrderPage() {
       }
       const saved = unwrap(res);
 
-      // Trigger AI Learning for OCR
-      if (form.partnerId) {
+      if (!isEdit && form.partnerId) {
         lines.forEach(item => {
           if (item._ocrRawName && item.variantId) {
             confirmOcrMapping(form.partnerId, item._ocrRawName, item.variantId)
@@ -436,55 +433,54 @@ function CreatePurchaseOrderPage() {
       <div className={styles.page}>
         {/* ── Page Header ── */}
         <div className={styles.pageHeader}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className={styles.breadcrumb}>
-                <span className={styles.breadcrumbLink} onClick={() => navigate('/purchase-orders')}>
-                  Đơn mua hàng
-                </span>
-                <i className="bi bi-chevron-right" style={{ margin: '0 6px', fontSize: 12 }} />
-                <span>{isEdit ? 'Cập nhật đơn mua hàng' : 'Tạo đơn mua hàng mới'}</span>
-              </div>
-              <h1 className={styles.pageTitle}>
-                <i className="bi bi-bag-plus" style={{ marginRight: 8 }} />
-                {isEdit
-                  ? `Cập nhật: ${form.poCode}`
-                  : `Tạo đơn mua hàng mới${form.poCode ? `: ${form.poCode}` : ''}`}
-              </h1>
+          <div>
+            <div className={styles.breadcrumb}>
+              <span className={styles.breadcrumbLink} onClick={() => navigate('/purchase-orders')}>
+                Đơn mua hàng
+              </span>
+              <i className="bi bi-chevron-right" style={{ margin: '0 6px', fontSize: 12 }} />
+              <span>{isEdit ? 'Cập nhật đơn mua hàng' : 'Tạo đơn mua hàng mới'}</span>
             </div>
-
-            {!isEdit && aiEnabled && (
-              <button
-                type="button"
-                onClick={() => setShowOcrModal(true)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '9px 18px',
-                  background: 'var(--brand-gradient, linear-gradient(135deg, var(--color-primary, #059669) 0%, var(--color-primary-accent, #10b981) 100%))',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
-                }}
-              >
-                <i className="bi bi-robot" style={{ fontSize: '15px' }}></i> 🤖 Quét AI (OCR Báo giá / Hóa đơn)
-              </button>
-            )}
+            <h1 className={styles.pageTitle}>
+              <i className="bi bi-bag-plus" style={{ marginRight: 8 }} />
+              {isEdit
+                ? `Cập nhật: ${form.poCode}`
+                : `Tạo đơn mua hàng mới${form.poCode ? `: ${form.poCode}` : ''}`}
+            </h1>
           </div>
+
+          {!isEdit && aiEnabled && (
+            <button
+              type="button"
+              onClick={() => setShowOcrModal(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                background: 'var(--brand-gradient, linear-gradient(135deg, var(--color-primary, #059669) 0%, var(--color-primary-accent, #10b981) 100%))',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.12)';
+              }}
+            >
+              <i className="bi bi-robot" style={{ fontSize: '15px' }} />
+              <span>Quét AI (OCR Báo giá / Hóa đơn)</span>
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -511,48 +507,37 @@ function CreatePurchaseOrderPage() {
                           placeholder="Chọn nhà cung cấp..."
                           isClearable
                           styles={customSelectStyles}
+                          menuPortalTarget={document.body}
                         />
                       </div>
-                      <button
-                        type="button"
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '36px',
-                          height: '36px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          background: '#f9fafb',
-                          cursor: 'pointer',
-                          color: '#2563eb'
-                        }}
-                        title="Thêm nhanh nhà cung cấp"
-                        onClick={() => setShowSupplierModal(true)}
-                      >
-                        <i className="bi bi-plus-lg" style={{ fontSize: '16px' }}></i>
+                      <button type="button" onClick={() => setShowSupplierModal(true)} style={{ width: '38px', height: '38px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary)' }}></i>
                       </button>
                     </div>
                   </div>
 
                   <div className={styles.fieldRow}>
-                    <label className={styles.label}>Hạn công nợ</label>
-                    <input
-                      type="date"
-                      className={styles.input}
-                      value={form.paymentDueDate}
-                      onChange={e => setForm(p => ({ ...p, paymentDueDate: e.target.value }))}
+                    <label className={styles.label}>Ghi chú</label>
+                    <textarea
+                      className={styles.textarea}
+                      rows={3}
+                      value={form.note}
+                      onChange={e => setForm(p => ({ ...p, note: e.target.value }))}
+                      placeholder="Ghi chú thêm về đơn mua hàng..."
                     />
                   </div>
                 </div>
+              </div>
 
+              {/* Middle panel — order identity */}
+              <div className={styles.middlePanel}>
                 <div className={styles.section}>
                   <div className={styles.sectionTitle}>
-                    <i className="bi bi-info-circle" /> Thông tin chung
+                    <i className="bi bi-file-earmark-text" /> Thông tin đơn mua
                   </div>
 
                   <div className={styles.fieldRow}>
-                    <label className={styles.label}>Ngày lập đơn <span className={styles.required}>*</span></label>
+                    <label className={styles.label}>Ngày lập <span className={styles.required}>*</span></label>
                     <input
                       type="date"
                       className={styles.input}
@@ -561,157 +546,156 @@ function CreatePurchaseOrderPage() {
                     />
                   </div>
 
-                  <div className={styles.fieldRow}>
-                    <label className={styles.label}>Ngày dự kiến nhận</label>
-                    <input
-                      type="date"
-                      className={styles.input}
-                      value={form.expectedDeliveryDate}
-                      onChange={e => setForm(p => ({ ...p, expectedDeliveryDate: e.target.value }))}
-                    />
-                  </div>
+                  <div className={styles.additionalFields}>
+                    <div className={styles.fieldRow}>
+                      <label className={styles.label}>Hạn công nợ</label>
+                      <input
+                        type="date"
+                        className={styles.input}
+                        min={form.poDate}
+                        value={form.paymentDueDate}
+                        onChange={e => setForm(p => ({ ...p, paymentDueDate: e.target.value }))}
+                      />
+                    </div>
 
-                  <div className={styles.fieldRow}>
-                    <label className={styles.label}>Ghi chú</label>
-                    <textarea
-                      className={styles.textarea}
-                      rows={3}
-                      placeholder="Ghi chú thêm về đơn hàng..."
-                      value={form.note}
-                      onChange={e => setForm(p => ({ ...p, note: e.target.value }))}
-                    />
+                    <div className={styles.fieldRow}>
+                      <label className={styles.label}>Ngày giao hàng dự kiến</label>
+                      <input
+                        type="date"
+                        className={styles.input}
+                        min={form.poDate}
+                        value={form.expectedDeliveryDate}
+                        onChange={e => setForm(p => ({ ...p, expectedDeliveryDate: e.target.value }))}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right panel — totals & quick actions */}
+              {/* Right panel — delivery and totals */}
               <div className={styles.rightPanel}>
-                <div className={styles.summaryCard}>
-                  <div className={styles.summaryTitle}>Tổng giá trị đơn hàng</div>
-                  <div className={styles.summaryRow}>
-                    <span>Tổng số lượng:</span>
-                    <strong>{totalQty}</strong>
-                  </div>
-                  <div className={styles.summaryRow}>
-                    <span>Tiền hàng (chưa VAT):</span>
-                    <span>{money(subTotalAmount)} đ</span>
-                  </div>
-                  <div className={styles.summaryRow}>
-                    <span>Tiền thuế VAT:</span>
-                    <span>{money(totalVatAmount)} đ</span>
-                  </div>
-                  <div className={styles.summaryDivider} />
-                  <div className={styles.summaryTotalRow}>
-                    <span>TỔNG CỘNG:</span>
-                    <span className={styles.totalAmount}>{money(grandTotal)} đ</span>
+                <div className={styles.section}>
+                  {/* Summary box */}
+                  <div className={styles.summaryBox}>
+                    <div className={styles.summaryRow}>
+                      <span>Tổng số lượng:</span>
+                      <strong>{totalQty.toLocaleString('vi-VN')}</strong>
+                    </div>
+                    <div className={styles.summaryRow}>
+                      <span>Tiền hàng:</span>
+                      <strong>{money(subTotalAmount)} đ</strong>
+                    </div>
+                    <div className={styles.summaryRow}>
+                      <span>Thuế VAT:</span>
+                      <strong>{money(totalVatAmount)} đ</strong>
+                    </div>
+                    <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
+                      <span>Tổng công nợ:</span>
+                      <strong className={styles.totalAmount}>{money(grandTotal)} đ</strong>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* ── Product lines table ── */}
-            <div className={styles.tableSection}>
-              <div className={styles.tableHeader}>
-                <span className={styles.tableTitle}>
-                  <i className="bi bi-box-seam" /> Danh sách sản phẩm ({lines.length})
+            {/* ── Lines ── */}
+            <div className={styles.linesSection}>
+              <div className={styles.linesSectionHeader}>
+                <span className={styles.sectionTitle}>
+                  <i className="bi bi-list-ul" /> Danh sách hàng hóa cần mua
                 </span>
                 <button className={styles.btnAddLine} onClick={addLine}>
-                  <i className="bi bi-plus-lg" /> Thêm dòng
+                  <i className="bi bi-plus-circle" /> Thêm dòng
                 </button>
               </div>
 
-              <div className={styles.tableWrapper}>
-                <table className={styles.table}>
+              <div style={{ overflowX: 'auto' }}>
+                <table className={styles.linesTable}>
                   <thead>
                     <tr>
-                      <th style={{ width: 40, textAlign: 'center' }}>#</th>
-                      <th style={{ minWidth: 260 }}>Sản phẩm / Biến thể <span className={styles.required}>*</span></th>
+                      <th style={{ width: 36 }}>#</th>
+                      <th>Sản phẩm</th>
                       <th style={{ width: 90, textAlign: 'center' }}>ĐVT</th>
-                      <th style={{ width: 100, textAlign: 'right' }}>Số lượng <span className={styles.required}>*</span></th>
+                      <th style={{ width: 110, textAlign: 'right' }}>Số lượng</th>
                       <th style={{ width: 140, textAlign: 'right' }}>Đơn giá (đ)</th>
-                      <th style={{ width: 90, textAlign: 'right' }}>VAT (%)</th>
-                      <th style={{ width: 150, textAlign: 'right' }}>Thành tiền (đ)</th>
-                      <th style={{ minWidth: 160 }}>Ghi chú dòng</th>
-                      <th style={{ width: 50, textAlign: 'center' }} />
+                      <th style={{ width: 80,  textAlign: 'center' }}>VAT (%)</th>
+                      <th style={{ width: 130, textAlign: 'right' }}>Thành tiền</th>
+                      <th style={{ width: 150 }}>Ghi chú</th>
+                      <th style={{ width: 36 }}></th>
                     </tr>
                   </thead>
                   <tbody>
                     {lines.map((line, idx) => {
-                      const lineSubtotal = Number(line.quantity || 0) * Number(line.unitPrice || 0);
-                      const lineVat      = lineSubtotal * Number(line.vatRate || 0) / 100;
-                      const lineTotal    = lineSubtotal + lineVat;
-
+                      const lineTotal = Number(line.quantity || 0) * Number(line.unitPrice || 0);
+                      const vatAmt    = lineTotal * Number(line.vatRate || 0) / 100;
                       return (
                         <tr key={idx}>
-                          <td style={{ textAlign: 'center', color: '#94a3b8' }}>{idx + 1}</td>
+                          <td style={{ textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>{idx + 1}</td>
                           <td>
                             <ProductGridSelect
                               products={productOptions}
-                              value={line.variantId ? String(line.variantId) : ''}
-                              onChange={val => {
-                                const selected = variants.find(v => String(v.id) === String(val));
-                                if (selected) {
-                                  updateLineMultiple(idx, {
-                                    variantId: selected.id,
-                                    unitName:  selected.unitName || 'Cái',
-                                    unitPrice: Number(selected.importPrice || selected.costPrice || selected.price || 0),
-                                    vatRate:   Number(selected.vatPercent || selected.vatRate || 0),
-                                  });
-                                } else {
-                                  updateLine(idx, 'variantId', null);
-                                }
-                              }}
-                              onQuickAdd={() => {
+                              value={line.variantId}
+                              onChange={selected => updateLineMultiple(idx, {
+                                variantId: selected?.id || null,
+                                unitName: selected?.unitName || 'Cái',
+                                vatRate: Number(selected?.vatPercent || selected?.vatRate || 0),
+                              })}
+                              onAddNew={() => {
                                 setQuickAddLineIndex(idx);
                                 setShowQuickAddProduct(true);
                               }}
-                              placeholder="Tìm kiếm theo mã SKU, tên linh kiện..."
+                              displayMode="code-name"
+                              placeholder="Chọn mã hoặc tên hàng"
+                              hideStock
                             />
                           </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <span className={styles.unitBadge}>{line.unitName || '—'}</span>
+                          <td style={{ textAlign: 'center', color: '#64748b', fontSize: 13 }}>
+                            {line.unitName || '—'}
                           </td>
                           <td>
                             <input
                               type="number"
-                              min={1}
-                              step={1}
-                              className={`${styles.input} ${styles.inputRight}`}
+                              className={styles.cellInput}
+                              style={{ textAlign: 'right' }}
+                              min="1"
+                              step="1"
                               value={line.quantity}
                               onChange={e => updateLine(idx, 'quantity', e.target.value)}
                             />
                           </td>
                           <td>
                             <input
-                              type="number"
-                              min={0}
-                              step={1000}
-                              className={`${styles.input} ${styles.inputRight}`}
-                              value={line.unitPrice}
-                              onChange={e => updateLine(idx, 'unitPrice', e.target.value)}
+                              type="text"
+                              inputMode="numeric"
+                              className={styles.cellInput}
+                              style={{ textAlign: 'right' }}
+                              value={line.unitPrice ? new Intl.NumberFormat('vi-VN').format(line.unitPrice) : ''}
+                              onChange={e => updateLine(idx, 'unitPrice', e.target.value.replace(/\D/g, ''))}
+                              placeholder="0"
                             />
                           </td>
                           <td>
                             <input
                               type="number"
-                              min={0}
-                              max={100}
-                              step={1}
-                              className={`${styles.input} ${styles.inputRight}`}
+                              className={styles.cellInput}
+                              style={{ textAlign: 'center' }}
+                              min="0"
+                              max="100"
+                              step="1"
                               value={line.vatRate}
                               onChange={e => updateLine(idx, 'vatRate', e.target.value)}
                             />
                           </td>
-                          <td style={{ textAlign: 'right', fontWeight: 600, color: '#1e293b' }}>
-                            {money(lineTotal)}
+                          <td style={{ textAlign: 'right', fontWeight: 600, color: '#1e40af', fontSize: 13, whiteSpace: 'nowrap' }}>
+                            {money(lineTotal + vatAmt)} đ
                           </td>
                           <td>
                             <input
                               type="text"
-                              className={styles.input}
-                              placeholder="Ghi chú..."
+                              className={styles.cellInput}
                               value={line.note}
                               onChange={e => updateLine(idx, 'note', e.target.value)}
+                              placeholder="Ghi chú..."
                             />
                           </td>
                           <td style={{ textAlign: 'center' }}>
@@ -719,6 +703,7 @@ function CreatePurchaseOrderPage() {
                               <button
                                 className={styles.btnRemoveLine}
                                 onClick={() => removeLine(idx)}
+                                title="Xóa dòng"
                               >
                                 <i className="bi bi-trash3" />
                               </button>

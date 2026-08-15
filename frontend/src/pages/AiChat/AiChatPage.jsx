@@ -228,19 +228,23 @@ function AiChatPage() {
         const question = value.trim();
         if (!question || isThinking) return;
 
-        setMessages((prev) => [
-            ...prev,
-            {
-                id: Date.now(),
-                role: 'user',
-                content: question,
-                time: currentTime
-            }
-        ]);
+        const userMsg = {
+            id: Date.now(),
+            role: 'user',
+            content: question,
+            time: currentTime
+        };
+
+        const historyPayload = messages
+            .filter(m => m.role === 'user' || m.role === 'assistant')
+            .slice(-6)
+            .map(m => ({ role: m.role, content: m.content }));
+
+        setMessages((prev) => [...prev, userMsg]);
         setInput('');
         setIsThinking(true);
 
-        axiosClient.post('/ai/chat', { message: question })
+        axiosClient.post('/ai/chat', { message: question, history: historyPayload })
             .then((response) => {
                 const data = response.data?.data;
                 const sources = Array.isArray(data?.sources) ? data.sources : [];

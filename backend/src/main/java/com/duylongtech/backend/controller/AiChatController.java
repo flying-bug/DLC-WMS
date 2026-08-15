@@ -39,7 +39,7 @@ public class AiChatController {
         if (!settingsService.isAiEnabled()) {
             return ResponseEntity.badRequest().body(ApiResponse.error("AI_DISABLED", "Tính năng Trí tuệ nhân tạo (AI) hiện đang tạm khóa bởi Quản trị viên."));
         }
-        AiChatResponse response = aiChatService.chat(request.getMessage());
+        AiChatResponse response = aiChatService.chat(request.getMessage(), request.getHistory());
         
         Long userId = null;
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
