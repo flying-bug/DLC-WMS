@@ -77,17 +77,18 @@ export function printImportSlip(slipOrSlips, options = {}) {
       totalAmount += amount;
       totalVatAmount += vatAmount;
 
-      const serialsStr = line.serialNumbers && line.serialNumbers.length > 0
-        ? line.serialNumbers.join(', ')
+      const serials = line.serialNumbers && line.serialNumbers.length > 0
+        ? `<div style="font-size: 11px; color: #475569; margin-top: 3px; word-break: break-all; line-height: 1.35;"><strong>Serial:</strong> ${escapeHtml(line.serialNumbers.join(', '))}</div>`
         : '';
 
       rowsHtml += `
         <tr>
           <td style="text-align: center;">${index + 1}</td>
-          <td style="text-align: center; font-weight: 500;">${escapeHtml(sku)}</td>
           <td>
             <strong>${escapeHtml(name)}</strong>
-            ${line.note ? `<div style="font-size: 11px; color: #64748b; font-style: italic;">Ghi chú: ${escapeHtml(line.note)}</div>` : ''}
+            ${sku ? `<span style="font-size: 11px; color: #64748b;"> (${escapeHtml(sku)})</span>` : ''}
+            ${serials}
+            ${line.note ? `<div style="font-size: 11px; color: #64748b; font-style: italic; margin-top: 2px;">Ghi chú: ${escapeHtml(line.note)}</div>` : ''}
           </td>
           <td style="text-align: center;">${escapeHtml(unit)}</td>
           <td style="text-align: center; font-weight: bold;">${qty.toLocaleString('vi-VN')}</td>
@@ -95,7 +96,6 @@ export function printImportSlip(slipOrSlips, options = {}) {
           <td style="text-align: center;">${vatPercent ? vatPercent + '%' : '0%'}</td>
           <td style="text-align: right;">${vatAmount ? vatAmount.toLocaleString('vi-VN') : '0'}</td>
           <td style="text-align: right; font-weight: bold;">${(amount + vatAmount) ? (amount + vatAmount).toLocaleString('vi-VN') : '0'}</td>
-          <td style="font-size: 11px; word-break: break-all; max-width: 150px;">${escapeHtml(serialsStr)}</td>
         </tr>
       `;
     });
@@ -165,38 +165,33 @@ export function printImportSlip(slipOrSlips, options = {}) {
         <table class="main-table">
           <thead>
             <tr>
-              <th style="width: 4%;">STT</th>
-              <th style="width: 12%;">Mã SKU</th>
-              <th style="width: 28%;">Tên sản phẩm</th>
-              <th style="width: 7%;">ĐVT</th>
-              <th style="width: 8%;">Số lượng</th>
-              <th style="width: 10%;">Đơn giá</th>
-              <th style="width: 6%;">% VAT</th>
+              <th style="width: 5%;">STT</th>
+              <th style="width: 42%;">Tên hàng hóa, sản phẩm</th>
+              <th style="width: 8%;">ĐVT</th>
+              <th style="width: 9%;">Số lượng</th>
+              <th style="width: 11%;">Đơn giá</th>
+              <th style="width: 7%;">% VAT</th>
               <th style="width: 8%;">Tiền VAT</th>
-              <th style="width: 11%;">Thành tiền</th>
-              <th style="width: 16%;">Số Serial</th>
+              <th style="width: 12%;">Thành tiền</th>
             </tr>
           </thead>
           <tbody>
             ${rowsHtml}
             <tr class="total-row">
-              <td colspan="4" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px;">Cộng tiền hàng:</td>
+              <td colspan="3" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px;">Cộng tiền hàng:</td>
               <td style="text-align: center; border: 1px solid #cbd5e1; padding: 8px; font-weight: bold;">${totalQty.toLocaleString('vi-VN')}</td>
               <td colspan="3" style="border: 1px solid #cbd5e1; padding: 8px;"></td>
               <td style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; font-weight: bold;">${totalAmount.toLocaleString('vi-VN')} đ</td>
-              <td style="border: 1px solid #cbd5e1; padding: 8px;"></td>
             </tr>
             ${totalVatAmount > 0 ? `
             <tr class="total-row">
-              <td colspan="8" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px;">Tiền thuế VAT:</td>
+              <td colspan="7" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px;">Tiền thuế VAT:</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; font-weight: bold;">${totalVatAmount.toLocaleString('vi-VN')} đ</td>
-              <td style="border: 1px solid #cbd5e1; padding: 8px;"></td>
             </tr>
             ` : ''}
             <tr class="total-row" style="background-color: #f8fafc;">
-              <td colspan="8" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; color: #b91c1c; font-size: 13px;">Tổng thanh toán:</td>
+              <td colspan="7" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; color: #b91c1c; font-size: 13px;">Tổng thanh toán:</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; color: #b91c1c; font-size: 14px; font-weight: bold;">${grandTotal.toLocaleString('vi-VN')} đ</td>
-              <td style="border: 1px solid #cbd5e1; padding: 8px;"></td>
             </tr>
           </tbody>
         </table>

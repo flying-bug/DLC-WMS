@@ -43,6 +43,21 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.postPayment(id));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('payment:edit')")
+    @Operation(summary = "Update a DRAFT receipt/voucher")
+    public ResponseEntity<PaymentResponse> updatePayment(@PathVariable Long id, @RequestBody PaymentRequest request) {
+        return ResponseEntity.ok(paymentService.updatePayment(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('payment:delete') or hasAuthority('payment:edit')")
+    @Operation(summary = "Delete a DRAFT receipt/voucher")
+    public ResponseEntity<Void> deletePayment(@PathVariable Long id) {
+        paymentService.deletePayment(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/balance/{partnerId}")
     @PreAuthorize("hasAuthority('payment:view')")
     @Operation(summary = "Get current partner debt balance")

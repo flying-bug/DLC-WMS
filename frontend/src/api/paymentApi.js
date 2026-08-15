@@ -11,6 +11,12 @@ export const createVoucher = (data) =>
 export const postPayment = (id) =>
   axiosClient.post(`${BASE}/${id}/post`);
 
+export const updatePayment = (id, data) =>
+  axiosClient.put(`${BASE}/${id}`, data);
+
+export const deletePayment = (id) =>
+  axiosClient.delete(`${BASE}/${id}`);
+
 export const getPartnerDebtBalance = (partnerId) =>
   axiosClient.get(`${BASE}/balance/${partnerId}`);
 

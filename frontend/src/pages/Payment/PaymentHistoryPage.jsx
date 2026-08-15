@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as customerApi from '../../api/customerApi';
 import * as purchaseOrderApi from '../../api/purchaseOrderApi';
 import * as paymentApi from '../../api/paymentApi';
 import styles from './PaymentHistoryPage.module.css';
 import { formatDateTime } from '../../utils/dateFormat';
+import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 
@@ -48,6 +50,8 @@ function PaymentHistoryPage() {
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [postingId, setPostingId] = useState(null);
+  const [deletingItem, setDeletingItem] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Filters for left column (Invoices & Import/Export Docs)
   const [leftKeyword, setLeftKeyword] = useState('');
@@ -161,6 +165,21 @@ function PaymentHistoryPage() {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!deletingItem?.id) return;
+    setDeleting(true);
+    try {
+      await paymentApi.deletePayment(deletingItem.id);
+      await loadData();
+      showToast('success', `Đã xóa phiếu nháp ${deletingItem.code}`);
+      setDeletingItem(null);
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể xóa phiếu nháp');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className={styles.page}>
@@ -172,7 +191,7 @@ function PaymentHistoryPage() {
               <i className="bi bi-person-lines-fill" /> {partnerLabel} {partner?.phone ? ` | SĐT: ${partner.phone}` : ''}
             </p>
           </div>
-          <button className={styles.backButton} onClick={() => navigate('/payments')} type="button">
+          <button className={styles.backButton} onClick={() => navigate(mode === 'VOUCHER' ? '/payments/expense' : '/payments/receipt')} type="button">
             <i className="bi bi-arrow-left" /> Quay lại thu chi
           </button>
         </div>
@@ -248,7 +267,7 @@ function PaymentHistoryPage() {
                     </tr>
                   ) : filteredInvoices.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className={styles.empty}>Chưa có hóa đơn / chứng từ nhập xuất</td>
+                      <td colSpan={4} className={styles.empty}>Không có hóa đơn phát sinh nợ</td>
                     </tr>
                   ) : (
                     filteredInvoices.map(item => {
@@ -256,7 +275,8 @@ function PaymentHistoryPage() {
                       return (
                         <tr key={item.id}>
                           <td className={styles.codeCell}>
-                            <i className={`bi ${typeInfo.icon}`} /> {item.referenceCode || '-'}
+                            <strong>{item.referenceCode || item.docCode || `#${item.referenceId || item.id}`}</strong>
+                            {item.note && <div className={styles.muted} style={{ fontSize: 11 }}>{item.note}</div>}
                           </td>
                           <td>
                             <span className={`${styles.badge} ${typeInfo.className}`}>
@@ -313,21 +333,25 @@ function PaymentHistoryPage() {
                     <th>Phương thức</th>
                     <th>Trạng thái</th>
                     <th className={styles.textRight}>Số tiền</th>
+                    <th style={{ textAlign: 'center', width: '100px' }}>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className={styles.empty}>Đang tải phiếu {mode === 'RECEIPT' ? 'thu' : 'chi'}...</td>
+                      <td colSpan={6} className={styles.empty}>Đang tải phiếu {mode === 'RECEIPT' ? 'thu' : 'chi'}...</td>
                     </tr>
                   ) : filteredPayments.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className={styles.empty}>Chưa có phiếu {mode === 'RECEIPT' ? 'thu' : 'chi'} thanh toán</td>
+                      <td colSpan={6} className={styles.empty}>Chưa có phiếu {mode === 'RECEIPT' ? 'thu' : 'chi'} thanh toán</td>
                     </tr>
                   ) : (
                     filteredPayments.map(item => (
                       <tr key={item.id}>
-                        <td className={styles.codeCell}>{item.code}</td>
+                        <td className={styles.codeCell}>
+                          <strong>{item.code}</strong>
+                          {item.note && <div className={styles.muted} style={{ fontSize: 11 }}>{item.note}</div>}
+                        </td>
                         <td>
                           <span className={item.type === 'RECEIPT' ? styles.typeReceipt : styles.typeVoucher}>
                             {item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'}
@@ -342,6 +366,37 @@ function PaymentHistoryPage() {
                         <td className={`${styles.textRight} ${styles.amountReceipt}`}>
                           -{money(item.amount)} đ
                         </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'inline-flex', gap: '5px', alignItems: 'center' }}>
+                            <button
+                              className={styles.btnActionSmall}
+                              onClick={() => printPaymentReceipt(item, { partnerName: partner?.name || '', salespersonName: '' })}
+                              title="In phiếu"
+                            >
+                              <i className="bi bi-printer" />
+                            </button>
+                            {item.status === 'DRAFT' && (
+                              <>
+                                <button
+                                  className={styles.postButton}
+                                  disabled={postingId === item.id}
+                                  onClick={() => postDraftPayment(item)}
+                                  title="Ghi sổ phiếu nháp"
+                                  style={{ borderRadius: 4, padding: '2px 6px', fontSize: 11 }}
+                                >
+                                  Ghi sổ
+                                </button>
+                                <button
+                                  className={styles.btnActionSmallDelete}
+                                  onClick={() => setDeletingItem(item)}
+                                  title="Xóa phiếu nháp"
+                                >
+                                  <i className="bi bi-trash" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -351,6 +406,17 @@ function PaymentHistoryPage() {
           </section>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={!!deletingItem}
+        title="Xóa phiếu nháp"
+        message={`Bạn có chắc chắn muốn xóa phiếu nháp "${deletingItem?.code}" số tiền ${money(deletingItem?.amount)} đ không? Thao tác này không thể hoàn tác.`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeletingItem(null)}
+        confirmText="Xóa phiếu"
+        isDanger={true}
+      />
+
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
     </AdminLayout>
   );
