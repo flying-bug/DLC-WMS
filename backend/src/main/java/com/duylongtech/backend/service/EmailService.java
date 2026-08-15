@@ -309,4 +309,52 @@ public class EmailService {
 
         sendEmail(toEmail, "[" + typeName.toUpperCase() + "] Đơn hàng " + (so.getSoCode() != null ? so.getSoCode() : "") + " - DLC WMS", htmlMsg, "DLC-WMS " + typeName);
     }
+
+    @Async
+    public void sendDailySnapshotNotificationEmail(String toEmail, java.time.LocalDate snapshotDate, long recordCount, double totalQuantity, java.math.BigDecimal totalValue, boolean isSuccess, String errorDetails) {
+        if (toEmail == null || toEmail.trim().isEmpty()) return;
+        try {
+            String statusText = isSuccess ? "THÀNH CÔNG" : "THẤT BẠI";
+            String statusColor = isSuccess ? "#16a34a" : "#dc2626";
+            String formattedDate = snapshotDate != null
+                    ? snapshotDate.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                    : "-";
+            String timeNow = java.time.LocalDateTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))
+                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy"));
+            
+            java.text.NumberFormat currencyFormat = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
+            java.text.NumberFormat qtyFormat = java.text.NumberFormat.getInstance(new java.util.Locale("vi", "VN"));
+            
+            String formattedValue = currencyFormat.format(totalValue != null ? totalValue : java.math.BigDecimal.ZERO);
+            String formattedQty = qtyFormat.format(totalQuantity);
+
+            String htmlMsg = "<div style='font-family: Arial, sans-serif; padding: 24px; color: #334155; max-width: 650px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;'>"
+                    + "<div style='text-align: center; margin-bottom: 20px; border-bottom: 2px solid " + statusColor + "; padding-bottom: 15px;'>"
+                    + "<h2 style='color: " + statusColor + "; margin-top: 0; text-transform: uppercase;'>Báo Cáo Chốt Sổ Kho Hàng Ngày (Daily Snapshot)</h2>"
+                    + "<p style='color: #64748b; margin-top: 5px; font-size: 14px;'>Ngày chốt sổ: <strong style='color: #0f172a;'>" + formattedDate + "</strong></p>"
+                    + "</div>"
+                    + "<p>Chào Quản trị viên,</p>"
+                    + "<p>Hệ thống DLC-WMS vừa hoàn tất tiến trình chốt số dư tồn kho tự động hàng ngày với thông tin chi tiết như sau:</p>"
+                    + "<div style='background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin: 18px 0;'>"
+                    + "<table style='width: 100%; border-collapse: collapse; font-size: 14px; line-height: 2;'>"
+                    + "<tr><td style='color: #64748b; width: 45%;'>Trạng thái:</td><td><strong style='color: " + statusColor + ";'>" + statusText + "</strong></td></tr>"
+                    + "<tr><td style='color: #64748b;'>Ngày chốt dữ liệu:</td><td><strong>" + formattedDate + "</strong></td></tr>"
+                    + "<tr><td style='color: #64748b;'>Thời điểm thực thi:</td><td>" + timeNow + "</td></tr>"
+                    + (isSuccess ? "<tr><td style='color: #64748b;'>Số mặt hàng đã chốt tồn:</td><td><strong>" + recordCount + "</strong> bản ghi</td></tr>"
+                                 + "<tr><td style='color: #64748b;'>Tổng số lượng tồn cuối ngày:</td><td><strong>" + formattedQty + "</strong></td></tr>"
+                                 + "<tr><td style='color: #64748b;'>Tổng giá trị tồn kho:</td><td><strong style='color: #2563eb; font-size: 15px;'>" + formattedValue + "</strong></td></tr>"
+                                 : "<tr><td style='color: #dc2626;'>Chi tiết lỗi:</td><td style='color: #dc2626;'>" + HtmlUtils.htmlEscape(errorDetails != null ? errorDetails : "Không xác định") + "</td></tr>")
+                    + "</table>"
+                    + "</div>"
+                    + "<p style='font-size: 13px; color: #64748b; line-height: 1.6;'>Dữ liệu snapshot được lưu trữ để tăng tốc truy vấn báo cáo Nhập - Xuất - Tồn và lưu lại lịch sử biến động số dư kho theo ngày.</p>"
+                    + "<div style='border-top: 1px solid #e2e8f0; margin-top: 20px; padding-top: 15px; font-size: 13px; color: #94a3b8; text-align: center;'>"
+                    + "<p style='margin: 0;'>Hệ thống Quản lý Kho Hàng Duy Long Computer (DLC-WMS)</p>"
+                    + "</div>"
+                    + "</div>";
+
+            sendEmail(toEmail, "[DLC-WMS] Báo cáo Chốt sổ kho ngày " + formattedDate + " - " + statusText, htmlMsg, "DLC-WMS Snapshot System");
+        } catch (Exception e) {
+            log.error("Failed to send daily snapshot notification email: {}", e.getMessage());
+        }
+    }
 }

@@ -1,15 +1,22 @@
 package com.duylongtech.backend.job;
 
+import com.duylongtech.backend.entity.SystemSetting;
+import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.repository.InventoryDailySnapshotRepository;
+import com.duylongtech.backend.repository.SystemSettingRepository;
+import com.duylongtech.backend.repository.UserRepository;
+import com.duylongtech.backend.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -17,6 +24,9 @@ import java.time.LocalTime;
 public class DailyInventorySnapshotJob {
 
     private final InventoryDailySnapshotRepository snapshotRepository;
+    private final EmailService emailService;
+    private final SystemSettingRepository settingRepo;
+    private final UserRepository userRepository;
 
     /**
      * Tự động chốt sổ kho hàng ngày lúc 00:05 mỗi đêm cho ngày hôm trước.
@@ -39,8 +49,58 @@ public class DailyInventorySnapshotJob {
         try {
             snapshotRepository.upsertDailySnapshotForDate(date, endOfDay);
             log.info("[DailyInventorySnapshotJob] Đã upsert snapshot cho ngày {}", date);
+
+            // Thu thập số liệu thống kê sau khi chốt sổ
+            long recordCount = 0;
+            double totalQty = 0;
+            BigDecimal totalVal = BigDecimal.ZERO;
+
+            List<Object[]> summary = snapshotRepository.getSummaryByDate(date);
+            if (summary != null && !summary.isEmpty() && summary.get(0) != null) {
+                Object[] row = summary.get(0);
+                if (row.length > 0 && row[0] != null) recordCount = ((Number) row[0]).longValue();
+                if (row.length > 1 && row[1] != null) totalQty = ((Number) row[1]).doubleValue();
+                if (row.length > 2 && row[2] != null) totalVal = new BigDecimal(row[2].toString());
+            }
+
+            sendNotification(date, recordCount, totalQty, totalVal, true, null);
         } catch (Exception e) {
             log.error("[DailyInventorySnapshotJob] Lỗi khi tạo snapshot cho ngày {}: {}", date, e.getMessage(), e);
+            sendNotification(date, 0, 0, BigDecimal.ZERO, false, e.getMessage());
+        }
+    }
+
+    private void sendNotification(LocalDate date, long recordCount, double totalQty, BigDecimal totalVal, boolean isSuccess, String errorDetails) {
+        try {
+            String notifyEnabled = settingRepo.findBySettingKey("notify.email.enabled")
+                    .map(SystemSetting::getSettingValue)
+                    .orElse("true");
+
+            if ("false".equalsIgnoreCase(notifyEnabled)) {
+                log.info("[DailyInventorySnapshotJob] Gửi thông báo qua email đang bị tắt trong cài đặt hệ thống.");
+                return;
+            }
+
+            String emailTo = settingRepo.findBySettingKey("notify.email.to")
+                    .map(SystemSetting::getSettingValue)
+                    .filter(s -> !s.isBlank())
+                    .orElse(null);
+
+            if (emailTo == null || emailTo.isBlank()) {
+                // Lấy email của SUPER_ADMIN hoặc ADMIN đầu tiên
+                emailTo = userRepository.findAll().stream()
+                        .filter(u -> u.getEmail() != null && !u.getEmail().isBlank())
+                        .filter(u -> u.getRoles() != null && u.getRoles().stream().anyMatch(r ->
+                                "SUPER_ADMIN".equalsIgnoreCase(r.getName()) || "ADMIN".equalsIgnoreCase(r.getName())))
+                        .map(User::getEmail)
+                        .findFirst()
+                        .orElse("computerduylong@gmail.com");
+            }
+
+            emailService.sendDailySnapshotNotificationEmail(emailTo, date, recordCount, totalQty, totalVal, isSuccess, errorDetails);
+            log.info("[DailyInventorySnapshotJob] Đã gửi thông báo snapshot ngày {} về email: {}", date, emailTo);
+        } catch (Exception ex) {
+            log.warn("[DailyInventorySnapshotJob] Không thể gửi email thông báo snapshot: {}", ex.getMessage());
         }
     }
 }

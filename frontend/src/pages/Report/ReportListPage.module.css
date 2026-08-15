@@ -570,10 +570,21 @@
     border-color: var(--color-text-placeholder);
 }
 
+.paginationWrapper {
+    margin-top: 16px;
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    border: 1px solid var(--color-border-soft);
+}
+
 /* Print Overrides */
 @media print {
     body * {
         visibility: hidden;
+    }
+    
+    .paginationWrapper {
+        display: none !important;
     }
     
     /* Only show the report results area */

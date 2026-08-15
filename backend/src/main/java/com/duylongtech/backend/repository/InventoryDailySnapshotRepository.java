@@ -19,6 +19,9 @@ public interface InventoryDailySnapshotRepository extends JpaRepository<Inventor
 
     List<InventoryDailySnapshot> findBySnapshotDate(LocalDate snapshotDate);
 
+    @Query("SELECT COUNT(s), COALESCE(SUM(s.closingQuantity), 0), COALESCE(SUM(s.closingValue), 0) FROM InventoryDailySnapshot s WHERE s.snapshotDate = :snapshotDate")
+    List<Object[]> getSummaryByDate(@Param("snapshotDate") LocalDate snapshotDate);
+
     @Modifying
     @Query(value = "INSERT INTO inventory_daily_snapshots (snapshot_date, warehouse_id, variant_id, closing_quantity, closing_value, created_at, updated_at) " +
             "SELECT :snapshotDate, l.warehouse_id, l.variant_id, " +
