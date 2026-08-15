@@ -28,16 +28,37 @@ public class DailyInventorySnapshotJob {
     private final SystemSettingRepository settingRepo;
     private final UserRepository userRepository;
 
+    private static final java.time.format.DateTimeFormatter TIME_FMT = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+    private static final java.time.ZoneId VIETNAM_ZONE = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+    private String lastRunDate = "";
+
     /**
-     * Tự động chốt sổ kho hàng ngày lúc 00:05 mỗi đêm cho ngày hôm trước.
+     * Tự động kiểm tra mỗi 30 giây để chốt sổ kho đúng giờ được cấu hình (theo giờ Việt Nam).
      */
-    @Scheduled(cron = "0 5 0 * * ?")
-    @Transactional
-    public void runDailySnapshot() {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
-        log.info("[DailyInventorySnapshotJob] Bắt đầu tự động chốt sổ kho ngày {}", yesterday);
-        snapshotDate(yesterday);
-        log.info("[DailyInventorySnapshotJob] Tự động chốt sổ kho ngày {} hoàn tất.", yesterday);
+    @Scheduled(fixedDelay = 30_000)
+    public void checkAndRunDailySnapshot() {
+        try {
+            String configuredTime = settingRepo.findBySettingKey("snapshot.time")
+                    .map(SystemSetting::getSettingValue)
+                    .filter(s -> !s.isBlank())
+                    .orElse("00:05");
+
+            LocalDateTime now = LocalDateTime.now(VIETNAM_ZONE);
+            String nowTime = now.format(TIME_FMT); // "HH:mm"
+
+            if (!nowTime.equals(configuredTime)) return;
+
+            String currentDateKey = now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            if (currentDateKey.equals(lastRunDate)) return;
+
+            lastRunDate = currentDateKey;
+            LocalDate yesterday = now.toLocalDate().minusDays(1);
+            log.info("[DailyInventorySnapshotJob] Bắt đầu tự động chốt sổ kho ngày {} (theo giờ cấu hình: {})", yesterday, configuredTime);
+            snapshotDate(yesterday);
+            log.info("[DailyInventorySnapshotJob] Tự động chốt sổ kho ngày {} hoàn tất.", yesterday);
+        } catch (Exception e) {
+            log.error("[DailyInventorySnapshotJob] Lỗi trong tiến trình kiểm tra lịch chốt sổ: {}", e.getMessage(), e);
+        }
     }
 
     /**

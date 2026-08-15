@@ -15,6 +15,7 @@ function SystemSettingsTab() {
         encryptKey: '',
         notifyEmailEnabled: false,
         notifyEmailTo: '',
+        snapshotTime: '00:05',
         reservationExpiryHours: 72,
         aiEnabled: true,
     });

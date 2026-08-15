@@ -48,6 +48,7 @@ public class SystemSettingsService {
                 .encryptKey("") // never expose key
                 .notifyEmailEnabled(getBool("notify.email.enabled"))
                 .notifyEmailTo(getSetting("notify.email.to", ""))
+                .snapshotTime(getSetting("snapshot.time", "00:05"))
                 .reservationExpiryHours(Integer.parseInt(getSetting("sales.reservation.expiry_hours", "72")))
                 .aiEnabled(isAiEnabled())
                 .build();
@@ -62,6 +63,10 @@ public class SystemSettingsService {
         upsert("notify.email.enabled", String.valueOf(dto.isNotifyEmailEnabled()));
         upsert("notify.email.to", dto.getNotifyEmailTo());
         upsert("ai.enabled", String.valueOf(dto.isAiEnabled()));
+
+        if (dto.getSnapshotTime() != null && !dto.getSnapshotTime().isBlank()) {
+            upsert("snapshot.time", dto.getSnapshotTime().trim());
+        }
         
         Integer expiry = dto.getReservationExpiryHours();
         if (expiry == null || expiry <= 0) {
