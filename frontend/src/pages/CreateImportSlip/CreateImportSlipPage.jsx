@@ -435,7 +435,7 @@ function CreateImportSlipPage() {
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
-  const isLineValid = (item) => {
+    const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const quantity = Number(item.quantity || 0);
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
@@ -445,9 +445,9 @@ function CreateImportSlipPage() {
   const isFormValid = Boolean(
     form.warehouseId &&
     form.docDate &&
-    (importType === 'PURCHASE' ? form.partnerId
+    (importType === 'PURCHASE' ? (form.partnerId && form.referenceId)
       : (importType === 'PRODUCTION' || importType === 'SCRAP') ? form.assemblyOrderId
-        : importType === 'RETURN' ? form.customerId
+        : importType === 'RETURN' ? (form.customerId && form.referenceId)
           : true) && // OTHER type has no required partner field
     items.length && items.every(isLineValid)
   );

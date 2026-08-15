@@ -300,7 +300,16 @@ function UpdateImportSlipPage() {
     const hasValidSerials = !product?.trackSerial || (Number.isInteger(quantity) && item.serialNumbers?.length === quantity);
     return product && isWarehouseProduct(product) && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
   };
-  const isFormValid = Boolean(form.warehouseId && form.docDate && items.length && items.every(isLineValid));
+  const isFormValid = Boolean(
+    form.warehouseId &&
+    form.docDate &&
+    (importType === 'PURCHASE' ? (form.partnerId && form.referenceId)
+      : (importType === 'PRODUCTION' || importType === 'SCRAP') ? form.assemblyOrderId
+        : importType === 'RETURN' ? (form.customerId && form.referenceId)
+          : true) &&
+    items.length &&
+    items.every(isLineValid)
+  );
 
 
   const handleFormChange = (field, value) => {

@@ -273,6 +273,9 @@ function UpdateExportSlipPage() {
   const isFormValid = Boolean(
     form.warehouseId &&
     form.docDate &&
+    (form.issuePurpose === 'SALES' ? (form.partnerId && form.referenceId)
+      : form.issuePurpose === 'ASSEMBLY' ? form.referenceId
+        : true) &&
     items.length &&
     items.every(isLineValid)
   );

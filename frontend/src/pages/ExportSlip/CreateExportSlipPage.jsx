@@ -355,6 +355,9 @@ function CreateExportSlipPage({ mode: propMode }) {
   const isFormValid = Boolean(
     form.warehouseId &&
     form.docDate &&
+    (exportMode === 'SALE' ? (form.partnerId && form.referenceId)
+      : exportMode === 'ASSEMBLY' ? form.referenceId
+        : true) &&
     items.length &&
     items.every(isLineValid)
   );
