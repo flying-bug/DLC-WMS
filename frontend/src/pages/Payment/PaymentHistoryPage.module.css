@@ -262,11 +262,29 @@
 .codeCell {
   color: var(--color-primary) !important;
   font-weight: 800;
-  white-space: nowrap;
+  vertical-align: middle;
+}
 
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.codeText {
+  color: var(--color-primary);
+  font-weight: 800;
+  white-space: nowrap;
+  display: block;
+}
+
+.codeNote {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: normal;
+  margin-top: 3px;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nowrapCell {
+  white-space: nowrap;
 }
 
 .codeCell i {

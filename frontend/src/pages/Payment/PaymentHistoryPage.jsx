@@ -11,7 +11,6 @@ import { formatDateTime } from '../../utils/dateFormat';
 import { printPaymentReceipt } from '../../utils/printPaymentReceipt';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
-
 const unwrap = (res) => res?.data?.data ?? res?.data;
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 const statusText = (status) => (status === 'POSTED' ? 'Ghi sổ' : status === 'DRAFT' ? 'Nháp' : status || '-');
@@ -51,12 +50,10 @@ function PaymentHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [postingId, setPostingId] = useState(null);
   const [deletingItem, setDeletingItem] = useState(null);
-  const [deleting, setDeleting] = useState(false);
 
   // Filters for left column (Invoices & Import/Export Docs)
   const [leftKeyword, setLeftKeyword] = useState('');
   const [leftTypeFilter, setLeftTypeFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
 
   // Filters for right column (Payments - Receipts / Vouchers)
   const [rightKeyword, setRightKeyword] = useState('');
@@ -167,7 +164,6 @@ function PaymentHistoryPage() {
 
   const handleConfirmDelete = async () => {
     if (!deletingItem?.id) return;
-    setDeleting(true);
     try {
       await paymentApi.deletePayment(deletingItem.id);
       await loadData();
@@ -175,8 +171,6 @@ function PaymentHistoryPage() {
       setDeletingItem(null);
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể xóa phiếu nháp');
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -275,10 +269,10 @@ function PaymentHistoryPage() {
                       return (
                         <tr key={item.id}>
                           <td className={styles.codeCell}>
-                            <strong>{item.referenceCode || item.docCode || `#${item.referenceId || item.id}`}</strong>
-                            {item.note && <div className={styles.muted} style={{ fontSize: 11 }}>{item.note}</div>}
+                            <span className={styles.codeText}>{item.referenceCode || item.docCode || `#${item.referenceId || item.id}`}</span>
+                            {item.note && <div className={styles.codeNote} title={item.note}>{item.note}</div>}
                           </td>
-                          <td>
+                          <td className={styles.nowrapCell}>
                             <span className={`${styles.badge} ${typeInfo.className}`}>
                               {typeInfo.text}
                             </span>
@@ -349,16 +343,16 @@ function PaymentHistoryPage() {
                     filteredPayments.map(item => (
                       <tr key={item.id}>
                         <td className={styles.codeCell}>
-                          <strong>{item.code}</strong>
-                          {item.note && <div className={styles.muted} style={{ fontSize: 11 }}>{item.note}</div>}
+                          <span className={styles.codeText}>{item.code}</span>
+                          {item.note && <div className={styles.codeNote} title={item.note}>{item.note}</div>}
                         </td>
-                        <td>
-                          <span className={item.type === 'RECEIPT' ? styles.typeReceipt : styles.typeVoucher}>
+                        <td className={styles.nowrapCell}>
+                          <span className={`${styles.badge} ${item.type === 'RECEIPT' ? styles.typeReceipt : styles.typeVoucher}`}>
                             {item.type === 'RECEIPT' ? 'Phiếu thu' : 'Phiếu chi'}
                           </span>
                         </td>
-                        <td>{item.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</td>
-                        <td>
+                        <td className={styles.nowrapCell}>{item.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</td>
+                        <td className={styles.nowrapCell}>
                           <span className={item.status === 'POSTED' ? styles.statusPosted : styles.statusDraft}>
                             {statusText(item.status)}
                           </span>
@@ -366,7 +360,7 @@ function PaymentHistoryPage() {
                         <td className={`${styles.textRight} ${styles.amountReceipt}`}>
                           -{money(item.amount)} đ
                         </td>
-                        <td style={{ textAlign: 'center' }}>
+                        <td className={styles.nowrapCell} style={{ textAlign: 'center' }}>
                           <div style={{ display: 'inline-flex', gap: '5px', alignItems: 'center' }}>
                             <button
                               className={styles.btnActionSmall}
