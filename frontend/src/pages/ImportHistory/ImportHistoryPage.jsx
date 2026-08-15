@@ -151,11 +151,11 @@ function ImportHistoryPage() {
 
   const loadLookups = useCallback(async () => {
     const [warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes] = await Promise.allSettled([
-      importApi.getWarehouses({ size: 100 }),
+      importApi.getWarehouses({ size: 1000 }),
       importApi.getSuppliers(),
-      importApi.getProducts({ size: 100 }),
-      customerApi.searchCustomers('', '', '', 0, 100),
-      assemblyOrderApi.getAssemblyOrders({ size: 100 }),
+      importApi.getProducts({ size: 2000 }),
+      customerApi.searchCustomers('', '', '', 0, 1000),
+      assemblyOrderApi.getAssemblyOrders({ size: 1000 }),
       exportApi.getUsers({ size: 1000 })
     ]);
 
@@ -353,7 +353,14 @@ function ImportHistoryPage() {
   };
 
   const handlePrintSlip = (slip, isImport = true) => {
+    const supplier = supplierById.get(slip.partnerId) || supplierById.get(Number(slip.partnerId)) || {};
+    const customer = customerById.get(slip.partnerId) || customerById.get(Number(slip.partnerId)) || {};
+    const warehouseName = warehouseById.get(slip.warehouseId)?.name || warehouseById.get(Number(slip.warehouseId))?.name || '';
+
     printImportSlip(slip, {
+      supplier,
+      customer,
+      warehouseName,
       supplierById,
       customerById,
       assemblyOrderById,

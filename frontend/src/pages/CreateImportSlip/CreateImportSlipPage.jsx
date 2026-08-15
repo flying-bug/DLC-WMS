@@ -1336,10 +1336,23 @@ function CreateImportSlipPage() {
         printBtnText="In phiếu nhập kho"
         onPrint={() => {
           const supplier = suppliers.find(s => String(s.id) === String(savedSlip?.partnerId || form.partnerId)) || {};
-          const warehouseName = warehouses.find(w => String(w.id) === String(savedSlip?.warehouseId || form.warehouseId))?.name || '';
-          printImportSlip(savedSlip || {}, {
-            customer: supplier,
-            warehouseName,
+          const customer = customers.find(c => String(c.id) === String(savedSlip?.partnerId || form.partnerId)) || {};
+          const warehouse = warehouses.find(w => String(w.id) === String(savedSlip?.warehouseId || form.warehouseId)) || {};
+          const productById = new Map(products.map(p => [p.id, p]));
+          const userById = new Map(users.map(u => [u.id, u]));
+          const supplierById = new Map(suppliers.map(s => [s.id, s]));
+          const warehouseById = new Map(warehouses.map(w => [w.id, w]));
+          const customerById = new Map(customers.map(c => [c.id, c]));
+          const assemblyOrderById = new Map(assemblyOrders.map(a => [a.id, a]));
+
+          printImportSlip(savedSlip || form || {}, {
+            supplier,
+            customer,
+            warehouseName: warehouse.name || '',
+            supplierById,
+            customerById,
+            warehouseById,
+            assemblyOrderById,
             productById,
             userById,
             isImport: true

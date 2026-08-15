@@ -435,7 +435,14 @@ function UpdateImportSlipPage() {
       docCode: form.docCode
     };
     
+    const supplier = suppliers.find(s => String(s.id) === String(slipForPrint.partnerId)) || {};
+    const customer = customers.find(c => String(c.id) === String(slipForPrint.partnerId)) || {};
+    const warehouse = warehouses.find(w => String(w.id) === String(slipForPrint.warehouseId)) || {};
+
     printImportSlip(slipForPrint, {
+      supplier,
+      customer,
+      warehouseName: warehouse.name || '',
       supplierById: new Map(suppliers.map(s => [s.id, s])),
       customerById: new Map(customers.map(c => [c.id, c])),
       warehouseById: new Map(warehouses.map(w => [w.id, w])),
