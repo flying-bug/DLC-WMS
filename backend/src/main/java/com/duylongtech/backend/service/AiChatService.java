@@ -581,7 +581,7 @@ public class AiChatService {
         if (keyword.isBlank()) {
             imports = inventoryDocumentRepository.findAllImports().stream().limit(8).toList();
         } else {
-            imports = inventoryDocumentRepository.searchImports(blankToNull(keyword), null, null, null, null, null, null, null).stream()
+            imports = inventoryDocumentRepository.searchImports(blankToNull(keyword), null, null, null, null, null, null, null, null, null).stream()
                     .limit(8)
                     .toList();
         }
@@ -624,7 +624,7 @@ public class AiChatService {
         if (keyword.isBlank()) {
             exports = inventoryDocumentRepository.findAllExports().stream().limit(8).toList();
         } else {
-            exports = inventoryDocumentRepository.searchExports(blankToNull(keyword), null, null, null, null, null, null, null).stream()
+            exports = inventoryDocumentRepository.searchExports(blankToNull(keyword), null, null, null, null, null, null, null, null, null).stream()
                     .limit(8)
                     .toList();
         }

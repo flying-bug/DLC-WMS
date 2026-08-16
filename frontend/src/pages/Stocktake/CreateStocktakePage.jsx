@@ -504,15 +504,23 @@ function CreateStocktakePage() {
       showToast('warning', 'Không có sản phẩm nào bị thiếu/hỏng để lập phiếu xuất kho xử lý!');
       return;
     }
-    navigate('/inventory/export/create', {
+    navigate('/export-slips/create?type=OTHER', {
       state: {
-        reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
-        items: diffLackLines.map(l => ({
-          variantId: l.variantId,
-          sku: l.sku,
-          productName: l.itemName,
-          quantity: Math.abs(Number(l.diffQty))
-        }))
+        returnUrl: '/stocktakes',
+        stocktakeData: {
+          code: formData.code,
+          warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
+          reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
+          lines: diffLackLines.map(l => ({
+            variantId: l.variantId,
+            sku: l.sku,
+            productName: l.itemName,
+            quantity: Math.abs(Number(l.diffQty)),
+            serials: (l.serials || []).map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean),
+            serialNumbers: (l.serials || []).map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean),
+            note: `Hàng thiếu từ kiểm kê ${formData.code}`
+          }))
+        }
       }
     });
   };
@@ -523,15 +531,23 @@ function CreateStocktakePage() {
       showToast('warning', 'Không có sản phẩm nào bị thừa để lập phiếu nhập kho điều chỉnh!');
       return;
     }
-    navigate('/inventory/import/create', {
+    navigate('/import-history/create?type=OTHER', {
       state: {
-        reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
-        items: diffSurplusLines.map(l => ({
-          variantId: l.variantId,
-          sku: l.sku,
-          productName: l.itemName,
-          quantity: Number(l.diffQty)
-        }))
+        returnUrl: '/stocktakes',
+        stocktakeData: {
+          code: formData.code,
+          warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
+          reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
+          lines: diffSurplusLines.map(l => ({
+            variantId: l.variantId,
+            sku: l.sku,
+            productName: l.itemName,
+            quantity: Number(l.diffQty),
+            serials: (l.serials || []).map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean),
+            serialNumbers: (l.serials || []).map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean),
+            note: `Hàng thừa từ kiểm kê ${formData.code}`
+          }))
+        }
       }
     });
   };

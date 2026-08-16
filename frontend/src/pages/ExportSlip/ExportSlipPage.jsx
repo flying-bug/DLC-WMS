@@ -66,7 +66,9 @@ const EXPORT_PURPOSE_LABELS = {
   SALES: 'Bán hàng',
   USAGE: 'Sử dụng nội bộ',
   ASSEMBLY: 'Xuất lắp ráp / tháo dỡ',
-  REPAIR: 'Xuất sửa chữa'
+  REPAIR: 'Xuất sửa chữa',
+  INVENTORY_ADJUSTMENT: 'Xuất điều chỉnh kiểm kê',
+  OTHER: 'Khác'
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -204,6 +206,8 @@ function ExportSlipPage() {
         issuePurpose: filters.issuePurpose || undefined,
         referenceId: filters.referenceId || undefined,
         referenceType: filters.referenceType || undefined,
+        partnerId: filters.partnerId || undefined,
+        salespersonId: filters.staffId || undefined,
       });
       const data = unwrap(response) || [];
       setSlips(data);
@@ -214,7 +218,7 @@ function ExportSlipPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters.docCode, filters.fromDate, filters.toDate, filters.status, filters.warehouseId, filters.issuePurpose, filters.referenceId, filters.referenceType]);
+  }, [filters]);
 
   const handleNavigateReference = (refType, refId) => {
     if (!refType || !refId) return;
@@ -268,6 +272,8 @@ function ExportSlipPage() {
         partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `Khách hàng #${slip.partnerId}` : 'Chưa chọn');
       } else if (slip.issuePurpose === 'ASSEMBLY') {
         partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');
+      } else if (slip.issuePurpose === 'INVENTORY_ADJUSTMENT' || slip.referenceType === 'STOCKTAKE') {
+        partnerLabel = slip.referenceCode || (slip.referenceId ? `Kiểm kê #${slip.referenceId}` : 'Kiểm kê');
       }
 
       return {
@@ -402,10 +408,16 @@ function ExportSlipPage() {
                 className={styles.searchInput}
                 placeholder="Tìm theo mã phiếu, Serial, SKU..."
                 value={filters.keyword}
-                onChange={(event) => setFilters(prev => ({ ...prev, keyword: event.target.value }))}
+                onChange={(event) => {
+                  setCurrentPage(1);
+                  setFilters(prev => ({ ...prev, keyword: event.target.value }));
+                }}
               />
               {filters.keyword && (
-                <button className={styles.clearSearchBtn} onClick={() => setFilters(prev => ({ ...prev, keyword: '' }))}>
+                <button className={styles.clearSearchBtn} onClick={() => {
+                  setCurrentPage(1);
+                  setFilters(prev => ({ ...prev, keyword: '' }));
+                }}>
                   <i className="bi bi-x-circle-fill"></i>
                 </button>
               )}
@@ -413,8 +425,14 @@ function ExportSlipPage() {
 
             <FilterPopover
               filters={filters}
-              onApply={(newFilters) => setFilters(newFilters)}
-              onReset={() => setFilters(DEFAULT_FILTERS)}
+              onApply={(newFilters) => {
+                setCurrentPage(1);
+                setFilters(newFilters);
+              }}
+              onReset={() => {
+                setCurrentPage(1);
+                setFilters(DEFAULT_FILTERS);
+              }}
               warehouses={warehouses}
               partners={customers}
               staffList={users}
@@ -429,7 +447,10 @@ function ExportSlipPage() {
           <div className={styles.filterActions}>
             <button
               className={styles.iconBtn}
-              onClick={() => setFilters(DEFAULT_FILTERS)}
+              onClick={() => {
+                setCurrentPage(1);
+                setFilters(DEFAULT_FILTERS);
+              }}
               title="Đặt lại bộ lọc"
             >
               <i className="bi bi-arrow-clockwise"></i>
@@ -678,7 +699,7 @@ function ExportSlipPage() {
               <div className={styles.modalBody}>
                 <div className={styles.detailGrid}>
                   <div className={styles.infoGrid}>
-                    {(selectedSlip.partnerId || selectedSlip.issuePurpose === 'SALE') && (
+                    {(selectedSlip.partnerId || selectedSlip.issuePurpose === 'SALES') && (
                       <div className={styles.infoBlock}>
                         <span className={styles.infoLabel}>
                           <i className="bi bi-person-hearts"></i> Khách hàng
@@ -710,9 +731,9 @@ function ExportSlipPage() {
                     <div className={styles.infoBlock}>
                       <span className={styles.infoLabel}>
                         <i className="bi bi-person-badge"></i>
-                        {selectedSlip.issuePurpose === 'SALE'
+                        {selectedSlip.issuePurpose === 'SALES'
                           ? 'Nhân viên bán hàng'
-                          : selectedSlip.issuePurpose === 'PRODUCTION'
+                          : selectedSlip.issuePurpose === 'PRODUCTION' || selectedSlip.issuePurpose === 'ASSEMBLY'
                           ? 'Nhân viên phụ trách'
                           : 'Nhân viên lập phiếu'}
                       </span>

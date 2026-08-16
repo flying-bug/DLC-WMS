@@ -66,6 +66,7 @@ const STATUS_LABELS = {
 
 const IMPORT_PURPOSE_LABELS = {
   PURCHASE: 'Mua hàng',
+  STOCKTAKE_ADD: 'Hàng thừa từ kiểm kê',
   RETURN: 'Hàng bán bị trả lại',
   PRODUCTION: 'Nhập kho sản xuất',
   SCRAP: 'Nhập phế liệu',
@@ -180,6 +181,8 @@ function ImportHistoryPage() {
         issuePurpose: filters.issuePurpose || undefined,
         referenceId: filters.referenceId || undefined,
         referenceType: filters.referenceType || undefined,
+        partnerId: filters.partnerId || undefined,
+        salespersonId: filters.staffId || undefined,
       };
       const response = await importApi.getImportHistory(params);
       const data = unwrap(response) || [];
@@ -391,10 +394,16 @@ function ImportHistoryPage() {
                 className={styles.searchInput}
                 placeholder="Tìm theo mã phiếu, Serial, SKU..."
                 value={filters.keyword}
-                onChange={(e) => setFilters(prev => ({ ...prev, keyword: e.target.value }))}
+                onChange={(event) => {
+                  setCurrentPage(1);
+                  setFilters(prev => ({ ...prev, keyword: event.target.value }));
+                }}
               />
               {filters.keyword && (
-                <button className={styles.clearSearchBtn} onClick={() => setFilters(prev => ({ ...prev, keyword: '' }))}>
+                <button className={styles.clearSearchBtn} onClick={() => {
+                  setCurrentPage(1);
+                  setFilters(prev => ({ ...prev, keyword: '' }));
+                }}>
                   <i className="bi bi-x-circle-fill"></i>
                 </button>
               )}
@@ -402,8 +411,14 @@ function ImportHistoryPage() {
 
             <FilterPopover
               filters={filters}
-              onApply={(newFilters) => setFilters(newFilters)}
-              onReset={() => setFilters(DEFAULT_FILTERS)}
+              onApply={(newFilters) => {
+                setCurrentPage(1);
+                setFilters(newFilters);
+              }}
+              onReset={() => {
+                setCurrentPage(1);
+                setFilters(DEFAULT_FILTERS);
+              }}
               warehouses={warehouses}
               partners={suppliers}
               staffList={users}
@@ -418,7 +433,10 @@ function ImportHistoryPage() {
           <div className={styles.filterActions}>
             <button
               className={styles.iconBtn}
-              onClick={() => setFilters(DEFAULT_FILTERS)}
+              onClick={() => {
+                setCurrentPage(1);
+                setFilters(DEFAULT_FILTERS);
+              }}
               title="Làm mới"
             >
               <i className="bi bi-arrow-clockwise"></i>

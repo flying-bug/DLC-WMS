@@ -61,9 +61,13 @@ public class ImportDocumentController {
             @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) String issuePurpose,
             @RequestParam(required = false) String referenceType,
-            @RequestParam(required = false) Long referenceId
+            @RequestParam(required = false) Long referenceId,
+            @RequestParam(required = false) Long partnerId,
+            @RequestParam(required = false) Long salespersonId
     ) {
-        return ApiResponse.success(inventoryDocumentService.getImportHistory(keyword, fromDate, toDate, status, warehouseId, issuePurpose, referenceType, referenceId));
+        return ApiResponse.success(inventoryDocumentService.getImportHistory(
+                keyword, fromDate, toDate, status, warehouseId, issuePurpose, referenceType, referenceId, partnerId, salespersonId
+        ));
     }
 
     @GetMapping("/{id}")
