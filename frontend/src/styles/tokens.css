@@ -1,4 +1,7 @@
 :root {
+  /* ==========================================================================
+     LEGACY COMPATIBILITY TOKENS (Preserved for existing components)
+     ========================================================================== */
   --color-primary: #0075c0;
   --color-primary-hover: #005a96;
   --color-primary-soft: #f1f8fe;
@@ -91,16 +94,73 @@
   --color-auth-middle: #1a3570;
   --color-excel: #107c41;
 
-  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  /* ==========================================================================
+     UNIFIED WMS-DS SEMANTIC TOKENS
+     ========================================================================== */
+  /* Brand Core */
+  --wms-primary: var(--color-primary, #0075c0);
+  --wms-primary-hover: var(--color-primary-hover, #005a96);
+  --wms-primary-soft: var(--color-primary-soft, #f1f8fe);
+  --wms-primary-border: var(--color-primary-pale, #dbeafe);
+  --wms-primary-gradient: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-accent) 100%);
 
-  /* Responsive Typography Tokens */
+  /* Semantic Feedback */
+  --wms-success: var(--color-success-dark, #059669);
+  --wms-success-hover: var(--color-success-deep, #047857);
+  --wms-success-soft: var(--color-success-bg-soft, #ecfdf5);
+  --wms-success-border: var(--color-success-border-soft, #a7f3d0);
+
+  --wms-warning: var(--color-warning-dark, #d97706);
+  --wms-warning-hover: #b45309;
+  --wms-warning-soft: var(--color-warning-bg, #fffbeb);
+  --wms-warning-border: var(--color-warning-border, #fde68a);
+
+  --wms-danger: var(--color-danger, #ef4444);
+  --wms-danger-hover: #dc2626;
+  --wms-danger-soft: var(--color-danger-bg-soft, #fef2f2);
+  --wms-danger-border: var(--color-danger-border-soft, #fecaca);
+
+  --wms-info: var(--color-info, #0ea5e9);
+  --wms-info-hover: var(--color-info-hover, #0284c7);
+  --wms-info-soft: var(--color-info-bg, #f0f9ff);
+  --wms-info-border: var(--color-info-border-soft, #bae6fd);
+
+  /* Surface & Background */
+  --wms-bg-app: var(--color-bg, #f4f5f8);
+  --wms-bg-surface: var(--color-surface, #ffffff);
+  --wms-bg-soft: var(--color-bg-soft, #f8f9fa);
+  --wms-bg-hover: var(--color-bg-hover, #f2f9ff);
+  --wms-bg-muted: var(--color-bg-muted, #e9edf2);
+
+  /* Typography Colors */
+  --wms-text-title: var(--color-text, #0f172a);
+  --wms-text-strong: var(--color-text-strong, #1e293b);
+  --wms-text-body: var(--color-text-body, #334155);
+  --wms-text-muted: var(--color-text-muted, #64748b);
+  --wms-text-subtle: var(--color-text-subtle, #94a3b8);
+  --wms-text-disabled: var(--color-text-disabled, #cbd5e1);
+
+  /* Borders & Dividers */
+  --wms-border-base: var(--color-border, #e2e8f0);
+  --wms-border-strong: var(--color-border-strong, #cbd5e1);
+  --wms-border-focus: var(--color-primary, #0075c0);
+  --wms-border-divider: var(--color-border-soft, #f1f5f9);
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+
+  /* Typography Scale */
+  --font-size-xs: 11px;
   --font-size-caption: clamp(0.75rem, 0.9vw, 0.8125rem); /* 12px - 13px */
   --font-size-body: clamp(0.8125rem, 1vw, 0.875rem);     /* 13px - 14px */
   --font-size-card-title: clamp(0.95rem, 1.2vw, 1.05rem);/* 15.2px - 16.8px */
   --font-size-section-title: clamp(1.1rem, 1.5vw, 1.35rem);/* 17.6px - 21.6px */
   --font-size-page-title: clamp(1.25rem, 2vw, 1.625rem); /* 20px - 26px */
+  --font-size-kpi: clamp(1.5rem, 2.5vw, 2rem);           /* 24px - 32px */
 
-  /* Spacing Tokens */
+  /* Spacing Scale */
+  --space-0-5: 2px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -120,12 +180,14 @@
   --radius-xl: 16px;
   --radius-full: 9999px;
 
-  /* Heights & Touch Area Tokens */
-  --height-control: 38px;
+  /* Heights & Control Tokens */
+  --height-control-sm: 32px; /* Dành cho ô trong bảng, compact filter */
+  --height-control: 38px;    /* Chuẩn form, input, button */
+  --height-control-lg: 44px; /* Touch target tối ưu mobile */
   --touch-target-min: 44px;
 
   /* Transitions */
-  --transition-fast: 0.15s ease;
-  --transition-base: 0.2s ease;
-  --transition-slow: 0.3s ease;
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
