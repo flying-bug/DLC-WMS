@@ -244,6 +244,34 @@ function CreateSalesOrderPage() {
     p.map((l, i) => i === idx ? { ...l, ...updates } : l)
   );
 
+  const handleProductSelect = (idx, selected) => {
+    if (!selected) {
+      updateLine(idx, 'variantId', null);
+      return;
+    }
+    const existingIndex = lines.findIndex((l, i) => i !== idx && String(l.variantId) === String(selected.id));
+    if (existingIndex >= 0) {
+      const addedQty = Number(lines[idx]?.quantity) || 1;
+      setLines(prev => {
+        const next = [...prev];
+        next[existingIndex] = {
+          ...next[existingIndex],
+          quantity: Number(next[existingIndex].quantity || 0) + addedQty
+        };
+        return next.filter((_, i) => i !== idx);
+      });
+      showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động tăng số lượng.');
+      return;
+    }
+    updateLineMultiple(idx, {
+      variantId: selected.id,
+      unitPrice: Number(selected.salePrice || 0),
+      unitName: selected.unitName || 'Cái',
+      warrantyMonths: Number(selected.warrantyMonths || 0),
+      vatRate: Number(selected.vatPercent || selected.vatRate || 0),
+    });
+  };
+
   const handleQuickAddProductSuccess = async (newProduct) => {
     try {
       const response = await soApi.getProducts({ size: 500 });
@@ -764,26 +792,13 @@ function CreateSalesOrderPage() {
                               products={productOptions}
                               inventoryMap={inventoryMap}
                               value={line.variantId}
-                              onChange={selected => {
-                                if (selected) {
-                                  updateLineMultiple(idx, {
-                                    variantId: selected.id,
-                                    unitPrice: Number(selected.salePrice || 0),
-                                    unitName: selected.unitName || 'Cái',
-                                    warrantyMonths: Number(selected.warrantyMonths || 0),
-                                    vatRate: Number(selected.vatPercent || selected.vatRate || 0),
-                                  });
-                                } else {
-                                  updateLine(idx, 'variantId', null);
-                                }
-                              }}
+                              onChange={selected => handleProductSelect(idx, selected)}
                               onAddNew={() => {
                                 setQuickAddLineIndex(idx);
                                 setShowQuickAddProduct(true);
                               }}
                               displayMode="code-name"
                               placeholder="Chọn mã hoặc tên hàng"
-
                             />
                             {line.variantId && (
                               <div style={{ marginTop: 4, fontSize: 11, color: availableQty >= Number(line.quantity || 0) ? '#16a34a' : '#dc2626' }}>

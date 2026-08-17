@@ -306,6 +306,29 @@ function CreateStocktakePage() {
   };
 
   const handleProductSelect = (index, variantId) => {
+    if (!variantId) {
+      setLines(prev => prev.map((line, idx) => {
+        if (idx !== index) return line;
+        return {
+          ...line,
+          variantId: '',
+          itemCode: '',
+          sku: '',
+          itemName: '',
+          unit: 'Cái',
+          trackSerial: false,
+          serials: []
+        };
+      }));
+      return;
+    }
+
+    const isDuplicate = lines.some((l, idx) => idx !== index && String(l.variantId) === String(variantId));
+    if (isDuplicate) {
+      showToast('warning', 'Sản phẩm này đã có trong danh sách kiểm kê!');
+      return;
+    }
+
     const selectedProduct = products.find(p => String(p.id) === String(variantId));
     if (!selectedProduct) return;
     
@@ -464,12 +487,36 @@ function CreateStocktakePage() {
     }))
   });
 
+  const validateForm = (payload) => {
+    if (!payload.warehouseId) {
+      showToast('error', 'Vui lòng chọn kho để kiểm kê');
+      return false;
+    }
+    if (!payload.lines || payload.lines.length === 0) {
+      showToast('error', 'Phiếu kiểm kê phải có ít nhất một dòng');
+      return false;
+    }
+    const hasEmptyVariant = payload.lines.some(l => !l.variantId);
+    if (hasEmptyVariant) {
+      showToast('error', 'Vui lòng chọn sản phẩm cho tất cả các dòng kiểm kê hoặc xóa dòng trống');
+      return false;
+    }
+    const variantSet = new Set();
+    for (const l of payload.lines) {
+      if (variantSet.has(String(l.variantId))) {
+        showToast('error', 'Danh sách kiểm kê không được chứa sản phẩm trùng nhau');
+        return false;
+      }
+      variantSet.add(String(l.variantId));
+    }
+    return true;
+  };
+
   const handleDraft = async () => {
     try {
       const payload = buildPayload();
-      if (!payload.warehouseId) {
-         showToast('error', 'Vui lòng chọn kho để kiểm kê');
-         return;
+      if (!validateForm(payload)) {
+        return;
       }
       const response = await stocktakeApi.createStocktake(payload);
       navigate(`/stocktakes/${response.data.data.id}`, { state: { toastMessage: 'Lưu nháp thành công!', toastType: 'success' } });
@@ -482,9 +529,8 @@ function CreateStocktakePage() {
   const handleSaveAndClose = async () => {
     try {
       const payload = buildPayload();
-      if (!payload.warehouseId) {
-         showToast('error', 'Vui lòng chọn kho để kiểm kê');
-         return;
+      if (!validateForm(payload)) {
+        return;
       }
       const response = await stocktakeApi.createStocktake(payload);
       if (formData.isProcessed) {
@@ -782,7 +828,14 @@ function CreateStocktakePage() {
                     <td>
                       {line.isNew && !isSaved ? (
                         <Select
-                          options={products.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}` }))}
+                          options={products.map(p => {
+                            const isSelected = lines.some((l, lIdx) => lIdx !== idx && String(l.variantId) === String(p.id));
+                            return {
+                              value: p.id,
+                              label: `${p.productName} - ${p.sku || p.productCode}${isSelected ? ' (Đã chọn)' : ''}`,
+                              isDisabled: isSelected
+                            };
+                          })}
                           value={products.find(p => String(p.id) === String(line.variantId)) ? { value: line.variantId, label: `${products.find(p => String(p.id) === String(line.variantId)).productName} - ${products.find(p => String(p.id) === String(line.variantId)).sku || products.find(p => String(p.id) === String(line.variantId)).productCode}` } : null}
                           onChange={(selected) => handleProductSelect(idx, selected ? selected.value : '')}
                           placeholder="Chọn vật tư / hàng hóa..."

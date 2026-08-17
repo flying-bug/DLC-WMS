@@ -263,6 +263,32 @@ function CreatePurchaseOrderPage() {
   const updateLineMultiple = (idx, updates) =>
     setLines(p => p.map((l, i) => i === idx ? { ...l, ...updates } : l));
 
+  const handleProductSelect = (idx, selected) => {
+    if (!selected) {
+      updateLine(idx, 'variantId', null);
+      return;
+    }
+    const existingIndex = lines.findIndex((l, i) => i !== idx && String(l.variantId) === String(selected.id));
+    if (existingIndex >= 0) {
+      const addedQty = Number(lines[idx]?.quantity) || 1;
+      setLines(prev => {
+        const next = [...prev];
+        next[existingIndex] = {
+          ...next[existingIndex],
+          quantity: Number(next[existingIndex].quantity || 0) + addedQty
+        };
+        return next.filter((_, i) => i !== idx);
+      });
+      showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động tăng số lượng.');
+      return;
+    }
+    updateLineMultiple(idx, {
+      variantId: selected.id,
+      unitName: selected.unitName || 'Cái',
+      vatRate: Number(selected.vatPercent || selected.vatRate || 0),
+    });
+  };
+
   const handleQuickAddProductSuccess = async (newProduct) => {
     try {
       const response = await poApi.getProducts({ size: 500 });
@@ -635,11 +661,7 @@ function CreatePurchaseOrderPage() {
                             <ProductGridSelect
                               products={productOptions}
                               value={line.variantId}
-                              onChange={selected => updateLineMultiple(idx, {
-                                variantId: selected?.id || null,
-                                unitName: selected?.unitName || 'Cái',
-                                vatRate: Number(selected?.vatPercent || selected?.vatRate || 0),
-                              })}
+                              onChange={selected => handleProductSelect(idx, selected)}
                               onAddNew={() => {
                                 setQuickAddLineIndex(idx);
                                 setShowQuickAddProduct(true);

@@ -286,9 +286,35 @@ function StocktakeDetailPage() {
     }))
   });
 
+  const validateForm = (payload) => {
+    if (!payload.warehouseId && formData.warehouseId !== 'all') {
+      showToast('error', 'Vui lòng chọn kho để kiểm kê');
+      return false;
+    }
+    if (!payload.lines || payload.lines.length === 0) {
+      showToast('error', 'Phiếu kiểm kê phải có ít nhất một dòng');
+      return false;
+    }
+    const hasEmptyVariant = payload.lines.some(l => !l.variantId);
+    if (hasEmptyVariant) {
+      showToast('error', 'Vui lòng chọn sản phẩm cho tất cả các dòng kiểm kê hoặc xóa dòng trống');
+      return false;
+    }
+    const variantSet = new Set();
+    for (const l of payload.lines) {
+      if (variantSet.has(String(l.variantId))) {
+        showToast('error', 'Danh sách kiểm kê không được chứa sản phẩm trùng nhau');
+        return false;
+      }
+      variantSet.add(String(l.variantId));
+    }
+    return true;
+  };
+
   const handleSave = async () => {
     try {
       const payload = buildPayload();
+      if (!validateForm(payload)) return;
       await stocktakeApi.updateStocktake(id, payload);
       setIsSaved(true);
       fetchStocktakeData();
@@ -302,6 +328,7 @@ function StocktakeDetailPage() {
   const handleSaveAndClose = async () => {
     try {
       const payload = buildPayload();
+      if (!validateForm(payload)) return;
       await stocktakeApi.updateStocktake(id, payload);
       if (formData.isProcessed) {
         await stocktakeApi.postStocktake(id);
@@ -321,6 +348,7 @@ function StocktakeDetailPage() {
     setShowConfirmModal(false);
     try {
       const payload = buildPayload();
+      if (!validateForm(payload)) return;
       // Lưu lại thay đổi trước khi xử lý
       await stocktakeApi.updateStocktake(id, payload);
       // Gọi API xử lý đổi trạng thái

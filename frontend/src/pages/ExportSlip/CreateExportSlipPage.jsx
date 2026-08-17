@@ -389,13 +389,19 @@ function CreateExportSlipPage({ mode: propMode }) {
         } : item);
       }
       if (field === 'variantId') {
+        if (!value) {
+          return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], price: 0, warrantyMonths: 0 } : item);
+        }
         const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value) && !(item.serialNumbers && item.serialNumbers.length > 0));
         if (existingIndex >= 0) {
+          const currentItem = prev.find(item => item.localId === localId);
+          const addedQty = Number(currentItem?.quantity) || 1;
           const newItems = [...prev];
           newItems[existingIndex] = {
             ...newItems[existingIndex],
-            quantity: Number(newItems[existingIndex].quantity || 0) + 1
+            quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
           };
+          showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động tăng số lượng.');
           return newItems.filter(item => item.localId !== localId);
         }
         const selectedProduct = products.find(p => String(p.id) === String(value));

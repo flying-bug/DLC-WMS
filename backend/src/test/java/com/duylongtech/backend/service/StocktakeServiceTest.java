@@ -260,6 +260,44 @@ class StocktakeServiceTest {
     }
 
     @Test
+    void createStocktake_nullVariantInLine_throwsBusinessException() {
+        StocktakeRequest request = validRequest();
+        request.getLines().get(0).setVariantId(null);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> stocktakeService.createStocktake(request)
+        );
+
+        assertEquals("Vui lòng chọn sản phẩm cho tất cả các dòng kiểm kê.", exception.getMessage());
+        verifyNoInteractions(stocktakeRepository, codeGeneratorService);
+    }
+
+    @Test
+    void createStocktake_duplicateVariantInLines_throwsBusinessException() {
+        StocktakeRequest request = validRequest();
+        StocktakeLineRequest duplicateLine = StocktakeLineRequest.builder()
+                .variantId(VARIANT_ID)
+                .bookQty(new BigDecimal("5.00"))
+                .countQty(new BigDecimal("5.00"))
+                .diffQty(BigDecimal.ZERO)
+                .goodQty(new BigDecimal("5.00"))
+                .badQty(BigDecimal.ZERO)
+                .lostQty(BigDecimal.ZERO)
+                .action("NONE")
+                .build();
+        request.setLines(List.of(request.getLines().get(0), duplicateLine));
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> stocktakeService.createStocktake(request)
+        );
+
+        assertEquals("Danh sách kiểm kê không được chứa sản phẩm trùng nhau.", exception.getMessage());
+        verifyNoInteractions(stocktakeRepository, codeGeneratorService);
+    }
+
+    @Test
     void createStocktake_duplicateCustomCode_throwsBusinessException() {
         StocktakeRequest request = validRequest();
         request.setStocktakeCode("  KK-CUSTOM  ");

@@ -338,6 +338,8 @@ public enum SystemMessage {
     STK_ERR_004("STK_004", "Dữ liệu không hợp lệ"),
     STK_ERR_005("STK_005", "Chỉ phiếu lưu tạm mới có thể xử lý chênh lệch"),
     STK_ERR_006("STK_006", "Mã phiếu kiểm kê đã tồn tại"),
+    STK_ERR_007("STK_007", "Danh sách kiểm kê không được chứa sản phẩm trùng nhau."),
+    STK_ERR_008("STK_008", "Vui lòng chọn sản phẩm cho tất cả các dòng kiểm kê."),
 
     // System Settings
     SYS_SET_ERR_001("SYS_SET_001", "Đổi mã Google OAuth2 thất bại."),

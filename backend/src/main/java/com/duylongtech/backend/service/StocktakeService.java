@@ -1,8 +1,9 @@
 package com.duylongtech.backend.service;
 
-import com.duylongtech.backend.dto.request.InventoryDocumentLineRequest;
 import com.duylongtech.backend.constant.SystemMessage;
+import com.duylongtech.backend.dto.request.InventoryDocumentLineRequest;
 import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
+import com.duylongtech.backend.dto.request.StocktakeLineRequest;
 import com.duylongtech.backend.dto.request.StocktakeRequest;
 import com.duylongtech.backend.dto.response.StocktakeResponse;
 import com.duylongtech.backend.dto.response.StocktakeLineResponse;
@@ -21,8 +22,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -175,6 +178,16 @@ public class StocktakeService {
             throw new BusinessException(SystemMessage.STK_ERR_002.getMessage());
         if (req.getCreatedBy() == null)
             throw new BusinessException(SystemMessage.ASM_ERR_026.getMessage());
+
+        Set<Long> seenVariants = new HashSet<>();
+        for (StocktakeLineRequest line : req.getLines()) {
+            if (line.getVariantId() == null) {
+                throw new BusinessException(SystemMessage.STK_ERR_008.getMessage());
+            }
+            if (!seenVariants.add(line.getVariantId())) {
+                throw new BusinessException(SystemMessage.STK_ERR_007.getMessage());
+            }
+        }
     }
 
     private String resolveDocCode(String requestedCode) {

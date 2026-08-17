@@ -459,23 +459,41 @@ function CreateImportSlipPage() {
   };
 
   const handleItemChange = (localId, field, value) => {
-    setItems(prev => prev.map(item => {
-      if (item.localId !== localId) return item;
+    setItems(prev => {
       if (field === 'quantity') {
         const quantity = Number(value || 0);
-        return { ...item, quantity: value, serialNumbers: item.serialNumbers?.slice(0, Math.max(0, quantity)) || [] };
+        return prev.map(item => item.localId === localId ? {
+          ...item,
+          quantity: value,
+          serialNumbers: item.serialNumbers?.slice(0, Math.max(0, quantity)) || []
+        } : item);
       }
       if (field === 'variantId') {
+        if (!value) {
+          return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], warrantyMonths: 0 } : item);
+        }
+        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value));
+        if (existingIndex >= 0) {
+          const currentItem = prev.find(item => item.localId === localId);
+          const addedQty = Number(currentItem?.quantity) || 1;
+          const newItems = [...prev];
+          newItems[existingIndex] = {
+            ...newItems[existingIndex],
+            quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
+          };
+          showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động tăng số lượng.');
+          return newItems.filter(item => item.localId !== localId);
+        }
         const product = products.find(p => String(p.id) === String(value));
-        return {
+        return prev.map(item => item.localId === localId ? {
           ...item,
           [field]: value,
           serialNumbers: [],
           warrantyMonths: product ? Number(product.warrantyMonths || 0) : 0
-        };
+        } : item);
       }
-      return { ...item, [field]: value };
-    }));
+      return prev.map(item => item.localId === localId ? { ...item, [field]: value } : item);
+    });
   };
 
   const handleQuickAddProductSuccess = async (newProduct) => {
