@@ -3,13 +3,16 @@ import { getTodayIsoDate } from './dateFormat';
 /** Date range preset utilities using Vietnam calendar dates. */
 
 export const DATE_PRESET_OPTIONS = [
-  { id: 'ALL', label: 'Tất cả thời gian' },
+  { id: 'THIS_YEAR', label: 'Năm nay' },
+  { id: 'THIS_QUARTER', label: 'Quý này' },
+  { id: 'THIS_MONTH', label: 'Tháng này' },
+  { id: 'LAST_MONTH', label: 'Tháng trước' },
+  { id: 'LAST_QUARTER', label: 'Quý trước' },
+  { id: 'LAST_YEAR', label: 'Năm trước' },
   { id: 'TODAY', label: 'Hôm nay' },
   { id: 'THIS_WEEK', label: 'Tuần này' },
-  { id: 'THIS_MONTH', label: 'Tháng này' },
-  { id: 'THIS_QUARTER', label: 'Quý này' },
-  { id: 'THIS_YEAR', label: 'Năm nay' },
   { id: 'CUSTOM', label: 'Tùy chọn' },
+  { id: 'ALL', label: 'Tất cả thời gian' },
 ];
 
 const formatIsoDate = (date) => {
@@ -45,15 +48,31 @@ export const getDateRangePreset = (presetKey) => {
       const lastDay = new Date(year, month + 1, 0);
       return { fromDate: formatIsoDate(firstDay), toDate: formatIsoDate(lastDay) };
     }
+    case 'LAST_MONTH': {
+      const firstDay = new Date(year, month - 1, 1);
+      const lastDay = new Date(year, month, 0);
+      return { fromDate: formatIsoDate(firstDay), toDate: formatIsoDate(lastDay) };
+    }
     case 'THIS_QUARTER': {
       const quarterIndex = Math.floor(month / 3);
       const firstDay = new Date(year, quarterIndex * 3, 1);
       const lastDay = new Date(year, (quarterIndex + 1) * 3, 0);
       return { fromDate: formatIsoDate(firstDay), toDate: formatIsoDate(lastDay) };
     }
+    case 'LAST_QUARTER': {
+      const quarterIndex = Math.floor(month / 3);
+      const firstDay = new Date(year, (quarterIndex - 1) * 3, 1);
+      const lastDay = new Date(year, quarterIndex * 3, 0);
+      return { fromDate: formatIsoDate(firstDay), toDate: formatIsoDate(lastDay) };
+    }
     case 'THIS_YEAR': {
       const firstDay = new Date(year, 0, 1);
       const lastDay = new Date(year, 11, 31);
+      return { fromDate: formatIsoDate(firstDay), toDate: formatIsoDate(lastDay) };
+    }
+    case 'LAST_YEAR': {
+      const firstDay = new Date(year - 1, 0, 1);
+      const lastDay = new Date(year - 1, 11, 31);
       return { fromDate: formatIsoDate(firstDay), toDate: formatIsoDate(lastDay) };
     }
     case 'ALL':

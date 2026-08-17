@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -6,16 +6,17 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as soApi from '../../api/salesOrderApi';
 import styles from './SalesOrderListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import { exportToExcel } from '../../utils/excelExport';
 import { printQuotation } from '../../utils/printQuotation';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 
 const STATUS_LABELS = {
-  DRAFT: { label: 'Nháp', code: 'info' },
-  APPROVED: { label: 'Đã duyệt', code: 'success' },
-  POSTED: { label: 'Ghi sổ', code: 'purple' },
-  CANCELLED: { label: 'Đã hủy', code: 'danger' },
+  DRAFT:     { label: 'Nháp',         code: 'info'    },
+  APPROVED:  { label: 'Đã duyệt',     code: 'success' },
+  POSTED:    { label: 'Ghi sổ',       code: 'purple'  },
+  CANCELLED: { label: 'Đã hủy',       code: 'danger'  },
 };
 
 const PAYMENT_STATUS_LABELS = {
@@ -25,10 +26,17 @@ const PAYMENT_STATUS_LABELS = {
 };
 
 const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'Nháp' },
-  { value: 'APPROVED', label: 'Đã duyệt' },
-  { value: 'POSTED', label: 'Ghi sổ' },
-  { value: 'CANCELLED', label: 'Đã hủy' },
+  { value: 'DRAFT',     label: 'Nháp'         },
+  { value: 'APPROVED',  label: 'Đã duyệt'     },
+  { value: 'POSTED',    label: 'Ghi sổ'       },
+  { value: 'CANCELLED', label: 'Đã hủy'       },
+];
+
+const RESERVATION_STATUS_OPTIONS = [
+  { value: 'NOT_RESERVED', label: 'Chưa giữ hàng'  },
+  { value: 'RESERVED',     label: 'Đã giữ hàng'    },
+  { value: 'BACKORDERED',  label: 'Chờ nhập hàng'  },
+  { value: 'RELEASED',     label: 'Đã giải phóng'  },
 ];
 
 const money = (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
@@ -42,16 +50,20 @@ function SalesOrderListPage() {
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState(() => {
+  const DEFAULT_FILTERS = useMemo(() => {
     const searchParams = new URLSearchParams(location.search);
+    const range = getDateRangePreset('THIS_YEAR');
     return {
       keyword: '',
       status: searchParams.get('status') || '',
       reservationStatus: searchParams.get('backordered') === 'true' ? 'BACKORDERED' : '',
-      fromDate: '',
-      toDate: ''
+      preset: 'THIS_YEAR',
+      fromDate: range ? range.fromDate : '',
+      toDate: range ? range.toDate : '',
     };
-  });
+  }, [location.search]);
+
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
@@ -197,12 +209,37 @@ function SalesOrderListPage() {
             </div>
 
             <div className={styles.filterField}>
+              <span className={styles.filterLabel}>KỲ THỜI GIAN</span>
+              <SearchableSelect
+                className={styles.filterSelect}
+                value={filters.preset || 'THIS_YEAR'}
+                onChange={e => {
+                  const presetKey = e.target.value;
+                  if (presetKey === 'CUSTOM') {
+                    setFilters(p => ({ ...p, preset: 'CUSTOM' }));
+                    return;
+                  }
+                  const range = getDateRangePreset(presetKey);
+                  setCurrentPage(1);
+                  setFilters(p => ({
+                    ...p,
+                    preset: presetKey,
+                    fromDate: range ? range.fromDate : '',
+                    toDate: range ? range.toDate : '',
+                  }));
+                }}
+              >
+                {DATE_PRESET_OPTIONS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </SearchableSelect>
+            </div>
+
+            <div className={styles.filterField}>
               <span className={styles.filterLabel}>TỪ NGÀY</span>
               <input
                 type="date"
                 className={styles.filterInput}
                 value={filters.fromDate}
-                onChange={e => setFilters(p => ({ ...p, fromDate: e.target.value }))}
+                onChange={e => setFilters(p => ({ ...p, fromDate: e.target.value, preset: 'CUSTOM' }))}
               />
             </div>
 
@@ -212,7 +249,7 @@ function SalesOrderListPage() {
                 type="date"
                 className={styles.filterInput}
                 value={filters.toDate}
-                onChange={e => setFilters(p => ({ ...p, toDate: e.target.value }))}
+                onChange={e => setFilters(p => ({ ...p, toDate: e.target.value, preset: 'CUSTOM' }))}
               />
             </div>
           </div>

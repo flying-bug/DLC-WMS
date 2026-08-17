@@ -7,6 +7,7 @@ import * as poApi from '../../api/purchaseOrderApi';
 import { printPurchaseOrder } from '../../utils/printPurchaseOrder';
 import styles from './PurchaseOrderListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import { exportToExcel } from '../../utils/excelExport';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
@@ -35,7 +36,14 @@ function PurchaseOrderListPage() {
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({ keyword: '', status: '', fromDate: '', toDate: '' });
+  const DEFAULT_FILTERS = {
+    keyword: '',
+    status: '',
+    preset: 'THIS_YEAR',
+    fromDate: getDateRangePreset('THIS_YEAR')?.fromDate || '',
+    toDate: getDateRangePreset('THIS_YEAR')?.toDate || '',
+  };
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
@@ -162,12 +170,37 @@ function PurchaseOrderListPage() {
             </div>
 
             <div className={styles.filterField}>
+              <span className={styles.filterLabel}>KỲ THỜI GIAN</span>
+              <SearchableSelect
+                className={styles.filterSelect}
+                value={filters.preset || 'THIS_YEAR'}
+                onChange={e => {
+                  const presetKey = e.target.value;
+                  if (presetKey === 'CUSTOM') {
+                    setFilters(p => ({ ...p, preset: 'CUSTOM' }));
+                    return;
+                  }
+                  const range = getDateRangePreset(presetKey);
+                  setCurrentPage(1);
+                  setFilters(p => ({
+                    ...p,
+                    preset: presetKey,
+                    fromDate: range ? range.fromDate : '',
+                    toDate: range ? range.toDate : '',
+                  }));
+                }}
+              >
+                {DATE_PRESET_OPTIONS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </SearchableSelect>
+            </div>
+
+            <div className={styles.filterField}>
               <span className={styles.filterLabel}>TỪ NGÀY</span>
               <input
                 type="date"
                 className={styles.filterInput}
                 value={filters.fromDate}
-                onChange={e => setFilters(p => ({ ...p, fromDate: e.target.value }))}
+                onChange={e => setFilters(p => ({ ...p, fromDate: e.target.value, preset: 'CUSTOM' }))}
               />
             </div>
 
@@ -177,7 +210,7 @@ function PurchaseOrderListPage() {
                 type="date"
                 className={styles.filterInput}
                 value={filters.toDate}
-                onChange={e => setFilters(p => ({ ...p, toDate: e.target.value }))}
+                onChange={e => setFilters(p => ({ ...p, toDate: e.target.value, preset: 'CUSTOM' }))}
               />
             </div>
           </div>
@@ -185,7 +218,7 @@ function PurchaseOrderListPage() {
           <div className={styles.filterActions}>
             <button
               className={styles.iconBtn}
-              onClick={() => setFilters({ keyword: '', status: '', fromDate: '', toDate: '' })}
+              onClick={() => setFilters(DEFAULT_FILTERS)}
               title="Đặt lại"
             >
               <i className="bi bi-arrow-clockwise" />

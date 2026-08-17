@@ -12,6 +12,7 @@ import Modal from '../../components/ui/Modal/Modal';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import { printExportSlip } from '../../utils/printExportSlip';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import styles from './ExportSlipPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
@@ -35,7 +36,7 @@ const EXPORT_PURPOSE_OPTIONS = [
   { value: 'USAGE', label: 'Sử dụng nội bộ' },
   { value: 'ASSEMBLY', label: 'Xuất lắp ráp / tháo dỡ' },
   { value: 'REPAIR', label: 'Xuất sửa chữa' },
-  { value: 'OTHER', label: 'Khác' }
+  { value: 'OTHER', label: 'Khác' },
 ];
 
 const STATUS_OPTIONS = [
@@ -68,7 +69,7 @@ const EXPORT_PURPOSE_LABELS = {
   ASSEMBLY: 'Xuất lắp ráp / tháo dỡ',
   REPAIR: 'Xuất sửa chữa',
   INVENTORY_ADJUSTMENT: 'Xuất điều chỉnh kiểm kê',
-  OTHER: 'Khác'
+  OTHER: 'Khác',
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -117,19 +118,22 @@ function ExportSlipPage() {
   const [users, setUsers] = useState([]);
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const DEFAULT_FILTERS = useMemo(() => ({
-    keyword: location.state?.filterKeyword || location.state?.filterDocCode || '',
-    fromDate: '',
-    toDate: '',
-    preset: 'ALL',
-    status: '',
-    warehouseId: '',
-    partnerId: '',
-    staffId: '',
-    issuePurpose: '',
-    referenceId: location.state?.referenceId || '',
-    referenceType: location.state?.referenceType || '',
-  }), [location.state?.filterKeyword, location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
+  const DEFAULT_FILTERS = useMemo(() => {
+    const range = getDateRangePreset('THIS_YEAR');
+    return {
+      keyword: location.state?.filterKeyword || location.state?.filterDocCode || '',
+      fromDate: range?.fromDate || '',
+      toDate: range?.toDate || '',
+      preset: 'THIS_YEAR',
+      status: '',
+      warehouseId: '',
+      partnerId: '',
+      staffId: '',
+      issuePurpose: '',
+      referenceId: location.state?.referenceId || '',
+      referenceType: location.state?.referenceType || '',
+    };
+  }, [location.state?.filterKeyword, location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
@@ -421,6 +425,31 @@ function ExportSlipPage() {
                   <i className="bi bi-x-circle-fill"></i>
                 </button>
               )}
+            </div>
+
+            <div style={{ minWidth: 160 }}>
+              <SearchableSelect
+                value={filters.preset || 'THIS_YEAR'}
+                onChange={(e) => {
+                  const presetKey = e.target.value;
+                  if (presetKey === 'CUSTOM') {
+                    setFilters(prev => ({ ...prev, preset: 'CUSTOM' }));
+                    return;
+                  }
+                  const range = getDateRangePreset(presetKey);
+                  setCurrentPage(1);
+                  setFilters(prev => ({
+                    ...prev,
+                    preset: presetKey,
+                    fromDate: range ? range.fromDate : '',
+                    toDate: range ? range.toDate : '',
+                  }));
+                }}
+              >
+                {DATE_PRESET_OPTIONS.map(opt => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
+                ))}
+              </SearchableSelect>
             </div>
 
             <FilterPopover

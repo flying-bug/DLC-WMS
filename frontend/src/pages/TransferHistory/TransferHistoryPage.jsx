@@ -10,6 +10,7 @@ import * as transferApi from '../../api/stockTransferApi';
 import { exportToExcel } from '../../utils/excelExport';
 import { printTransferSlip } from '../../utils/printTransferSlip';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import styles from './TransferHistoryPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
@@ -24,7 +25,7 @@ const DEFAULT_COLUMNS = {
 };
 
 const COLUMN_OPTIONS = [
-  { id: 'date', label: 'Ngày Ghi Nhận' },
+  { id: 'date', label: 'Ngày Chuyển' },
   { id: 'transferCode', label: 'Số Phiếu' },
   { id: 'fromWarehouse', label: 'Kho Xuất' },
   { id: 'toWarehouse', label: 'Kho Nhập' },
@@ -62,7 +63,18 @@ function TransferHistoryPage() {
 
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [filters, setFilters] = useState({ transferCode: location.state?.filterTransferCode || '', fromDate: '', toDate: '', status: '' });
+  const DEFAULT_FILTERS = useMemo(() => {
+    const range = getDateRangePreset('THIS_YEAR');
+    return {
+      transferCode: location.state?.filterTransferCode || '',
+      fromDate: range ? range.fromDate : '',
+      toDate: range ? range.toDate : '',
+      preset: 'THIS_YEAR',
+      status: '',
+    };
+  }, [location.state?.filterTransferCode]);
+
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -231,10 +243,35 @@ function TransferHistoryPage() {
               )}
             </div>
 
+            <div style={{ minWidth: 160 }}>
+              <SearchableSelect
+                value={filters.preset || 'THIS_YEAR'}
+                onChange={(e) => {
+                  const presetKey = e.target.value;
+                  if (presetKey === 'CUSTOM') {
+                    setFilters(prev => ({ ...prev, preset: 'CUSTOM' }));
+                    return;
+                  }
+                  const range = getDateRangePreset(presetKey);
+                  setCurrentPage(1);
+                  setFilters(prev => ({
+                    ...prev,
+                    preset: presetKey,
+                    fromDate: range ? range.fromDate : '',
+                    toDate: range ? range.toDate : '',
+                  }));
+                }}
+              >
+                {DATE_PRESET_OPTIONS.map(opt => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
+                ))}
+              </SearchableSelect>
+            </div>
+
             <FilterPopover
               filters={filters}
               onApply={(newFilters) => { setFilters(newFilters); setCurrentPage(1); setTimeout(loadSlips, 0); }}
-              onReset={() => { setFilters({ transferCode: '', fromDate: '', toDate: '', status: '' }); setCurrentPage(1); setTimeout(loadSlips, 0); }}
+              onReset={() => { setFilters(DEFAULT_FILTERS); setCurrentPage(1); setTimeout(loadSlips, 0); }}
               statusOptions={[
                 { value: 'DRAFT', label: 'Lưu tạm' },
                 { value: 'POSTED', label: 'Ghi sổ' },
@@ -245,7 +282,7 @@ function TransferHistoryPage() {
           <div className={styles.filterActions}>
             <button
               className={styles.iconBtn}
-              onClick={() => { setFilters({ transferCode: '', fromDate: '', toDate: '', status: '' }); setCurrentPage(1); setTimeout(loadSlips, 0); }}
+              onClick={() => { setFilters(DEFAULT_FILTERS); setCurrentPage(1); setTimeout(loadSlips, 0); }}
               title="Đặt lại bộ lọc"
             >
               <i className="bi bi-arrow-clockwise"></i>

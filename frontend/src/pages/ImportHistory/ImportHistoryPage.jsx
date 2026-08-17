@@ -12,6 +12,7 @@ import * as exportApi from '../../api/inventoryExportApi';
 import { exportToExcel } from '../../utils/excelExport';
 import { printImportSlip } from '../../utils/printImportSlip';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import styles from './ImportHistoryPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
@@ -111,19 +112,22 @@ function ImportHistoryPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const DEFAULT_FILTERS = useMemo(() => ({
-    keyword: location.state?.filterKeyword || location.state?.filterDocCode || '',
-    fromDate: '',
-    toDate: '',
-    preset: 'ALL',
-    status: '',
-    warehouseId: '',
-    partnerId: '',
-    staffId: '',
-    issuePurpose: '',
-    referenceId: location.state?.referenceId || '',
-    referenceType: location.state?.referenceType || '',
-  }), [location.state?.filterKeyword, location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
+  const DEFAULT_FILTERS = useMemo(() => {
+    const range = getDateRangePreset('THIS_YEAR');
+    return {
+      keyword: location.state?.filterKeyword || location.state?.filterDocCode || '',
+      fromDate: range?.fromDate || '',
+      toDate: range?.toDate || '',
+      preset: 'THIS_YEAR',
+      status: '',
+      warehouseId: '',
+      partnerId: '',
+      staffId: '',
+      issuePurpose: '',
+      referenceId: location.state?.referenceId || '',
+      referenceType: location.state?.referenceType || '',
+    };
+  }, [location.state?.filterKeyword, location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
@@ -407,6 +411,31 @@ function ImportHistoryPage() {
                   <i className="bi bi-x-circle-fill"></i>
                 </button>
               )}
+            </div>
+
+            <div style={{ minWidth: 160 }}>
+              <SearchableSelect
+                value={filters.preset || 'THIS_YEAR'}
+                onChange={(e) => {
+                  const presetKey = e.target.value;
+                  if (presetKey === 'CUSTOM') {
+                    setFilters(prev => ({ ...prev, preset: 'CUSTOM' }));
+                    return;
+                  }
+                  const range = getDateRangePreset(presetKey);
+                  setCurrentPage(1);
+                  setFilters(prev => ({
+                    ...prev,
+                    preset: presetKey,
+                    fromDate: range ? range.fromDate : '',
+                    toDate: range ? range.toDate : '',
+                  }));
+                }}
+              >
+                {DATE_PRESET_OPTIONS.map(opt => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
+                ))}
+              </SearchableSelect>
             </div>
 
             <FilterPopover
