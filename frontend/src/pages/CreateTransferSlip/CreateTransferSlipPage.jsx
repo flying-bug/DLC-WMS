@@ -14,6 +14,7 @@ import { printTransferSlip } from '../../utils/printTransferSlip';
 import axiosClient from '../../api/axiosClient';
 import styles from './CreateTransferSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { findBestMatch } from '../../utils/fuzzyMatch';
 
@@ -403,27 +404,51 @@ function CreateTransferSlipPage() {
   };
 
   const submit = async (status) => {
-    if (!isFormValid) {
-      if (form.fromWarehouseId === form.toWarehouseId) {
-        showToast('error', 'Kho xuất và kho nhập phải khác nhau.');
-      } else {
-        showToast('error', 'Vui lòng điền đầy đủ thông tin kho, ngày chuyển và ít nhất một mặt hàng.');
-      }
-      return;
+    if (!form.fromWarehouseId) {
+      focusField('transfer-fromWarehouseId');
+      return showToast('error', 'Vui lòng chọn kho xuất.');
+    }
+    if (!form.toWarehouseId) {
+      focusField('transfer-toWarehouseId');
+      return showToast('error', 'Vui lòng chọn kho nhập.');
+    }
+    if (form.fromWarehouseId === form.toWarehouseId) {
+      focusField('transfer-toWarehouseId');
+      return showToast('error', 'Kho xuất và kho nhập phải khác nhau.');
+    }
+    if (!form.transferDate) {
+      focusField('transfer-docDate');
+      return showToast('error', 'Vui lòng chọn ngày chuyển.');
     }
 
-    // Check trackSerial matches
-    const payload = buildPayload();
-    for (const line of payload.lines) {
-      const product = productById.get(String(line.variantId));
-      if (product?.trackSerial && line.serialNumbers.length !== line.quantity) {
-        showToast('error', `Mặt hàng ${product.sku || product.productName} có theo dõi Serial. Số lượng quét (${line.serialNumbers.length}) chưa khớp với số lượng chuyển (${line.quantity}).`);
-        return;
+    if (!items.length) {
+      return showToast('error', 'Vui lòng thêm ít nhất một mặt hàng.');
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item.variantId) {
+        focusField(`transfer-line-product-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Vui lòng chọn sản phẩm.`);
+      }
+      const qty = Number(item.quantity);
+      if (!Number.isInteger(qty) || qty <= 0) {
+        focusField(`transfer-line-qty-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Số lượng chuyển phải là số nguyên lớn hơn 0.`);
+      }
+      const product = productById.get(String(item.variantId));
+      if (product?.trackSerial) {
+        const serialCount = item.serialNumbers ? item.serialNumbers.length : 0;
+        if (serialCount !== qty) {
+          setSerialModalItemId(item.localId);
+          return showToast('error', `Mặt hàng ${product.sku || product.productName} có theo dõi Serial. Số lượng quét (${serialCount}) chưa khớp với số lượng chuyển (${qty}).`);
+        }
       }
     }
 
     setSaving(true);
     try {
+      const payload = buildPayload();
       payload.status = status;
       const response = await transferApi.createTransferSlip(payload);
       const created = unwrap(response);
@@ -476,14 +501,14 @@ function CreateTransferSlipPage() {
               <div className="misa-form-row">
                 <div className="misa-form-group">
                   <label className="misa-label">Từ kho (Xuất) <span className="required">*</span></label>
-                  <SearchableSelect className="misa-select" value={form.fromWarehouseId} onChange={(e) => handleFormChange('fromWarehouseId', e.target.value)}>
+                  <SearchableSelect id="transfer-fromWarehouseId" className="misa-select" value={form.fromWarehouseId} onChange={(e) => handleFormChange('fromWarehouseId', e.target.value)}>
                     <option value="">Chọn kho xuất</option>
                     {warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} - {warehouse.name}</option>)}
                   </SearchableSelect>
                 </div>
                 <div className="misa-form-group">
                   <label className="misa-label">Đến kho (Nhập) <span className="required">*</span></label>
-                  <SearchableSelect className="misa-select" value={form.toWarehouseId} onChange={(e) => handleFormChange('toWarehouseId', e.target.value)}>
+                  <SearchableSelect id="transfer-toWarehouseId" className="misa-select" value={form.toWarehouseId} onChange={(e) => handleFormChange('toWarehouseId', e.target.value)}>
                     <option value="">Chọn kho nhập</option>
                     {warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} - {warehouse.name}</option>)}
                   </SearchableSelect>
@@ -511,7 +536,7 @@ function CreateTransferSlipPage() {
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                 <label className="misa-label">Ngày chuyển <span className="required">*</span></label>
-                <input type="date" className="misa-input" value={form.transferDate} onChange={(e) => handleFormChange('transferDate', e.target.value)} />
+                <input id="transfer-docDate" type="date" className="misa-input" value={form.transferDate} onChange={(e) => handleFormChange('transferDate', e.target.value)} />
               </div>
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
@@ -601,6 +626,7 @@ function CreateTransferSlipPage() {
                         <td>{index + 1}</td>
                         <td>
                           <ProductGridSelect
+                            id={`transfer-line-product-${index}`}
                             products={products}
                             inventoryMap={sourceInventory}
                             value={item.variantId}
@@ -624,7 +650,7 @@ function CreateTransferSlipPage() {
                           {stock.toLocaleString('vi-VN')}
                         </td>
                         <td align="right">
-                          <input type="number" min="1" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '80px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
+                          <input id={`transfer-line-qty-${index}`} type="number" min="1" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '80px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
                         </td>
                         <td align="center">
                           <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -640,7 +666,7 @@ function CreateTransferSlipPage() {
                           </div>
                         </td>
                         <td align="right">
-                          <input type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
+                          <input id={`transfer-line-price-${index}`} type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
                         </td>
                         <td align="right" style={{ fontWeight: 'bold', color: '#0070cc' }}>
                           {new Intl.NumberFormat('vi-VN').format(Number(item.quantity || 0) * Number(item.price || 0))} đ

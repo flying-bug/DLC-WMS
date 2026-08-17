@@ -25,6 +25,7 @@ import axiosClient from '../../api/axiosClient';
 import { useAiFeature } from '../../contexts/AiFeatureContext';
 import styles from './CreateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { findBestMatch } from '../../utils/fuzzyMatch';
 
@@ -637,28 +638,62 @@ function CreateImportSlipPage() {
   };
 
   const submit = async (status, shouldPost = false) => {
-    if (!isFormValid) {
-      if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho nhập.');
-      if (importType === 'PURCHASE' && !form.partnerId) return showToast('error', 'Vui lòng chọn nhà cung cấp.');
-      if ((importType === 'PRODUCTION' || importType === 'SCRAP') && !form.assemblyOrderId) return showToast('error', 'Vui lòng chọn lệnh quản lý cấu hình.');
-      if (importType === 'RETURN' && !form.customerId) return showToast('error', 'Vui lòng chọn khách hàng.');
-      if ((importType === 'PURCHASE' || importType === 'RETURN') && !form.referenceId) return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
-      if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày nhập kho.');
-      const invalidVat = items.some(item => {
-        const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-        return isNaN(vat) || vat < 0 || vat > 10;
-      });
-      if (invalidVat) return showToast('error', 'Thuế VAT phải nằm trong khoảng từ 0% đến 10%.');
-      if (!items.length || !items.every(isLineValid)) {
-        return showToast('error', 'Vui lòng chọn hàng hóa và nhập số lượng hợp lệ (Hàng có serial cần khớp số lượng mã quét).');
-      }
-      return showToast('error', 'Vui lòng điền đầy đủ thông tin bắt buộc.');
+    if (!form.warehouseId) {
+      focusField('import-warehouseId');
+      return showToast('error', 'Vui lòng chọn kho nhập.');
+    }
+    if (importType === 'PURCHASE' && !form.partnerId) {
+      focusField('import-partnerId');
+      return showToast('error', 'Vui lòng chọn nhà cung cấp.');
+    }
+    if ((importType === 'PRODUCTION' || importType === 'SCRAP') && !form.assemblyOrderId) {
+      focusField('import-assemblyOrderId');
+      return showToast('error', 'Vui lòng chọn lệnh quản lý cấu hình.');
+    }
+    if (importType === 'RETURN' && !form.customerId) {
+      focusField('import-customerId');
+      return showToast('error', 'Vui lòng chọn khách hàng.');
+    }
+    if ((importType === 'PURCHASE' || importType === 'RETURN') && !form.referenceId) {
+      return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
+    }
+    if (!form.docDate) {
+      focusField('import-docDate');
+      return showToast('error', 'Vui lòng chọn ngày nhập kho.');
     }
 
-    for (const item of items) {
+    if (!items.length) {
+      return showToast('error', 'Vui lòng thêm ít nhất 1 dòng hàng hóa.');
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item.variantId) {
+        focusField(`import-line-product-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Vui lòng chọn hàng hóa.`);
+      }
+      const qty = Number(item.quantity);
+      if (!Number.isInteger(qty) || qty <= 0) {
+        focusField(`import-line-qty-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Số lượng phải là số nguyên lớn hơn 0.`);
+      }
+      const product = productById.get(String(item.variantId));
+      if (product?.trackSerial) {
+        const serialCount = item.serialNumbers ? item.serialNumbers.length : 0;
+        if (serialCount !== qty) {
+          setSerialModalItemId(item.localId);
+          return showToast('error', `Dòng ${i + 1}: Vui lòng quét đủ ${qty} mã serial (hiện có ${serialCount}).`);
+        }
+      }
+      const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
+      if (isNaN(vat) || vat < 0 || vat > 10) {
+        focusField(`import-line-vat-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Thuế VAT phải nằm trong khoảng từ 0% đến 10%.`);
+      }
       if (item.maxQuantity !== undefined && item.maxQuantity !== null && Number(item.quantity) > Number(item.maxQuantity)) {
-        const sku = productById.get(String(item.variantId))?.sku || '';
-        return showToast('error', `Số lượng nhập (${item.quantity}) vượt quá số lượng còn lại trong đơn mua hàng (tối đa ${item.maxQuantity}) ${sku ? `cho sản phẩm SKU ${sku}` : ''}`);
+        focusField(`import-line-qty-${i}`);
+        const sku = product?.sku || '';
+        return showToast('error', `Dòng ${i + 1}: Số lượng nhập (${item.quantity}) vượt quá số lượng còn lại trong đơn mua hàng (tối đa ${item.maxQuantity}) ${sku ? `cho SKU ${sku}` : ''}`);
       }
     }
     setSaving(true);
@@ -795,6 +830,7 @@ function CreateImportSlipPage() {
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <div style={{ flex: 1 }}>
                       <Select
+                        inputId="import-partnerId"
                         options={suppliers.map(s => ({ value: s.id, label: `${s.code || `NCC#${s.id}`} - ${s.name || ''}`, codeOnly: s.code || `NCC#${s.id}` }))}
                         value={suppliers.find(s => String(s.id) === String(form.partnerId)) ? { value: form.partnerId, label: `${suppliers.find(s => String(s.id) === String(form.partnerId)).code || `NCC#${form.partnerId}`} - ${suppliers.find(s => String(s.id) === String(form.partnerId)).name || ''}`, codeOnly: suppliers.find(s => String(s.id) === String(form.partnerId)).code || `NCC#${form.partnerId}` } : null}
                         onChange={(selected) => {
@@ -833,6 +869,7 @@ function CreateImportSlipPage() {
                   <label className="misa-label">Lệnh sản xuất <span className="required">*</span></label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input
+                      id="import-assemblyOrderId"
                       type="text"
                       className="misa-input"
                       readOnly
@@ -861,6 +898,7 @@ function CreateImportSlipPage() {
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <div style={{ flex: 1 }}>
                         <Select
+                          inputId="import-customerId"
                           options={customers.map(c => ({ value: c.id, label: `${c.code || `KH#${c.id}`} - ${c.name || ''}`, codeOnly: c.code || `KH#${c.id}` }))}
                           value={customers.find(c => String(c.id) === String(form.customerId)) ? { value: form.customerId, label: `${customers.find(c => String(c.id) === String(form.customerId)).code || `KH#${form.customerId}`} - ${customers.find(c => String(c.id) === String(form.customerId)).name || ''}`, codeOnly: customers.find(c => String(c.id) === String(form.customerId)).code || `KH#${form.customerId}` } : null}
                           onChange={(selected) => {
@@ -943,6 +981,7 @@ function CreateImportSlipPage() {
               <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                 <label className="misa-label">Kho nhập <span className="required">*</span></label>
                 <Select
+                  inputId="import-warehouseId"
                   options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
                   value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
                   onChange={(selected) => handleFormChange('warehouseId', selected ? selected.value : '')}
@@ -1037,7 +1076,7 @@ function CreateImportSlipPage() {
 
             <div className="misa-form-group" style={{ marginBottom: '16px' }}>
               <label className="misa-label">Ngày nhập kho <span className="required">*</span></label>
-              <input type="date" className="misa-input" value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
+              <input id="import-docDate" type="date" className="misa-input" value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
             </div>
           </div>
         </div>
@@ -1073,6 +1112,7 @@ function CreateImportSlipPage() {
                       <td>{index + 1}</td>
                       <td>
                         <ProductGridSelect
+                          id={`import-line-product-${index}`}
                           products={filteredProducts}
                           inventoryMap={inventoryMap}
                           value={item.variantId}
@@ -1095,7 +1135,7 @@ function CreateImportSlipPage() {
                       </td>
                       <td>{product?.unitName || ''}</td>
                       <td align="right">
-                        <input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
+                        <input id={`import-line-qty-${index}`} type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
                       </td>
                       <td align="center">
                         <div className={styles.serialCellContainer} style={{ justifyContent: 'center' }}>
@@ -1112,10 +1152,10 @@ function CreateImportSlipPage() {
                         </div>
                       </td>
                       <td align="center">
-                        <input type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(e) => handleItemChange(item.localId, 'warrantyMonths', e.target.value)} />
+                        <input id={`import-line-warranty-${index}`} type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(e) => handleItemChange(item.localId, 'warrantyMonths', e.target.value)} />
                       </td>
                       <td align="right">
-                        <input type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
+                        <input id={`import-line-price-${index}`} type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
                       </td>
                       <td align="right" className={`${styles.textBold} ${styles.textBlue}`}>
                         {money(Number(item.quantity || 0) * Number(item.price || 0))} đ

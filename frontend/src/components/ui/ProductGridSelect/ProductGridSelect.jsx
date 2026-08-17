@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import styles from './ProductGridSelect.module.css';
 
 const ProductGridSelect = ({
+  id,
   products = [],
   inventoryMap = new Map(),
   value = '',
@@ -163,9 +164,17 @@ const ProductGridSelect = ({
   return (
     <div className={styles.container} ref={containerRef}>
       <div
+        id={id}
+        tabIndex={disabled ? -1 : 0}
         ref={triggerRef}
         className={`${styles.triggerBox} ${isOpen ? styles.triggerBoxOpen : ''} ${disabled ? styles.disabled : ''}`}
         onClick={handleOpen}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && !isOpen) {
+            e.preventDefault();
+            handleOpen();
+          }
+        }}
       >
         <div className={styles.valueContainer}>
           {renderValue()}

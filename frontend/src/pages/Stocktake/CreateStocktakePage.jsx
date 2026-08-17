@@ -9,6 +9,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import { printStocktakeReport } from '../../utils/printStocktakeReport';
 import { getTodayIsoDate, getCurrentDateTimeInput } from '../../utils/dateFormat';
+import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 
@@ -489,6 +490,7 @@ function CreateStocktakePage() {
 
   const validateForm = (payload) => {
     if (!payload.warehouseId) {
+      focusField('stocktake-warehouseId');
       showToast('error', 'Vui lòng chọn kho để kiểm kê');
       return false;
     }
@@ -496,18 +498,22 @@ function CreateStocktakePage() {
       showToast('error', 'Phiếu kiểm kê phải có ít nhất một dòng');
       return false;
     }
-    const hasEmptyVariant = payload.lines.some(l => !l.variantId);
-    if (hasEmptyVariant) {
-      showToast('error', 'Vui lòng chọn sản phẩm cho tất cả các dòng kiểm kê hoặc xóa dòng trống');
-      return false;
-    }
-    const variantSet = new Set();
-    for (const l of payload.lines) {
-      if (variantSet.has(String(l.variantId))) {
-        showToast('error', 'Danh sách kiểm kê không được chứa sản phẩm trùng nhau');
+    for (let i = 0; i < payload.lines.length; i++) {
+      if (!payload.lines[i].variantId) {
+        focusField(`stocktake-line-product-${i}`);
+        showToast('error', `Dòng ${i + 1}: Vui lòng chọn sản phẩm hoặc xóa dòng trống`);
         return false;
       }
-      variantSet.add(String(l.variantId));
+    }
+    const variantSet = new Map();
+    for (let i = 0; i < payload.lines.length; i++) {
+      const vid = String(payload.lines[i].variantId);
+      if (variantSet.has(vid)) {
+        focusField(`stocktake-line-product-${i}`);
+        showToast('error', `Dòng ${i + 1}: Sản phẩm bị trùng lặp với dòng ${variantSet.get(vid) + 1}`);
+        return false;
+      }
+      variantSet.set(vid, i);
     }
     return true;
   };
@@ -633,7 +639,7 @@ function CreateStocktakePage() {
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Kiểm kê kho</label>
-                <SearchableSelect className={styles.formSelect} name="warehouseId" value={formData.warehouseId} onChange={handleChange} disabled={isSaved}>
+                <SearchableSelect id="stocktake-warehouseId" className={styles.formSelect} name="warehouseId" value={formData.warehouseId} onChange={handleChange} disabled={isSaved}>
                   <option value="all">Tất cả kho</option>
                   {warehouses.map(wh => (
                     <option key={wh.id} value={wh.id}>{wh.name}</option>
@@ -828,6 +834,7 @@ function CreateStocktakePage() {
                     <td>
                       {line.isNew && !isSaved ? (
                         <Select
+                          inputId={`stocktake-line-product-${idx}`}
                           options={products.map(p => {
                             const isSelected = lines.some((l, lIdx) => lIdx !== idx && String(l.variantId) === String(p.id));
                             return {

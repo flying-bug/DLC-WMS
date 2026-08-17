@@ -112,11 +112,11 @@ const FilterPopover = ({
             {showDateRange && (
               <>
                 {/* Field: Quick Date Presets */}
-                <div className={styles.formGroup}>
+                <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                   <label className={styles.label}>KHOẢNG THỜI GIAN</label>
                   <SearchableSelect
                     className={styles.select}
-                    value={localFilters.preset || 'ALL'}
+                    value={localFilters.preset || 'THIS_YEAR'}
                     onChange={(e) => handlePresetChange(e.target.value)}
                   >
                     {DATE_PRESET_OPTIONS.map(opt => (
@@ -126,63 +126,60 @@ const FilterPopover = ({
                 </div>
 
                 {/* Date Pickers */}
-                <div className={styles.row}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>TỪ NGÀY</label>
-                    <input
-                      type="date"
-                      className={styles.input}
-                      value={localFilters.fromDate || ''}
-                      onChange={(e) => handleDateChange('fromDate', e.target.value)}
-                    />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>ĐẾN NGÀY</label>
-                    <input
-                      type="date"
-                      className={styles.input}
-                      value={localFilters.toDate || ''}
-                      onChange={(e) => handleDateChange('toDate', e.target.value)}
-                    />
-                  </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>TỪ NGÀY</label>
+                  <input
+                    type="date"
+                    className={styles.input}
+                    value={localFilters.fromDate || ''}
+                    onChange={(e) => handleDateChange('fromDate', e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>ĐẾN NGÀY</label>
+                  <input
+                    type="date"
+                    className={styles.input}
+                    value={localFilters.toDate || ''}
+                    onChange={(e) => handleDateChange('toDate', e.target.value)}
+                  />
                 </div>
               </>
             )}
 
-            {/* Purpose & Status */}
-            <div className={styles.row}>
-              {purposeOptions.length > 0 && (
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>{purposeLabel.toUpperCase()}</label>
-                  <SearchableSelect
-                    className={styles.select}
-                    value={localFilters[purposeField] || ''}
-                    onChange={(e) => handleFieldChange(purposeField, e.target.value)}
-                  >
-                    <option value="">Tất cả loại phiếu</option>
-                    {purposeOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </SearchableSelect>
-                </div>
-              )}
+            {/* Purpose */}
+            {purposeOptions.length > 0 && (
+              <div className={styles.formGroup}>
+                <label className={styles.label}>{purposeLabel.toUpperCase()}</label>
+                <SearchableSelect
+                  className={styles.select}
+                  value={localFilters[purposeField] || ''}
+                  onChange={(e) => handleFieldChange(purposeField, e.target.value)}
+                >
+                  <option value="">Tất cả loại phiếu</option>
+                  {purposeOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </SearchableSelect>
+              </div>
+            )}
 
-              {statusOptions.length > 0 && (
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>TRẠNG THÁI</label>
-                  <SearchableSelect
-                    className={styles.select}
-                    value={localFilters.status || ''}
-                    onChange={(e) => handleFieldChange('status', e.target.value)}
-                  >
-                    <option value="">Tất cả trạng thái</option>
-                    {statusOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </SearchableSelect>
-                </div>
-              )}
-            </div>
+            {/* Status */}
+            {statusOptions.length > 0 && (
+              <div className={styles.formGroup}>
+                <label className={styles.label}>TRẠNG THÁI</label>
+                <SearchableSelect
+                  className={styles.select}
+                  value={localFilters.status || ''}
+                  onChange={(e) => handleFieldChange('status', e.target.value)}
+                >
+                  <option value="">Tất cả trạng thái</option>
+                  {statusOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </SearchableSelect>
+              </div>
+            )}
 
             {/* Warehouse */}
             {warehouses.length > 0 && (
@@ -210,7 +207,7 @@ const FilterPopover = ({
                   value={localFilters.partnerId || ''}
                   onChange={(e) => handleFieldChange('partnerId', e.target.value)}
                 >
-                  <option value="">Tất cả đối tác</option>
+                  <option value="">{`Tất cả ${partnerLabel.toLowerCase()}`}</option>
                   {partners.map(p => (
                     <option key={p.id} value={p.id}>{p.name || p.code}</option>
                   ))}
@@ -236,25 +233,21 @@ const FilterPopover = ({
             )}
 
             {/* Custom Selects */}
-            {customSelects && customSelects.length > 0 && (
-              <div className={styles.row}>
-                {customSelects.map(sel => (
-                  <div className={styles.formGroup} key={sel.name}>
-                    <label className={styles.label}>{sel.label.toUpperCase()}</label>
-                    <SearchableSelect
-                      className={styles.select}
-                      value={localFilters[sel.name] || ''}
-                      onChange={(e) => handleFieldChange(sel.name, e.target.value)}
-                    >
-                      <option value="">{sel.defaultOption || `Tất cả ${sel.label.toLowerCase()}`}</option>
-                      {sel.options.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </SearchableSelect>
-                  </div>
-                ))}
+            {customSelects && customSelects.map(sel => (
+              <div className={styles.formGroup} key={sel.key || sel.name}>
+                <label className={styles.label}>{(sel.label || '').toUpperCase()}</label>
+                <SearchableSelect
+                  className={styles.select}
+                  value={localFilters[sel.key || sel.name] || ''}
+                  onChange={(e) => handleFieldChange(sel.key || sel.name, e.target.value)}
+                >
+                  <option value="">{sel.defaultOption || `Tất cả ${(sel.label || '').toLowerCase()}`}</option>
+                  {(sel.options || []).map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </SearchableSelect>
               </div>
-            )}
+            ))}
           </div>
 
           <div className={styles.footer}>

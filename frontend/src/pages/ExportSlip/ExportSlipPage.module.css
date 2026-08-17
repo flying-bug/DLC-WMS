@@ -258,6 +258,7 @@
   outline: none;
   color: var(--color-text-strong);
   height: 38px;
+  box-sizing: border-box;
   transition: border-color 0.2s ease;
 }
 
@@ -267,7 +268,9 @@
 
 .clearSearchBtn {
   position: absolute;
-  right: 10px;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   background: none;
   border: none;
   color: var(--color-text-muted);
@@ -275,7 +278,11 @@
   padding: 0;
   display: flex;
   align-items: center;
-  font-size: 14px;
+  justify-content: center;
+  font-size: 15px;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
 }
 
 .clearSearchBtn:hover {

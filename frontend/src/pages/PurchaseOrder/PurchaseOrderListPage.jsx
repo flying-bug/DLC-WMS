@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import * as poApi from '../../api/purchaseOrderApi';
 import { printPurchaseOrder } from '../../utils/printPurchaseOrder';
 import styles from './PurchaseOrderListPage.module.css';
@@ -35,14 +36,19 @@ function PurchaseOrderListPage() {
   const location = useLocation();
 
   const [orders, setOrders] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const DEFAULT_FILTERS = {
-    keyword: '',
-    status: '',
-    preset: 'THIS_YEAR',
-    fromDate: getDateRangePreset('THIS_YEAR')?.fromDate || '',
-    toDate: getDateRangePreset('THIS_YEAR')?.toDate || '',
-  };
+  const DEFAULT_FILTERS = useMemo(() => {
+    const range = getDateRangePreset('THIS_YEAR');
+    return {
+      keyword: '',
+      status: '',
+      partnerId: '',
+      preset: 'THIS_YEAR',
+      fromDate: range?.fromDate || '',
+      toDate: range?.toDate || '',
+    };
+  }, []);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -52,6 +58,19 @@ function PurchaseOrderListPage() {
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
+
+  useEffect(() => {
+    const loadSuppliers = async () => {
+      try {
+        const res = await poApi.getSuppliers({ size: 200 });
+        const list = unwrap(res);
+        setSuppliers(Array.isArray(list) ? list : (list?.content || []));
+      } catch (err) {
+        console.error('Không tải được danh sách nhà cung cấp', err);
+      }
+    };
+    loadSuppliers();
+  }, []);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -145,34 +164,34 @@ function PurchaseOrderListPage() {
 
         {/* ── Filter ── */}
         <div className={styles.filterSection}>
-          <div className={styles.filterGroup}>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌM KIẾM</span>
+          <div className={styles.searchAndPopover}>
+            <div className={styles.searchBox}>
+              <i className="bi bi-search" />
               <input
                 type="text"
-                className={styles.filterInput}
-                placeholder="Mã PO, tên nhà cung cấp..."
+                className={styles.searchInput}
+                placeholder="Tìm theo mã đơn, nhà cung cấp..."
                 value={filters.keyword}
-                onChange={e => setFilters(p => ({ ...p, keyword: e.target.value }))}
+                onChange={e => {
+                  setCurrentPage(1);
+                  setFilters(p => ({ ...p, keyword: e.target.value }));
+                }}
               />
+              {filters.keyword && (
+                <button
+                  className={styles.clearSearchBtn}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setFilters(p => ({ ...p, keyword: '' }));
+                  }}
+                >
+                  <i className="bi bi-x-circle-fill" />
+                </button>
+              )}
             </div>
 
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TRẠNG THÁI</span>
+            <div style={{ minWidth: 160 }}>
               <SearchableSelect
-                className={styles.filterSelect}
-                value={filters.status}
-                onChange={e => setFilters(p => ({ ...p, status: e.target.value }))}
-              >
-                <option value="">Tất cả</option>
-                {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </SearchableSelect>
-            </div>
-
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>KỲ THỜI GIAN</span>
-              <SearchableSelect
-                className={styles.filterSelect}
                 value={filters.preset || 'THIS_YEAR'}
                 onChange={e => {
                   const presetKey = e.target.value;
@@ -190,36 +209,36 @@ function PurchaseOrderListPage() {
                   }));
                 }}
               >
-                {DATE_PRESET_OPTIONS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                {DATE_PRESET_OPTIONS.map(opt => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
+                ))}
               </SearchableSelect>
             </div>
 
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TỪ NGÀY</span>
-              <input
-                type="date"
-                className={styles.filterInput}
-                value={filters.fromDate}
-                onChange={e => setFilters(p => ({ ...p, fromDate: e.target.value, preset: 'CUSTOM' }))}
-              />
-            </div>
-
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>ĐẾN NGÀY</span>
-              <input
-                type="date"
-                className={styles.filterInput}
-                value={filters.toDate}
-                onChange={e => setFilters(p => ({ ...p, toDate: e.target.value, preset: 'CUSTOM' }))}
-              />
-            </div>
+            <FilterPopover
+              filters={filters}
+              onApply={(newFilters) => {
+                setCurrentPage(1);
+                setFilters(newFilters);
+              }}
+              onReset={() => {
+                setCurrentPage(1);
+                setFilters(DEFAULT_FILTERS);
+              }}
+              partners={suppliers}
+              partnerLabel="Nhà cung cấp"
+              statusOptions={STATUS_OPTIONS}
+            />
           </div>
 
           <div className={styles.filterActions}>
             <button
               className={styles.iconBtn}
-              onClick={() => setFilters(DEFAULT_FILTERS)}
-              title="Đặt lại"
+              onClick={() => {
+                setCurrentPage(1);
+                setFilters(DEFAULT_FILTERS);
+              }}
+              title="Đặt lại bộ lọc"
             >
               <i className="bi bi-arrow-clockwise" />
             </button>
@@ -229,9 +248,6 @@ function PurchaseOrderListPage() {
               title="Xuất tệp Excel"
             >
               <i className="bi bi-file-earmark-excel" />
-            </button>
-            <button className={styles.btnPrimary} onClick={loadOrders}>
-              <i className="bi bi-funnel" /> Lọc
             </button>
           </div>
         </div>

@@ -351,27 +351,70 @@ function CreateSalesOrderPage() {
     })),
   });
 
+  const focusField = (elementId) => {
+    setTimeout(() => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (typeof el.select === 'function') {
+          el.select();
+        }
+      }
+    }, 50);
+  };
+
   const validate = () => {
-    if (!form.partnerId) { showToast('error', 'Vui lòng chọn khách hàng'); return false; }
-    if (!form.warehouseId) { showToast('error', 'Vui lòng chọn kho'); return false; }
-    if (!form.soDate) { showToast('error', 'Vui lòng nhập ngày lập'); return false; }
+    if (!form.partnerId) {
+      showToast('error', 'Vui lòng chọn khách hàng');
+      focusField('so-partnerId');
+      return false;
+    }
+    if (!form.warehouseId) {
+      showToast('error', 'Vui lòng chọn kho');
+      focusField('so-warehouseId');
+      return false;
+    }
+    if (!form.soDate) {
+      showToast('error', 'Vui lòng nhập ngày lập');
+      focusField('so-docDate');
+      return false;
+    }
 
     if (form.paymentDueDate) {
       if (form.paymentDueDate < form.soDate) {
         showToast('error', 'Hạn thanh toán không được nhỏ hơn ngày lập đơn');
+        focusField('so-paymentDueDate');
         return false;
       }
       if (form.paymentDueDate < today()) {
         showToast('error', 'Hạn thanh toán không được nằm trong quá khứ');
+        focusField('so-paymentDueDate');
         return false;
       }
     }
 
+    if (lines.length === 0) {
+      showToast('error', 'Đơn hàng phải có ít nhất 1 dòng sản phẩm');
+      return false;
+    }
+
     for (let i = 0; i < lines.length; i++) {
-      if (!lines[i].variantId) { showToast('error', `Dòng ${i + 1}: chưa chọn sản phẩm`); return false; }
+      if (!lines[i].variantId) {
+        showToast('error', `Dòng ${i + 1}: chưa chọn sản phẩm`);
+        focusField(`so-line-product-${i}`);
+        return false;
+      }
       const qty = Number(lines[i].quantity);
       if (!Number.isInteger(qty) || qty <= 0) {
         showToast('error', `Dòng ${i + 1}: số lượng phải là số nguyên lớn hơn 0`);
+        focusField(`so-line-qty-${i}`);
+        return false;
+      }
+      const price = Number(lines[i].unitPrice);
+      if (Number.isNaN(price) || price < 0) {
+        showToast('error', `Dòng ${i + 1}: đơn giá không hợp lệ`);
+        focusField(`so-line-price-${i}`);
         return false;
       }
     }
@@ -379,22 +422,55 @@ function CreateSalesOrderPage() {
   };
 
   const validateDirectCheckout = () => {
-    if (!form.warehouseId) { showToast('error', 'Vui lòng chọn kho xuất hàng'); return false; }
-    if (!form.soDate) { showToast('error', 'Vui lòng nhập ngày bán'); return false; }
+    if (!form.warehouseId) {
+      showToast('error', 'Vui lòng chọn kho xuất hàng');
+      focusField('so-warehouseId');
+      return false;
+    }
+    if (!form.soDate) {
+      showToast('error', 'Vui lòng nhập ngày bán');
+      focusField('so-docDate');
+      return false;
+    }
     const paid = Number(paymentAmount || 0);
-    if (Number.isNaN(paid) || paid < 0) { showToast('error', 'Số tiền khách trả không hợp lệ'); return false; }
-    if (paid > grandTotal) { showToast('error', 'Số tiền khách trả vượt tổng thanh toán'); return false; }
+    if (Number.isNaN(paid) || paid < 0) {
+      showToast('error', 'Số tiền khách trả không hợp lệ');
+      focusField('so-paymentAmount');
+      return false;
+    }
+    if (paid > grandTotal) {
+      showToast('error', 'Số tiền khách trả vượt tổng thanh toán');
+      focusField('so-paymentAmount');
+      return false;
+    }
+
+    if (lines.length === 0) {
+      showToast('error', 'Đơn hàng phải có ít nhất 1 dòng sản phẩm');
+      return false;
+    }
 
     for (let i = 0; i < lines.length; i++) {
-      if (!lines[i].variantId) { showToast('error', `Dòng ${i + 1}: chưa chọn sản phẩm`); return false; }
+      if (!lines[i].variantId) {
+        showToast('error', `Dòng ${i + 1}: chưa chọn sản phẩm`);
+        focusField(`so-line-product-${i}`);
+        return false;
+      }
       const qty = Number(lines[i].quantity);
       if (!Number.isInteger(qty) || qty <= 0) {
         showToast('error', `Dòng ${i + 1}: số lượng phải là số nguyên lớn hơn 0`);
+        focusField(`so-line-qty-${i}`);
+        return false;
+      }
+      const price = Number(lines[i].unitPrice);
+      if (Number.isNaN(price) || price < 0) {
+        showToast('error', `Dòng ${i + 1}: đơn giá không hợp lệ`);
+        focusField(`so-line-price-${i}`);
         return false;
       }
       const serialCount = Array.isArray(lines[i].serialNumbers) ? lines[i].serialNumbers.length : 0;
       if (serialCount > 0 && serialCount !== qty) {
         showToast('error', `Dòng ${i + 1}: số serial phải bằng số lượng`);
+        setSerialModalLineIndex(i);
         return false;
       }
     }
@@ -526,6 +602,7 @@ function CreateSalesOrderPage() {
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <div style={{ flex: 1 }}>
                         <Select
+                          inputId="so-partnerId"
                           options={customerOptions}
                           value={customerOptions.find(o => o.value === form.partnerId) || null}
                           onChange={opt => {
@@ -612,6 +689,7 @@ function CreateSalesOrderPage() {
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Kho xuất hàng <span className={styles.required}>*</span></label>
                     <Select
+                      inputId="so-warehouseId"
                       options={warehouseOptions}
                       value={warehouseOptions.find(o => o.value === form.warehouseId) || null}
                       onChange={opt => setForm(p => ({ ...p, warehouseId: opt?.value || null }))}
@@ -655,6 +733,7 @@ function CreateSalesOrderPage() {
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Ngày lập <span className={styles.required}>*</span></label>
                     <DatePicker
+                      id="so-docDate"
                       className={styles.input}
                       dateFormat="dd/MM/yyyy"
                       selected={form.soDate ? parseISO(form.soDate) : null}
@@ -691,6 +770,7 @@ function CreateSalesOrderPage() {
                         </div>
                       </div>
                       <input
+                        id="so-paymentAmount"
                         inputMode="numeric"
                         type="text"
                         className={styles.input}
@@ -705,6 +785,7 @@ function CreateSalesOrderPage() {
                     <div className={styles.fieldRow}>
                       <label className={styles.label}>Hạn thanh toán</label>
                       <DatePicker
+                        id="so-paymentDueDate"
                         className={styles.input}
                         dateFormat="dd/MM/yyyy"
                         minDate={form.soDate ? parseISO(form.soDate) : new Date()}
@@ -757,9 +838,6 @@ function CreateSalesOrderPage() {
             <div className={styles.linesSection}>
               <div className={styles.linesSectionHeader}>
                 <span className={styles.sectionTitle}><i className="bi bi-list-ul" /> Danh sách hàng hóa</span>
-                <button className={styles.btnAddLine} onClick={addLine}>
-                  <i className="bi bi-plus-circle" /> Thêm dòng
-                </button>
               </div>
 
               <div style={{ overflowX: 'auto' }}>
@@ -789,6 +867,7 @@ function CreateSalesOrderPage() {
                           <td style={{ textAlign: 'center', color: '#94a3b8' }}>{idx + 1}</td>
                           <td>
                             <ProductGridSelect
+                              id={`so-line-product-${idx}`}
                               products={productOptions}
                               inventoryMap={inventoryMap}
                               value={line.variantId}
@@ -811,6 +890,7 @@ function CreateSalesOrderPage() {
                           </td>
                           <td>
                             <input
+                              id={`so-line-qty-${idx}`}
                               type="number"
                               min="1"
                               step="1"
@@ -821,6 +901,7 @@ function CreateSalesOrderPage() {
                           </td>
                           <td>
                             <input
+                              id={`so-line-warranty-${idx}`}
                               type="number"
                               min="0"
                               className={styles.lineInput}
@@ -830,6 +911,7 @@ function CreateSalesOrderPage() {
                           </td>
                           <td>
                             <input
+                              id={`so-line-price-${idx}`}
                               inputMode="numeric"
                               type="text"
                               className={styles.lineInput}
@@ -842,6 +924,7 @@ function CreateSalesOrderPage() {
                           </td>
                           <td>
                             <input
+                              id={`so-line-vat-${idx}`}
                               type="number"
                               min="0"
                               max="100"
@@ -927,6 +1010,48 @@ function CreateSalesOrderPage() {
                     </tr>
                   </tfoot>
                 </table>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 20px', backgroundColor: '#fff', borderTop: '1px solid #e0e0e0' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ color: '#4b5563', fontSize: '13px' }}>
+                    Tổng số: <strong style={{ color: '#111827' }}>{lines.length}</strong> bản ghi
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={addLine}
+                      style={{
+                        padding: '6px 12px',
+                        border: '1px solid #d1d5db',
+                        backgroundColor: '#fff',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: '#374151'
+                      }}
+                    >
+                      Thêm dòng
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLines([emptyLine()])}
+                      style={{
+                        padding: '6px 12px',
+                        border: '1px solid #d1d5db',
+                        backgroundColor: '#fff',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: '#374151'
+                      }}
+                    >
+                      Xóa hết dòng
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 

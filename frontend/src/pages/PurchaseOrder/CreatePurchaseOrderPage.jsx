@@ -359,18 +359,55 @@ function CreatePurchaseOrderPage() {
     })),
   });
 
+  const focusField = (elementId) => {
+    setTimeout(() => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (typeof el.select === 'function') {
+          el.select();
+        }
+      }
+    }, 50);
+  };
+
   const validate = () => {
-    if (!form.partnerId) { showToast('error', 'Vui lòng chọn nhà cung cấp'); return false; }
-    if (!form.poDate)    { showToast('error', 'Vui lòng nhập ngày lập');      return false; }
+    if (!form.partnerId) {
+      showToast('error', 'Vui lòng chọn nhà cung cấp');
+      focusField('po-supplierId');
+      return false;
+    }
+    if (!form.poDate) {
+      showToast('error', 'Vui lòng nhập ngày lập');
+      focusField('po-docDate');
+      return false;
+    }
     if (form.paymentDueDate && form.paymentDueDate < form.poDate) {
       showToast('error', 'Hạn công nợ không được nhỏ hơn ngày lập đơn');
+      focusField('po-paymentDueDate');
+      return false;
+    }
+    if (lines.length === 0) {
+      showToast('error', 'Đơn mua hàng phải có ít nhất 1 dòng sản phẩm');
       return false;
     }
     for (let i = 0; i < lines.length; i++) {
-      if (!lines[i].variantId)           { showToast('error', `Dòng ${i + 1}: chưa chọn sản phẩm`); return false; }
+      if (!lines[i].variantId) {
+        showToast('error', `Dòng ${i + 1}: chưa chọn sản phẩm`);
+        focusField(`po-line-product-${i}`);
+        return false;
+      }
       const qty = Number(lines[i].quantity);
       if (!Number.isInteger(qty) || qty <= 0) {
         showToast('error', `Dòng ${i + 1}: số lượng phải là số nguyên lớn hơn 0`);
+        focusField(`po-line-qty-${i}`);
+        return false;
+      }
+      const price = Number(lines[i].unitPrice);
+      if (Number.isNaN(price) || price < 0) {
+        showToast('error', `Dòng ${i + 1}: đơn giá không hợp lệ`);
+        focusField(`po-line-price-${i}`);
         return false;
       }
     }
@@ -527,6 +564,7 @@ function CreatePurchaseOrderPage() {
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <div style={{ flex: 1 }}>
                         <Select
+                          inputId="po-supplierId"
                           options={supplierOptions}
                           value={supplierOptions.find(o => o.value === form.partnerId) || null}
                           onChange={opt => setForm(p => ({ ...p, partnerId: opt?.value || null }))}
@@ -565,6 +603,7 @@ function CreatePurchaseOrderPage() {
                   <div className={styles.fieldRow}>
                     <label className={styles.label}>Ngày lập <span className={styles.required}>*</span></label>
                     <input
+                      id="po-docDate"
                       type="date"
                       className={styles.input}
                       value={form.poDate}
@@ -576,6 +615,7 @@ function CreatePurchaseOrderPage() {
                     <div className={styles.fieldRow}>
                       <label className={styles.label}>Hạn công nợ</label>
                       <input
+                        id="po-paymentDueDate"
                         type="date"
                         className={styles.input}
                         min={form.poDate}
@@ -630,9 +670,6 @@ function CreatePurchaseOrderPage() {
                 <span className={styles.sectionTitle}>
                   <i className="bi bi-list-ul" /> Danh sách hàng hóa cần mua
                 </span>
-                <button className={styles.btnAddLine} onClick={addLine}>
-                  <i className="bi bi-plus-circle" /> Thêm dòng
-                </button>
               </div>
 
               <div style={{ overflowX: 'auto' }}>
@@ -659,6 +696,7 @@ function CreatePurchaseOrderPage() {
                           <td style={{ textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>{idx + 1}</td>
                           <td>
                             <ProductGridSelect
+                              id={`po-line-product-${idx}`}
                               products={productOptions}
                               value={line.variantId}
                               onChange={selected => handleProductSelect(idx, selected)}
@@ -676,6 +714,7 @@ function CreatePurchaseOrderPage() {
                           </td>
                           <td>
                             <input
+                              id={`po-line-qty-${idx}`}
                               type="number"
                               className={styles.cellInput}
                               style={{ textAlign: 'right' }}
@@ -687,17 +726,21 @@ function CreatePurchaseOrderPage() {
                           </td>
                           <td>
                             <input
+                              id={`po-line-price-${idx}`}
                               type="text"
-                              inputMode="numeric"
                               className={styles.cellInput}
                               style={{ textAlign: 'right' }}
-                              value={line.unitPrice ? new Intl.NumberFormat('vi-VN').format(line.unitPrice) : ''}
-                              onChange={e => updateLine(idx, 'unitPrice', e.target.value.replace(/\D/g, ''))}
+                              value={line.unitPrice ? Number(line.unitPrice).toLocaleString('vi-VN') : ''}
+                              onChange={e => {
+                                const raw = e.target.value.replace(/\D/g, '');
+                                updateLine(idx, 'unitPrice', raw);
+                              }}
                               placeholder="0"
                             />
                           </td>
                           <td>
                             <input
+                              id={`po-line-vat-${idx}`}
                               type="number"
                               className={styles.cellInput}
                               style={{ textAlign: 'center' }}
@@ -736,6 +779,48 @@ function CreatePurchaseOrderPage() {
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 20px', backgroundColor: '#fff', borderTop: '1px solid #e0e0e0' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ color: '#4b5563', fontSize: '13px' }}>
+                    Tổng số: <strong style={{ color: '#111827' }}>{lines.length}</strong> bản ghi
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={addLine}
+                      style={{
+                        padding: '6px 12px',
+                        border: '1px solid #d1d5db',
+                        backgroundColor: '#fff',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: '#374151'
+                      }}
+                    >
+                      Thêm dòng
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLines([emptyLine()])}
+                      style={{
+                        padding: '6px 12px',
+                        border: '1px solid #d1d5db',
+                        backgroundColor: '#fff',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: '#374151'
+                      }}
+                    >
+                      Xóa hết dòng
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
