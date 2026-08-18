@@ -162,6 +162,7 @@ public class DirectCheckoutService {
             lines.add(SalesOrderLine.builder()
                     .salesOrderId(0L)
                     .variantId(reqLine.getVariantId())
+                    .warehouseId(request.getWarehouseId())
                     .quantity(qty)
                     .unitPrice(reqLine.getUnitPrice())
                     .vatRate(vatRate)
@@ -220,6 +221,7 @@ public class DirectCheckoutService {
         for (DirectCheckoutRequest.Line reqLine : request.getLines()) {
             InventoryDocumentLineRequest line = new InventoryDocumentLineRequest();
             line.setVariantId(reqLine.getVariantId());
+            line.setWarehouseId(request.getWarehouseId());
             line.setQuantityOut(reqLine.getQuantity());
             line.setUnitPrice(reqLine.getUnitPrice());
             line.setUnitCost(ZERO);

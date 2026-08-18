@@ -6,13 +6,26 @@ const SuccessPrintModal = ({
   title = "Lưu và ghi sổ thành công!",
   message = "Phiếu đã được ghi sổ vào hệ thống thành công.",
   docCode = "",
-  printBtnText = "In phiếu ngay",
+  printBtnText = "In phiếu tổng hợp",
+  printSplitBtnText = "In tách theo từng kho",
   onPrint,
+  onPrintSummary,
+  onPrintSplit,
   onViewList,
   onCreateNew,
   onClose,
 }) => {
   if (!isOpen) return null;
+
+  const handlePrintSummary = () => {
+    if (onPrintSummary) onPrintSummary();
+    else if (onPrint) onPrint('SUMMARY');
+  };
+
+  const handlePrintSplit = () => {
+    if (onPrintSplit) onPrintSplit();
+    else if (onPrint) onPrint('SPLIT_BY_WAREHOUSE');
+  };
 
   return (
     <div className={styles.modalOverlay} onClick={onClose || onViewList}>
@@ -32,11 +45,19 @@ const SuccessPrintModal = ({
         <p className={styles.modalMessage}>{message}</p>
 
         <div className={styles.actionGroup}>
-          {onPrint && (
-            <button className={styles.btnPrint} onClick={onPrint}>
-              <i className="bi bi-printer"></i> {printBtnText}
-            </button>
-          )}
+          <div className={styles.printButtonsRow}>
+            {(onPrintSummary || onPrint) && (
+              <button className={styles.btnPrint} onClick={handlePrintSummary}>
+                <i className="bi bi-printer"></i> {printBtnText}
+              </button>
+            )}
+
+            {onPrintSplit && (
+              <button className={styles.btnPrintSplit} onClick={handlePrintSplit}>
+                <i className="bi bi-files"></i> {printSplitBtnText}
+              </button>
+            )}
+          </div>
 
           {onViewList && (
             <button className={styles.btnList} onClick={onViewList}>

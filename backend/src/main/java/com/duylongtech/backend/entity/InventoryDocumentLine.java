@@ -63,4 +63,10 @@ public class InventoryDocumentLine {
 
     @Column(name = "vat_percent", precision = 5, scale = 2)
     private BigDecimal vatPercent;
+
+    @Column(name = "warehouse_id")
+    private Long warehouseId;
+
+    @Column(name = "target_warehouse_id")
+    private Long targetWarehouseId;
 }

@@ -219,7 +219,7 @@
 .linesTable {
   border-collapse: collapse;
   font-size: 13px;
-  min-width: 980px;
+  min-width: 1180px;
   table-layout: fixed;
   width: 100%;
 }

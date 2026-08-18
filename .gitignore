@@ -27,6 +27,7 @@ coverage/
 *.db
 *.sqlite
 *.sql
+!backend/src/main/resources/db/migration/*.sql
 *.log
 npm-debug.log*
 yarn-error.log*

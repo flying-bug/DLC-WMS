@@ -53,6 +53,13 @@ public class SalesOrderLine {
     @Column(name = "warranty_months")
     private Integer warrantyMonths;
 
+    @Column(name = "warehouse_id")
+    private Long warehouseId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "warehouse_id", insertable = false, updatable = false)
+    private Warehouse warehouse;
+
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 }

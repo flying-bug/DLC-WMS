@@ -13,6 +13,7 @@ export function printImportSlip(slipOrSlips, options = {}) {
     productById = new Map(),
     userById = new Map(),
     isImport = true,
+    printMode = 'SUMMARY', // 'SUMMARY' | 'SPLIT_BY_WAREHOUSE'
   } = options;
 
   const slips = Array.isArray(slipOrSlips) ? slipOrSlips : [slipOrSlips];
@@ -51,22 +52,29 @@ export function printImportSlip(slipOrSlips, options = {}) {
     return undefined;
   };
 
+  const getWarehouseDisplayName = (whId, lineWhName) => {
+    if (lineWhName) return lineWhName;
+    if (!whId) return '';
+    const wh = getFromLookup(warehouseById, whId);
+    return wh?.name || wh?.warehouseName || `Kho #${whId}`;
+  };
+
   const typeTitle = isImport ? 'NHẬP' : 'XUẤT';
   const partnerTitle = isImport ? 'Nhà cung cấp / Đối tác' : 'Khách hàng';
   const warehouseTitle = isImport ? 'Kho nhập' : 'Kho xuất';
 
-  const pagesHtml = slips.map((slip) => {
-    const lines = slip?.lines || [];
+  const renderSinglePage = (slip, linesToRender, customWhName = null, isSplit = false) => {
     let rowsHtml = '';
     let totalQty = 0;
     let totalAmount = 0;
     let totalVatAmount = 0;
 
-    lines.forEach((line, index) => {
+    linesToRender.forEach((line, index) => {
       const product = getFromLookup(productById, line.variantId) || getFromLookup(productById, line.productId);
       const sku = line.sku || line.variantCode || product?.sku || product?.productCode || (line.variantId ? `SKU #${line.variantId}` : '');
       const name = line.variantName || (product?.variantName && product?.variantName !== product?.productName ? `${product.productName} - ${product.variantName}` : (product?.productName || product?.variantName || product?.name || 'Sản phẩm'));
       const unit = line.unitName || line.unit || product?.unitName || 'Chiếc';
+      const lineWh = getWarehouseDisplayName(line.warehouseId, line.warehouseName);
       const qty = Number((isImport ? (line.quantityIn ?? line.quantity) : (line.quantityOut ?? line.quantity)) || 0);
       const price = Number(line.unitCost || line.unitPrice || 0);
       const amount = qty * price;
@@ -90,6 +98,7 @@ export function printImportSlip(slipOrSlips, options = {}) {
             ${serials}
             ${line.note ? `<div style="font-size: 11px; color: #64748b; font-style: italic; margin-top: 2px;">Ghi chú: ${escapeHtml(line.note)}</div>` : ''}
           </td>
+          ${!isSplit ? `<td style="text-align: center; font-size: 11px;">${escapeHtml(lineWh || '—')}</td>` : ''}
           <td style="text-align: center;">${escapeHtml(unit)}</td>
           <td style="text-align: center; font-weight: bold;">${qty.toLocaleString('vi-VN')}</td>
           <td style="text-align: right;">${price ? price.toLocaleString('vi-VN') : '0'}</td>
@@ -116,14 +125,18 @@ export function printImportSlip(slipOrSlips, options = {}) {
       partnerName = ao?.orderCode || slip.partnerName || 'Chưa chọn';
     }
 
-    const foundWarehouse = getFromLookup(warehouseById, slip.warehouseId);
-    const currentWarehouseName = warehouseName || foundWarehouse?.name || slip.warehouseName || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa rõ');
+    let currentWarehouseName = customWhName || warehouseName || slip.warehouseName || (slip.warehouseId ? getWarehouseDisplayName(slip.warehouseId) : '');
+    if (!currentWarehouseName && !isSplit) {
+      currentWarehouseName = 'Nhiều kho';
+    }
     
     const userObj = getFromLookup(userById, slip.salespersonId) || getFromLookup(userById, slip.createdBy);
     const salesperson = slip.salespersonName || userObj?.fullName || userObj?.username || 'Chưa rõ';
+    const colSpanTotal = isSplit ? 3 : 4;
+    const colSpanSummary = isSplit ? 7 : 8;
 
     return `
-      <div style="position: relative;">
+      <div class="print-page-wrapper" style="position: relative;">
         <!-- HEADER -->
         <table class="header-table">
           <tr>
@@ -139,8 +152,8 @@ export function printImportSlip(slipOrSlips, options = {}) {
         </table>
 
         <div class="title-container">
-          <div class="doc-title">PHIẾU ${escapeHtml(typeTitle)} KHO</div>
-          <div class="doc-subtitle">Liên 1: Lưu trữ - Liên 2: Bàn giao</div>
+          <div class="doc-title">PHIẾU ${escapeHtml(typeTitle)} KHO ${isSplit ? `<span style="font-size: 16px; color: #0284c7; display: block; margin-top: 4px;">(${escapeHtml(currentWarehouseName)})</span>` : ''}</div>
+          <div class="doc-subtitle">${isSplit ? `(Bản in tách kho)` : `(Liên 1: Lưu trữ - Liên 2: Bàn giao)`}</div>
         </div>
 
         <table class="info-table">
@@ -166,31 +179,32 @@ export function printImportSlip(slipOrSlips, options = {}) {
           <thead>
             <tr>
               <th style="width: 5%;">STT</th>
-              <th style="width: 42%;">Tên hàng hóa, sản phẩm</th>
+              <th style="width: ${isSplit ? '40%' : '30%'};">Tên hàng hóa, sản phẩm</th>
+              ${!isSplit ? `<th style="width: 14%;">Kho nhập</th>` : ''}
               <th style="width: 8%;">ĐVT</th>
-              <th style="width: 9%;">Số lượng</th>
+              <th style="width: 8%;">Số lượng</th>
               <th style="width: 11%;">Đơn giá</th>
               <th style="width: 7%;">% VAT</th>
-              <th style="width: 8%;">Tiền VAT</th>
+              <th style="width: 9%;">Tiền VAT</th>
               <th style="width: 12%;">Thành tiền</th>
             </tr>
           </thead>
           <tbody>
             ${rowsHtml}
             <tr class="total-row">
-              <td colspan="3" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px;">Cộng tiền hàng:</td>
+              <td colspan="${colSpanTotal}" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px;">Cộng tiền hàng:</td>
               <td style="text-align: center; border: 1px solid #cbd5e1; padding: 8px; font-weight: bold;">${totalQty.toLocaleString('vi-VN')}</td>
               <td colspan="3" style="border: 1px solid #cbd5e1; padding: 8px;"></td>
               <td style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; font-weight: bold;">${totalAmount.toLocaleString('vi-VN')} đ</td>
             </tr>
             ${totalVatAmount > 0 ? `
             <tr class="total-row">
-              <td colspan="7" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px;">Tiền thuế VAT:</td>
+              <td colspan="${colSpanSummary}" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px;">Tiền thuế VAT:</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; font-weight: bold;">${totalVatAmount.toLocaleString('vi-VN')} đ</td>
             </tr>
             ` : ''}
             <tr class="total-row" style="background-color: #f8fafc;">
-              <td colspan="7" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; color: #b91c1c; font-size: 13px;">Tổng thanh toán:</td>
+              <td colspan="${colSpanSummary}" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; color: #b91c1c; font-size: 13px;">Tổng thanh toán:</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; color: #b91c1c; font-size: 14px; font-weight: bold;">${grandTotal.toLocaleString('vi-VN')} đ</td>
             </tr>
           </tbody>
@@ -204,7 +218,7 @@ export function printImportSlip(slipOrSlips, options = {}) {
           <tr>
             <td><strong>Người giao hàng</strong><br/><span style="font-size: 11px; font-style: italic; color: #64748b;">(Ký, ghi rõ họ tên)</span></td>
             <td><strong>Người nhận hàng</strong><br/><span style="font-size: 11px; font-style: italic; color: #64748b;">(Ký, ghi rõ họ tên)</span></td>
-            <td><strong>Thủ kho</strong><br/><span style="font-size: 11px; font-style: italic; color: #64748b;">(Ký, đóng dấu)</span></td>
+            <td><strong>Thủ kho ${isSplit ? `<br/><span style="font-size: 10px; color: #0284c7;">${escapeHtml(currentWarehouseName)}</span>` : ''}</strong><br/><span style="font-size: 11px; font-style: italic; color: #64748b;">(Ký, đóng dấu)</span></td>
             <td><strong>Người lập phiếu</strong><br/><span style="font-size: 11px; font-style: italic; color: #64748b;">(Ký, ghi rõ họ tên)</span></td>
           </tr>
           <tr class="sign-space">
@@ -222,7 +236,33 @@ export function printImportSlip(slipOrSlips, options = {}) {
         </table>
       </div>
     `;
-  }).join('<div style="page-break-after: always;"></div>');
+  };
+
+  const pagesArray = [];
+  slips.forEach((slip) => {
+    const lines = slip?.lines || [];
+    if (printMode === 'SPLIT_BY_WAREHOUSE') {
+      const groups = new Map();
+      lines.forEach((l) => {
+        const whId = l.warehouseId || slip.warehouseId || 'DEFAULT';
+        if (!groups.has(whId)) groups.set(whId, []);
+        groups.get(whId).push(l);
+      });
+
+      if (groups.size === 0) {
+        pagesArray.push(renderSinglePage(slip, lines, null, false));
+      } else {
+        groups.forEach((groupLines, whId) => {
+          const customWhName = whId !== 'DEFAULT' ? getWarehouseDisplayName(whId, groupLines[0]?.warehouseName) : (warehouseName || 'Kho nhập');
+          pagesArray.push(renderSinglePage(slip, groupLines, customWhName, true));
+        });
+      }
+    } else {
+      pagesArray.push(renderSinglePage(slip, lines, null, false));
+    }
+  });
+
+  const pagesHtml = pagesArray.join('<div class="page-break" style="page-break-after: always; break-after: page;"></div>');
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -242,6 +282,15 @@ export function printImportSlip(slipOrSlips, options = {}) {
             color: #1e293b;
             line-height: 1.4;
           }
+          .print-page-wrapper {
+            page-break-after: always;
+            break-after: page;
+            padding-bottom: 20px;
+          }
+          .print-page-wrapper:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
           .header-table {
             width: 100%;
             border-bottom: 2px solid #0f172a;
@@ -250,72 +299,61 @@ export function printImportSlip(slipOrSlips, options = {}) {
           }
           .title-container {
             text-align: center;
-            margin-bottom: 16px;
+            margin-bottom: 15px;
           }
           .doc-title {
-            font-size: 22px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 20px;
+            font-weight: bold;
             color: #0f172a;
           }
           .doc-subtitle {
             font-size: 12px;
-            font-style: italic;
             color: #64748b;
-            margin-top: 2px;
+            font-style: italic;
           }
           .info-table {
             width: 100%;
-            margin-bottom: 14px;
-            border-collapse: separate;
-            border-spacing: 0 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
           }
           .info-table td {
-            font-size: 13px;
-            vertical-align: top;
+            padding: 4px 0;
           }
           .main-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 12px;
+            margin-bottom: 15px;
+          }
+          .main-table th, .main-table td {
+            border: 1px solid #cbd5e1;
+            padding: 6px 8px;
+            font-size: 12px;
           }
           .main-table th {
-            border: 1px solid #94a3b8;
-            padding: 7px 6px;
             background-color: #f1f5f9;
+            color: #1e293b;
+            font-weight: 600;
             text-align: center;
-            font-size: 12px;
-            font-weight: 700;
-            color: #0f172a;
-          }
-          .main-table td {
-            border: 1px solid #cbd5e1;
-            padding: 6px;
-            font-size: 12px;
           }
           .total-row td {
             font-weight: 600;
           }
           .words-row {
-            margin-top: 6px;
+            margin-bottom: 20px;
             font-style: italic;
-            font-size: 12.5px;
-            color: #334155;
+            font-size: 12px;
           }
           .signatures {
             width: 100%;
-            margin-top: 24px;
-            border-collapse: collapse;
+            text-align: center;
+            margin-top: 15px;
           }
           .signatures td {
-            text-align: center;
             width: 25%;
-            font-size: 12.5px;
             vertical-align: top;
           }
-          .sign-space {
-            height: 60px;
+          .sign-space td {
+            height: 55px;
           }
         </style>
       </head>
@@ -323,15 +361,17 @@ export function printImportSlip(slipOrSlips, options = {}) {
         ${pagesHtml}
         <script>
           window.onload = function() {
-            window.print();
-            setTimeout(function() { window.close(); }, 500);
-          }
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
         </script>
       </body>
     </html>
   `;
 
+  printWindow.document.open();
   printWindow.document.write(htmlContent);
   printWindow.document.close();
+  return true;
 }
-

@@ -60,6 +60,9 @@ public class PurchaseOrderResponse {
         private BigDecimal vatRate;
         private BigDecimal vatAmount;
         private BigDecimal lineAmount;
+        private Long warehouseId;
+        private String warehouseCode;
+        private String warehouseName;
         private String note;
         // Import tracking
         private BigDecimal importedQuantity;

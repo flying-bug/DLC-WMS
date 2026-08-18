@@ -33,8 +33,9 @@ const customSelectStyles = {
   menuPortal:           (base) => ({ ...base, zIndex: 9999 }),
 };
 
-const emptyLine = () => ({
+const emptyLine = (defaultWh = null) => ({
   variantId: null,
+  warehouseId: defaultWh,
   quantity: 1,
   unitPrice: 0,
   unitName: '',
@@ -50,8 +51,9 @@ function CreatePurchaseOrderPage() {
   const voiceData = location.state?.voiceData || null;
   const { aiEnabled } = useAiFeature();
 
-  const [suppliers, setSuppliers] = useState([]);
-  const [variants,  setVariants]  = useState([]);
+  const [suppliers,  setSuppliers]  = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [variants,   setVariants]   = useState([]);
   const [loading, setLoading] = useState(false);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showQuickAddProduct, setShowQuickAddProduct] = useState(false);
@@ -167,9 +169,10 @@ function CreatePurchaseOrderPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [supplierRes, variantRes, codeRes] = await Promise.allSettled([
+        const [supplierRes, variantRes, warehouseRes, codeRes] = await Promise.allSettled([
           poApi.getSuppliers({ isSupplier: true, status: 'APPROVED', size: 1000 }),
           poApi.getProducts({ size: 500 }),
+          poApi.getWarehouses({ size: 100 }),
           !isEdit ? poApi.getNextPoCode() : Promise.resolve(null),
         ]);
 
@@ -178,6 +181,13 @@ function CreatePurchaseOrderPage() {
         }
         if (variantRes.status === 'fulfilled') {
           setVariants(pageContent(unwrap(variantRes.value)));
+        }
+        if (warehouseRes.status === 'fulfilled') {
+          const whList = pageContent(unwrap(warehouseRes.value));
+          setWarehouses(whList);
+          if (!isEdit && whList.length > 0) {
+            setLines(prev => prev.map(l => ({ ...l, warehouseId: l.warehouseId || whList[0].id })));
+          }
         }
         if (codeRes.status === 'fulfilled' && codeRes.value) {
           const code = unwrap(codeRes.value);
@@ -213,8 +223,10 @@ function CreatePurchaseOrderPage() {
       if (matchProd) {
         const qty = Number(voiceData.quantity) || 1;
         const price = voiceData.unitPrice != null ? Number(voiceData.unitPrice) : (Number(matchProd.importPrice || matchProd.costPrice || matchProd.price || 0));
+        const defaultWh = warehouses.length > 0 ? warehouses[0].id : null;
         setLines([{
           variantId: matchProd.id,
+          warehouseId: defaultWh,
           quantity: qty,
           unitPrice: price,
           unitName: matchProd.unitName || 'Cái',
@@ -223,7 +235,7 @@ function CreatePurchaseOrderPage() {
         }]);
       }
     }
-  }, [voiceData, isEdit, suppliers, variants]);
+  }, [voiceData, isEdit, suppliers, variants, warehouses]);
 
   // Load PO data if editing
   useEffect(() => {
@@ -242,22 +254,24 @@ function CreatePurchaseOrderPage() {
           note:                 po.note || '',
         });
         setLines((po.lines || []).map(l => ({
-          variantId: l.variantId,
-          quantity:  Number(l.quantity),
-          unitPrice: Number(l.unitPrice),
-          unitName:  l.unitName || '',
-          vatRate:   l.vatRate  || 0,
-          note:      l.note     || '',
+          variantId:   l.variantId,
+          warehouseId: l.warehouseId || (warehouses.length > 0 ? warehouses[0].id : null),
+          quantity:    Number(l.quantity),
+          unitPrice:   Number(l.unitPrice),
+          unitName:    l.unitName || '',
+          vatRate:     l.vatRate  || 0,
+          note:        l.note     || '',
         })));
       } catch {
         showToast('error', 'Không thể tải dữ liệu đơn hàng');
       }
     };
     loadPo();
-  }, [id, isEdit]);
+  }, [id, isEdit, warehouses]);
 
   // ── Line management ──
-  const addLine     = ()             => setLines(p => [...p, emptyLine()]);
+  const defaultWarehouseId = warehouses.length > 0 ? warehouses[0].id : null;
+  const addLine     = ()             => setLines(p => [...p, emptyLine(defaultWarehouseId)]);
   const removeLine  = (idx)          => setLines(p => p.filter((_, i) => i !== idx));
   const updateLine  = (idx, f, val)  => setLines(p => p.map((l, i) => i === idx ? { ...l, [f]: val } : l));
   const updateLineMultiple = (idx, updates) =>
@@ -268,7 +282,8 @@ function CreatePurchaseOrderPage() {
       updateLine(idx, 'variantId', null);
       return;
     }
-    const existingIndex = lines.findIndex((l, i) => i !== idx && String(l.variantId) === String(selected.id));
+    const currentWh = lines[idx]?.warehouseId || defaultWarehouseId;
+    const existingIndex = lines.findIndex((l, i) => i !== idx && String(l.variantId) === String(selected.id) && String(l.warehouseId) === String(currentWh));
     if (existingIndex >= 0) {
       const addedQty = Number(lines[idx]?.quantity) || 1;
       setLines(prev => {
@@ -279,11 +294,12 @@ function CreatePurchaseOrderPage() {
         };
         return next.filter((_, i) => i !== idx);
       });
-      showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động tăng số lượng.');
+      showToast('info', 'Sản phẩm cùng kho nhận đã tồn tại trong danh sách, đã tự động tăng số lượng.');
       return;
     }
     updateLineMultiple(idx, {
       variantId: selected.id,
+      warehouseId: currentWh,
       unitName: selected.unitName || 'Cái',
       vatRate: Number(selected.vatPercent || selected.vatRate || 0),
     });
@@ -301,6 +317,7 @@ function CreatePurchaseOrderPage() {
       if (createdVariant && quickAddLineIndex !== null) {
         updateLineMultiple(quickAddLineIndex, {
           variantId: createdVariant.id,
+          warehouseId: lines[quickAddLineIndex]?.warehouseId || defaultWarehouseId,
           unitName: createdVariant.unitName || 'Cái',
           vatRate: Number(createdVariant.vatPercent || createdVariant.vatRate || 0),
         });
@@ -351,11 +368,12 @@ function CreatePurchaseOrderPage() {
     partnerId:            Number(form.partnerId),
     note:                 form.note || undefined,
     lines: lines.map(l => ({
-      variantId: Number(l.variantId),
-      quantity:  Number(l.quantity),
-      unitPrice: Number(l.unitPrice),
-      vatRate:   Number(l.vatRate || 0),
-      note:      l.note || undefined,
+      variantId:   Number(l.variantId),
+      warehouseId: l.warehouseId ? Number(l.warehouseId) : undefined,
+      quantity:    Number(l.quantity),
+      unitPrice:   Number(l.unitPrice),
+      vatRate:     Number(l.vatRate || 0),
+      note:        l.note || undefined,
     })),
   });
 
@@ -676,15 +694,16 @@ function CreatePurchaseOrderPage() {
                 <table className={styles.linesTable}>
                   <thead>
                     <tr>
-                      <th style={{ width: 36 }}>#</th>
-                      <th>Sản phẩm</th>
-                      <th style={{ width: 90, textAlign: 'center' }}>ĐVT</th>
-                      <th style={{ width: 110, textAlign: 'right' }}>Số lượng</th>
-                      <th style={{ width: 140, textAlign: 'right' }}>Đơn giá (đ)</th>
+                      <th style={{ width: 36, textAlign: 'center' }}>#</th>
+                      <th style={{ minWidth: 260, width: 280 }}>Sản phẩm</th>
+                      <th style={{ width: 170, minWidth: 160 }}>Kho nhận dự kiến</th>
+                      <th style={{ width: 80, textAlign: 'center' }}>ĐVT</th>
+                      <th style={{ width: 100, textAlign: 'right' }}>Số lượng</th>
+                      <th style={{ width: 130, textAlign: 'right' }}>Đơn giá (đ)</th>
                       <th style={{ width: 80,  textAlign: 'center' }}>VAT (%)</th>
                       <th style={{ width: 130, textAlign: 'right' }}>Thành tiền</th>
                       <th style={{ width: 150 }}>Ghi chú</th>
-                      <th style={{ width: 36 }}></th>
+                      <th style={{ width: 36, textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -707,6 +726,17 @@ function CreatePurchaseOrderPage() {
                               displayMode="code-name"
                               placeholder="Chọn mã hoặc tên hàng"
                               hideStock
+                            />
+                          </td>
+                          <td style={{ minWidth: 160 }}>
+                            <Select
+                              inputId={`po-line-wh-${idx}`}
+                              options={warehouses.map(w => ({ value: w.id, label: `${w.name} (${w.code})` }))}
+                              value={warehouses.map(w => ({ value: w.id, label: `${w.name} (${w.code})` })).find(o => o.value === line.warehouseId) || null}
+                              onChange={opt => updateLine(idx, 'warehouseId', opt?.value || null)}
+                              placeholder="Chọn kho..."
+                              styles={customSelectStyles}
+                              menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
                             />
                           </td>
                           <td style={{ textAlign: 'center', color: '#64748b', fontSize: 13 }}>

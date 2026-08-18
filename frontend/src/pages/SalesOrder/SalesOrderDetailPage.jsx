@@ -154,6 +154,8 @@ function SalesOrderDetailPage() {
           : Number(l.quantity || 1);
         return {
           variantId: String(l.variantId),
+          warehouseId: l.warehouseId,
+          warehouseName: l.warehouseName,
           quantity: rem,
           maxQuantity: rem,
           orderedQuantity: l.quantity,
@@ -298,10 +300,10 @@ function SalesOrderDetailPage() {
             {so.status === 'DRAFT' && (
               <>
                 <button className={styles.btnOutline} onClick={() => navigate(`/sales-orders/${id}/edit`)}>
-                  <i className="bi bi-pencil" /> Sửa đơn
+                  <i className="bi bi-pencil" /> Chỉnh sửa
                 </button>
                 <button className={styles.btnSuccess} onClick={() => setConfirmApprove(true)}>
-                  <i className="bi bi-check2-circle" /> Duyệt đơn
+                  <i className="bi bi-check-circle" /> Duyệt đơn
                 </button>
               </>
             )}
@@ -314,7 +316,7 @@ function SalesOrderDetailPage() {
               <>
                 {existingDraftExport ? (
                   <button
-                    className={styles.btnPrimary}
+                    className={styles.btnWarning}
                     onClick={() => navigate(`/export-slips/${existingDraftExport.id}/edit`)}
                   >
                     <i className="bi bi-arrow-right-circle" /> Tiếp tục xuất kho
@@ -369,7 +371,7 @@ function SalesOrderDetailPage() {
           <div className={styles.card}>
             <div className={styles.cardTitle}><i className="bi bi-building" /> Kho & Tài chính</div>
             <div className={styles.infoRows}>
-              <div className={styles.infoRow}><span className={styles.infoLabel}>Kho:</span><span className={`${styles.infoValue} ${styles.highlight}`}>{so.warehouseName || '—'}</span></div>
+              <div className={styles.infoRow}><span className={styles.infoLabel}>Kho:</span><span className={`${styles.infoValue} ${styles.highlight}`}>{so.warehouseName || 'Theo từng dòng'}</span></div>
               <div className={styles.infoRow}><span className={styles.infoLabel}>Hạn thanh toán:</span><span className={styles.infoValue}>{fmtDate(so.paymentDueDate)}</span></div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Tiền hàng:</span>
@@ -407,6 +409,7 @@ function SalesOrderDetailPage() {
                   <th>#</th>
                   <th>SKU</th>
                   <th>Tên sản phẩm</th>
+                  <th style={{ width: 140 }}>Kho xuất</th>
                   <th style={{ textAlign: 'center' }}>ĐVT</th>
                   <th style={{ textAlign: 'center' }}>Số lượng</th>
                   <th style={{ textAlign: 'center' }}>BH (T)</th>
@@ -422,6 +425,7 @@ function SalesOrderDetailPage() {
                     <td>{idx + 1}</td>
                     <td><span className={styles.skuBadge}>{line.sku || `#${line.variantId}`}</span></td>
                     <td>{line.variantName || '—'}</td>
+                    <td style={{ color: '#1e40af', fontWeight: 500 }}>{line.warehouseName || (line.warehouseId ? `Kho #${line.warehouseId}` : '—')}</td>
                     <td style={{ textAlign: 'center', color: '#475569' }}>{line.unitName || '—'}</td>
                     <td style={{ textAlign: 'center' }}>{Number(line.quantity).toLocaleString('vi-VN')}</td>
                     <td style={{ textAlign: 'center' }}>{line.warrantyMonths || 0}</td>
@@ -434,15 +438,15 @@ function SalesOrderDetailPage() {
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Tiền hàng:</td>
+                  <td colSpan={9} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Tiền hàng:</td>
                   <td colSpan={2} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: '#1d4ed8', fontSize: 15 }}>{money(subTotalAmount)}</td>
                 </tr>
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Thuế VAT:</td>
+                  <td colSpan={9} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Thuế VAT:</td>
                   <td colSpan={2} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: '#dc2626', fontSize: 15 }}>{money(taxAmount)}</td>
                 </tr>
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Tổng thanh toán:</td>
+                  <td colSpan={9} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600 }}>Tổng thanh toán:</td>
                   <td colSpan={2} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 700, color: '#16a34a', fontSize: 15 }}>{money(totalAmount)}</td>
                 </tr>
               </tfoot>

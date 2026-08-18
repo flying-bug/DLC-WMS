@@ -14,7 +14,6 @@ public class SalesOrderRequest {
     @NotNull(message = "Khách hàng không được để trống")
     private Long partnerId;
 
-    @NotNull(message = "Kho không được để trống")
     private Long warehouseId;
 
     private String soCode;
@@ -38,6 +37,8 @@ public class SalesOrderRequest {
 
         @NotNull(message = "Sản phẩm không được để trống")
         private Long variantId;
+
+        private Long warehouseId; // Kho xuất hàng cho dòng này
 
         @NotNull
         @DecimalMin(value = "1", message = "Số lượng phải là số nguyên lớn hơn 0")

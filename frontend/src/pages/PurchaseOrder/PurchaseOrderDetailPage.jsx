@@ -302,6 +302,7 @@ function PurchaseOrderDetailPage() {
                   <th style={{ width: 40 }}>#</th>
                   <th>Sản phẩm</th>
                   <th style={{ width: 80 }}>SKU</th>
+                  <th style={{ width: 160 }}>Kho nhận dự kiến</th>
                   <th style={{ width: 80 }}>ĐVT</th>
                   <th style={{ width: 100, textAlign: 'right' }}>Số lượng</th>
                   <th style={{ width: 130, textAlign: 'right' }}>Đơn giá</th>
@@ -314,7 +315,7 @@ function PurchaseOrderDetailPage() {
               <tbody>
                 {(po.lines || []).length === 0 ? (
                   <tr>
-                    <td colSpan={10} style={{ textAlign: 'center', padding: 24, color: '#94a3b8' }}>
+                    <td colSpan={11} style={{ textAlign: 'center', padding: 24, color: '#94a3b8' }}>
                       Không có dòng sản phẩm
                     </td>
                   </tr>
@@ -322,8 +323,11 @@ function PurchaseOrderDetailPage() {
                   (po.lines || []).map((line, idx) => (
                     <tr key={line.id || idx}>
                       <td style={{ color: '#94a3b8' }}>{idx + 1}</td>
-                      <td style={{ fontWeight: 500 }}>{line.variantName || `#${line.variantId}`}</td>
+                      <td style={{ fontWeight: 500 }}>{line.variantName || line.productName || `#${line.variantId}`}</td>
                       <td style={{ color: '#64748b', fontSize: 12 }}>{line.sku || '—'}</td>
+                      <td style={{ color: '#1e40af', fontWeight: 500 }}>
+                        {line.warehouseName || (line.warehouseId ? warehouseById.get(line.warehouseId)?.name : null) || '—'}
+                      </td>
                       <td style={{ color: '#64748b' }}>{line.unitName || '—'}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>
                         {Number(line.quantity).toLocaleString('vi-VN')}

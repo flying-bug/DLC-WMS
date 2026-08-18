@@ -31,8 +31,9 @@ const normalizeProductType = (value) =>
 
 const isServiceProduct = (item) => normalizeProductType(item?.productType) === 'dich vu';
 const isWarehouseProduct = (item) => {
+  if (!item) return false;
   const type = normalizeProductType(item?.productType);
-  return type === 'hang hoa' || type === 'thanh pham';
+  return type !== 'dich vu' && type !== 'service';
 };
 
 const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
@@ -94,9 +95,10 @@ const customSelectStyles = {
   })
 };
 
-const emptyLine = () => ({
+const emptyLine = (defaultWarehouseId = '') => ({
   localId: crypto.randomUUID(),
   variantId: '',
+  warehouseId: defaultWarehouseId,
   serialNumbers: [],
   scannedCode: '',
   quantity: 1,
@@ -148,51 +150,55 @@ function UpdateExportSlipPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-  useEffect(() => {
-    if (form.warehouseId) {
-      exportApi.getInventoryBalance({ warehouseId: form.warehouseId })
-        .then(res => setInventoryBalances(pageContent(unwrap(res))))
-        .catch(err => console.error('Failed to load balances', err));
-    }
-  }, [form.warehouseId]);
+  const loadAllInventoryBalances = () => {
+    exportApi.getInventoryBalance({ size: 10000 })
+      .then(res => setInventoryBalances(pageContent(unwrap(res))))
+      .catch(err => console.error('Lỗi khi tải số dư tồn kho', err));
+  };
 
-  const inventoryMap = useMemo(() => {
-    const map = new Map();
-    if (Array.isArray(inventoryBalances)) {
-      inventoryBalances.forEach(b => {
-        const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
-        const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
-        const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
-        const stock = Math.max(0, availableQuantity);
-        if (b.variantId) map.set(String(b.variantId), stock);
-        else if (b.itemId) map.set(String(b.itemId), stock);
+  useEffect(() => {
+    loadAllInventoryBalances();
+  }, []);
+
+  const handleApplyWarehouseToAllLines = (whId) => {
+    if (!whId) return;
+    setItems(prev => {
+      const mergedMap = new Map();
+      const result = [];
+      prev.forEach(item => {
+        if (!item.variantId) {
+          result.push({ ...item, warehouseId: String(whId), serialNumbers: [] });
+          return;
+        }
+        const key = String(item.variantId);
+        if (mergedMap.has(key)) {
+          const existing = mergedMap.get(key);
+          existing.quantity = Number(existing.quantity || 0) + (Number(item.quantity) || 1);
+        } else {
+          const newItem = { ...item, warehouseId: String(whId), serialNumbers: [] };
+          mergedMap.set(key, newItem);
+          result.push(newItem);
+        }
       });
-    }
-    return map;
-  }, [inventoryBalances]);
-  const warehouseScopedProducts = useMemo(() => {
-    if (!form.warehouseId) return products;
-    const selectedIds = new Set(items.map(item => String(item.variantId || '')).filter(Boolean));
-    return products.filter(product => inventoryMap.has(String(product.id)) || selectedIds.has(String(product.id)));
-  }, [form.warehouseId, inventoryMap, items, products]);
+      return result;
+    });
+    showToast('info', 'Đã áp dụng kho cho tất cả các dòng sản phẩm và tự động gộp các dòng trùng');
+  };
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       setError('');
       try {
-        const [detailRes, warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
-          exportApi.getExportDetail(id),
+        const [warehouseRes, productRes, customerRes, userRes, slipRes] = await Promise.allSettled([
           exportApi.getWarehouses({ size: 100 }),
           exportApi.getProducts({ size: 1000 }),
           exportApi.getCustomers({ size: 1000 }),
           exportApi.getUsers({ size: 1000 }).catch(() => null),
+          exportApi.getExportDetail(id),
         ]);
 
-        let detail = null;
-        if (detailRes.status === 'fulfilled') {
-          detail = unwrap(detailRes.value);
-        }
+        const detail = slipRes.status === 'fulfilled' ? unwrap(slipRes.value) : null;
 
         if (warehouseRes.status === 'fulfilled') {
           setWarehouses(pageContent(unwrap(warehouseRes.value)));
@@ -210,7 +216,6 @@ function UpdateExportSlipPage() {
         if (detail) {
           const userList = userRes.status === 'fulfilled' ? pageContent(unwrap(userRes.value)) : [];
           setUsers(userList);
-          const salespersonUser = userList.find(u => String(u.id) === String(detail.salespersonId));
           const currentUserId = sessionStorage.getItem('userId') || sessionStorage.getItem('id');
           const salespersonIdToSet = detail.salespersonId ? String(detail.salespersonId) : (currentUserId ? String(currentUserId) : '');
 
@@ -236,6 +241,7 @@ function UpdateExportSlipPage() {
             localId: crypto.randomUUID(),
             id: line.id,
             variantId: line.variantId || '',
+            warehouseId: String(line.warehouseId || detail.warehouseId || ''),
             quantity: line.quantityOut || 1,
             price: line.unitPrice || 0,
             vatPercent: line.vatPercent ?? line.vatRate ?? 0,
@@ -261,6 +267,41 @@ function UpdateExportSlipPage() {
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const userById = useMemo(() => new Map(users.map(user => [String(user.id), user])), [users]);
+  const inventoryMap = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(inventoryBalances)) {
+      inventoryBalances.forEach(b => {
+        const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+        const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+        const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+        const stock = Math.max(0, availableQuantity);
+        const vId = b.variantId || b.itemId;
+        const wId = b.warehouseId;
+        if (vId && wId) {
+          map.set(`${vId}_${wId}`, stock);
+        }
+        if (vId) {
+          const currentTotal = map.get(String(vId)) || 0;
+          map.set(String(vId), currentTotal + stock);
+        }
+      });
+    }
+    return map;
+  }, [inventoryBalances]);
+
+  const getStockForLine = (variantId, warehouseId) => {
+    if (!variantId) return 0;
+    const effectiveWh = warehouseId || form.warehouseId;
+    if (effectiveWh) {
+      const specific = inventoryMap.get(`${variantId}_${effectiveWh}`);
+      if (specific !== undefined) return specific;
+    }
+    return inventoryMap.get(String(variantId)) || 0;
+  };
+
+  const warehouseScopedProducts = useMemo(() => {
+    return products;
+  }, [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
@@ -268,10 +309,9 @@ function UpdateExportSlipPage() {
   const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-    return product && isWarehouseProduct(product) && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
+    return product && isWarehouseProduct(product) && item.warehouseId && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
   };
   const isFormValid = Boolean(
-    form.warehouseId &&
     form.docDate &&
     (form.issuePurpose === 'SALES' ? (form.partnerId && form.referenceId)
       : form.issuePurpose === 'ASSEMBLY' ? form.referenceId
@@ -303,6 +343,30 @@ function UpdateExportSlipPage() {
 
   const handleItemChange = (localId, field, value) => {
     setItems(prev => {
+      const getLineWh = (item) => String(item.warehouseId || form.warehouseId || '');
+
+      if (field === 'warehouseId') {
+        const currentItem = prev.find(item => item.localId === localId);
+        if (currentItem && currentItem.variantId) {
+          const targetWh = String(value || form.warehouseId || '');
+          const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(currentItem.variantId) && getLineWh(item) === targetWh);
+          if (existingIndex >= 0) {
+            const addedQty = Number(currentItem.quantity) || 1;
+            const newItems = [...prev];
+            newItems[existingIndex] = {
+              ...newItems[existingIndex],
+              quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
+            };
+            showToast('info', 'Sản phẩm đã tồn tại trong kho này, đã tự động cộng dồn số lượng.');
+            return newItems.filter(item => item.localId !== localId);
+          }
+        }
+        return prev.map(item => item.localId === localId ? {
+          ...item,
+          warehouseId: String(value || ''),
+          serialNumbers: [],
+        } : item);
+      }
       if (field === 'quantity') {
         const quantity = Number(value || 0);
         return prev.map(item => item.localId === localId ? {
@@ -315,22 +379,24 @@ function UpdateExportSlipPage() {
         if (!value) {
           return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], price: 0, warrantyMonths: 0 } : item);
         }
-        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value) && !(item.serialNumbers && item.serialNumbers.length > 0));
+        const currentItem = prev.find(item => item.localId === localId);
+        const itemWh = String(currentItem?.warehouseId || form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''));
+        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value) && getLineWh(item) === itemWh);
         if (existingIndex >= 0) {
-          const currentItem = prev.find(item => item.localId === localId);
           const addedQty = Number(currentItem?.quantity) || 1;
           const newItems = [...prev];
           newItems[existingIndex] = {
             ...newItems[existingIndex],
             quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
           };
-          showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động tăng số lượng.');
+          showToast('info', 'Sản phẩm đã tồn tại trong kho này, đã tự động cộng dồn số lượng.');
           return newItems.filter(item => item.localId !== localId);
         }
         const selectedProduct = products.find(p => String(p.id) === String(value));
         return prev.map(item => item.localId === localId ? {
           ...item,
-          variantId: value,
+          variantId: String(value),
+          warehouseId: itemWh,
           serialNumbers: [],
           price: selectedProduct ? Number(selectedProduct.salePrice || 0) : 0,
           warrantyMonths: selectedProduct ? Number(selectedProduct.warrantyMonths || 0) : 0
@@ -403,7 +469,7 @@ function UpdateExportSlipPage() {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, emptyLine()]);
+    setItems(prev => [...prev, emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''))]);
   };
 
   const ensureScannedProduct = (scanResult) => {
@@ -440,7 +506,7 @@ function UpdateExportSlipPage() {
     if (!ensureScannedProduct(scanResult)) return;
 
     setItems(prev => {
-      const existingIndex = prev.findIndex(item => String(item.variantId) === String(scanResult.variantId));
+      const existingIndex = prev.findIndex(item => String(item.variantId) === String(scanResult.variantId) && String(item.warehouseId || form.warehouseId) === String(form.warehouseId));
       const serial = scanResult.serialNumber;
 
       if (existingIndex >= 0) {
@@ -467,8 +533,9 @@ function UpdateExportSlipPage() {
       }
 
       const newLine = {
-        ...emptyLine(),
+        ...emptyLine(form.warehouseId),
         variantId: scanResult.variantId,
+        warehouseId: String(form.warehouseId),
         scannedCode: scanResult.code,
         quantity: 1,
         price: scanResult.salePrice || 0,
@@ -507,46 +574,46 @@ function UpdateExportSlipPage() {
   };
 
   const removeItem = (localId) => {
-    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(), isNew: false }]);
+    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(form.warehouseId), isNew: false }]);
   };
 
-  const buildPayload = (status) => ({
-    docCode: form.docCode || undefined,
-    warehouseId: Number(form.warehouseId),
-    partnerId: form.partnerId ? Number(form.partnerId) : null,
-    salespersonId: (!isNaN(Number(form.salespersonId)) && String(form.salespersonId).trim() !== '') ? Number(form.salespersonId) : null,
-    customerAddress: form.customerAddress,
-    recipientName: form.receiverName || customers.find(s => String(s.id) === String(form.partnerId))?.name || '',
-    receiverPhone: form.receiverPhone || selectedCustomer?.phone || '',
-    recipientAddress: form.receiverAddress || form.customerAddress || customers.find(s => String(s.id) === String(form.partnerId))?.address || '',
-    docDate: form.docDate,
-    status,
-    note: form.note,
-    createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
-    lines: items.map(item => ({
-      id: item.id || undefined,
-      variantId: Number(item.variantId),
-      quantityIn: 0,
-      quantityOut: Number(item.quantity),
-      unitCost: 0,
-      unitPrice: Number(item.price),
-      vatRate: Number(item.vatPercent || 0),
-      vatPercent: Number(item.vatPercent || 0),
-      warrantyMonths: Number(item.warrantyMonths || 0),
-      serialNumbers: item.serialNumbers || [],
-      note: item.note,
-    })),
-    salesOrderId: form.salesOrderId || undefined,
-    issuePurpose: form.issuePurpose || undefined,
-    referenceType: form.referenceType || undefined,
-    referenceId: form.referenceId || undefined,
-  });
+  const buildPayload = (status) => {
+    const firstWh = items.find(it => it.warehouseId)?.warehouseId;
+    return {
+      docCode: form.docCode || undefined,
+      warehouseId: firstWh ? Number(firstWh) : (warehouses[0]?.id ? Number(warehouses[0].id) : null),
+      partnerId: form.partnerId ? Number(form.partnerId) : null,
+      salespersonId: (!isNaN(Number(form.salespersonId)) && String(form.salespersonId).trim() !== '') ? Number(form.salespersonId) : null,
+      customerAddress: form.customerAddress,
+      recipientName: form.receiverName || customers.find(s => String(s.id) === String(form.partnerId))?.name || '',
+      receiverPhone: form.receiverPhone || selectedCustomer?.phone || '',
+      recipientAddress: form.receiverAddress || form.customerAddress || customers.find(s => String(s.id) === String(form.partnerId))?.address || '',
+      docDate: form.docDate,
+      status,
+      note: form.note,
+      createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
+      lines: items.map(item => ({
+        id: item.id || undefined,
+        variantId: Number(item.variantId),
+        warehouseId: Number(item.warehouseId),
+        quantityIn: 0,
+        quantityOut: Number(item.quantity),
+        unitCost: 0,
+        unitPrice: Number(item.price),
+        vatRate: Number(item.vatPercent || 0),
+        vatPercent: Number(item.vatPercent || 0),
+        warrantyMonths: Number(item.warrantyMonths || 0),
+        serialNumbers: item.serialNumbers || [],
+        note: item.note,
+      })),
+      salesOrderId: form.salesOrderId || undefined,
+      issuePurpose: form.issuePurpose || undefined,
+      referenceType: form.referenceType || undefined,
+      referenceId: form.referenceId || undefined,
+    };
+  };
 
   const submit = async (status, shouldPost = false) => {
-    if (!form.warehouseId) {
-      focusField('export-warehouseId');
-      return showToast('error', 'Vui lòng chọn kho xuất.');
-    }
     if (form.issuePurpose === 'SALES' && !form.partnerId) {
       focusField('export-partnerId');
       return showToast('error', 'Vui lòng chọn khách hàng.');
@@ -556,11 +623,11 @@ function UpdateExportSlipPage() {
     }
     if (!form.docDate) {
       focusField('export-docDate');
-      return showToast('error', 'Vui lòng chọn ngày ghi nhận.');
+      return showToast('error', 'Vui lòng chọn ngày lập phiếu.');
     }
 
     if (!items.length) {
-      return showToast('error', 'Vui lòng thêm ít nhất một dòng hàng hóa.');
+      return showToast('error', 'Vui lòng thêm ít nhất 1 dòng hàng hóa.');
     }
 
     for (let i = 0; i < items.length; i++) {
@@ -569,39 +636,53 @@ function UpdateExportSlipPage() {
         focusField(`export-line-product-${i}`);
         return showToast('error', `Dòng ${i + 1}: Vui lòng chọn hàng hóa.`);
       }
+      if (!item.warehouseId) {
+        return showToast('error', `Dòng ${i + 1}: Vui lòng chọn kho xuất.`);
+      }
       const qty = Number(item.quantity);
       if (!Number.isInteger(qty) || qty <= 0) {
         focusField(`export-line-qty-${i}`);
         return showToast('error', `Dòng ${i + 1}: Số lượng phải là số nguyên lớn hơn 0.`);
-      }
-      const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-      if (isNaN(vat) || vat < 0 || vat > 10) {
-        focusField(`export-line-vat-${i}`);
-        return showToast('error', `Dòng ${i + 1}: Thuế VAT phải nằm trong khoảng từ 0% đến 10%.`);
       }
       const product = productById.get(String(item.variantId));
       if (product?.trackSerial) {
         const serialCount = item.serialNumbers ? item.serialNumbers.length : 0;
         if (serialCount !== qty) {
           setSerialModalItemId(item.localId);
-          return showToast('error', `Dòng ${i + 1}: Vui lòng nhập đủ ${qty} mã serial (hiện có ${serialCount}).`);
+          return showToast('error', `Dòng ${i + 1}: Vui lòng quét đủ ${qty} mã serial (hiện có ${serialCount}).`);
+        }
+      }
+      const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
+      if (isNaN(vat) || vat < 0 || vat > 10) {
+        focusField(`export-line-vat-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Thuế VAT không hợp lệ.`);
+      }
+      if (product) {
+        const balance = getStockForLine(product.id, item.warehouseId);
+        if (Number(item.quantity) > balance) {
+          focusField(`export-line-qty-${i}`);
+          return showToast('error', `Dòng ${i + 1}: Số lượng xuất (${item.quantity}) vượt quá tồn khả dụng (${balance}) tại kho đã chọn.`);
         }
       }
     }
     setSaving(true);
     try {
-      await exportApi.updateExportSlip(id, buildPayload(status));
+      const response = await exportApi.updateExportSlip(id, buildPayload(status));
+      const updated = unwrap(response);
       if (shouldPost) {
         await exportApi.postExportSlip(id);
       }
 
       const fullSlipData = {
-        id,
+        ...updated,
         docCode: form.docCode,
         docDate: form.docDate,
         status: shouldPost ? 'POSTED' : status,
+        warehouseId: form.warehouseId,
         lines: items.map(item => ({
           ...item,
+          warehouseId: Number(item.warehouseId),
+          warehouseName: warehouses.find(w => String(w.id) === String(item.warehouseId))?.name,
           quantityOut: item.quantity,
           unitPrice: item.price,
           variantName: productById.get(String(item.variantId))?.variantName || productById.get(String(item.variantId))?.name,
@@ -622,6 +703,17 @@ function UpdateExportSlipPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePrint = (printMode = 'SUMMARY') => {
+    if (!savedSlip) return;
+    printExportSlip(savedSlip, {
+      customer: customers.find(c => String(c.id) === String(savedSlip.partnerId || form.partnerId)),
+      warehouseById: new Map(warehouses.map(w => [w.id, w])),
+      productById,
+      userById,
+      printMode,
+    });
   };
 
   return (
@@ -668,36 +760,17 @@ function UpdateExportSlipPage() {
                       </div>
                     </div>
                     <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
-                      <label className="misa-label">Tên Khách hàng</label>
-                      <Select
-                        options={customers.map(c => ({ value: c.id, label: c.name || '' }))}
-                        value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).name || '' } : null}
-                        onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
-                        placeholder="Chọn Tên KH..."
-                        isClearable
-                        styles={customSelectStyles}
-                      />
+                      <label className="misa-label">Tên khách hàng</label>
+                      <input type="text" className="misa-input" readOnly value={form.partnerId ? (customers.find(s => String(s.id) === String(form.partnerId))?.name || '') : ''} style={{ backgroundColor: '#f9fafb' }} placeholder="Tên khách hàng" />
                     </div>
                   </div>
 
                   <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                    <label className="misa-label">Địa chỉ khách hàng</label>
-                    <input type="text" className="misa-input" readOnly value={customers.find(s => String(s.id) === String(form.partnerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} placeholder="Tự động điền theo Mã KH" />
+                    <label className="misa-label">Địa chỉ</label>
+                    <input type="text" className="misa-input" value={form.customerAddress || ''} onChange={(event) => handleFormChange('customerAddress', event.target.value)} placeholder="Nhập địa chỉ giao hàng (có thể tuỳ chỉnh)..." />
                   </div>
 
                   <div className="misa-form-row" style={{ marginTop: '12px' }}>
-                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                      <label className="misa-label">Kho xuất <span className="required">*</span></label>
-                      <Select
-                        inputId="export-warehouseId"
-                        options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
-                        value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
-                        onChange={(selected) => handleFormChange('warehouseId', selected ? selected.value : '')}
-                        placeholder="Chọn kho"
-                        isClearable
-                        styles={customSelectStyles}
-                      />
-                    </div>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                       <label className="misa-label">Nhân viên xuất hàng</label>
                       <input
@@ -706,6 +779,16 @@ function UpdateExportSlipPage() {
                         value={users.find(u => String(u.id) === String(form.salespersonId)) ? (users.find(u => String(u.id) === String(form.salespersonId)).fullName || users.find(u => String(u.id) === String(form.salespersonId)).username) : 'Đang tải...'}
                         readOnly
                         style={{ backgroundColor: '#f3f4f6' }}
+                      />
+                    </div>
+                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                      <label className="misa-label">Người nhận hàng</label>
+                      <input
+                        type="text"
+                        className="misa-input"
+                        value={form.receiverName || ''}
+                        onChange={(e) => handleFormChange('receiverName', e.target.value)}
+                        placeholder="Nhập tên người nhận hàng"
                       />
                     </div>
                   </div>
@@ -747,7 +830,6 @@ function UpdateExportSlipPage() {
                       <input type="text" className="misa-input" style={{ marginTop: '8px' }} placeholder="Số chứng từ đính kèm..." />
                     )}
                   </div>
-
 
                 </div>
               </div>
@@ -802,17 +884,18 @@ function UpdateExportSlipPage() {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th style={{ width: '50px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                      <th style={{ width: '12%' }}>Mã hàng</th>
-                      <th style={{ width: '22%' }}>Tên hàng</th>
-                      <th style={{ width: '7%' }}>ĐVT</th>
-                      <th style={{ width: '8%' }} className={styles.textCenter}>Tồn khả dụng</th>
-                      <th style={{ width: '8%' }} className={styles.textRight}>SL</th>
-                      <th style={{ width: '10%', textAlign: 'center' }}>Serial</th>
-                      <th style={{ width: '8%', textAlign: 'center' }}>BH (T)</th>
-                      <th style={{ width: '11%' }} className={styles.textRight}>Đơn giá</th>
-                      <th style={{ width: '11%' }} className={styles.textRight}>Thành tiền</th>
-                      <th style={{ width: '8%' }} className={styles.textRight}>% VAT</th>
+                      <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
+                      <th style={{ minWidth: '120px', width: '11%' }}>Mã hàng</th>
+                      <th style={{ minWidth: '180px', width: '18%' }}>Tên hàng</th>
+                      <th style={{ minWidth: '140px', width: '14%' }}>Kho xuất</th>
+                      <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                      <th style={{ minWidth: '80px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
+                      <th style={{ minWidth: '65px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
+                      <th style={{ minWidth: '75px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                      <th style={{ minWidth: '65px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                      <th style={{ minWidth: '100px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>
+                      <th style={{ minWidth: '100px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>
+                      <th style={{ minWidth: '75px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>% VAT</th>
                       <th style={{ width: '40px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
@@ -846,11 +929,23 @@ function UpdateExportSlipPage() {
                             />
                           </td>
                           <td>
+                            <Select
+                              options={warehouses.map(w => ({ value: String(w.id), label: `${w.code} - ${w.name}` }))}
+                              value={warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId)) ? {
+                                value: String(item.warehouseId || form.warehouseId),
+                                label: `${warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId))?.code} - ${warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId))?.name}`
+                              } : null}
+                              onChange={(selected) => handleItemChange(item.localId, 'warehouseId', selected ? selected.value : '')}
+                              placeholder="Chọn kho"
+                              styles={customSelectStyles}
+                            />
+                          </td>
+                          <td>
                             {product?.unitName || ''}
                             {item.serialNumberId && <div className={styles.serialTag}>{item.scannedCode}</div>}
                           </td>
                           <td className={styles.textCenter} style={{ fontWeight: '600', color: '#0052cc' }}>
-                            {product ? (inventoryMap.get(String(product.id)) || 0) : ''}
+                            {product ? getStockForLine(product.id, item.warehouseId || form.warehouseId) : ''}
                           </td>
                           <td className={styles.textRight}>
                             <input id={`export-line-qty-${index}`} type="number" min="0" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
@@ -991,13 +1086,13 @@ function UpdateExportSlipPage() {
           targetQuantity={Number(selectedSerialItem.quantity || 0)}
           initialSerials={selectedSerialItem.serialNumbers || []}
           mode="export"
-          warehouseId={form.warehouseId}
+          warehouseId={selectedSerialItem.warehouseId || form.warehouseId}
           variantId={selectedSerialProduct.id}
           onValidateSerial={async (serialValue) => {
             try {
               const response = await exportApi.resolveScan({
                 code: serialValue,
-                warehouseId: form.warehouseId,
+                warehouseId: selectedSerialItem.warehouseId || form.warehouseId,
               });
               const scanResult = unwrap(response);
               if (!scanResult.serialNumber) {
@@ -1016,20 +1111,10 @@ function UpdateExportSlipPage() {
       <SuccessPrintModal
         isOpen={showSuccessModal}
         title={savedSlip?.status === 'POSTED' || savedSlip?.statusCode === 'POSTED' ? 'Ghi sổ phiếu xuất kho thành công!' : 'Cập nhật phiếu xuất kho thành công!'}
-        message="Phiếu xuất kho đã được lưu và cập nhật thành công. Bạn có thể in phiếu ngay bây giờ."
+        message="Phiếu xuất kho đã được lưu và cập nhật thành công. Bạn có thể chọn cách in phiếu dưới đây."
         docCode={savedSlip?.docCode || form.docCode}
-        printBtnText="In phiếu xuất kho"
-        onPrint={() => {
-          const customer = customers.find(c => String(c.id) === String(savedSlip?.partnerId || form.partnerId)) || {};
-          const warehouseName = warehouses.find(w => String(w.id) === String(savedSlip?.warehouseId || form.warehouseId))?.name || '';
-          printExportSlip(savedSlip || {}, {
-            customer,
-            warehouseName,
-            productById,
-            userById,
-            isImport: false
-          });
-        }}
+        onPrintSummary={() => handlePrint('SUMMARY')}
+        onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
         onViewList={() => navigate('/export-slips')}
         onClose={() => navigate('/export-slips')}
       />

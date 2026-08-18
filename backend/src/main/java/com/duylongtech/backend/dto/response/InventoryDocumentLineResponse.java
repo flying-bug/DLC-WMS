@@ -21,4 +21,9 @@ public class InventoryDocumentLineResponse {
     private Integer warrantyMonths;
     private String note;
     private BigDecimal vatPercent;
+    private Long warehouseId;
+    private String warehouseName;
+    private String warehouseCode;
+    private Long targetWarehouseId;
+    private String targetWarehouseName;
 }

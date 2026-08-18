@@ -39,7 +39,7 @@ const customSelectStyles = {
   menuPortal: base => ({ ...base, zIndex: 9999 }),
 };
 
-const emptyLine = () => ({ variantId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, serialNumbers: [], note: '' });
+const emptyLine = (defaultWh = null) => ({ variantId: null, warehouseId: defaultWh, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, serialNumbers: [], note: '' });
 
 function CreateSalesOrderPage() {
   const navigate = useNavigate();
@@ -91,20 +91,29 @@ function CreateSalesOrderPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [warehouseRes, customerRes, variantRes, codeRes] = await Promise.allSettled([
+        const [warehouseRes, customerRes, variantRes, balanceRes, codeRes] = await Promise.allSettled([
           soApi.getWarehouses({ size: 100 }),
           soApi.getCustomers({ isCustomer: true, status: 'APPROVED', size: 1000 }),
           soApi.getProducts({ size: 500 }),
+          soApi.getInventoryBalance({}),
           !isEdit ? soApi.getNextSoCode() : Promise.resolve(null),
         ]);
+        let whList = [];
         if (warehouseRes.status === 'fulfilled') {
-          setWarehouses(pageContent(unwrap(warehouseRes.value)));
+          whList = pageContent(unwrap(warehouseRes.value));
+          setWarehouses(whList);
+          if (!isEdit && whList.length > 0) {
+            setLines(prev => prev.map(l => ({ ...l, warehouseId: l.warehouseId || whList[0].id })));
+          }
         }
         if (customerRes.status === 'fulfilled') {
           setCustomers(pageContent(unwrap(customerRes.value)));
         }
         if (variantRes.status === 'fulfilled') {
           setVariants(pageContent(unwrap(variantRes.value)));
+        }
+        if (balanceRes.status === 'fulfilled') {
+          setInventoryBalances(pageContent(unwrap(balanceRes.value)));
         }
         if (codeRes.status === 'fulfilled' && codeRes.value) {
           const code = unwrap(codeRes.value);
@@ -125,13 +134,7 @@ function CreateSalesOrderPage() {
       setMode(voiceData.mode);
     }
 
-    // Auto-select warehouse
-    if (voiceData.warehouseKeyword && warehouses.length > 0) {
-      const matchWh = findBestMatch(warehouses, voiceData.warehouseKeyword, w => [w.name, w.code]);
-      if (matchWh) {
-        setForm(prev => ({ ...prev, warehouseId: matchWh.id }));
-      }
-    }
+    const defaultWh = warehouses.length > 0 ? warehouses[0].id : null;
 
     // Auto-select customer
     if (voiceData.customerKeyword) {
@@ -171,6 +174,7 @@ function CreateSalesOrderPage() {
         const price = voiceData.unitPrice != null ? Number(voiceData.unitPrice) : (Number(matchProd.retailPrice || matchProd.price || 0));
         setLines([{
           variantId: matchProd.id,
+          warehouseId: defaultWh,
           quantity: qty,
           unitPrice: price,
           unitName: matchProd.unitName || 'Cái',
@@ -202,6 +206,7 @@ function CreateSalesOrderPage() {
         });
         setLines((so.lines || []).map(l => ({
           variantId: l.variantId,
+          warehouseId: l.warehouseId || (warehouses.length > 0 ? warehouses[0].id : null),
           quantity: Number(l.quantity),
           unitPrice: Number(l.unitPrice),
           unitName: l.unitName || '',
@@ -214,27 +219,11 @@ function CreateSalesOrderPage() {
       }
     };
     loadSo();
-  }, [id, isEdit]);
-
-  // Load inventory balances when warehouse changes
-  useEffect(() => {
-    if (!form.warehouseId) {
-      setInventoryBalances([]);
-      return;
-    }
-    const loadBalances = async () => {
-      try {
-        const res = await soApi.getInventoryBalance({ warehouseId: form.warehouseId });
-        setInventoryBalances(unwrap(res) || []);
-      } catch (err) {
-        console.error('Failed to load inventory balances', err);
-      }
-    };
-    loadBalances();
-  }, [form.warehouseId]);
+  }, [id, isEdit, warehouses]);
 
   // ── Line management ──
-  const addLine = () => setLines(p => [...p, emptyLine()]);
+  const defaultWarehouseId = warehouses.length > 0 ? warehouses[0].id : null;
+  const addLine = () => setLines(p => [...p, emptyLine(defaultWarehouseId)]);
   const removeLine = (idx) => setLines(p => p.filter((_, i) => i !== idx));
   const updateLine = (idx, field, value) => setLines(p =>
     p.map((l, i) => i === idx ? { ...l, [field]: value } : l)
@@ -249,7 +238,8 @@ function CreateSalesOrderPage() {
       updateLine(idx, 'variantId', null);
       return;
     }
-    const existingIndex = lines.findIndex((l, i) => i !== idx && String(l.variantId) === String(selected.id));
+    const currentWh = lines[idx]?.warehouseId || defaultWarehouseId;
+    const existingIndex = lines.findIndex((l, i) => i !== idx && String(l.variantId) === String(selected.id) && String(l.warehouseId) === String(currentWh));
     if (existingIndex >= 0) {
       const addedQty = Number(lines[idx]?.quantity) || 1;
       setLines(prev => {
@@ -260,11 +250,12 @@ function CreateSalesOrderPage() {
         };
         return next.filter((_, i) => i !== idx);
       });
-      showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động tăng số lượng.');
+      showToast('info', 'Sản phẩm cùng kho xuất đã tồn tại trong danh sách, đã tự động tăng số lượng.');
       return;
     }
     updateLineMultiple(idx, {
       variantId: selected.id,
+      warehouseId: currentWh,
       unitPrice: Number(selected.salePrice || 0),
       unitName: selected.unitName || 'Cái',
       warrantyMonths: Number(selected.warrantyMonths || 0),
@@ -313,43 +304,51 @@ function CreateSalesOrderPage() {
   }, [grandTotal, mode, isPaymentUserEdited]);
 
   // ── Save ──
-  const buildPayload = () => ({
-    soCode: form.soCode.trim() || undefined,
-    soDate: form.soDate,
-    paymentDueDate: form.paymentDueDate || undefined,
-    partnerId: Number(form.partnerId),
-    warehouseId: Number(form.warehouseId),
-    deliveryAddress: form.deliveryAddress || undefined,
-    note: form.note || undefined,
-    lines: lines.map(l => ({
-      variantId: Number(l.variantId),
-      quantity: Number(l.quantity),
-      unitPrice: Number(l.unitPrice),
-      vatRate: Number(l.vatRate || 0),
-      warrantyMonths: Number(l.warrantyMonths || 0),
-      note: l.note || undefined,
-    })),
-  });
+  const buildPayload = () => {
+    const firstWh = lines[0]?.warehouseId || form.warehouseId;
+    return {
+      soCode: form.soCode.trim() || undefined,
+      soDate: form.soDate,
+      paymentDueDate: form.paymentDueDate || undefined,
+      partnerId: Number(form.partnerId),
+      warehouseId: firstWh ? Number(firstWh) : undefined,
+      deliveryAddress: form.deliveryAddress || undefined,
+      note: form.note || undefined,
+      lines: lines.map(l => ({
+        variantId: Number(l.variantId),
+        warehouseId: l.warehouseId ? Number(l.warehouseId) : undefined,
+        quantity: Number(l.quantity),
+        unitPrice: Number(l.unitPrice),
+        vatRate: Number(l.vatRate || 0),
+        warrantyMonths: Number(l.warrantyMonths || 0),
+        note: l.note || undefined,
+      })),
+    };
+  };
 
-  const buildDirectPayload = () => ({
-    partnerId: form.partnerId ? Number(form.partnerId) : undefined,
-    customerPhone: directCustomer.phone.trim() || undefined,
-    customerName: directCustomer.name.trim() || undefined,
-    customerAddress: directCustomer.address.trim() || undefined,
-    warehouseId: Number(form.warehouseId),
-    checkoutDate: form.soDate,
-    paymentAmount: Number(paymentAmount || 0),
-    note: form.note || undefined,
-    lines: lines.map(l => ({
-      variantId: Number(l.variantId),
-      quantity: Number(l.quantity),
-      unitPrice: Number(l.unitPrice),
-      vatRate: Number(l.vatRate || 0),
-      warrantyMonths: Number(l.warrantyMonths || 0),
-      serialNumbers: Array.isArray(l.serialNumbers) ? l.serialNumbers : [],
-      note: l.note || undefined,
-    })),
-  });
+  const buildDirectPayload = () => {
+    const firstWh = lines[0]?.warehouseId || form.warehouseId;
+    return {
+      partnerId: form.partnerId ? Number(form.partnerId) : undefined,
+      customerPhone: directCustomer.phone.trim() || undefined,
+      customerName: directCustomer.name.trim() || undefined,
+      customerAddress: directCustomer.address.trim() || undefined,
+      warehouseId: firstWh ? Number(firstWh) : undefined,
+      checkoutDate: form.soDate,
+      paymentAmount: Number(paymentAmount || 0),
+      note: form.note || undefined,
+      lines: lines.map(l => ({
+        variantId: Number(l.variantId),
+        warehouseId: l.warehouseId ? Number(l.warehouseId) : undefined,
+        quantity: Number(l.quantity),
+        unitPrice: Number(l.unitPrice),
+        vatRate: Number(l.vatRate || 0),
+        warrantyMonths: Number(l.warrantyMonths || 0),
+        serialNumbers: Array.isArray(l.serialNumbers) ? l.serialNumbers : [],
+        note: l.note || undefined,
+      })),
+    };
+  };
 
   const focusField = (elementId) => {
     setTimeout(() => {
@@ -368,11 +367,6 @@ function CreateSalesOrderPage() {
     if (!form.partnerId) {
       showToast('error', 'Vui lòng chọn khách hàng');
       focusField('so-partnerId');
-      return false;
-    }
-    if (!form.warehouseId) {
-      showToast('error', 'Vui lòng chọn kho');
-      focusField('so-warehouseId');
       return false;
     }
     if (!form.soDate) {
@@ -405,6 +399,11 @@ function CreateSalesOrderPage() {
         focusField(`so-line-product-${i}`);
         return false;
       }
+      if (!lines[i].warehouseId) {
+        showToast('error', `Dòng ${i + 1}: chưa chọn kho xuất hàng`);
+        focusField(`so-line-wh-${i}`);
+        return false;
+      }
       const qty = Number(lines[i].quantity);
       if (!Number.isInteger(qty) || qty <= 0) {
         showToast('error', `Dòng ${i + 1}: số lượng phải là số nguyên lớn hơn 0`);
@@ -422,11 +421,6 @@ function CreateSalesOrderPage() {
   };
 
   const validateDirectCheckout = () => {
-    if (!form.warehouseId) {
-      showToast('error', 'Vui lòng chọn kho xuất hàng');
-      focusField('so-warehouseId');
-      return false;
-    }
     if (!form.soDate) {
       showToast('error', 'Vui lòng nhập ngày bán');
       focusField('so-docDate');
@@ -453,6 +447,11 @@ function CreateSalesOrderPage() {
       if (!lines[i].variantId) {
         showToast('error', `Dòng ${i + 1}: chưa chọn sản phẩm`);
         focusField(`so-line-product-${i}`);
+        return false;
+      }
+      if (!lines[i].warehouseId) {
+        showToast('error', `Dòng ${i + 1}: chưa chọn kho xuất hàng`);
+        focusField(`so-line-wh-${i}`);
         return false;
       }
       const qty = Number(lines[i].quantity);
@@ -687,19 +686,6 @@ function CreateSalesOrderPage() {
                   )}
 
                   <div className={styles.fieldRow}>
-                    <label className={styles.label}>Kho xuất hàng <span className={styles.required}>*</span></label>
-                    <Select
-                      inputId="so-warehouseId"
-                      options={warehouseOptions}
-                      value={warehouseOptions.find(o => o.value === form.warehouseId) || null}
-                      onChange={opt => setForm(p => ({ ...p, warehouseId: opt?.value || null }))}
-                      placeholder="Chọn kho..."
-                      isClearable
-                      styles={customSelectStyles}
-                    />
-                  </div>
-
-                  <div className={styles.fieldRow}>
                     <label className={styles.label}>Ghi chú</label>
                     <textarea
                       className={styles.textarea}
@@ -801,7 +787,7 @@ function CreateSalesOrderPage() {
                   <div className={styles.summaryBox}>
                     <div className={styles.summaryRow}>
                       <span>Tổng số lượng:</span>
-                      <strong>{totalQuantity}</strong>
+                      <strong>{totalQuantity.toLocaleString('vi-VN')}</strong>
                     </div>
                     <div className={styles.summaryRow}>
                       <span>Tiền hàng:</span>
@@ -844,24 +830,25 @@ function CreateSalesOrderPage() {
                 <table className={styles.linesTable}>
                   <thead>
                     <tr>
-                      <th style={{ width: 40 }}>#</th>
-                      <th>Sản phẩm</th>
-                      <th style={{ width: 70 }}>ĐVT</th>
-                      <th style={{ width: 90 }}>Số lượng</th>
-                      <th style={{ width: 70 }}>BH (T)</th>
-                      <th style={{ width: 130 }}>Đơn giá</th>
+                      <th style={{ width: 40, textAlign: 'center' }}>#</th>
+                      <th style={{ minWidth: 260, width: 280 }}>Sản phẩm</th>
+                      <th style={{ width: 170, minWidth: 160 }}>Kho xuất</th>
+                      <th style={{ width: 70, textAlign: 'center' }}>ĐVT</th>
+                      <th style={{ width: 90, textAlign: 'right' }}>Số lượng</th>
+                      <th style={{ width: 75, textAlign: 'center' }}>BH (T)</th>
+                      <th style={{ width: 130, textAlign: 'right' }}>Đơn giá</th>
                       <th style={{ width: 140, textAlign: 'right' }}>Thành tiền</th>
-                      <th style={{ width: 80 }}>% VAT</th>
-                      {mode === 'direct' && <th style={{ width: 180 }}>Serial</th>}
-                      <th style={{ width: 140 }}>Ghi chú dòng</th>
-                      <th style={{ width: 40 }}></th>
+                      <th style={{ width: 80, textAlign: 'center' }}>% VAT</th>
+                      {mode === 'direct' && <th style={{ width: 120, textAlign: 'center' }}>Serial</th>}
+                      <th style={{ width: 150 }}>Ghi chú dòng</th>
+                      <th style={{ width: 40, textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
                     {lines.map((line, idx) => {
                       const lineTotal = Number(line.quantity) * Number(line.unitPrice);
-                      const invBalance = inventoryBalances.find(b => b.variantId === line.variantId);
-                      const availableQty = invBalance ? (Number(invBalance.totalQuantity || 0) - Number(invBalance.totalReserved || 0)) : 0;
+                      const invBalance = inventoryBalances.find(b => String(b.variantId) === String(line.variantId) && (String(b.warehouseId) === String(line.warehouseId) || !line.warehouseId));
+                      const availableQty = invBalance ? (Number(invBalance.quantityOnHand || invBalance.totalQuantity || 0) - Number(invBalance.quantityReserved || invBalance.totalReserved || 0)) : 0;
                       return (
                         <tr key={idx}>
                           <td style={{ textAlign: 'center', color: '#94a3b8' }}>{idx + 1}</td>
@@ -884,6 +871,17 @@ function CreateSalesOrderPage() {
                                 Tồn khả dụng: {money(availableQty)}
                               </div>
                             )}
+                          </td>
+                          <td style={{ minWidth: 150 }}>
+                            <Select
+                              inputId={`so-line-wh-${idx}`}
+                              options={warehouseOptions}
+                              value={warehouseOptions.find(o => o.value === line.warehouseId) || null}
+                              onChange={opt => updateLine(idx, 'warehouseId', opt?.value || null)}
+                              placeholder="Chọn kho..."
+                              styles={customSelectStyles}
+                              menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                            />
                           </td>
                           <td style={{ textAlign: 'center', color: '#475569', fontSize: 13 }}>
                             {line.unitName || '—'}
@@ -985,7 +983,7 @@ function CreateSalesOrderPage() {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={mode === 'direct' ? 9 : 8} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
+                      <td colSpan={mode === 'direct' ? 10 : 9} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
                         <strong>Tiền hàng:</strong>
                       </td>
                       <td colSpan={2} style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 15, color: '#1d4ed8' }}>
@@ -993,7 +991,7 @@ function CreateSalesOrderPage() {
                       </td>
                     </tr>
                     <tr>
-                      <td colSpan={mode === 'direct' ? 9 : 8} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
+                      <td colSpan={mode === 'direct' ? 10 : 9} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
                         <strong>Tiền thuế VAT:</strong>
                       </td>
                       <td colSpan={2} style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 15, color: '#dc2626' }}>
@@ -1001,7 +999,7 @@ function CreateSalesOrderPage() {
                       </td>
                     </tr>
                     <tr>
-                      <td colSpan={mode === 'direct' ? 9 : 8} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 15, color: '#0f172a' }}>
+                      <td colSpan={mode === 'direct' ? 10 : 9} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 15, color: '#0f172a' }}>
                         <strong>Tổng cộng thanh toán:</strong>
                       </td>
                       <td colSpan={2} style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 16, color: '#16a34a' }}>
