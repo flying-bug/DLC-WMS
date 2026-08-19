@@ -332,9 +332,10 @@ function UpdateImportSlipPage() {
     const quantity = Number(item.quantity || 0);
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
     const hasValidSerials = !product?.trackSerial || (Number.isInteger(quantity) && item.serialNumbers?.length === quantity);
-    return product && isWarehouseProduct(product) && item.warehouseId && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
+    return product && isWarehouseProduct(product) && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
   };
   const isFormValid = Boolean(
+    form.warehouseId &&
     form.docDate &&
     (importType === 'PURCHASE' ? (form.partnerId && form.referenceId)
       : (importType === 'PRODUCTION' || importType === 'SCRAP') ? form.assemblyOrderId
@@ -350,30 +351,6 @@ function UpdateImportSlipPage() {
 
   const handleItemChange = (localId, field, value) => {
     setItems(prev => {
-      const getLineWh = (item) => String(item.warehouseId || form.warehouseId || '');
-
-      if (field === 'warehouseId') {
-        const currentItem = prev.find(item => item.localId === localId);
-        if (currentItem && currentItem.variantId) {
-          const targetWh = String(value || form.warehouseId || '');
-          const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(currentItem.variantId) && getLineWh(item) === targetWh);
-          if (existingIndex >= 0) {
-            const addedQty = Number(currentItem.quantity) || 1;
-            const newItems = [...prev];
-            newItems[existingIndex] = {
-              ...newItems[existingIndex],
-              quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
-            };
-            showToast('info', 'Sản phẩm đã tồn tại trong kho này, đã tự động cộng dồn số lượng.');
-            return newItems.filter(item => item.localId !== localId);
-          }
-        }
-        return prev.map(item => item.localId === localId ? {
-          ...item,
-          warehouseId: String(value || ''),
-          serialNumbers: [],
-        } : item);
-      }
       if (field === 'quantity') {
         const quantity = Number(value || 0);
         return prev.map(item => item.localId === localId ? {
@@ -386,24 +363,22 @@ function UpdateImportSlipPage() {
         if (!value) {
           return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], warrantyMonths: 0 } : item);
         }
-        const currentItem = prev.find(item => item.localId === localId);
-        const itemWh = String(currentItem?.warehouseId || form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''));
-        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value) && getLineWh(item) === itemWh);
+        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value));
         if (existingIndex >= 0) {
+          const currentItem = prev.find(item => item.localId === localId);
           const addedQty = Number(currentItem?.quantity) || 1;
           const newItems = [...prev];
           newItems[existingIndex] = {
             ...newItems[existingIndex],
             quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
           };
-          showToast('info', 'Sản phẩm đã tồn tại trong kho này, đã tự động cộng dồn số lượng.');
+          showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động cộng dồn số lượng.');
           return newItems.filter(item => item.localId !== localId);
         }
         const product = products.find(p => String(p.id) === String(value));
         return prev.map(item => item.localId === localId ? {
           ...item,
           [field]: String(value),
-          warehouseId: itemWh,
           serialNumbers: [],
           warrantyMonths: product ? Number(product.warrantyMonths || 0) : 0
         } : item);
@@ -456,12 +431,12 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
   };
 
   const selectedSerialItem = useMemo(() => items.find(i => i.localId === serialModalItemId), [items, serialModalItemId]);
+  const selectedSerialProduct = useMemo(() => selectedSerialItem ? productById.get(String(selectedSerialItem.variantId)) : null, [selectedSerialItem, productById]);
   
   const buildPayload = (status) => {
-    const firstWh = items.find(it => it.warehouseId)?.warehouseId;
     return {
       docCode: form.docCode || undefined,
-      warehouseId: firstWh ? Number(firstWh) : (warehouses[0]?.id ? Number(warehouses[0].id) : null),
+      warehouseId: Number(form.warehouseId),
       partnerId: importType === 'RETURN' ? (form.customerId ? Number(form.customerId) : null)
         : importType === 'OTHER' ? null
           : (form.partnerId ? Number(form.partnerId) : null),
@@ -472,7 +447,7 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       lines: items.map(item => ({
         id: item.id || undefined,
         variantId: Number(item.variantId),
-        warehouseId: Number(item.warehouseId),
+        warehouseId: Number(form.warehouseId),
         quantityIn: Number(item.quantity),
         quantityOut: 0,
         unitCost: Number(item.price),
@@ -506,6 +481,10 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
     if ((importType === 'PURCHASE' || importType === 'RETURN') && !form.referenceId) {
       return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
     }
+    if (!form.warehouseId) {
+      focusField('import-warehouseId');
+      return showToast('error', 'Vui lòng chọn kho nhập.');
+    }
     if (!form.docDate) {
       focusField('import-docDate');
       return showToast('error', 'Vui lòng chọn ngày nhập kho.');
@@ -520,9 +499,6 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       if (!item.variantId) {
         focusField(`import-line-product-${i}`);
         return showToast('error', `Dòng ${i + 1}: Vui lòng chọn hàng hóa.`);
-      }
-      if (!item.warehouseId) {
-        return showToast('error', `Dòng ${i + 1}: Vui lòng chọn kho nhập.`);
       }
       const qty = Number(item.quantity);
       if (!Number.isInteger(qty) || qty <= 0) {
@@ -815,6 +791,22 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
 
                   <div className="misa-form-row" style={{ marginTop: '12px' }}>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                      <label className="misa-label">Kho nhập <span className="required">*</span></label>
+                      <Select
+                        inputId="import-warehouseId"
+                        options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
+                        value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
+                        onChange={(selected) => {
+                          const newWh = selected ? selected.value : '';
+                          handleFormChange('warehouseId', newWh);
+                          setItems(prev => prev.map(it => ({ ...it, warehouseId: newWh })));
+                        }}
+                        placeholder="Chọn kho"
+                        isClearable
+                        styles={customSelectStyles}
+                      />
+                    </div>
+                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                       <label className="misa-label">
                         {importType === 'PURCHASE' && 'Nhân viên mua hàng'}
                         {importType === 'PRODUCTION' && 'Nhân viên phụ trách'}
@@ -829,7 +821,10 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                         style={{ backgroundColor: '#f3f4f6' }}
                       />
                     </div>
-                    {(importType === 'PURCHASE' || importType === 'PRODUCTION' || importType === 'OTHER') ? (
+                  </div>
+
+                  {(importType === 'PURCHASE' || importType === 'PRODUCTION' || importType === 'OTHER') && (
+                    <div className="misa-form-row" style={{ marginTop: '12px' }}>
                       <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                         <label className="misa-label">Người giao hàng</label>
                         <input
@@ -840,10 +835,9 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                           placeholder="Nhập người giao hàng..."
                         />
                       </div>
-                    ) : (
                       <div className="misa-form-group" style={{ flex: '0 0 50%' }}></div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
                   <label className="misa-label">Ghi chú</label>
@@ -919,16 +913,15 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                   <thead>
                     <tr>
                       <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>#</th>
-                      <th style={{ minWidth: '120px', width: '11%' }}>Mã hàng</th>
-                      <th style={{ minWidth: '180px', width: '18%' }}>Tên hàng</th>
-                      <th style={{ minWidth: '140px', width: '14%' }}>Kho nhập</th>
-                      <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                      <th style={{ minWidth: '65px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
-                      <th style={{ minWidth: '75px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
-                      <th style={{ minWidth: '65px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
-                      <th style={{ minWidth: '100px', width: '9%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>
-                      <th style={{ minWidth: '100px', width: '9%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
-                      <th style={{ minWidth: '75px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>% thuế GTGT</th>
+                      <th style={{ minWidth: '120px', width: '13%' }}>Mã hàng</th>
+                      <th style={{ minWidth: '180px', width: '22%' }}>Tên hàng</th>
+                      <th style={{ minWidth: '60px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                      <th style={{ minWidth: '65px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
+                      <th style={{ minWidth: '75px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                      <th style={{ minWidth: '65px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                      <th style={{ minWidth: '100px', width: '11%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>
+                      <th style={{ minWidth: '100px', width: '11%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
+                      <th style={{ minWidth: '75px', width: '8%', textAlign: 'right', whiteSpace: 'nowrap' }}>% thuế GTGT</th>
                       <th style={{ width: '40px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
@@ -959,18 +952,6 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                               onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
                               displayMode="name"
                               placeholder="Chọn hàng"
-                            />
-                          </td>
-                          <td>
-                            <Select
-                              options={warehouses.map(w => ({ value: String(w.id), label: `${w.code} - ${w.name}` }))}
-                              value={warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId)) ? {
-                                value: String(item.warehouseId || form.warehouseId),
-                                label: `${warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId))?.code} - ${warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId))?.name}`
-                              } : null}
-                              onChange={(selected) => handleItemChange(item.localId, 'warehouseId', selected ? selected.value : '')}
-                              placeholder="Chọn kho"
-                              styles={customSelectStyles}
                             />
                           </td>
                           <td>{product?.unitName || ''}</td>
@@ -1010,7 +991,6 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                   </tbody>
                   <tfoot>
                     <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
-                      <td style={{ borderRight: 'none' }}></td>
                       <td style={{ borderRight: 'none' }}></td>
                       <td style={{ borderRight: 'none' }}></td>
                       <td style={{ borderRight: 'none' }}></td>

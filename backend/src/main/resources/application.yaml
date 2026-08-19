@@ -63,3 +63,11 @@ ai:
     api-key: ${GEMINI_API_KEY:}
     model: ${GEMINI_MODEL:gemini-2.0-flash}
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+
+einvoice:
+  active-provider: ${EINVOICE_PROVIDER:XINVOICE}
+  xinvoice:
+    base-url: ${XINVOICE_BASE_URL:https://api.xinvoice.vn}
+    client-id: ${XINVOICE_CLIENT_ID:demo-client-id}
+    api-key: ${XINVOICE_API_KEY:demo-api-key}
+    auth-token: ${XINVOICE_AUTH_TOKEN:demo-auth-token}

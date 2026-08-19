@@ -463,9 +463,10 @@ function CreateImportSlipPage() {
     const quantity = Number(item.quantity || 0);
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
     const hasValidSerials = !product?.trackSerial || (Number.isInteger(quantity) && item.serialNumbers?.length === quantity);
-    return product && isWarehouseProduct(product) && item.warehouseId && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
+    return product && isWarehouseProduct(product) && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
   };
   const isFormValid = Boolean(
+    form.warehouseId &&
     form.docDate &&
     (importType === 'PURCHASE' ? (form.partnerId && form.referenceId)
       : (importType === 'PRODUCTION' || importType === 'SCRAP') ? form.assemblyOrderId
@@ -480,30 +481,6 @@ function CreateImportSlipPage() {
 
   const handleItemChange = (localId, field, value) => {
     setItems(prev => {
-      const getLineWh = (item) => String(item.warehouseId || form.warehouseId || '');
-
-      if (field === 'warehouseId') {
-        const currentItem = prev.find(item => item.localId === localId);
-        if (currentItem && currentItem.variantId) {
-          const targetWh = String(value || form.warehouseId || '');
-          const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(currentItem.variantId) && getLineWh(item) === targetWh);
-          if (existingIndex >= 0) {
-            const addedQty = Number(currentItem.quantity) || 1;
-            const newItems = [...prev];
-            newItems[existingIndex] = {
-              ...newItems[existingIndex],
-              quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
-            };
-            showToast('info', 'Sản phẩm đã tồn tại trong kho này, đã tự động cộng dồn số lượng.');
-            return newItems.filter(item => item.localId !== localId);
-          }
-        }
-        return prev.map(item => item.localId === localId ? {
-          ...item,
-          warehouseId: String(value || ''),
-          serialNumbers: [],
-        } : item);
-      }
       if (field === 'quantity') {
         const quantity = Number(value || 0);
         return prev.map(item => item.localId === localId ? {
@@ -516,24 +493,22 @@ function CreateImportSlipPage() {
         if (!value) {
           return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], warrantyMonths: 0 } : item);
         }
-        const currentItem = prev.find(item => item.localId === localId);
-        const itemWh = String(currentItem?.warehouseId || form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''));
-        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value) && getLineWh(item) === itemWh);
+        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value));
         if (existingIndex >= 0) {
+          const currentItem = prev.find(item => item.localId === localId);
           const addedQty = Number(currentItem?.quantity) || 1;
           const newItems = [...prev];
           newItems[existingIndex] = {
             ...newItems[existingIndex],
             quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
           };
-          showToast('info', 'Sản phẩm đã tồn tại trong kho này, đã tự động cộng dồn số lượng.');
+          showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động cộng dồn số lượng.');
           return newItems.filter(item => item.localId !== localId);
         }
         const product = products.find(p => String(p.id) === String(value));
         return prev.map(item => item.localId === localId ? {
           ...item,
           [field]: String(value),
-          warehouseId: itemWh,
           serialNumbers: [],
           warrantyMonths: product ? Number(product.warrantyMonths || 0) : 0
         } : item);
@@ -702,6 +677,10 @@ function CreateImportSlipPage() {
     if ((importType === 'PURCHASE' || importType === 'RETURN') && !form.referenceId) {
       return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
     }
+    if (!form.warehouseId) {
+      focusField('import-warehouseId');
+      return showToast('error', 'Vui lòng chọn kho nhập.');
+    }
     if (!form.docDate) {
       focusField('import-docDate');
       return showToast('error', 'Vui lòng chọn ngày nhập kho.');
@@ -716,9 +695,6 @@ function CreateImportSlipPage() {
       if (!item.variantId) {
         focusField(`import-line-product-${i}`);
         return showToast('error', `Dòng ${i + 1}: Vui lòng chọn hàng hóa.`);
-      }
-      if (!item.warehouseId) {
-        return showToast('error', `Dòng ${i + 1}: Vui lòng chọn kho nhập.`);
       }
       const qty = Number(item.quantity);
       if (!Number.isInteger(qty) || qty <= 0) {
@@ -819,85 +795,82 @@ function CreateImportSlipPage() {
     <AdminLayout>
       <div className={styles.pageHeader}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); navigate(returnUrl || '/import-history'); }}>
-            <i className="bi bi-arrow-left"></i> Lập phiếu nhập kho
+          <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/import-history'); }}>
+            <i className="bi bi-arrow-left"></i> Quay lại
           </a>
-          {aiEnabled && (
-            <button
-              type="button"
-              className={styles.ocrBtn}
-              onClick={() => setShowOcrModal(true)}
-              title="Quét tự động hóa đơn PDF/Ảnh"
-            >
-              <i className="bi bi-file-earmark-arrow-up-fill" style={{ color: '#0284c7' }}></i>
-              <span>Nhập từ Hóa đơn (AI Scan)</span>
-            </button>
-          )}
+          <span style={{ fontWeight: 600, fontSize: '18px' }}>Tạo phiếu nhập kho {form.docCode ? form.docCode : ''}</span>
+          <span style={{ color: '#d1d5db', fontSize: '20px' }}>|</span>
+          <div style={{ width: '280px' }}>
+            <Select
+              value={[
+                { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
+                { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
+                { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
+                { value: 'OTHER', label: 'Khác' }
+              ].find(o => o.value === importType)}
+              options={[
+                { value: 'PURCHASE', label: 'Nhập kho mua hàng' },
+                { value: 'PRODUCTION', label: 'Nhập kho thành phẩm sản xuất' },
+                { value: 'RETURN', label: 'Nhập kho hàng bán bị trả lại' },
+                { value: 'OTHER', label: 'Khác' }
+              ]}
+              onChange={(option) => {
+                setImportType(option.value);
+                setForm(prev => ({
+                  ...prev,
+                  partnerId: '',
+                  partnerName: '',
+                  customerId: '',
+                  customerName: '',
+                  assemblyOrderId: '',
+                  otherObjectCode: '',
+                  otherObjectName: '',
+                  otherObjectAddress: '',
+                  deliverer: ''
+                }));
+                setItems([{ ...emptyLine(form.warehouseId), isNew: false }]);
+              }}
+              styles={{
+                ...customSelectStyles,
+                control: (base, state) => ({ ...customSelectStyles.control(base, state), fontWeight: 'bold' })
+              }}
+              isSearchable={false}
+            />
+          </div>
         </div>
+        {aiEnabled && (
+          <button
+            type="button"
+            onClick={() => setShowOcrModal(true)}
+            style={{
+              padding: '7px 16px', borderRadius: '8px', border: 'none',
+              background: 'var(--brand-gradient, linear-gradient(135deg, var(--color-primary, #059669) 0%, var(--color-primary-accent, #10b981) 100%))',
+              color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+            }}
+          >
+            🤖 Quét AI (OCR)
+          </button>
+        )}
       </div>
 
       <div className={styles.pageBody}>
-        {/* Top Type Selector */}
-        <div className={styles.typeSelectorRow}>
-          <label className={styles.radioLabel}>
-            <input
-              type="radio"
-              name="importType"
-              value="PURCHASE"
-              checked={importType === 'PURCHASE'}
-              onChange={() => {
-                setImportType('PURCHASE');
-                setForm(prev => ({ ...prev, partnerId: '', partnerName: '', customerId: '', customerName: '', assemblyOrderId: '', otherObjectCode: '', otherObjectName: '', otherObjectAddress: '', deliverer: '' }));
-              }}
-            />
-            1. Mua hàng trong nước
-          </label>
-          <label className={styles.radioLabel}>
-            <input
-              type="radio"
-              name="importType"
-              value="PRODUCTION"
-              checked={importType === 'PRODUCTION'}
-              onChange={() => {
-                setImportType('PRODUCTION');
-                setForm(prev => ({ ...prev, partnerId: '', partnerName: '', customerId: '', customerName: '', assemblyOrderId: '', otherObjectCode: '', otherObjectName: '', otherObjectAddress: '', deliverer: '' }));
-              }}
-            />
-            2. Thành phẩm sản xuất
-          </label>
-          <label className={styles.radioLabel}>
-            <input
-              type="radio"
-              name="importType"
-              value="RETURN"
-              checked={importType === 'RETURN'}
-              onChange={() => {
-                setImportType('RETURN');
-                setForm(prev => ({ ...prev, partnerId: '', partnerName: '', customerId: '', customerName: '', assemblyOrderId: '', otherObjectCode: '', otherObjectName: '', otherObjectAddress: '', deliverer: '' }));
-              }}
-            />
-            3. Hàng bán bị trả lại
-          </label>
-          <label className={styles.radioLabel}>
-            <input
-              type="radio"
-              name="importType"
-              value="OTHER"
-              checked={importType === 'OTHER'}
-              onChange={() => {
-                setImportType('OTHER');
-                setForm(prev => ({ ...prev, partnerId: '', partnerName: '', customerId: '', customerName: '', assemblyOrderId: '', otherObjectCode: '', otherObjectName: '', otherObjectAddress: '', deliverer: '' }));
-              }}
-            />
-            4. Khác
-          </label>
-        </div>
-
-        <div className={styles.topSection}>
+        <div className={styles.topGrid}>
           {/* Card 1: Thông tin chung */}
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              <i className="bi bi-person-fill" style={{ fontSize: '16px', color: '#0075c0' }}></i> Thông tin chung
+              <i className="bi bi-info-circle text-gray-500"></i>
+              <h3 className={styles.cardTitle}>Thông tin chung</h3>
             </div>
             <div className={styles.cardBody}>
               {importType === 'PURCHASE' && (
@@ -1064,6 +1037,22 @@ function CreateImportSlipPage() {
 
               <div className="misa-form-row" style={{ marginTop: '12px' }}>
                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                  <label className="misa-label">Kho nhập <span className="required">*</span></label>
+                  <Select
+                    inputId="import-warehouseId"
+                    options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
+                    value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
+                    onChange={(selected) => {
+                      const newWh = selected ? selected.value : '';
+                      handleFormChange('warehouseId', newWh);
+                      setItems(prev => prev.map(it => ({ ...it, warehouseId: newWh })));
+                    }}
+                    placeholder="Chọn kho"
+                    isClearable
+                    styles={customSelectStyles}
+                  />
+                </div>
+                <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                   <label className="misa-label">
                     {importType === 'PURCHASE' && 'Nhân viên mua hàng'}
                     {importType === 'PRODUCTION' && 'Nhân viên phụ trách'}
@@ -1078,7 +1067,10 @@ function CreateImportSlipPage() {
                     style={{ backgroundColor: '#f3f4f6' }}
                   />
                 </div>
-                {(importType === 'PURCHASE' || importType === 'PRODUCTION' || importType === 'OTHER') ? (
+              </div>
+
+              {(importType === 'PURCHASE' || importType === 'PRODUCTION' || importType === 'OTHER') && (
+                <div className="misa-form-row" style={{ marginTop: '12px' }}>
                   <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                     <label className="misa-label">Người giao hàng</label>
                     <input
@@ -1089,10 +1081,9 @@ function CreateImportSlipPage() {
                       placeholder="Nhập người giao hàng..."
                     />
                   </div>
-                ) : (
                   <div className="misa-form-group" style={{ flex: '0 0 50%' }}></div>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="misa-form-group" style={{ marginTop: '12px' }}>
                 <label className="misa-label">Ghi chú</label>
@@ -1185,16 +1176,15 @@ function CreateImportSlipPage() {
               <thead>
                 <tr>
                   <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                  <th style={{ minWidth: '120px', width: '11%' }}>Mã hàng</th>
-                  <th style={{ minWidth: '180px', width: '18%' }}>Tên hàng</th>
-                  <th style={{ minWidth: '140px', width: '14%' }}>Kho nhập</th>
-                  <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                  <th style={{ minWidth: '65px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
-                  <th style={{ minWidth: '75px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
-                  <th style={{ minWidth: '65px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
-                  <th style={{ minWidth: '100px', width: '9%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>
-                  <th style={{ minWidth: '100px', width: '9%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
-                  <th style={{ minWidth: '75px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>% thuế GTGT</th>
+                  <th style={{ minWidth: '120px', width: '13%' }}>Mã hàng</th>
+                  <th style={{ minWidth: '180px', width: '22%' }}>Tên hàng</th>
+                  <th style={{ minWidth: '60px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                  <th style={{ minWidth: '65px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
+                  <th style={{ minWidth: '75px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                  <th style={{ minWidth: '65px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                  <th style={{ minWidth: '100px', width: '11%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>
+                  <th style={{ minWidth: '100px', width: '11%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
+                  <th style={{ minWidth: '75px', width: '8%', textAlign: 'right', whiteSpace: 'nowrap' }}>% thuế GTGT</th>
                   <th style={{ width: '40px', textAlign: 'center' }}></th>
                 </tr>
               </thead>
@@ -1225,18 +1215,6 @@ function CreateImportSlipPage() {
                           onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
                           displayMode="name"
                           placeholder="Chọn hàng"
-                        />
-                      </td>
-                      <td>
-                        <Select
-                          options={warehouses.map(w => ({ value: String(w.id), label: `${w.code} - ${w.name}` }))}
-                          value={warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId)) ? {
-                            value: String(item.warehouseId || form.warehouseId),
-                            label: `${warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId))?.code} - ${warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId))?.name}`
-                          } : null}
-                          onChange={(selected) => handleItemChange(item.localId, 'warehouseId', selected ? selected.value : '')}
-                          placeholder="Chọn kho"
-                          styles={customSelectStyles}
                         />
                       </td>
                       <td>{product?.unitName || ''}</td>
@@ -1280,7 +1258,6 @@ function CreateImportSlipPage() {
               </tbody>
               <tfoot>
                 <tr style={{ backgroundColor: '#f3f4f6', fontWeight: 'bold' }}>
-                  <td style={{ borderRight: 'none' }}></td>
                   <td style={{ borderRight: 'none' }}></td>
                   <td style={{ borderRight: 'none' }}></td>
                   <td style={{ borderRight: 'none' }}></td>

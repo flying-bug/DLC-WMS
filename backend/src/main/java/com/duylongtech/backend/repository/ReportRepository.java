@@ -33,6 +33,7 @@ public class ReportRepository {
                         "pv.id AS variantId, " +
                         "pv.variant_name AS itemName, " +
                         "u.name AS unitName, " +
+                        "w.id AS warehouseId, " +
                         "w.code AS warehouseCode, " +
                         "w.name AS warehouseName, " +
                         "p.track_serial AS trackSerial, " +
@@ -104,13 +105,14 @@ public class ReportRepository {
             params.add("%" + search + "%");
         }
 
-        sql.append(" GROUP BY pv.sku, pv.id, pv.variant_name, u.name, w.code, w.name, p.track_serial ");
+        sql.append(" GROUP BY pv.sku, pv.id, pv.variant_name, u.name, w.id, w.code, w.name, p.track_serial ");
         sql.append(" ORDER BY w.code, pv.sku ");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> InventoryBalanceReportResponse.builder()
                 .itemCode(rs.getString("itemCode"))
                 .itemName(rs.getString("itemName"))
                 .unitName(rs.getString("unitName"))
+                .warehouseId(rs.getLong("warehouseId"))
                 .warehouseCode(rs.getString("warehouseCode"))
                 .warehouseName(rs.getString("warehouseName"))
                 .totalQuantity(rs.getBigDecimal("totalQuantity"))

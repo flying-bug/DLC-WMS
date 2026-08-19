@@ -252,30 +252,6 @@ function CreateExportSlipPage({ mode: propMode }) {
 
   const handleItemChange = (localId, field, value) => {
     setItems(prev => {
-      const getLineWh = (item) => String(item.warehouseId || form.warehouseId || '');
-
-      if (field === 'warehouseId') {
-        const currentItem = prev.find(item => item.localId === localId);
-        if (currentItem && currentItem.variantId) {
-          const targetWh = String(value || form.warehouseId || '');
-          const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(currentItem.variantId) && getLineWh(item) === targetWh);
-          if (existingIndex >= 0) {
-            const addedQty = Number(currentItem.quantity) || 1;
-            const newItems = [...prev];
-            newItems[existingIndex] = {
-              ...newItems[existingIndex],
-              quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
-            };
-            showToast('info', 'Sản phẩm đã tồn tại trong kho này, đã tự động cộng dồn số lượng.');
-            return newItems.filter(item => item.localId !== localId);
-          }
-        }
-        return prev.map(item => item.localId === localId ? {
-          ...item,
-          warehouseId: String(value || ''),
-          serialNumbers: [],
-        } : item);
-      }
       if (field === 'quantity') {
         const quantity = Number(value || 0);
         return prev.map(item => item.localId === localId ? {
@@ -288,24 +264,22 @@ function CreateExportSlipPage({ mode: propMode }) {
         if (!value) {
           return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], price: 0, warrantyMonths: 0 } : item);
         }
-        const currentItem = prev.find(item => item.localId === localId);
-        const itemWh = String(currentItem?.warehouseId || form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''));
-        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value) && getLineWh(item) === itemWh);
+        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value));
         if (existingIndex >= 0) {
+          const currentItem = prev.find(item => item.localId === localId);
           const addedQty = Number(currentItem?.quantity) || 1;
           const newItems = [...prev];
           newItems[existingIndex] = {
             ...newItems[existingIndex],
             quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
           };
-          showToast('info', 'Sản phẩm đã tồn tại trong kho này, đã tự động cộng dồn số lượng.');
+          showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động cộng dồn số lượng.');
           return newItems.filter(item => item.localId !== localId);
         }
         const selectedProduct = products.find(p => String(p.id) === String(value));
         return prev.map(item => item.localId === localId ? {
           ...item,
           variantId: String(value),
-          warehouseId: itemWh,
           serialNumbers: [],
           price: selectedProduct ? Number(selectedProduct.salePrice || 0) : 0,
           warrantyMonths: selectedProduct ? Number(selectedProduct.warrantyMonths || 0) : 0
@@ -446,8 +420,7 @@ function CreateExportSlipPage({ mode: propMode }) {
     if (!variantId) return 0;
     const effectiveWh = warehouseId || form.warehouseId;
     if (effectiveWh) {
-      const specific = inventoryMap.get(`${variantId}_${effectiveWh}`);
-      if (specific !== undefined) return specific;
+      return inventoryMap.get(`${variantId}_${effectiveWh}`) || 0;
     }
     return inventoryMap.get(String(variantId)) || 0;
   };
@@ -463,10 +436,11 @@ function CreateExportSlipPage({ mode: propMode }) {
   const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-    return product && isWarehouseProduct(product) && item.warehouseId && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
+    return product && isWarehouseProduct(product) && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
   };
 
   const isFormValid = Boolean(
+    form.warehouseId &&
     form.docDate &&
     (exportMode === 'SALE' ? (form.partnerId && form.referenceId)
       : exportMode === 'ASSEMBLY' ? form.referenceId
@@ -697,11 +671,10 @@ function CreateExportSlipPage({ mode: propMode }) {
   };
 
   const buildPayload = (status) => {
-    const firstWh = items.find(it => it.warehouseId)?.warehouseId;
     return {
       docCode: form.docCode || undefined,
       issuePurpose: exportMode === 'SALE' ? 'SALES' : exportMode === 'USAGE' ? 'USAGE' : exportMode === 'ASSEMBLY' ? 'ASSEMBLY' : (form.referenceType === 'STOCKTAKE' ? 'INVENTORY_ADJUSTMENT' : 'USAGE'),
-      warehouseId: firstWh ? Number(firstWh) : (warehouses[0]?.id ? Number(warehouses[0].id) : null),
+      warehouseId: Number(form.warehouseId),
       partnerId: form.partnerId ? Number(form.partnerId) : null,
       salespersonId: (!isNaN(Number(form.salespersonId)) && String(form.salespersonId).trim() !== '') ? Number(form.salespersonId) : null,
       customerAddress: form.customerAddress,
@@ -714,7 +687,7 @@ function CreateExportSlipPage({ mode: propMode }) {
       createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
       lines: items.map(item => ({
         variantId: Number(item.variantId),
-        warehouseId: Number(item.warehouseId),
+        warehouseId: Number(form.warehouseId),
         quantityIn: 0,
         quantityOut: Number(item.quantity),
         unitCost: 0,
@@ -732,6 +705,10 @@ function CreateExportSlipPage({ mode: propMode }) {
   };
 
   const submit = async (status, shouldPost = false) => {
+    if (!form.warehouseId) {
+      focusField('export-warehouseId');
+      return showToast('error', 'Vui lòng chọn kho xuất.');
+    }
     if (exportMode === 'SALE' && !form.partnerId) {
       focusField('export-partnerId');
       return showToast('error', 'Vui lòng chọn khách hàng.');
@@ -758,9 +735,6 @@ function CreateExportSlipPage({ mode: propMode }) {
         focusField(`export-line-product-${i}`);
         return showToast('error', `Dòng ${i + 1}: Vui lòng chọn hàng hóa.`);
       }
-      if (!item.warehouseId) {
-        return showToast('error', `Dòng ${i + 1}: Vui lòng chọn kho xuất.`);
-      }
       const qty = Number(item.quantity);
       if (!Number.isInteger(qty) || qty <= 0) {
         focusField(`export-line-qty-${i}`);
@@ -785,6 +759,7 @@ function CreateExportSlipPage({ mode: propMode }) {
         return showToast('error', `Dòng ${i + 1}: Số lượng xuất (${item.quantity}) vượt quá số lượng còn lại trong đơn bán hàng (tối đa ${item.maxQuantity}) ${sku ? `cho SKU ${sku}` : ''}`);
       }
       if (product) {
+        const lineWh = item.warehouseId || form.warehouseId;
         const balance = getStockForLine(product.id, lineWh);
         if (Number(item.quantity) > balance) {
           focusField(`export-line-qty-${i}`);
@@ -1027,8 +1002,24 @@ function CreateExportSlipPage({ mode: propMode }) {
                 </div>
               )}
 
-              {/* Shared Row: Nhân viên phụ trách & Người nhận hàng */}
+              {/* Shared Row: Kho xuất & Nhân viên phụ trách */}
               <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                  <label className="misa-label">Kho xuất <span className="required">*</span></label>
+                  <Select
+                    inputId="export-warehouseId"
+                    options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
+                    value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
+                    onChange={(selected) => {
+                      const newWh = selected ? selected.value : '';
+                      handleFormChange('warehouseId', newWh);
+                      setItems(prev => prev.map(it => ({ ...it, warehouseId: newWh })));
+                    }}
+                    placeholder="Chọn kho xuất"
+                    isClearable
+                    styles={customSelectStyles}
+                  />
+                </div>
                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                   <label className="misa-label">Nhân viên xuất hàng</label>
                   <input
@@ -1039,17 +1030,23 @@ function CreateExportSlipPage({ mode: propMode }) {
                     style={{ backgroundColor: '#f3f4f6' }}
                   />
                 </div>
-                <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                  <label className="misa-label">Người nhận hàng</label>
-                  <input
-                    type="text"
-                    className="misa-input"
-                    value={form.receiverName || ''}
-                    onChange={(e) => handleFormChange('receiverName', e.target.value)}
-                    placeholder="Nhập tên người nhận hàng"
-                  />
-                </div>
               </div>
+
+              {(exportMode === 'SALE' || exportMode === 'ASSEMBLY') && (
+                <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                  <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                    <label className="misa-label">Người nhận hàng</label>
+                    <input
+                      type="text"
+                      className="misa-input"
+                      value={form.receiverName || ''}
+                      onChange={(e) => handleFormChange('receiverName', e.target.value)}
+                      placeholder="Nhập tên người nhận hàng"
+                    />
+                  </div>
+                  <div className="misa-form-group" style={{ flex: '0 0 50%' }}></div>
+                </div>
+              )}
 
               {/* Ghi chú Field placed BEFORE Tham chiếu chứng từ (Matching Nhập Kho) */}
               <div className="misa-form-group" style={{ marginTop: '12px' }}>
@@ -1158,17 +1155,16 @@ function CreateExportSlipPage({ mode: propMode }) {
               <thead>
                 <tr>
                   <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                  <th style={{ minWidth: '120px', width: '11%' }}>Mã hàng</th>
-                  <th style={{ minWidth: '180px', width: '18%' }}>{exportMode === 'ASSEMBLY' ? 'Tên linh kiện' : 'Tên hàng'}</th>
-                  <th style={{ minWidth: '140px', width: '14%' }}>Kho xuất</th>
-                  <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                  <th style={{ minWidth: '80px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
-                  <th style={{ minWidth: '65px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
-                  <th style={{ minWidth: '75px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
-                  <th style={{ minWidth: '65px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
-                  <th style={{ minWidth: '100px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>
-                  <th style={{ minWidth: '100px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>
-                  <th style={{ minWidth: '75px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thuế GTGT</th>
+                  <th style={{ minWidth: '120px', width: '13%' }}>Mã hàng</th>
+                  <th style={{ minWidth: '180px', width: '22%' }}>{exportMode === 'ASSEMBLY' ? 'Tên linh kiện' : 'Tên hàng'}</th>
+                  <th style={{ minWidth: '60px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                  <th style={{ minWidth: '80px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
+                  <th style={{ minWidth: '65px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
+                  <th style={{ minWidth: '75px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                  <th style={{ minWidth: '65px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                  <th style={{ minWidth: '100px', width: '11%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>
+                  <th style={{ minWidth: '100px', width: '11%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>
+                  <th style={{ minWidth: '75px', width: '8%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thuế GTGT</th>
                   <th style={{ width: '40px', textAlign: 'center' }}></th>
                 </tr>
               </thead>
@@ -1199,18 +1195,6 @@ function CreateExportSlipPage({ mode: propMode }) {
                           onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
                           displayMode="name"
                           placeholder="Chọn hàng hóa / linh kiện"
-                        />
-                      </td>
-                      <td>
-                        <Select
-                          options={warehouses.map(w => ({ value: String(w.id), label: `${w.code} - ${w.name}` }))}
-                          value={warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId)) ? {
-                            value: String(item.warehouseId || form.warehouseId),
-                            label: `${warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId))?.code} - ${warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId))?.name}`
-                          } : null}
-                          onChange={(selected) => handleItemChange(item.localId, 'warehouseId', selected ? selected.value : '')}
-                          placeholder="Chọn kho"
-                          styles={customSelectStyles}
                         />
                       </td>
                       <td>

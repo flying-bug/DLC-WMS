@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createCustomer, updateCustomer } from '../../../api/customerApi';
+import { lookupTaxCode } from '../../../api/taxLookupApi';
 import Modal from '../../../components/ui/Modal/Modal';
 import styles from './CustomerModal.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
@@ -20,16 +21,20 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
         phone: '', 
         email: '', 
         address: '', 
+        taxCode: '',
         groupType: 'RETAIL' 
     });
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
     const [phoneWarning, setPhoneWarning] = useState('');
     const [apiError, setApiError] = useState('');
+    const [lookingUpTax, setLookingUpTax] = useState(false);
+    const [taxLookupMsg, setTaxLookupMsg] = useState({ type: '', text: '' });
 
     useEffect(() => {
         if (!isOpen) return;
         setApiError('');
+        setTaxLookupMsg({ type: '', text: '' });
         if (isEditMode) {
             setForm({
                 code: editData.code || '',
@@ -37,14 +42,44 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                 phone: editData.phone || '',
                 email: editData.email || '',
                 address: editData.address || '',
+                taxCode: editData.taxCode || '',
                 groupType: editData.groupType || 'RETAIL',
             });
             setPhoneWarning('');
         } else {
-            setForm({ code: '', name: '', phone: '', email: '', address: '', groupType: 'RETAIL' });
+            setForm({ code: '', name: '', phone: '', email: '', address: '', taxCode: '', groupType: 'RETAIL' });
         }
         setErrors({});
     }, [isOpen, editData, isEditMode]);
+
+    const handleTaxLookup = async () => {
+        if (!form.taxCode || !form.taxCode.trim()) {
+            setTaxLookupMsg({ type: 'error', text: 'Vui lòng nhập Mã số thuế trước khi tra cứu' });
+            return;
+        }
+        setLookingUpTax(true);
+        setTaxLookupMsg({ type: '', text: '' });
+        try {
+            const res = await lookupTaxCode(form.taxCode.trim());
+            const data = res.data?.data;
+            if (data && data.success) {
+                setForm(prev => ({
+                    ...prev,
+                    name: data.name || prev.name,
+                    address: data.address || prev.address,
+                    groupType: 'DISTRIBUTOR',
+                }));
+                setTaxLookupMsg({ type: 'success', text: `Tìm thấy: ${data.name} (${data.rawStatusText || 'Đang hoạt động'})` });
+                setErrors(prev => ({ ...prev, name: '' }));
+            } else {
+                setTaxLookupMsg({ type: 'error', text: data?.message || 'Không tìm thấy thông tin công ty từ mã số thuế này' });
+            }
+        } catch (err) {
+            setTaxLookupMsg({ type: 'error', text: 'Tra cứu mã số thuế thất bại hoặc dịch vụ tạm ngưng' });
+        } finally {
+            setLookingUpTax(false);
+        }
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -93,6 +128,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                 phone: cleanString(form.phone),
                 email: cleanString(form.email),
                 address: cleanString(form.address),
+                taxCode: cleanString(form.taxCode),
                 groupType: form.groupType,
             };
 
@@ -187,14 +223,61 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                     </div>
 
                     <div className={`${styles.formGroup} ${styles.col12}`}>
-                        <label className={styles.formLabel}>Tên khách hàng <span className={styles.required}>*</span></label>
+                        <label className={styles.formLabel}>Mã số thuế doanh nghiệp (nếu có)</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <input 
+                                type="text" 
+                                className={styles.input}
+                                name="taxCode"
+                                value={form.taxCode}
+                                onChange={handleChange}
+                                placeholder="Ví dụ: 0100109106..." 
+                                maxLength={50}
+                            />
+                            <button
+                                type="button"
+                                onClick={handleTaxLookup}
+                                disabled={lookingUpTax || !form.taxCode?.trim()}
+                                style={{
+                                    padding: '0 14px',
+                                    background: '#0284c7',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    fontWeight: 600,
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                <i className={`bi ${lookingUpTax ? 'bi-arrow-repeat spin' : 'bi-search'}`} />
+                                {lookingUpTax ? 'Đang tra...' : 'Tra cứu MST'}
+                            </button>
+                        </div>
+                        {taxLookupMsg.text && (
+                            <div style={{
+                                marginTop: '6px', fontSize: '12px',
+                                color: taxLookupMsg.type === 'success' ? '#166534' : '#dc2626',
+                                background: taxLookupMsg.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                                padding: '4px 8px', borderRadius: '4px'
+                            }}>
+                                {taxLookupMsg.text}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className={`${styles.formGroup} ${styles.col12}`}>
+                        <label className={styles.formLabel}>Tên khách hàng / Đơn vị <span className={styles.required}>*</span></label>
                         <input 
                             type="text" 
                             className={`${styles.input} ${errors.name ? styles.inputError : ''}`} 
                             name="name"
                             value={form.name}
                             onChange={handleChange}
-                            placeholder="Ví dụ: Nguyễn Văn A..." 
+                            placeholder="Ví dụ: Công ty TNHH ABC hoặc Nguyễn Văn A..." 
                             maxLength={150}
                         />
                         {errors.name && <span className={styles.errorMsg}>{errors.name}</span>}

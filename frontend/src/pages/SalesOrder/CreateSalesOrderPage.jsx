@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Select from 'react-select';
 import DatePicker from 'react-datepicker';
@@ -466,11 +466,14 @@ function CreateSalesOrderPage() {
         focusField(`so-line-price-${i}`);
         return false;
       }
-      const serialCount = Array.isArray(lines[i].serialNumbers) ? lines[i].serialNumbers.length : 0;
-      if (serialCount > 0 && serialCount !== qty) {
-        showToast('error', `Dòng ${i + 1}: số serial phải bằng số lượng`);
-        setSerialModalLineIndex(i);
-        return false;
+      const v = variants.find(item => String(item.id) === String(lines[i].variantId));
+      if (v?.trackSerial) {
+        const serialCount = Array.isArray(lines[i].serialNumbers) ? lines[i].serialNumbers.length : 0;
+        if (serialCount !== qty) {
+          showToast('error', `Dòng ${i + 1}: Vui lòng quét đủ ${qty} mã serial cho sản phẩm "${v.productName || v.variantName || ''}" (hiện có ${serialCount})`);
+          setSerialModalLineIndex(i);
+          return false;
+        }
       }
     }
     return true;
@@ -539,11 +542,44 @@ function CreateSalesOrderPage() {
     salePrice: v.salePrice || 0,
     warrantyMonths: v.warrantyMonths || 0,
     vatRate: v.vatPercent || v.vatRate || 0,
+    trackSerial: Boolean(v.trackSerial),
   }));
-  const inventoryMap = new Map(inventoryBalances.map(balance => [
-    String(balance.variantId),
-    Math.max(0, Number(balance.totalQuantity || 0) - Number(balance.totalReserved || 0)),
-  ]));
+  const inventoryMap = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(inventoryBalances)) {
+      inventoryBalances.forEach(b => {
+        const qty = Math.max(0, Number(b.availableQuantity ?? (Number(b.totalQuantity || b.quantityOnHand || 0) - Number(b.totalReserved || b.quantityReserved || 0))));
+        const vId = String(b.variantId || b.id || '');
+        const wId = b.warehouseId ? String(b.warehouseId) : null;
+        if (vId && wId) {
+          map.set(`${vId}_${wId}`, (map.get(`${vId}_${wId}`) || 0) + qty);
+        }
+        if (vId) {
+          map.set(vId, (map.get(vId) || 0) + qty);
+        }
+      });
+    }
+    return map;
+  }, [inventoryBalances]);
+
+  const getWarehouseInventoryMap = useCallback((warehouseId) => {
+    const map = new Map();
+    if (Array.isArray(inventoryBalances)) {
+      inventoryBalances.forEach(b => {
+        const qty = Math.max(0, Number(b.availableQuantity ?? (Number(b.totalQuantity || b.quantityOnHand || 0) - Number(b.totalReserved || b.quantityReserved || 0))));
+        const vId = String(b.variantId || b.id || '');
+        const wId = b.warehouseId ? String(b.warehouseId) : null;
+        if (warehouseId) {
+          if (wId === String(warehouseId)) {
+            map.set(vId, (map.get(vId) || 0) + qty);
+          }
+        } else {
+          map.set(vId, (map.get(vId) || 0) + qty);
+        }
+      });
+    }
+    return map;
+  }, [inventoryBalances]);
 
   return (
     <AdminLayout>
@@ -847,8 +883,13 @@ function CreateSalesOrderPage() {
                   <tbody>
                     {lines.map((line, idx) => {
                       const lineTotal = Number(line.quantity) * Number(line.unitPrice);
-                      const invBalance = inventoryBalances.find(b => String(b.variantId) === String(line.variantId) && (String(b.warehouseId) === String(line.warehouseId) || !line.warehouseId));
-                      const availableQty = invBalance ? (Number(invBalance.quantityOnHand || invBalance.totalQuantity || 0) - Number(invBalance.quantityReserved || invBalance.totalReserved || 0)) : 0;
+                      const effectiveWh = line.warehouseId || defaultWarehouseId;
+                      const lineInventoryMap = getWarehouseInventoryMap(effectiveWh);
+                      const availableQty = line.variantId
+                        ? (effectiveWh
+                            ? (inventoryMap.get(`${line.variantId}_${effectiveWh}`) || 0)
+                            : (inventoryMap.get(String(line.variantId)) || 0))
+                        : 0;
                       return (
                         <tr key={idx}>
                           <td style={{ textAlign: 'center', color: '#94a3b8' }}>{idx + 1}</td>
@@ -856,7 +897,7 @@ function CreateSalesOrderPage() {
                             <ProductGridSelect
                               id={`so-line-product-${idx}`}
                               products={productOptions}
-                              inventoryMap={inventoryMap}
+                              inventoryMap={lineInventoryMap}
                               value={line.variantId}
                               onChange={selected => handleProductSelect(idx, selected)}
                               onAddNew={() => {
@@ -876,7 +917,7 @@ function CreateSalesOrderPage() {
                             <Select
                               inputId={`so-line-wh-${idx}`}
                               options={warehouseOptions}
-                              value={warehouseOptions.find(o => o.value === line.warehouseId) || null}
+                              value={warehouseOptions.find(o => String(o.value) === String(line.warehouseId)) || null}
                               onChange={opt => updateLine(idx, 'warehouseId', opt?.value || null)}
                               placeholder="Chọn kho..."
                               styles={customSelectStyles}
@@ -934,30 +975,37 @@ function CreateSalesOrderPage() {
                           {mode === 'direct' && (
                             <td align="center">
                               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                {line.variantId && (
-                                  <button
-                                    type="button"
-                                    style={{
-                                      background: (line.serialNumbers?.length || 0) === Number(line.quantity || 0) ? '#dcfce7' : '#fef9c3',
-                                      color: (line.serialNumbers?.length || 0) === Number(line.quantity || 0) ? '#166534' : '#854d0e',
-                                      border: `1px solid ${(line.serialNumbers?.length || 0) === Number(line.quantity || 0) ? '#bbf7d0' : '#fef08a'}`,
-                                      borderRadius: '4px',
-                                      padding: '2px 8px',
-                                      fontSize: '12px',
-                                      fontWeight: 500,
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      gap: '4px',
-                                      whiteSpace: 'nowrap'
-                                    }}
-                                    onClick={() => setSerialModalLineIndex(idx)}
-                                  >
-                                    <i className="bi bi-upc-scan"></i>
-                                    {(line.serialNumbers?.length || 0)} / {Number(line.quantity || 0)}
-                                  </button>
-                                )}
+                                {line.variantId && (() => {
+                                  const prod = variants.find(v => String(v.id) === String(line.variantId));
+                                  if (!prod?.trackSerial) {
+                                    return <span style={{ color: '#94a3b8', fontSize: '13px' }}>—</span>;
+                                  }
+                                  const isFull = (line.serialNumbers?.length || 0) === Number(line.quantity || 0);
+                                  return (
+                                    <button
+                                      type="button"
+                                      style={{
+                                        background: isFull ? '#dcfce7' : '#fef9c3',
+                                        color: isFull ? '#166534' : '#854d0e',
+                                        border: `1px solid ${isFull ? '#bbf7d0' : '#fef08a'}`,
+                                        borderRadius: '4px',
+                                        padding: '2px 8px',
+                                        fontSize: '12px',
+                                        fontWeight: 500,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '4px',
+                                        whiteSpace: 'nowrap'
+                                      }}
+                                      onClick={() => setSerialModalLineIndex(idx)}
+                                    >
+                                      <i className="bi bi-upc-scan"></i>
+                                      {(line.serialNumbers?.length || 0)} / {Number(line.quantity || 0)}
+                                    </button>
+                                  );
+                                })()}
                               </div>
                             </td>
                           )}

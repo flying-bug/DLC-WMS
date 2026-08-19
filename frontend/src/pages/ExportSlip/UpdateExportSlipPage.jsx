@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
+import * as einvoiceApi from '../../api/einvoiceApi';
 import CustomerModal from '../Customer/components/CustomerModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
+import IssueInvoiceModal from '../SalesOrder/components/IssueInvoiceModal';
+import EInvoicePreviewModal from '../EInvoice/components/EInvoicePreviewModal';
 import { printExportSlip } from '../../utils/printExportSlip';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
@@ -129,6 +132,10 @@ function UpdateExportSlipPage() {
   const [serialModalItemId, setSerialModalItemId] = useState(null);
   const [savedSlip, setSavedSlip] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [einvoice, setEinvoice] = useState(null);
+  const [showIssueModal, setShowIssueModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [issuingInvoice, setIssuingInvoice] = useState(false);
   const [form, setForm] = useState({
     docCode: '',
     warehouseId: '',
@@ -184,6 +191,16 @@ function UpdateExportSlipPage() {
     });
     showToast('info', 'Đã áp dụng kho cho tất cả các dòng sản phẩm và tự động gộp các dòng trùng');
   };
+
+  const loadEInvoice = useCallback(async () => {
+    if (!id) return;
+    try {
+      const res = await einvoiceApi.getEInvoiceByExportId(id);
+      setEinvoice(res.data?.data || null);
+    } catch {
+      setEinvoice(null);
+    }
+  }, [id]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -260,8 +277,34 @@ function UpdateExportSlipPage() {
 
     if (id) {
       loadData();
+      loadEInvoice();
     }
-  }, [id]);
+  }, [id, loadEInvoice]);
+
+  const handleIssueEInvoice = async (formData) => {
+    setIssuingInvoice(true);
+    try {
+      const payload = {
+        salesOrderId: form.salesOrderId ? Number(form.salesOrderId) : undefined,
+        inventoryDocumentId: Number(id),
+        buyerName: formData.name,
+        buyerLegalName: formData.legalName,
+        buyerTaxCode: formData.taxCode,
+        buyerAddress: formData.address,
+        buyerPhone: formData.phone,
+        buyerEmail: formData.email,
+        paymentMethod: 'TM/CK',
+      };
+      await einvoiceApi.issueEInvoice(payload);
+      showToast('success', 'Phát hành Hóa đơn điện tử thành công!');
+      setShowIssueModal(false);
+      loadEInvoice();
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Phát hành HĐĐT thất bại');
+    } finally {
+      setIssuingInvoice(false);
+    }
+  };
 
   const selectedCustomer = useMemo(() => customers.find(c => String(c.id) === String(form.partnerId)), [customers, form.partnerId]);
 
@@ -293,8 +336,7 @@ function UpdateExportSlipPage() {
     if (!variantId) return 0;
     const effectiveWh = warehouseId || form.warehouseId;
     if (effectiveWh) {
-      const specific = inventoryMap.get(`${variantId}_${effectiveWh}`);
-      if (specific !== undefined) return specific;
+      return inventoryMap.get(`${variantId}_${effectiveWh}`) || 0;
     }
     return inventoryMap.get(String(variantId)) || 0;
   };
@@ -309,9 +351,10 @@ function UpdateExportSlipPage() {
   const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-    return product && isWarehouseProduct(product) && item.warehouseId && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
+    return product && isWarehouseProduct(product) && Number(item.quantity) > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10;
   };
   const isFormValid = Boolean(
+    form.warehouseId &&
     form.docDate &&
     (form.issuePurpose === 'SALES' ? (form.partnerId && form.referenceId)
       : form.issuePurpose === 'ASSEMBLY' ? form.referenceId
@@ -343,30 +386,6 @@ function UpdateExportSlipPage() {
 
   const handleItemChange = (localId, field, value) => {
     setItems(prev => {
-      const getLineWh = (item) => String(item.warehouseId || form.warehouseId || '');
-
-      if (field === 'warehouseId') {
-        const currentItem = prev.find(item => item.localId === localId);
-        if (currentItem && currentItem.variantId) {
-          const targetWh = String(value || form.warehouseId || '');
-          const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(currentItem.variantId) && getLineWh(item) === targetWh);
-          if (existingIndex >= 0) {
-            const addedQty = Number(currentItem.quantity) || 1;
-            const newItems = [...prev];
-            newItems[existingIndex] = {
-              ...newItems[existingIndex],
-              quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
-            };
-            showToast('info', 'Sản phẩm đã tồn tại trong kho này, đã tự động cộng dồn số lượng.');
-            return newItems.filter(item => item.localId !== localId);
-          }
-        }
-        return prev.map(item => item.localId === localId ? {
-          ...item,
-          warehouseId: String(value || ''),
-          serialNumbers: [],
-        } : item);
-      }
       if (field === 'quantity') {
         const quantity = Number(value || 0);
         return prev.map(item => item.localId === localId ? {
@@ -379,24 +398,22 @@ function UpdateExportSlipPage() {
         if (!value) {
           return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], price: 0, warrantyMonths: 0 } : item);
         }
-        const currentItem = prev.find(item => item.localId === localId);
-        const itemWh = String(currentItem?.warehouseId || form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''));
-        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value) && getLineWh(item) === itemWh);
+        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value));
         if (existingIndex >= 0) {
+          const currentItem = prev.find(item => item.localId === localId);
           const addedQty = Number(currentItem?.quantity) || 1;
           const newItems = [...prev];
           newItems[existingIndex] = {
             ...newItems[existingIndex],
             quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
           };
-          showToast('info', 'Sản phẩm đã tồn tại trong kho này, đã tự động cộng dồn số lượng.');
+          showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động cộng dồn số lượng.');
           return newItems.filter(item => item.localId !== localId);
         }
         const selectedProduct = products.find(p => String(p.id) === String(value));
         return prev.map(item => item.localId === localId ? {
           ...item,
           variantId: String(value),
-          warehouseId: itemWh,
           serialNumbers: [],
           price: selectedProduct ? Number(selectedProduct.salePrice || 0) : 0,
           warrantyMonths: selectedProduct ? Number(selectedProduct.warrantyMonths || 0) : 0
@@ -578,10 +595,9 @@ function UpdateExportSlipPage() {
   };
 
   const buildPayload = (status) => {
-    const firstWh = items.find(it => it.warehouseId)?.warehouseId;
     return {
       docCode: form.docCode || undefined,
-      warehouseId: firstWh ? Number(firstWh) : (warehouses[0]?.id ? Number(warehouses[0].id) : null),
+      warehouseId: Number(form.warehouseId),
       partnerId: form.partnerId ? Number(form.partnerId) : null,
       salespersonId: (!isNaN(Number(form.salespersonId)) && String(form.salespersonId).trim() !== '') ? Number(form.salespersonId) : null,
       customerAddress: form.customerAddress,
@@ -595,7 +611,7 @@ function UpdateExportSlipPage() {
       lines: items.map(item => ({
         id: item.id || undefined,
         variantId: Number(item.variantId),
-        warehouseId: Number(item.warehouseId),
+        warehouseId: Number(form.warehouseId),
         quantityIn: 0,
         quantityOut: Number(item.quantity),
         unitCost: 0,
@@ -614,6 +630,10 @@ function UpdateExportSlipPage() {
   };
 
   const submit = async (status, shouldPost = false) => {
+    if (!form.warehouseId) {
+      focusField('export-warehouseId');
+      return showToast('error', 'Vui lòng chọn kho xuất.');
+    }
     if (form.issuePurpose === 'SALES' && !form.partnerId) {
       focusField('export-partnerId');
       return showToast('error', 'Vui lòng chọn khách hàng.');
@@ -635,9 +655,6 @@ function UpdateExportSlipPage() {
       if (!item.variantId) {
         focusField(`export-line-product-${i}`);
         return showToast('error', `Dòng ${i + 1}: Vui lòng chọn hàng hóa.`);
-      }
-      if (!item.warehouseId) {
-        return showToast('error', `Dòng ${i + 1}: Vui lòng chọn kho xuất.`);
       }
       const qty = Number(item.quantity);
       if (!Number.isInteger(qty) || qty <= 0) {
@@ -718,10 +735,44 @@ function UpdateExportSlipPage() {
 
   return (
     <AdminLayout>
-      <div className={styles.pageHeader}>
+      <div className={styles.pageHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/export-slips'); }}>
           <i className="bi bi-arrow-left"></i> Cập nhật phiếu xuất kho {form.docCode ? form.docCode : ''}
         </a>
+
+        {form.status === 'POSTED' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {einvoice ? (
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(true)}
+                style={{
+                  padding: '6px 14px', borderRadius: 6,
+                  border: '1px solid #16a34a', color: '#16a34a', background: '#f0fdf4',
+                  fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 6
+                }}
+              >
+                <i className="bi bi-file-earmark-check-fill" style={{ color: '#16a34a' }} />
+                Xem HĐĐT ({einvoice.invoiceNumber || 'Đã cấp'})
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowIssueModal(true)}
+                style={{
+                  padding: '6px 14px', borderRadius: 6,
+                  background: '#059669', color: '#fff', border: 'none',
+                  fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                }}
+              >
+                <i className="bi bi-file-earmark-plus" /> Xuất Hóa Đơn Điện Tử (NĐ 123)
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className={styles.pageBody}>
@@ -772,6 +823,22 @@ function UpdateExportSlipPage() {
 
                   <div className="misa-form-row" style={{ marginTop: '12px' }}>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                      <label className="misa-label">Kho xuất <span className="required">*</span></label>
+                      <Select
+                        inputId="export-warehouseId"
+                        options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
+                        value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
+                        onChange={(selected) => {
+                          const newWh = selected ? selected.value : '';
+                          handleFormChange('warehouseId', newWh);
+                          setItems(prev => prev.map(it => ({ ...it, warehouseId: newWh })));
+                        }}
+                        placeholder="Chọn kho xuất"
+                        isClearable
+                        styles={customSelectStyles}
+                      />
+                    </div>
+                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                       <label className="misa-label">Nhân viên xuất hàng</label>
                       <input
                         type="text"
@@ -781,6 +848,9 @@ function UpdateExportSlipPage() {
                         style={{ backgroundColor: '#f3f4f6' }}
                       />
                     </div>
+                  </div>
+
+                  <div className="misa-form-row" style={{ marginTop: '12px' }}>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                       <label className="misa-label">Người nhận hàng</label>
                       <input
@@ -791,6 +861,7 @@ function UpdateExportSlipPage() {
                         placeholder="Nhập tên người nhận hàng"
                       />
                     </div>
+                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}></div>
                   </div>
 
                   <div className="misa-form-group" style={{ marginTop: '12px' }}>
@@ -885,17 +956,16 @@ function UpdateExportSlipPage() {
                   <thead>
                     <tr>
                       <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                      <th style={{ minWidth: '120px', width: '11%' }}>Mã hàng</th>
-                      <th style={{ minWidth: '180px', width: '18%' }}>Tên hàng</th>
-                      <th style={{ minWidth: '140px', width: '14%' }}>Kho xuất</th>
-                      <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                      <th style={{ minWidth: '80px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
-                      <th style={{ minWidth: '65px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
-                      <th style={{ minWidth: '75px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
-                      <th style={{ minWidth: '65px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
-                      <th style={{ minWidth: '100px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>
-                      <th style={{ minWidth: '100px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>
-                      <th style={{ minWidth: '75px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>% VAT</th>
+                      <th style={{ minWidth: '120px', width: '13%' }}>Mã hàng</th>
+                      <th style={{ minWidth: '180px', width: '22%' }}>Tên hàng</th>
+                      <th style={{ minWidth: '60px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                      <th style={{ minWidth: '80px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
+                      <th style={{ minWidth: '65px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
+                      <th style={{ minWidth: '75px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                      <th style={{ minWidth: '65px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                      <th style={{ minWidth: '100px', width: '11%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>
+                      <th style={{ minWidth: '100px', width: '11%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>
+                      <th style={{ minWidth: '75px', width: '8%', whiteSpace: 'nowrap' }} className={styles.textRight}>% VAT</th>
                       <th style={{ width: '40px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
@@ -926,18 +996,6 @@ function UpdateExportSlipPage() {
                               onAddNew={() => { setQuickAddLineId(item.localId); setShowQuickAddProduct(true); }}
                               displayMode="name"
                               placeholder="Chọn hàng"
-                            />
-                          </td>
-                          <td>
-                            <Select
-                              options={warehouses.map(w => ({ value: String(w.id), label: `${w.code} - ${w.name}` }))}
-                              value={warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId)) ? {
-                                value: String(item.warehouseId || form.warehouseId),
-                                label: `${warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId))?.code} - ${warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId))?.name}`
-                              } : null}
-                              onChange={(selected) => handleItemChange(item.localId, 'warehouseId', selected ? selected.value : '')}
-                              placeholder="Chọn kho"
-                              styles={customSelectStyles}
                             />
                           </td>
                           <td>
@@ -1108,6 +1166,39 @@ function UpdateExportSlipPage() {
           }}
         />
       )}
+      {/* ── Modal Phát Hành Hóa Đơn Điện Tử ── */}
+      <IssueInvoiceModal
+        isOpen={showIssueModal}
+        onClose={() => setShowIssueModal(false)}
+        exportDoc={{
+          id: Number(id),
+          docCode: form.docCode,
+          partnerId: form.partnerId,
+          partnerName: form.customerName || customers.find(c => String(c.id) === String(form.partnerId))?.name,
+          partnerTaxCode: selectedCustomer?.taxCode || '',
+          partnerAddress: form.customerAddress || selectedCustomer?.address || '',
+          partnerPhone: form.receiverPhone || selectedCustomer?.phone || '',
+          partnerEmail: selectedCustomer?.email || '',
+          salesOrderId: form.salesOrderId,
+          lines: items.map(item => ({
+            ...item,
+            quantityOut: item.quantity,
+            unitPrice: item.price,
+            vatRate: item.vatPercent,
+            serialNumbersText: item.serialNumbers?.join(', '),
+          })),
+        }}
+        onConfirm={handleIssueEInvoice}
+        loading={issuingInvoice}
+      />
+
+      {/* ── Modal Xem Hóa Đơn Điện Tử ── */}
+      <EInvoicePreviewModal
+        invoice={einvoice}
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+      />
+
       <SuccessPrintModal
         isOpen={showSuccessModal}
         title={savedSlip?.status === 'POSTED' || savedSlip?.statusCode === 'POSTED' ? 'Ghi sổ phiếu xuất kho thành công!' : 'Cập nhật phiếu xuất kho thành công!'}

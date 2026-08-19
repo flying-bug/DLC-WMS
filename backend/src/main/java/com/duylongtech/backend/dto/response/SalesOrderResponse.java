@@ -22,6 +22,8 @@ public class SalesOrderResponse {
     private String partnerName;
     private String partnerPhone;
     private String partnerEmail;
+    private String partnerTaxCode;
+    private String partnerAddress;
 
     // Warehouse info
     private Long warehouseId;

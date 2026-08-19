@@ -11,6 +11,7 @@ import styles from './CreateTransferSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import { printTransferSlip } from '../../utils/printTransferSlip';
+import Toast from '../../components/ui/Toast/Toast';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 

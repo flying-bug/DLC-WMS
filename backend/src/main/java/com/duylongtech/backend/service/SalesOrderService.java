@@ -571,6 +571,8 @@ public class SalesOrderService {
                 .partnerName(so.getPartner() != null ? so.getPartner().getName() : null)
                 .partnerPhone(so.getPartner() != null ? so.getPartner().getPhone() : null)
                 .partnerEmail(so.getPartner() != null ? so.getPartner().getEmail() : null)
+                .partnerTaxCode(so.getPartner() != null ? so.getPartner().getTaxCode() : null)
+                .partnerAddress(so.getPartner() != null ? so.getPartner().getAddress() : null)
                 .warehouseId(so.getWarehouseId())
                 .warehouseCode(so.getWarehouse() != null ? so.getWarehouse().getCode() : null)
                 .warehouseName(so.getWarehouse() != null ? so.getWarehouse().getName() : null)

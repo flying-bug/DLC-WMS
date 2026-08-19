@@ -76,7 +76,8 @@ const AdminLayout = ({ children }) => {
             { path: '/purchase-orders', label: 'Đơn mua hàng' }
         ],
         sales: [
-            { path: '/sales-orders', label: 'Đơn bán hàng' }
+            { path: '/sales-orders', label: 'Đơn bán hàng' },
+            { path: '/einvoices', label: 'Hóa đơn điện tử' }
         ],
         finance: [
             { path: '/payments/receipt', label: 'Phiếu Thu' },
@@ -107,7 +108,7 @@ const AdminLayout = ({ children }) => {
         if (currentPath === '/main-dashboard') return 'overview';
         if (['/dashboard', '/import-history', '/import-slips', '/export-slips', '/transfer-history', '/stocktakes', '/assembly-orders', '/assembly-boms', '/warehouses', '/reports'].some(p => currentPath.startsWith(p))) return 'warehouse';
         if (currentPath.startsWith('/purchase-orders')) return 'purchase';
-        if (currentPath.startsWith('/sales-orders')) return 'sales';
+        if (currentPath.startsWith('/sales-orders') || currentPath.startsWith('/einvoices')) return 'sales';
         if (currentPath.startsWith('/payments')) return 'finance';
         if (currentPath.startsWith('/warranties') || currentPath.startsWith('/repairs')) return 'service';
         if (['/customers', '/suppliers'].some(p => currentPath.startsWith(p))) return 'partner';
