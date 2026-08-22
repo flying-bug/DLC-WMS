@@ -6,6 +6,7 @@ import * as exportApi from '../../api/inventoryExportApi';
 import CustomerModal from '../Customer/components/CustomerModal';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import * as stocktakeApi from '../../api/stocktakeApi';
+import * as salesOrderApi from '../../api/salesOrderApi';
 import AssemblyOrderSelectionModal from '../CreateImportSlip/components/AssemblyOrderSelectionModal';
 import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import Toast from '../../components/ui/Toast/Toast';
@@ -175,6 +176,8 @@ function CreateExportSlipPage({ mode: propMode }) {
         variantId: String(l.variantId),
         warehouseId: String(l.warehouseId || soData.warehouseId || ''),
         quantity: l.quantity || 1,
+        reservedQuantity: Number(l.quantity || 0),
+        maxQuantity: Number(l.quantity || 0),
         price: l.price || 0,
         vatPercent: l.vatPercent || 0,
         warrantyMonths: l.warrantyMonths || 0,
@@ -416,13 +419,22 @@ function CreateExportSlipPage({ mode: propMode }) {
     return map;
   }, [inventoryBalances]);
 
-  const getStockForLine = (variantId, warehouseId) => {
+  const getStockForLine = (variantId, warehouseId, item) => {
     if (!variantId) return 0;
     const effectiveWh = warehouseId || form.warehouseId;
+    let baseStock = 0;
     if (effectiveWh) {
-      return inventoryMap.get(`${variantId}_${effectiveWh}`) || 0;
+      baseStock = inventoryMap.get(`${variantId}_${effectiveWh}`) || 0;
+    } else {
+      baseStock = inventoryMap.get(String(variantId)) || 0;
     }
-    return inventoryMap.get(String(variantId)) || 0;
+
+    // Nếu phiếu xuất này được tạo cho một Đơn bán hàng (SO), cộng bù số lượng cố định đã giữ chỗ (reservedQuantity)
+    const isSoExport = Boolean(soData || form.salesOrderId || form.referenceType === 'SALES_ORDER' || form.referenceType === 'SO');
+    if (isSoExport && item && item.reservedQuantity !== undefined && item.reservedQuantity !== null) {
+      return baseStock + Number(item.reservedQuantity);
+    }
+    return baseStock;
   };
 
   const warehouseScopedProducts = useMemo(() => {
@@ -700,7 +712,7 @@ function CreateExportSlipPage({ mode: propMode }) {
       })),
       referenceType: form.referenceType || undefined,
       referenceId: form.referenceId || undefined,
-      salesOrderId: soData?.soId || undefined,
+      salesOrderId: form.salesOrderId ? Number(form.salesOrderId) : (form.referenceType === 'SALES_ORDER' || form.referenceType === 'SO' ? Number(form.referenceId) : (soData?.soId ? Number(soData.soId) : undefined)),
     };
   };
 
@@ -760,7 +772,7 @@ function CreateExportSlipPage({ mode: propMode }) {
       }
       if (product) {
         const lineWh = item.warehouseId || form.warehouseId;
-        const balance = getStockForLine(product.id, lineWh);
+        const balance = getStockForLine(product.id, lineWh, item);
         if (Number(item.quantity) > balance) {
           focusField(`export-line-qty-${i}`);
           return showToast('error', `Dòng ${i + 1}: Số lượng xuất (${item.quantity}) vượt quá tồn khả dụng (${balance}) tại kho đã chọn.`);
@@ -1201,7 +1213,7 @@ function CreateExportSlipPage({ mode: propMode }) {
                         {product?.unitName || 'Cái'}
                       </td>
                       <td className={styles.textCenter} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>
-                        {product ? getStockForLine(product.id, item.warehouseId || form.warehouseId) : ''}
+                        {product ? getStockForLine(product.id, item.warehouseId || form.warehouseId, item) : ''}
                       </td>
                       <td className={styles.textRight}>
                         <input id={`export-line-qty-${index}`} type="number" min="1" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
@@ -1345,8 +1357,44 @@ function CreateExportSlipPage({ mode: propMode }) {
             ...prev,
             referenceType: data.referenceType,
             referenceId: data.referenceId,
-            referenceCode: data.docCode
+            referenceCode: data.docCode,
+            salesOrderId: data.referenceType === 'SALES_ORDER' ? data.referenceId : prev.salesOrderId,
           }));
+          if (data.referenceType === 'SALES_ORDER' && data.referenceId) {
+            try {
+              const res = await salesOrderApi.getSalesOrderDetail(data.referenceId);
+              const so = res?.data?.data || res?.data;
+              if (so) {
+                setForm(prev => ({
+                  ...prev,
+                  salesOrderId: so.id,
+                  warehouseId: so.warehouseId ? String(so.warehouseId) : prev.warehouseId,
+                  partnerId: so.partnerId || so.customerId || prev.partnerId,
+                  salespersonId: so.salespersonId || prev.salespersonId,
+                  customerAddress: so.shippingAddress || so.partnerAddress || prev.customerAddress,
+                  receiverName: so.partnerName || so.customerName || prev.receiverName,
+                  receiverPhone: so.partnerPhone || so.customerPhone || prev.receiverPhone,
+                  note: prev.note || `Xuất kho theo đơn hàng ${so.soCode}`,
+                }));
+                if (so.lines && so.lines.length > 0) {
+                  setItems(so.lines.map(l => ({
+                    ...emptyLine(String(so.warehouseId || form.warehouseId || '')),
+                    variantId: String(l.variantId),
+                    warehouseId: String(l.warehouseId || so.warehouseId || form.warehouseId || ''),
+                    quantity: l.quantity || 1,
+                    price: l.unitPrice || l.price || 0,
+                    vatPercent: l.vatPercent || l.vatRate || 0,
+                    warrantyMonths: l.warrantyMonths || 0,
+                    note: l.note || '',
+                    serialNumbers: [],
+                  })));
+                  showToast('success', `Đã tải ${so.lines.length} sản phẩm từ đơn bán hàng ${so.soCode}`);
+                }
+              }
+            } catch (err) {
+              console.error('Failed to load SO detail', err);
+            }
+          }
           if (data.referenceType === 'STOCKTAKE' && data.referenceId) {
             try {
               const res = await stocktakeApi.getStocktakeDetail(data.referenceId);

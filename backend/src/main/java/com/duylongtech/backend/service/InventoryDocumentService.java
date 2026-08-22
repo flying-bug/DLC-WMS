@@ -41,7 +41,6 @@ import com.duylongtech.backend.repository.DeviceComponentSerialRepository;
 import com.duylongtech.backend.repository.StocktakeRepository;
 import com.duylongtech.backend.repository.RepairRepository;
 import com.duylongtech.backend.repository.PurchaseOrderRepository;
-import com.duylongtech.backend.entity.Stocktake;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -111,6 +110,7 @@ public class InventoryDocumentService {
     private final SalesOrderService salesOrderService;
     private final com.duylongtech.backend.repository.StockReservationRepository stockReservationRepository;
     private final com.duylongtech.backend.repository.WarehouseRepository warehouseRepository;
+    private final AppNotificationService appNotificationService;
 
     @Transactional(readOnly = true)
     public ScanResolveResponse resolveExportScan(ScanResolveRequest req) {
@@ -198,7 +198,7 @@ public class InventoryDocumentService {
     public InventoryDocumentResponse createExport(InventoryDocumentRequest req) {
         validateCreateRequest(req);
         validateOrderLineQuantities(req, null);
-        validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getLines());
+        validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getReferenceType(), req.getReferenceId(), req.getLines());
         InventoryDocument doc = buildBaseDocument(req, EXPORT_DOC_TYPE, resolveCreateDocCode(req.getDocCode()));
         for (int i = 0; i < req.getLines().size(); i++) {
             doc.getLines().add(toExportLineEntity(doc, req.getLines().get(i), i));
@@ -252,7 +252,7 @@ public class InventoryDocumentService {
     public InventoryDocumentResponse updateExport(Long id, InventoryDocumentRequest req) {
         validateUpdateRequest(req);
         validateOrderLineQuantities(req, id);
-        validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getLines());
+        validateExportInventoryBalance(req.getWarehouseId(), req.getSalesOrderId(), req.getReferenceType(), req.getReferenceId(), req.getLines());
         InventoryDocument doc = findExportOrThrow(id);
         ensureEditable(doc);
         updateBaseDocument(id, doc, req, "Mã phiếu xuất kho đã tồn tại", false);
@@ -488,8 +488,12 @@ public class InventoryDocumentService {
                     warrantyLines.add(wl);
             }
 
-            if (doc.getSalesOrderId() != null) {
-                salesOrderService.fulfillReservation(doc.getSalesOrderId(), line.getVariantId(), effectiveWarehouseId,
+            Long soId = doc.getSalesOrderId();
+            if (soId == null && ("SALES_ORDER".equalsIgnoreCase(doc.getReferenceType()) || "SO".equalsIgnoreCase(doc.getReferenceType()))) {
+                soId = doc.getReferenceId();
+            }
+            if (soId != null) {
+                salesOrderService.fulfillReservation(soId, line.getVariantId(), effectiveWarehouseId,
                         qtyToExport, totalCost);
             }
         }
@@ -686,6 +690,51 @@ public class InventoryDocumentService {
                 .distinct()
                 .forEach(variantId -> salesOrderService.reEvaluateBackorders(savedImport.getWarehouseId(), variantId));
 
+        // Kiểm tra chênh lệch giữa số lượng dự kiến và thực nhận
+        boolean hasDiscrepancy = false;
+        StringBuilder discrepancyDetails = new StringBuilder();
+        for (InventoryDocumentLine line : savedImport.getLines()) {
+            BigDecimal exp = line.getExpectedQuantity() != null && line.getExpectedQuantity().compareTo(BigDecimal.ZERO) > 0
+                    ? line.getExpectedQuantity()
+                    : (line.getQuantityIn() != null ? line.getQuantityIn() : BigDecimal.ZERO);
+            BigDecimal act = line.getQuantityIn() != null ? line.getQuantityIn() : BigDecimal.ZERO;
+            BigDecimal rej = line.getRejectedQuantity() != null ? line.getRejectedQuantity() : BigDecimal.ZERO;
+
+            if (act.compareTo(exp) < 0 || rej.compareTo(BigDecimal.ZERO) > 0) {
+                hasDiscrepancy = true;
+                ProductVariant pv = productVariantRepository.findById(line.getVariantId()).orElse(null);
+                String sku = pv != null ? pv.getSku() : String.valueOf(line.getVariantId());
+                BigDecimal diff = exp.subtract(act);
+                discrepancyDetails.append(String.format("• %s: Dự kiến %s, Thực nhận %s (Thiếu: %s, Lỗi: %s). Lý do: %s\n",
+                        sku, exp.stripTrailingZeros().toPlainString(), act.stripTrailingZeros().toPlainString(),
+                        diff.stripTrailingZeros().toPlainString(), rej.stripTrailingZeros().toPlainString(),
+                        line.getDiscrepancyReason() != null ? line.getDiscrepancyReason() : "Chưa nhập lý do"));
+            }
+        }
+
+        if (hasDiscrepancy) {
+            savedImport.setHasDiscrepancy(true);
+            savedImport.setDiscrepancyNote(discrepancyDetails.toString().trim());
+            inventoryDocumentRepository.save(savedImport);
+
+            try {
+                String partnerName = "";
+                if (savedImport.getPartnerId() != null) {
+                    partnerName = partnerRepository.findById(savedImport.getPartnerId()).map(Partner::getName).orElse("");
+                }
+                String notifTitle = "⚠️ Cảnh báo nhập kho thiếu: " + savedImport.getDocCode();
+                String notifMsg = String.format("Thủ kho đã kiểm nhận phiếu %s %s nhưng phát hiện thiếu/hàng lỗi:\n%s\nVui lòng đối soát lại hóa đơn và công nợ với NCC.",
+                        savedImport.getDocCode(), partnerName.isBlank() ? "" : "(NCC: " + partnerName + ")", discrepancyDetails.toString().trim());
+
+                appNotificationService.createNotification("ROLE_ACCOUNTANT", null, notifTitle, notifMsg,
+                        "DISCREPANCY", "IMPORT_DOCUMENT", savedImport.getId(), "/import-slips/" + savedImport.getId() + "/edit");
+                appNotificationService.createNotification("ROLE_MANAGER", null, notifTitle, notifMsg,
+                        "DISCREPANCY", "IMPORT_DOCUMENT", savedImport.getId(), "/import-slips/" + savedImport.getId() + "/edit");
+            } catch (Exception e) {
+                // Log warning but do not fail the transaction
+            }
+        }
+
         return toResponse(savedImport);
     }
 
@@ -699,6 +748,15 @@ public class InventoryDocumentService {
             }
         }
 
+        Long soId = req.getSalesOrderId();
+        if (soId == null && ("SALES_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType())) || "SO".equalsIgnoreCase(trimToNull(req.getReferenceType())))) {
+            soId = req.getReferenceId();
+        }
+        Long poId = req.getPurchaseOrderId();
+        if (poId == null && ("PURCHASE_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType())) || "PO".equalsIgnoreCase(trimToNull(req.getReferenceType())))) {
+            poId = req.getReferenceId();
+        }
+
         InventoryDocument doc = new InventoryDocument();
         doc.setDocCode(docCode);
         doc.setDocType(docType);
@@ -707,12 +765,9 @@ public class InventoryDocumentService {
         doc.setReferenceId(req.getReferenceId());
         doc.setWarehouseId(req.getWarehouseId());
         doc.setSourceWarehouseId(req.getSourceWarehouseId());
-        doc.setPurchaseOrderId(req.getPurchaseOrderId());
-        doc.setSalesOrderId(req.getSalesOrderId());
+        doc.setPurchaseOrderId(poId);
+        doc.setSalesOrderId(soId);
         doc.setPartnerId(req.getPartnerId());
-        doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
-        doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
-        doc.setReferenceId(req.getReferenceId());
         doc.setDocDate(req.getDocDate());
         doc.setStatus(normalizeEditableStatus(req.getStatus(), DEFAULT_STATUS));
         doc.setNote(req.getNote());
@@ -743,10 +798,19 @@ public class InventoryDocumentService {
             }
             doc.setDocCode(requestedCode);
         }
+        Long soId = req.getSalesOrderId();
+        if (soId == null && ("SALES_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType())) || "SO".equalsIgnoreCase(trimToNull(req.getReferenceType())))) {
+            soId = req.getReferenceId();
+        }
+        Long poId = req.getPurchaseOrderId();
+        if (poId == null && ("PURCHASE_ORDER".equalsIgnoreCase(trimToNull(req.getReferenceType())) || "PO".equalsIgnoreCase(trimToNull(req.getReferenceType())))) {
+            poId = req.getReferenceId();
+        }
+
         doc.setWarehouseId(req.getWarehouseId());
         doc.setSourceWarehouseId(req.getSourceWarehouseId());
-        doc.setPurchaseOrderId(req.getPurchaseOrderId());
-        doc.setSalesOrderId(req.getSalesOrderId());
+        doc.setPurchaseOrderId(poId);
+        doc.setSalesOrderId(soId);
         doc.setPartnerId(req.getPartnerId());
         doc.setIssuePurpose(normalizeOptionalReference(req.getIssuePurpose()));
         doc.setReferenceType(normalizeOptionalReference(req.getReferenceType()));
@@ -1159,9 +1223,15 @@ public class InventoryDocumentService {
         }
     }
 
-    private void validateExportInventoryBalance(Long warehouseId, Long salesOrderId, List<InventoryDocumentLineRequest> lines) {
+    private void validateExportInventoryBalance(Long warehouseId, Long salesOrderId, String referenceType, Long referenceId, List<InventoryDocumentLineRequest> lines) {
         if (lines == null || lines.isEmpty())
             return;
+
+        Long effectiveSalesOrderId = salesOrderId;
+        if (effectiveSalesOrderId == null && ("SALES_ORDER".equalsIgnoreCase(trimToNull(referenceType)) || "SO".equalsIgnoreCase(trimToNull(referenceType)))) {
+            effectiveSalesOrderId = referenceId;
+        }
+
         for (int i = 0; i < lines.size(); i++) {
             InventoryDocumentLineRequest line = lines.get(i);
             if (line.getVariantId() == null || line.getQuantityOut() == null)
@@ -1178,13 +1248,12 @@ public class InventoryDocumentService {
                 totalAvailable = BigDecimal.ZERO;
             }
             
-            if (salesOrderId != null) {
+            if (effectiveSalesOrderId != null) {
                 BigDecimal reservedForThisOrder = stockReservationRepository
-                        .findBySalesOrderIdAndVariantIdAndWarehouseId(salesOrderId, line.getVariantId(), effectiveWh)
-                        .filter(r -> "HOLDING".equals(r.getStatus()))
-                        .map(com.duylongtech.backend.entity.StockReservation::getQuantityReserved)
-                        .orElse(BigDecimal.ZERO);
-                totalAvailable = totalAvailable.add(reservedForThisOrder);
+                        .sumHoldingQuantityBySalesOrderIdAndVariantAndWarehouse(effectiveSalesOrderId, line.getVariantId(), effectiveWh);
+                if (reservedForThisOrder != null) {
+                    totalAvailable = totalAvailable.add(reservedForThisOrder);
+                }
             }
 
             if (totalAvailable.compareTo(qtyToExport) < 0) {
@@ -1397,6 +1466,12 @@ public class InventoryDocumentService {
             throw new BusinessException("Vui lòng chọn kho nhập cho từng dòng sản phẩm");
         }
 
+        BigDecimal expectedQty = lr.getExpectedQuantity() != null && lr.getExpectedQuantity().compareTo(ZERO) > 0
+                ? lr.getExpectedQuantity()
+                : quantityIn;
+        BigDecimal rejectedQty = lr.getRejectedQuantity() != null ? lr.getRejectedQuantity() : ZERO;
+        String reason = trimToNull(lr.getDiscrepancyReason());
+
         return InventoryDocumentLine.builder()
                 .inventoryDocument(doc)
                 .variantId(lr.getVariantId())
@@ -1414,6 +1489,9 @@ public class InventoryDocumentService {
                 .warrantyMonths(lr.getWarrantyMonths())
                 .note(lr.getNote())
                 .vatPercent(vatRate)
+                .expectedQuantity(expectedQty)
+                .rejectedQuantity(rejectedQty)
+                .discrepancyReason(reason)
                 .build();
     }
 
@@ -1602,6 +1680,8 @@ public class InventoryDocumentService {
         r.setRecipientName(doc.getRecipientName());
         r.setRecipientAddress(doc.getRecipientAddress());
         r.setSalespersonId(doc.getSalespersonId());
+        r.setHasDiscrepancy(doc.getHasDiscrepancy());
+        r.setDiscrepancyNote(doc.getDiscrepancyNote());
 
         if (doc.getPartnerId() != null) {
             Partner partner = partnerRepository.findById(doc.getPartnerId()).orElse(null);
@@ -1687,6 +1767,9 @@ public class InventoryDocumentService {
                 lr.setVatPercent(l.getVatPercent());
                 lr.setWarehouseId(l.getWarehouseId());
                 lr.setTargetWarehouseId(l.getTargetWarehouseId());
+                lr.setExpectedQuantity(l.getExpectedQuantity() != null ? l.getExpectedQuantity() : l.getQuantityIn());
+                lr.setRejectedQuantity(l.getRejectedQuantity() != null ? l.getRejectedQuantity() : ZERO);
+                lr.setDiscrepancyReason(l.getDiscrepancyReason());
                 if (l.getWarehouseId() != null) {
                     warehouseRepository.findById(l.getWarehouseId()).ifPresent(wh -> {
                         lr.setWarehouseName(wh.getName());

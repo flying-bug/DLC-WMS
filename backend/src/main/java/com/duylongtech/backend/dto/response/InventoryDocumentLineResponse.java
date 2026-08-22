@@ -26,4 +26,7 @@ public class InventoryDocumentLineResponse {
     private String warehouseCode;
     private Long targetWarehouseId;
     private String targetWarehouseName;
+    private BigDecimal expectedQuantity;
+    private BigDecimal rejectedQuantity;
+    private String discrepancyReason;
 }

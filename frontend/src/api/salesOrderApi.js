@@ -8,6 +8,8 @@ export const getSalesOrders = (params = {}) =>
 export const getSalesOrderById = (id) =>
   axiosClient.get(`${BASE}/${id}`);
 
+export const getSalesOrderDetail = getSalesOrderById;
+
 export const getNextSoCode = () =>
   axiosClient.get(`${BASE}/next-code`);
 

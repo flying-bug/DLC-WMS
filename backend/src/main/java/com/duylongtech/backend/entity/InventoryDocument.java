@@ -94,4 +94,10 @@ public class InventoryDocument {
 
     @Column(name = "salesperson_id")
     private Long salespersonId;
+
+    @Column(name = "has_discrepancy")
+    private Boolean hasDiscrepancy;
+
+    @Column(name = "discrepancy_note", columnDefinition = "TEXT")
+    private String discrepancyNote;
 }

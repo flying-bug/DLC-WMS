@@ -568,6 +568,27 @@ function ImportHistoryPage() {
                           }`}>
                           {slip.statusLabel}
                         </span>
+                        {slip.hasDiscrepancy && (
+                          <span
+                            style={{
+                              marginLeft: 6,
+                              background: '#fff7ed',
+                              color: '#c2410c',
+                              border: '1px solid #fed7aa',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              padding: '2px 6px',
+                              borderRadius: 10,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 3
+                            }}
+                            title={slip.discrepancyNote || 'Phiếu nhập kho có chênh lệch thiếu/hàng lỗi'}
+                          >
+                            <i className="bi bi-exclamation-triangle-fill" style={{ color: '#ea580c' }}></i>
+                            Lệch HĐ
+                          </span>
+                        )}
                       </td>
                     )}
                     <td className={styles.textCenter}>

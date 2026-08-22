@@ -49,6 +49,20 @@ public interface StockReservationRepository extends JpaRepository<StockReservati
         Long salesOrderId, Long variantId, Long warehouseId
     );
 
+    @Query("""
+        SELECT COALESCE(SUM(r.quantityReserved), 0)
+        FROM StockReservation r
+        WHERE r.salesOrderId = :salesOrderId
+          AND r.variantId = :variantId
+          AND (r.warehouseId IS NULL OR r.warehouseId = :warehouseId)
+          AND r.status = 'HOLDING'
+    """)
+    BigDecimal sumHoldingQuantityBySalesOrderIdAndVariantAndWarehouse(
+        @Param("salesOrderId") Long salesOrderId,
+        @Param("variantId") Long variantId,
+        @Param("warehouseId") Long warehouseId
+    );
+
     @Modifying
     @Query("""
         UPDATE StockReservation r SET r.status = :newStatus

@@ -295,6 +295,8 @@ function UpdateImportSlipPage() {
           docDate: detail.docDate ? detail.docDate.split('T')[0] : '',
           note: detail.note || '',
           status: detail.status || 'DRAFT',
+          hasDiscrepancy: detail.hasDiscrepancy || false,
+          discrepancyNote: detail.discrepancyNote || '',
         });
         setItems((detail.lines || []).map(line => ({
           localId: crypto.randomUUID(),
@@ -302,6 +304,9 @@ function UpdateImportSlipPage() {
           variantId: line.variantId || '',
           warehouseId: String(line.warehouseId || detail.warehouseId || ''),
           quantity: line.quantityIn || 1,
+          expectedQuantity: line.expectedQuantity !== undefined ? line.expectedQuantity : (line.quantityIn || 1),
+          rejectedQuantity: line.rejectedQuantity || 0,
+          discrepancyReason: line.discrepancyReason || '',
           price: line.unitCost || 0,
           vatPercent: line.vatPercent ?? line.vatRate ?? 0,
           warrantyMonths: line.warrantyMonths || 0,
@@ -445,13 +450,13 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       note: form.note,
       createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
       lines: items.map(item => ({
-        id: item.id || undefined,
         variantId: Number(item.variantId),
-        warehouseId: Number(form.warehouseId),
+        warehouseId: Number(item.warehouseId || form.warehouseId),
         quantityIn: Number(item.quantity),
-        quantityOut: 0,
-        unitCost: Number(item.price),
-        unitPrice: Number(item.price),
+        expectedQuantity: item.expectedQuantity !== undefined && item.expectedQuantity !== '' ? Number(item.expectedQuantity) : Number(item.quantity),
+        rejectedQuantity: item.rejectedQuantity !== undefined && item.rejectedQuantity !== '' ? Number(item.rejectedQuantity) : 0,
+        discrepancyReason: item.discrepancyReason || '',
+        unitCost: Number(item.price || 0),
         vatPercent: Number(item.vatPercent || 0),
         warrantyMonths: Number(item.warrantyMonths || 0),
         serialNumbers: item.serialNumbers || [],
@@ -627,6 +632,34 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
           <div className={styles.card}>Đang tải dữ liệu...</div>
         ) : (
           <>
+            {form.hasDiscrepancy && (
+              <div style={{
+                background: '#fff7ed',
+                border: '1px solid #fed7aa',
+                borderRadius: 10,
+                padding: '16px 20px',
+                marginBottom: 20,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 14,
+                boxShadow: '0 2px 4px rgba(234, 88, 12, 0.06)'
+              }}>
+                <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: 24, color: '#ea580c', flexShrink: 0, marginTop: 2 }}></i>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#9a3412', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span>CẢNH BÁO CHÊNH LỆCH NHẬP KHO (THỦ KHO ĐÃ GHI NHẬN THIẾU / HÀNG LỖI)</span>
+                    <span style={{ fontSize: 11, background: '#ffedd5', color: '#c2410c', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>Cần Kế toán đối soát</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: '#c2410c', lineHeight: 1.5, whiteSpace: 'pre-line', background: '#ffffff', padding: '8px 12px', borderRadius: 6, border: '1px dashed #fdba74', margin: '8px 0' }}>
+                    {form.discrepancyNote || 'Phiếu nhập kho này có phát sinh chênh lệch giữa số lượng dự kiến từ HĐ và số lượng thực nhận vào kho.'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#7c2d12', marginTop: 4, lineHeight: 1.4 }}>
+                    💡 <strong>Hướng dẫn nghiệp vụ cho Kế toán:</strong> Hệ thống đã tự động ghi nhận công nợ trả NCC theo đúng <strong>số lượng thực nhận</strong> (bảo vệ quỹ tiền). Kế toán vui lòng liên hệ NCC để: <strong>(1)</strong> Yêu cầu NCC hủy & xuất lại HĐGTGT theo đúng số lượng thực nhận, HOẶC <strong>(2)</strong> Lập biên bản yêu cầu NCC giao bù các sản phẩm còn thiếu trong đợt tiếp theo.
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className={styles.topGrid}>
               <div className={styles.card}>
                 <div className={styles.cardHeader}>
@@ -912,24 +945,28 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>#</th>
-                      <th style={{ minWidth: '120px', width: '13%' }}>Mã hàng</th>
-                      <th style={{ minWidth: '180px', width: '22%' }}>Tên hàng</th>
-                      <th style={{ minWidth: '60px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                      <th style={{ minWidth: '65px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
-                      <th style={{ minWidth: '75px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
-                      <th style={{ minWidth: '65px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
-                      <th style={{ minWidth: '100px', width: '11%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>
-                      <th style={{ minWidth: '100px', width: '11%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
-                      <th style={{ minWidth: '75px', width: '8%', textAlign: 'right', whiteSpace: 'nowrap' }}>% thuế GTGT</th>
-                      <th style={{ width: '40px', textAlign: 'center' }}></th>
+                      <th style={{ width: '35px', textAlign: 'center', whiteSpace: 'nowrap' }}>#</th>
+                      <th style={{ minWidth: '110px', width: '11%' }}>Mã hàng</th>
+                      <th style={{ minWidth: '160px', width: '18%' }}>Tên hàng</th>
+                      <th style={{ minWidth: '50px', width: '5%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                      <th style={{ minWidth: '70px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng ghi trên Hóa đơn NCC">SL HĐ</th>
+                      <th style={{ minWidth: '75px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng thực tế dỡ vào kho">SL Nhận</th>
+                      <th style={{ minWidth: '65px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng hàng hỏng/móp méo từ chối nhận">SL Lỗi</th>
+                      <th style={{ minWidth: '75px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                      <th style={{ minWidth: '60px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                      <th style={{ minWidth: '95px', width: '10%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>
+                      <th style={{ minWidth: '95px', width: '10%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
+                      <th style={{ minWidth: '60px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>% VAT</th>
+                      <th style={{ minWidth: '110px', width: '12%', whiteSpace: 'nowrap' }}>Lý do chênh lệch</th>
+                      <th style={{ width: '35px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((item, index) => {
                       const product = productById.get(String(item.variantId));
+                      const isDiscrepant = (Number(item.expectedQuantity || item.quantity || 0) > Number(item.quantity || 0)) || Number(item.rejectedQuantity || 0) > 0;
                       return (
-                        <tr key={item.localId}>
+                        <tr key={item.localId} style={isDiscrepant ? { backgroundColor: '#fffbeb' } : {}}>
                           <td className={styles.textCenter}>{index + 1}</td>
                           <td>
                             <ProductGridSelect
@@ -956,7 +993,39 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                           </td>
                           <td>{product?.unitName || ''}</td>
                           <td align="right">
-                            <input id={`import-line-qty-${index}`} type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
+                            <input
+                              type="number"
+                              min="0"
+                              className="misa-input"
+                              style={{ height: '32px', padding: '0 6px', width: '55px', textAlign: 'right', fontSize: '13px', backgroundColor: '#f8fafc' }}
+                              value={item.expectedQuantity !== undefined ? item.expectedQuantity : item.quantity}
+                              onChange={(e) => handleItemChange(item.localId, 'expectedQuantity', e.target.value)}
+                              title="Số lượng trên Hóa đơn NCC"
+                            />
+                          </td>
+                          <td align="right">
+                            <input
+                              id={`import-line-qty-${index}`}
+                              type="number"
+                              min="0"
+                              className="misa-input"
+                              style={{ height: '32px', padding: '0 6px', width: '55px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold', color: isDiscrepant ? '#d97706' : '#1e293b' }}
+                              value={item.quantity}
+                              onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)}
+                              title="Số lượng thực nhận vào kho"
+                            />
+                          </td>
+                          <td align="right">
+                            <input
+                              type="number"
+                              min="0"
+                              className="misa-input"
+                              style={{ height: '32px', padding: '0 6px', width: '50px', textAlign: 'right', fontSize: '13px', color: Number(item.rejectedQuantity || 0) > 0 ? '#dc2626' : '#64748b' }}
+                              value={item.rejectedQuantity !== undefined ? item.rejectedQuantity : ''}
+                              onChange={(e) => handleItemChange(item.localId, 'rejectedQuantity', e.target.value)}
+                              placeholder="0"
+                              title="Số lượng hàng lỗi/từ chối nhận"
+                            />
                           </td>
                           <td align="center">
                             <div className={styles.serialCellContainer} style={{ justifyContent: 'center' }}>
@@ -973,16 +1042,26 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                             </div>
                           </td>
                           <td align="center">
-                            <input id={`import-line-warranty-${index}`} type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(e) => handleItemChange(item.localId, 'warrantyMonths', e.target.value)} />
+                            <input id={`import-line-warranty-${index}`} type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 6px', width: '50px', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(e) => handleItemChange(item.localId, 'warrantyMonths', e.target.value)} />
                           </td>
                           <td align="right">
-                            <input id={`import-line-price-${index}`} type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
+                            <input id={`import-line-price-${index}`} type="text" className="misa-input" style={{ height: '32px', padding: '0 6px', width: '100%', maxWidth: '110px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
                           </td>
                           <td align="right" className={`${styles.textBold} ${styles.textBlue}`}>
                             {money(Number(item.quantity || 0) * Number(item.price || 0))} đ
                           </td>
                           <td align="right">
-                            <input id={`import-line-vat-${index}`} type="number" min="0" max="10" step="any" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
+                            <input id={`import-line-vat-${index}`} type="number" min="0" max="10" step="any" className="misa-input" style={{ height: '32px', padding: '0 6px', width: '50px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              className="misa-input"
+                              style={{ height: '32px', padding: '0 6px', fontSize: '12px' }}
+                              value={item.discrepancyReason || ''}
+                              onChange={(e) => handleItemChange(item.localId, 'discrepancyReason', e.target.value)}
+                              placeholder={isDiscrepant ? "Nhập lý do thiếu/lỗi..." : "—"}
+                            />
                           </td>
                           <td><button className={styles.deleteBtn} onClick={() => removeItem(item.localId)}><i className="bi bi-trash"></i></button></td>
                         </tr>

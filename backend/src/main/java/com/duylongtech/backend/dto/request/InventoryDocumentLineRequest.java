@@ -36,4 +36,8 @@ public class InventoryDocumentLineRequest {
 
     private Long warehouseId;
     private Long targetWarehouseId;
+
+    private BigDecimal expectedQuantity;
+    private BigDecimal rejectedQuantity;
+    private String discrepancyReason;
 }

@@ -34,6 +34,7 @@ public class SalesOrderService {
     private final AuditLogService auditLogService;
     private final PartnerLedgerService partnerLedgerService;
     private final EmailService emailService;
+    private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
     private final PaymentService paymentService;
     private final SystemSettingsService systemSettingsService;
@@ -338,8 +339,16 @@ public class SalesOrderService {
         SalesOrder so = salesOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng ID: " + id));
 
-        if ("POSTED".equals(so.getStatus()) || "CANCELLED".equals(so.getStatus()) || "APPROVED".equals(so.getStatus())) {
+        if ("POSTED".equals(so.getStatus()) || "CANCELLED".equals(so.getStatus())) {
             throw new BusinessException(String.format(SystemMessage.SO_ERR_005.getMessage(), so.getStatus()));
+        }
+
+        // Kiểm tra xem đơn hàng đã có phiếu xuất kho nào đã ghi sổ (POSTED) chưa
+        List<InventoryDocument> exportDocs = inventoryDocumentRepository.findAllExports();
+        boolean hasPostedExport = exportDocs.stream()
+                .anyMatch(d -> id.equals(d.getSalesOrderId()) && "POSTED".equalsIgnoreCase(d.getStatus()));
+        if (hasPostedExport) {
+            throw new BusinessException("Đơn bán hàng đã có phiếu xuất kho đã ghi sổ (hoàn tất xuất), không thể hủy đơn hàng.");
         }
 
         // Release tất cả reservations HOLDING
@@ -399,28 +408,36 @@ public class SalesOrderService {
      */
     @Transactional
     public void fulfillReservation(Long salesOrderId, Long variantId, Long warehouseId, BigDecimal quantityFulfilled, BigDecimal costAmountFulfilled) {
-        stockReservationRepository
-                .findBySalesOrderIdAndVariantIdAndWarehouseId(salesOrderId, variantId, warehouseId)
-                .ifPresent(r -> {
-                    // Giảm quantity_reserved trong INVENTORY_BALANCES
-                    inventoryBalanceRepository
-                            .findByWarehouseAndVariant(warehouseId, variantId, "GOOD")
-                            .ifPresent(balance -> {
-                                BigDecimal newReserved = balance.getQuantityReserved().subtract(quantityFulfilled);
-                                balance.setQuantityReserved(newReserved.max(BigDecimal.ZERO));
-                                inventoryBalanceRepository.save(balance);
-                            });
+        List<StockReservation> reservations = stockReservationRepository.findBySalesOrderId(salesOrderId).stream()
+                .filter(r -> variantId.equals(r.getVariantId()) && ("HOLDING".equals(r.getStatus()) || "BACKORDERED".equals(r.getStatus())))
+                .collect(Collectors.toList());
 
-                    // Cập nhật quantityReserved còn lại
-                    BigDecimal remaining = r.getQuantityReserved().subtract(quantityFulfilled);
-                    if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
-                        r.setStatus("FULFILLED");
-                        r.setQuantityReserved(BigDecimal.ZERO);
-                    } else {
-                        r.setQuantityReserved(remaining);
-                    }
-                    stockReservationRepository.save(r);
-                });
+        BigDecimal remainingToFulfill = quantityFulfilled;
+        for (StockReservation r : reservations) {
+            if (remainingToFulfill.compareTo(BigDecimal.ZERO) <= 0) break;
+            Long whId = r.getWarehouseId() != null ? r.getWarehouseId() : warehouseId;
+            BigDecimal fulfillThis = remainingToFulfill.min(r.getQuantityReserved());
+
+            if (whId != null && "HOLDING".equals(r.getStatus())) {
+                inventoryBalanceRepository
+                        .findByWarehouseAndVariant(whId, variantId, "GOOD")
+                        .ifPresent(balance -> {
+                            BigDecimal newReserved = balance.getQuantityReserved().subtract(fulfillThis);
+                            balance.setQuantityReserved(newReserved.max(BigDecimal.ZERO));
+                            inventoryBalanceRepository.save(balance);
+                        });
+            }
+
+            BigDecimal remainingRes = r.getQuantityReserved().subtract(fulfillThis);
+            if (remainingRes.compareTo(BigDecimal.ZERO) <= 0) {
+                r.setStatus("FULFILLED");
+                r.setQuantityReserved(BigDecimal.ZERO);
+            } else {
+                r.setQuantityReserved(remainingRes);
+            }
+            stockReservationRepository.save(r);
+            remainingToFulfill = remainingToFulfill.subtract(fulfillThis);
+        }
 
         // Cập nhật giá vốn FIFO vào SalesOrderLine
         salesOrderRepository.findByIdWithDetails(salesOrderId).ifPresent(so -> {

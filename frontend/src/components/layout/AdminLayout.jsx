@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { getAuthRole, getAuthRoles, getAuthPermissions } from '../../auth/session';
 import { useAiFeature } from '../../contexts/AiFeatureContext';
 import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
+import NotificationBell from '../ui/NotificationBell/NotificationBell';
 import VoiceCommandButton from '../ui/VoiceCommandButton/VoiceCommandButton';
 import ActiveWorkflowGuide from '../workflow/ActiveWorkflowGuide';
 import styles from './AdminLayout.module.css';
@@ -350,7 +351,8 @@ const AdminLayout = ({ children }) => {
                             );
                         })}
                     </nav>
-                    <div className={styles.headerRight}>
+                    <div className={styles.headerRight} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <NotificationBell />
                         <UserProfileDropdown voiceEnabled={voiceEnabled} onToggleVoice={toggleVoice} aiEnabled={aiEnabled} />
                     </div>
                 </header>

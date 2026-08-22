@@ -346,13 +346,22 @@ function UpdateExportSlipPage() {
     return map;
   }, [inventoryBalances]);
 
-  const getStockForLine = (variantId, warehouseId) => {
+  const getStockForLine = (variantId, warehouseId, item) => {
     if (!variantId) return 0;
     const effectiveWh = warehouseId || form.warehouseId;
+    let baseStock = 0;
     if (effectiveWh) {
-      return inventoryMap.get(`${variantId}_${effectiveWh}`) || 0;
+      baseStock = inventoryMap.get(`${variantId}_${effectiveWh}`) || 0;
+    } else {
+      baseStock = inventoryMap.get(String(variantId)) || 0;
     }
-    return inventoryMap.get(String(variantId)) || 0;
+
+    // Nếu phiếu xuất này gắn với Đơn bán hàng (SO), cộng bù số lượng cố định đã giữ chỗ (reservedQuantity)
+    const isSoExport = Boolean(form.salesOrderId || form.referenceType === 'SALES_ORDER' || form.referenceType === 'SO');
+    if (isSoExport && item && item.reservedQuantity !== undefined && item.reservedQuantity !== null) {
+      return baseStock + Number(item.reservedQuantity);
+    }
+    return baseStock;
   };
 
   const warehouseScopedProducts = useMemo(() => {
@@ -689,7 +698,7 @@ function UpdateExportSlipPage() {
         return showToast('error', `Dòng ${i + 1}: Thuế VAT không hợp lệ.`);
       }
       if (product) {
-        const balance = getStockForLine(product.id, item.warehouseId);
+        const balance = getStockForLine(product.id, item.warehouseId || form.warehouseId, item);
         if (Number(item.quantity) > balance) {
           focusField(`export-line-qty-${i}`);
           return showToast('error', `Dòng ${i + 1}: Số lượng xuất (${item.quantity}) vượt quá tồn khả dụng (${balance}) tại kho đã chọn.`);
@@ -1046,7 +1055,7 @@ function UpdateExportSlipPage() {
                             {item.serialNumberId && <div className={styles.serialTag}>{item.scannedCode}</div>}
                           </td>
                           <td className={styles.textCenter} style={{ fontWeight: '600', color: '#0052cc' }}>
-                            {product ? getStockForLine(product.id, item.warehouseId || form.warehouseId) : ''}
+                            {product ? getStockForLine(product.id, item.warehouseId || form.warehouseId, item) : ''}
                           </td>
                           <td className={styles.textRight}>
                             <input id={`export-line-qty-${index}`} type="number" min="0" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />

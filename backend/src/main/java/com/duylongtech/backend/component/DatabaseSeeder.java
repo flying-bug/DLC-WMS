@@ -37,7 +37,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     public void run(String... args) throws Exception {
         // Ensure REPAIRS.serial_number_id is NULLable for devices without serial
         // Ensure USERS table has all required columns
-        String[] userAlterStatements = new String[]{
+        String[] schemaAlterStatements = new String[]{
             "ALTER TABLE USERS ADD COLUMN user_code VARCHAR(50) NULL",
             "ALTER TABLE USERS ADD COLUMN avatar_url VARCHAR(255) NULL",
             "ALTER TABLE USERS ADD COLUMN address TEXT NULL",
@@ -46,9 +46,27 @@ public class DatabaseSeeder implements CommandLineRunner {
             "ALTER TABLE USERS ADD COLUMN gender VARCHAR(10) NULL",
             "ALTER TABLE USERS ADD COLUMN start_date DATE NULL",
             "ALTER TABLE USERS ADD COLUMN position VARCHAR(50) NULL",
-            "ALTER TABLE USERS ADD COLUMN department VARCHAR(50) NULL"
+            "ALTER TABLE USERS ADD COLUMN department VARCHAR(50) NULL",
+            "ALTER TABLE INVENTORY_DOCUMENTS ADD COLUMN has_discrepancy BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE INVENTORY_DOCUMENTS ADD COLUMN discrepancy_note TEXT NULL",
+            "ALTER TABLE INVENTORY_DOCUMENT_LINES ADD COLUMN expected_quantity DECIMAL(15,4) NULL",
+            "ALTER TABLE INVENTORY_DOCUMENT_LINES ADD COLUMN rejected_quantity DECIMAL(15,4) NULL",
+            "ALTER TABLE INVENTORY_DOCUMENT_LINES ADD COLUMN discrepancy_reason VARCHAR(255) NULL",
+            "CREATE TABLE IF NOT EXISTS APP_NOTIFICATIONS (" +
+            "  id BIGINT AUTO_INCREMENT PRIMARY KEY," +
+            "  recipient_role VARCHAR(50) NULL," +
+            "  user_id BIGINT NULL," +
+            "  title VARCHAR(200) NOT NULL," +
+            "  message TEXT NOT NULL," +
+            "  type VARCHAR(50) NULL," +
+            "  reference_type VARCHAR(50) NULL," +
+            "  reference_id BIGINT NULL," +
+            "  link VARCHAR(255) NULL," +
+            "  is_read BOOLEAN DEFAULT FALSE," +
+            "  created_at DATETIME DEFAULT CURRENT_TIMESTAMP" +
+            ")"
         };
-        for (String sql : userAlterStatements) {
+        for (String sql : schemaAlterStatements) {
             try {
                 jdbcTemplate.execute(sql);
             } catch (Exception ignored) {

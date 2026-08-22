@@ -69,4 +69,13 @@ public class InventoryDocumentLine {
 
     @Column(name = "target_warehouse_id")
     private Long targetWarehouseId;
+
+    @Column(name = "expected_quantity", precision = 15, scale = 4)
+    private BigDecimal expectedQuantity;
+
+    @Column(name = "rejected_quantity", precision = 15, scale = 4)
+    private BigDecimal rejectedQuantity;
+
+    @Column(name = "discrepancy_reason", length = 255)
+    private String discrepancyReason;
 }

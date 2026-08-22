@@ -33,5 +33,7 @@ public class InventoryDocumentResponse {
     private String recipientAddress;
     private Long salespersonId;
     private String salespersonName;
+    private Boolean hasDiscrepancy;
+    private String discrepancyNote;
     private List<InventoryDocumentLineResponse> lines;
 }
