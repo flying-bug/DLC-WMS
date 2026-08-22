@@ -13,6 +13,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 public class AuthService {
 
@@ -42,15 +45,15 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        java.util.List<String> roles = userDetails.getAuthorities().stream()
+        List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .filter(auth -> auth.startsWith("ROLE_"))
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
 
-        java.util.List<String> permissions = userDetails.getAuthorities().stream()
+        List<String> permissions = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .filter(auth -> !auth.startsWith("ROLE_"))
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
 
         String role = roles.stream().findFirst().orElse("ROLE_USER");
         String jwt = jwtUtils.generateJwtToken(userDetails.getUsername(), role);
@@ -86,15 +89,15 @@ public class AuthService {
 
             UserDetailsImpl userDetails = UserDetailsImpl.build(user);
 
-            java.util.List<String> roles = userDetails.getAuthorities().stream()
+            List<String> roles = userDetails.getAuthorities().stream()
                     .map(item -> item.getAuthority())
                     .filter(auth -> auth.startsWith("ROLE_"))
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
 
-            java.util.List<String> permissions = userDetails.getAuthorities().stream()
+            List<String> permissions = userDetails.getAuthorities().stream()
                     .map(item -> item.getAuthority())
                     .filter(auth -> !auth.startsWith("ROLE_"))
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
 
             String role = roles.stream().findFirst().orElse("ROLE_USER");
             String jwt = jwtUtils.generateJwtToken(user.getUsername(), role);

@@ -29,7 +29,7 @@ public class UserDetailsImpl implements UserDetails {
     }
 
     public static UserDetailsImpl build(User user) {
-        Set<String> authorityStrings = new java.util.HashSet<>();
+        Set<String> authorityStrings = new HashSet<>();
 
         boolean hasCustomPermissions = user.getPermissions() != null && !user.getPermissions().isEmpty();
 
@@ -63,7 +63,7 @@ public class UserDetailsImpl implements UserDetails {
 
         List<GrantedAuthority> authorities = authorityStrings.stream()
                 .map(SimpleGrantedAuthority::new)
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
 
         boolean enabled = "APPROVED".equalsIgnoreCase(user.getStatus());
         return new UserDetailsImpl(
