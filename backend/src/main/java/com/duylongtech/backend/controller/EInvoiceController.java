@@ -91,7 +91,7 @@ public class EInvoiceController {
         return ApiResponse.success(response);
     }
 
-    @GetMapping(value = "/preview/{transactionUuid}", produces = MediaType.TEXT_HTML_VALUE)
+    @GetMapping(value = "/preview/{transactionUuid}", produces = MediaType.TEXT_HTML_VALUE + ";charset=UTF-8")
     @Operation(summary = "Xem trực tuyến mẫu hóa đơn điện tử (HTML)")
     public ResponseEntity<String> previewHtml(@PathVariable String transactionUuid) {
         EInvoice invoice = einvoiceRepository.findByTransactionUuid(transactionUuid)
@@ -102,7 +102,11 @@ public class EInvoiceController {
         }
 
         String html = renderInvoiceHtml(invoice);
-        return ResponseEntity.ok(html);
+        return ResponseEntity.ok()
+                .header("Content-Type", "text/html; charset=UTF-8")
+                .header("X-Frame-Options", "ALLOWALL")
+                .header("Content-Security-Policy", "frame-ancestors *")
+                .body(html);
     }
 
     private String renderInvoiceHtml(EInvoice inv) {

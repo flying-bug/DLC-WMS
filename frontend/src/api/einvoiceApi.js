@@ -43,3 +43,16 @@ export const issueEInvoice = (payload) => {
 export const cancelEInvoice = (id, payload) => {
   return axiosClient.post(`${BASE_URL}/${id}/cancel`, payload);
 };
+
+/**
+ * Lấy nội dung HTML mẫu hóa đơn điện tử để hiển thị trực tiếp
+ */
+export const getEInvoicePreviewHtml = (uuid) => {
+  return axiosClient.get(`${BASE_URL}/preview/${uuid}`, {
+    responseType: 'text',
+    headers: {
+      'Accept': 'text/html'
+    }
+  });
+};
+
