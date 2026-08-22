@@ -24,7 +24,7 @@ public class RoleController {
         List<RoleEntity> roles = roleRepository.findAll();
         if ("WAREHOUSE".equalsIgnoreCase(module)) {
             roles = roles.stream()
-                    .filter(r -> !"SUPER_ADMIN".equals(r.getCode()) && !"HR_MANAGER".equals(r.getCode()))
+                    .filter(r -> r.getCode() != null && !r.getCode().toUpperCase().contains("SUPER_ADMIN") && !r.getCode().toUpperCase().contains("HR_MANAGER"))
                     .collect(java.util.stream.Collectors.toList());
         }
         return ApiResponse.success(roles);

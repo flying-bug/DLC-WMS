@@ -59,6 +59,10 @@ public class DatabaseSeeder implements CommandLineRunner {
         // 1. Seed Roles (Chuẩn Spring Boot với tiền tố ROLE_)
         RoleEntity superAdminRole = createRoleIfNotFound("ROLE_SUPER_ADMIN", "Super Admin");
         RoleEntity managerRole = createRoleIfNotFound("ROLE_MANAGER", "Quản lý");
+        RoleEntity whControllerRole = createRoleIfNotFound("ROLE_WAREHOUSE_CONTROLLER", "Thủ kho");
+        RoleEntity technicianRole = createRoleIfNotFound("ROLE_TECHNICIAN", "Kỹ thuật viên");
+        RoleEntity accountantRole = createRoleIfNotFound("ROLE_ACCOUNTANT", "Kế toán");
+        RoleEntity cashierRole = createRoleIfNotFound("ROLE_CASHIER_CONTROLLER", "Thủ quỹ");
         RoleEntity staffRole = createRoleIfNotFound("ROLE_STAFF", "Nhân viên");
 
         // 2. Seed Permissions
@@ -67,8 +71,8 @@ public class DatabaseSeeder implements CommandLineRunner {
         // 3. Gán Permissions cho các Roles
         associatePermissionsWithRoles();
 
-        // 4. Seed Users mẫu
-        seedUsers(superAdminRole, managerRole, staffRole);
+        // 4. Seed Users mẫu cho 6 Roles
+        seedUsers(superAdminRole, managerRole, whControllerRole, technicianRole, accountantRole, cashierRole, staffRole);
 
         // 5. Seed Dữ liệu kinh doanh (Đã comment ra để hệ thống trắng)
         // seedWarehouses();
@@ -230,6 +234,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private void associatePermissionsWithRoles() {
         Set<PermissionEntity> allPerms = new HashSet<>(permissionRepository.findAll());
 
+        // 1. SUPER_ADMIN
         roleRepository.findByCode("ROLE_SUPER_ADMIN").ifPresent(role -> {
             Set<PermissionEntity> superAdminPerms = new HashSet<>();
             for (PermissionEntity perm : allPerms) {
@@ -241,6 +246,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             roleRepository.save(role);
         });
 
+        // 2. MANAGER
         roleRepository.findByCode("ROLE_MANAGER").ifPresent(role -> {
             Set<PermissionEntity> managerPerms = new HashSet<>();
             for (PermissionEntity perm : allPerms) {
@@ -252,6 +258,81 @@ public class DatabaseSeeder implements CommandLineRunner {
             roleRepository.save(role);
         });
 
+        // 3. WAREHOUSE_CONTROLLER (Thủ kho)
+        roleRepository.findByCode("ROLE_WAREHOUSE_CONTROLLER").ifPresent(role -> {
+            Set<PermissionEntity> whPerms = new HashSet<>();
+            for (PermissionEntity perm : allPerms) {
+                String mod = perm.getModule();
+                String code = perm.getCode();
+                if (java.util.Arrays.asList("transfer", "stocktake").contains(mod)) {
+                    whPerms.add(perm);
+                } else if ("import".equals(mod) && java.util.Arrays.asList("import:view", "import:edit", "import:print").contains(code)) {
+                    whPerms.add(perm);
+                } else if ("export".equals(mod) && java.util.Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print").contains(code)) {
+                    whPerms.add(perm);
+                } else if (java.util.Arrays.asList("product", "unit", "brand", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                    whPerms.add(perm);
+                } else if (java.util.Arrays.asList("report_balance", "report_ledger", "report_transfer").contains(mod)) {
+                    whPerms.add(perm);
+                }
+            }
+            role.setPermissions(whPerms);
+            roleRepository.save(role);
+        });
+
+        // 4. TECHNICIAN (Kỹ thuật viên)
+        roleRepository.findByCode("ROLE_TECHNICIAN").ifPresent(role -> {
+            Set<PermissionEntity> techPerms = new HashSet<>();
+            for (PermissionEntity perm : allPerms) {
+                String mod = perm.getModule();
+                String code = perm.getCode();
+                if (java.util.Arrays.asList("assembly_config", "assembly", "warranty", "repair").contains(mod)) {
+                    techPerms.add(perm);
+                } else if (java.util.Arrays.asList("product", "export", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                    techPerms.add(perm);
+                }
+            }
+            role.setPermissions(techPerms);
+            roleRepository.save(role);
+        });
+
+        // 5. ACCOUNTANT (Kế toán)
+        roleRepository.findByCode("ROLE_ACCOUNTANT").ifPresent(role -> {
+            Set<PermissionEntity> accPerms = new HashSet<>();
+            for (PermissionEntity perm : allPerms) {
+                String mod = perm.getModule();
+                String code = perm.getCode();
+                if (java.util.Arrays.asList("sales_order", "purchase_order", "einvoice", "customer", "supplier").contains(mod)) {
+                    accPerms.add(perm);
+                } else if ("import".equals(mod) && java.util.Arrays.asList("import:view", "import:add", "import:edit", "import:export", "import:print").contains(code)) {
+                    accPerms.add(perm);
+                } else if (java.util.Arrays.asList("report_debt", "report_sales", "report_summary").contains(mod)) {
+                    accPerms.add(perm);
+                } else if (java.util.Arrays.asList("payment", "export", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                    accPerms.add(perm);
+                }
+            }
+            role.setPermissions(accPerms);
+            roleRepository.save(role);
+        });
+
+        // 6. CASHIER_CONTROLLER (Thủ quỹ / Thu ngân)
+        roleRepository.findByCode("ROLE_CASHIER_CONTROLLER").ifPresent(role -> {
+            Set<PermissionEntity> cashierPerms = new HashSet<>();
+            for (PermissionEntity perm : allPerms) {
+                String mod = perm.getModule();
+                String code = perm.getCode();
+                if ("payment".equals(mod)) {
+                    cashierPerms.add(perm);
+                } else if (java.util.Arrays.asList("sales_order", "customer", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                    cashierPerms.add(perm);
+                }
+            }
+            role.setPermissions(cashierPerms);
+            roleRepository.save(role);
+        });
+
+        // 7. Legacy STAFF role
         roleRepository.findByCode("ROLE_STAFF").ifPresent(role -> {
             Set<PermissionEntity> staffPerms = new HashSet<>();
             for (PermissionEntity perm : allPerms) {
@@ -268,7 +349,8 @@ public class DatabaseSeeder implements CommandLineRunner {
         });
     }
 
-    private void seedUsers(RoleEntity superAdminRole, RoleEntity managerRole, RoleEntity staffRole) {
+    private void seedUsers(RoleEntity superAdminRole, RoleEntity managerRole, RoleEntity whControllerRole,
+                           RoleEntity technicianRole, RoleEntity accountantRole, RoleEntity cashierRole, RoleEntity staffRole) {
         Set<PermissionEntity> allPermissions = new HashSet<>(permissionRepository.findAll());
         Set<PermissionEntity> adminPermissions = new HashSet<>();
         for (PermissionEntity perm : allPermissions) {
@@ -277,7 +359,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             }
         }
 
-        // Tài khoản Admin
+        // 1. Tài khoản Super Admin
         Optional<User> adminOpt = userRepository.findByUsername("admin");
         if (adminOpt.isPresent()) {
             User admin = adminOpt.get();
@@ -306,35 +388,48 @@ public class DatabaseSeeder implements CommandLineRunner {
             System.out.println("✅ Đã tạo tài khoản mặc định: admin / 123456");
         }
 
-        // Tài khoản Manager
-        // if (userRepository.findByUsername("manager@duylong.vn").isEmpty()) {
-        //     User manager = User.builder()
-        //             .username("manager@duylong.vn")
-        //             .fullName("Quản Lý Hệ Thống")
-        //             .passwordHash(passwordEncoder.encode("123456"))
-        //             .status("APPROVED")
-        //             .roles(new HashSet<>())
-        //             .build();
-        //     manager.getRoles().add(managerRole);
-        //     userRepository.save(manager);
-        //     System.out.println("✅ Đã tạo tài khoản mẫu: manager@duylong.vn / 123456");
-        // }
+        // 2. Tài khoản Manager mẫu
+        seedUserIfNotFound("manager@duylong.vn", "Quản Lý Hệ Thống", "manager@duylong.vn", "0981111111", managerRole);
 
-        // Tài khoản Staff
-        // for (int i = 1; i <= 2; i++) {
-        //     String username = "staff" + i + "@duylong.vn";
-        //     if (userRepository.findByUsername(username).isEmpty()) {
-        //         User staff = User.builder()
-        //                 .username(username)
-        //                 .fullName("Nhân Viên " + i)
-        //                 .passwordHash(passwordEncoder.encode("123456"))
-        //                 .status("APPROVED")
-        //                 .roles(new HashSet<>())
-        //                 .build();
-        //         staff.getRoles().add(staffRole);
-        //         userRepository.save(staff);
-        //     }
-        // }
+        // 3. Tài khoản Warehouse Controller (Thủ kho)
+        seedUserIfNotFound("wh_controller@duylong.vn", "Trưởng Kho Vận", "wh_controller@duylong.vn", "0982222222", whControllerRole);
+
+        // 4. Tài khoản Technician (Kỹ thuật viên)
+        seedUserIfNotFound("technician@duylong.vn", "Kỹ Thuật Viên Trưởng", "technician@duylong.vn", "0983333333", technicianRole);
+
+        // 5. Tài khoản Accountant (Kế toán)
+        seedUserIfNotFound("accountant@duylong.vn", "Kế Toán Tổng Hợp", "accountant@duylong.vn", "0984444444", accountantRole);
+
+        // 6. Tài khoản Cashier Controller (Thủ quỹ)
+        seedUserIfNotFound("cashier@duylong.vn", "Thủ Quỹ Thu Ngân", "cashier@duylong.vn", "0985555555", cashierRole);
+    }
+
+    private void seedUserIfNotFound(String username, String fullName, String email, String phone, RoleEntity role) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if (user.getRoles() == null || user.getRoles().isEmpty()) {
+                Set<RoleEntity> roles = new HashSet<>();
+                roles.add(role);
+                user.setRoles(roles);
+                userRepository.save(user);
+            }
+        } else {
+            Set<RoleEntity> roles = new HashSet<>();
+            roles.add(role);
+            User user = User.builder()
+                    .username(username)
+                    .passwordHash(passwordEncoder.encode("123456"))
+                    .fullName(fullName)
+                    .email(email)
+                    .phone(phone)
+                    .status("APPROVED")
+                    .roles(roles)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            userRepository.save(user);
+            System.out.println("✅ Đã tạo tài khoản mẫu: " + username + " / 123456 (" + role.getName() + ")");
+        }
     }
 
     @SuppressWarnings("unused")

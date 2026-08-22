@@ -25,10 +25,20 @@ const parseDisplayDateToIso = (value) => {
     return `${year}-${month}-${day}`;
 };
 
+const ROLE_OPTIONS = [
+    { value: 'ROLE_WAREHOUSE_CONTROLLER', label: 'Thủ kho (Warehouse Controller)', icon: 'bi-box-seam', desc: 'Nhập / Xuất / Chuyển kho / Kiểm kê, Quét mã Scanner' },
+    { value: 'ROLE_TECHNICIAN', label: 'Kỹ thuật viên (Technician)', icon: 'bi-tools', desc: 'Lắp ráp PC theo BOM, Tiếp nhận Bảo hành & Sửa chữa' },
+    { value: 'ROLE_ACCOUNTANT', label: 'Kế toán (Accountant)', icon: 'bi-receipt', desc: 'Phiếu nhập dự kiến, Đơn bán SO, Hóa đơn & Công nợ' },
+    { value: 'ROLE_CASHIER_CONTROLLER', label: 'Thủ quỹ / Thu ngân (Cashier Controller)', icon: 'bi-cash-stack', desc: 'Lập Phiếu thu, Phiếu chi, Quản lý quỹ tiền mặt' },
+    { value: 'ROLE_MANAGER', label: 'Quản lý điều hành (Manager)', icon: 'bi-person-badge', desc: 'Toàn quyền nghiệp vụ, phê duyệt đơn, xem Dashboard' },
+    { value: 'ROLE_SUPER_ADMIN', label: 'Quản trị hệ thống (Super Admin)', icon: 'bi-shield-lock', desc: 'Quản lý tài khoản, Phân quyền ma trận, Backup CSDL' }
+];
+
 function CreateEmployeePage() {
     const navigate = useNavigate();
     const { showToast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
+    const [selectedRoles, setSelectedRoles] = useState(['ROLE_WAREHOUSE_CONTROLLER']);
     const [formData, setFormData] = useState({
         username: '',
         fullName: '',
@@ -38,10 +48,7 @@ function CreateEmployeePage() {
         startDate: '',
         idCard: '',
         gender: 'male',
-        position: '',
-        department: '',
-        address: '',
-        systemRole: 'staff'
+        address: ''
     });
 
     const handleChange = (e) => {
@@ -50,6 +57,20 @@ function CreateEmployeePage() {
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
+    };
+
+    const toggleRole = (roleValue) => {
+        setSelectedRoles(prev => {
+            if (prev.includes(roleValue)) {
+                if (prev.length === 1) {
+                    showToast('warning', 'Tài khoản phải có ít nhất 1 vai trò.');
+                    return prev;
+                }
+                return prev.filter(r => r !== roleValue);
+            } else {
+                return [...prev, roleValue];
+            }
+        });
     };
 
     const handleSave = async (e) => {
@@ -71,19 +92,28 @@ function CreateEmployeePage() {
             showToast('warning', 'Vui lòng nhập Địa chỉ Email.');
             return;
         }
-        if (formData.idCard.trim() && !/^\d+$/.test(formData.idCard.trim())) {
-            showToast('warning', 'Số CCCD/CMND không hợp lệ (chỉ được nhập số).');
+        if (formData.idCard.trim()) {
+            const cleanIdCard = formData.idCard.trim();
+            if (!/^\d{9}$|^\d{12}$/.test(cleanIdCard)) {
+                showToast('warning', 'Số CCCD/CMND không hợp lệ (phải gồm đúng 9 hoặc 12 chữ số).');
+                return;
+            }
+        }
+        const dob = formData.dob ? formData.dob : null;
+        if (dob && new Date(dob) > new Date()) {
+            showToast('warning', 'Ngày sinh không thể lớn hơn ngày hiện tại.');
             return;
         }
-        const dob = parseDisplayDateToIso(formData.dob);
-        if (formData.dob.trim() && !dob) {
-            showToast('warning', 'Ngày sinh không hợp lệ. Vui lòng nhập theo định dạng ngày/tháng/năm, ví dụ 31/12/2000.');
+        if (!selectedRoles || selectedRoles.length === 0) {
+            showToast('warning', 'Vui lòng chọn ít nhất 1 vai trò cho nhân viên.');
             return;
         }
 
         try {
             setIsSaving(true);
-            const roles = formData.systemRole === 'admin' ? ['MANAGER'] : ['STAFF'];
+            const primaryRoleObj = ROLE_OPTIONS.find(r => r.value === selectedRoles[0]);
+            const primaryRoleLabel = primaryRoleObj ? primaryRoleObj.label.split(' (')[0] : 'Nhân viên';
+
             const payload = {
                 username: formData.username.trim(),
                 fullName: formData.fullName.trim(),
@@ -93,11 +123,11 @@ function CreateEmployeePage() {
                 dob,
                 startDate: formData.startDate || null,
                 gender: formData.gender,
-                position: formData.position,
-                department: formData.department,
+                position: primaryRoleLabel,
+                department: primaryRoleLabel,
                 address: formData.address.trim(),
                 status: 'APPROVED',
-                roles: roles
+                roles: selectedRoles
             };
 
             await axiosClient.post('/users', payload);
@@ -211,32 +241,36 @@ function CreateEmployeePage() {
                                 <label className={styles.label} htmlFor="dob">Ngày sinh</label>
                                 <div className={styles.inputWrapper}>
                                     <input
-                                        type="text"
+                                        type="date"
                                         id="dob"
                                         className={styles.input}
                                         name="dob"
                                         value={formData.dob}
                                         onChange={handleChange}
-                                        inputMode="numeric"
-                                        placeholder="dd/mm/yyyy"
+                                        max={new Date().toISOString().split('T')[0]}
                                     />
                                 </div>
                             </div>
 
-
                             <div className={styles.formGroup}>
-                                <label className={styles.label} htmlFor="idCard">Số CCCD</label>
+                                <label className={styles.label} htmlFor="idCard">Số CCCD / CMND</label>
                                 <div className={styles.inputWrapper}>
                                     <input
                                         type="text"
                                         id="idCard"
                                         className={styles.input}
+                                        placeholder="Nhập 9 hoặc 12 số CCCD..."
                                         name="idCard"
+                                        maxLength={12}
                                         value={formData.idCard}
-                                        onChange={handleChange}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '').slice(0, 12);
+                                            setFormData(prev => ({ ...prev, idCard: val }));
+                                        }}
                                     />
                                 </div>
                             </div>
+
                             <div className={styles.formGroup}>
                                 <label className={styles.label}>Giới tính</label>
                                 <div className={styles.radioGroup}>
@@ -248,53 +282,10 @@ function CreateEmployeePage() {
                                         <input id="gender-female" type="radio" name="gender" value="female" className={styles.radioInput} checked={formData.gender === 'female'} onChange={handleChange} />
                                         Nữ
                                     </label>
-
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Card 2: Job Info */}
-                    <div className={styles.card}>
-                        <h2 className={styles.cardTitle}>
-                            <i className="bi bi-briefcase"></i> Thông tin công việc & Phân quyền
-                        </h2>
-                        <div className={styles.grid2}>
-                            <div className={styles.formGroup}>
-                                <label className={styles.label} htmlFor="position">Chức danh nhân sự</label>
-                                <div className={styles.inputWrapper}>
-                                    <SearchableSelect id="position" className={`${styles.input} ${styles.select}`} name="position" value={formData.position} onChange={handleChange}>
-                                        <option value="">Chọn chức danh</option>
-                                        <option value="manager">Quản lý kho</option>
-                                        <option value="staff">Nhân viên kho</option>
-                                        <option value="technician">Kỹ thuật viên</option>
-
-                                    </SearchableSelect>
-                                </div>
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label className={styles.label} htmlFor="department">Phòng ban</label>
-                                <div className={styles.inputWrapper}>
-                                    <SearchableSelect id="department" className={`${styles.input} ${styles.select}`} name="department" value={formData.department} onChange={handleChange}>
-                                        <option value="">Chọn phòng ban</option>
-                                        <option value="warehouse">Kho bãi</option>
-                                        <option value="technical">Kỹ thuật - Bảo hành</option>
-                                        <option value="admin">Kế toán - Hành chính</option>
-                                    </SearchableSelect>
                                 </div>
                             </div>
 
-
-                        </div>
-                    </div>
-
-                    {/* Card 3: Address */}
-                    <div className={styles.card}>
-                        <h2 className={styles.cardTitle}>
-                            <i className="bi bi-geo-alt"></i> Địa chỉ
-                        </h2>
-                        <div className={styles.grid1}>
-                            <div className={styles.formGroup}>
+                            <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
                                 <label className={styles.label} htmlFor="address">Địa chỉ thường trú</label>
                                 <div className={styles.inputWrapper}>
                                     <i className={`bi bi-house ${styles.inputIcon}`}></i>
@@ -302,13 +293,61 @@ function CreateEmployeePage() {
                                         type="text"
                                         id="address"
                                         className={`${styles.input} ${styles.inputWithIcon}`}
-                                        placeholder="Nhập địa chỉ đầy đủ (Số nhà, đường, phường/xã...)"
+                                        placeholder="Nhập địa chỉ đầy đủ (Số nhà, đường, phường/xã, quận/huyện...)"
                                         name="address"
                                         value={formData.address}
                                         onChange={handleChange}
                                     />
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Card 2: Roles */}
+                    <div className={styles.card}>
+                        <h2 className={styles.cardTitle}>
+                            <i className="bi bi-shield-check"></i> Vai trò & Quyền hạn hệ thống
+                        </h2>
+                        <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
+                            Chọn một hoặc nhiều vai trò cho tài khoản. Hệ thống sẽ tự động gộp các quyền tương ứng.
+                        </p>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                            {ROLE_OPTIONS.map(role => {
+                                const isChecked = selectedRoles.includes(role.value);
+                                return (
+                                    <div
+                                        key={role.value}
+                                        onClick={() => toggleRole(role.value)}
+                                        style={{
+                                            padding: '12px 16px',
+                                            borderRadius: '8px',
+                                            border: `1.5px solid ${isChecked ? 'var(--color-primary, #3b82f6)' : 'var(--color-border, #e2e8f0)'}`,
+                                            background: isChecked ? 'rgba(59, 130, 246, 0.06)' : 'var(--color-surface, #fff)',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '12px',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={() => {}} // Handled by div onClick
+                                            style={{ marginTop: '3px', cursor: 'pointer', accentColor: 'var(--color-primary, #3b82f6)' }}
+                                        />
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontWeight: 600, fontSize: '14px', color: isChecked ? 'var(--color-primary, #1d4ed8)' : 'inherit', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <i className={`bi ${role.icon}`}></i> {role.label}
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: 'var(--color-text-muted, #64748b)', marginTop: '4px', lineHeight: 1.4 }}>
+                                                {role.desc}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 

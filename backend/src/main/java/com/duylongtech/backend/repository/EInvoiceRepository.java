@@ -19,7 +19,15 @@ public interface EInvoiceRepository extends JpaRepository<EInvoice, Long> {
 
     List<EInvoice> findAllBySalesOrderId(Long salesOrderId);
 
+    List<EInvoice> findAllBySalesOrderIdAndStatusNot(Long salesOrderId, String status);
+
+    Optional<EInvoice> findFirstBySalesOrderIdAndInventoryDocumentIdIsNullAndStatusNot(Long salesOrderId, String status);
+
+    List<EInvoice> findAllBySalesOrderIdAndInventoryDocumentIdIsNotNullAndStatusNot(Long salesOrderId, String status);
+
     Optional<EInvoice> findByInventoryDocumentId(Long inventoryDocumentId);
+
+    Optional<EInvoice> findFirstByInventoryDocumentIdAndStatusNot(Long inventoryDocumentId, String status);
 
     List<EInvoice> findAllByInventoryDocumentId(Long inventoryDocumentId);
 

@@ -7,7 +7,10 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class UserDetailsImpl implements UserDetails {
     private Long id;
@@ -25,63 +28,43 @@ public class UserDetailsImpl implements UserDetails {
         this.authorities = authorities;
     }
 
-    private static String normalizeRoleCode(String code) {
-        if (code == null) {
-            return "";
-        }
-        return code.startsWith("ROLE_") ? code.substring("ROLE_".length()) : code;
-    }
-
     public static UserDetailsImpl build(User user) {
-        List<GrantedAuthority> authorities = new java.util.ArrayList<>();
-        boolean isStaff = false;
-        boolean hasAdminOrManager = false;
+        Set<String> authorityStrings = new java.util.HashSet<>();
+
+        boolean hasCustomPermissions = user.getPermissions() != null && !user.getPermissions().isEmpty();
 
         if (user.getRoles() != null) {
             for (RoleEntity role : user.getRoles()) {
                 String code = role.getCode();
-                String normalizedCode = normalizeRoleCode(code);
-                if ("STAFF".equalsIgnoreCase(normalizedCode)) {
-                    isStaff = true;
-                }
-                if ("SUPER_ADMIN".equalsIgnoreCase(normalizedCode) || "MANAGER".equalsIgnoreCase(normalizedCode)) {
-                    hasAdminOrManager = true;
-                }
-                String authority = code.startsWith("ROLE_") ? code : "ROLE_" + code;
-                authorities.add(new SimpleGrantedAuthority(authority));
+                if (code != null && !code.isBlank()) {
+                    String authority = code.startsWith("ROLE_") ? code : "ROLE_" + code;
+                    authorityStrings.add(authority);
 
-                // Add role-based permissions for SUPER_ADMIN or MANAGER
-                if (("SUPER_ADMIN".equalsIgnoreCase(normalizedCode) || "MANAGER".equalsIgnoreCase(normalizedCode))
-                        && role.getPermissions() != null) {
-                    role.getPermissions().forEach(permission -> {
-                        authorities.add(new SimpleGrantedAuthority(permission.getCode()));
-                    });
+                    // If user has no custom permissions override, load role default permissions
+                    if (!hasCustomPermissions && role.getPermissions() != null) {
+                        role.getPermissions().forEach(permission -> {
+                            if (permission.getCode() != null) {
+                                authorityStrings.add(permission.getCode());
+                            }
+                        });
+                    }
                 }
             }
         }
 
-        // If user is STAFF and does not have admin/manager roles, load dynamic
-        // permissions
-        if (isStaff && !hasAdminOrManager) {
-            if (user.getPermissions() != null && !user.getPermissions().isEmpty()) {
-                user.getPermissions().forEach(permission -> {
-                    authorities.add(new SimpleGrantedAuthority(permission.getCode()));
-                });
-            } else {
-                // Fallback to default STAFF permissions from DB if no custom permissions are
-                // set
-                if (user.getRoles() != null) {
-                    user.getRoles().forEach(role -> {
-                        if ("STAFF".equalsIgnoreCase(normalizeRoleCode(role.getCode()))
-                                && role.getPermissions() != null) {
-                            role.getPermissions().forEach(permission -> {
-                                authorities.add(new SimpleGrantedAuthority(permission.getCode()));
-                            });
-                        }
-                    });
+        // If user has custom permissions saved, load them directly
+        if (hasCustomPermissions) {
+            user.getPermissions().forEach(permission -> {
+                if (permission.getCode() != null) {
+                    authorityStrings.add(permission.getCode());
                 }
-            }
+            });
         }
+
+        List<GrantedAuthority> authorities = authorityStrings.stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(java.util.stream.Collectors.toList());
+
         boolean enabled = "APPROVED".equalsIgnoreCase(user.getStatus());
         return new UserDetailsImpl(
                 user.getId(),

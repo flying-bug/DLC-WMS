@@ -76,16 +76,14 @@ public class EInvoiceService {
 
     @Transactional(readOnly = true)
     public EInvoiceResponse getInvoiceBySalesOrderId(Long salesOrderId) {
-        return einvoiceRepository.findBySalesOrderId(salesOrderId)
-                .filter(i -> !"CANCELED".equals(i.getStatus()))
+        return einvoiceRepository.findFirstBySalesOrderIdAndInventoryDocumentIdIsNullAndStatusNot(salesOrderId, "CANCELED")
                 .map(this::toResponse)
                 .orElse(null);
     }
 
     @Transactional(readOnly = true)
     public EInvoiceResponse getInvoiceByInventoryDocumentId(Long inventoryDocumentId) {
-        return einvoiceRepository.findByInventoryDocumentId(inventoryDocumentId)
-                .filter(i -> !"CANCELED".equals(i.getStatus()))
+        return einvoiceRepository.findFirstByInventoryDocumentIdAndStatusNot(inventoryDocumentId, "CANCELED")
                 .map(this::toResponse)
                 .orElse(null);
     }
@@ -110,19 +108,29 @@ public class EInvoiceService {
                 throw new BusinessException("Chỉ có thể xuất hóa đơn điện tử cho phiếu xuất kho đã ghi sổ (hoàn tất xuất kho).");
             }
 
-            // Kiểm tra xem phiếu xuất kho này đã xuất HĐĐT chưa
+            // 1. Kiểm tra xem phiếu xuất kho này đã xuất HĐĐT chưa
             final String expDocCode = foundDoc.getDocCode();
-            einvoiceRepository.findByInventoryDocumentId(exportDocId).ifPresent(existing -> {
-                if (!"CANCELED".equals(existing.getStatus())) {
-                    throw new BusinessException(String.format(
-                            "Phiếu xuất kho %s đã được xuất hóa đơn số %s (Ký hiệu: %s)",
-                            expDocCode, existing.getInvoiceNumber(), existing.getInvoiceSeries()
-                    ));
-                }
+            einvoiceRepository.findFirstByInventoryDocumentIdAndStatusNot(exportDocId, "CANCELED").ifPresent(existing -> {
+                throw new BusinessException(String.format(
+                        "Phiếu xuất kho %s đã được xuất hóa đơn số %s (Ký hiệu: %s)",
+                        expDocCode, existing.getInvoiceNumber(), existing.getInvoiceSeries()
+                ));
             });
 
             exportDoc = foundDoc;
             soId = (rawSoId != null) ? rawSoId : foundDoc.getSalesOrderId();
+
+            // 2. Kiểm tra chéo: Nếu đơn hàng gốc đã xuất HĐĐT toàn bộ đơn hàng (cấp SO), chặn không cho xuất theo từng phiếu xuất
+            if (soId != null) {
+                SalesOrder parentSo = salesOrderRepository.findById(soId).orElse(null);
+                String parentSoCode = parentSo != null ? parentSo.getSoCode() : String.valueOf(soId);
+                einvoiceRepository.findFirstBySalesOrderIdAndInventoryDocumentIdIsNullAndStatusNot(soId, "CANCELED").ifPresent(soInv -> {
+                    throw new BusinessException(String.format(
+                            "Đơn bán hàng %s đã được xuất hóa đơn điện tử toàn bộ đơn số %s (Ký hiệu: %s). Theo quy định Nghị định 123/2020/NĐ-CP, không thể xuất thêm hóa đơn riêng cho từng phiếu xuất kho con.",
+                            parentSoCode, soInv.getInvoiceNumber(), soInv.getInvoiceSeries()
+                    ));
+                });
+            }
         } else {
             exportDoc = null;
             soId = rawSoId;
@@ -133,14 +141,23 @@ public class EInvoiceService {
         // Nếu xuất HĐ toàn bộ đơn hàng (không theo phiếu xuất riêng)
         if (exportDoc == null && so != null) {
             final String soCode = so.getSoCode();
-            einvoiceRepository.findBySalesOrderId(so.getId()).ifPresent(existing -> {
-                if (existing.getInventoryDocumentId() == null && !"CANCELED".equals(existing.getStatus())) {
-                    throw new BusinessException(String.format(
-                            "Đơn hàng %s đã được xuất hóa đơn số %s (Ký hiệu: %s)",
-                            soCode, existing.getInvoiceNumber(), existing.getInvoiceSeries()
-                    ));
-                }
+            // 1. Kiểm tra nếu đơn hàng đã có HĐĐT cấp đơn hàng
+            einvoiceRepository.findFirstBySalesOrderIdAndInventoryDocumentIdIsNullAndStatusNot(so.getId(), "CANCELED").ifPresent(existing -> {
+                throw new BusinessException(String.format(
+                        "Đơn bán hàng %s đã được xuất hóa đơn số %s (Ký hiệu: %s) cho toàn bộ đơn hàng.",
+                        soCode, existing.getInvoiceNumber(), existing.getInvoiceSeries()
+                ));
             });
+
+            // 2. Kiểm tra chéo: Nếu đơn hàng đã có bất kỳ phiếu xuất kho nào được xuất HĐĐT riêng
+            List<EInvoice> exportInvoices = einvoiceRepository.findAllBySalesOrderIdAndInventoryDocumentIdIsNotNullAndStatusNot(so.getId(), "CANCELED");
+            if (!exportInvoices.isEmpty()) {
+                EInvoice firstExpInv = exportInvoices.get(0);
+                throw new BusinessException(String.format(
+                        "Đơn bán hàng %s đã có %d hóa đơn điện tử được xuất theo từng đợt xuất kho (ví dụ HĐ số %s - Ký hiệu %s). Theo quy định Nghị định 123/2020/NĐ-CP, vui lòng tiếp tục xuất hóa đơn theo từng phiếu xuất kho thay vì xuất gộp toàn bộ đơn hàng.",
+                        soCode, exportInvoices.size(), firstExpInv.getInvoiceNumber(), firstExpInv.getInvoiceSeries()
+                ));
+            }
         }
 
         Long partnerId = so != null ? so.getPartnerId() : (exportDoc != null ? exportDoc.getPartnerId() : null);

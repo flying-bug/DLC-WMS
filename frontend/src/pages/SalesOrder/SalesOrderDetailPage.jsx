@@ -308,6 +308,9 @@ function SalesOrderDetailPage() {
   const taxAmount = so.taxAmount || 0;
   const totalAmount = so.totalAmount || (subTotalAmount + taxAmount);
 
+  const soLevelInvoice = einvoices.find(i => !i.inventoryDocumentId);
+  const exportLevelInvoices = einvoices.filter(i => Boolean(i.inventoryDocumentId));
+
   return (
     <AdminLayout>
       <div className={styles.page}>
@@ -342,37 +345,47 @@ function SalesOrderDetailPage() {
               </span>
             )}
 
-            {einvoices.length > 0 && (
+            {soLevelInvoice ? (
               <span
                 className={styles.statusBadge}
                 style={{ background: '#dcfce7', color: '#166534', cursor: 'pointer', border: '1px solid #86efac' }}
-                onClick={() => handleOpenEInvoicePreview(einvoices[0])}
-                title="Nhấn để xem HĐĐT"
+                onClick={() => handleOpenEInvoicePreview(soLevelInvoice)}
+                title="Nhấn để xem HĐĐT toàn đơn hàng"
               >
                 <i className="bi bi-file-earmark-check-fill" style={{ marginRight: 5, color: '#16a34a' }} />
-                {einvoices.length === 1
-                  ? `HĐĐT: ${einvoices[0].invoiceNumber || 'Đã cấp'} (${einvoices[0].invoiceSeries})`
-                  : `Đã xuất ${einvoices.length} HĐĐT (theo đợt)`}
+                HĐĐT: {soLevelInvoice.invoiceNumber || 'Đã cấp'} ({soLevelInvoice.invoiceSeries})
               </span>
-            )}
+            ) : exportLevelInvoices.length > 0 ? (
+              <span
+                className={styles.statusBadge}
+                style={{ background: '#ecfdf5', color: '#065f46', cursor: 'pointer', border: '1px solid #a7f3d0' }}
+                onClick={() => handleOpenEInvoicePreview(exportLevelInvoices[0])}
+                title="Nhấn để xem HĐĐT đợt"
+              >
+                <i className="bi bi-receipt" style={{ marginRight: 5, color: '#059669' }} />
+                {exportLevelInvoices.length === 1
+                  ? `HĐĐT đợt: ${exportLevelInvoices[0].invoiceNumber || 'Đã cấp'} (${exportLevelInvoices[0].invoiceSeries})`
+                  : `Đã xuất ${exportLevelInvoices.length} HĐĐT (theo đợt)`}
+              </span>
+            ) : null}
           </div>
 
           <div className={styles.headerActions}>
-            {einvoices.length === 1 ? (
+            {soLevelInvoice ? (
               <button
                 className={styles.btnOutline}
-                onClick={() => handleOpenEInvoicePreview(einvoices[0])}
+                onClick={() => handleOpenEInvoicePreview(soLevelInvoice)}
                 style={{ borderColor: '#16a34a', color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
-                <i className="bi bi-receipt" /> Xem HĐĐT ({einvoices[0].invoiceNumber})
+                <i className="bi bi-receipt" /> Xem HĐĐT ({soLevelInvoice.invoiceNumber})
               </button>
-            ) : einvoices.length > 1 ? (
+            ) : exportLevelInvoices.length > 0 ? (
               <button
                 className={styles.btnOutline}
-                onClick={() => handleOpenEInvoicePreview(einvoices[0])}
+                onClick={() => handleOpenEInvoicePreview(exportLevelInvoices[0])}
                 style={{ borderColor: '#16a34a', color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
-                <i className="bi bi-receipt" /> Xem {einvoices.length} HĐĐT
+                <i className="bi bi-receipt" /> {exportLevelInvoices.length === 1 ? `Xem HĐĐT (${exportLevelInvoices[0].invoiceNumber})` : `Xem ${exportLevelInvoices.length} HĐĐT`}
               </button>
             ) : ['APPROVED', 'POSTED'].includes(so.status) && (
               <button
@@ -679,6 +692,30 @@ function SalesOrderDetailPage() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenEInvoicePreview(inv)}
+                                style={{
+                                  background: 'none', border: 'none', color: '#0284c7',
+                                  cursor: 'pointer', fontSize: 12, textDecoration: 'underline'
+                                }}
+                              >
+                                Xem HĐ
+                              </button>
+                            </div>
+                          ) : soLevelInvoice ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                                  background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe',
+                                  padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600
+                                }}
+                                title="Đơn hàng đã được xuất HĐĐT gộp toàn bộ đơn"
+                              >
+                                <i className="bi bi-file-earmark-lock-fill" style={{ color: '#2563eb' }} />
+                                Đã xuất theo HĐ đơn hàng ({soLevelInvoice.invoiceNumber})
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEInvoicePreview(soLevelInvoice)}
                                 style={{
                                   background: 'none', border: 'none', color: '#0284c7',
                                   cursor: 'pointer', fontSize: 12, textDecoration: 'underline'

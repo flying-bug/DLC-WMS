@@ -133,6 +133,7 @@ function UpdateExportSlipPage() {
   const [savedSlip, setSavedSlip] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [einvoice, setEinvoice] = useState(null);
+  const [soInvoice, setSoInvoice] = useState(null);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [issuingInvoice, setIssuingInvoice] = useState(false);
@@ -192,13 +193,25 @@ function UpdateExportSlipPage() {
     showToast('info', 'Đã áp dụng kho cho tất cả các dòng sản phẩm và tự động gộp các dòng trùng');
   };
 
-  const loadEInvoice = useCallback(async () => {
+  const loadEInvoice = useCallback(async (soId) => {
     if (!id) return;
     try {
       const res = await einvoiceApi.getEInvoiceByExportId(id);
       setEinvoice(res.data?.data || null);
     } catch {
       setEinvoice(null);
+    }
+
+    if (soId) {
+      try {
+        const soRes = await einvoiceApi.getEInvoicesBySalesOrderId(soId);
+        const list = soRes.data?.data;
+        const invoices = Array.isArray(list) ? list : (list ? [list] : []);
+        const parentInv = invoices.find(i => !i.inventoryDocumentId);
+        setSoInvoice(parentInv || null);
+      } catch {
+        setSoInvoice(null);
+      }
     }
   }, [id]);
 
@@ -267,6 +280,8 @@ function UpdateExportSlipPage() {
             serialNumbers: line.serialNumbers || [],
             scannedCode: line.serialNumber || line.productCode || '',
           })));
+          const parentSoId = detail.salesOrderId || (detail.referenceType === 'SALES_ORDER' ? detail.referenceId : null);
+          loadEInvoice(parentSoId);
         }
       } catch (err) {
         setError(err.response?.data?.userMessage || 'Không tải được phiếu xuất kho');
@@ -277,7 +292,6 @@ function UpdateExportSlipPage() {
 
     if (id) {
       loadData();
-      loadEInvoice();
     }
   }, [id, loadEInvoice]);
 
@@ -756,6 +770,35 @@ function UpdateExportSlipPage() {
                 <i className="bi bi-file-earmark-check-fill" style={{ color: '#16a34a' }} />
                 Xem HĐĐT ({einvoice.invoiceNumber || 'Đã cấp'})
               </button>
+            ) : soInvoice ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe',
+                    padding: '6px 12px', borderRadius: 6, fontSize: 13, fontWeight: 600
+                  }}
+                  title="Đơn bán hàng gốc đã xuất HĐĐT gộp toàn bộ đơn"
+                >
+                  <i className="bi bi-file-earmark-lock-fill" style={{ color: '#2563eb' }} />
+                  Đã xuất HĐĐT theo đơn hàng {form.referenceCode || ''} ({soInvoice.invoiceNumber || 'Đã cấp'})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEinvoice(soInvoice);
+                    setShowPreviewModal(true);
+                  }}
+                  style={{
+                    padding: '6px 12px', borderRadius: 6,
+                    border: '1px solid #2563eb', color: '#2563eb', background: '#fff',
+                    fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 6
+                  }}
+                >
+                  <i className="bi bi-receipt" /> Xem HĐ
+                </button>
+              </div>
             ) : (
               <button
                 type="button"

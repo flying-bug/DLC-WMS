@@ -201,7 +201,11 @@ public class UserService {
         user.setPhone(phone);
         user.setStatus("APPROVED");
         user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
-        user.setIdCard(userDto.getIdCard());
+        String idCard = userDto.getIdCard() != null ? userDto.getIdCard().trim() : null;
+        if (idCard != null && idCard.length() > 20) {
+            idCard = idCard.substring(0, 20);
+        }
+        user.setIdCard(idCard);
         user.setDob(userDto.getDob());
         user.setGender(userDto.getGender());
         user.setStartDate(userDto.getStartDate());
@@ -253,10 +257,10 @@ public class UserService {
 
     public void updatePermissions(Long id, List<String> permissionCodes) {
         User user = userRepository.findById(id).orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
-        boolean isStaff = user.getRoles() != null && user.getRoles().stream()
-                .anyMatch(role -> "ROLE_STAFF".equalsIgnoreCase(role.getCode()) || "STAFF".equalsIgnoreCase(role.getCode()));
-        if (!isStaff) {
-            throw new BusinessException(SystemMessage.STAFF_ONLY_PERMISSION);
+        boolean isSuperAdmin = user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(role -> "ROLE_SUPER_ADMIN".equalsIgnoreCase(role.getCode()) || "SUPER_ADMIN".equalsIgnoreCase(role.getCode()));
+        if (isSuperAdmin) {
+            throw new BusinessException(SystemMessage.ACCESS_DENIED);
         }
         Set<PermissionEntity> permissions = new HashSet<>();
         if (permissionCodes != null) {
@@ -317,7 +321,11 @@ public class UserService {
             });
             user.setRoles(roles);
         }
-        if (userDto.getIdCard() != null) user.setIdCard(userDto.getIdCard());
+        if (userDto.getIdCard() != null) {
+            String idCard = userDto.getIdCard().trim();
+            if (idCard.length() > 20) idCard = idCard.substring(0, 20);
+            user.setIdCard(idCard);
+        }
         if (userDto.getDob() != null) user.setDob(userDto.getDob());
         if (userDto.getGender() != null) user.setGender(userDto.getGender());
         if (userDto.getStartDate() != null) user.setStartDate(userDto.getStartDate());

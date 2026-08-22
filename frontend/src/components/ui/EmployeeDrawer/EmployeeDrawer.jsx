@@ -402,10 +402,16 @@ function EmployeeDrawer({ isOpen, onClose, user, onSave }) {
                                 <h2 id="employee-drawer-title" className={styles.userName}>{formData.name}</h2>
                                 <span className={styles.userCode}>Tên đăng nhập: {formData.username || formData.code}</span>
                                 <div className={styles.badges}>
-                                    <span className={styles.statusBadge} style={formData.status !== 'active' ? { background: 'var(--status-warning-bg)', color: 'var(--color-warning-dark)' } : {}}>
+                                    <span className={styles.statusBadge} style={formData.status !== 'APPROVED' ? { background: 'var(--status-warning-bg)', color: 'var(--color-warning-dark)' } : {}}>
                                         <i className="bi bi-circle-fill"></i> {formData.statusLabel}
                                     </span>
-                                    <span className={styles.roleBadge}>{formData.roleBadge}</span>
+                                    {formData.badges && formData.badges.length > 0 ? (
+                                        formData.badges.map((b, bIdx) => (
+                                            <span key={bIdx} className={styles.roleBadge}>{b.label}</span>
+                                        ))
+                                    ) : (
+                                        <span className={styles.roleBadge}>{formData.roleBadge}</span>
+                                    )}
                                 </div>
                             </div>
                         </div>

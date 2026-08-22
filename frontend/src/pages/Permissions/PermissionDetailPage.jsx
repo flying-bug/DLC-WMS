@@ -27,21 +27,23 @@ function PermissionDetailPage() {
     // Initial state matching the UC list
     const [permissions, setPermissions] = useState({
         // Quản lý kho
+        warehouse_master: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         import: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         export: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         transfer: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         stocktake: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+
+        // Kỹ thuật & Lắp ráp
         assembly_config: { full: false, view: false, add: false, edit: false },
         assembly: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+        warranty: { full: false, view: false, add: false, edit: false },
+        repair: { full: false, view: false, add: false, edit: false, delete: false },
 
-        // Giao dịch
+        // Kinh doanh & Kế toán
         purchase_order: { full: false, view: false, add: false, edit: false },
         sales_order: { full: false, view: false, add: false, edit: false, export: false, print: false },
+        einvoice: { full: false, view: false, add: false, edit: false, export: false, print: false },
         payment: { full: false, view: false, add: false, edit: false },
-
-        // Dịch vụ
-        warranty: { full: false, view: false },
-        repair: { full: false, view: false, add: false, edit: false, delete: false },
 
         // Danh mục
         product: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
@@ -50,7 +52,6 @@ function PermissionDetailPage() {
         unit: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         customer: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         supplier: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
-        warehouse_master: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
 
         // Báo cáo
         report_balance: { full: false, view: false, export: false },
@@ -67,6 +68,45 @@ function PermissionDetailPage() {
         audit: { full: false, view: false, export: false }
     });
 
+    const ROLE_DEFAULT_PERMS = {
+        ROLE_WAREHOUSE_CONTROLLER: [
+            'warehouse_master:view', 'import:view', 'import:edit', 'import:print',
+            'export:view', 'export:add', 'export:edit', 'export:export', 'export:print',
+            'transfer:view', 'transfer:add', 'transfer:edit', 'transfer:delete', 'transfer:export', 'transfer:print',
+            'stocktake:view', 'stocktake:add', 'stocktake:edit', 'stocktake:delete', 'stocktake:export', 'stocktake:print',
+            'product:view', 'unit:view', 'brand:view',
+            'report_balance:view', 'report_balance:export', 'report_ledger:view', 'report_ledger:export', 'report_transfer:view', 'report_transfer:export',
+            'ai_chat:view'
+        ],
+        ROLE_TECHNICIAN: [
+            'assembly_config:view', 'assembly_config:add', 'assembly_config:edit',
+            'assembly:view', 'assembly:add', 'assembly:edit', 'assembly:delete', 'assembly:export', 'assembly:print',
+            'warranty:view', 'warranty:add', 'warranty:edit',
+            'repair:view', 'repair:add', 'repair:edit', 'repair:delete',
+            'product:view', 'export:view', 'ai_chat:view'
+        ],
+        ROLE_ACCOUNTANT: [
+            'import:view', 'import:add', 'import:edit', 'import:export', 'import:print',
+            'sales_order:view', 'sales_order:add', 'sales_order:edit', 'sales_order:export', 'sales_order:print',
+            'purchase_order:view', 'purchase_order:add', 'purchase_order:edit',
+            'einvoice:view', 'einvoice:add', 'einvoice:edit', 'einvoice:export', 'einvoice:print',
+            'customer:view', 'customer:add', 'customer:edit', 'customer:delete', 'customer:export', 'customer:print',
+            'supplier:view', 'supplier:add', 'supplier:edit', 'supplier:delete', 'supplier:export', 'supplier:print',
+            'report_debt:view', 'report_debt:export', 'report_sales:view', 'report_sales:export', 'report_summary:view', 'report_summary:export',
+            'payment:view', 'export:view', 'ai_chat:view'
+        ],
+        ROLE_CASHIER_CONTROLLER: [
+            'payment:view', 'payment:add', 'payment:edit',
+            'sales_order:view', 'customer:view', 'ai_chat:view'
+        ],
+        ROLE_STAFF: [
+            'import:view', 'import:add', 'import:edit', 'export:view', 'export:add', 'export:edit',
+            'purchase_order:view', 'sales_order:view', 'payment:view',
+            'transfer:view', 'stocktake:view', 'assembly_config:view', 'assembly:view', 'warranty:view', 'repair:view',
+            'product:view', 'report_balance:view', 'report_sales:view', 'ai_chat:view'
+        ]
+    };
+
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -75,18 +115,23 @@ function PermissionDetailPage() {
                 const userData = userRes.data?.data;
                 setUser(userData);
 
-                // Set initial permission matrix based on saved permissions or roles
+                // Check permissions access
                 if (userData) {
-                    const hasStaff = userData.roles && userData.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF');
-                    if (!hasStaff) {
-                        showToast('error', "Chỉ tài khoản Nhân viên (STAFF) mới được phép phân quyền động.");
+                    const isSuperAdmin = userData.roles && userData.roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
+                    if (isSuperAdmin) {
+                        showToast('warning', "Tài khoản Super Admin có toàn quyền hệ thống mặc định.");
                         setTimeout(() => navigate('/users'), 1500);
                         return;
                     }
-                    setPermissions(prev => {
-                        const newPerms = { ...prev };
 
-                        // 1. If user already has explicit permissions, populate them
+                    setPermissions(prev => {
+                        const newPerms = {};
+                        // Deep clone prev
+                        Object.keys(prev).forEach(m => {
+                            newPerms[m] = { ...prev[m] };
+                        });
+
+                        // 1. If user already has explicit custom permissions, populate them
                         if (userData.permissions && userData.permissions.length > 0) {
                             userData.permissions.forEach(code => {
                                 const [mod, act] = code.split(':');
@@ -95,34 +140,25 @@ function PermissionDetailPage() {
                                 }
                             });
                         } else if (userData.roles) {
-                            // 2. Otherwise fallback to default permissions based on roles
-                            const hasAdmin = userData.roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
+                            // 2. Otherwise fallback to union of default permissions based on all assigned roles
                             const hasManager = userData.roles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
-                            const hasStaff = userData.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF');
 
-                            if (hasAdmin) {
-                                Object.keys(newPerms).forEach(mod => {
-                                    Object.keys(newPerms[mod]).forEach(act => {
-                                        newPerms[mod][act] = true;
-                                    });
-                                });
-                            } else if (hasManager) {
+                            if (hasManager) {
                                 Object.keys(newPerms).forEach(mod => {
                                     const isSystem = ['account', 'auth', 'audit'].includes(mod);
                                     Object.keys(newPerms[mod]).forEach(act => {
                                         newPerms[mod][act] = !isSystem;
                                     });
                                 });
-                            } else if (hasStaff) {
-                                const defaultStaffModules = [
-                                    'import', 'export', 'purchase_order', 'sales_order', 'payment',
-                                    'transfer', 'stocktake', 'assembly_config', 'assembly', 'warranty', 'repair',
-                                    'product', 'report_balance', 'report_sales', 'ai_chat'
-                                ];
-                                Object.keys(newPerms).forEach(mod => {
-                                    const isDefaultStaffModule = defaultStaffModules.includes(mod);
-                                    Object.keys(newPerms[mod]).forEach(act => {
-                                        newPerms[mod][act] = isDefaultStaffModule;
+                            } else {
+                                userData.roles.forEach(roleCode => {
+                                    const normalized = roleCode.startsWith('ROLE_') ? roleCode : `ROLE_${roleCode}`;
+                                    const defaults = ROLE_DEFAULT_PERMS[normalized] || [];
+                                    defaults.forEach(code => {
+                                        const [mod, act] = code.split(':');
+                                        if (newPerms[mod] && newPerms[mod][act] !== undefined) {
+                                            newPerms[mod][act] = true;
+                                        }
                                     });
                                 });
                             }
@@ -242,39 +278,40 @@ function PermissionDetailPage() {
             case 'warehouse':
                 return (
                     <>
-                        {renderRow('warehouse_master', 'Kho', 'bi-houses')}
-                        {renderRow('import', 'Nhập kho', 'bi-box-arrow-in-right')}
-                        {renderRow('export', 'Xuất kho', 'bi-box-arrow-right')}
-                        {renderRow('transfer', 'Chuyển kho', 'bi-arrow-left-right')}
-                        {renderRow('stocktake', 'Kiểm kê kho', 'bi-clipboard2-check')}
-                        {renderRow('assembly_config', 'Quản lý Cấu hình', 'bi-diagram-3')}
-                        {renderRow('assembly', 'Lắp ráp/Tháo dỡ', 'bi-box-seam')}
+                        {renderRow('warehouse_master', 'Quản lý danh sách Kho', 'bi-houses')}
+                        {renderRow('import', 'Phiếu Nhập kho', 'bi-box-arrow-in-right')}
+                        {renderRow('export', 'Phiếu Xuất kho', 'bi-box-arrow-right')}
+                        {renderRow('transfer', 'Phiếu Chuyển kho', 'bi-arrow-left-right')}
+                        {renderRow('stocktake', 'Phiếu Kiểm kê kho', 'bi-clipboard2-check')}
                     </>
                 );
-            case 'transactions':
+            case 'technical':
                 return (
                     <>
-                        {renderRow('purchase_order', 'Đơn mua hàng', 'bi-bag-plus')}
-                        {renderRow('sales_order', 'Đơn bán hàng', 'bi-cart3')}
-                        {renderRow('payment', 'Thu chi & Công nợ', 'bi-cash-coin')}
+                        {renderRow('assembly_config', 'Định mức Cấu hình PC (BOM)', 'bi-diagram-3')}
+                        {renderRow('assembly', 'Lệnh Lắp ráp / Tháo dỡ PC', 'bi-box-seam')}
+                        {renderRow('warranty', 'Tiếp nhận & Quản lý Bảo hành', 'bi-shield-check')}
+                        {renderRow('repair', 'Phiếu Sửa chữa Dịch vụ', 'bi-tools')}
                     </>
                 );
-            case 'services':
+            case 'business':
                 return (
                     <>
-                        {renderRow('warranty', 'Bảo hành', 'bi-shield-check')}
-                        {renderRow('repair', 'Sửa chữa', 'bi-tools')}
+                        {renderRow('sales_order', 'Đơn Bán hàng (SO)', 'bi-cart3')}
+                        {renderRow('purchase_order', 'Đơn Mua hàng NCC (PO)', 'bi-bag-plus')}
+                        {renderRow('einvoice', 'Hóa đơn Điện tử', 'bi-receipt-cutoff')}
+                        {renderRow('payment', 'Sổ quỹ & Thu chi tiền mặt', 'bi-cash-coin')}
                     </>
                 );
             case 'master_data':
                 return (
                     <>
-                        {renderRow('product', 'Sản phẩm', 'bi-tags')}
-                        {renderRow('product_category', 'Danh mục sản phẩm', 'bi-folder')}
+                        {renderRow('product', 'Sản phẩm & Linh kiện', 'bi-tags')}
+                        {renderRow('product_category', 'Danh mục ngành hàng', 'bi-folder')}
                         {renderRow('brand', 'Thương hiệu', 'bi-bookmark-star')}
                         {renderRow('unit', 'Đơn vị tính', 'bi-rulers')}
-                        {renderRow('customer', 'Khách hàng', 'bi-person-vcard')}
-                        {renderRow('supplier', 'Nhà cung cấp', 'bi-truck')}
+                        {renderRow('customer', 'Danh bạ Khách hàng', 'bi-person-vcard')}
+                        {renderRow('supplier', 'Danh bạ Nhà cung cấp', 'bi-truck')}
                     </>
                 );
             case 'reports':
@@ -282,19 +319,19 @@ function PermissionDetailPage() {
                     <>
                         {renderRow('report_balance', 'Báo cáo tồn kho hiện tại', 'bi-bar-chart')}
                         {renderRow('report_ledger', 'Sổ chi tiết vật tư hàng hóa', 'bi-journal-text')}
-                        {renderRow('report_transfer', 'Báo cáo chuyển kho nội bộ', 'bi-arrow-left-right')}
+                        {renderRow('report_transfer', 'Báo cáo luân chuyển kho', 'bi-arrow-left-right')}
                         {renderRow('report_debt', 'Báo cáo công nợ đối tác', 'bi-receipt')}
                         {renderRow('report_summary', 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)', 'bi-file-earmark-bar-graph')}
-                        {renderRow('report_sales', 'Báo cáo lợi nhuận bán hàng', 'bi-currency-dollar')}
+                        {renderRow('report_sales', 'Báo cáo doanh số bán hàng', 'bi-currency-dollar')}
                     </>
                 );
             case 'system':
                 return (
                     <>
-                        {renderRow('ai_chat', 'AI Chat', 'bi-robot')}
+                        {renderRow('ai_chat', 'Trợ lý AI Gemini', 'bi-robot')}
                         {renderRow('account', 'Quản lý người dùng', 'bi-people')}
-                        {renderRow('auth', 'Phân quyền', 'bi-shield-lock')}
-                        {renderRow('audit', 'Nhật ký hệ thống', 'bi-journal-medical')}
+                        {renderRow('auth', 'Ma trận phân quyền', 'bi-shield-lock')}
+                        {renderRow('audit', 'Nhật ký hệ thống (Audit Log)', 'bi-journal-medical')}
                     </>
                 );
             default:
@@ -325,28 +362,28 @@ function PermissionDetailPage() {
                     <nav className={styles.sidebar} aria-label="Danh mục module">
                         <div className={styles.sidebarHeader}>DANH MỤC MODULE</div>
                         <button type="button" aria-pressed={activeCategory === 'warehouse'} className={`${styles.menuItem} ${activeCategory === 'warehouse' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('warehouse')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-box-seam"></i> Quản lý kho</div>
+                            <div className={styles.menuItemLeft}><i className="bi bi-box-seam"></i> 1. Quản lý kho</div>
                             <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
                         </button>
-                        <button type="button" aria-pressed={activeCategory === 'transactions'} className={`${styles.menuItem} ${activeCategory === 'transactions' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('transactions')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-receipt"></i> Giao dịch</div>
-                            {activeCategory === 'transactions' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
+                        <button type="button" aria-pressed={activeCategory === 'technical'} className={`${styles.menuItem} ${activeCategory === 'technical' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('technical')}>
+                            <div className={styles.menuItemLeft}><i className="bi bi-tools"></i> 2. Kỹ thuật & Lắp ráp</div>
+                            <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
                         </button>
-                        <button type="button" aria-pressed={activeCategory === 'services'} className={`${styles.menuItem} ${activeCategory === 'services' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('services')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-tools"></i> Dịch vụ</div>
-                            {activeCategory === 'services' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
+                        <button type="button" aria-pressed={activeCategory === 'business'} className={`${styles.menuItem} ${activeCategory === 'business' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('business')}>
+                            <div className={styles.menuItemLeft}><i className="bi bi-receipt"></i> 3. Kinh doanh & Thu chi</div>
+                            <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
                         </button>
                         <button type="button" aria-pressed={activeCategory === 'master_data'} className={`${styles.menuItem} ${activeCategory === 'master_data' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('master_data')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-database"></i> Danh mục</div>
-                            {activeCategory === 'master_data' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
+                            <div className={styles.menuItemLeft}><i className="bi bi-database"></i> 4. Danh mục & Đối tác</div>
+                            <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
                         </button>
                         <button type="button" aria-pressed={activeCategory === 'reports'} className={`${styles.menuItem} ${activeCategory === 'reports' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('reports')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-bar-chart"></i> Báo cáo</div>
-                            {activeCategory === 'reports' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
+                            <div className={styles.menuItemLeft}><i className="bi bi-bar-chart"></i> 5. Báo cáo & Thống kê</div>
+                            <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
                         </button>
                         <button type="button" aria-pressed={activeCategory === 'system'} className={`${styles.menuItem} ${activeCategory === 'system' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('system')}>
-                            <div className={styles.menuItemLeft}><i className="bi bi-gear"></i> Quản trị hệ thống</div>
-                            {activeCategory === 'system' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
+                            <div className={styles.menuItemLeft}><i className="bi bi-gear"></i> 6. Quản trị hệ thống</div>
+                            <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
                         </button>
                     </nav>
 
