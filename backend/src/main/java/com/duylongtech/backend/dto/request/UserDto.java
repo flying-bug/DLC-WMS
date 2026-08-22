@@ -2,6 +2,8 @@ package com.duylongtech.backend.dto.request;
 
 import lombok.Data;
 import java.util.List;
+import java.time.LocalDate;
+import com.duylongtech.backend.constant.AppConstants;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -21,16 +23,16 @@ public class UserDto {
     private String email;
     
     @NotBlank(message = "FIELD_REQUIRED")
-    @Pattern(regexp = com.duylongtech.backend.constant.AppConstants.MOBILE_REGEX, message = "INVALID_PHONE")
+    @Pattern(regexp = AppConstants.MOBILE_REGEX, message = "INVALID_PHONE")
     private String phone;
     private String status;
     private String avatarUrl;
     
     @NotBlank(message = "FIELD_REQUIRED")
     private String idCard;
-    private java.time.LocalDate dob;
+    private LocalDate dob;
     private String gender;
-    private java.time.LocalDate startDate;
+    private LocalDate startDate;
     private String position;
     private String department;
     private String address;

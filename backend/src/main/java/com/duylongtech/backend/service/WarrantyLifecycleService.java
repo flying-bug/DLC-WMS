@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -72,7 +73,7 @@ public class WarrantyLifecycleService {
 
     private List<WarrantyLine> mapLines(List<WarrantyLineRequest> lineRequests, Warranty warranty) {
         if (lineRequests == null || lineRequests.isEmpty()) {
-            return new java.util.ArrayList<>();
+            return new ArrayList<>();
         }
         return lineRequests.stream().map(req -> WarrantyLine.builder()
                 .warranty(warranty)

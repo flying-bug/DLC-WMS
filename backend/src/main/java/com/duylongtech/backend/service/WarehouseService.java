@@ -4,6 +4,9 @@ import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.request.WarehouseRequest;
 import com.duylongtech.backend.dto.response.WarehouseDetailResponse;
 import com.duylongtech.backend.dto.response.WarehouseResponse;
+import com.duylongtech.backend.dto.response.SerialTreeResponse;
+import com.duylongtech.backend.entity.DeviceComponentSerial;
+import com.duylongtech.backend.entity.SerialNumber;
 import com.duylongtech.backend.entity.UserWarehouseRole;
 import com.duylongtech.backend.entity.Warehouse;
 import com.duylongtech.backend.exception.BusinessException;
@@ -17,6 +20,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +29,12 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -109,9 +118,9 @@ public class WarehouseService {
 
         // Lấy metrics từ INVENTORY_BALANCES
         Long totalSkus = inventoryBalanceRepository.countDistinctVariantsByWarehouseId(id);
-        java.math.BigDecimal totalQtyDecimal = inventoryBalanceRepository.sumQuantityOnHandByWarehouseId(id);
+        BigDecimal totalQtyDecimal = inventoryBalanceRepository.sumQuantityOnHandByWarehouseId(id);
         Long totalQuantity = totalQtyDecimal != null ? totalQtyDecimal.longValue() : 0L;
-        java.math.BigDecimal totalValue = inventoryBalanceRepository.sumTotalValueByWarehouseId(id);
+        BigDecimal totalValue = inventoryBalanceRepository.sumTotalValueByWarehouseId(id);
 
         return WarehouseDetailResponse.builder()
                 .id(warehouse.getId())
@@ -127,7 +136,7 @@ public class WarehouseService {
                 .version(warehouse.getVersion())
                 .totalSkus(totalSkus != null ? totalSkus : 0L)
                 .totalQuantity(totalQuantity)
-                .totalValue(totalValue != null ? totalValue : java.math.BigDecimal.ZERO)
+                .totalValue(totalValue != null ? totalValue : BigDecimal.ZERO)
                 .createdAt(warehouse.getCreatedAt())
                 .updatedAt(warehouse.getUpdatedAt())
                 .build();
@@ -143,7 +152,7 @@ public class WarehouseService {
                 .orElseThrow(() -> new BusinessException(SystemMessage.WH_NOT_FOUND));
 
         if (request.getVersion() != null && !request.getVersion().equals(warehouse.getVersion())) {
-            throw new org.springframework.orm.ObjectOptimisticLockingFailureException(Warehouse.class, id);
+            throw new ObjectOptimisticLockingFailureException(Warehouse.class, id);
         }
 
         // Chỉ cho phép sửa name, address, status, type. Code là read-only.
@@ -323,52 +332,52 @@ public class WarehouseService {
     public List<String> getAvailableSerials(Long warehouseId, Long variantId) {
         List<String> availableSerials = serialNumberRepository.findByWarehouseIdAndVariantIdAndStatus(warehouseId, variantId, "AVAILABLE")
                 .stream()
-                .map(com.duylongtech.backend.entity.SerialNumber::getSerialNumber)
-                .collect(java.util.stream.Collectors.toList());
+                .map(SerialNumber::getSerialNumber)
+                .collect(Collectors.toList());
         if (availableSerials.isEmpty()) {
             return availableSerials;
         }
 
-        java.util.Set<String> installedComponentSerials = deviceComponentSerialRepository
+        Set<String> installedComponentSerials = deviceComponentSerialRepository
                 .findActiveComponentSerials(variantId, availableSerials)
                 .stream()
-                .map(serial -> serial == null ? "" : serial.trim().toLowerCase(java.util.Locale.ROOT))
-                .collect(java.util.stream.Collectors.toSet());
+                .map(serial -> serial == null ? "" : serial.trim().toLowerCase(Locale.ROOT))
+                .collect(Collectors.toSet());
         if (installedComponentSerials.isEmpty()) {
             return availableSerials;
         }
 
         return availableSerials.stream()
-                .filter(serial -> !installedComponentSerials.contains(serial.trim().toLowerCase(java.util.Locale.ROOT)))
-                .collect(java.util.stream.Collectors.toList());
+                .filter(serial -> !installedComponentSerials.contains(serial.trim().toLowerCase(Locale.ROOT)))
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public List<com.duylongtech.backend.dto.response.SerialTreeResponse> getSerialTree(Long warehouseId, Long variantId) {
+    public List<SerialTreeResponse> getSerialTree(Long warehouseId, Long variantId) {
         // 1. Lấy danh sách Serial của thành phẩm (variantId) đang AVAILABLE trong kho này
         List<String> availableSerials = getAvailableSerials(warehouseId, variantId);
         if (availableSerials.isEmpty()) {
-            return java.util.Collections.emptyList();
+            return Collections.emptyList();
         }
 
         // 2. Lấy cấu hình linh kiện đang dùng của các serial thành phẩm này
-        List<com.duylongtech.backend.entity.DeviceComponentSerial> mappings = deviceComponentSerialRepository.findActiveByTargetVariantIdAndTargetSerialsIn(variantId, availableSerials);
+        List<DeviceComponentSerial> mappings = deviceComponentSerialRepository.findActiveByTargetVariantIdAndTargetSerialsIn(variantId, availableSerials);
 
         // 3. Gom nhóm theo Target Serial
-        java.util.Map<String, List<com.duylongtech.backend.entity.DeviceComponentSerial>> grouped = mappings.stream()
-                .collect(java.util.stream.Collectors.groupingBy(com.duylongtech.backend.entity.DeviceComponentSerial::getTargetSerial));
+        Map<String, List<DeviceComponentSerial>> grouped = mappings.stream()
+                .collect(Collectors.groupingBy(DeviceComponentSerial::getTargetSerial));
 
         // 4. Map sang SerialTreeResponse
         return availableSerials.stream().map(targetSerial -> {
-            List<com.duylongtech.backend.entity.DeviceComponentSerial> comps = grouped.getOrDefault(targetSerial, java.util.Collections.emptyList());
+            List<DeviceComponentSerial> comps = grouped.getOrDefault(targetSerial, Collections.emptyList());
             
             String targetSku = comps.isEmpty() ? "" : comps.get(0).getTargetVariant().getSku();
             String targetName = comps.isEmpty() ? "" : comps.get(0).getTargetVariant().getProduct().getProductName() + " - " + comps.get(0).getTargetVariant().getVariantName();
 
-            List<com.duylongtech.backend.dto.response.SerialTreeResponse.ComponentSerial> compResponses = comps.stream().map(c -> {
+            List<SerialTreeResponse.ComponentSerial> compResponses = comps.stream().map(c -> {
                 String cSku = c.getComponentVariant() != null ? c.getComponentVariant().getSku() : "";
                 String cName = c.getComponentVariant() != null ? c.getComponentVariant().getProduct().getProductName() + " - " + c.getComponentVariant().getVariantName() : "";
-                return com.duylongtech.backend.dto.response.SerialTreeResponse.ComponentSerial.builder()
+                return SerialTreeResponse.ComponentSerial.builder()
                         .componentSerial(c.getComponentSerial())
                         .componentSku(cSku)
                         .componentName(cName)
@@ -376,15 +385,15 @@ public class WarehouseService {
                         .installedAt(c.getInstalledAt())
                         .removedAt(c.getRemovedAt())
                         .build();
-            }).collect(java.util.stream.Collectors.toList());
+            }).collect(Collectors.toList());
 
-            return com.duylongtech.backend.dto.response.SerialTreeResponse.builder()
+            return SerialTreeResponse.builder()
                     .targetSerial(targetSerial)
                     .targetSku(targetSku)
                     .targetName(targetName)
                     .components(compResponses)
                     .build();
-        }).collect(java.util.stream.Collectors.toList());
+        }).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

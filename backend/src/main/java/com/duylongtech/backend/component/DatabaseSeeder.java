@@ -4,6 +4,7 @@ import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -11,9 +12,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
@@ -32,7 +31,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final PartnerRepository partnerRepository;
     private final ProductVariantRepository productVariantRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
-    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void run(String... args) throws Exception {
@@ -184,7 +183,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void seedPermissions() {
-        java.util.Map<String, String[]> moduleActions = new java.util.LinkedHashMap<>();
+        Map<String, String[]> moduleActions = new LinkedHashMap<>();
         moduleActions.put("import", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("export", new String[]{"view", "add", "edit", "delete", "export", "print"});
         moduleActions.put("purchase_order", new String[]{"view", "add", "edit"});
@@ -214,7 +213,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         moduleActions.put("auth", new String[]{"view", "edit"});
         moduleActions.put("audit", new String[]{"view", "export"});
 
-        for (java.util.Map.Entry<String, String[]> entry : moduleActions.entrySet()) {
+        for (Map.Entry<String, String[]> entry : moduleActions.entrySet()) {
             String module = entry.getKey();
             for (String action : entry.getValue()) {
                 String code = module + ":" + action;
@@ -238,7 +237,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         roleRepository.findByCode("ROLE_SUPER_ADMIN").ifPresent(role -> {
             Set<PermissionEntity> superAdminPerms = new HashSet<>();
             for (PermissionEntity perm : allPerms) {
-                if (java.util.Arrays.asList("account", "auth", "audit").contains(perm.getModule())) {
+                if (Arrays.asList("account", "auth", "audit").contains(perm.getModule())) {
                     superAdminPerms.add(perm);
                 }
             }
@@ -250,7 +249,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         roleRepository.findByCode("ROLE_MANAGER").ifPresent(role -> {
             Set<PermissionEntity> managerPerms = new HashSet<>();
             for (PermissionEntity perm : allPerms) {
-                if (!java.util.Arrays.asList("account", "auth", "audit").contains(perm.getModule())) {
+                if (!Arrays.asList("account", "auth", "audit").contains(perm.getModule())) {
                     managerPerms.add(perm);
                 }
             }
@@ -264,15 +263,15 @@ public class DatabaseSeeder implements CommandLineRunner {
             for (PermissionEntity perm : allPerms) {
                 String mod = perm.getModule();
                 String code = perm.getCode();
-                if (java.util.Arrays.asList("transfer", "stocktake").contains(mod)) {
+                if (Arrays.asList("transfer", "stocktake").contains(mod)) {
                     whPerms.add(perm);
-                } else if ("import".equals(mod) && java.util.Arrays.asList("import:view", "import:edit", "import:print").contains(code)) {
+                } else if ("import".equals(mod) && Arrays.asList("import:view", "import:edit", "import:print").contains(code)) {
                     whPerms.add(perm);
-                } else if ("export".equals(mod) && java.util.Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print").contains(code)) {
+                } else if ("export".equals(mod) && Arrays.asList("export:view", "export:add", "export:edit", "export:export", "export:print").contains(code)) {
                     whPerms.add(perm);
-                } else if (java.util.Arrays.asList("product", "unit", "brand", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                } else if (Arrays.asList("product", "unit", "brand", "warehouse_master", "ai_chat").contains(mod) && code.endsWith(":view")) {
                     whPerms.add(perm);
-                } else if (java.util.Arrays.asList("report_balance", "report_ledger", "report_transfer").contains(mod)) {
+                } else if (Arrays.asList("report_balance", "report_ledger", "report_transfer").contains(mod)) {
                     whPerms.add(perm);
                 }
             }
@@ -286,9 +285,9 @@ public class DatabaseSeeder implements CommandLineRunner {
             for (PermissionEntity perm : allPerms) {
                 String mod = perm.getModule();
                 String code = perm.getCode();
-                if (java.util.Arrays.asList("assembly_config", "assembly", "warranty", "repair").contains(mod)) {
+                if (Arrays.asList("assembly_config", "assembly", "warranty", "repair").contains(mod)) {
                     techPerms.add(perm);
-                } else if (java.util.Arrays.asList("product", "export", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                } else if (Arrays.asList("product", "export", "ai_chat").contains(mod) && code.endsWith(":view")) {
                     techPerms.add(perm);
                 }
             }
@@ -302,13 +301,13 @@ public class DatabaseSeeder implements CommandLineRunner {
             for (PermissionEntity perm : allPerms) {
                 String mod = perm.getModule();
                 String code = perm.getCode();
-                if (java.util.Arrays.asList("sales_order", "purchase_order", "einvoice", "customer", "supplier").contains(mod)) {
+                if (Arrays.asList("sales_order", "purchase_order", "einvoice", "customer", "supplier").contains(mod)) {
                     accPerms.add(perm);
-                } else if ("import".equals(mod) && java.util.Arrays.asList("import:view", "import:add", "import:edit", "import:export", "import:print").contains(code)) {
+                } else if ("import".equals(mod) && Arrays.asList("import:view", "import:add", "import:edit", "import:export", "import:print").contains(code)) {
                     accPerms.add(perm);
-                } else if (java.util.Arrays.asList("report_debt", "report_sales", "report_summary").contains(mod)) {
+                } else if (Arrays.asList("report_debt", "report_sales", "report_summary").contains(mod)) {
                     accPerms.add(perm);
-                } else if (java.util.Arrays.asList("payment", "export", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                } else if (Arrays.asList("payment", "export", "ai_chat").contains(mod) && code.endsWith(":view")) {
                     accPerms.add(perm);
                 }
             }
@@ -324,7 +323,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 String code = perm.getCode();
                 if ("payment".equals(mod)) {
                     cashierPerms.add(perm);
-                } else if (java.util.Arrays.asList("sales_order", "customer", "ai_chat").contains(mod) && code.endsWith(":view")) {
+                } else if (Arrays.asList("sales_order", "customer", "ai_chat").contains(mod) && code.endsWith(":view")) {
                     cashierPerms.add(perm);
                 }
             }
@@ -336,7 +335,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         roleRepository.findByCode("ROLE_STAFF").ifPresent(role -> {
             Set<PermissionEntity> staffPerms = new HashSet<>();
             for (PermissionEntity perm : allPerms) {
-                if (java.util.Arrays.asList(
+                if (Arrays.asList(
                         "import", "export", "purchase_order", "sales_order", "payment",
                         "transfer", "stocktake", "assembly_config", "assembly", "warranty", "repair",
                         "product", "report_balance", "report_sales", "ai_chat"
@@ -354,7 +353,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         Set<PermissionEntity> allPermissions = new HashSet<>(permissionRepository.findAll());
         Set<PermissionEntity> adminPermissions = new HashSet<>();
         for (PermissionEntity perm : allPermissions) {
-            if (java.util.Arrays.asList("account", "auth", "audit").contains(perm.getModule())) {
+            if (Arrays.asList("account", "auth", "audit").contains(perm.getModule())) {
                 adminPermissions.add(perm);
             }
         }
