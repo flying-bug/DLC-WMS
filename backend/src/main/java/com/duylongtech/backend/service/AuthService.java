@@ -42,12 +42,17 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        String role = userDetails.getAuthorities().stream()
+        java.util.List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .filter(auth -> auth.startsWith("ROLE_"))
-                .findFirst()
-                .orElse("ROLE_USER");
+                .collect(java.util.stream.Collectors.toList());
 
+        java.util.List<String> permissions = userDetails.getAuthorities().stream()
+                .map(item -> item.getAuthority())
+                .filter(auth -> !auth.startsWith("ROLE_"))
+                .collect(java.util.stream.Collectors.toList());
+
+        String role = roles.stream().findFirst().orElse("ROLE_USER");
         String jwt = jwtUtils.generateJwtToken(userDetails.getUsername(), role);
 
         return JwtResponse.builder()
@@ -55,6 +60,8 @@ public class AuthService {
                 .id(userDetails.getId())
                 .username(userDetails.getUsername())
                 .role(role)
+                .roles(roles)
+                .permissions(permissions)
                 .build();
     }
 
@@ -77,13 +84,19 @@ public class AuthService {
                 throw new BusinessException(SystemMessage.USER_LOCKED);
             }
 
-            String role = user.getRoles().stream()
-                    .findFirst()
-                    .map(r -> {
-                        String code = r.getCode();
-                        return code.startsWith("ROLE_") ? code : "ROLE_" + code;
-                    })
-                    .orElse("ROLE_USER");
+            UserDetailsImpl userDetails = UserDetailsImpl.build(user);
+
+            java.util.List<String> roles = userDetails.getAuthorities().stream()
+                    .map(item -> item.getAuthority())
+                    .filter(auth -> auth.startsWith("ROLE_"))
+                    .collect(java.util.stream.Collectors.toList());
+
+            java.util.List<String> permissions = userDetails.getAuthorities().stream()
+                    .map(item -> item.getAuthority())
+                    .filter(auth -> !auth.startsWith("ROLE_"))
+                    .collect(java.util.stream.Collectors.toList());
+
+            String role = roles.stream().findFirst().orElse("ROLE_USER");
             String jwt = jwtUtils.generateJwtToken(user.getUsername(), role);
 
             return JwtResponse.builder()
@@ -91,6 +104,8 @@ public class AuthService {
                     .id(user.getId())
                     .username(user.getUsername())
                     .role(role)
+                    .roles(roles)
+                    .permissions(permissions)
                     .build();
         } catch (Exception e) {
             if (e instanceof BusinessException) {

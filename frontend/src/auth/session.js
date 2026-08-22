@@ -9,6 +9,43 @@ export function getAuthRole() {
     return sessionStorage.getItem('role') || localStorage.getItem('role');
 }
 
+export function getAuthRoles() {
+    try {
+        const raw = sessionStorage.getItem('roles') || localStorage.getItem('roles');
+        if (raw) return JSON.parse(raw);
+    } catch {
+        // Fallback
+    }
+    const singleRole = getAuthRole();
+    return singleRole ? [singleRole] : [];
+}
+
+export function getAuthPermissions() {
+    try {
+        const raw = sessionStorage.getItem('permissions') || localStorage.getItem('permissions');
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+}
+
+export function hasPermission(requiredPerm) {
+    const roles = getAuthRoles();
+    if (roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN')) return true;
+    const perms = getAuthPermissions();
+    if (Array.isArray(requiredPerm)) {
+        return requiredPerm.some(p => perms.includes(p));
+    }
+    return perms.includes(requiredPerm);
+}
+
+export function hasAnyModulePermission(moduleName) {
+    const roles = getAuthRoles();
+    if (roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN')) return true;
+    const perms = getAuthPermissions();
+    return perms.some(p => p === moduleName || p.startsWith(`${moduleName}:`));
+}
+
 export function getAuthUserId() {
     const rawUserId = sessionStorage.getItem('userId') || localStorage.getItem('userId');
     return rawUserId ? Number(rawUserId) : null;
@@ -28,6 +65,20 @@ export function setAuthSession(session, rememberMe = false) {
         sessionStorage.removeItem('role');
     }
 
+    if (session.roles && Array.isArray(session.roles)) {
+        sessionStorage.setItem('roles', JSON.stringify(session.roles));
+    } else if (session.role) {
+        sessionStorage.setItem('roles', JSON.stringify([session.role]));
+    } else {
+        sessionStorage.removeItem('roles');
+    }
+
+    if (session.permissions && Array.isArray(session.permissions)) {
+        sessionStorage.setItem('permissions', JSON.stringify(session.permissions));
+    } else {
+        sessionStorage.removeItem('permissions');
+    }
+
     if (session.id != null) {
         sessionStorage.setItem('userId', String(session.id));
     } else {
@@ -38,10 +89,14 @@ export function setAuthSession(session, rememberMe = false) {
     if (rememberMe) {
         localStorage.setItem('token', session.token);
         if (session.role) localStorage.setItem('role', session.role);
+        if (session.roles) localStorage.setItem('roles', JSON.stringify(session.roles));
+        if (session.permissions) localStorage.setItem('permissions', JSON.stringify(session.permissions));
         if (session.id != null) localStorage.setItem('userId', String(session.id));
     } else {
         localStorage.removeItem('token');
         localStorage.removeItem('role');
+        localStorage.removeItem('roles');
+        localStorage.removeItem('permissions');
         localStorage.removeItem('userId');
     }
 
@@ -53,9 +108,13 @@ export function setAuthSession(session, rememberMe = false) {
 export function clearAuthSession() {
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('role');
+    sessionStorage.removeItem('roles');
+    sessionStorage.removeItem('permissions');
     sessionStorage.removeItem('userId');
     localStorage.removeItem('token');
     localStorage.removeItem('role');
+    localStorage.removeItem('roles');
+    localStorage.removeItem('permissions');
     localStorage.removeItem('userId');
 }
 
@@ -64,6 +123,10 @@ if (!sessionStorage.getItem('token') && localStorage.getItem('token')) {
     sessionStorage.setItem('token', localStorage.getItem('token'));
     const savedRole = localStorage.getItem('role');
     if (savedRole) sessionStorage.setItem('role', savedRole);
+    const savedRoles = localStorage.getItem('roles');
+    if (savedRoles) sessionStorage.setItem('roles', savedRoles);
+    const savedPerms = localStorage.getItem('permissions');
+    if (savedPerms) sessionStorage.setItem('permissions', savedPerms);
     const savedUserId = localStorage.getItem('userId');
     if (savedUserId) sessionStorage.setItem('userId', savedUserId);
 }

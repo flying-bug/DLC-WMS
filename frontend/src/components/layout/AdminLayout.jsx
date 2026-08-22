@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { getAuthRole } from '../../auth/session';
+import { getAuthRole, getAuthRoles, getAuthPermissions } from '../../auth/session';
 import { useAiFeature } from '../../contexts/AiFeatureContext';
 import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
 import VoiceCommandButton from '../ui/VoiceCommandButton/VoiceCommandButton';
@@ -12,27 +12,27 @@ const MENU_CONFIG = [
         id: 'main',
         label: 'PHÂN HỆ',
         items: [
-            { path: '/main-dashboard', icon: 'fas fa-chart-pie', label: 'Tổng quan', moduleId: 'overview' },
-            { path: '/dashboard', icon: 'fas fa-warehouse', label: 'Kho', moduleId: 'warehouse' },
-            { path: '/purchase-orders', icon: 'bi bi-bag-plus', label: 'Mua hàng', moduleId: 'purchase' },
-            { path: '/sales-orders', icon: 'bi bi-cart3', label: 'Bán hàng', moduleId: 'sales' },
-            { path: '/payments', icon: 'bi bi-cash-coin', label: 'Thu chi', moduleId: 'finance' },
-            { path: '/warranties', icon: 'fas fa-shield-alt', label: 'Dịch vụ', moduleId: 'service' }
+            { path: '/main-dashboard', icon: 'fas fa-chart-pie', label: 'Tổng quan', moduleId: 'overview', moduleKeys: ['report_balance', 'report_ledger', 'report_transfer', 'report_debt', 'report_sales', 'report_summary'] },
+            { path: '/dashboard', icon: 'fas fa-warehouse', label: 'Kho', moduleId: 'warehouse', moduleKeys: ['import', 'export', 'transfer', 'stocktake', 'assembly', 'assembly_config', 'warehouse_master', 'report_balance', 'report_ledger', 'report_transfer'] },
+            { path: '/purchase-orders', icon: 'bi bi-bag-plus', label: 'Mua hàng', moduleId: 'purchase', moduleKey: 'purchase_order' },
+            { path: '/sales-orders', icon: 'bi bi-cart3', label: 'Bán hàng', moduleId: 'sales', moduleKeys: ['sales_order', 'einvoice'] },
+            { path: '/payments', icon: 'bi bi-cash-coin', label: 'Thu chi', moduleId: 'finance', moduleKey: 'payment' },
+            { path: '/warranties', icon: 'fas fa-shield-alt', label: 'Dịch vụ', moduleId: 'service', moduleKeys: ['warranty', 'repair'] }
         ]
     },
     {
         id: 'catalog',
         label: 'DANH MỤC',
         items: [
-            { path: '/customers', icon: 'fas fa-handshake', label: 'Đối tác', moduleId: 'partner' },
-            { path: '/products', icon: 'fas fa-boxes', label: 'Vật tư hàng hóa', moduleId: 'catalog' }
+            { path: '/customers', icon: 'fas fa-handshake', label: 'Đối tác', moduleId: 'partner', moduleKeys: ['customer', 'supplier'] },
+            { path: '/products', icon: 'fas fa-boxes', label: 'Vật tư hàng hóa', moduleId: 'catalog', moduleKeys: ['product', 'product_category', 'brand', 'unit'] }
         ]
     },
     {
         id: 'system',
         label: 'HỆ THỐNG',
         items: [
-            { path: '/ai-chat', icon: 'fas fa-robot', label: 'Trợ lý AI' },
+            { path: '/ai-chat', icon: 'fas fa-robot', label: 'Trợ lý AI', moduleKey: 'ai_chat' },
             { path: '/operations', icon: 'fas fa-cogs', label: 'Thiết lập', adminOnly: true }
         ]
     }
@@ -52,8 +52,10 @@ const AdminLayout = ({ children }) => {
     const location = useLocation();
     const currentPath = location.pathname;
 
-    const userRole = getAuthRole() || 'STAFF';
-    const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'ROLE_ADMIN';
+    const userRoles = getAuthRoles();
+    const userPermissions = getAuthPermissions();
+    const isSuperAdmin = userRoles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'ADMIN' || r === 'ROLE_ADMIN');
+    const isManager = userRoles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
     const { aiEnabled } = useAiFeature();
     
     // Configuration for top header tabs based on active module
@@ -63,42 +65,42 @@ const AdminLayout = ({ children }) => {
         ],
         warehouse: [
             { path: '/dashboard', label: 'Quy trình', exact: true },
-            { path: '/import-history', label: 'Nhập kho', matches: ['/import-history', '/import-slips'] },
-            { path: '/export-slips', label: 'Xuất kho' },
-            { path: '/transfer-history', label: 'Chuyển kho' },
-            { path: '/stocktakes', label: 'Kiểm kê' },
-            { path: '/assembly-orders', label: 'Lắp ráp / Tháo dỡ' },
-            { path: '/assembly-boms', label: 'Cấu hình máy' },
-            { path: '/warehouses', label: 'Quản lý kho' },
-            { path: '/reports', label: 'Báo cáo kho' }
+            { path: '/import-history', label: 'Nhập kho', matches: ['/import-history', '/import-slips'], moduleKey: 'import' },
+            { path: '/export-slips', label: 'Xuất kho', moduleKey: 'export' },
+            { path: '/transfer-history', label: 'Chuyển kho', moduleKey: 'transfer' },
+            { path: '/stocktakes', label: 'Kiểm kê', moduleKey: 'stocktake' },
+            { path: '/assembly-orders', label: 'Lắp ráp / Tháo dỡ', moduleKey: 'assembly' },
+            { path: '/assembly-boms', label: 'Cấu hình máy', moduleKey: 'assembly_config' },
+            { path: '/warehouses', label: 'Quản lý kho', moduleKey: 'warehouse_master' },
+            { path: '/reports', label: 'Báo cáo kho', moduleKeys: ['report_balance', 'report_ledger', 'report_transfer'] }
         ],
         purchase: [
-            { path: '/purchase-orders', label: 'Đơn mua hàng' }
+            { path: '/purchase-orders', label: 'Đơn mua hàng', moduleKey: 'purchase_order' }
         ],
         sales: [
-            { path: '/sales-orders', label: 'Đơn bán hàng' },
-            { path: '/einvoices', label: 'Hóa đơn điện tử' }
+            { path: '/sales-orders', label: 'Đơn bán hàng', moduleKey: 'sales_order' },
+            { path: '/einvoices', label: 'Hóa đơn điện tử', moduleKey: 'einvoice' }
         ],
         finance: [
-            { path: '/payments/receipt', label: 'Phiếu Thu' },
-            { path: '/payments/expense', label: 'Phiếu Chi' }
+            { path: '/payments/receipt', label: 'Phiếu Thu', moduleKey: 'payment' },
+            { path: '/payments/expense', label: 'Phiếu Chi', moduleKey: 'payment' }
         ],
         service: [
-            { path: '/warranties', label: 'Bảo hành' },
-            { path: '/repairs', label: 'Sửa chữa' }
+            { path: '/warranties', label: 'Bảo hành', moduleKey: 'warranty' },
+            { path: '/repairs', label: 'Sửa chữa', moduleKey: 'repair' }
         ],
         partner: [
-            { path: '/customers', label: 'Khách hàng' },
-            { path: '/suppliers', label: 'Nhà cung cấp' }
+            { path: '/customers', label: 'Khách hàng', moduleKey: 'customer' },
+            { path: '/suppliers', label: 'Nhà cung cấp', moduleKey: 'supplier' }
         ],
         catalog: [
-            { path: '/products', label: 'Danh sách Hàng hóa' },
-            { path: '/product-categories', label: 'Danh mục sản phẩm' },
-            { path: '/brands', label: 'Thương hiệu' },
-            { path: '/units', label: 'Đơn vị tính' }
+            { path: '/products', label: 'Danh sách Hàng hóa', moduleKey: 'product' },
+            { path: '/product-categories', label: 'Danh mục sản phẩm', moduleKey: 'product_category' },
+            { path: '/brands', label: 'Thương hiệu', moduleKey: 'brand' },
+            { path: '/units', label: 'Đơn vị tính', moduleKey: 'unit' }
         ],
         system: [
-            { path: '/ai-chat', label: 'AI Chat' },
+            { path: '/ai-chat', label: 'AI Chat', moduleKey: 'ai_chat' },
             { path: '/operations', label: 'Backup DB', adminOnly: true }
         ]
     };
@@ -121,6 +123,13 @@ const AdminLayout = ({ children }) => {
     const activeTabs = (TABS_CONFIG[activeModule] || []).filter(tab => {
         if (tab.adminOnly && !isSuperAdmin) return false;
         if (tab.path === '/ai-chat' && !aiEnabled) return false;
+        if (isSuperAdmin || isManager) return true;
+        if (tab.moduleKey) {
+            return userPermissions.some(p => p.startsWith(`${tab.moduleKey}:`));
+        }
+        if (tab.moduleKeys) {
+            return tab.moduleKeys.some(key => userPermissions.some(p => p.startsWith(`${key}:`)));
+        }
         return true;
     });
 
@@ -164,13 +173,23 @@ const AdminLayout = ({ children }) => {
         system: true
     });
 
+    const checkItemPermission = (item) => {
+        if (item.adminOnly && !isSuperAdmin) return false;
+        if (item.path === '/ai-chat' && !aiEnabled) return false;
+        if (isSuperAdmin || isManager) return true;
+
+        if (item.moduleKey) {
+            return userPermissions.some(p => p.startsWith(`${item.moduleKey}:`));
+        }
+        if (item.moduleKeys) {
+            return item.moduleKeys.some(key => userPermissions.some(p => p.startsWith(`${key}:`)));
+        }
+        return true;
+    };
+
     const visibleMenuGroups = MENU_CONFIG.map(group => ({
         ...group,
-        items: group.items.filter(item => {
-            if (item.adminOnly && !isSuperAdmin) return false;
-            if (item.path === '/ai-chat' && !aiEnabled) return false;
-            return true;
-        })
+        items: group.items.filter(checkItemPermission)
     })).filter(group => group.items.length > 0);
 
     const activeGroup = visibleMenuGroups.find(group => group.items.some(item => (
