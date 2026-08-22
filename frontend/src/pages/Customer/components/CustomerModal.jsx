@@ -22,6 +22,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
         email: '', 
         address: '', 
         taxCode: '',
+        type: 'INDIVIDUAL',
         groupType: 'RETAIL' 
     });
     const [errors, setErrors] = useState({});
@@ -43,11 +44,12 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                 email: editData.email || '',
                 address: editData.address || '',
                 taxCode: editData.taxCode || '',
+                type: editData.type || (editData.taxCode ? 'COMPANY' : 'INDIVIDUAL'),
                 groupType: editData.groupType || 'RETAIL',
             });
             setPhoneWarning('');
         } else {
-            setForm({ code: '', name: '', phone: '', email: '', address: '', taxCode: '', groupType: 'RETAIL' });
+            setForm({ code: '', name: '', phone: '', email: '', address: '', taxCode: '', type: 'INDIVIDUAL', groupType: 'RETAIL' });
         }
         setErrors({});
     }, [isOpen, editData, isEditMode]);
@@ -67,15 +69,16 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                     ...prev,
                     name: data.name || prev.name,
                     address: data.address || prev.address,
-                    groupType: 'DISTRIBUTOR',
+                    type: 'COMPANY',
+                    groupType: prev.groupType === 'RETAIL' ? 'DISTRIBUTOR' : prev.groupType,
                 }));
                 setTaxLookupMsg({ type: 'success', text: `Tìm thấy: ${data.name} (${data.rawStatusText || 'Đang hoạt động'})` });
                 setErrors(prev => ({ ...prev, name: '' }));
             } else {
-                setTaxLookupMsg({ type: 'error', text: data?.message || 'Không tìm thấy thông tin công ty từ mã số thuế này' });
+                setTaxLookupMsg({ type: 'error', text: data?.message || 'Không tìm thấy thông tin doanh nghiệp từ mã số thuế này.' });
             }
-        } catch (err) {
-            setTaxLookupMsg({ type: 'error', text: 'Tra cứu mã số thuế thất bại hoặc dịch vụ tạm ngưng' });
+        } catch {
+            setTaxLookupMsg({ type: 'error', text: 'Tra cứu mã số thuế thất bại hoặc dịch vụ tra cứu tạm thời gián đoạn.' });
         } finally {
             setLookingUpTax(false);
         }
@@ -94,12 +97,21 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
         }
     };
 
+    const handleSelectType = (newType) => {
+        setForm(prev => ({
+            ...prev,
+            type: newType,
+            groupType: newType === 'COMPANY' && prev.groupType === 'RETAIL' ? 'DISTRIBUTOR' : prev.groupType
+        }));
+        setTaxLookupMsg({ type: '', text: '' });
+    };
+
     const validate = () => {
         const newErrors = {};
-        if (!form.name.trim()) newErrors.name = 'Vui lòng nhập tên khách hàng!';
+        if (!form.name.trim()) newErrors.name = 'Vui lòng nhập tên khách hàng / đơn vị!';
         else if (form.name.trim().length > 150) newErrors.name = 'Tên không được vượt quá 150 ký tự.';
 
-        if (!form.phone.trim()) newErrors.phone = 'Vui lòng nhập số điện thoại!';
+        if (!form.phone.trim()) newErrors.phone = 'Vui lòng nhập số điện thoại liên hệ!';
 
         if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
             newErrors.email = 'Email không đúng định dạng!';
@@ -129,6 +141,7 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                 email: cleanString(form.email),
                 address: cleanString(form.address),
                 taxCode: cleanString(form.taxCode),
+                type: form.type,
                 groupType: form.groupType,
             };
 
@@ -172,12 +185,14 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
 
     if (!isOpen) return null;
 
+    const isCompany = form.type === 'COMPANY';
+
     return (
-        <Modal isOpen={isOpen} onClose={onClose} dialogStyle={{ width: '600px', maxWidth: '90%', display: 'flex', flexDirection: 'column' }}>
+        <Modal isOpen={isOpen} onClose={onClose} dialogStyle={{ width: '640px', maxWidth: '95%', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
             <div className={styles.header}>
                 <h3 className={styles.headerTitle}>
-                    {isEditMode ? 'Chỉnh sửa Khách Hàng' : 'Thêm Khách Hàng'}
+                    {isEditMode ? 'Chỉnh sửa Khách Hàng' : 'Thêm Khách Hàng Mới'}
                 </h3>
                 <button className={styles.iconBtn} onClick={onClose} title="Đóng">
                     <i className="bi bi-x-lg"></i>
@@ -192,10 +207,41 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                         <span>{apiError}</span>
                     </div>
                 )}
+
+                {/* Type Selection Tabs */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    <button
+                        type="button"
+                        onClick={() => handleSelectType('INDIVIDUAL')}
+                        style={{
+                            flex: 1, padding: '8px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                            border: !isCompany ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                            background: !isCompany ? '#f0f9ff' : '#fff',
+                            color: !isCompany ? '#0369a1' : '#64748b',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                        }}
+                    >
+                        <i className="bi bi-person" /> Khách hàng cá nhân
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => handleSelectType('COMPANY')}
+                        style={{
+                            flex: 1, padding: '8px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                            border: isCompany ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                            background: isCompany ? '#f0f9ff' : '#fff',
+                            color: isCompany ? '#0369a1' : '#64748b',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                        }}
+                    >
+                        <i className="bi bi-building" /> Công ty / Doanh nghiệp
+                    </button>
+                </div>
                 
                 <div className={styles.formGrid}>
                     {isEditMode && (
-                        <div className={`${styles.formGroup} ${styles.col6}`}>
+                        <div className={`${styles.formGroup} ${styles.col12}`}>
                             <label className={styles.formLabel}>Mã khách hàng</label>
                             <input 
                                 type="text" 
@@ -208,76 +254,70 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                         </div>
                     )}
 
-                    <div className={`${styles.formGroup} ${styles.col6}`}>
-                        <label className={styles.formLabel}>Nhóm khách hàng</label>
-                        <SearchableSelect 
-                            className={styles.select} 
-                            name="groupType"
-                            value={form.groupType}
-                            onChange={handleChange}
-                        >
-                            {GROUP_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                        </SearchableSelect>
-                    </div>
-
-                    <div className={`${styles.formGroup} ${styles.col12}`}>
-                        <label className={styles.formLabel}>Mã số thuế doanh nghiệp (nếu có)</label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <input 
-                                type="text" 
-                                className={styles.input}
-                                name="taxCode"
-                                value={form.taxCode}
-                                onChange={handleChange}
-                                placeholder="Ví dụ: 0100109106..." 
-                                maxLength={50}
-                            />
-                            <button
-                                type="button"
-                                onClick={handleTaxLookup}
-                                disabled={lookingUpTax || !form.taxCode?.trim()}
-                                style={{
-                                    padding: '0 14px',
-                                    background: '#0284c7',
-                                    color: '#fff',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    fontWeight: 600,
-                                    fontSize: '13px',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    whiteSpace: 'nowrap'
-                                }}
-                            >
-                                <i className={`bi ${lookingUpTax ? 'bi-arrow-repeat spin' : 'bi-search'}`} />
-                                {lookingUpTax ? 'Đang tra...' : 'Tra cứu MST'}
-                            </button>
-                        </div>
-                        {taxLookupMsg.text && (
-                            <div style={{
-                                marginTop: '6px', fontSize: '12px',
-                                color: taxLookupMsg.type === 'success' ? '#166534' : '#dc2626',
-                                background: taxLookupMsg.type === 'success' ? '#f0fdf4' : '#fef2f2',
-                                padding: '4px 8px', borderRadius: '4px'
-                            }}>
-                                {taxLookupMsg.text}
+                    {/* Tax Code Field (For Company) */}
+                    {isCompany && (
+                        <div className={`${styles.formGroup} ${styles.col12}`}>
+                            <label className={styles.formLabel}>
+                                Mã số thuế doanh nghiệp <span className={styles.required}>*</span>
+                            </label>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <input 
+                                    type="text" 
+                                    className={styles.input}
+                                    name="taxCode"
+                                    value={form.taxCode}
+                                    onChange={handleChange}
+                                    placeholder="Nhập MST công ty (VD: 0100109106)..." 
+                                    maxLength={50}
+                                    style={{ fontFamily: 'monospace' }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleTaxLookup}
+                                    disabled={lookingUpTax || !form.taxCode?.trim()}
+                                    style={{
+                                        padding: '0 14px',
+                                        background: '#0284c7',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontWeight: 600,
+                                        fontSize: '13px',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    <i className={`bi ${lookingUpTax ? 'bi-arrow-repeat spin' : 'bi-search'}`} />
+                                    {lookingUpTax ? 'Đang tra...' : 'Tra cứu MST'}
+                                </button>
                             </div>
-                        )}
-                    </div>
+                            {taxLookupMsg.text && (
+                                <div style={{
+                                    marginTop: '6px', fontSize: '12px',
+                                    color: taxLookupMsg.type === 'success' ? '#166534' : '#dc2626',
+                                    background: taxLookupMsg.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                                    padding: '6px 10px', borderRadius: '4px', border: `1px solid ${taxLookupMsg.type === 'success' ? '#bbf7d0' : '#fecaca'}`
+                                }}>
+                                    {taxLookupMsg.text}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     <div className={`${styles.formGroup} ${styles.col12}`}>
-                        <label className={styles.formLabel}>Tên khách hàng / Đơn vị <span className={styles.required}>*</span></label>
+                        <label className={styles.formLabel}>
+                            {isCompany ? 'Tên công ty / Đơn vị (theo ĐKKD)' : 'Họ và tên khách hàng'} <span className={styles.required}>*</span>
+                        </label>
                         <input 
                             type="text" 
                             className={`${styles.input} ${errors.name ? styles.inputError : ''}`} 
                             name="name"
                             value={form.name}
                             onChange={handleChange}
-                            placeholder="Ví dụ: Công ty TNHH ABC hoặc Nguyễn Văn A..." 
+                            placeholder={isCompany ? "Ví dụ: Công ty TNHH Giải Pháp Công Nghệ..." : "Ví dụ: Nguyễn Văn A..."} 
                             maxLength={150}
                         />
                         {errors.name && <span className={styles.errorMsg}>{errors.name}</span>}
@@ -291,14 +331,16 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                             name="phone"
                             value={form.phone}
                             onChange={handleChange}
-                            placeholder="Ví dụ: 0912..." 
+                            placeholder="Ví dụ: 0912345678..." 
                         />
                         {errors.phone && <span className={styles.errorMsg}>{errors.phone}</span>}
                         {phoneWarning && <span className={styles.warningMsg}>{phoneWarning}</span>}
                     </div>
 
                     <div className={`${styles.formGroup} ${styles.col6}`}>
-                        <label className={styles.formLabel}>Email</label>
+                        <label className={styles.formLabel}>
+                            {isCompany ? 'Email nhận HĐĐT / liên hệ' : 'Email'}
+                        </label>
                         <input 
                             type="email" 
                             className={`${styles.input} ${errors.email ? styles.inputError : ''}`} 
@@ -312,14 +354,16 @@ const CustomerModal = ({ isOpen, onClose, onSaved, onSuccess, editData = null, o
                     </div>
 
                     <div className={`${styles.formGroup} ${styles.col12}`}>
-                        <label className={styles.formLabel}>Địa chỉ</label>
+                        <label className={styles.formLabel}>
+                            {isCompany ? 'Địa chỉ trụ sở chính' : 'Địa chỉ khách hàng'}
+                        </label>
                         <textarea 
                             className={`${styles.input} ${errors.address ? styles.inputError : ''}`} 
-                            style={{ resize: 'vertical', minHeight: '80px' }}
+                            style={{ resize: 'vertical', minHeight: '75px' }}
                             name="address"
                             value={form.address}
                             onChange={handleChange}
-                            placeholder="Nhập địa chỉ chi tiết..." 
+                            placeholder={isCompany ? "Nhập địa chỉ trụ sở chính theo ĐKKD..." : "Nhập địa chỉ chi tiết của khách hàng..."} 
                             rows="3"
                             maxLength={1000}
                         ></textarea>

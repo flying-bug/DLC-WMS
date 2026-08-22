@@ -37,6 +37,9 @@ public class CustomerResponse {
     /** Địa chỉ. */
     private String address;
 
+    /** Mã số thuế doanh nghiệp / cá nhân. */
+    private String taxCode;
+
     /** Nhóm khách hàng: RETAIL | WHOLESALE | DISTRIBUTOR. */
     private String groupType;
 

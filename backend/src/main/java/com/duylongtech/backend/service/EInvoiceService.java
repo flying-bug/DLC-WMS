@@ -69,7 +69,6 @@ public class EInvoiceService {
     @Transactional(readOnly = true)
     public List<EInvoiceResponse> getInvoicesBySalesOrderId(Long salesOrderId) {
         return einvoiceRepository.findAllBySalesOrderId(salesOrderId).stream()
-                .filter(i -> !"CANCELED".equals(i.getStatus()))
                 .map(this::toResponse)
                 .toList();
     }
@@ -216,19 +215,19 @@ public class EInvoiceService {
                     ProductVariant variant = productVariantRepository.findById(expLine.getVariantId()).orElse(null);
                     if (variant != null) {
                         sku = variant.getSku() != null ? variant.getSku() : sku;
-                        if (variant.getProduct() != null) {
-                            itemName = variant.getProduct().getProductName();
-                            if (variant.getProduct().getUnit() != null) {
-                                unitName = variant.getProduct().getUnit().getName();
-                            }
-                        } else if (variant.getVariantName() != null) {
-                            itemName = variant.getVariantName();
+                        String baseName = (variant.getProduct() != null && variant.getProduct().getProductName() != null)
+                                ? variant.getProduct().getProductName() : (variant.getVariantName() != null ? variant.getVariantName() : "Sản phẩm");
+                        String varDetail = (variant.getVariantName() != null && !variant.getVariantName().equalsIgnoreCase(baseName))
+                                ? " (" + variant.getVariantName() + ")" : "";
+                        itemName = baseName + varDetail;
+                        if (variant.getProduct() != null && variant.getProduct().getUnit() != null) {
+                            unitName = variant.getProduct().getUnit().getName();
                         }
                     }
                 }
 
                 String lineNote = expLine.getSerialNumbersText() != null && !expLine.getSerialNumbersText().isBlank()
-                        ? "Serial: " + expLine.getSerialNumbersText() : null;
+                        ? "S/N: " + expLine.getSerialNumbersText() : null;
 
                 items.add(EInvoiceProviderData.LineItem.builder()
                         .lineNumber(lineNum++)
@@ -262,14 +261,15 @@ public class EInvoiceService {
                 String sku = "SP" + sol.getId();
 
                 if (sol.getVariant() != null) {
-                    sku = sol.getVariant().getSku() != null ? sol.getVariant().getSku() : sku;
-                    if (sol.getVariant().getProduct() != null) {
-                        itemName = sol.getVariant().getProduct().getProductName();
-                        if (sol.getVariant().getProduct().getUnit() != null) {
-                            unitName = sol.getVariant().getProduct().getUnit().getName();
-                        }
-                    } else if (sol.getVariant().getVariantName() != null) {
-                        itemName = sol.getVariant().getVariantName();
+                    ProductVariant variant = sol.getVariant();
+                    sku = variant.getSku() != null ? variant.getSku() : sku;
+                    String baseName = (variant.getProduct() != null && variant.getProduct().getProductName() != null)
+                            ? variant.getProduct().getProductName() : (variant.getVariantName() != null ? variant.getVariantName() : "Sản phẩm");
+                    String varDetail = (variant.getVariantName() != null && !variant.getVariantName().equalsIgnoreCase(baseName))
+                            ? " (" + variant.getVariantName() + ")" : "";
+                    itemName = baseName + varDetail;
+                    if (variant.getProduct() != null && variant.getProduct().getUnit() != null) {
+                        unitName = variant.getProduct().getUnit().getName();
                     }
                 }
 
@@ -463,6 +463,7 @@ public class EInvoiceService {
                 .cancelReason(e.getCancelReason())
                 .canceledAt(e.getCanceledAt())
                 .canceledBy(e.getCanceledBy())
+                .canceledByName(e.getCanceledByUser() != null ? e.getCanceledByUser().getFullName() : (e.getCanceledBy() != null ? "Quản trị viên" : null))
                 .createdBy(e.getCreatedBy())
                 .createdByName(e.getCreatedByUser() != null ? e.getCreatedByUser().getFullName() : null)
                 .createdAt(e.getCreatedAt())

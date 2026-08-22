@@ -163,7 +163,24 @@ export default function EInvoicePreviewModal({ invoice, isOpen, onClose }) {
         </div>
 
         {/* Modal Body: iframe / Loading / Error */}
-        <div style={{ flex: 1, backgroundColor: '#f1f5f9', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ flex: 1, backgroundColor: '#f1f5f9', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          {invoice.status === 'CANCELED' && (
+            <div style={{
+              background: '#fef2f2', borderBottom: '1px solid #fecaca', color: '#991b1b',
+              padding: '10px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              fontSize: '13px', flexShrink: 0
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="bi bi-exclamation-octagon-fill" style={{ color: '#dc2626', fontSize: '18px' }} />
+                <div>
+                  <strong style={{ color: '#dc2626' }}>HÓA ĐƠN ĐÃ HỦY:</strong> {invoice.cancelReason || 'Không có lý do chi tiết'}
+                </div>
+              </div>
+              <div style={{ fontSize: '12px', color: '#7f1d1d' }}>
+                Người thực hiện: <strong>{invoice.canceledByName || 'Quản trị viên'}</strong> {invoice.canceledAt ? `lúc ${new Date(invoice.canceledAt).toLocaleString('vi-VN')}` : ''}
+              </div>
+            </div>
+          )}
           {loading ? (
             <div style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',

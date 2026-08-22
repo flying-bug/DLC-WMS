@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
@@ -65,6 +65,19 @@ function SalesOrderDetailPage() {
   const [issueModalTarget, setIssueModalTarget] = useState(null); // { so, exportDoc }
   const [issuingInvoice, setIssuingInvoice] = useState(false);
   const [previewInvoice, setPreviewInvoice] = useState(null);
+
+  const [invoiceDropdownOpen, setInvoiceDropdownOpen] = useState(false);
+  const invoiceDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (invoiceDropdownRef.current && !invoiceDropdownRef.current.contains(event.target)) {
+        setInvoiceDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [emailTo, setEmailTo] = useState('');
@@ -308,8 +321,9 @@ function SalesOrderDetailPage() {
   const taxAmount = so.taxAmount || 0;
   const totalAmount = so.totalAmount || (subTotalAmount + taxAmount);
 
-  const soLevelInvoice = einvoices.find(i => !i.inventoryDocumentId);
-  const exportLevelInvoices = einvoices.filter(i => Boolean(i.inventoryDocumentId));
+  const activeSoLevelInvoice = einvoices.find(i => !i.inventoryDocumentId && i.status !== 'CANCELED');
+  const activeExportLevelInvoices = einvoices.filter(i => Boolean(i.inventoryDocumentId) && i.status !== 'CANCELED');
+  const canceledSoLevelInvoice = einvoices.find(i => !i.inventoryDocumentId && i.status === 'CANCELED');
 
   return (
     <AdminLayout>
@@ -345,55 +359,162 @@ function SalesOrderDetailPage() {
               </span>
             )}
 
-            {soLevelInvoice ? (
-              <span
-                className={styles.statusBadge}
-                style={{ background: '#dcfce7', color: '#166534', cursor: 'pointer', border: '1px solid #86efac' }}
-                onClick={() => handleOpenEInvoicePreview(soLevelInvoice)}
-                title="Nhấn để xem HĐĐT toàn đơn hàng"
-              >
-                <i className="bi bi-file-earmark-check-fill" style={{ marginRight: 5, color: '#16a34a' }} />
-                HĐĐT: {soLevelInvoice.invoiceNumber || 'Đã cấp'} ({soLevelInvoice.invoiceSeries})
-              </span>
-            ) : exportLevelInvoices.length > 0 ? (
-              <span
-                className={styles.statusBadge}
-                style={{ background: '#ecfdf5', color: '#065f46', cursor: 'pointer', border: '1px solid #a7f3d0' }}
-                onClick={() => handleOpenEInvoicePreview(exportLevelInvoices[0])}
-                title="Nhấn để xem HĐĐT đợt"
-              >
-                <i className="bi bi-receipt" style={{ marginRight: 5, color: '#059669' }} />
-                {exportLevelInvoices.length === 1
-                  ? `HĐĐT đợt: ${exportLevelInvoices[0].invoiceNumber || 'Đã cấp'} (${exportLevelInvoices[0].invoiceSeries})`
-                  : `Đã xuất ${exportLevelInvoices.length} HĐĐT (theo đợt)`}
-              </span>
+            {einvoices.length === 1 ? (
+              (() => {
+                const inv = einvoices[0];
+                const isCanceled = inv.status === 'CANCELED';
+                return (
+                  <span
+                    className={styles.statusBadge}
+                    style={{
+                      background: isCanceled ? '#fff1f2' : '#dcfce7',
+                      color: isCanceled ? '#9f1239' : '#166534',
+                      cursor: 'pointer',
+                      border: `1px solid ${isCanceled ? '#fecdd3' : '#86efac'}`
+                    }}
+                    onClick={() => handleOpenEInvoicePreview(inv)}
+                    title={isCanceled ? `HĐĐT ${inv.invoiceNumber} (Đã hủy: ${inv.cancelReason || '—'}). Nhấn để xem chi tiết` : 'Nhấn để xem HĐĐT'}
+                  >
+                    <i className={`bi ${isCanceled ? 'bi-x-circle-fill' : 'bi-file-earmark-check-fill'}`} style={{ marginRight: 5, color: isCanceled ? '#f43f5e' : '#16a34a' }} />
+                    HĐĐT: {inv.invoiceNumber || 'Đã cấp'} ({inv.invoiceSeries}) {isCanceled ? '• Đã hủy' : ''}
+                  </span>
+                );
+              })()
+            ) : einvoices.length > 1 ? (
+              <div style={{ position: 'relative' }} ref={invoiceDropdownRef}>
+                <button
+                  type="button"
+                  className={styles.statusBadge}
+                  style={{
+                    background: activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? '#dcfce7' : '#fff1f2',
+                    color: activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? '#166534' : '#9f1239',
+                    cursor: 'pointer',
+                    border: `1px solid ${activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? '#86efac' : '#fecdd3'}`,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                  onClick={() => setInvoiceDropdownOpen(prev => !prev)}
+                  title="Nhấn để xem danh sách các HĐĐT của đơn này"
+                >
+                  <i
+                    className={`bi ${activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? 'bi-file-earmark-check-fill' : 'bi-x-circle-fill'}`}
+                    style={{ color: activeSoLevelInvoice || activeExportLevelInvoices.length > 0 ? '#16a34a' : '#f43f5e' }}
+                  />
+                  <span>
+                    {activeSoLevelInvoice
+                      ? `HĐĐT: ${activeSoLevelInvoice.invoiceNumber} (${activeSoLevelInvoice.invoiceSeries})`
+                      : activeExportLevelInvoices.length > 0
+                      ? `${activeExportLevelInvoices.length} HĐĐT hiệu lực`
+                      : 'HĐĐT đã hủy'}
+                  </span>
+                  <span style={{ fontSize: 11, background: 'rgba(0,0,0,0.06)', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>
+                    {einvoices.length} HĐ ▾
+                  </span>
+                </button>
+
+                {invoiceDropdownOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 6px)',
+                      left: 0,
+                      background: '#ffffff',
+                      borderRadius: 8,
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                      zIndex: 100,
+                      minWidth: 330,
+                      padding: '6px 0',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Hóa đơn điện tử ({einvoices.length})</span>
+                      <span
+                        style={{ color: '#0284c7', cursor: 'pointer', textTransform: 'none', fontWeight: 500 }}
+                        onClick={() => {
+                          const el = document.getElementById('einvoice-history-section');
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
+                          setInvoiceDropdownOpen(false);
+                        }}
+                      >
+                        Xem bảng chi tiết ↓
+                      </span>
+                    </div>
+
+                    {einvoices.map(inv => {
+                      const isCanceled = inv.status === 'CANCELED';
+                      return (
+                        <div
+                          key={inv.id}
+                          style={{
+                            padding: '10px 14px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            borderBottom: '1px solid #f8fafc',
+                            transition: 'background 0.15s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          onClick={() => {
+                            handleOpenEInvoicePreview(inv);
+                            setInvoiceDropdownOpen(false);
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 13, color: isCanceled ? '#991b1b' : '#0284c7' }}>
+                                #{inv.invoiceNumber || 'Chưa cấp số'}
+                              </span>
+                              <span style={{ fontSize: 11, color: '#64748b', fontFamily: 'JetBrains Mono, monospace' }}>
+                                ({inv.invoiceSeries})
+                              </span>
+                              {inv.inventoryDocumentId && (
+                                <span style={{ fontSize: 10, background: '#f1f5f9', padding: '1px 4px', borderRadius: 3, color: '#475569' }}>
+                                  Đợt {inv.exportDocCode || `#${inv.inventoryDocumentId}`}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 11, color: isCanceled ? '#dc2626' : '#64748b', marginTop: 2 }}>
+                              {isCanceled ? `Đã hủy: ${inv.cancelReason || '—'}` : `${inv.invoiceDate} • ${money(inv.totalAmount)}`}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                padding: '2px 8px',
+                                borderRadius: 12,
+                                background: isCanceled ? '#fee2e2' : '#ecfdf5',
+                                color: isCanceled ? '#991b1b' : '#065f46'
+                              }}
+                            >
+                              {isCanceled ? 'Đã hủy' : 'Hiệu lực'}
+                            </span>
+                            <i className="bi bi-chevron-right" style={{ fontSize: 11, color: '#94a3b8' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             ) : null}
           </div>
 
           <div className={styles.headerActions}>
-            {soLevelInvoice ? (
-              <button
-                className={styles.btnOutline}
-                onClick={() => handleOpenEInvoicePreview(soLevelInvoice)}
-                style={{ borderColor: '#16a34a', color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >
-                <i className="bi bi-receipt" /> Xem HĐĐT ({soLevelInvoice.invoiceNumber})
-              </button>
-            ) : exportLevelInvoices.length > 0 ? (
-              <button
-                className={styles.btnOutline}
-                onClick={() => handleOpenEInvoicePreview(exportLevelInvoices[0])}
-                style={{ borderColor: '#16a34a', color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >
-                <i className="bi bi-receipt" /> {exportLevelInvoices.length === 1 ? `Xem HĐĐT (${exportLevelInvoices[0].invoiceNumber})` : `Xem ${exportLevelInvoices.length} HĐĐT`}
-              </button>
-            ) : ['APPROVED', 'POSTED'].includes(so.status) && (
+            {!activeSoLevelInvoice && activeExportLevelInvoices.length === 0 && ['APPROVED', 'POSTED'].includes(so.status) && (
               <button
                 className={styles.btnPrimary}
                 onClick={() => setIssueModalTarget({ so, exportDoc: null })}
                 style={{ backgroundColor: '#059669', display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
-                <i className="bi bi-file-earmark-text" /> Xuất Hóa Đơn Điện Tử
+                <i className="bi bi-file-earmark-text" /> {canceledSoLevelInvoice ? 'Xuất lại HĐĐT mới' : 'Xuất Hóa Đơn Điện Tử'}
               </button>
             )}
 
@@ -485,8 +606,12 @@ function SalesOrderDetailPage() {
             <div className={styles.infoRows}>
               <div className={styles.infoRow}><span className={styles.infoLabel}>Mã KH:</span><span className={styles.infoValue}>{so.partnerCode || '—'}</span></div>
               <div className={styles.infoRow}><span className={styles.infoLabel}>Tên KH:</span><span className={`${styles.infoValue} ${styles.highlight}`}>{so.partnerName || '—'}</span></div>
+              <div className={styles.infoRow}><span className={styles.infoLabel}>Mã số thuế:</span><span className={styles.infoValue} style={{ fontFamily: 'monospace', fontWeight: 600 }}>{so.partnerTaxCode || '—'}</span></div>
               <div className={styles.infoRow}><span className={styles.infoLabel}>Điện thoại:</span><span className={styles.infoValue}>{so.partnerPhone || '—'}</span></div>
-              <div className={styles.infoRow}><span className={styles.infoLabel}>Địa chỉ giao hàng:</span><span className={styles.infoValue}>{so.deliveryAddress || '—'}</span></div>
+              {so.partnerEmail && (
+                <div className={styles.infoRow}><span className={styles.infoLabel}>Email:</span><span className={styles.infoValue}>{so.partnerEmail}</span></div>
+              )}
+              <div className={styles.infoRow}><span className={styles.infoLabel}>Địa chỉ giao hàng:</span><span className={styles.infoValue}>{so.deliveryAddress || so.partnerAddress || '—'}</span></div>
             </div>
           </div>
 
@@ -657,7 +782,8 @@ function SalesOrderDetailPage() {
                 </thead>
                 <tbody>
                   {exportDocs.map((doc, idx) => {
-                    const inv = einvoices.find(i => Number(i.inventoryDocumentId) === Number(doc.id));
+                    const activeDocInv = einvoices.find(i => Number(i.inventoryDocumentId) === Number(doc.id) && i.status !== 'CANCELED');
+                    const canceledDocInv = einvoices.find(i => Number(i.inventoryDocumentId) === Number(doc.id) && i.status === 'CANCELED');
                     const isPosted = doc.status === 'POSTED';
                     const qtyTotal = doc.lines?.reduce((s, l) => s + (Number(l.quantityOut ?? l.quantity ?? 0)), 0) || doc.totalQuantity || 0;
                     return (
@@ -677,7 +803,7 @@ function SalesOrderDetailPage() {
                           </span>
                         </td>
                         <td>
-                          {inv ? (
+                          {activeDocInv ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span
                                 style={{
@@ -687,11 +813,11 @@ function SalesOrderDetailPage() {
                                 }}
                               >
                                 <i className="bi bi-file-earmark-check-fill" style={{ color: '#059669' }} />
-                                HĐ: {inv.invoiceNumber || 'Đã cấp'} ({inv.invoiceSeries})
+                                HĐ: {activeDocInv.invoiceNumber || 'Đã cấp'} ({activeDocInv.invoiceSeries})
                               </span>
                               <button
                                 type="button"
-                                onClick={() => handleOpenEInvoicePreview(inv)}
+                                onClick={() => handleOpenEInvoicePreview(activeDocInv)}
                                 style={{
                                   background: 'none', border: 'none', color: '#0284c7',
                                   cursor: 'pointer', fontSize: 12, textDecoration: 'underline'
@@ -700,7 +826,7 @@ function SalesOrderDetailPage() {
                                 Xem HĐ
                               </button>
                             </div>
-                          ) : soLevelInvoice ? (
+                          ) : activeSoLevelInvoice ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span
                                 style={{
@@ -711,11 +837,11 @@ function SalesOrderDetailPage() {
                                 title="Đơn hàng đã được xuất HĐĐT gộp toàn bộ đơn"
                               >
                                 <i className="bi bi-file-earmark-lock-fill" style={{ color: '#2563eb' }} />
-                                Đã xuất theo HĐ đơn hàng ({soLevelInvoice.invoiceNumber})
+                                Đã xuất theo HĐ đơn hàng ({activeSoLevelInvoice.invoiceNumber})
                               </span>
                               <button
                                 type="button"
-                                onClick={() => handleOpenEInvoicePreview(soLevelInvoice)}
+                                onClick={() => handleOpenEInvoicePreview(activeSoLevelInvoice)}
                                 style={{
                                   background: 'none', border: 'none', color: '#0284c7',
                                   cursor: 'pointer', fontSize: 12, textDecoration: 'underline'
@@ -725,17 +851,31 @@ function SalesOrderDetailPage() {
                               </button>
                             </div>
                           ) : isPosted ? (
-                            <button
-                              type="button"
-                              className={styles.btnPrimary}
-                              onClick={() => setIssueModalTarget({ so, exportDoc: doc })}
-                              style={{
-                                backgroundColor: '#059669', fontSize: 12, padding: '3px 10px',
-                                display: 'inline-flex', alignItems: 'center', gap: 4
-                              }}
-                            >
-                              <i className="bi bi-file-earmark-plus" /> Xuất HĐĐT đợt này
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              {canceledDocInv && (
+                                <span
+                                  style={{
+                                    fontSize: 11, color: '#dc2626', background: '#fee2e2',
+                                    padding: '2px 6px', borderRadius: 4, border: '1px solid #fecaca', cursor: 'pointer'
+                                  }}
+                                  onClick={() => handleOpenEInvoicePreview(canceledDocInv)}
+                                  title="HĐ cũ đã hủy"
+                                >
+                                  HĐ cũ #{canceledDocInv.invoiceNumber} (Đã hủy)
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                className={styles.btnPrimary}
+                                onClick={() => setIssueModalTarget({ so, exportDoc: doc })}
+                                style={{
+                                  backgroundColor: '#059669', fontSize: 12, padding: '3px 10px',
+                                  display: 'inline-flex', alignItems: 'center', gap: 4
+                                }}
+                              >
+                                <i className="bi bi-file-earmark-plus" /> {canceledDocInv ? 'Xuất lại HĐ đợt này' : 'Xuất HĐĐT đợt này'}
+                              </button>
+                            </div>
                           ) : (
                             <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>Chưa hoàn tất xuất kho</span>
                           )}
@@ -762,6 +902,108 @@ function SalesOrderDetailPage() {
             </div>
           )}
         </div>
+
+        {/* ── E-Invoice History & Details Card (Khoản 1 Điều 9 Nghị định 123/2020/NĐ-CP) ── */}
+        {einvoices.length > 0 && (
+          <div className={styles.card} style={{ marginTop: 20 }}>
+            <div className={styles.cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <i className="bi bi-file-earmark-ruled" style={{ color: '#059669' }} /> Lịch sử Hóa đơn điện tử của đơn hàng ({einvoices.length} bản ghi)
+              </div>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 45, textAlign: 'center' }}>#</th>
+                    <th style={{ width: 110 }}>Số HĐ</th>
+                    <th style={{ width: 90 }}>Ký hiệu</th>
+                    <th style={{ width: 105 }}>Ngày lập</th>
+                    <th>Loại hóa đơn</th>
+                    <th>Người mua / MST</th>
+                    <th style={{ textAlign: 'right', width: 140 }}>Tổng tiền</th>
+                    <th style={{ width: 130 }}>Cơ quan thuế</th>
+                    <th style={{ minWidth: 150 }}>Trạng thái</th>
+                    <th style={{ textAlign: 'center', width: 110 }}>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {einvoices.map((inv, idx) => {
+                    const isCanceled = inv.status === 'CANCELED';
+                    return (
+                      <tr key={inv.id || idx}>
+                        <td style={{ textAlign: 'center', color: '#94a3b8' }}>{idx + 1}</td>
+                        <td>
+                          <span
+                            style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: '#0284c7', cursor: 'pointer' }}
+                            onClick={() => handleOpenEInvoicePreview(inv)}
+                            title="Nhấn để xem bản thể hiện HĐĐT"
+                          >
+                            {inv.invoiceNumber || 'Chưa cấp'}
+                          </span>
+                        </td>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: '#475569' }}>
+                          {inv.invoiceSeries}
+                        </td>
+                        <td style={{ fontFamily: 'JetBrains Mono, monospace' }}>{inv.invoiceDate}</td>
+                        <td>
+                          {inv.inventoryDocumentId ? (
+                            <span style={{ fontSize: 12, color: '#059669', background: '#ecfdf5', padding: '2px 8px', borderRadius: 4, border: '1px solid #a7f3d0' }}>
+                              Đợt xuất: {inv.exportDocCode || `PXK #${inv.inventoryDocumentId}`}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 12, color: '#1e40af', background: '#eff6ff', padding: '2px 8px', borderRadius: 4, border: '1px solid #bfdbfe' }}>
+                              Toàn bộ đơn hàng
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{inv.buyerLegalName || inv.buyerName || 'Khách lẻ'}</div>
+                          {inv.buyerTaxCode && <div style={{ fontSize: 11, color: '#64748b', fontFamily: 'JetBrains Mono, monospace' }}>MST: {inv.buyerTaxCode}</div>}
+                        </td>
+                        <td style={{ textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, color: isCanceled ? '#9f1239' : '#166534' }}>
+                          {money(inv.totalAmount)}
+                        </td>
+                        <td>
+                          <span style={{ fontSize: 11, color: '#15803d', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '2px 6px', borderRadius: 4 }}>
+                            <i className="bi bi-shield-check" /> {inv.cqtCode ? 'Đã cấp mã' : 'Hợp lệ'}
+                          </span>
+                        </td>
+                        <td>
+                          {isCanceled ? (
+                            <div>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fff1f2', color: '#9f1239', border: '1px solid #fecdd3', padding: '2px 8px', borderRadius: 9999, fontSize: 12, fontWeight: 600 }}>
+                                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#f43f5e' }} /> Đã hủy
+                              </span>
+                              <div style={{ fontSize: 11, color: '#9f1239', marginTop: 3 }}>
+                                <strong>Lý do:</strong> {inv.cancelReason || '—'}
+                              </div>
+                              {inv.canceledByName && <div style={{ fontSize: 10, color: '#64748b' }}>Bởi: {inv.canceledByName}</div>}
+                            </div>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: 9999, fontSize: 12, fontWeight: 600 }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#10b981', boxShadow: '0 0 6px #10b981' }} /> Đã phát hành
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            className={styles.btnSecondary}
+                            onClick={() => handleOpenEInvoicePreview(inv)}
+                            style={{ fontSize: 12, padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          >
+                            <i className="bi bi-eye" /> Xem HĐ
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* ── Modals ── */}
         <ConfirmModal

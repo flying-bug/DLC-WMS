@@ -156,6 +156,10 @@ public class EInvoice {
     @Column(name = "canceled_by")
     private Long canceledBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "canceled_by", insertable = false, updatable = false)
+    private User canceledByUser;
+
     // Audit Info
     @Column(name = "created_by", nullable = false)
     private Long createdBy;

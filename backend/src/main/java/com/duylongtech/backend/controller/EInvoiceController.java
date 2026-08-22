@@ -26,6 +26,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 
+import com.duylongtech.backend.entity.ProductVariant;
+import com.duylongtech.backend.repository.ProductVariantRepository;
+
 @RestController
 @RequestMapping("/api/v1/einvoices")
 @RequiredArgsConstructor
@@ -34,6 +37,7 @@ public class EInvoiceController {
 
     private final EInvoiceService einvoiceService;
     private final EInvoiceRepository einvoiceRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     private Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -119,12 +123,27 @@ public class EInvoiceController {
                 String sku = "SP" + line.getId();
                 String unit = "Cái";
 
+                if (line.getVariantId() != null) {
+                    ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
+                    if (variant != null) {
+                        sku = variant.getSku() != null ? variant.getSku() : sku;
+                        String baseName = (variant.getProduct() != null && variant.getProduct().getProductName() != null)
+                                ? variant.getProduct().getProductName() : (variant.getVariantName() != null ? variant.getVariantName() : "Sản phẩm");
+                        String varDetail = (variant.getVariantName() != null && !variant.getVariantName().equalsIgnoreCase(baseName))
+                                ? " (" + variant.getVariantName() + ")" : "";
+                        itemName = baseName + varDetail;
+                        if (variant.getProduct() != null && variant.getProduct().getUnit() != null) {
+                            unit = variant.getProduct().getUnit().getName();
+                        }
+                    }
+                }
+
                 double qty = line.getQuantityOut() != null ? line.getQuantityOut().doubleValue() : 1.0;
                 double price = line.getUnitPrice() != null ? line.getUnitPrice().doubleValue() : 0.0;
                 double lineAmount = line.getLineAmount() != null ? line.getLineAmount().doubleValue() : (qty * price);
 
                 String serialNote = line.getSerialNumbersText() != null && !line.getSerialNumbersText().isBlank()
-                        ? String.format("<div style=\"font-size: 11px; color: #0284c7;\">Serial: %s</div>", line.getSerialNumbersText()) : "";
+                        ? String.format("<div style=\"font-size: 11px; color: #0284c7; font-weight: 600; margin-top: 3px;\">S/N: %s</div>", line.getSerialNumbersText()) : "";
 
                 itemsHtml.append(String.format("""
                     <tr>
@@ -148,14 +167,15 @@ public class EInvoiceController {
                 String unit = "Cái";
 
                 if (sol.getVariant() != null) {
-                    sku = sol.getVariant().getSku() != null ? sol.getVariant().getSku() : sku;
-                    if (sol.getVariant().getProduct() != null) {
-                        itemName = sol.getVariant().getProduct().getProductName();
-                        if (sol.getVariant().getProduct().getUnit() != null) {
-                            unit = sol.getVariant().getProduct().getUnit().getName();
-                        }
-                    } else if (sol.getVariant().getVariantName() != null) {
-                        itemName = sol.getVariant().getVariantName();
+                    ProductVariant variant = sol.getVariant();
+                    sku = variant.getSku() != null ? variant.getSku() : sku;
+                    String baseName = (variant.getProduct() != null && variant.getProduct().getProductName() != null)
+                            ? variant.getProduct().getProductName() : (variant.getVariantName() != null ? variant.getVariantName() : "Sản phẩm");
+                    String varDetail = (variant.getVariantName() != null && !variant.getVariantName().equalsIgnoreCase(baseName))
+                            ? " (" + variant.getVariantName() + ")" : "";
+                    itemName = baseName + varDetail;
+                    if (variant.getProduct() != null && variant.getProduct().getUnit() != null) {
+                        unit = variant.getProduct().getUnit().getName();
                     }
                 }
 

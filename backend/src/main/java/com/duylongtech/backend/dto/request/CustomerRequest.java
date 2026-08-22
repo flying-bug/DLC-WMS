@@ -60,6 +60,17 @@ public class CustomerRequest {
     private String address;
 
     /**
+     * Mã số thuế doanh nghiệp / cá nhân (optional).
+     */
+    @Size(max = 50, message = "EXCEED_MAX_LENGTH")
+    private String taxCode;
+
+    /**
+     * Loại pháp lý: COMPANY | INDIVIDUAL.
+     */
+    private String type;
+
+    /**
      * Nhóm khách hàng: RETAIL | WHOLESALE | DISTRIBUTOR.
      * Mặc định: RETAIL.
      */
