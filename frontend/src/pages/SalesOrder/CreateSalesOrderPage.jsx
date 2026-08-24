@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Select from 'react-select';
 import DatePicker from 'react-datepicker';
@@ -28,18 +28,22 @@ const formatMoneyInput = (value) => {
 
 const customSelectStyles = {
   control: (base, state) => ({
-    ...base, minHeight: 36, height: 36, fontSize: 13,
-    borderColor: state.isFocused ? '#2563eb' : '#d1d5db',
-    boxShadow: state.isFocused ? '0 0 0 1px #2563eb' : 'none',
+    ...base, minHeight: 30, height: 30, fontSize: 12.5,
+    borderColor: state.isFocused ? '#0075c0' : '#d1d5db',
+    boxShadow: state.isFocused ? '0 0 0 1px #0075c0' : 'none',
+    borderRadius: 4,
   }),
-  valueContainer: (base) => ({ ...base, height: 36, padding: '0 8px' }),
+  valueContainer: (base) => ({ ...base, height: 30, padding: '0 6px' }),
   input: (base) => ({ ...base, margin: 0, padding: 0 }),
   indicatorSeparator: () => ({ display: 'none' }),
-  indicatorsContainer: (base) => ({ ...base, height: 36 }),
+  indicatorsContainer: (base) => ({ ...base, height: 28 }),
+  dropdownIndicator: (base) => ({ ...base, padding: '2px 4px' }),
+  clearIndicator: (base) => ({ ...base, padding: 2 }),
   menuPortal: base => ({ ...base, zIndex: 9999 }),
+  menu: base => ({ ...base, zIndex: 9999, fontSize: 12.5 }),
 };
 
-const emptyLine = () => ({ variantId: null, warehouseId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, serialNumbers: [], note: '' });
+const emptyLine = () => ({ variantId: null, warehouseId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, serialNumbers: [], note: '', showNote: false });
 
 function CreateSalesOrderPage() {
   const navigate = useNavigate();
@@ -536,7 +540,12 @@ function CreateSalesOrderPage() {
   const customerOptions = customers
     .filter(c => c.status === 'APPROVED' || c.id === form.partnerId)
     .map(c => ({ value: c.id, label: `${c.code} — ${c.name}${c.phone ? ' (' + c.phone + ')' : ''}` }));
-  const warehouseOptions = warehouses.map(w => ({ value: w.id, label: `${w.code} — ${w.name}` }));
+  const warehouseOptions = warehouses.map(w => ({
+    value: w.id,
+    code: w.code,
+    name: w.name,
+    label: `${w.code} — ${w.name}`,
+  }));
   const productOptions = variants.map(v => ({
     ...v,
     productName: v.productName || v.variantName || `Sản phẩm #${v.id}`,
@@ -588,16 +597,23 @@ function CreateSalesOrderPage() {
       <div className={styles.page}>
         {/* ── Page Header ── */}
         <div className={styles.pageHeader}>
-          <div className={styles.breadcrumb}>
-            <span className={styles.breadcrumbLink} onClick={() => navigate('/sales-orders')}>
-              Đơn bán hàng
-            </span>
-            <i className="bi bi-chevron-right" style={{ margin: '0 6px', fontSize: 12 }} />
-            <span>{isEdit ? 'Cập nhật đơn hàng' : 'Tạo đơn bán hàng mới'}</span>
+          <div className={styles.headerLeft}>
+            <div className={styles.breadcrumb}>
+              <span className={styles.breadcrumbLink} onClick={() => navigate('/sales-orders')}>
+                Đơn bán hàng
+              </span>
+              <i className="bi bi-chevron-right" style={{ margin: '0 6px', fontSize: 12 }} />
+              <span>{isEdit ? 'Cập nhật đơn hàng' : 'Tạo đơn bán hàng mới'}</span>
+            </div>
+            <h1 className={styles.pageTitle}>
+              {isEdit ? `Cập nhật: ${form.soCode}` : (mode === 'direct' ? 'Bán hàng trực tiếp tại quầy' : 'Tạo đơn bán hàng / Báo giá')}
+            </h1>
           </div>
-          <h1 className={styles.pageTitle}>
-            {isEdit ? `Cập nhật: ${form.soCode}` : 'Tạo đơn bán hàng mới'}
-          </h1>
+
+          <div className={styles.headerRightTotal}>
+            <span className={styles.headerTotalLabel}>Tổng thanh toán</span>
+            <span className={styles.headerTotalAmount}>{money(grandTotal)} đ</span>
+          </div>
         </div>
 
         {!isEdit && (
@@ -666,9 +682,9 @@ function CreateSalesOrderPage() {
                         type="button"
                         onClick={() => setShowCustomerModal(true)}
                         title="Tạo khách hàng mới"
-                        style={{ width: '38px', height: '38px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ width: '32px', height: '30px', border: '1px solid #cbd5e1', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
-                        <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary)' }}></i>
+                        <i className="bi bi-plus" style={{ fontSize: '18px', color: '#0075c0' }}></i>
                       </button>
                     </div>
                   </div>
@@ -724,10 +740,10 @@ function CreateSalesOrderPage() {
                   )}
 
                   <div className={styles.fieldRow}>
-                    <label className={styles.label}>Ghi chú</label>
+                    <label className={styles.label}>Ghi chú / Diễn giải</label>
                     <textarea
                       className={styles.textarea}
-                      rows={3}
+                      rows={mode === 'direct' && form.partnerId ? 4 : 2}
                       value={form.note}
                       onChange={e => setForm(p => ({ ...p, note: e.target.value }))}
                       placeholder="Ghi chú thêm về đơn hàng..."
@@ -820,40 +836,6 @@ function CreateSalesOrderPage() {
                       />
                     </div>
                   )}
-
-                  {/* Summary box */}
-                  <div className={styles.summaryBox}>
-                    <div className={styles.summaryRow}>
-                      <span>Tổng số lượng:</span>
-                      <strong>{totalQuantity.toLocaleString('vi-VN')}</strong>
-                    </div>
-                    <div className={styles.summaryRow}>
-                      <span>Tiền hàng:</span>
-                      <strong>{money(subTotalAmount)} đ</strong>
-                    </div>
-                    <div className={styles.summaryRow}>
-                      <span>Thuế VAT:</span>
-                      <strong>{money(totalVatAmount)} đ</strong>
-                    </div>
-                    <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
-                      <span>Tổng thanh toán:</span>
-                      <strong className={styles.totalAmount}>{money(grandTotal)} đ</strong>
-                    </div>
-                    {mode === 'direct' && (
-                      <>
-                        <div className={styles.summaryRow} style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed #cbd5e1' }}>
-                          <span>Khách trả:</span>
-                          <strong style={{ color: '#166534' }}>{money(Number(paymentAmount || 0))} đ</strong>
-                        </div>
-                        <div className={styles.summaryRow}>
-                          <span>Còn nợ:</span>
-                          <strong style={{ color: Math.max(0, grandTotal - Number(paymentAmount || 0)) > 0 ? '#dc2626' : '#166534' }}>
-                            {money(Math.max(0, grandTotal - Number(paymentAmount || 0)))} đ
-                          </strong>
-                        </div>
-                      </>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>
@@ -861,25 +843,30 @@ function CreateSalesOrderPage() {
             {/* ── Lines ── */}
             <div className={styles.linesSection}>
               <div className={styles.linesSectionHeader}>
-                <span className={styles.sectionTitle}><i className="bi bi-list-ul" /> Danh sách hàng hóa</span>
+                <span className={styles.sectionTitle} style={{ margin: 0, padding: 0, border: 'none' }}>
+                  <i className="bi bi-list-ul" /> Danh sách hàng hóa
+                </span>
+                <span style={{ fontSize: 12.5, color: '#64748b' }}>
+                  Tổng: <strong style={{ color: '#1e293b' }}>{lines.length}</strong> sản phẩm | SL: <strong style={{ color: '#1e293b' }}>{totalQuantity}</strong>
+                </span>
               </div>
 
-              <div style={{ overflowX: 'auto' }}>
+              <div className={styles.linesTableWrap}>
                 <table className={styles.linesTable}>
                   <thead>
                     <tr>
-                      <th style={{ width: 40, textAlign: 'center' }}>#</th>
-                      <th style={{ minWidth: 260, width: 280 }}>Sản phẩm</th>
-                      <th style={{ width: 170, minWidth: 160 }}>Kho xuất</th>
-                      <th style={{ width: 70, textAlign: 'center' }}>ĐVT</th>
-                      <th style={{ width: 90, textAlign: 'right' }}>Số lượng</th>
-                      <th style={{ width: 75, textAlign: 'center' }}>BH (T)</th>
-                      <th style={{ width: 130, textAlign: 'right' }}>Đơn giá</th>
-                      <th style={{ width: 140, textAlign: 'right' }}>Thành tiền</th>
-                      <th style={{ width: 80, textAlign: 'center' }}>% VAT</th>
-                      {mode === 'direct' && <th style={{ width: 120, textAlign: 'center' }}>Serial</th>}
-                      <th style={{ width: 150 }}>Ghi chú dòng</th>
-                      <th style={{ width: 40, textAlign: 'center' }}></th>
+                      <th style={{ width: '36px', textAlign: 'center' }}>#</th>
+                      <th style={{ minWidth: '120px', width: '13%' }}>Mã hàng</th>
+                      <th style={{ minWidth: '180px', width: '25%' }}>Tên hàng</th>
+                      <th style={{ minWidth: '110px', width: '12%' }}>Kho xuất</th>
+                      <th style={{ width: '55px', textAlign: 'center' }}>ĐVT</th>
+                      <th style={{ width: '75px', textAlign: 'center' }}>Tồn kho</th>
+                      <th style={{ width: '70px', textAlign: 'right' }}>SL</th>
+                      <th style={{ width: '55px', textAlign: 'center' }}>BH (T)</th>
+                      <th style={{ width: '105px', textAlign: 'right' }}>Đơn giá</th>
+                      <th style={{ width: '110px', textAlign: 'right' }}>Thành tiền</th>
+                      <th style={{ width: '60px', textAlign: 'center' }}>% VAT</th>
+                      <th style={{ width: '36px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -892,233 +879,266 @@ function CreateSalesOrderPage() {
                             ? (inventoryMap.get(`${line.variantId}_${effectiveWh}`) || 0)
                             : (inventoryMap.get(String(line.variantId)) || 0))
                         : 0;
-                      const selectedWhObj = warehouses.find(w => String(w.id) === String(effectiveWh));
+                      const prod = variants.find(v => String(v.id) === String(line.variantId));
+                      const isSerialProduct = Boolean(prod?.trackSerial);
+                      const hasSubRow = (mode === 'direct' && isSerialProduct) || line.showNote || Boolean(line.note);
+
                       return (
-                        <tr key={idx}>
-                          <td style={{ textAlign: 'center', color: '#94a3b8' }}>{idx + 1}</td>
-                          <td>
-                            <ProductGridSelect
-                              id={`so-line-product-${idx}`}
-                              products={productOptions}
-                              inventoryMap={lineInventoryMap}
-                              value={line.variantId}
-                              onChange={selected => handleProductSelect(idx, selected)}
-                              onAddNew={() => {
-                                setQuickAddLineIndex(idx);
-                                setShowQuickAddProduct(true);
-                              }}
-                              displayMode="code-name"
-                              placeholder="Chọn mã hoặc tên hàng"
-                            />
-                            {line.variantId && (
-                              <div style={{
-                                marginTop: 4,
-                                fontSize: 11,
-                                color: effectiveWh
-                                  ? (availableQty >= Number(line.quantity || 0) ? '#16a34a' : '#dc2626')
-                                  : '#d97706'
-                              }}>
-                                {effectiveWh
-                                  ? `Tồn khả dụng (${selectedWhObj?.name || 'Kho'}): ${money(availableQty)}`
-                                  : `Tổng tồn hệ thống: ${money(availableQty)} (Chưa chọn kho xuất)`}
-                              </div>
-                            )}
-                          </td>
-                          <td style={{ minWidth: 160 }}>
-                            <Select
-                              inputId={`so-line-wh-${idx}`}
-                              options={warehouseOptions}
-                              value={warehouseOptions.find(o => String(o.value) === String(line.warehouseId)) || null}
-                              onChange={opt => updateLine(idx, 'warehouseId', opt?.value || null)}
-                              placeholder="Chọn kho xuất..."
-                              styles={{
-                                ...customSelectStyles,
-                                control: (base, state) => ({
-                                  ...customSelectStyles.control(base, state),
-                                  borderColor: state.isFocused ? '#2563eb' : (!line.warehouseId ? '#f59e0b' : '#d1d5db'),
-                                })
-                              }}
-                              menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
-                            />
-                            {!line.warehouseId && (
-                              <div style={{ marginTop: 2, fontSize: 11, color: '#d97706', fontWeight: 500 }}>
-                                * Chưa chọn kho
-                              </div>
-                            )}
-                          </td>
-                          <td style={{ textAlign: 'center', color: '#475569', fontSize: 13 }}>
-                            {line.unitName || '—'}
-                          </td>
-                          <td>
-                            <input
-                              id={`so-line-qty-${idx}`}
-                              type="number"
-                              min="1"
-                              step="1"
-                              className={styles.lineInput}
-                              value={line.quantity}
-                              onChange={e => updateLine(idx, 'quantity', e.target.value)}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              id={`so-line-warranty-${idx}`}
-                              type="number"
-                              min="0"
-                              className={styles.lineInput}
-                              value={line.warrantyMonths}
-                              onChange={e => updateLine(idx, 'warrantyMonths', e.target.value)}
-                            />
-                          </td>
-                          <td>
-                            <input
-                              id={`so-line-price-${idx}`}
-                              inputMode="numeric"
-                              type="text"
-                              className={styles.lineInput}
-                              value={formatMoneyInput(line.unitPrice)}
-                              onChange={e => updateLine(idx, 'unitPrice', digitsOnly(e.target.value))}
-                            />
-                          </td>
-                          <td style={{ textAlign: 'right', fontWeight: 600, color: '#1e40af' }}>
-                            {money(lineTotal)} đ
-                          </td>
-                          <td>
-                            <input
-                              id={`so-line-vat-${idx}`}
-                              type="number"
-                              min="0"
-                              max="100"
-                              className={styles.lineInput}
-                              value={line.vatRate}
-                              onChange={e => updateLine(idx, 'vatRate', e.target.value)}
-                            />
-                          </td>
-                          {mode === 'direct' && (
-                            <td align="center">
-                              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                {line.variantId && (() => {
-                                  const prod = variants.find(v => String(v.id) === String(line.variantId));
-                                  if (!prod?.trackSerial) {
-                                    return <span style={{ color: '#94a3b8', fontSize: '13px' }}>—</span>;
-                                  }
-                                  const isFull = (line.serialNumbers?.length || 0) === Number(line.quantity || 0);
-                                  return (
-                                    <button
-                                      type="button"
-                                      style={{
-                                        background: isFull ? '#dcfce7' : '#fef9c3',
-                                        color: isFull ? '#166534' : '#854d0e',
-                                        border: `1px solid ${isFull ? '#bbf7d0' : '#fef08a'}`,
-                                        borderRadius: '4px',
-                                        padding: '2px 8px',
-                                        fontSize: '12px',
-                                        fontWeight: 500,
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '4px',
-                                        whiteSpace: 'nowrap'
-                                      }}
-                                      onClick={() => setSerialModalLineIndex(idx)}
-                                    >
-                                      <i className="bi bi-upc-scan"></i>
-                                      {(line.serialNumbers?.length || 0)} / {Number(line.quantity || 0)}
-                                    </button>
-                                  );
-                                })()}
+                        <React.Fragment key={idx}>
+                          <tr>
+                            <td style={{ textAlign: 'center', color: '#94a3b8' }}>{idx + 1}</td>
+                            <td>
+                              <ProductGridSelect
+                                id={`so-line-code-${idx}`}
+                                products={productOptions}
+                                inventoryMap={lineInventoryMap}
+                                value={line.variantId}
+                                onChange={selected => handleProductSelect(idx, selected)}
+                                onAddNew={() => {
+                                  setQuickAddLineIndex(idx);
+                                  setShowQuickAddProduct(true);
+                                }}
+                                displayMode="code"
+                                placeholder="Chọn mã"
+                              />
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <div style={{ flex: 1 }}>
+                                  <ProductGridSelect
+                                    id={`so-line-name-${idx}`}
+                                    products={productOptions}
+                                    inventoryMap={lineInventoryMap}
+                                    value={line.variantId}
+                                    onChange={selected => handleProductSelect(idx, selected)}
+                                    onAddNew={() => {
+                                      setQuickAddLineIndex(idx);
+                                      setShowQuickAddProduct(true);
+                                    }}
+                                    displayMode="name"
+                                    placeholder="Chọn hàng hóa"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  className={`${styles.btnInlineNote} ${line.showNote || line.note ? styles.btnInlineNoteActive : ''}`}
+                                  onClick={() => updateLine(idx, 'showNote', !line.showNote)}
+                                  title={line.showNote || line.note ? "Ẩn ghi chú" : "Thêm ghi chú dòng"}
+                                >
+                                  <i className="bi bi-chat-left-text" />
+                                </button>
                               </div>
                             </td>
+                            <td>
+                              <Select
+                                inputId={`so-line-wh-${idx}`}
+                                options={warehouseOptions}
+                                value={warehouseOptions.find(o => String(o.value) === String(line.warehouseId)) || null}
+                                onChange={opt => updateLine(idx, 'warehouseId', opt?.value || null)}
+                                placeholder="Chọn kho"
+                                formatOptionLabel={(option, { context }) => (context === 'value' ? (option.code || option.label) : option.label)}
+                                styles={{
+                                  ...customSelectStyles,
+                                  control: (base, state) => ({
+                                    ...customSelectStyles.control(base, state),
+                                    borderColor: state.isFocused ? '#0075c0' : (!line.warehouseId ? '#f59e0b' : '#cbd5e1'),
+                                  })
+                                }}
+                                menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                              />
+                            </td>
+                            <td style={{ textAlign: 'center', color: '#475569', fontSize: 12.5 }}>
+                              {line.unitName || '—'}
+                            </td>
+                            <td style={{ textAlign: 'center', fontWeight: 600, color: effectiveWh ? (availableQty >= Number(line.quantity || 0) ? '#16a34a' : '#dc2626') : '#94a3b8' }}>
+                              {effectiveWh ? money(availableQty) : '—'}
+                            </td>
+                            <td>
+                              <input
+                                id={`so-line-qty-${idx}`}
+                                type="number"
+                                min="1"
+                                step="1"
+                                className={styles.lineInput}
+                                style={{ textAlign: 'right' }}
+                                value={line.quantity}
+                                onChange={e => updateLine(idx, 'quantity', e.target.value)}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                id={`so-line-warranty-${idx}`}
+                                type="number"
+                                min="0"
+                                className={styles.lineInput}
+                                style={{ textAlign: 'center' }}
+                                value={line.warrantyMonths}
+                                onChange={e => updateLine(idx, 'warrantyMonths', e.target.value)}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                id={`so-line-price-${idx}`}
+                                inputMode="numeric"
+                                type="text"
+                                className={styles.lineInput}
+                                style={{ textAlign: 'right' }}
+                                value={formatMoneyInput(line.unitPrice)}
+                                onChange={e => updateLine(idx, 'unitPrice', digitsOnly(e.target.value))}
+                              />
+                            </td>
+                            <td style={{ textAlign: 'right', fontWeight: 600, color: '#0075c0', fontSize: 13 }}>
+                              {money(lineTotal)} đ
+                            </td>
+                            <td>
+                              <input
+                                id={`so-line-vat-${idx}`}
+                                type="number"
+                                min="0"
+                                max="100"
+                                className={styles.lineInput}
+                                style={{ textAlign: 'center' }}
+                                value={line.vatRate}
+                                onChange={e => updateLine(idx, 'vatRate', e.target.value)}
+                              />
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              {lines.length > 1 && (
+                                <button className={styles.btnRemoveLine} onClick={() => removeLine(idx)} title="Xóa dòng">
+                                  <i className="bi bi-trash" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+
+                          {/* Dòng mở rộng (Sub-row) cho Serial và Ghi chú */}
+                          {hasSubRow && (
+                            <tr className={styles.subRow}>
+                              <td></td>
+                              <td colSpan={11}>
+                                <div className={styles.subRowContent}>
+                                  {/* Hiển thị & chọn Serial khi bán trực tiếp sản phẩm có quản lý Serial */}
+                                  {mode === 'direct' && isSerialProduct && (
+                                    <div className={styles.serialBox}>
+                                      <span className={styles.serialLabel}>
+                                        <i className="bi bi-upc-scan" /> Serial ({(line.serialNumbers?.length || 0)}/{Number(line.quantity || 0)}):
+                                      </span>
+                                      {line.serialNumbers?.length > 0 ? (
+                                        <div className={styles.serialChips}>
+                                          {line.serialNumbers.map((sn, sIdx) => (
+                                            <span key={sIdx} className={styles.serialBadge}>{sn}</span>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <span className={styles.serialEmptyText}>Chưa chọn Serial</span>
+                                      )}
+                                      <button
+                                        type="button"
+                                        className={styles.btnScanSerial}
+                                        onClick={() => setSerialModalLineIndex(idx)}
+                                      >
+                                        <i className="bi bi-upc-scan" /> {line.serialNumbers?.length > 0 ? 'Sửa Serial' : 'Chọn/Quét Serial'}
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {/* Ô nhập ghi chú dòng */}
+                                  {(line.showNote || line.note) ? (
+                                    <div className={styles.lineNoteInputWrap}>
+                                      <i className="bi bi-card-text" style={{ color: '#64748b', fontSize: 13 }} />
+                                      <input
+                                        type="text"
+                                        className={styles.lineSubNoteInput}
+                                        value={line.note || ''}
+                                        onChange={e => updateLine(idx, 'note', e.target.value)}
+                                        placeholder="Nhập ghi chú cho sản phẩm này..."
+                                        autoFocus={line.showNote && !line.note}
+                                      />
+                                      <button
+                                        type="button"
+                                        className={styles.btnDeleteSubNote}
+                                        onClick={() => {
+                                          updateLine(idx, 'note', '');
+                                          updateLine(idx, 'showNote', false);
+                                        }}
+                                        title="Ẩn ghi chú"
+                                      >
+                                        <i className="bi bi-x" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className={styles.btnAddLineNote}
+                                      onClick={() => updateLine(idx, 'showNote', true)}
+                                    >
+                                      <i className="bi bi-plus" /> Thêm ghi chú
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
                           )}
-                          <td>
-                            <input
-                              type="text"
-                              className={styles.lineInput}
-                              value={line.note}
-                              onChange={e => updateLine(idx, 'note', e.target.value)}
-                              placeholder="Ghi chú..."
-                            />
-                          </td>
-                          <td>
-                            {lines.length > 1 && (
-                              <button className={styles.btnRemoveLine} onClick={() => removeLine(idx)} title="Xóa dòng">
-                                <i className="bi bi-trash" />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
-                  <tfoot>
-                    <tr>
-                      <td colSpan={mode === 'direct' ? 10 : 9} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
-                        <strong>Tiền hàng:</strong>
-                      </td>
-                      <td colSpan={2} style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 15, color: '#1d4ed8' }}>
-                        {money(subTotalAmount)} đ
-                      </td>
-                    </tr>
-                    <tr>
-                      <td colSpan={mode === 'direct' ? 10 : 9} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 14, color: '#475569' }}>
-                        <strong>Tiền thuế VAT:</strong>
-                      </td>
-                      <td colSpan={2} style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 15, color: '#dc2626' }}>
-                        {money(totalVatAmount)} đ
-                      </td>
-                    </tr>
-                    <tr>
-                      <td colSpan={mode === 'direct' ? 10 : 9} style={{ textAlign: 'right', padding: '8px 12px', fontSize: 15, color: '#0f172a' }}>
-                        <strong>Tổng cộng thanh toán:</strong>
-                      </td>
-                      <td colSpan={2} style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 700, fontSize: 16, color: '#16a34a' }}>
-                        {money(grandTotal)} đ
-                      </td>
-                    </tr>
-                  </tfoot>
                 </table>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 20px', backgroundColor: '#fff', borderTop: '1px solid #e0e0e0' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ color: '#4b5563', fontSize: '13px' }}>
-                    Tổng số: <strong style={{ color: '#111827' }}>{lines.length}</strong> bản ghi
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+              {/* MISA-style Table Bottom Bar: Left action buttons + Right Summary Box */}
+              <div className={styles.tableBottomBar}>
+                <div className={styles.tableBottomLeft}>
+                  <div className={styles.tableActions}>
                     <button
                       type="button"
+                      className={styles.btnTableAction}
                       onClick={addLine}
-                      style={{
-                        padding: '6px 12px',
-                        border: '1px solid #d1d5db',
-                        backgroundColor: '#fff',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        fontWeight: 500,
-                        color: '#374151'
-                      }}
                     >
-                      Thêm dòng
+                      <i className="bi bi-plus-lg" /> Thêm dòng
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setLines([emptyLine()])}
-                      style={{
-                        padding: '6px 12px',
-                        border: '1px solid #d1d5db',
-                        backgroundColor: '#fff',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        fontWeight: 500,
-                        color: '#374151'
-                      }}
-                    >
-                      Xóa hết dòng
-                    </button>
+                    {lines.length > 1 && (
+                      <button
+                        type="button"
+                        className={styles.btnTableAction}
+                        onClick={() => setLines([emptyLine()])}
+                      >
+                        <i className="bi bi-trash3" /> Xóa hết dòng
+                      </button>
+                    )}
                   </div>
+                  <div className={styles.tableCount}>
+                    Tổng số: <strong style={{ color: '#1e293b' }}>{lines.length}</strong> dòng sản phẩm
+                  </div>
+                </div>
+
+                <div className={styles.summarySection}>
+                  <div className={styles.summaryRow}>
+                    <span>Tiền hàng:</span>
+                    <strong>{money(subTotalAmount)} đ</strong>
+                  </div>
+                  <div className={styles.summaryRow}>
+                    <span>Tiền thuế VAT:</span>
+                    <strong style={{ color: '#dc2626' }}>{money(totalVatAmount)} đ</strong>
+                  </div>
+                  <div className={styles.summaryTotalRow}>
+                    <span>Tổng thanh toán:</span>
+                    <span className={styles.summaryTotalValue}>{money(grandTotal)} đ</span>
+                  </div>
+                  {mode === 'direct' && (
+                    <>
+                      <div className={styles.summaryRow} style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed #cbd5e1' }}>
+                        <span>Khách trả:</span>
+                        <strong style={{ color: '#166534' }}>{money(Number(paymentAmount || 0))} đ</strong>
+                      </div>
+                      <div className={styles.summaryRow}>
+                        <span>Còn nợ:</span>
+                        <strong style={{ color: Math.max(0, grandTotal - Number(paymentAmount || 0)) > 0 ? '#dc2626' : '#166534' }}>
+                          {money(Math.max(0, grandTotal - Number(paymentAmount || 0)))} đ
+                        </strong>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
