@@ -8,6 +8,7 @@ import { getTodayIsoDate } from '../../utils/dateFormat';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
+import WarehouseGridSelect from '../../components/ui/WarehouseGridSelect/WarehouseGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import CustomerModal from '../Customer/components/CustomerModal';
 import * as soApi from '../../api/salesOrderApi';
@@ -930,21 +931,14 @@ function CreateSalesOrderPage() {
                               </div>
                             </td>
                             <td>
-                              <Select
-                                inputId={`so-line-wh-${idx}`}
-                                options={warehouseOptions}
-                                value={warehouseOptions.find(o => String(o.value) === String(line.warehouseId)) || null}
-                                onChange={opt => updateLine(idx, 'warehouseId', opt?.value || null)}
+                              <WarehouseGridSelect
+                                id={`so-line-wh-${idx}`}
+                                warehouses={warehouses}
+                                value={line.warehouseId}
+                                onChange={val => updateLine(idx, 'warehouseId', val)}
                                 placeholder="Chọn kho"
-                                formatOptionLabel={(option, { context }) => (context === 'value' ? (option.code || option.label) : option.label)}
-                                styles={{
-                                  ...customSelectStyles,
-                                  control: (base, state) => ({
-                                    ...customSelectStyles.control(base, state),
-                                    borderColor: state.isFocused ? '#0075c0' : (!line.warehouseId ? '#f59e0b' : '#cbd5e1'),
-                                  })
-                                }}
-                                menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                                displayMode="code"
+                                hasWarning={!line.warehouseId}
                               />
                             </td>
                             <td style={{ textAlign: 'center', color: '#475569', fontSize: 12.5 }}>
