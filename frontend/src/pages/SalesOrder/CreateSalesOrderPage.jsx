@@ -39,7 +39,7 @@ const customSelectStyles = {
   menuPortal: base => ({ ...base, zIndex: 9999 }),
 };
 
-const emptyLine = (defaultWh = null) => ({ variantId: null, warehouseId: defaultWh, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, serialNumbers: [], note: '' });
+const emptyLine = () => ({ variantId: null, warehouseId: null, quantity: 1, unitPrice: 0, unitName: '', warrantyMonths: 0, vatRate: 0, serialNumbers: [], note: '' });
 
 function CreateSalesOrderPage() {
   const navigate = useNavigate();
@@ -102,9 +102,6 @@ function CreateSalesOrderPage() {
         if (warehouseRes.status === 'fulfilled') {
           whList = pageContent(unwrap(warehouseRes.value));
           setWarehouses(whList);
-          if (!isEdit && whList.length > 0) {
-            setLines(prev => prev.map(l => ({ ...l, warehouseId: l.warehouseId || whList[0].id })));
-          }
         }
         if (customerRes.status === 'fulfilled') {
           setCustomers(pageContent(unwrap(customerRes.value)));
@@ -222,8 +219,7 @@ function CreateSalesOrderPage() {
   }, [id, isEdit, warehouses]);
 
   // ── Line management ──
-  const defaultWarehouseId = warehouses.length > 0 ? warehouses[0].id : null;
-  const addLine = () => setLines(p => [...p, emptyLine(defaultWarehouseId)]);
+  const addLine = () => setLines(p => [...p, emptyLine()]);
   const removeLine = (idx) => setLines(p => p.filter((_, i) => i !== idx));
   const updateLine = (idx, field, value) => setLines(p =>
     p.map((l, i) => i === idx ? { ...l, [field]: value } : l)
@@ -238,8 +234,10 @@ function CreateSalesOrderPage() {
       updateLine(idx, 'variantId', null);
       return;
     }
-    const currentWh = lines[idx]?.warehouseId || defaultWarehouseId;
-    const existingIndex = lines.findIndex((l, i) => i !== idx && String(l.variantId) === String(selected.id) && String(l.warehouseId) === String(currentWh));
+    const currentWh = lines[idx]?.warehouseId || null;
+    const existingIndex = currentWh
+      ? lines.findIndex((l, i) => i !== idx && String(l.variantId) === String(selected.id) && String(l.warehouseId) === String(currentWh))
+      : -1;
     if (existingIndex >= 0) {
       const addedQty = Number(lines[idx]?.quantity) || 1;
       setLines(prev => {
@@ -327,19 +325,19 @@ function CreateSalesOrderPage() {
   };
 
   const buildDirectPayload = () => {
-    const firstWh = lines[0]?.warehouseId || form.warehouseId;
+    const firstWh = lines.find(l => l.warehouseId)?.warehouseId || form.warehouseId || (warehouses[0]?.id ? Number(warehouses[0].id) : 1);
     return {
       partnerId: form.partnerId ? Number(form.partnerId) : undefined,
       customerPhone: directCustomer.phone.trim() || undefined,
       customerName: directCustomer.name.trim() || undefined,
       customerAddress: directCustomer.address.trim() || undefined,
-      warehouseId: firstWh ? Number(firstWh) : undefined,
+      warehouseId: Number(firstWh),
       checkoutDate: form.soDate,
       paymentAmount: Number(paymentAmount || 0),
       note: form.note || undefined,
       lines: lines.map(l => ({
         variantId: Number(l.variantId),
-        warehouseId: l.warehouseId ? Number(l.warehouseId) : undefined,
+        warehouseId: l.warehouseId ? Number(l.warehouseId) : Number(firstWh),
         quantity: Number(l.quantity),
         unitPrice: Number(l.unitPrice),
         vatRate: Number(l.vatRate || 0),
@@ -400,7 +398,9 @@ function CreateSalesOrderPage() {
         return false;
       }
       if (!lines[i].warehouseId) {
-        showToast('error', `Dòng ${i + 1}: chưa chọn kho xuất hàng`);
+        const prod = variants.find(item => String(item.id) === String(lines[i].variantId));
+        const prodLabel = prod ? (prod.productName || prod.variantName || `ID #${prod.id}`) : `sản phẩm`;
+        showToast('error', `Dòng ${i + 1}: Vui lòng chọn kho xuất cho "${prodLabel}"`);
         focusField(`so-line-wh-${i}`);
         return false;
       }
@@ -450,7 +450,9 @@ function CreateSalesOrderPage() {
         return false;
       }
       if (!lines[i].warehouseId) {
-        showToast('error', `Dòng ${i + 1}: chưa chọn kho xuất hàng`);
+        const prod = variants.find(item => String(item.id) === String(lines[i].variantId));
+        const prodLabel = prod ? (prod.productName || prod.variantName || `ID #${prod.id}`) : `sản phẩm`;
+        showToast('error', `Dòng ${i + 1}: Vui lòng chọn kho xuất cho "${prodLabel}"`);
         focusField(`so-line-wh-${i}`);
         return false;
       }
@@ -883,13 +885,14 @@ function CreateSalesOrderPage() {
                   <tbody>
                     {lines.map((line, idx) => {
                       const lineTotal = Number(line.quantity) * Number(line.unitPrice);
-                      const effectiveWh = line.warehouseId || defaultWarehouseId;
+                      const effectiveWh = line.warehouseId || null;
                       const lineInventoryMap = getWarehouseInventoryMap(effectiveWh);
                       const availableQty = line.variantId
                         ? (effectiveWh
                             ? (inventoryMap.get(`${line.variantId}_${effectiveWh}`) || 0)
                             : (inventoryMap.get(String(line.variantId)) || 0))
                         : 0;
+                      const selectedWhObj = warehouses.find(w => String(w.id) === String(effectiveWh));
                       return (
                         <tr key={idx}>
                           <td style={{ textAlign: 'center', color: '#94a3b8' }}>{idx + 1}</td>
@@ -908,21 +911,40 @@ function CreateSalesOrderPage() {
                               placeholder="Chọn mã hoặc tên hàng"
                             />
                             {line.variantId && (
-                              <div style={{ marginTop: 4, fontSize: 11, color: availableQty >= Number(line.quantity || 0) ? '#16a34a' : '#dc2626' }}>
-                                Tồn khả dụng: {money(availableQty)}
+                              <div style={{
+                                marginTop: 4,
+                                fontSize: 11,
+                                color: effectiveWh
+                                  ? (availableQty >= Number(line.quantity || 0) ? '#16a34a' : '#dc2626')
+                                  : '#d97706'
+                              }}>
+                                {effectiveWh
+                                  ? `Tồn khả dụng (${selectedWhObj?.name || 'Kho'}): ${money(availableQty)}`
+                                  : `Tổng tồn hệ thống: ${money(availableQty)} (Chưa chọn kho xuất)`}
                               </div>
                             )}
                           </td>
-                          <td style={{ minWidth: 150 }}>
+                          <td style={{ minWidth: 160 }}>
                             <Select
                               inputId={`so-line-wh-${idx}`}
                               options={warehouseOptions}
                               value={warehouseOptions.find(o => String(o.value) === String(line.warehouseId)) || null}
                               onChange={opt => updateLine(idx, 'warehouseId', opt?.value || null)}
-                              placeholder="Chọn kho..."
-                              styles={customSelectStyles}
+                              placeholder="Chọn kho xuất..."
+                              styles={{
+                                ...customSelectStyles,
+                                control: (base, state) => ({
+                                  ...customSelectStyles.control(base, state),
+                                  borderColor: state.isFocused ? '#2563eb' : (!line.warehouseId ? '#f59e0b' : '#d1d5db'),
+                                })
+                              }}
                               menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
                             />
+                            {!line.warehouseId && (
+                              <div style={{ marginTop: 2, fontSize: 11, color: '#d97706', fontWeight: 500 }}>
+                                * Chưa chọn kho
+                              </div>
+                            )}
                           </td>
                           <td style={{ textAlign: 'center', color: '#475569', fontSize: 13 }}>
                             {line.unitName || '—'}

@@ -159,10 +159,11 @@ public class DirectCheckoutService {
 
             subTotal = subTotal.add(lineSubtotal);
             taxAmount = taxAmount.add(lineVat);
+            Long lineWh = reqLine.getWarehouseId() != null ? reqLine.getWarehouseId() : request.getWarehouseId();
             lines.add(SalesOrderLine.builder()
                     .salesOrderId(0L)
                     .variantId(reqLine.getVariantId())
-                    .warehouseId(request.getWarehouseId())
+                    .warehouseId(lineWh)
                     .quantity(qty)
                     .unitPrice(reqLine.getUnitPrice())
                     .vatRate(vatRate)
@@ -219,9 +220,10 @@ public class DirectCheckoutService {
 
         List<InventoryDocumentLineRequest> exportLines = new ArrayList<>();
         for (DirectCheckoutRequest.Line reqLine : request.getLines()) {
+            Long lineWh = reqLine.getWarehouseId() != null ? reqLine.getWarehouseId() : request.getWarehouseId();
             InventoryDocumentLineRequest line = new InventoryDocumentLineRequest();
             line.setVariantId(reqLine.getVariantId());
-            line.setWarehouseId(request.getWarehouseId());
+            line.setWarehouseId(lineWh);
             line.setQuantityOut(reqLine.getQuantity());
             line.setUnitPrice(reqLine.getUnitPrice());
             line.setUnitCost(ZERO);
