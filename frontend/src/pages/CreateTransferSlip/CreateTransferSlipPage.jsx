@@ -11,6 +11,8 @@ import Toast from '../../components/ui/Toast/Toast';
 import { useToast } from '../../contexts/ToastContext';
 import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
 import { printTransferSlip } from '../../utils/printTransferSlip';
+import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
+import { serializeNoteWithAttachments, parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import axiosClient from '../../api/axiosClient';
 import styles from './CreateTransferSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
@@ -121,6 +123,7 @@ function CreateTransferSlipPage() {
   }));
 
   const [items, setItems] = useState([emptyLine()]);
+  const [attachments, setAttachments] = useState([]);
   const [sourceInventory, setSourceInventory] = useState(new Map());
   const [serialModalItemId, setSerialModalItemId] = useState(null);
   const [showReferenceModal, setShowReferenceModal] = useState(false);
@@ -387,7 +390,7 @@ function CreateTransferSlipPage() {
       fromWarehouseId: Number(form.fromWarehouseId),
       toWarehouseId: Number(form.toWarehouseId),
       transferDate: form.transferDate,
-      note: form.note,
+      note: serializeNoteWithAttachments(form.note, attachments),
       deliverer: form.deliverer,
       attachedDocument: form.attachedDocument,
       referenceId: form.referenceId ? Number(form.referenceId) : undefined,
@@ -694,9 +697,18 @@ function CreateTransferSlipPage() {
                   <span style={{ fontWeight: 'bold', color: '#0070cc' }}>{new Intl.NumberFormat('vi-VN').format(totalPrice)} đ</span>
                 </div>
               </div>
-              <div className={styles.tableActions} style={{ display: 'flex', gap: '8px', padding: '16px' }}>
-                <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
-                <button type="button" onClick={() => setItems([emptyLine()])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
+              <div className={styles.tableActions} style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
+                  <button type="button" onClick={() => setItems([emptyLine()])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
+                </div>
+                <div style={{ width: '100%', maxWidth: '520px' }}>
+                  <AttachmentUpload
+                    files={attachments}
+                    onChange={setAttachments}
+                    folder="transfer_slips"
+                  />
+                </div>
               </div>
             </div>
           </div>

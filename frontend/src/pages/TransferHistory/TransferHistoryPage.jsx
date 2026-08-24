@@ -4,6 +4,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
+import TimeInfoBadge from '../../components/ui/TimeInfoBadge/TimeInfoBadge';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as transferApi from '../../api/stockTransferApi';
@@ -243,40 +244,7 @@ function TransferHistoryPage() {
               )}
             </div>
 
-            <div style={{ minWidth: 160 }}>
-              <SearchableSelect
-                value={filters.preset || 'THIS_YEAR'}
-                onChange={(e) => {
-                  const presetKey = e.target.value;
-                  if (presetKey === 'CUSTOM') {
-                    setFilters(prev => ({ ...prev, preset: 'CUSTOM' }));
-                    return;
-                  }
-                  const range = getDateRangePreset(presetKey);
-                  setCurrentPage(1);
-                  setFilters(prev => ({
-                    ...prev,
-                    preset: presetKey,
-                    fromDate: range ? range.fromDate : '',
-                    toDate: range ? range.toDate : '',
-                  }));
-                }}
-              >
-                {DATE_PRESET_OPTIONS.map(opt => (
-                  <option key={opt.id} value={opt.id}>{opt.label}</option>
-                ))}
-              </SearchableSelect>
-            </div>
-
-            <FilterPopover
-              filters={filters}
-              onApply={(newFilters) => { setFilters(newFilters); setCurrentPage(1); setTimeout(loadSlips, 0); }}
-              onReset={() => { setFilters(DEFAULT_FILTERS); setCurrentPage(1); setTimeout(loadSlips, 0); }}
-              statusOptions={[
-                { value: 'DRAFT', label: 'Lưu tạm' },
-                { value: 'POSTED', label: 'Ghi sổ' },
-              ]}
-            />
+            <TimeInfoBadge filters={filters} />
           </div>
 
           <div className={styles.filterActions}>
@@ -287,6 +255,15 @@ function TransferHistoryPage() {
             >
               <i className="bi bi-arrow-clockwise"></i>
             </button>
+            <FilterPopover
+              filters={filters}
+              onApply={(newFilters) => { setFilters(newFilters); setCurrentPage(1); setTimeout(loadSlips, 0); }}
+              onReset={() => { setFilters(DEFAULT_FILTERS); setCurrentPage(1); setTimeout(loadSlips, 0); }}
+              statusOptions={[
+                { value: 'DRAFT', label: 'Lưu tạm' },
+                { value: 'POSTED', label: 'Ghi sổ' },
+              ]}
+            />
             <button
               className={styles.iconBtn}
               onClick={handleExport}

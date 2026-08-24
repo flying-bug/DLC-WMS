@@ -3,7 +3,7 @@ import { getTodayIsoDate } from './dateFormat';
 /** Date range preset utilities using Vietnam calendar dates. */
 
 export const DATE_PRESET_OPTIONS = [
-  { id: 'THIS_YEAR', label: 'Năm nay' },
+  { id: 'THIS_YEAR', label: 'Đầu năm tới hiện tại' },
   { id: 'THIS_QUARTER', label: 'Quý này' },
   { id: 'THIS_MONTH', label: 'Tháng này' },
   { id: 'LAST_MONTH', label: 'Tháng trước' },

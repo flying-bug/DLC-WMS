@@ -136,27 +136,18 @@ const AdminLayout = ({ children }) => {
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const navMenuRef = useRef(null);
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-        return localStorage.getItem('dlc_sidebar_collapsed') === 'true';
-    });
 
     useEffect(() => {
         const syncSidebarWidth = () => {
             const viewportWidth = window.innerWidth;
-            const sidebarWidth = viewportWidth < 768
-                ? '0px'
-                : isSidebarCollapsed
-                    ? '72px'
-                    : viewportWidth < 1200
-                        ? '80px'
-                        : '248px';
+            const sidebarWidth = viewportWidth < 768 ? '0px' : '72px';
             document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
         };
 
         syncSidebarWidth();
         window.addEventListener('resize', syncSidebarWidth);
         return () => window.removeEventListener('resize', syncSidebarWidth);
-    }, [isSidebarCollapsed]);
+    }, []);
 
     useLayoutEffect(() => {
         const savedScrollTop = Number(sessionStorage.getItem(SIDEBAR_SCROLL_KEY));
@@ -201,10 +192,6 @@ const AdminLayout = ({ children }) => {
     ));
 
     const toggleGroup = (groupId) => {
-        if (isSidebarCollapsed) {
-            setIsSidebarCollapsed(false);
-            localStorage.setItem('dlc_sidebar_collapsed', 'false');
-        }
         setExpandedGroups(prev => ({
             ...prev,
             [groupId]: !prev[groupId]
@@ -215,14 +202,6 @@ const AdminLayout = ({ children }) => {
         setVoiceEnabled((prev) => {
             const next = !prev;
             localStorage.setItem('dlc_voice_enabled', String(next));
-            return next;
-        });
-    };
-
-    const toggleSidebar = () => {
-        setIsSidebarCollapsed(prev => {
-            const next = !prev;
-            localStorage.setItem('dlc_sidebar_collapsed', String(next));
             return next;
         });
     };
@@ -249,73 +228,68 @@ const AdminLayout = ({ children }) => {
                 />
             )}
 
-            <aside className={`${styles.sidebar} ${mobileMenuOpen ? styles.mobileOpen : ''} ${isSidebarCollapsed ? styles.collapsed : ''}`}>
-                <div className={styles.logoArea}>
-                    <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.brandLogo} />
-                    <div className={styles.brandText}>
-                        <span className={styles.brandTitle}>Duy Long Computer</span>
-                        <span className={styles.brandSubtitle}>Warehouse Management</span>
+            <div className={styles.sidebarWrapper}>
+                <aside
+                    className={`${styles.sidebar} ${mobileMenuOpen ? styles.mobileOpen : ''}`}
+                >
+                    <div className={styles.logoArea}>
+                        <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.brandLogo} />
+                        <div className={styles.brandText}>
+                            <span className={styles.brandTitle}>Duy Long Computer</span>
+                            <span className={styles.brandSubtitle}>Warehouse Management</span>
+                        </div>
+                        <button
+                            type="button"
+                            className={styles.mobileCloseBtn}
+                            onClick={() => setMobileMenuOpen(false)}
+                        >
+                            <i className="fas fa-times"></i>
+                        </button>
                     </div>
-                    <button
-                        type="button"
-                        className={styles.mobileCloseBtn}
-                        onClick={() => setMobileMenuOpen(false)}
-                    >
-                        <i className="fas fa-times"></i>
-                    </button>
-                </div>
-                <nav ref={navMenuRef} className={styles.navMenu} onScroll={handleNavScroll}>
-                    {visibleMenuGroups.map(group => {
-                        const isExpanded = expandedGroups[group.id];
+                    <nav ref={navMenuRef} className={styles.navMenu} onScroll={handleNavScroll}>
+                        {visibleMenuGroups.map(group => {
+                            const isExpanded = expandedGroups[group.id];
 
-                        return (
-                            <div key={group.id} className={styles.menuGroup}>
-                                <div
-                                    className={styles.navGroupLabel}
-                                    onClick={() => toggleGroup(group.id)}
-                                    aria-expanded={isExpanded}
-                                >
-                                    <span>{group.label}</span>
-                                    <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
-                                </div>
-                                {isExpanded && (
-                                    <div className={styles.groupItems}>
-                                        {group.items.map(item => {
-                                            if (item.adminOnly && !isSuperAdmin) return null;
-
-                                            const isActive = item.moduleId 
-                                                ? item.moduleId === activeModule
-                                                : currentPath === item.path || currentPath.startsWith(item.path + '/');
-
-                                            return (
-                                                <button
-                                                    key={item.path}
-                                                    className={`${styles.navItem} ${isActive ? styles.active : ''}`}
-                                                    onClick={() => handleNavClick(item.path)}
-                                                    type="button"
-                                                >
-                                                    <i className={item.icon}></i>
-                                                    <span>{item.label}</span>
-                                                </button>
-                                            );
-                                        })}
+                            return (
+                                <div key={group.id} className={styles.menuGroup}>
+                                    <div
+                                        className={styles.navGroupLabel}
+                                        onClick={() => toggleGroup(group.id)}
+                                        aria-expanded={isExpanded}
+                                    >
+                                        <span>{group.label}</span>
+                                        <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </nav>
-                <div className={styles.collapseBtnContainer}>
-                    <button
-                        type="button"
-                        className={styles.collapseBtn}
-                        onClick={toggleSidebar}
-                        title={isSidebarCollapsed ? "Mở rộng" : "Thu gọn"}
-                    >
-                        <i className={`fas ${isSidebarCollapsed ? 'fa-angle-double-right' : 'fa-angle-double-left'}`}></i>
-                    </button>
-                </div>
-            </aside>
+                                    {isExpanded && (
+                                        <div className={styles.groupItems}>
+                                            {group.items.map(item => {
+                                                if (item.adminOnly && !isSuperAdmin) return null;
+
+                                                const isActive = item.moduleId 
+                                                    ? item.moduleId === activeModule
+                                                    : currentPath === item.path || currentPath.startsWith(item.path + '/');
+
+                                                return (
+                                                    <button
+                                                        key={item.path}
+                                                        className={`${styles.navItem} ${isActive ? styles.active : ''}`}
+                                                        onClick={() => handleNavClick(item.path)}
+                                                        type="button"
+                                                        title={item.label}
+                                                    >
+                                                        <i className={item.icon}></i>
+                                                        <span>{item.label}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </nav>
+                </aside>
+            </div>
 
             <div className={styles.mainWrapper}>
                 <header className={styles.header}>

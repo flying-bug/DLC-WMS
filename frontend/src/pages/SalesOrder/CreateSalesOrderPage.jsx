@@ -11,6 +11,8 @@ import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGrid
 import WarehouseGridSelect from '../../components/ui/WarehouseGridSelect/WarehouseGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import CustomerModal from '../Customer/components/CustomerModal';
+import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
+import { serializeNoteWithAttachments, parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import * as soApi from '../../api/salesOrderApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import styles from './CreateSalesOrderPage.module.css';
@@ -65,6 +67,7 @@ function CreateSalesOrderPage() {
   const [showQuickAddProduct, setShowQuickAddProduct] = useState(false);
   const [quickAddLineIndex, setQuickAddLineIndex] = useState(null);
   const [serialModalLineIndex, setSerialModalLineIndex] = useState(null);
+  const [attachments, setAttachments] = useState([]);
 
 
   const [form, setForm] = useState({
@@ -90,6 +93,15 @@ function CreateSalesOrderPage() {
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(p => ({ ...p, isVisible: false }));
+
+  const handleOpenSerialModal = (idx) => {
+    const line = lines[idx];
+    if (!line.warehouseId) {
+      showToast('warning', 'Vui lòng chọn kho xuất cho sản phẩm này trước khi chọn Serial.');
+      return;
+    }
+    setSerialModalLineIndex(idx);
+  };
 
   // Load lookups
   useEffect(() => {
@@ -197,15 +209,17 @@ function CreateSalesOrderPage() {
         const res = await soApi.getSalesOrderById(id);
         const so = unwrap(res);
         if (!so) return;
+        const { note: cleanNote, attachments: loadedAttachments } = parseNoteAndAttachments(so.note);
         setForm({
           soCode: so.soCode,
           soDate: so.soDate,
           partnerId: so.partnerId,
           warehouseId: so.warehouseId,
           deliveryAddress: so.deliveryAddress || so.partnerAddress || '',
-          note: so.note || '',
+          note: cleanNote || '',
           paymentDueDate: so.paymentDueDate || '',
         });
+        setAttachments(loadedAttachments || []);
         setLines((so.lines || []).map(l => ({
           variantId: l.variantId,
           warehouseId: l.warehouseId || (warehouses.length > 0 ? warehouses[0].id : null),
@@ -239,23 +253,44 @@ function CreateSalesOrderPage() {
       updateLine(idx, 'variantId', null);
       return;
     }
-    const currentWh = lines[idx]?.warehouseId || null;
-    const existingIndex = currentWh
-      ? lines.findIndex((l, i) => i !== idx && String(l.variantId) === String(selected.id) && String(l.warehouseId) === String(currentWh))
-      : -1;
+    const currentLine = lines[idx];
+    const currentWh = currentLine?.warehouseId || (warehouses.length > 0 ? warehouses[0].id : null);
+
+    // Tìm dòng đã tồn tại cùng sản phẩm (ưu tiên cùng kho hoặc chưa gán kho)
+    const existingIndex = lines.findIndex((l, i) => {
+      if (i === idx) return false;
+      if (String(l.variantId) !== String(selected.id)) return false;
+      if (currentLine?.warehouseId && l.warehouseId) {
+        return String(l.warehouseId) === String(currentLine.warehouseId);
+      }
+      return true;
+    });
+
     if (existingIndex >= 0) {
-      const addedQty = Number(lines[idx]?.quantity) || 1;
+      const addedQty = Number(currentLine?.quantity) || 1;
+      const existingLine = lines[existingIndex];
+      const mergedSerials = Array.from(new Set([
+        ...(existingLine.serialNumbers || []),
+        ...(currentLine?.serialNumbers || [])
+      ]));
+
       setLines(prev => {
         const next = [...prev];
         next[existingIndex] = {
           ...next[existingIndex],
-          quantity: Number(next[existingIndex].quantity || 0) + addedQty
+          quantity: Number(next[existingIndex].quantity || 0) + addedQty,
+          serialNumbers: mergedSerials,
         };
-        return next.filter((_, i) => i !== idx);
+        if (next.length > 1) {
+          return next.filter((_, i) => i !== idx);
+        }
+        return next;
       });
-      showToast('info', 'Sản phẩm cùng kho xuất đã tồn tại trong danh sách, đã tự động tăng số lượng.');
+
+      showToast('info', `Sản phẩm "${selected.productName || selected.variantName || 'Hàng hóa'}" đã có trong danh sách, đã tự động dồn dòng và tăng số lượng (+${addedQty}).`);
       return;
     }
+
     updateLineMultiple(idx, {
       variantId: selected.id,
       warehouseId: currentWh,
@@ -264,6 +299,48 @@ function CreateSalesOrderPage() {
       warrantyMonths: Number(selected.warrantyMonths || 0),
       vatRate: Number(selected.vatPercent || selected.vatRate || 0),
     });
+  };
+
+  const handleWarehouseChange = (idx, newWhId) => {
+    const currentLine = lines[idx];
+    if (!newWhId || !currentLine?.variantId) {
+      updateLine(idx, 'warehouseId', newWhId);
+      return;
+    }
+
+    // Kiểm tra xem đã có dòng nào khác cùng variantId và cùng newWhId chưa
+    const existingIndex = lines.findIndex((l, i) =>
+      i !== idx &&
+      String(l.variantId) === String(currentLine.variantId) &&
+      String(l.warehouseId) === String(newWhId)
+    );
+
+    if (existingIndex >= 0) {
+      const addedQty = Number(currentLine.quantity) || 1;
+      const existingLine = lines[existingIndex];
+      const mergedSerials = Array.from(new Set([
+        ...(existingLine.serialNumbers || []),
+        ...(currentLine.serialNumbers || [])
+      ]));
+
+      setLines(prev => {
+        const next = [...prev];
+        next[existingIndex] = {
+          ...next[existingIndex],
+          quantity: Number(next[existingIndex].quantity || 0) + addedQty,
+          serialNumbers: mergedSerials,
+        };
+        if (next.length > 1) {
+          return next.filter((_, i) => i !== idx);
+        }
+        return [emptyLine()];
+      });
+
+      showToast('info', `Đã dồn vào dòng sản phẩm cùng kho xuất và tăng số lượng (+${addedQty}).`);
+      return;
+    }
+
+    updateLine(idx, 'warehouseId', newWhId);
   };
 
   const handleQuickAddProductSuccess = async (newProduct) => {
@@ -309,6 +386,7 @@ function CreateSalesOrderPage() {
   // ── Save ──
   const buildPayload = () => {
     const firstWh = lines[0]?.warehouseId || form.warehouseId;
+    const combinedNote = serializeNoteWithAttachments(form.note, attachments);
     return {
       soCode: form.soCode.trim() || undefined,
       soDate: form.soDate,
@@ -316,7 +394,7 @@ function CreateSalesOrderPage() {
       partnerId: Number(form.partnerId),
       warehouseId: firstWh ? Number(firstWh) : undefined,
       deliveryAddress: form.deliveryAddress || undefined,
-      note: form.note || undefined,
+      note: combinedNote || undefined,
       lines: lines.map(l => ({
         variantId: Number(l.variantId),
         warehouseId: l.warehouseId ? Number(l.warehouseId) : undefined,
@@ -331,6 +409,7 @@ function CreateSalesOrderPage() {
 
   const buildDirectPayload = () => {
     const firstWh = lines.find(l => l.warehouseId)?.warehouseId || form.warehouseId || (warehouses[0]?.id ? Number(warehouses[0].id) : 1);
+    const combinedNote = serializeNoteWithAttachments(form.note, attachments);
     return {
       partnerId: form.partnerId ? Number(form.partnerId) : undefined,
       customerPhone: directCustomer.phone.trim() || undefined,
@@ -339,7 +418,7 @@ function CreateSalesOrderPage() {
       warehouseId: Number(firstWh),
       checkoutDate: form.soDate,
       paymentAmount: Number(paymentAmount || 0),
-      note: form.note || undefined,
+      note: combinedNote || undefined,
       lines: lines.map(l => ({
         variantId: Number(l.variantId),
         warehouseId: l.warehouseId ? Number(l.warehouseId) : Number(firstWh),
@@ -610,11 +689,6 @@ function CreateSalesOrderPage() {
               {isEdit ? `Cập nhật: ${form.soCode}` : (mode === 'direct' ? 'Bán hàng trực tiếp tại quầy' : 'Tạo đơn bán hàng / Báo giá')}
             </h1>
           </div>
-
-          <div className={styles.headerRightTotal}>
-            <span className={styles.headerTotalLabel}>Tổng thanh toán</span>
-            <span className={styles.headerTotalAmount}>{money(grandTotal)} đ</span>
-          </div>
         </div>
 
         {!isEdit && (
@@ -857,16 +931,15 @@ function CreateSalesOrderPage() {
                   <thead>
                     <tr>
                       <th style={{ width: '36px', textAlign: 'center' }}>#</th>
-                      <th style={{ minWidth: '120px', width: '13%' }}>Mã hàng</th>
-                      <th style={{ minWidth: '180px', width: '25%' }}>Tên hàng</th>
-                      <th style={{ minWidth: '110px', width: '12%' }}>Kho xuất</th>
+                      <th style={{ width: '130px', minWidth: '120px' }}>Mã hàng</th>
+                      <th style={{ minWidth: '180px' }}>Tên hàng</th>
+                      <th style={{ width: '115px', minWidth: '110px' }}>Kho xuất</th>
                       <th style={{ width: '55px', textAlign: 'center' }}>ĐVT</th>
-                      <th style={{ width: '75px', textAlign: 'center' }}>Tồn kho</th>
-                      <th style={{ width: '70px', textAlign: 'right' }}>SL</th>
-                      <th style={{ width: '55px', textAlign: 'center' }}>BH (T)</th>
-                      <th style={{ width: '105px', textAlign: 'right' }}>Đơn giá</th>
-                      <th style={{ width: '110px', textAlign: 'right' }}>Thành tiền</th>
-                      <th style={{ width: '60px', textAlign: 'center' }}>% VAT</th>
+                      <th style={{ width: '110px', minWidth: '105px', textAlign: 'center' }}>SL / Tồn</th>
+                      <th style={{ width: '68px', minWidth: '65px', textAlign: 'center' }}>BH (T)</th>
+                      <th style={{ width: '125px', minWidth: '120px', textAlign: 'right' }}>Đơn giá</th>
+                      <th style={{ width: '130px', minWidth: '125px', textAlign: 'right' }}>Thành tiền</th>
+                      <th style={{ width: '62px', minWidth: '60px', textAlign: 'center' }}>% VAT</th>
                       <th style={{ width: '36px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
@@ -935,7 +1008,7 @@ function CreateSalesOrderPage() {
                                 id={`so-line-wh-${idx}`}
                                 warehouses={warehouses}
                                 value={line.warehouseId}
-                                onChange={val => updateLine(idx, 'warehouseId', val)}
+                                onChange={val => handleWarehouseChange(idx, val)}
                                 placeholder="Chọn kho"
                                 displayMode="code"
                                 hasWarning={!line.warehouseId}
@@ -944,30 +1017,57 @@ function CreateSalesOrderPage() {
                             <td style={{ textAlign: 'center', color: '#475569', fontSize: 12.5 }}>
                               {line.unitName || '—'}
                             </td>
-                            <td style={{ textAlign: 'center', fontWeight: 600, color: effectiveWh ? (availableQty >= Number(line.quantity || 0) ? '#16a34a' : '#dc2626') : '#94a3b8' }}>
-                              {effectiveWh ? money(availableQty) : '—'}
+                            <td style={{ textAlign: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                <input
+                                  id={`so-line-qty-${idx}`}
+                                  type="text"
+                                  inputMode="numeric"
+                                  className={styles.lineInput}
+                                  style={{ width: '46px', textAlign: 'center', padding: '0 2px' }}
+                                  value={line.quantity}
+                                  onChange={e => {
+                                    const val = digitsOnly(e.target.value);
+                                    updateLine(idx, 'quantity', val);
+                                  }}
+                                  onBlur={() => {
+                                    if (!line.quantity || Number(line.quantity) < 1) {
+                                      updateLine(idx, 'quantity', 1);
+                                    }
+                                  }}
+                                />
+                                <span
+                                  style={{
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    color: effectiveWh
+                                      ? (availableQty >= Number(line.quantity || 0) ? '#16a34a' : '#dc2626')
+                                      : '#94a3b8',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                  title={effectiveWh ? `Tồn kho: ${money(availableQty)}` : 'Chưa chọn kho'}
+                                >
+                                  / {effectiveWh ? money(availableQty) : '—'}
+                                </span>
+                              </div>
                             </td>
-                            <td>
-                              <input
-                                id={`so-line-qty-${idx}`}
-                                type="number"
-                                min="1"
-                                step="1"
-                                className={styles.lineInput}
-                                style={{ textAlign: 'right' }}
-                                value={line.quantity}
-                                onChange={e => updateLine(idx, 'quantity', e.target.value)}
-                              />
-                            </td>
-                            <td>
+                            <td style={{ textAlign: 'center' }}>
                               <input
                                 id={`so-line-warranty-${idx}`}
-                                type="number"
-                                min="0"
+                                type="text"
+                                inputMode="numeric"
                                 className={styles.lineInput}
-                                style={{ textAlign: 'center' }}
-                                value={line.warrantyMonths}
-                                onChange={e => updateLine(idx, 'warrantyMonths', e.target.value)}
+                                style={{ width: '100%', textAlign: 'center', padding: '0 2px' }}
+                                value={line.warrantyMonths ?? ''}
+                                onChange={e => {
+                                  const val = digitsOnly(e.target.value);
+                                  updateLine(idx, 'warrantyMonths', val === '' ? '' : Number(val));
+                                }}
+                                onBlur={() => {
+                                  if (line.warrantyMonths === '' || line.warrantyMonths == null) {
+                                    updateLine(idx, 'warrantyMonths', 0);
+                                  }
+                                }}
                               />
                             </td>
                             <td>
@@ -976,24 +1076,35 @@ function CreateSalesOrderPage() {
                                 inputMode="numeric"
                                 type="text"
                                 className={styles.lineInput}
-                                style={{ textAlign: 'right' }}
+                                style={{ width: '100%', textAlign: 'right', padding: '0 6px' }}
                                 value={formatMoneyInput(line.unitPrice)}
                                 onChange={e => updateLine(idx, 'unitPrice', digitsOnly(e.target.value))}
                               />
                             </td>
-                            <td style={{ textAlign: 'right', fontWeight: 600, color: '#0075c0', fontSize: 13 }}>
+                            <td style={{ textAlign: 'right', fontWeight: 600, color: '#0075c0', fontSize: 13, whiteSpace: 'nowrap' }}>
                               {money(lineTotal)} đ
                             </td>
                             <td>
                               <input
                                 id={`so-line-vat-${idx}`}
-                                type="number"
-                                min="0"
-                                max="100"
+                                type="text"
+                                inputMode="numeric"
                                 className={styles.lineInput}
-                                style={{ textAlign: 'center' }}
-                                value={line.vatRate}
-                                onChange={e => updateLine(idx, 'vatRate', e.target.value)}
+                                style={{ width: '100%', textAlign: 'center', padding: '0 2px' }}
+                                value={line.vatRate ?? ''}
+                                onChange={e => {
+                                  const val = digitsOnly(e.target.value);
+                                  if (val === '') {
+                                    updateLine(idx, 'vatRate', '');
+                                  } else {
+                                    updateLine(idx, 'vatRate', Math.min(100, Number(val)));
+                                  }
+                                }}
+                                onBlur={() => {
+                                  if (line.vatRate === '' || line.vatRate == null) {
+                                    updateLine(idx, 'vatRate', 0);
+                                  }
+                                }}
                               />
                             </td>
                             <td style={{ textAlign: 'center' }}>
@@ -1009,7 +1120,7 @@ function CreateSalesOrderPage() {
                           {hasSubRow && (
                             <tr className={styles.subRow}>
                               <td></td>
-                              <td colSpan={11}>
+                              <td colSpan={10}>
                                 <div className={styles.subRowContent}>
                                   {/* Hiển thị & chọn Serial khi bán trực tiếp sản phẩm có quản lý Serial */}
                                   {mode === 'direct' && isSerialProduct && (
@@ -1029,7 +1140,7 @@ function CreateSalesOrderPage() {
                                       <button
                                         type="button"
                                         className={styles.btnScanSerial}
-                                        onClick={() => setSerialModalLineIndex(idx)}
+                                        onClick={() => handleOpenSerialModal(idx)}
                                       >
                                         <i className="bi bi-upc-scan" /> {line.serialNumbers?.length > 0 ? 'Sửa Serial' : 'Chọn/Quét Serial'}
                                       </button>
@@ -1103,6 +1214,14 @@ function CreateSalesOrderPage() {
                   </div>
                   <div className={styles.tableCount}>
                     Tổng số: <strong style={{ color: '#1e293b' }}>{lines.length}</strong> dòng sản phẩm
+                  </div>
+
+                  <div style={{ width: '100%', maxWidth: '520px', marginTop: '6px' }}>
+                    <AttachmentUpload
+                      files={attachments}
+                      onChange={setAttachments}
+                      folder="sales_orders"
+                    />
                   </div>
                 </div>
 
@@ -1230,13 +1349,13 @@ function CreateSalesOrderPage() {
           targetQuantity={Number(selectedSerialLine.quantity || 0)}
           initialSerials={selectedSerialLine.serialNumbers || []}
           mode="export"
-          warehouseId={form.warehouseId}
+          warehouseId={selectedSerialLine?.warehouseId}
           variantId={selectedSerialProduct.id}
           onValidateSerial={async (serialValue) => {
             try {
               const response = await exportApi.resolveScan({
                 code: serialValue,
-                warehouseId: form.warehouseId,
+                warehouseId: selectedSerialLine?.warehouseId,
               });
               const scanResult = unwrap(response);
               if (!scanResult.serialNumber) {

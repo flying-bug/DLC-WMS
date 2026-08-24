@@ -24,4 +24,11 @@ public class UploadController {
             @RequestParam(defaultValue = "images") String folder) {
         return ApiResponse.success(cloudinaryService.uploadImage(file, folder));
     }
+
+    @PostMapping(value = "/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<UploadResponse> uploadDocument(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(defaultValue = "attachments") String folder) {
+        return ApiResponse.success(cloudinaryService.uploadDocument(file, folder));
+    }
 }

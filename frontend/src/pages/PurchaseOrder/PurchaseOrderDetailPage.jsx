@@ -7,6 +7,8 @@ import * as poApi from '../../api/purchaseOrderApi';
 import * as importApi from '../../api/inventoryImportApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import { printPurchaseOrder } from '../../utils/printPurchaseOrder';
+import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
+import { parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import styles from './PurchaseOrderDetailPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
@@ -252,12 +254,15 @@ function PurchaseOrderDetailPage() {
               <span className={styles.infoLabel}>Ngày giao hàng DK</span>
               <span className={styles.infoValue}>{fmtDate(po.expectedDeliveryDate)}</span>
             </div>
-            {po.note && (
-              <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>Ghi chú</span>
-                <span className={styles.infoValue}>{po.note}</span>
-              </div>
-            )}
+            {(() => {
+              const { note: cleanNote } = parseNoteAndAttachments(po.note);
+              return cleanNote ? (
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Ghi chú</span>
+                  <span className={styles.infoValue}>{cleanNote}</span>
+                </div>
+              ) : null;
+            })()}
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Người tạo</span>
               <span className={styles.infoValue}>{po.createdByName || userById.get(po.createdBy)?.fullName || userById.get(po.createdBy)?.username || `#${po.createdBy}`}</span>
@@ -363,6 +368,30 @@ function PurchaseOrderDetailPage() {
             </table>
           </div>
         </div>
+
+        {/* ── Ghi chú & Đính kèm ── */}
+        {(() => {
+          const { note: cleanNote, attachments: poAttachments } = parseNoteAndAttachments(po.note);
+          if (!cleanNote && (!poAttachments || poAttachments.length === 0)) return null;
+          return (
+            <div className={styles.card} style={{ marginTop: 20 }}>
+              <div className={styles.cardTitle}>
+                <i className="bi bi-paperclip" /> Ghi chú &amp; Tệp đính kèm
+              </div>
+              {cleanNote && (
+                <div style={{ marginBottom: (poAttachments && poAttachments.length > 0) ? 14 : 0, fontSize: 13.5, color: '#334155', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: 6, border: '1px solid #e2e8f0', lineHeight: 1.6 }}>
+                  <strong>Ghi chú:</strong> {cleanNote}
+                </div>
+              )}
+              {poAttachments && poAttachments.length > 0 && (
+                <AttachmentUpload
+                  files={poAttachments}
+                  disabled={true}
+                />
+              )}
+            </div>
+          );
+        })()}
         
         {/* ── Linked Import Slips ── */}
         {(po.status === 'APPROVED' || po.status === 'POSTED') && (

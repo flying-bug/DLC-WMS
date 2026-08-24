@@ -11,6 +11,8 @@ import IssueInvoiceModal from './components/IssueInvoiceModal';
 import EInvoicePreviewModal from '../EInvoice/components/EInvoicePreviewModal';
 import { printSalesInvoice } from '../../utils/printSalesInvoice';
 import { printQuotation } from '../../utils/printQuotation';
+import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
+import { parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import styles from './SalesOrderDetailPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
@@ -701,6 +703,30 @@ function SalesOrderDetailPage() {
             </table>
           </div>
         </div>
+
+        {/* ── Ghi chú & Đính kèm ── */}
+        {(() => {
+          const { note: cleanNote, attachments: soAttachments } = parseNoteAndAttachments(so.note);
+          if (!cleanNote && (!soAttachments || soAttachments.length === 0)) return null;
+          return (
+            <div className={styles.card} style={{ marginTop: 20 }}>
+              <div className={styles.cardTitle}>
+                <i className="bi bi-paperclip" /> Ghi chú &amp; Tệp đính kèm
+              </div>
+              {cleanNote && (
+                <div style={{ marginBottom: (soAttachments && soAttachments.length > 0) ? 14 : 0, fontSize: 13.5, color: '#334155', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: 6, border: '1px solid #e2e8f0', lineHeight: 1.6 }}>
+                  <strong>Ghi chú:</strong> {cleanNote}
+                </div>
+              )}
+              {soAttachments && soAttachments.length > 0 && (
+                <AttachmentUpload
+                  files={soAttachments}
+                  disabled={true}
+                />
+              )}
+            </div>
+          );
+        })()}
 
         {/* ── Reservations ── */}
         {so.reservations && so.reservations.length > 0 && (

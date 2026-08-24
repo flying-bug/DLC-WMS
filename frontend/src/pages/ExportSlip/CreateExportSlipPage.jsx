@@ -15,6 +15,8 @@ import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrin
 import { printExportSlip } from '../../utils/printExportSlip';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
+import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
+import { serializeNoteWithAttachments, parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import Select from 'react-select';
 import axiosClient from '../../api/axiosClient';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
@@ -150,6 +152,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   const [selectedAssemblyOrder, setSelectedAssemblyOrder] = useState(null);
   const [savedSlip, setSavedSlip] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [attachments, setAttachments] = useState([]);
 
   const [form, setForm] = useState(() => ({
     docCode: '',
@@ -695,7 +698,7 @@ function CreateExportSlipPage({ mode: propMode }) {
       recipientAddress: form.receiverAddress || form.customerAddress || '',
       docDate: form.docDate,
       status,
-      note: form.note,
+      note: serializeNoteWithAttachments(form.note, attachments),
       createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
       lines: items.map(item => ({
         variantId: Number(item.variantId),
@@ -1273,6 +1276,14 @@ function CreateExportSlipPage({ mode: propMode }) {
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
                   <button type="button" onClick={() => setItems([{ ...emptyLine(form.warehouseId), isNew: false }])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
+                </div>
+
+                <div style={{ width: '100%', maxWidth: '520px', marginTop: '6px' }}>
+                  <AttachmentUpload
+                    files={attachments}
+                    onChange={setAttachments}
+                    folder="export_slips"
+                  />
                 </div>
               </div>
 

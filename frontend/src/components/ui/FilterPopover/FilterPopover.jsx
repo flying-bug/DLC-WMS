@@ -92,10 +92,9 @@ const FilterPopover = ({
         className={`${styles.triggerBtn} ${activeCount > 0 ? styles.activeTrigger : ''}`}
         onClick={() => setIsOpen(!isOpen)}
         type="button"
+        title="Bộ lọc dữ liệu"
       >
         <i className="bi bi-funnel"></i>
-        <span>Lọc</span>
-        <i className={`bi bi-chevron-down ${isOpen ? styles.rotatedChevron : ''}`}></i>
         {activeCount > 0 && <span className={styles.badge}>{activeCount}</span>}
       </button>
 

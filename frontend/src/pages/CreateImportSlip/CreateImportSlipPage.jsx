@@ -20,6 +20,8 @@ import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrin
 import { printImportSlip } from '../../utils/printImportSlip';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
+import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
+import { serializeNoteWithAttachments, parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import Select from 'react-select';
 import axiosClient from '../../api/axiosClient';
 import { useAiFeature } from '../../contexts/AiFeatureContext';
@@ -157,6 +159,7 @@ function CreateImportSlipPage() {
   const [ocrQuickAddUnitName, setOcrQuickAddUnitName] = useState('');
   const [ocrQuickAddCategoryName, setOcrQuickAddCategoryName] = useState('');
   const [ocrQuickAddWarrantyMonths, setOcrQuickAddWarrantyMonths] = useState('');
+  const [attachments, setAttachments] = useState([]);
 
   const handleOcrPreviewQuickAdd = (index, rawProductName, unit, category, warrantyMonths) => {
     setOcrQuickAddPreviewIndex(index);
@@ -594,7 +597,7 @@ function CreateImportSlipPage() {
           : (form.partnerId ? Number(form.partnerId) : null),
       docDate: form.docDate,
       status,
-      note: form.note,
+      note: serializeNoteWithAttachments(form.note, attachments),
       createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
       lines: items.map(item => ({
         variantId: Number(item.variantId),
@@ -1282,6 +1285,14 @@ function CreateImportSlipPage() {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
                 <button type="button" onClick={() => setItems([{ ...emptyLine(form.warehouseId), isNew: false }])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
+              </div>
+
+              <div style={{ width: '100%', maxWidth: '520px', marginTop: '6px' }}>
+                <AttachmentUpload
+                  files={attachments}
+                  onChange={setAttachments}
+                  folder="import_slips"
+                />
               </div>
             </div>
 

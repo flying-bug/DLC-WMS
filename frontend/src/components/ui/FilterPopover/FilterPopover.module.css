@@ -6,58 +6,66 @@
 .triggerBtn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  color: var(--color-text-strong);
-  padding: 8px 14px;
+  justify-content: center;
+  position: relative;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
   border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   height: 38px;
+  width: 38px;
+  min-width: 38px;
+  padding: 0;
+  box-sizing: border-box;
+  font-size: 15px;
 }
 
 .triggerBtn:hover {
-  background-color: var(--color-bg-control-hover);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  background-color: #f1f8fe;
+  border-color: #0075c0;
+  color: #0075c0;
 }
 
 .activeTrigger {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background-color: var(--color-info-bg);
+  border-color: #0075c0 !important;
+  color: #0075c0 !important;
+  background-color: #f1f8fe !important;
 }
 
 .badge {
-  background-color: var(--color-primary);
-  color: #ffffff;
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #0075c0 !important;
+  color: #ffffff !important;
   border-radius: 10px;
-  padding: 2px 7px;
-  font-size: 11px;
-  font-weight: 600;
-  margin-left: 2px;
-}
-
-.rotatedChevron {
-  transform: rotate(180deg);
-  transition: transform 0.2s ease;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border: 2px solid #ffffff;
+  line-height: 1;
 }
 
 /* Popover Dropdown Panel */
 .popover {
   position: absolute;
   top: calc(100% + 8px);
-  left: 0;
+  right: 0;
   z-index: 1000;
   width: 540px;
   max-width: calc(100vw - 32px);
   background: var(--color-surface);
   border-radius: 8px;
   box-shadow: var(--shadow-dropdown);
-  border: 1px solid var(--color-border);
+  border: 1px solid #cbd5e1;
   display: flex;
   flex-direction: column;
   animation: fadeIn 0.15s ease-out;

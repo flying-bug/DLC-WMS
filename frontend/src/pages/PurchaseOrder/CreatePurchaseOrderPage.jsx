@@ -4,8 +4,11 @@ import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
+import WarehouseGridSelect from '../../components/ui/WarehouseGridSelect/WarehouseGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import SupplierModal from '../Supplier/components/SupplierModal';
+import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
+import { serializeNoteWithAttachments, parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import OcrUploadModal from '../CreateImportSlip/components/OcrUploadModal';
 import OcrResultPreviewModal from '../CreateImportSlip/components/OcrResultPreviewModal';
 import { useAiFeature } from '../../contexts/AiFeatureContext';
@@ -60,6 +63,7 @@ function CreatePurchaseOrderPage() {
   const [quickAddLineIndex, setQuickAddLineIndex] = useState(null);
   const [saving,    setSaving]    = useState(false);
   const [toast,     setToast]     = useState({ isVisible: false, type: 'info', message: '' });
+  const [attachments, setAttachments] = useState([]);
 
   // ── AI OCR States ──
   const [showOcrModal, setShowOcrModal] = useState(false);
@@ -245,14 +249,16 @@ function CreatePurchaseOrderPage() {
         const res = await poApi.getPurchaseOrderById(id);
         const po  = unwrap(res);
         if (!po) return;
+        const { note: cleanNote, attachments: loadedAttachments } = parseNoteAndAttachments(po.note);
         setForm({
           poCode:               po.poCode,
           poDate:               po.poDate,
           partnerId:            po.partnerId,
           paymentDueDate:       po.paymentDueDate || '',
           expectedDeliveryDate: po.expectedDeliveryDate || '',
-          note:                 po.note || '',
+          note:                 cleanNote || '',
         });
+        setAttachments(loadedAttachments || []);
         setLines((po.lines || []).map(l => ({
           variantId:   l.variantId,
           warehouseId: l.warehouseId || (warehouses.length > 0 ? warehouses[0].id : null),
@@ -360,22 +366,25 @@ function CreatePurchaseOrderPage() {
   const totalQty       = lines.reduce((s, l) => s + Number(l.quantity || 0), 0);
 
   // ── Build payload ──
-  const buildPayload = () => ({
-    poCode:               form.poCode.trim() || undefined,
-    poDate:               form.poDate,
-    paymentDueDate:       form.paymentDueDate       || undefined,
-    expectedDeliveryDate: form.expectedDeliveryDate || undefined,
-    partnerId:            Number(form.partnerId),
-    note:                 form.note || undefined,
-    lines: lines.map(l => ({
-      variantId:   Number(l.variantId),
-      warehouseId: l.warehouseId ? Number(l.warehouseId) : undefined,
-      quantity:    Number(l.quantity),
-      unitPrice:   Number(l.unitPrice),
-      vatRate:     Number(l.vatRate || 0),
-      note:        l.note || undefined,
-    })),
-  });
+  const buildPayload = () => {
+    const combinedNote = serializeNoteWithAttachments(form.note, attachments);
+    return {
+      poCode:               form.poCode.trim() || undefined,
+      poDate:               form.poDate,
+      paymentDueDate:       form.paymentDueDate       || undefined,
+      expectedDeliveryDate: form.expectedDeliveryDate || undefined,
+      partnerId:            Number(form.partnerId),
+      note:                 combinedNote || undefined,
+      lines: lines.map(l => ({
+        variantId:   Number(l.variantId),
+        warehouseId: l.warehouseId ? Number(l.warehouseId) : undefined,
+        quantity:    Number(l.quantity),
+        unitPrice:   Number(l.unitPrice),
+        vatRate:     Number(l.vatRate || 0),
+        note:        l.note || undefined,
+      })),
+    };
+  };
 
   const focusField = (elementId) => {
     setTimeout(() => {
@@ -502,6 +511,11 @@ function CreatePurchaseOrderPage() {
   const supplierOptions = suppliers
     .filter(s => s.status === 'APPROVED' || s.id === form.partnerId)
     .map(s => ({ value: s.id, label: `${s.code} — ${s.name}` }));
+  const warehouseOptions = warehouses.map(w => ({
+    value: w.id,
+    label: `${w.code} — ${w.name}`,
+    codeOnly: w.code || w.name,
+  }));
   const productOptions = variants.map(v => ({
     ...v,
     productName: v.productName || v.variantName || `Sản phẩm #${v.id}`,
@@ -570,7 +584,7 @@ function CreatePurchaseOrderPage() {
           <>
             {/* ── Form body ── */}
             <div className={styles.formBody}>
-              {/* Left panel — supplier info */}
+              {/* Left card — supplier info */}
               <div className={styles.leftPanel}>
                 <div className={styles.section}>
                   <div className={styles.sectionTitle}>
@@ -592,17 +606,29 @@ function CreatePurchaseOrderPage() {
                           menuPortalTarget={document.body}
                         />
                       </div>
-                      <button type="button" onClick={() => setShowSupplierModal(true)} style={{ width: '38px', height: '38px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary)' }}></i>
+                      <button type="button" onClick={() => setShowSupplierModal(true)} style={{ width: '36px', height: '36px', border: '1px solid #d1d5db', borderRadius: '4px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Thêm nhanh nhà cung cấp">
+                        <i className="bi bi-plus" style={{ fontSize: '20px', color: 'var(--color-primary, #059669)' }}></i>
                       </button>
                     </div>
                   </div>
 
                   <div className={styles.fieldRow}>
+                    <label className={styles.label}>Địa chỉ</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      readOnly
+                      value={suppliers.find(s => s.id === form.partnerId)?.address || ''}
+                      style={{ backgroundColor: '#f8fafc' }}
+                      placeholder="Địa chỉ nhà cung cấp..."
+                    />
+                  </div>
+
+                  <div className={styles.fieldRow} style={{ marginBottom: 0 }}>
                     <label className={styles.label}>Ghi chú</label>
                     <textarea
                       className={styles.textarea}
-                      rows={3}
+                      rows={2}
                       value={form.note}
                       onChange={e => setForm(p => ({ ...p, note: e.target.value }))}
                       placeholder="Ghi chú thêm về đơn mua hàng..."
@@ -611,11 +637,22 @@ function CreatePurchaseOrderPage() {
                 </div>
               </div>
 
-              {/* Middle panel — order identity */}
-              <div className={styles.middlePanel}>
+              {/* Right card — document info */}
+              <div className={styles.rightPanel}>
                 <div className={styles.section}>
                   <div className={styles.sectionTitle}>
-                    <i className="bi bi-file-earmark-text" /> Thông tin đơn mua
+                    <i className="bi bi-file-earmark-text" /> Thông tin chứng từ
+                  </div>
+
+                  <div className={styles.fieldRow}>
+                    <label className={styles.label}>Số đơn mua</label>
+                    <input
+                      type="text"
+                      className={styles.input}
+                      value={form.poCode || ''}
+                      onChange={e => setForm(p => ({ ...p, poCode: e.target.value }))}
+                      placeholder="Tự động tạo nếu để trống"
+                    />
                   </div>
 
                   <div className={styles.fieldRow}>
@@ -629,8 +666,8 @@ function CreatePurchaseOrderPage() {
                     />
                   </div>
 
-                  <div className={styles.additionalFields}>
-                    <div className={styles.fieldRow}>
+                  <div className={styles.directGrid}>
+                    <div className={styles.fieldRow} style={{ marginBottom: 0 }}>
                       <label className={styles.label}>Hạn công nợ</label>
                       <input
                         id="po-paymentDueDate"
@@ -642,8 +679,8 @@ function CreatePurchaseOrderPage() {
                       />
                     </div>
 
-                    <div className={styles.fieldRow}>
-                      <label className={styles.label}>Ngày giao hàng dự kiến</label>
+                    <div className={styles.fieldRow} style={{ marginBottom: 0 }}>
+                      <label className={styles.label}>Ngày giao dự kiến</label>
                       <input
                         type="date"
                         className={styles.input}
@@ -655,48 +692,26 @@ function CreatePurchaseOrderPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Right panel — delivery and totals */}
-              <div className={styles.rightPanel}>
-                <div className={styles.section}>
-                  {/* Summary box */}
-                  <div className={styles.summaryBox}>
-                    <div className={styles.summaryRow}>
-                      <span>Tổng số lượng:</span>
-                      <strong>{totalQty.toLocaleString('vi-VN')}</strong>
-                    </div>
-                    <div className={styles.summaryRow}>
-                      <span>Tiền hàng:</span>
-                      <strong>{money(subTotalAmount)} đ</strong>
-                    </div>
-                    <div className={styles.summaryRow}>
-                      <span>Thuế VAT:</span>
-                      <strong>{money(totalVatAmount)} đ</strong>
-                    </div>
-                    <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
-                      <span>Tổng công nợ:</span>
-                      <strong className={styles.totalAmount}>{money(grandTotal)} đ</strong>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* ── Lines ── */}
             <div className={styles.linesSection}>
               <div className={styles.linesSectionHeader}>
-                <span className={styles.sectionTitle}>
+                <span className={styles.sectionTitle} style={{ borderBottom: 'none', margin: 0, padding: 0 }}>
                   <i className="bi bi-list-ul" /> Danh sách hàng hóa cần mua
+                </span>
+                <span style={{ fontSize: '12.5px', color: '#64748b' }}>
+                  Tổng cộng: <strong style={{ color: '#1e293b' }}>{lines.length}</strong> dòng
                 </span>
               </div>
 
-              <div style={{ overflowX: 'auto' }}>
+              <div className={styles.linesTableWrap}>
                 <table className={styles.linesTable}>
                   <thead>
                     <tr>
                       <th style={{ width: 36, textAlign: 'center' }}>#</th>
                       <th style={{ minWidth: 260, width: 280 }}>Sản phẩm</th>
-                      <th style={{ width: 170, minWidth: 160 }}>Kho nhận dự kiến</th>
+                      <th style={{ width: 120, minWidth: 100 }}>Kho nhận</th>
                       <th style={{ width: 80, textAlign: 'center' }}>ĐVT</th>
                       <th style={{ width: 100, textAlign: 'right' }}>Số lượng</th>
                       <th style={{ width: 130, textAlign: 'right' }}>Đơn giá (đ)</th>
@@ -728,15 +743,14 @@ function CreatePurchaseOrderPage() {
                               hideStock
                             />
                           </td>
-                          <td style={{ minWidth: 160 }}>
-                            <Select
-                              inputId={`po-line-wh-${idx}`}
-                              options={warehouses.map(w => ({ value: w.id, label: `${w.name} (${w.code})` }))}
-                              value={warehouses.map(w => ({ value: w.id, label: `${w.name} (${w.code})` })).find(o => o.value === line.warehouseId) || null}
-                              onChange={opt => updateLine(idx, 'warehouseId', opt?.value || null)}
-                              placeholder="Chọn kho..."
-                              styles={customSelectStyles}
-                              menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                          <td style={{ minWidth: 100, width: 120 }}>
+                            <WarehouseGridSelect
+                              id={`po-line-wh-${idx}`}
+                              warehouses={warehouses}
+                              value={line.warehouseId}
+                              onChange={selectedId => updateLine(idx, 'warehouseId', selectedId)}
+                              displayMode="code"
+                              placeholder="Chọn kho"
                             />
                           </td>
                           <td style={{ textAlign: 'center', color: '#64748b', fontSize: 13 }}>
@@ -811,44 +825,54 @@ function CreatePurchaseOrderPage() {
                 </table>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 20px', backgroundColor: '#fff', borderTop: '1px solid #e0e0e0' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ color: '#4b5563', fontSize: '13px' }}>
-                    Tổng số: <strong style={{ color: '#111827' }}>{lines.length}</strong> bản ghi
+              {/* Table Bottom Bar */}
+              <div className={styles.tableBottomBar}>
+                <div className={styles.tableBottomLeft}>
+                  <div className={styles.tableCount}>
+                    Tổng số: <strong style={{ color: '#0f172a' }}>{lines.length}</strong> bản ghi
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div className={styles.tableActions}>
                     <button
                       type="button"
+                      className={styles.btnTableAction}
                       onClick={addLine}
-                      style={{
-                        padding: '6px 12px',
-                        border: '1px solid #d1d5db',
-                        backgroundColor: '#fff',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        fontWeight: 500,
-                        color: '#374151'
-                      }}
                     >
-                      Thêm dòng
+                      <i className="bi bi-plus-lg" /> Thêm dòng
                     </button>
                     <button
                       type="button"
+                      className={styles.btnTableAction}
                       onClick={() => setLines([emptyLine()])}
-                      style={{
-                        padding: '6px 12px',
-                        border: '1px solid #d1d5db',
-                        backgroundColor: '#fff',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        fontWeight: 500,
-                        color: '#374151'
-                      }}
                     >
-                      Xóa hết dòng
+                      <i className="bi bi-trash" /> Xóa hết dòng
                     </button>
+                  </div>
+
+                  <div style={{ width: '100%', maxWidth: '520px', marginTop: '6px' }}>
+                    <AttachmentUpload
+                      files={attachments}
+                      onChange={setAttachments}
+                      folder="purchase_orders"
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.summarySection}>
+                  <div className={styles.summaryRow}>
+                    <span>Tổng số lượng:</span>
+                    <strong>{totalQty.toLocaleString('vi-VN')}</strong>
+                  </div>
+                  <div className={styles.summaryRow}>
+                    <span>Tiền hàng:</span>
+                    <strong>{money(subTotalAmount)} đ</strong>
+                  </div>
+                  <div className={styles.summaryRow}>
+                    <span>Thuế VAT:</span>
+                    <strong>{money(totalVatAmount)} đ</strong>
+                  </div>
+                  <div className={styles.summaryTotalRow}>
+                    <span>Tổng công nợ:</span>
+                    <span className={styles.summaryTotalValue}>{money(grandTotal)} đ</span>
                   </div>
                 </div>
               </div>
@@ -856,29 +880,36 @@ function CreatePurchaseOrderPage() {
 
             {/* ── Action buttons ── */}
             <div className={styles.actionBar}>
-              <button
-                className={styles.btnOutline}
-                onClick={() => navigate('/purchase-orders')}
-                disabled={saving}
-              >
-                <i className="bi bi-x" /> Hủy
-              </button>
-              <button
-                className={styles.btnSave}
-                onClick={() => handleSave(false)}
-                disabled={saving}
-              >
-                {saving ? <><i className="bi bi-hourglass-split" /> Đang lưu...</> : <><i className="bi bi-floppy" /> Lưu nháp</>}
-              </button>
-              {!isEdit && (
+              <div className={styles.actionLeft}>
                 <button
-                  className={styles.btnSaveAndApprove}
-                  onClick={() => handleSave(true)}
+                  type="button"
+                  className={styles.btnOutline}
+                  onClick={() => navigate('/purchase-orders')}
                   disabled={saving}
                 >
-                  {saving ? '...' : <><i className="bi bi-check2-circle" /> Lưu &amp; Duyệt ngay</>}
+                  <i className="bi bi-x-lg" /> Hủy
                 </button>
-              )}
+              </div>
+              <div className={styles.actionRight}>
+                <button
+                  type="button"
+                  className={styles.btnSave}
+                  onClick={() => handleSave(false)}
+                  disabled={saving}
+                >
+                  {saving ? <><i className="bi bi-hourglass-split" /> Đang lưu...</> : <><i className="bi bi-floppy" /> Lưu nháp</>}
+                </button>
+                {!isEdit && (
+                  <button
+                    type="button"
+                    className={styles.btnSaveAndApprove}
+                    onClick={() => handleSave(true)}
+                    disabled={saving}
+                  >
+                    {saving ? '...' : <><i className="bi bi-check2-circle" /> Lưu &amp; Duyệt ngay</>}
+                  </button>
+                )}
+              </div>
             </div>
           </>
         )}

@@ -7,107 +7,101 @@
     font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 
+.sidebarWrapper {
+    width: 72px;
+    flex-shrink: 0;
+    height: 100vh;
+    position: relative;
+    z-index: 1000;
+}
+
+/* Sidebar cố định toàn chiều cao từ top y=0 */
 .sidebar {
-    width: 260px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 72px;
+    height: 100vh;
     background: var(--color-primary-sidebar);
     color: var(--overlay-white-soft-text);
     display: flex;
     flex-direction: column;
-    box-shadow: var(--shadow-dropdown);
-    z-index: 10;
-    transition: width 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
-.sidebar.collapsed {
-    width: 72px;
-}
-
-.sidebar.collapsed .brandText {
+.sidebar::-webkit-scrollbar {
     display: none;
 }
 
-.sidebar.collapsed .navItem span,
-.sidebar.collapsed .navGroupLabel span,
-.sidebar.collapsed .navGroupLabel i {
-    display: none;
+/* KHI HOVER: Sidebar mở rộng ra 256px đè lên trên cả Header & Content */
+.sidebar:hover {
+    width: 256px;
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
 }
 
-.sidebar.collapsed .navItem {
-    justify-content: center;
-    padding: 12px 0;
-    margin: 4px 10px;
-}
-
-.sidebar.collapsed .navItem i {
-    margin: 0;
-    font-size: 1.3rem;
-}
-
-.sidebar.collapsed .navGroupLabel {
-    padding: 12px 0;
-    justify-content: center;
-}
-
-.collapseBtnContainer {
-    margin-top: auto;
-    padding: 12px;
-    border-top: 1px solid var(--overlay-white-line);
-    display: flex;
-    justify-content: center;
-}
-
-.collapseBtn {
-    background: transparent;
-    border: none;
-    color: var(--overlay-white-soft-text);
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: color 0.2s;
-    width: 100%;
-    text-align: center;
-    padding: 8px 0;
-}
-
-.collapseBtn:hover {
-    color: var(--color-white);
-}
-
-.sidebar.collapsed .collapseBtnContainer {
-    padding: 12px 0;
-}
-
+/* Logo Area: Cao đúng 62px bằng với Header */
 .logoArea {
-    padding: 16px 20px;
+    height: 62px;
+    min-height: 62px;
+    max-height: 62px;
+    padding: 0 14px;
     display: flex;
     align-items: center;
     gap: 12px;
     border-bottom: 1px solid var(--overlay-white-line);
-    min-height: 80px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    transition: padding 0.2s ease;
+    background: var(--color-primary-sidebar);
+}
+
+.sidebar:hover .logoArea {
+    padding: 0 18px;
 }
 
 .brandLogo {
     width: 44px;
     height: 44px;
     object-fit: contain;
-    border-radius: 4px;
+    border-radius: 6px;
     background: var(--color-white);
     padding: 2px;
+    flex-shrink: 0;
 }
 
 .brandText {
     display: flex;
     flex-direction: column;
     color: var(--color-white);
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.sidebar:hover .brandText {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
 }
 
 .brandTitle {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 700;
     line-height: 1.2;
 }
 
 .brandSubtitle {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: var(--overlay-white-soft-text);
     font-weight: 500;
 }
@@ -141,8 +135,9 @@
 .navMenu {
     display: flex;
     flex-direction: column;
-    padding: 12px 0;
+    padding: 8px 0;
     overflow-y: auto;
+    overflow-x: hidden;
     flex: 1;
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -152,27 +147,93 @@
     display: none;
 }
 
-.navItem {
-    padding: 10px 16px;
-    margin: 4px 12px;
+.menuGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Tiêu đề nhóm (PHÂN HỆ, DANH MỤC, HỆ THỐNG) */
+.navGroupLabel {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
+    padding: 10px 14px 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.6);
+    letter-spacing: 0.5px;
     cursor: pointer;
-    color: var(--overlay-white-soft-text);
-    transition: all 0.2s ease;
-    border: 0;
-    border-radius: 8px;
+    user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
+    height: 28px;
+    box-sizing: border-box;
+}
+
+.navGroupLabel span,
+.navGroupLabel i {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.sidebar:hover .navGroupLabel {
+    padding: 12px 18px 4px;
+}
+
+.sidebar:hover .navGroupLabel span,
+.sidebar:hover .navGroupLabel i {
+    opacity: 1;
+}
+
+.groupItems {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Item Menu */
+.navItem {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    margin: 3px 8px;
+    border: none;
     background: transparent;
-    text-align: left;
-    font: inherit;
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 8px;
+    cursor: pointer;
     font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    height: 42px;
+    box-sizing: border-box;
 }
 
 .navItem i {
-    width: 20px;
+    font-size: 1.25rem;
+    width: 28px;
     text-align: center;
-    font-size: 1.1rem;
+    flex-shrink: 0;
+    margin-right: 0;
+    transition: margin-right 0.2s ease;
+}
+
+.sidebar:hover .navItem i {
+    margin-right: 12px;
+}
+
+.navItem span {
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.sidebar:hover .navItem span {
+    opacity: 1;
+    transform: translateX(0);
 }
 
 .navItem:hover {
@@ -214,7 +275,7 @@
     box-shadow: var(--shadow-card-soft);
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 10;
 }
 
 .topTabs {
@@ -369,40 +430,18 @@
 
 /* ── 4-Breakpoint System ── */
 
-/* Breakpoint 1 & 2: Desktop XL (>=1440px) & Desktop (1200px - 1439px) */
-@media (min-width: 1200px) {
-    .sidebar {
-        width: 248px;
-        transition: width var(--transition-base);
-    }
-}
-
-/* Breakpoint 3: Tablet (768px - 1199px) -> Collapsed Icon Sidebar */
+/* Breakpoint 3: Tablet (768px - 1199px) */
 @media (min-width: 768px) and (max-width: 1199px) {
-    .sidebar {
-        width: 80px;
-        transition: width var(--transition-base);
-    }
-
-    .brandText,
-    .navItem span,
-    .navGroupLabel {
-        display: none;
-    }
-
-    .logoArea {
-        padding: 16px 10px;
-        justify-content: center;
-    }
-
-    .navItem {
-        justify-content: center;
-        padding: 16px 0;
+    .sidebarWrapper {
+        width: 72px;
     }
 }
 
 /* Breakpoint 4: Mobile (< 768px) -> Slide-in Drawer with Hamburger */
 @media (max-width: 767px) {
+    .sidebarWrapper {
+        width: 0;
+    }
     .hamburgerBtn {
         display: flex;
     }

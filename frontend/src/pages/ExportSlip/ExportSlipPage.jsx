@@ -10,6 +10,9 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
+import TimeInfoBadge from '../../components/ui/TimeInfoBadge/TimeInfoBadge';
+import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
+import { parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import { printExportSlip } from '../../utils/printExportSlip';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
@@ -427,31 +430,20 @@ function ExportSlipPage() {
               )}
             </div>
 
-            <div style={{ minWidth: 160 }}>
-              <SearchableSelect
-                value={filters.preset || 'THIS_YEAR'}
-                onChange={(e) => {
-                  const presetKey = e.target.value;
-                  if (presetKey === 'CUSTOM') {
-                    setFilters(prev => ({ ...prev, preset: 'CUSTOM' }));
-                    return;
-                  }
-                  const range = getDateRangePreset(presetKey);
-                  setCurrentPage(1);
-                  setFilters(prev => ({
-                    ...prev,
-                    preset: presetKey,
-                    fromDate: range ? range.fromDate : '',
-                    toDate: range ? range.toDate : '',
-                  }));
-                }}
-              >
-                {DATE_PRESET_OPTIONS.map(opt => (
-                  <option key={opt.id} value={opt.id}>{opt.label}</option>
-                ))}
-              </SearchableSelect>
-            </div>
+            <TimeInfoBadge filters={filters} />
+          </div>
 
+          <div className={styles.filterActions}>
+            <button
+              className={styles.iconBtn}
+              onClick={() => {
+                setCurrentPage(1);
+                setFilters(DEFAULT_FILTERS);
+              }}
+              title="Đặt lại bộ lọc"
+            >
+              <i className="bi bi-arrow-clockwise"></i>
+            </button>
             <FilterPopover
               filters={filters}
               onApply={(newFilters) => {
@@ -471,19 +463,6 @@ function ExportSlipPage() {
               staffLabel="Nhân viên xuất"
               purposeLabel="Loại phiếu xuất"
             />
-          </div>
-
-          <div className={styles.filterActions}>
-            <button
-              className={styles.iconBtn}
-              onClick={() => {
-                setCurrentPage(1);
-                setFilters(DEFAULT_FILTERS);
-              }}
-              title="Đặt lại bộ lọc"
-            >
-              <i className="bi bi-arrow-clockwise"></i>
-            </button>
             <button
               className={styles.iconBtn}
               onClick={handleExport}
@@ -771,14 +750,19 @@ function ExportSlipPage() {
                       </span>
                     </div>
                     
-                    <div className={styles.infoBlock}>
-                      <span className={styles.infoLabel}>
-                        <i className="bi bi-chat-text"></i> Lý do xuất
-                      </span>
-                      <span className={styles.infoValue} style={{ color: selectedSlip.note ? 'inherit' : '#9ca3af', fontStyle: selectedSlip.note ? 'normal' : 'italic' }}>
-                        {selectedSlip.note || 'Không có ghi chú'}
-                      </span>
-                    </div>
+                    {(() => {
+                      const { note: cleanNote } = parseNoteAndAttachments(selectedSlip.note);
+                      return (
+                        <div className={styles.infoBlock}>
+                          <span className={styles.infoLabel}>
+                            <i className="bi bi-chat-text"></i> Lý do xuất
+                          </span>
+                          <span className={styles.infoValue} style={{ color: cleanNote ? 'inherit' : '#9ca3af', fontStyle: cleanNote ? 'normal' : 'italic' }}>
+                            {cleanNote || 'Không có ghi chú'}
+                          </span>
+                        </div>
+                      );
+                    })()}
 
                     {(selectedSlip.referenceType && selectedSlip.referenceId) && (
                       <div className={styles.infoBlock}>
@@ -863,6 +847,19 @@ function ExportSlipPage() {
                     })}
                   </tbody>
                 </table>
+
+                {(() => {
+                  const { attachments } = parseNoteAndAttachments(selectedSlip.note);
+                  if (!attachments || attachments.length === 0) return null;
+                  return (
+                    <div style={{ marginTop: '16px', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <AttachmentUpload
+                        files={attachments}
+                        disabled={true}
+                      />
+                    </div>
+                  );
+                })()}
 
                 <div className={styles.detailFooter}>
                   <div className={styles.footerGroup}>

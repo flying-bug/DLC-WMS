@@ -4,6 +4,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
+import TimeInfoBadge from '../../components/ui/TimeInfoBadge/TimeInfoBadge';
 import * as poApi from '../../api/purchaseOrderApi';
 import { printPurchaseOrder } from '../../utils/printPurchaseOrder';
 import styles from './PurchaseOrderListPage.module.css';
@@ -190,31 +191,20 @@ function PurchaseOrderListPage() {
               )}
             </div>
 
-            <div style={{ minWidth: 160 }}>
-              <SearchableSelect
-                value={filters.preset || 'THIS_YEAR'}
-                onChange={e => {
-                  const presetKey = e.target.value;
-                  if (presetKey === 'CUSTOM') {
-                    setFilters(p => ({ ...p, preset: 'CUSTOM' }));
-                    return;
-                  }
-                  const range = getDateRangePreset(presetKey);
-                  setCurrentPage(1);
-                  setFilters(p => ({
-                    ...p,
-                    preset: presetKey,
-                    fromDate: range ? range.fromDate : '',
-                    toDate: range ? range.toDate : '',
-                  }));
-                }}
-              >
-                {DATE_PRESET_OPTIONS.map(opt => (
-                  <option key={opt.id} value={opt.id}>{opt.label}</option>
-                ))}
-              </SearchableSelect>
-            </div>
+            <TimeInfoBadge filters={filters} />
+          </div>
 
+          <div className={styles.filterActions}>
+            <button
+              className={styles.iconBtn}
+              onClick={() => {
+                setCurrentPage(1);
+                setFilters(DEFAULT_FILTERS);
+              }}
+              title="Đặt lại bộ lọc"
+            >
+              <i className="bi bi-arrow-clockwise" />
+            </button>
             <FilterPopover
               filters={filters}
               onApply={(newFilters) => {
@@ -229,19 +219,6 @@ function PurchaseOrderListPage() {
               partnerLabel="Nhà cung cấp"
               statusOptions={STATUS_OPTIONS}
             />
-          </div>
-
-          <div className={styles.filterActions}>
-            <button
-              className={styles.iconBtn}
-              onClick={() => {
-                setCurrentPage(1);
-                setFilters(DEFAULT_FILTERS);
-              }}
-              title="Đặt lại bộ lọc"
-            >
-              <i className="bi bi-arrow-clockwise" />
-            </button>
             <button
               className={styles.iconBtn}
               onClick={handleExport}
