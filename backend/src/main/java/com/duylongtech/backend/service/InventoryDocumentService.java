@@ -36,6 +36,7 @@ import com.duylongtech.backend.entity.SalesOrderLine;
 import com.duylongtech.backend.entity.PurchaseOrder;
 import com.duylongtech.backend.entity.PurchaseOrderLine;
 import java.util.Map;
+import com.duylongtech.backend.repository.UnitRepository;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
 import com.duylongtech.backend.repository.DeviceComponentSerialRepository;
 import com.duylongtech.backend.repository.StocktakeRepository;
@@ -110,6 +111,7 @@ public class InventoryDocumentService {
     private final SalesOrderService salesOrderService;
     private final com.duylongtech.backend.repository.StockReservationRepository stockReservationRepository;
     private final com.duylongtech.backend.repository.WarehouseRepository warehouseRepository;
+    private final UnitRepository unitRepository;
     private final AppNotificationService appNotificationService;
 
     @Transactional(readOnly = true)
@@ -363,7 +365,9 @@ public class InventoryDocumentService {
             if (effectiveWarehouseId == null) {
                 throw new BusinessException("Dòng sản phẩm chưa được chọn kho xuất");
             }
-            BigDecimal qtyToExport = line.getQuantityOut();
+            BigDecimal qtyToExport = line.getBaseQuantity() != null && line.getBaseQuantity().compareTo(ZERO) > 0
+                    ? line.getBaseQuantity()
+                    : line.getQuantityOut();
             List<SerialNumber> serialsToExport = new java.util.ArrayList<>();
             ProductVariant variant = productVariantRepository.findById(line.getVariantId()).orElse(null);
 
@@ -578,7 +582,9 @@ public class InventoryDocumentService {
             if (effectiveWarehouseId == null) {
                 throw new BusinessException("Dòng sản phẩm chưa được chọn kho nhập");
             }
-            BigDecimal qtyToImport = line.getQuantityIn();
+            BigDecimal qtyToImport = line.getBaseQuantity() != null && line.getBaseQuantity().compareTo(ZERO) > 0
+                    ? line.getBaseQuantity()
+                    : line.getQuantityIn();
             BigDecimal unitCost = nonNegativeOrZero(line.getUnitCost(), "unitCost");
             InventoryBalance balance = inventoryBalanceRepository
                     .findByWarehouseAndVariantForUpdate(effectiveWarehouseId, line.getVariantId(), "GOOD")
@@ -1428,6 +1434,19 @@ public class InventoryDocumentService {
             }
         }
 
+        BigDecimal ratio = lr.getConversionRatio() != null && lr.getConversionRatio().compareTo(ZERO) > 0
+                ? lr.getConversionRatio()
+                : BigDecimal.ONE;
+        String op = lr.getConversionOperator() != null && !lr.getConversionOperator().isBlank()
+                ? lr.getConversionOperator().trim().toUpperCase()
+                : "MULTIPLY";
+        BigDecimal baseQty;
+        if ("DIVIDE".equals(op) || "/".equals(op)) {
+            baseQty = quantityOut.divide(ratio, 4, RoundingMode.HALF_UP);
+        } else {
+            baseQty = quantityOut.multiply(ratio);
+        }
+
         return InventoryDocumentLine.builder()
                 .inventoryDocument(doc)
                 .variantId(lr.getVariantId())
@@ -1445,6 +1464,11 @@ public class InventoryDocumentService {
                 .serialNumbersText(formatSerialNumbers(lr.getSerialNumbers()))
                 .warrantyMonths(warrantyMonths)
                 .note(lr.getNote())
+                .unitId(lr.getUnitId())
+                .baseUnitId(lr.getBaseUnitId())
+                .conversionOperator(op)
+                .conversionRatio(ratio)
+                .baseQuantity(baseQty)
                 .build();
     }
 
@@ -1472,6 +1496,19 @@ public class InventoryDocumentService {
         BigDecimal rejectedQty = lr.getRejectedQuantity() != null ? lr.getRejectedQuantity() : ZERO;
         String reason = trimToNull(lr.getDiscrepancyReason());
 
+        BigDecimal ratio = lr.getConversionRatio() != null && lr.getConversionRatio().compareTo(ZERO) > 0
+                ? lr.getConversionRatio()
+                : BigDecimal.ONE;
+        String op = lr.getConversionOperator() != null && !lr.getConversionOperator().isBlank()
+                ? lr.getConversionOperator().trim().toUpperCase()
+                : "MULTIPLY";
+        BigDecimal baseQty;
+        if ("DIVIDE".equals(op) || "/".equals(op)) {
+            baseQty = quantityIn.divide(ratio, 4, RoundingMode.HALF_UP);
+        } else {
+            baseQty = quantityIn.multiply(ratio);
+        }
+
         return InventoryDocumentLine.builder()
                 .inventoryDocument(doc)
                 .variantId(lr.getVariantId())
@@ -1492,6 +1529,11 @@ public class InventoryDocumentService {
                 .expectedQuantity(expectedQty)
                 .rejectedQuantity(rejectedQty)
                 .discrepancyReason(reason)
+                .unitId(lr.getUnitId())
+                .baseUnitId(lr.getBaseUnitId())
+                .conversionOperator(op)
+                .conversionRatio(ratio)
+                .baseQuantity(baseQty)
                 .build();
     }
 
@@ -1770,6 +1812,17 @@ public class InventoryDocumentService {
                 lr.setExpectedQuantity(l.getExpectedQuantity() != null ? l.getExpectedQuantity() : l.getQuantityIn());
                 lr.setRejectedQuantity(l.getRejectedQuantity() != null ? l.getRejectedQuantity() : ZERO);
                 lr.setDiscrepancyReason(l.getDiscrepancyReason());
+                lr.setUnitId(l.getUnitId());
+                lr.setBaseUnitId(l.getBaseUnitId());
+                lr.setConversionOperator(l.getConversionOperator());
+                lr.setConversionRatio(l.getConversionRatio() != null ? l.getConversionRatio() : BigDecimal.ONE);
+                lr.setBaseQuantity(l.getBaseQuantity() != null ? l.getBaseQuantity() : (l.getQuantityIn() != null && l.getQuantityIn().compareTo(ZERO) > 0 ? l.getQuantityIn() : l.getQuantityOut()));
+                if (l.getUnitId() != null) {
+                    unitRepository.findById(l.getUnitId()).ifPresent(u -> lr.setUnitName(u.getName()));
+                }
+                if (l.getBaseUnitId() != null) {
+                    unitRepository.findById(l.getBaseUnitId()).ifPresent(u -> lr.setBaseUnitName(u.getName()));
+                }
                 if (l.getWarehouseId() != null) {
                     warehouseRepository.findById(l.getWarehouseId()).ifPresent(wh -> {
                         lr.setWarehouseName(wh.getName());

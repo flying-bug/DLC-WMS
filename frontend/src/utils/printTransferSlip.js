@@ -1,10 +1,12 @@
 import { numberToVietnameseWords } from './numberToVietnameseWords';
 import { formatDateOnly } from './dateFormat';
+import { canViewPricing } from '../auth/session';
 
 export function printTransferSlip(slipOrSlips, options = {}) {
   const {
     warehouseById = new Map(),
     productById = new Map(),
+    showPricing = canViewPricing(),
   } = options;
 
   const slips = Array.isArray(slipOrSlips) ? slipOrSlips : [slipOrSlips];
@@ -74,8 +76,10 @@ export function printTransferSlip(slipOrSlips, options = {}) {
           </td>
           <td style="text-align: center;">${escapeHtml(unit)}</td>
           <td style="text-align: center; font-weight: 500;">${qty.toLocaleString('vi-VN')}</td>
-          <td style="text-align: right;">${price ? price.toLocaleString('vi-VN') : ''}</td>
-          <td style="text-align: right; font-weight: 600;">${amount ? amount.toLocaleString('vi-VN') : ''}</td>
+          ${showPricing ? `
+            <td style="text-align: right;">${price ? price.toLocaleString('vi-VN') : ''}</td>
+            <td style="text-align: right; font-weight: 600;">${amount ? amount.toLocaleString('vi-VN') : ''}</td>
+          ` : ''}
         </tr>
       `;
     });
@@ -130,11 +134,13 @@ export function printTransferSlip(slipOrSlips, options = {}) {
           <thead>
             <tr>
               <th style="width: 5%;">STT</th>
-              <th style="width: 40%;">Tên hàng hóa, dịch vụ</th>
+              <th style="width: ${showPricing ? '40%' : '65%'};">Tên hàng hóa, dịch vụ</th>
               <th style="width: 10%;">ĐVT</th>
               <th style="width: 10%;">Số lượng</th>
-              <th style="width: 15%;">Đơn giá</th>
-              <th style="width: 20%;">Thành tiền</th>
+              ${showPricing ? `
+                <th style="width: 15%;">Đơn giá</th>
+                <th style="width: 20%;">Thành tiền</th>
+              ` : ''}
             </tr>
           </thead>
           <tbody>
@@ -142,17 +148,21 @@ export function printTransferSlip(slipOrSlips, options = {}) {
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="3" style="text-align: right; font-weight: bold; border-right: none;">Cộng tiền hàng:</td>
+              <td colspan="3" style="text-align: right; font-weight: bold; border-right: none;">Tổng số lượng chuyển:</td>
               <td style="text-align: center; font-weight: 700;">${totalQty.toLocaleString('vi-VN')}</td>
-              <td style="border-left: none;"></td>
-              <td style="text-align: right; font-weight: 700;">${totalAmount.toLocaleString('vi-VN')}</td>
+              ${showPricing ? `
+                <td style="border-left: none;"></td>
+                <td style="text-align: right; font-weight: 700;">${totalAmount.toLocaleString('vi-VN')}</td>
+              ` : ''}
             </tr>
           </tfoot>
         </table>
 
+        ${showPricing ? `
         <div style="font-style: italic; font-size: 13px; margin-bottom: 30px;">
           <strong>Bằng chữ:</strong> ${wordsAmount}.
         </div>
+        ` : ''}
 
         <!-- SIGNATURES -->
         <table class="signatures">

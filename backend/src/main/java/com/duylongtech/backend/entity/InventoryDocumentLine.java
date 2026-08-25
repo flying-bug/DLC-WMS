@@ -78,4 +78,19 @@ public class InventoryDocumentLine {
 
     @Column(name = "discrepancy_reason", length = 255)
     private String discrepancyReason;
+
+    @Column(name = "unit_id")
+    private Long unitId;
+
+    @Column(name = "base_unit_id")
+    private Long baseUnitId;
+
+    @Column(name = "conversion_operator", length = 20)
+    private String conversionOperator;
+
+    @Column(name = "conversion_ratio", precision = 15, scale = 4)
+    private BigDecimal conversionRatio;
+
+    @Column(name = "base_quantity", precision = 15, scale = 4)
+    private BigDecimal baseQuantity;
 }

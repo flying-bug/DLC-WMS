@@ -43,4 +43,5 @@ public class ProductRequest {
     private String bomTemplate;
     private String warrantyPeriod;
     private Integer warrantyPeriodMonths;
+    private java.util.List<ProductUnitConversionRequest> unitConversions;
 }

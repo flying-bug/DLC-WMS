@@ -40,4 +40,10 @@ public class InventoryDocumentLineRequest {
     private BigDecimal expectedQuantity;
     private BigDecimal rejectedQuantity;
     private String discrepancyReason;
+
+    private Long unitId;
+    private Long baseUnitId;
+    private String conversionOperator;
+    private BigDecimal conversionRatio;
+    private BigDecimal baseQuantity;
 }

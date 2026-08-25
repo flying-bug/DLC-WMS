@@ -16,6 +16,7 @@ import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import Modal from '../../components/ui/Modal/Modal';
 import ProductDetailModal from './components/ProductDetailModal';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { canViewPricing } from '../../auth/session';
 
 const defaultFormData = {
     id: null,
@@ -237,6 +238,7 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
 
 const ProductPage = () => {
     const navigate = useNavigate();
+    const showPricing = canViewPricing();
     const [products, setProducts] = useState([]);
     const [columns, setColumns] = useState(() => {
         const saved = localStorage.getItem('dlc_product_columns');
@@ -274,6 +276,7 @@ const ProductPage = () => {
     const [isEdit, setIsEdit] = useState(false);
     const [printBarcodeProduct, setPrintBarcodeProduct] = useState(null);
     const [formData, setFormData] = useState(defaultFormData);
+    const [unitConversions, setUnitConversions] = useState([]);
     const [errorMsg, setErrorMsg] = useState('');
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
@@ -921,8 +924,9 @@ const ProductPage = () => {
     const handleOpenAdd = () => {
         setIsEdit(false);
         setFormData(buildInitialFormData());
+        setUnitConversions([]);
         setBomLines(getPredefinedBomLines(categories));
-        setActiveTab('bom');
+        setActiveTab(formData.productType === 'Thành phẩm' ? 'bom' : 'units');
         setWarrantyQty('');
         setWarrantyUnit('Tháng');
         setErrorMsg('');
@@ -984,6 +988,7 @@ const ProductPage = () => {
         }
 
         setBomLines(loadedBomLines);
+        setUnitConversions((product.unitConversions || []).map(u => ({ ...u, ratio: u.ratio != null ? u.ratio : '' })));
         setErrorMsg('');
         setActiveTab(product.productType === 'Thành phẩm' ? 'bom' : 'units');
         setShowQuickAddCat(false);
@@ -1028,6 +1033,7 @@ const ProductPage = () => {
         }
 
         setErrorMsg('');
+        setUnitConversions((product.unitConversions || []).map(u => ({ ...u, ratio: u.ratio != null ? u.ratio : '' })));
         setActiveTab(product.productType === 'Thành phẩm' ? 'bom' : 'units');
         setShowQuickAddCat(false);
         setShowQuickAddUnit(false);
@@ -1066,6 +1072,14 @@ const ProductPage = () => {
                 quantity: Number(line.quantity || 0),
                 note: line.note || ''
             })) : [],
+            unitConversions: unitConversions
+                .filter(u => u.unitId && Number(u.ratio) > 0)
+                .map(u => ({
+                    unitId: Number(u.unitId),
+                    operator: u.operator || 'MULTIPLY',
+                    ratio: Number(u.ratio),
+                    note: u.note || ''
+                })),
             minStockQty: isService ? 0 : Number(data.minStockQty || 0),
             warrantyPeriod: warrantyQty > 0 ? `${warrantyQty} ${warrantyUnit}` : null,
             warrantyPeriodMonths: warrantyQty > 0 ? (warrantyUnit === 'Năm' ? warrantyQty * 12 : warrantyQty) : 0
@@ -1639,7 +1653,7 @@ const ProductPage = () => {
                                 {columns.category && <th style={{ width: '110px' }}>Danh mục</th>}
                                 {columns.brand && <th style={{ width: '110px' }}>Thương hiệu</th>}
                                 {columns.unit && <th style={{ width: '90px' }}>Đơn vị tính</th>}
-                                {columns.salePrice && <th className={styles.textRight} style={{ width: '110px' }}>Giá bán</th>}
+                                {showPricing && columns.salePrice && <th className={styles.textRight} style={{ width: '110px' }}>Giá bán</th>}
                                 <th className={styles.textCenter} style={{ width: '130px' }}>Thao Tác</th>
                             </tr>
                         </thead>
@@ -1689,7 +1703,7 @@ const ProductPage = () => {
                                         {columns.category && <td>{item.categoryName || '-'}</td>}
                                         {columns.brand && <td>{item.brandName || '-'}</td>}
                                         {columns.unit && <td>{item.unitName || '-'}</td>}
-                                        {columns.salePrice && <td className={`${styles.money} ${styles.textRight}`}>{formatCurrency(item.salePrice)}</td>}
+                                        {showPricing && columns.salePrice && <td className={`${styles.money} ${styles.textRight}`}>{formatCurrency(item.salePrice)}</td>}
                                         <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }} onClick={(event) => event.stopPropagation()}>
                                             <i
                                                 className="bi bi-pencil"
@@ -2427,24 +2441,38 @@ const ProductPage = () => {
                                     </div>
                                 </div>
 
-                                {/* ─── Tabs Section (BOM) ─── */}
-                                {formData.productType === 'Thành phẩm' && (
+                                {/* ─── Tabs Section (BOM & Unit Conversions) ─── */}
+                                {formData.productType !== 'Dịch vụ' && (
                                     <div style={{ marginTop: '24px', border: '1px solid #e5e7eb', borderRadius: '6px', overflow: 'hidden' }}>
                                         <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', backgroundColor: '#f9fafb' }}>
+                                            {formData.productType === 'Thành phẩm' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setActiveTab('bom')}
+                                                    style={{
+                                                        padding: '9px 18px', fontSize: '13px', border: 'none', cursor: 'pointer', background: 'transparent',
+                                                        borderBottom: activeTab === 'bom' ? '2px solid #2563eb' : '2px solid transparent',
+                                                        color: activeTab === 'bom' ? '#2563eb' : '#6b7280', fontWeight: activeTab === 'bom' ? 600 : 400
+                                                    }}
+                                                >
+                                                    Định mức cấu hình (BOM)
+                                                </button>
+                                            )}
                                             <button
-                                                onClick={() => setActiveTab('bom')}
+                                                type="button"
+                                                onClick={() => setActiveTab('units')}
                                                 style={{
                                                     padding: '9px 18px', fontSize: '13px', border: 'none', cursor: 'pointer', background: 'transparent',
-                                                    borderBottom: activeTab === 'bom' ? '2px solid #2563eb' : '2px solid transparent',
-                                                    color: activeTab === 'bom' ? '#2563eb' : '#6b7280', fontWeight: activeTab === 'bom' ? 600 : 400
+                                                    borderBottom: activeTab === 'units' ? '2px solid #2563eb' : '2px solid transparent',
+                                                    color: activeTab === 'units' ? '#2563eb' : '#6b7280', fontWeight: activeTab === 'units' ? 600 : 400
                                                 }}
                                             >
-                                                Định mức cấu hình
+                                                Đơn vị tính chuyển đổi {unitConversions.length > 0 ? `(${unitConversions.length})` : ''}
                                             </button>
                                         </div>
 
                                         <div style={{ padding: '14px 16px', minHeight: '120px' }}>
-                                            {activeTab === 'bom' && (
+                                            {formData.productType === 'Thành phẩm' && activeTab === 'bom' && (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                                     {bomLines.map((line, idx) => (
                                                         <div key={idx} style={{
@@ -2497,6 +2525,7 @@ const ProductPage = () => {
                                                                 </div>
                                                             </div>
                                                             <button
+                                                                type="button"
                                                                 onClick={() => { const a = [...bomLines]; a.splice(idx, 1); setBomLines(a); }}
                                                                 style={{
                                                                     border: 'none', background: 'transparent', cursor: 'pointer',
@@ -2513,6 +2542,7 @@ const ProductPage = () => {
                                                     ))}
 
                                                     <button
+                                                        type="button"
                                                         onClick={() => setBomLines([...bomLines, { componentVariantId: '', categoryId: '', quantity: '', note: '' }])}
                                                         style={{
                                                             width: '100%', padding: '14px', border: '1px dashed #cbd5e1',
@@ -2525,6 +2555,114 @@ const ProductPage = () => {
                                                         onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
                                                     >
                                                         <i className="bi bi-plus-circle" style={{ fontSize: '16px' }}></i> Thêm danh mục yêu cầu
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {activeTab === 'units' && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                    {unitConversions.length === 0 ? (
+                                                        <div style={{ padding: '20px', textAlign: 'center', color: '#6b7280', fontSize: '13px', background: '#f9fafb', borderRadius: '6px', border: '1px dashed #d1d5db' }}>
+                                                            Chưa có đơn vị tính chuyển đổi nào. Nhấn nút bên dưới để thêm đơn vị phụ (VD: Thùng, Hộp, Lốc...).
+                                                        </div>
+                                                    ) : (
+                                                        unitConversions.map((conv, idx) => (
+                                                            <div key={idx} style={{
+                                                                display: 'flex', alignItems: 'center', gap: '10px',
+                                                                padding: '10px 14px', background: '#fff', border: '1px solid #e5e7eb',
+                                                                borderRadius: '8px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                                                            }}>
+                                                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#f3f4f6', color: '#6b7280', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    {idx + 1}
+                                                                </div>
+                                                                <div style={{ flex: 2 }}>
+                                                                    <label style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginBottom: '2px' }}>Đơn vị chuyển đổi (*)</label>
+                                                                    <select
+                                                                        className={styles.fieldInput}
+                                                                        value={conv.unitId || ''}
+                                                                        onChange={(e) => {
+                                                                            const next = [...unitConversions];
+                                                                            next[idx].unitId = e.target.value;
+                                                                            setUnitConversions(next);
+                                                                        }}
+                                                                    >
+                                                                        <option value="">Chọn đơn vị phụ</option>
+                                                                        {units.filter(u => String(u.id) !== String(formData.unitId)).map(u => (
+                                                                            <option key={u.id} value={u.id}>{u.name}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                                <div style={{ flex: 1.2 }}>
+                                                                    <label style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginBottom: '2px' }}>Phép tính</label>
+                                                                    <select
+                                                                        className={styles.fieldInput}
+                                                                        value={conv.operator || 'MULTIPLY'}
+                                                                        onChange={(e) => {
+                                                                            const next = [...unitConversions];
+                                                                            next[idx].operator = e.target.value;
+                                                                            setUnitConversions(next);
+                                                                        }}
+                                                                    >
+                                                                        <option value="MULTIPLY">Nhân (*)</option>
+                                                                        <option value="DIVIDE">Chia (/)</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div style={{ flex: 1.2 }}>
+                                                                    <label style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginBottom: '2px' }}>Tỷ lệ quy đổi (*)</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        min="0.0001"
+                                                                        step="any"
+                                                                        className={styles.fieldInput}
+                                                                        value={conv.ratio ?? ''}
+                                                                        placeholder="VD: 24"
+                                                                        onChange={(e) => {
+                                                                            const next = [...unitConversions];
+                                                                            next[idx].ratio = e.target.value;
+                                                                            setUnitConversions(next);
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div style={{ flex: 2.2 }}>
+                                                                    <label style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginBottom: '2px' }}>Diễn giải quy đổi</label>
+                                                                    <div style={{ fontSize: '12px', color: '#2563eb', fontWeight: 500, paddingTop: '6px' }}>
+                                                                        {conv.unitId && conv.ratio && formData.unitId ? (
+                                                                            `1 ${units.find(u => String(u.id) === String(conv.unitId))?.name || 'ĐVT'} = ${conv.operator === 'DIVIDE' ? `1/${conv.ratio}` : conv.ratio} ${units.find(u => String(u.id) === String(formData.unitId))?.name || 'ĐVC'}`
+                                                                        ) : '-'}
+                                                                    </div>
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const next = [...unitConversions];
+                                                                        next.splice(idx, 1);
+                                                                        setUnitConversions(next);
+                                                                    }}
+                                                                    style={{
+                                                                        border: 'none', background: 'transparent', cursor: 'pointer',
+                                                                        color: '#9ca3af', fontSize: '15px', padding: '8px',
+                                                                        borderRadius: '6px', marginTop: '16px'
+                                                                    }}
+                                                                    title="Xóa đơn vị chuyển đổi"
+                                                                >
+                                                                    <i className="bi bi-trash3"></i>
+                                                                </button>
+                                                            </div>
+                                                        ))
+                                                    )}
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setUnitConversions([...unitConversions, { unitId: '', operator: 'MULTIPLY', ratio: '', note: '' }])}
+                                                        style={{
+                                                            width: '100%', padding: '12px', border: '1px dashed #cbd5e1',
+                                                            borderRadius: '8px', background: '#f8fafc', color: '#3b82f6',
+                                                            fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                                            marginTop: '6px'
+                                                        }}
+                                                    >
+                                                        <i className="bi bi-plus-circle" style={{ fontSize: '15px' }}></i> Thêm đơn vị chuyển đổi
                                                     </button>
                                                 </div>
                                             )}

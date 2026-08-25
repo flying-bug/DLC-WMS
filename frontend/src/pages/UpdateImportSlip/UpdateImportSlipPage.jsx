@@ -21,6 +21,7 @@ import { printImportSlip } from '../../utils/printImportSlip';
 import styles from './UpdateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
+import { canViewPricing } from '../../auth/session';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -106,7 +107,14 @@ const emptyLine = (defaultWarehouseId = '') => ({
   id: null,
   variantId: '',
   warehouseId: defaultWarehouseId,
+  unitId: '',
+  baseUnitId: '',
+  conversionRatio: 1,
+  conversionOperator: 'MULTIPLY',
   quantity: 1,
+  expectedQuantity: 1,
+  rejectedQuantity: 0,
+  discrepancyReason: '',
   price: 0,
   vatPercent: 0,
   note: '',
@@ -118,6 +126,7 @@ function UpdateImportSlipPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
+  const showPricing = canViewPricing();
   const returnUrl = location.state?.returnUrl || null;
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -303,6 +312,10 @@ function UpdateImportSlipPage() {
           id: line.id,
           variantId: line.variantId || '',
           warehouseId: String(line.warehouseId || detail.warehouseId || ''),
+          unitId: line.unitId ? String(line.unitId) : '',
+          baseUnitId: line.baseUnitId ? String(line.baseUnitId) : '',
+          conversionRatio: line.conversionRatio != null ? Number(line.conversionRatio) : 1,
+          conversionOperator: line.conversionOperator || 'MULTIPLY',
           quantity: line.quantityIn || 1,
           expectedQuantity: line.expectedQuantity !== undefined ? line.expectedQuantity : (line.quantityIn || 1),
           rejectedQuantity: line.rejectedQuantity || 0,
@@ -366,7 +379,7 @@ function UpdateImportSlipPage() {
       }
       if (field === 'variantId') {
         if (!value) {
-          return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], warrantyMonths: 0 } : item);
+          return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], warrantyMonths: 0, unitId: '', baseUnitId: '', conversionRatio: 1, conversionOperator: 'MULTIPLY' } : item);
         }
         const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value));
         if (existingIndex >= 0) {
@@ -385,8 +398,28 @@ function UpdateImportSlipPage() {
           ...item,
           [field]: String(value),
           serialNumbers: [],
-          warrantyMonths: product ? Number(product.warrantyMonths || 0) : 0
+          warrantyMonths: product ? Number(product.warrantyMonths || 0) : 0,
+          unitId: product?.unitId ? String(product.unitId) : '',
+          baseUnitId: product?.unitId ? String(product.unitId) : '',
+          conversionRatio: 1,
+          conversionOperator: 'MULTIPLY',
+          price: product?.costPrice || product?.salePrice || item.price || 0,
         } : item);
+      }
+      if (field === 'unitId') {
+        return prev.map(item => {
+          if (item.localId !== localId) return item;
+          const product = products.find(p => String(p.id) === String(item.variantId));
+          if (!product) return { ...item, unitId: value };
+          if (String(value) === String(product.unitId)) {
+            return { ...item, unitId: value, conversionRatio: 1, conversionOperator: 'MULTIPLY' };
+          }
+          const conv = (product.unitConversions || []).find(c => String(c.unitId) === String(value));
+          if (conv) {
+            return { ...item, unitId: value, conversionRatio: Number(conv.ratio) || 1, conversionOperator: conv.operator || 'MULTIPLY' };
+          }
+          return { ...item, unitId: value, conversionRatio: 1, conversionOperator: 'MULTIPLY' };
+        });
       }
       return prev.map(item => item.localId === localId ? { ...item, [field]: value } : item);
     });
@@ -449,19 +482,31 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
       status,
       note: form.note,
       createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
-      lines: items.map(item => ({
-        variantId: Number(item.variantId),
-        warehouseId: Number(item.warehouseId || form.warehouseId),
-        quantityIn: Number(item.quantity),
-        expectedQuantity: item.expectedQuantity !== undefined && item.expectedQuantity !== '' ? Number(item.expectedQuantity) : Number(item.quantity),
-        rejectedQuantity: item.rejectedQuantity !== undefined && item.rejectedQuantity !== '' ? Number(item.rejectedQuantity) : 0,
-        discrepancyReason: item.discrepancyReason || '',
-        unitCost: Number(item.price || 0),
-        vatPercent: Number(item.vatPercent || 0),
-        warrantyMonths: Number(item.warrantyMonths || 0),
-        serialNumbers: item.serialNumbers || [],
-        note: item.note,
-      })),
+      lines: items.map(item => {
+        const product = productById.get(String(item.variantId));
+        const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
+        const op = item.conversionOperator || 'MULTIPLY';
+        const qty = Number(item.quantity || 0);
+        const baseQty = (op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio);
+        return {
+          variantId: Number(item.variantId),
+          warehouseId: Number(item.warehouseId || form.warehouseId),
+          quantityIn: qty,
+          expectedQuantity: item.expectedQuantity !== undefined && item.expectedQuantity !== '' ? Number(item.expectedQuantity) : qty,
+          rejectedQuantity: item.rejectedQuantity !== undefined && item.rejectedQuantity !== '' ? Number(item.rejectedQuantity) : 0,
+          discrepancyReason: item.discrepancyReason || '',
+          unitId: item.unitId ? Number(item.unitId) : (product ? Number(product.unitId) : null),
+          baseUnitId: item.baseUnitId ? Number(item.baseUnitId) : (product ? Number(product.unitId) : null),
+          conversionOperator: op,
+          conversionRatio: ratio,
+          baseQuantity: baseQty,
+          unitCost: Number(item.price || 0),
+          vatPercent: Number(item.vatPercent || 0),
+          warrantyMonths: Number(item.warrantyMonths || 0),
+          serialNumbers: item.serialNumbers || [],
+          note: item.note,
+        };
+      }),
       issuePurpose: importType,
       recipientName: importType === 'OTHER' ? form.otherObjectName : form.deliverer,
       salespersonId: (!isNaN(Number(form.purchaser)) && String(form.purchaser).trim() !== '') ? Number(form.purchaser) : null,
@@ -946,24 +991,34 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                   <thead>
                     <tr>
                       <th style={{ width: '35px', textAlign: 'center', whiteSpace: 'nowrap' }}>#</th>
-                      <th style={{ minWidth: '110px', width: '11%' }}>Mã hàng</th>
-                      <th style={{ minWidth: '160px', width: '18%' }}>Tên hàng</th>
-                      <th style={{ minWidth: '50px', width: '5%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                      <th style={{ minWidth: '70px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng ghi trên Hóa đơn NCC">SL HĐ</th>
-                      <th style={{ minWidth: '75px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng thực tế dỡ vào kho">SL Nhận</th>
-                      <th style={{ minWidth: '65px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng hàng hỏng/móp méo từ chối nhận">SL Lỗi</th>
-                      <th style={{ minWidth: '75px', width: '8%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
-                      <th style={{ minWidth: '60px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
-                      <th style={{ minWidth: '95px', width: '10%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>
-                      <th style={{ minWidth: '95px', width: '10%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
-                      <th style={{ minWidth: '60px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>% VAT</th>
-                      <th style={{ minWidth: '110px', width: '12%', whiteSpace: 'nowrap' }}>Lý do chênh lệch</th>
+                      <th style={{ minWidth: '110px', width: '12%' }}>Mã hàng</th>
+                      <th style={{ minWidth: '150px', width: '16%' }}>Tên hàng</th>
+                      <th style={{ minWidth: '85px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                      <th style={{ minWidth: '55px', width: '5%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng ghi trên Hóa đơn NCC">SL HĐ</th>
+                      <th style={{ minWidth: '55px', width: '5%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng thực tế dỡ vào kho">SL Nhận</th>
+                      <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>
+                      <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>
+                      <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>
+                      <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>
+                      <th style={{ minWidth: '50px', width: '4%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng hàng hỏng/móp méo từ chối nhận">SL Lỗi</th>
+                      <th style={{ minWidth: '65px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                      <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                      {showPricing && <th style={{ minWidth: '85px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>}
+                      {showPricing && <th style={{ minWidth: '85px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>}
+                      {showPricing && <th style={{ minWidth: '55px', width: '4%', textAlign: 'right', whiteSpace: 'nowrap' }}>% VAT</th>}
+                      <th style={{ minWidth: '90px', width: '8%', whiteSpace: 'nowrap' }}>Lý do chênh lệch</th>
                       <th style={{ width: '35px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((item, index) => {
                       const product = productById.get(String(item.variantId));
+                      const baseUnitName = product?.unitName || '-';
+                      const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
+                      const op = item.conversionOperator || 'MULTIPLY';
+                      const qty = Number(item.quantity || 0);
+                      const baseQty = (op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio);
+                      const lineAmount = qty * Number(item.price || 0);
                       const isDiscrepant = (Number(item.expectedQuantity || item.quantity || 0) > Number(item.quantity || 0)) || Number(item.rejectedQuantity || 0) > 0;
                       return (
                         <tr key={item.localId} style={isDiscrepant ? { backgroundColor: '#fffbeb' } : {}}>
@@ -991,7 +1046,23 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                               placeholder="Chọn hàng"
                             />
                           </td>
-                          <td>{product?.unitName || ''}</td>
+                          <td>
+                            <select
+                              className="misa-input"
+                              style={{ height: '32px', padding: '0 4px', fontSize: '12px', minWidth: '80px' }}
+                              value={item.unitId || (product?.unitId ? String(product.unitId) : '')}
+                              onChange={(e) => handleItemChange(item.localId, 'unitId', e.target.value)}
+                              disabled={!product}
+                            >
+                              {product?.unitId && (
+                                <option value={product.unitId}>{product.unitName} (Chính)</option>
+                              )}
+                              {product?.unitConversions?.map(conv => (
+                                <option key={conv.unitId} value={conv.unitId}>{conv.unitName}</option>
+                              ))}
+                              {!product?.unitId && <option value="">-</option>}
+                            </select>
+                          </td>
                           <td align="right">
                             <input
                               type="number"
@@ -1015,6 +1086,10 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                               title="Số lượng thực nhận vào kho"
                             />
                           </td>
+                          <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
+                          <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
+                          <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: '#2563eb' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+                          <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: '#059669' }}>{Number(baseQty.toFixed(4))}</td>
                           <td align="right">
                             <input
                               type="number"
@@ -1044,15 +1119,21 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                           <td align="center">
                             <input id={`import-line-warranty-${index}`} type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 6px', width: '50px', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(e) => handleItemChange(item.localId, 'warrantyMonths', e.target.value)} />
                           </td>
-                          <td align="right">
-                            <input id={`import-line-price-${index}`} type="text" className="misa-input" style={{ height: '32px', padding: '0 6px', width: '100%', maxWidth: '110px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
-                          </td>
-                          <td align="right" className={`${styles.textBold} ${styles.textBlue}`}>
-                            {money(Number(item.quantity || 0) * Number(item.price || 0))} đ
-                          </td>
-                          <td align="right">
-                            <input id={`import-line-vat-${index}`} type="number" min="0" max="10" step="any" className="misa-input" style={{ height: '32px', padding: '0 6px', width: '50px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
-                          </td>
+                          {showPricing && (
+                            <td align="right">
+                              <input id={`import-line-price-${index}`} type="text" className="misa-input" style={{ height: '32px', padding: '0 6px', width: '100%', maxWidth: '110px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
+                            </td>
+                          )}
+                          {showPricing && (
+                            <td align="right" className={`${styles.textBold} ${styles.textBlue}`}>
+                              {money(lineAmount)} đ
+                            </td>
+                          )}
+                          {showPricing && (
+                            <td align="right">
+                              <input id={`import-line-vat-${index}`} type="number" min="0" max="10" step="any" className="misa-input" style={{ height: '32px', padding: '0 6px', width: '50px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
+                            </td>
+                          )}
                           <td>
                             <input
                               type="text"
@@ -1074,12 +1155,26 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                       <td style={{ borderRight: 'none' }}></td>
                       <td style={{ borderRight: 'none' }}></td>
                       <td></td>
+                      <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalExpectedQuantity)}</td>
                       <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalQuantity)}</td>
                       <td style={{ borderRight: 'none' }}></td>
                       <td style={{ borderRight: 'none' }}></td>
-                      <td></td>
-                      <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>
                       <td style={{ borderRight: 'none' }}></td>
+                      <td style={{ textAlign: 'right', padding: '12px', color: '#059669' }}>
+                        {Number(items.reduce((sum, it) => {
+                          const ratio = Number(it.conversionRatio) > 0 ? Number(it.conversionRatio) : 1;
+                          const op = it.conversionOperator || 'MULTIPLY';
+                          const qty = Number(it.quantity || 0);
+                          return sum + ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
+                        }, 0).toFixed(4))}
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '12px', color: '#dc2626' }}>{money(totalRejectedQuantity)}</td>
+                      <td style={{ borderRight: 'none' }}></td>
+                      <td style={{ borderRight: 'none' }}></td>
+                      {showPricing && <td></td>}
+                      {showPricing && <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>}
+                      {showPricing && <td style={{ borderRight: 'none' }}></td>}
+                      <td></td>
                       <td></td>
                     </tr>
                   </tfoot>
@@ -1108,22 +1203,33 @@ handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
                       <span style={{ cursor: 'pointer' }}>Sau</span>
                     </div>
                   </div>
-                  <table style={{ width: '100%', fontSize: '13px' }}>
-                    <tbody>
-                      <tr>
-                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền hàng</td>
-                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalPrice)}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Thuế GTGT</td>
-                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalVat)}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền thanh toán</td>
-                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(grandTotal)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  {showPricing ? (
+                    <table style={{ width: '100%', fontSize: '13px' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền hàng</td>
+                          <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalPrice)}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Thuế GTGT</td>
+                          <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalVat)}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền thanh toán</td>
+                          <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(grandTotal)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  ) : (
+                    <table style={{ width: '100%', fontSize: '13px' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng số lượng thực nhận</td>
+                          <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold', color: 'var(--color-primary)' }}>{money(totalQuantity)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
             </div>

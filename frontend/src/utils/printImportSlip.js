@@ -1,5 +1,6 @@
 import { numberToVietnameseWords } from './numberToVietnameseWords';
 import { formatDateOnly } from './dateFormat';
+import { canViewPricing } from '../auth/session';
 
 export function printImportSlip(slipOrSlips, options = {}) {
   const {
@@ -14,6 +15,7 @@ export function printImportSlip(slipOrSlips, options = {}) {
     userById = new Map(),
     isImport = true,
     printMode = 'SUMMARY', // 'SUMMARY' | 'SPLIT_BY_WAREHOUSE'
+    showPricing = canViewPricing(),
   } = options;
 
   const slips = Array.isArray(slipOrSlips) ? slipOrSlips : [slipOrSlips];
@@ -66,6 +68,7 @@ export function printImportSlip(slipOrSlips, options = {}) {
   const renderSinglePage = (slip, linesToRender, customWhName = null, isSplit = false) => {
     let rowsHtml = '';
     let totalQty = 0;
+    let totalBaseQty = 0;
     let totalAmount = 0;
     let totalVatAmount = 0;
 
@@ -74,14 +77,19 @@ export function printImportSlip(slipOrSlips, options = {}) {
       const sku = line.sku || line.variantCode || product?.sku || product?.productCode || (line.variantId ? `SKU #${line.variantId}` : '');
       const name = line.variantName || (product?.variantName && product?.variantName !== product?.productName ? `${product.productName} - ${product.variantName}` : (product?.productName || product?.variantName || product?.name || 'Sản phẩm'));
       const unit = line.unitName || line.unit || product?.unitName || 'Chiếc';
+      const baseUnitName = line.baseUnitName || product?.unitName || unit;
+      const ratio = Number(line.conversionRatio) > 0 ? Number(line.conversionRatio) : 1;
+      const op = line.conversionOperator || 'MULTIPLY';
       const lineWh = getWarehouseDisplayName(line.warehouseId, line.warehouseName);
       const qty = Number((isImport ? (line.quantityIn ?? line.quantity) : (line.quantityOut ?? line.quantity)) || 0);
+      const baseQty = line.baseQuantity != null ? Number(line.baseQuantity) : ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
       const price = Number(line.unitCost || line.unitPrice || 0);
       const amount = qty * price;
       const vatPercent = Number(line.vatPercent ?? line.vatRate ?? 0);
       const vatAmount = amount * (vatPercent / 100);
 
       totalQty += qty;
+      totalBaseQty += baseQty;
       totalAmount += amount;
       totalVatAmount += vatAmount;
 
@@ -101,10 +109,16 @@ export function printImportSlip(slipOrSlips, options = {}) {
           ${!isSplit ? `<td style="text-align: center; font-size: 11px;">${escapeHtml(lineWh || '—')}</td>` : ''}
           <td style="text-align: center;">${escapeHtml(unit)}</td>
           <td style="text-align: center; font-weight: bold;">${qty.toLocaleString('vi-VN')}</td>
-          <td style="text-align: right;">${price ? price.toLocaleString('vi-VN') : '0'}</td>
-          <td style="text-align: center;">${vatPercent ? vatPercent + '%' : '0%'}</td>
-          <td style="text-align: right;">${vatAmount ? vatAmount.toLocaleString('vi-VN') : '0'}</td>
-          <td style="text-align: right; font-weight: bold;">${(amount + vatAmount) ? (amount + vatAmount).toLocaleString('vi-VN') : '0'}</td>
+          <td style="text-align: center;">${escapeHtml(baseUnitName)}</td>
+          <td style="text-align: center;">${ratio}</td>
+          <td style="text-align: center; font-weight: 600; color: #2563eb;">${op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+          <td style="text-align: right; font-weight: bold; color: #059669;">${Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
+          ${showPricing ? `
+            <td style="text-align: right;">${price ? price.toLocaleString('vi-VN') : '0'}</td>
+            <td style="text-align: center;">${vatPercent ? vatPercent + '%' : '0%'}</td>
+            <td style="text-align: right;">${vatAmount ? vatAmount.toLocaleString('vi-VN') : '0'}</td>
+            <td style="text-align: right; font-weight: bold;">${(amount + vatAmount) ? (amount + vatAmount).toLocaleString('vi-VN') : '0'}</td>
+          ` : ''}
         </tr>
       `;
     });
@@ -133,7 +147,7 @@ export function printImportSlip(slipOrSlips, options = {}) {
     const userObj = getFromLookup(userById, slip.salespersonId) || getFromLookup(userById, slip.createdBy);
     const salesperson = slip.salespersonName || userObj?.fullName || userObj?.username || 'Chưa rõ';
     const colSpanTotal = isSplit ? 3 : 4;
-    const colSpanSummary = isSplit ? 7 : 8;
+    const colSpanSummary = isSplit ? 11 : 12;
 
     return `
       <div class="print-page-wrapper" style="position: relative;">
@@ -178,41 +192,55 @@ export function printImportSlip(slipOrSlips, options = {}) {
         <table class="main-table">
           <thead>
             <tr>
-              <th style="width: 5%;">STT</th>
-              <th style="width: ${isSplit ? '40%' : '30%'};">Tên hàng hóa, sản phẩm</th>
-              ${!isSplit ? `<th style="width: 14%;">Kho nhập</th>` : ''}
-              <th style="width: 8%;">ĐVT</th>
-              <th style="width: 8%;">Số lượng</th>
-              <th style="width: 11%;">Đơn giá</th>
-              <th style="width: 7%;">% VAT</th>
-              <th style="width: 9%;">Tiền VAT</th>
-              <th style="width: 12%;">Thành tiền</th>
+              <th style="width: 4%;">STT</th>
+              <th style="width: ${isSplit ? '30%' : '24%'};">Tên hàng hóa, sản phẩm</th>
+              ${!isSplit ? `<th style="width: 10%;">Kho nhập</th>` : ''}
+              <th style="width: 6%;">ĐVT</th>
+              <th style="width: 6%;">Số lượng</th>
+              <th style="width: 6%;">ĐVC</th>
+              <th style="width: 6%;">Tỷ lệ CĐ</th>
+              <th style="width: 5%;">Phép tính</th>
+              <th style="width: 7%;">SL (ĐVC)</th>
+              ${showPricing ? `
+                <th style="width: 9%;">Đơn giá</th>
+                <th style="width: 5%;">% VAT</th>
+                <th style="width: 7%;">Tiền VAT</th>
+                <th style="width: 9%;">Thành tiền</th>
+              ` : ''}
             </tr>
           </thead>
           <tbody>
             ${rowsHtml}
             <tr class="total-row">
-              <td colspan="${colSpanTotal}" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px;">Cộng tiền hàng:</td>
+              <td colspan="${colSpanTotal}" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px;">Tổng số lượng:</td>
               <td style="text-align: center; border: 1px solid #cbd5e1; padding: 8px; font-weight: bold;">${totalQty.toLocaleString('vi-VN')}</td>
-              <td colspan="3" style="border: 1px solid #cbd5e1; padding: 8px;"></td>
-              <td style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; font-weight: bold;">${totalAmount.toLocaleString('vi-VN')} đ</td>
+              <td colspan="3" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px;">Tổng quy đổi ĐVC:</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; font-weight: bold; color: #059669;">${Number(totalBaseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
+              ${showPricing ? `
+                <td colspan="3" style="border: 1px solid #cbd5e1; padding: 8px;"></td>
+                <td style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; font-weight: bold;">${totalAmount.toLocaleString('vi-VN')} đ</td>
+              ` : ''}
             </tr>
-            ${totalVatAmount > 0 ? `
+            ${showPricing && totalVatAmount > 0 ? `
             <tr class="total-row">
               <td colspan="${colSpanSummary}" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px;">Tiền thuế VAT:</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; font-weight: bold;">${totalVatAmount.toLocaleString('vi-VN')} đ</td>
             </tr>
             ` : ''}
+            ${showPricing ? `
             <tr class="total-row" style="background-color: #f8fafc;">
               <td colspan="${colSpanSummary}" style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; color: #b91c1c; font-size: 13px;">Tổng thanh toán:</td>
               <td style="text-align: right; border: 1px solid #cbd5e1; padding: 8px; color: #b91c1c; font-size: 14px; font-weight: bold;">${grandTotal.toLocaleString('vi-VN')} đ</td>
             </tr>
+            ` : ''}
           </tbody>
         </table>
 
+        ${showPricing ? `
         <div class="words-row">
           <strong>Số tiền viết bằng chữ:</strong> ${escapeHtml(wordsAmount)}
         </div>
+        ` : ''}
 
         <table class="signatures">
           <tr>

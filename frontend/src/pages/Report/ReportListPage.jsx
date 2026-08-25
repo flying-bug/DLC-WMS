@@ -17,6 +17,7 @@ import { formatDateOnly } from '../../utils/dateFormat';
 import { getDateRangePreset } from '../../utils/datePresets';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import Pagination from '../../components/ui/Pagination/Pagination';
+import { canViewPricing } from '../../auth/session';
 
 
 const MOCK_CATEGORIES = [
@@ -292,12 +293,16 @@ const ReportListPage = () => {
         }
     };
 
-    // Filter report categories by Search Term
-    const filteredCategories = MOCK_CATEGORIES.map((cat) => {
+    // Filter report categories by Search Term and Permissions
+    const availableCategories = canViewPricing() 
+        ? MOCK_CATEGORIES 
+        : MOCK_CATEGORIES.filter(cat => cat.id !== 'debt-reports' && cat.id !== 'sales-reports');
+
+    const filteredCategories = availableCategories.map((cat) => {
         // Resolve actual reports for favorites category
         let reportsList = cat.reports;
         if (cat.id === 'favorites') {
-            reportsList = MOCK_CATEGORIES.flatMap((c) => c.reports).filter((rep) => favorites.includes(rep.id));
+            reportsList = availableCategories.flatMap((c) => c.reports).filter((rep) => favorites.includes(rep.id));
             // De-duplicate just in case
             reportsList = reportsList.filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i);
         }
@@ -557,20 +562,20 @@ const ReportListPage = () => {
                                                                         <th rowSpan="2" className={`${styles.fixedHeaderBold} ${styles.colProductCode}`}>Mã hàng</th>
                                                                         <th rowSpan="2" className={`${styles.fixedHeaderBold} ${styles.colProductName}`}>Tên hàng</th>
                                                                         <th rowSpan="2" className={`${styles.fixedHeaderBold} ${styles.colUnit}`}>ĐVT</th>
-                                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Tồn đầu kỳ</th>
-                                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Nhập trong kỳ</th>
-                                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Xuất trong kỳ</th>
-                                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Tồn cuối kỳ</th>
+                                                                        <th colSpan={canViewPricing() ? 2 : 1} className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Tồn đầu kỳ</th>
+                                                                        <th colSpan={canViewPricing() ? 2 : 1} className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Nhập trong kỳ</th>
+                                                                        <th colSpan={canViewPricing() ? 2 : 1} className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Xuất trong kỳ</th>
+                                                                        <th colSpan={canViewPricing() ? 2 : 1} className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Tồn cuối kỳ</th>
                                                                     </tr>
                                                                     <tr>
                                                                         <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
-                                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
+                                                                        {canViewPricing() && <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>}
                                                                         <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
-                                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
+                                                                        {canViewPricing() && <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>}
                                                                         <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
-                                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
+                                                                        {canViewPricing() && <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>}
                                                                         <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
-                                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
+                                                                        {canViewPricing() && <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>}
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
@@ -581,13 +586,13 @@ const ReportListPage = () => {
                                                                             <td className={`${styles.fontSemibold} ${styles.colProductName}`}>{item.productName}</td>
                                                                             <td className={`${styles.fontSemibold} ${styles.colUnit}`}>{item.unitName || '-'}</td>
                                                                             <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.openingQuantity)}</td>
-                                                                            <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.openingValue)}</td>
+                                                                            {canViewPricing() && <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.openingValue)}</td>}
                                                                             <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.receiptQuantity)}</td>
-                                                                            <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.receiptValue)}</td>
+                                                                            {canViewPricing() && <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.receiptValue)}</td>}
                                                                             <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.issueQuantity)}</td>
-                                                                            <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.issueValue)}</td>
+                                                                            {canViewPricing() && <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.issueValue)}</td>}
                                                                             <td className={`${styles.textRight} ${styles.fontSemibold} ${styles.groupBorderLeft}`} style={{ color: 'var(--misa-primary)', whiteSpace: 'nowrap' }}>{formatQuantity(item.endingQuantity)}</td>
-                                                                            <td className={`${styles.textRight} ${styles.fontSemibold} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.endingValue)}</td>
+                                                                            {canViewPricing() && <td className={`${styles.textRight} ${styles.fontSemibold} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.endingValue)}</td>}
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>
@@ -604,7 +609,7 @@ const ReportListPage = () => {
                                                                         <th className={styles.colUnit}>Đơn vị tính</th>
                                                                         <th className={styles.colWarehouse}>Kho chứa</th>
                                                                         <th className={styles.textRight}>Số lượng tồn</th>
-                                                                        <th className={styles.textRight}>Giá trị tồn</th>
+                                                                        {canViewPricing() && <th className={styles.textRight}>Giá trị tồn</th>}
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
@@ -615,7 +620,7 @@ const ReportListPage = () => {
                                                                             <td className={styles.colUnit}>{item.unitName || '-'}</td>
                                                                             <td className={styles.colWarehouse}>{item.warehouseCode ? `${item.warehouseCode} - ${item.warehouseName}` : '-'}</td>
                                                                             <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: 'var(--color-success)' }}>{formatQuantity(item.totalQuantity)}</td>
-                                                                            <td className={styles.textRight}>{formatCurrency(item.totalValue)}</td>
+                                                                            {canViewPricing() && <td className={styles.textRight}>{formatCurrency(item.totalValue)}</td>}
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>
@@ -634,7 +639,7 @@ const ReportListPage = () => {
                                                                         <th className={styles.colProductName}>Tên hàng</th>
                                                                         <th className={styles.colWarehouse}>Kho</th>
                                                                         <th className={styles.colUnit}>ĐVT</th>
-                                                                        <th className={styles.textRight}>Đơn giá</th>
+                                                                        {canViewPricing() && <th className={styles.textRight}>Đơn giá</th>}
                                                                         <th className={styles.textRight}>Số lượng nhập</th>
                                                                         <th className={styles.textRight}>Số lượng xuất</th>
                                                                         <th className={styles.textRight}>Tồn sau CT</th>
@@ -654,7 +659,7 @@ const ReportListPage = () => {
                                                                             <td className={styles.colProductName}>{item.productName}</td>
                                                                             <td className={styles.colWarehouse}>{item.warehouseName}</td>
                                                                             <td className={styles.colUnit}>{item.unitName || '-'}</td>
-                                                                            <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>
+                                                                            {canViewPricing() && <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>}
                                                                             <td className={`${styles.textRight} ${styles.textSuccess}`}>{item.quantityIn > 0 ? `+${formatQuantity(item.quantityIn)}` : '-'}</td>
                                                                             <td className={`${styles.textRight} ${styles.textDanger}`}>{item.quantityOut > 0 ? `-${formatQuantity(item.quantityOut)}` : '-'}</td>
                                                                             <td className={`${styles.textRight} ${styles.fontSemibold}`}>{formatQuantity(item.balanceAfter)}</td>
@@ -677,8 +682,8 @@ const ReportListPage = () => {
                                                                         <th className={styles.colWarehouse}>Kho nhận</th>
                                                                         <th className={styles.colUnit}>ĐVT</th>
                                                                         <th className={styles.textRight}>Số lượng</th>
-                                                                        <th className={styles.textRight}>Đơn giá</th>
-                                                                        <th className={styles.textRight}>Thành tiền</th>
+                                                                        {canViewPricing() && <th className={styles.textRight}>Đơn giá</th>}
+                                                                        {canViewPricing() && <th className={styles.textRight}>Thành tiền</th>}
                                                                         <th>Trạng thái</th>
                                                                     </tr>
                                                                 </thead>
@@ -693,8 +698,8 @@ const ReportListPage = () => {
                                                                             <td className={styles.colWarehouse}>{item.destinationWarehouse}</td>
                                                                             <td className={styles.colUnit}>{item.unitName}</td>
                                                                             <td className={styles.textRight}>{formatQuantity(item.quantity)}</td>
-                                                                            <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>
-                                                                            <td className={styles.textRight}>{formatCurrency(item.amount)}</td>
+                                                                            {canViewPricing() && <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>}
+                                                                            {canViewPricing() && <td className={styles.textRight}>{formatCurrency(item.amount)}</td>}
                                                                             <td>
                                                                                 <span className={`${styles.badge} ${item.status === 'COMPLETED' ? styles.badgeSuccess : styles.badgeWarning}`}>
                                                                                     {item.status === 'COMPLETED' ? 'Hoàn thành' : item.status}

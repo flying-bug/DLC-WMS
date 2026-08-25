@@ -18,6 +18,7 @@ import { formatDateOnly } from '../../utils/dateFormat';
 import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import styles from './ExportSlipPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { canViewPricing } from '../../auth/session';
 
 
 const DEFAULT_COLUMNS = {
@@ -112,6 +113,7 @@ const variantLabel = (item) => item?.variantName && item.variantName !== item.pr
 function ExportSlipPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const showPricing = canViewPricing();
   const [slips, setSlips] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
@@ -497,8 +499,8 @@ function ExportSlipPage() {
                   {columns.warehouse && <th style={{ width: '120px' }}>Kho Xuất</th>}
                   {columns.salesperson && <th style={{ width: '150px' }}>Nhân viên xuất hàng</th>}
                   {columns.recipient && <th style={{ width: '150px' }}>Người nhận hàng</th>}
-                  {columns.vat && <th className={styles.textRight} style={{ width: '110px' }}>Tiền VAT</th>}
-                  {columns.total && <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>}
+                  {showPricing && columns.vat && <th className={styles.textRight} style={{ width: '110px' }}>Tiền VAT</th>}
+                  {showPricing && columns.total && <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>}
                   {columns.note && <th style={{ width: '180px' }}>Ghi Chú</th>}
                   {columns.status && <th style={{ width: '120px' }}>Trạng Thái</th>}
                   <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
@@ -529,8 +531,8 @@ function ExportSlipPage() {
                     {columns.warehouse && <td>{slip.warehouse}</td>}
                     {columns.salesperson && <td>{slip.salespersonName}</td>}
                     {columns.recipient && <td>{slip.recipientName}</td>}
-                    {columns.vat && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.vat}</td>}
-                    {columns.total && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.total}</td>}
+                    {showPricing && columns.vat && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.vat}</td>}
+                    {showPricing && columns.total && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.total}</td>}
                     {columns.note && (
                       <td style={{ maxWidth: '180px' }}>
                         <div className={styles.tooltipContainer}>
@@ -806,20 +808,30 @@ function ExportSlipPage() {
                   <thead>
                     <tr>
                       <th>STT</th>
-                      <th>Mã hàng</th>
+                      <th>Mã SP</th>
                       <th>Tên hàng</th>
-                      <th>DVT</th>
+                      <th>ĐVT</th>
                       <th className={styles.textCenter}>Số lượng</th>
-                      <th className={styles.textRight}>Giá xuất</th>
-                      <th className={styles.textRight}>% VAT</th>
-                      <th className={styles.textRight}>Tiền VAT</th>
-                      <th className={styles.textRight}>Thành tiền</th>
+                      <th>ĐVC</th>
+                      <th className={styles.textCenter}>Tỷ lệ CĐ</th>
+                      <th className={styles.textCenter}>Phép tính</th>
+                      <th className={styles.textRight}>SL (ĐVC)</th>
+                      {showPricing && <th className={styles.textRight}>Giá xuất</th>}
+                      {showPricing && <th className={styles.textRight}>% VAT</th>}
+                      {showPricing && <th className={styles.textRight}>Tiền VAT</th>}
+                      {showPricing && <th className={styles.textRight}>Thành tiền</th>}
                       <th>Số Serial</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(selectedSlip.lines || []).map((line, index) => {
                       const product = productById.get(line.variantId);
+                      const baseUnitName = line.baseUnitName || product?.unitName || '-';
+                      const unitName = line.unitName || product?.unitName || '-';
+                      const ratio = Number(line.conversionRatio) > 0 ? Number(line.conversionRatio) : 1;
+                      const op = line.conversionOperator || 'MULTIPLY';
+                      const qty = Number(line.quantityOut || 0);
+                      const baseQty = line.baseQuantity != null ? Number(line.baseQuantity) : ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
                       return (
                         <tr key={line.id || index}>
                           <td>{index + 1}</td>
@@ -827,12 +839,16 @@ function ExportSlipPage() {
                           <td style={{ fontWeight: '500' }}>
                             {variantLabel(product) || 'Chưa có tên sản phẩm'}
                           </td>
-                          <td>{product?.unitName || ''}</td>
-                          <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(line.quantityOut || 0).toLocaleString('vi-VN')}</td>
-                          <td className={styles.textRight}>{money(line.unitPrice)}</td>
-                          <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>
-                          <td className={styles.textRight}>{money(Number(line.quantityOut || 0) * Number(line.unitPrice || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>
-                          <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{money(line.lineAmount)}</td>
+                          <td>{unitName}</td>
+                          <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(qty).toLocaleString('vi-VN')}</td>
+                          <td>{baseUnitName}</td>
+                          <td className={styles.textCenter}>{ratio}</td>
+                          <td className={styles.textCenter} style={{ fontWeight: 600, color: '#2563eb' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+                          <td className={styles.textRight} style={{ fontWeight: '600', color: '#059669' }}>{Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
+                          {showPricing && <td className={styles.textRight}>{money(line.unitPrice)}</td>}
+                          {showPricing && <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>}
+                          {showPricing && <td className={styles.textRight}>{money(Number(qty) * Number(line.unitPrice || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>}
+                          {showPricing && <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{money(line.lineAmount)}</td>}
                           <td style={{ maxWidth: '220px', wordWrap: 'break-word', whiteSpace: 'normal' }}>
                             {line.serialNumbers && line.serialNumbers.length > 0 ? (
                               <span style={{ fontSize: '13px', color: '#334155', fontWeight: '500' }}>
@@ -863,15 +879,17 @@ function ExportSlipPage() {
 
                 <div className={styles.detailFooter}>
                   <div className={styles.footerGroup}>
-                    <span className={styles.footerTotalLabel}>Tổng SL xuất:</span>
+                    <span className={styles.footerTotalLabel}>Tổng SL thực xuất:</span>
                     <span className={styles.footerQty}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</span>
                   </div>
                   <div style={{ flex: 1 }}></div>
-                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ fontSize: '13px', color: '#64748b' }}>Tổng tiền hàng: <strong>{money(sumSubtotal(selectedSlip.lines))}</strong></div>
-                    <div style={{ fontSize: '13px', color: '#64748b' }}>Tiền VAT: <strong>{money(sumVat(selectedSlip.lines))}</strong></div>
-                    <div style={{ fontSize: '16px', color: 'var(--color-primary)', marginTop: '4px' }}>Tổng thanh toán: <strong>{money(sumAmount(selectedSlip.lines))}</strong></div>
-                  </div>
+                  {showPricing && (
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ fontSize: '13px', color: '#64748b' }}>Tổng tiền hàng: <strong>{money(sumSubtotal(selectedSlip.lines))}</strong></div>
+                      <div style={{ fontSize: '13px', color: '#64748b' }}>Tiền VAT: <strong>{money(sumVat(selectedSlip.lines))}</strong></div>
+                      <div style={{ fontSize: '16px', color: 'var(--color-primary)', marginTop: '4px' }}>Tổng thanh toán: <strong>{money(sumAmount(selectedSlip.lines))}</strong></div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

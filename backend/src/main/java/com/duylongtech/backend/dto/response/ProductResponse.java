@@ -38,6 +38,7 @@ public class ProductResponse {
     private String bomTemplate;
     private String warrantyPeriod;
     private Integer warrantyPeriodMonths;
+    private java.util.List<ProductUnitConversionResponse> unitConversions;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

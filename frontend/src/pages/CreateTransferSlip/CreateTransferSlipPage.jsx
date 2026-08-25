@@ -19,6 +19,7 @@ import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { findBestMatch } from '../../utils/fuzzyMatch';
+import { canViewPricing } from '../../auth/session';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -614,8 +615,8 @@ function CreateTransferSlipPage() {
                     <th style={{ textAlign: 'right' }}>Tồn khả dụng</th>
                     <th style={{ textAlign: 'right' }}>Số lượng</th>
                     <th style={{ textAlign: 'center' }}>Serial</th>
-                    <th style={{ textAlign: 'right' }}>Đơn giá</th>
-                    <th style={{ textAlign: 'right' }}>Thành tiền</th>
+                    {canViewPricing() && <th style={{ textAlign: 'right' }}>Đơn giá</th>}
+                    {canViewPricing() && <th style={{ textAlign: 'right' }}>Thành tiền</th>}
                     <th>Ghi chú</th>
                     <th></th>
                   </tr>
@@ -668,12 +669,16 @@ function CreateTransferSlipPage() {
                             )}
                           </div>
                         </td>
-                        <td align="right">
-                          <input id={`transfer-line-price-${index}`} type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
-                        </td>
-                        <td align="right" style={{ fontWeight: 'bold', color: '#0070cc' }}>
-                          {new Intl.NumberFormat('vi-VN').format(Number(item.quantity || 0) * Number(item.price || 0))} đ
-                        </td>
+                        {canViewPricing() && (
+                          <td align="right">
+                            <input id={`transfer-line-price-${index}`} type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
+                          </td>
+                        )}
+                        {canViewPricing() && (
+                          <td align="right" style={{ fontWeight: 'bold', color: '#0070cc' }}>
+                            {new Intl.NumberFormat('vi-VN').format(Number(item.quantity || 0) * Number(item.price || 0))} đ
+                          </td>
+                        )}
                         <td>
                           <input type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={item.note} onChange={(e) => handleItemChange(item.localId, 'note', e.target.value)} />
                         </td>
@@ -692,10 +697,12 @@ function CreateTransferSlipPage() {
                   <span>Tổng cộng hàng chuyển:</span>
                   <span className={styles.textBlue} style={{ marginLeft: '8px' }}>{totalQuantity.toLocaleString('vi-VN')}</span>
                 </div>
-                <div>
-                  <span style={{ marginRight: '8px' }}>Tổng tiền:</span>
-                  <span style={{ fontWeight: 'bold', color: '#0070cc' }}>{new Intl.NumberFormat('vi-VN').format(totalPrice)} đ</span>
-                </div>
+                {canViewPricing() && (
+                  <div>
+                    <span style={{ marginRight: '8px' }}>Tổng tiền:</span>
+                    <span style={{ fontWeight: 'bold', color: '#0070cc' }}>{new Intl.NumberFormat('vi-VN').format(totalPrice)} đ</span>
+                  </div>
+                )}
               </div>
               <div className={styles.tableActions} style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px' }}>
                 <div style={{ display: 'flex', gap: '8px' }}>

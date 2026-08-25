@@ -13,6 +13,7 @@ import { focusField } from '../../utils/focusField';
 import { printTransferSlip } from '../../utils/printTransferSlip';
 import Toast from '../../components/ui/Toast/Toast';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { canViewPricing } from '../../auth/session';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -559,8 +560,8 @@ function UpdateTransferSlipPage() {
                     <th style={{ textAlign: 'right' }}>Tồn khả dụng</th>
                     <th style={{ textAlign: 'right' }}>Số lượng</th>
                     <th style={{ textAlign: 'center' }}>Serial</th>
-                    <th style={{ textAlign: 'right' }}>Đơn giá</th>
-                    <th style={{ textAlign: 'right' }}>Thành tiền</th>
+                    {canViewPricing() && <th style={{ textAlign: 'right' }}>Đơn giá</th>}
+                    {canViewPricing() && <th style={{ textAlign: 'right' }}>Thành tiền</th>}
                     <th>Ghi chú</th>
                     <th></th>
                   </tr>
@@ -613,12 +614,16 @@ function UpdateTransferSlipPage() {
                             )}
                           </div>
                         </td>
-                        <td align="right">
-                          <input id={`transfer-line-price-${index}`} type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
-                        </td>
-                        <td align="right" style={{ fontWeight: 'bold', color: '#0070cc' }}>
-                          {new Intl.NumberFormat('vi-VN').format(Number(item.quantity || 0) * Number(item.price || 0))} đ
-                        </td>
+                        {canViewPricing() && (
+                          <td align="right">
+                            <input id={`transfer-line-price-${index}`} type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
+                          </td>
+                        )}
+                        {canViewPricing() && (
+                          <td align="right" style={{ fontWeight: 'bold', color: '#0070cc' }}>
+                            {new Intl.NumberFormat('vi-VN').format(Number(item.quantity || 0) * Number(item.price || 0))} đ
+                          </td>
+                        )}
                         <td>
                           <input type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', fontSize: '13px' }} value={item.note} onChange={(e) => handleItemChange(item.localId, 'note', e.target.value)} />
                         </td>
@@ -637,10 +642,12 @@ function UpdateTransferSlipPage() {
                   <span>Tổng cộng hàng chuyển:</span>
                   <span className={styles.textBlue} style={{ marginLeft: '8px' }}>{totalQuantity.toLocaleString('vi-VN')}</span>
                 </div>
-                <div>
-                  <span style={{ marginRight: '8px' }}>Tổng tiền:</span>
-                  <span style={{ fontWeight: 'bold', color: '#0070cc' }}>{new Intl.NumberFormat('vi-VN').format(totalPrice)} đ</span>
-                </div>
+                {canViewPricing() && (
+                  <div>
+                    <span style={{ marginRight: '8px' }}>Tổng tiền:</span>
+                    <span style={{ fontWeight: 'bold', color: '#0070cc' }}>{new Intl.NumberFormat('vi-VN').format(totalPrice)} đ</span>
+                  </div>
+                )}
               </div>
               <div className={styles.tableActions} style={{ display: 'flex', gap: '8px', padding: '16px' }}>
                 <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>

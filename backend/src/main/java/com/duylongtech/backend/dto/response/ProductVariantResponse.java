@@ -36,6 +36,7 @@ public class ProductVariantResponse {
     private String specsJson;
     private Boolean active;
     private Integer warrantyMonths;
+    private java.util.List<ProductUnitConversionResponse> unitConversions;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

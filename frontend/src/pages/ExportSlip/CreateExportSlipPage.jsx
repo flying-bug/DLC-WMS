@@ -25,6 +25,7 @@ import { getTodayIsoDate } from '../../utils/dateFormat';
 import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { findBestMatch } from '../../utils/fuzzyMatch';
+import { canViewPricing } from '../../auth/session';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -111,6 +112,10 @@ const emptyLine = (defaultWarehouseId = '') => ({
   localId: crypto.randomUUID(),
   variantId: '',
   warehouseId: defaultWarehouseId,
+  unitId: '',
+  baseUnitId: '',
+  conversionRatio: 1,
+  conversionOperator: 'MULTIPLY',
   serialNumbers: [],
   scannedCode: '',
   quantity: 1,
@@ -122,6 +127,7 @@ const emptyLine = (defaultWarehouseId = '') => ({
 function CreateExportSlipPage({ mode: propMode }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const showPricing = canViewPricing();
 
   const searchParams = new URLSearchParams(location.search);
   const assemblyData = location.state?.assemblyData || null;
@@ -268,7 +274,7 @@ function CreateExportSlipPage({ mode: propMode }) {
       }
       if (field === 'variantId') {
         if (!value) {
-          return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], price: 0, warrantyMonths: 0 } : item);
+          return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], price: 0, warrantyMonths: 0, unitId: '', baseUnitId: '', conversionRatio: 1, conversionOperator: 'MULTIPLY' } : item);
         }
         const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value));
         if (existingIndex >= 0) {
@@ -287,9 +293,28 @@ function CreateExportSlipPage({ mode: propMode }) {
           ...item,
           variantId: String(value),
           serialNumbers: [],
+          unitId: selectedProduct?.unitId ? String(selectedProduct.unitId) : '',
+          baseUnitId: selectedProduct?.unitId ? String(selectedProduct.unitId) : '',
+          conversionRatio: 1,
+          conversionOperator: 'MULTIPLY',
           price: selectedProduct ? Number(selectedProduct.salePrice || 0) : 0,
           warrantyMonths: selectedProduct ? Number(selectedProduct.warrantyMonths || 0) : 0
         } : item);
+      }
+      if (field === 'unitId') {
+        return prev.map(item => {
+          if (item.localId !== localId) return item;
+          const product = products.find(p => String(p.id) === String(item.variantId));
+          if (!product) return { ...item, unitId: value };
+          if (String(value) === String(product.unitId)) {
+            return { ...item, unitId: value, conversionRatio: 1, conversionOperator: 'MULTIPLY' };
+          }
+          const conv = (product.unitConversions || []).find(c => String(c.unitId) === String(value));
+          if (conv) {
+            return { ...item, unitId: value, conversionRatio: Number(conv.ratio) || 1, conversionOperator: conv.operator || 'MULTIPLY' };
+          }
+          return { ...item, unitId: value, conversionRatio: 1, conversionOperator: 'MULTIPLY' };
+        });
       }
       return prev.map(item => item.localId === localId ? { ...item, [field]: value } : item);
     });
@@ -700,19 +725,31 @@ function CreateExportSlipPage({ mode: propMode }) {
       status,
       note: serializeNoteWithAttachments(form.note, attachments),
       createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
-      lines: items.map(item => ({
-        variantId: Number(item.variantId),
-        warehouseId: Number(form.warehouseId),
-        quantityIn: 0,
-        quantityOut: Number(item.quantity),
-        unitCost: 0,
-        unitPrice: Number(item.price),
-        vatRate: Number(item.vatPercent || 0),
-        vatPercent: Number(item.vatPercent || 0),
-        warrantyMonths: Number(item.warrantyMonths || 0),
-        serialNumbers: item.serialNumbers || [],
-        note: item.note,
-      })),
+      lines: items.map(item => {
+        const product = productById.get(String(item.variantId));
+        const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
+        const op = item.conversionOperator || 'MULTIPLY';
+        const qty = Number(item.quantity || 0);
+        const baseQty = (op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio);
+        return {
+          variantId: Number(item.variantId),
+          warehouseId: Number(form.warehouseId),
+          quantityIn: 0,
+          quantityOut: qty,
+          unitId: item.unitId ? Number(item.unitId) : (product ? Number(product.unitId) : null),
+          baseUnitId: item.baseUnitId ? Number(item.baseUnitId) : (product ? Number(product.unitId) : null),
+          conversionOperator: op,
+          conversionRatio: ratio,
+          baseQuantity: baseQty,
+          unitCost: 0,
+          unitPrice: Number(item.price || 0),
+          vatRate: Number(item.vatPercent || 0),
+          vatPercent: Number(item.vatPercent || 0),
+          warrantyMonths: Number(item.warrantyMonths || 0),
+          serialNumbers: item.serialNumbers || [],
+          note: item.note,
+        };
+      }),
       referenceType: form.referenceType || undefined,
       referenceId: form.referenceId || undefined,
       salesOrderId: form.salesOrderId ? Number(form.salesOrderId) : (form.referenceType === 'SALES_ORDER' || form.referenceType === 'SO' ? Number(form.referenceId) : (soData?.soId ? Number(soData.soId) : undefined)),
@@ -1170,22 +1207,33 @@ function CreateExportSlipPage({ mode: propMode }) {
               <thead>
                 <tr>
                   <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                  <th style={{ minWidth: '120px', width: '13%' }}>Mã hàng</th>
-                  <th style={{ minWidth: '180px', width: '22%' }}>{exportMode === 'ASSEMBLY' ? 'Tên linh kiện' : 'Tên hàng'}</th>
-                  <th style={{ minWidth: '60px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                  <th style={{ minWidth: '80px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
-                  <th style={{ minWidth: '65px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
-                  <th style={{ minWidth: '75px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
-                  <th style={{ minWidth: '65px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
-                  <th style={{ minWidth: '100px', width: '11%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>
-                  <th style={{ minWidth: '100px', width: '11%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>
-                  <th style={{ minWidth: '75px', width: '8%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thuế GTGT</th>
+                  <th style={{ minWidth: '110px', width: '12%' }}>Mã hàng</th>
+                  <th style={{ minWidth: '160px', width: '18%' }}>{exportMode === 'ASSEMBLY' ? 'Tên linh kiện' : 'Tên hàng'}</th>
+                  <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                  <th style={{ minWidth: '75px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
+                  <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
+                  <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>
+                  <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>
+                  <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>
+                  <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>
+                  <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                  <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                  {showPricing && <th style={{ minWidth: '90px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>}
+                  {showPricing && <th style={{ minWidth: '90px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>}
+                  {showPricing && <th style={{ minWidth: '60px', width: '5%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thuế GTGT</th>}
                   <th style={{ width: '40px', textAlign: 'center' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item, index) => {
                   const product = productById.get(String(item.variantId));
+                  const baseUnitName = product?.unitName || '-';
+                  const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
+                  const op = item.conversionOperator || 'MULTIPLY';
+                  const qty = Number(item.quantity || 0);
+                  const baseQty = (op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio);
+                  const lineAmount = qty * Number(item.price || 0);
+
                   return (
                     <tr key={item.localId}>
                       <td className={styles.textCenter}>{index + 1}</td>
@@ -1213,7 +1261,21 @@ function CreateExportSlipPage({ mode: propMode }) {
                         />
                       </td>
                       <td>
-                        {product?.unitName || 'Cái'}
+                        <select
+                          className="misa-input"
+                          style={{ height: '32px', padding: '0 4px', fontSize: '12px', minWidth: '80px' }}
+                          value={item.unitId || (product?.unitId ? String(product.unitId) : '')}
+                          onChange={(e) => handleItemChange(item.localId, 'unitId', e.target.value)}
+                          disabled={!product}
+                        >
+                          {product?.unitId && (
+                            <option value={product.unitId}>{product.unitName} (Chính)</option>
+                          )}
+                          {product?.unitConversions?.map(conv => (
+                            <option key={conv.unitId} value={conv.unitId}>{conv.unitName}</option>
+                          ))}
+                          {!product?.unitId && <option value="">-</option>}
+                        </select>
                       </td>
                       <td className={styles.textCenter} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>
                         {product ? getStockForLine(product.id, item.warehouseId || form.warehouseId, item) : ''}
@@ -1221,6 +1283,10 @@ function CreateExportSlipPage({ mode: propMode }) {
                       <td className={styles.textRight}>
                         <input id={`export-line-qty-${index}`} type="number" min="1" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
                       </td>
+                      <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
+                      <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
+                      <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: '#2563eb' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+                      <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: '#059669' }}>{Number(baseQty.toFixed(4))}</td>
                       <td align="center">
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           {product?.trackSerial && (
@@ -1252,13 +1318,19 @@ function CreateExportSlipPage({ mode: propMode }) {
                       <td className={styles.textCenter}>
                         <input id={`export-line-warranty-${index}`} type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '60px', margin: '0 auto', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(event) => handleItemChange(item.localId, 'warrantyMonths', event.target.value)} />
                       </td>
-                      <td className={styles.textRight}>
-                        <input id={`export-line-price-${index}`} type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} />
-                      </td>
-                      <td className={`${styles.textRight} ${styles.textBlue}`}>{money(Number(item.quantity || 0) * Number(item.price || 0))}</td>
-                      <td className={styles.textRight}>
-                        <input id={`export-line-vat-${index}`} type="number" min="0" max="10" step="any" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '65px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(event) => handleItemChange(item.localId, 'vatPercent', event.target.value)} />
-                      </td>
+                      {showPricing && (
+                        <td className={styles.textRight}>
+                          <input id={`export-line-price-${index}`} type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} />
+                        </td>
+                      )}
+                      {showPricing && (
+                        <td className={`${styles.textRight} ${styles.textBlue}`}>{money(lineAmount)}</td>
+                      )}
+                      {showPricing && (
+                        <td className={styles.textRight}>
+                          <input id={`export-line-vat-${index}`} type="number" min="0" max="10" step="any" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '65px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(event) => handleItemChange(item.localId, 'vatPercent', event.target.value)} />
+                        </td>
+                      )}
                       <td className={styles.textCenter}>
                         <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)} title="Xóa dòng"><i className="bi bi-trash"></i></button>
                       </td>
@@ -1301,22 +1373,33 @@ function CreateExportSlipPage({ mode: propMode }) {
                     <span style={{ cursor: 'pointer' }}>Sau</span>
                   </div>
                 </div>
-                <table style={{ width: '100%', fontSize: '13px' }}>
-                  <tbody>
-                    <tr>
-                      <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền hàng</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalPrice)}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Thuế GTGT</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalVat)}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền thanh toán</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(grandTotal)}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                {showPricing ? (
+                  <table style={{ width: '100%', fontSize: '13px' }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền hàng</td>
+                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalPrice)}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Thuế GTGT</td>
+                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalVat)}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền thanh toán</td>
+                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(grandTotal)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                ) : (
+                  <table style={{ width: '100%', fontSize: '13px' }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng số lượng xuất</td>
+                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold', color: 'var(--color-primary)' }}>{money(totalQuantity)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           </div>

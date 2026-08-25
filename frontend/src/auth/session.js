@@ -46,6 +46,14 @@ export function hasAnyModulePermission(moduleName) {
     return perms.some(p => p === moduleName || p.startsWith(`${moduleName}:`));
 }
 
+export function canViewPricing() {
+    const roles = getAuthRoles().map(r => String(r || '').toUpperCase());
+    if (roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'ADMIN' || r === 'ROLE_ADMIN' || r === 'MANAGER' || r === 'ROLE_MANAGER' || r === 'ACCOUNTANT' || r === 'ROLE_ACCOUNTANT' || r === 'CASHIER_CONTROLLER' || r === 'ROLE_CASHIER_CONTROLLER')) {
+        return true;
+    }
+    return false;
+}
+
 export function getAuthUserId() {
     const rawUserId = sessionStorage.getItem('userId') || localStorage.getItem('userId');
     return rawUserId ? Number(rawUserId) : null;

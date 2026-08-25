@@ -2,13 +2,16 @@ package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.ProductRequest;
 import com.duylongtech.backend.constant.SystemMessage;
+import com.duylongtech.backend.dto.request.ProductUnitConversionRequest;
 import com.duylongtech.backend.dto.request.ProductVariantRequest;
 import com.duylongtech.backend.dto.response.ProductResponse;
+import com.duylongtech.backend.dto.response.ProductUnitConversionResponse;
 import com.duylongtech.backend.dto.response.ProductVariantResponse;
 import com.duylongtech.backend.dto.response.StockAlertSummaryResponse;
 import com.duylongtech.backend.entity.Brand;
 import com.duylongtech.backend.entity.Product;
 import com.duylongtech.backend.entity.ProductCategory;
+import com.duylongtech.backend.entity.ProductUnitConversion;
 import com.duylongtech.backend.entity.ProductVariant;
 import com.duylongtech.backend.entity.Unit;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
@@ -20,6 +23,7 @@ import com.duylongtech.backend.repository.InventoryDocumentLineRepository;
 import com.duylongtech.backend.repository.InventoryLedgerRepository;
 import com.duylongtech.backend.repository.ProductCategoryRepository;
 import com.duylongtech.backend.repository.ProductRepository;
+import com.duylongtech.backend.repository.ProductUnitConversionRepository;
 import com.duylongtech.backend.repository.ProductVariantRepository;
 import com.duylongtech.backend.repository.SalesOrderLineRepository;
 import com.duylongtech.backend.repository.SerialNumberRepository;
@@ -51,6 +55,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -66,6 +71,7 @@ public class ProductService {
     private final ProductCategoryRepository categoryRepository;
     private final UnitRepository unitRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final ProductUnitConversionRepository productUnitConversionRepository;
     private final InventoryBalanceRepository inventoryBalanceRepository;
     private final InventoryCostLayerRepository inventoryCostLayerRepository;
     private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
@@ -129,6 +135,7 @@ public class ProductService {
         validateProductRequest(dto);
 
         Product product = convertToEntity(dto);
+        updateUnitConversions(product, dto.getUnitConversions());
         Product saved = productRepository.save(product);
         createDefaultVariant(saved, dto);
         return convertToDto(saved);
@@ -180,6 +187,7 @@ public class ProductService {
 
         // Cập nhật quan hệ
         updateRelations(product, dto);
+        updateUnitConversions(product, dto.getUnitConversions());
 
         Product updated = productRepository.save(product);
         return convertToDtoWithStock(updated, getActualStock(updated.getId()));
@@ -502,6 +510,21 @@ public class ProductService {
 
     private ProductVariantResponse convertVariantToDto(ProductVariant variant) {
         Product product = variant.getProduct();
+        List<ProductUnitConversionResponse> conversions = null;
+        if (product != null) {
+            conversions = productUnitConversionRepository.findByProductId(product.getId())
+                    .stream()
+                    .map(conv -> ProductUnitConversionResponse.builder()
+                            .id(conv.getId())
+                            .unitId(conv.getUnit().getId())
+                            .unitName(conv.getUnit().getName())
+                            .operator(conv.getOperator())
+                            .ratio(conv.getRatio())
+                            .note(conv.getNote())
+                            .build())
+                    .collect(Collectors.toList());
+        }
+
         return ProductVariantResponse.builder()
                 .id(variant.getId())
                 .productId(product != null ? product.getId() : null)
@@ -526,6 +549,7 @@ public class ProductService {
                 .specsJson(variant.getSpecsJson())
                 .active(variant.getActive())
                 .warrantyMonths((variant.getWarrantyMonths() == null || variant.getWarrantyMonths() <= 0) && product != null ? product.getWarrantyPeriodMonths() : variant.getWarrantyMonths())
+                .unitConversions(conversions)
                 .createdAt(variant.getCreatedAt())
                 .updatedAt(variant.getUpdatedAt())
                 .build();
@@ -621,11 +645,51 @@ public class ProductService {
         return value.trim();
     }
 
+    private void updateUnitConversions(Product product, List<ProductUnitConversionRequest> conversionRequests) {
+        if (product.getUnitConversions() == null) {
+            product.setUnitConversions(new java.util.ArrayList<>());
+        } else {
+            product.getUnitConversions().clear();
+        }
+        if (conversionRequests != null && !conversionRequests.isEmpty()) {
+            for (ProductUnitConversionRequest req : conversionRequests) {
+                if (req.getUnitId() == null || req.getRatio() == null || req.getRatio().compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+                Unit unit = unitRepository.findById(req.getUnitId())
+                        .orElseThrow(() -> new BusinessException("Đơn vị chuyển đổi không tồn tại: ID " + req.getUnitId()));
+                String op = "DIVIDE".equalsIgnoreCase(req.getOperator()) || "/".equals(req.getOperator()) ? "DIVIDE" : "MULTIPLY";
+                ProductUnitConversion conv = ProductUnitConversion.builder()
+                        .product(product)
+                        .unit(unit)
+                        .operator(op)
+                        .ratio(req.getRatio())
+                        .note(req.getNote())
+                        .build();
+                product.getUnitConversions().add(conv);
+            }
+        }
+    }
+
     private ProductResponse convertToDto(Product product) {
         return convertToDtoWithStock(product, product.getStockQty());
     }
 
     private ProductResponse convertToDtoWithStock(Product product, BigDecimal stockQty) {
+        List<ProductUnitConversionResponse> convList = new java.util.ArrayList<>();
+        if (product.getUnitConversions() != null) {
+            for (ProductUnitConversion c : product.getUnitConversions()) {
+                convList.add(ProductUnitConversionResponse.builder()
+                        .id(c.getId())
+                        .unitId(c.getUnit() != null ? c.getUnit().getId() : null)
+                        .unitName(c.getUnit() != null ? c.getUnit().getName() : null)
+                        .operator(c.getOperator())
+                        .ratio(c.getRatio())
+                        .note(c.getNote())
+                        .build());
+            }
+        }
+
         return ProductResponse.builder()
                 .id(product.getId())
                 .productCode(product.getProductCode())
@@ -646,6 +710,7 @@ public class ProductService {
                 .bomTemplate(product.getBomTemplate())
                 .warrantyPeriod(product.getWarrantyPeriod())
                 .warrantyPeriodMonths(product.getWarrantyPeriodMonths())
+                .unitConversions(convList)
                 .brandId(product.getBrand() != null ? product.getBrand().getId() : null)
                 .brandName(product.getBrand() != null ? product.getBrand().getName() : null)
                 .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)

@@ -29,4 +29,12 @@ public class InventoryDocumentLineResponse {
     private BigDecimal expectedQuantity;
     private BigDecimal rejectedQuantity;
     private String discrepancyReason;
+
+    private Long unitId;
+    private String unitName;
+    private Long baseUnitId;
+    private String baseUnitName;
+    private String conversionOperator;
+    private BigDecimal conversionRatio;
+    private BigDecimal baseQuantity;
 }
