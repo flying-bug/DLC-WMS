@@ -54,6 +54,7 @@ import PaymentManagementPage from '../pages/Payment/PaymentManagementPage';
 import PaymentOverviewPage from '../pages/Payment/PaymentOverviewPage';
 import PaymentHistoryPage from '../pages/Payment/PaymentHistoryPage';
 import EInvoiceListPage from '../pages/EInvoice/EInvoiceListPage';
+import BusinessSettingsPage from '../pages/BusinessSettings/BusinessSettingsPage';
 import MobileScannerPage from '../pages/MobileScanner/MobileScannerPage';
 
 // Helper to check valid token
@@ -181,6 +182,7 @@ function AppRouter() {
                     <Route path="/purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
                     <Route path="/purchase-orders/:id/edit" element={<CreatePurchaseOrderPage />} />
                     <Route path="/einvoices" element={<EInvoiceListPage />} />
+                    <Route path="/business-settings" element={<BusinessSettingsPage />} />
                 </Route>
 
                 {/* Protected Routes for SUPER_ADMIN only */}

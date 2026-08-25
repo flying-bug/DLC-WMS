@@ -26,6 +26,7 @@ const defaultFormData = {
     brandId: '',
     unitId: '',
     salePrice: 0,
+    vatRate: 8,
     description: '',
     imageUrl: '',
     trackSerial: false,
@@ -942,6 +943,7 @@ const ProductPage = () => {
             brandId: product.brandId || '',
             unitId: product.unitId || '',
             salePrice: Number(product.salePrice || 0),
+            vatRate: product.vatRate !== undefined && product.vatRate !== null ? Number(product.vatRate) : 8,
             description: product.description || '',
             imageUrl: product.imageUrl || '',
             trackSerial: Boolean(product.trackSerial),
@@ -1001,6 +1003,7 @@ const ProductPage = () => {
             brandId: product.brandId || '',
             unitId: product.unitId || '',
             salePrice: Number(product.salePrice || 0),
+            vatRate: product.vatRate !== undefined && product.vatRate !== null ? Number(product.vatRate) : 8,
             description: product.description || '',
             imageUrl: product.imageUrl || '',
             trackSerial: Boolean(product.trackSerial),
@@ -1049,6 +1052,7 @@ const ProductPage = () => {
             brandId: isService ? null : finalBrandId,
             unitId: Number(data.unitId),
             salePrice: Number(data.salePrice || 0),
+            vatRate: Number(data.vatRate !== undefined && data.vatRate !== null ? data.vatRate : 8),
             description: data.description?.trim() || '',
             imageUrl: data.imageUrl || '',
             active: data.active,
@@ -2307,6 +2311,37 @@ const ProductPage = () => {
                                                 </div>
                                             </div>
                                         )}
+
+                                        {/* Giá bán & Thuế VAT */}
+                                        <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                                            <div className={styles.formField} style={{ flex: 1 }}>
+                                                <label className={styles.fieldLabel}>Giá bán (VNĐ)</label>
+                                                <input
+                                                    type="text"
+                                                    className={styles.fieldInput}
+                                                    value={formData.salePrice ? new Intl.NumberFormat('vi-VN').format(formData.salePrice) : ''}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/\D/g, '');
+                                                        setFormData(fd => ({ ...fd, salePrice: val ? Number(val) : 0 }));
+                                                    }}
+                                                    placeholder="0"
+                                                />
+                                            </div>
+
+                                            <div className={styles.formField} style={{ flex: 1 }}>
+                                                <label className={styles.fieldLabel}>Thuế VAT (%)</label>
+                                                <SearchableSelect
+                                                    className={styles.fieldInput}
+                                                    value={formData.vatRate !== undefined && formData.vatRate !== null ? formData.vatRate : 8}
+                                                    onChange={(e) => setFormData(fd => ({ ...fd, vatRate: Number(e.target.value) }))}
+                                                >
+                                                    <option value={0}>0%</option>
+                                                    <option value={5}>5%</option>
+                                                    <option value={8}>8%</option>
+                                                    <option value={10}>10%</option>
+                                                </SearchableSelect>
+                                            </div>
+                                        </div>
 
                                         {/* Mô tả */}
                                         <div className={styles.formField} style={{ marginTop: '12px' }}>

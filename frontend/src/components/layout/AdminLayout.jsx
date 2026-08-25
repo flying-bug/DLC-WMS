@@ -34,7 +34,8 @@ const MENU_CONFIG = [
         label: 'HỆ THỐNG',
         items: [
             { path: '/ai-chat', icon: 'fas fa-robot', label: 'Trợ lý AI', moduleKey: 'ai_chat' },
-            { path: '/operations', icon: 'fas fa-cogs', label: 'Thiết lập', adminOnly: true }
+            { path: '/business-settings', icon: 'bi bi-sliders2-vertical', label: 'Thiết lập nghiệp vụ', managerOrAdmin: true },
+            { path: '/operations', icon: 'fas fa-cogs', label: 'Vận hành kỹ thuật', adminOnly: true }
         ]
     }
 ];
@@ -102,7 +103,8 @@ const AdminLayout = ({ children }) => {
         ],
         system: [
             { path: '/ai-chat', label: 'AI Chat', moduleKey: 'ai_chat' },
-            { path: '/operations', label: 'Backup DB', adminOnly: true }
+            { path: '/business-settings', label: 'Thiết lập nghiệp vụ', managerOrAdmin: true },
+            { path: '/operations', label: 'Vận hành kỹ thuật', adminOnly: true }
         ]
     };
 
@@ -116,13 +118,14 @@ const AdminLayout = ({ children }) => {
         if (currentPath.startsWith('/warranties') || currentPath.startsWith('/repairs')) return 'service';
         if (['/customers', '/suppliers'].some(p => currentPath.startsWith(p))) return 'partner';
         if (['/product-categories', '/brands', '/units', '/products'].some(p => currentPath.startsWith(p))) return 'catalog';
-        if (currentPath.startsWith('/ai-chat') || currentPath.startsWith('/operations')) return 'system';
+        if (currentPath.startsWith('/ai-chat') || currentPath.startsWith('/operations') || currentPath.startsWith('/business-settings')) return 'system';
         return 'overview';
     };
 
     const activeModule = getActiveModule();
     const activeTabs = (TABS_CONFIG[activeModule] || []).filter(tab => {
         if (tab.adminOnly && !isSuperAdmin) return false;
+        if (tab.managerOrAdmin && !isSuperAdmin && !isManager) return false;
         if (tab.path === '/ai-chat' && !aiEnabled) return false;
         if (isSuperAdmin || isManager) return true;
         if (tab.moduleKey) {
@@ -167,6 +170,7 @@ const AdminLayout = ({ children }) => {
 
     const checkItemPermission = (item) => {
         if (item.adminOnly && !isSuperAdmin) return false;
+        if (item.managerOrAdmin && !isSuperAdmin && !isManager) return false;
         if (item.path === '/ai-chat' && !aiEnabled) return false;
         if (isSuperAdmin || isManager) return true;
 

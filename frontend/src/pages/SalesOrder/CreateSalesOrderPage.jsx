@@ -500,6 +500,12 @@ function CreateSalesOrderPage() {
         focusField(`so-line-price-${i}`);
         return false;
       }
+      const vat = Number(lines[i].vatRate ?? 0);
+      if (Number.isNaN(vat) || vat < 0 || vat > 10) {
+        showToast('error', `Dòng ${i + 1}: Thuế VAT (%) phải từ 0% đến 10%`);
+        focusField(`so-line-vat-${i}`);
+        return false;
+      }
     }
     return true;
   };
@@ -550,6 +556,12 @@ function CreateSalesOrderPage() {
       if (Number.isNaN(price) || price < 0) {
         showToast('error', `Dòng ${i + 1}: đơn giá không hợp lệ`);
         focusField(`so-line-price-${i}`);
+        return false;
+      }
+      const vat = Number(lines[i].vatRate ?? 0);
+      if (Number.isNaN(vat) || vat < 0 || vat > 10) {
+        showToast('error', `Dòng ${i + 1}: Thuế VAT (%) phải từ 0% đến 10%`);
+        focusField(`so-line-vat-${i}`);
         return false;
       }
       const v = variants.find(item => String(item.id) === String(lines[i].variantId));
@@ -1097,12 +1109,14 @@ function CreateSalesOrderPage() {
                                   if (val === '') {
                                     updateLine(idx, 'vatRate', '');
                                   } else {
-                                    updateLine(idx, 'vatRate', Math.min(100, Number(val)));
+                                    updateLine(idx, 'vatRate', Math.min(10, Math.max(0, Number(val))));
                                   }
                                 }}
                                 onBlur={() => {
                                   if (line.vatRate === '' || line.vatRate == null) {
                                     updateLine(idx, 'vatRate', 0);
+                                  } else {
+                                    updateLine(idx, 'vatRate', Math.min(10, Math.max(0, Number(line.vatRate))));
                                   }
                                 }}
                               />

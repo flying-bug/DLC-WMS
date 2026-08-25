@@ -29,6 +29,7 @@ public class ProductRequest {
     private String productType;
     @NotNull(message = "FIELD_REQUIRED")
     private BigDecimal salePrice;
+    private BigDecimal vatRate;
     private Boolean trackSerial;
     private Boolean trackLot;
     private Boolean isAssembly;

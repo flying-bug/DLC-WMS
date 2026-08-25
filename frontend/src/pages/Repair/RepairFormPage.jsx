@@ -1270,7 +1270,7 @@ function RepairFormPage() {
                     </td>
                     <td align="right">
                       {isEditable ? (
-                        <input type="number" min="0" step="1" max="100" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} value={line.vatPercent || 0} onChange={(e) => handleUpdateLineField(line.id, line._key, 'vatPercent', Number(e.target.value))} />
+                        <input type="number" min="0" step="1" max="10" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} value={line.vatPercent || 0} onChange={(e) => handleUpdateLineField(line.id, line._key, 'vatPercent', Math.min(10, Math.max(0, Number(e.target.value))))} />
                       ) : (line.vatPercent || 0)}
                     </td>
                     <td align="right" style={{ fontWeight: '500' }}>
@@ -1374,7 +1374,7 @@ function RepairFormPage() {
                     </td>
                     <td align="right">
                       {isEditable ? (
-                        <input type="number" min="0" step="1" max="100" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={fee.isFreeWarranty} value={fee.vatPercent || 0} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'vatPercent', Number(e.target.value))} />
+                        <input type="number" min="0" step="1" max="10" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={fee.isFreeWarranty} value={fee.vatPercent || 0} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'vatPercent', Math.min(10, Math.max(0, Number(e.target.value))))} />
                       ) : (fee.vatPercent || 0)}
                     </td>
                     <td align="right" style={{ fontWeight: '500' }}>
@@ -1902,11 +1902,11 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       <td align="right">
         <input
           type="number"
-          min="0" step="1" max="100"
+          min="0" step="1" max="10"
           className="misa-input"
           disabled={isSaving || isFree}
           value={form.vatPercent || 0}
-          onChange={e => setForm({ ...form, vatPercent: Number(e.target.value) })}
+          onChange={e => setForm({ ...form, vatPercent: Math.min(10, Math.max(0, Number(e.target.value))) })}
           onBlur={() => savePart(form)}
           onKeyDown={e => {
             if (e.key === 'Enter') savePart(form);
@@ -2033,12 +2033,12 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       <td align="right">
         <input
           type="number"
-          min="0" step="1" max="100"
+          min="0" step="1" max="10"
           className="misa-input"
           disabled={isSaving || isFree}
           style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }}
           value={form.vatPercent || 0}
-          onChange={e => setForm({ ...form, vatPercent: Number(e.target.value) })}
+          onChange={e => setForm({ ...form, vatPercent: Math.min(10, Math.max(0, Number(e.target.value))) })}
           onBlur={() => saveFee(form)}
           onKeyDown={e => {
             if (e.key === 'Enter') saveFee(form);

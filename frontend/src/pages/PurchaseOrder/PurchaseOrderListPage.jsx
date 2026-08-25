@@ -32,6 +32,76 @@ const money    = (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
 const fmtDate  = (v) => (v ? formatDateOnly(v) : '');
 const unwrap   = (res) => res?.data?.data ?? res?.data;
 
+function renderPaymentDueDateBadge(po) {
+  if (!po.paymentDueDate) {
+    return <span style={{ color: 'var(--color-text-muted-2)' }}>—</span>;
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueDate = new Date(po.paymentDueDate);
+  dueDate.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((dueDate - today) / (1000 * 60 * 60 * 24));
+  const isPaid = po.paymentStatus === 'PAID';
+
+  return (
+    <div className={styles.dateCell}>
+      <span className={styles.dateMain}>{fmtDate(po.paymentDueDate)}</span>
+      {isPaid ? (
+        <span className={`${styles.badgePill} ${styles.pillPaid}`} title="Đã thanh toán đủ">
+          <i className="bi bi-check-circle-fill" /> Đã trả
+        </span>
+      ) : diffDays < 0 ? (
+        <span className={`${styles.badgePill} ${styles.pillOverdue}`} title={`Quá hạn công nợ ${Math.abs(diffDays)} ngày`}>
+          <i className="bi bi-exclamation-triangle-fill" /> Quá hạn {Math.abs(diffDays)}N
+        </span>
+      ) : diffDays === 0 ? (
+        <span className={`${styles.badgePill} ${styles.pillDueToday}`} title="Đến hạn thanh toán hôm nay">
+          <i className="bi bi-clock-fill" /> Hôm nay
+        </span>
+      ) : diffDays <= 3 ? (
+        <span className={`${styles.badgePill} ${styles.pillDueSoon}`} title={`Sắp đến hạn trong ${diffDays} ngày`}>
+          <i className="bi bi-hourglass-split" /> Còn {diffDays}N
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function renderDeliveryDateBadge(po) {
+  if (!po.expectedDeliveryDate) {
+    return <span style={{ color: 'var(--color-text-muted-2)' }}>—</span>;
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const delivDate = new Date(po.expectedDeliveryDate);
+  delivDate.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((delivDate - today) / (1000 * 60 * 60 * 24));
+  const isFullyImported = po.isFullyImported || po.status === 'POSTED';
+
+  return (
+    <div className={styles.dateCell}>
+      <span className={styles.dateMain}>{fmtDate(po.expectedDeliveryDate)}</span>
+      {isFullyImported ? (
+        <span className={`${styles.badgePill} ${styles.pillPaid}`} title="Đã nhập kho đủ">
+          <i className="bi bi-check2-all" /> Đã nhập
+        </span>
+      ) : diffDays < 0 ? (
+        <span className={`${styles.badgePill} ${styles.pillDeliveryLate}`} title={`Trễ hạn giao hàng ${Math.abs(diffDays)} ngày`}>
+          <i className="bi bi-truck-flatbed" /> Trễ {Math.abs(diffDays)}N
+        </span>
+      ) : diffDays === 0 ? (
+        <span className={`${styles.badgePill} ${styles.pillDeliveryToday}`} title="Dự kiến giao hàng trong hôm nay">
+          <i className="bi bi-box-seam" /> Giao hôm nay
+        </span>
+      ) : diffDays === 1 ? (
+        <span className={`${styles.badgePill} ${styles.pillDeliverySoon}`} title="Dự kiến giao hàng vào ngày mai">
+          <i className="bi bi-calendar-event" /> Ngày mai
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function PurchaseOrderListPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -91,11 +161,13 @@ function PurchaseOrderListPage() {
       showToast('warning', 'Không có dữ liệu để xuất Excel');
       return;
     }
-    const headers = ['Mã đơn', 'Ngày lập', 'Nhà cung cấp', 'Tổng tiền', 'Trạng thái'];
+    const headers = ['Mã đơn', 'Ngày lập', 'Nhà cung cấp', 'Hạn công nợ', 'Ngày giao DK', 'Tổng tiền', 'Trạng thái'];
     const data = orders.map(po => [
       po.poCode,
       fmtDate(po.poDate),
       po.partnerName || `#${po.partnerId}`,
+      fmtDate(po.paymentDueDate),
+      fmtDate(po.expectedDeliveryDate),
       money(po.totalAmount),
       STATUS_LABELS[po.status]?.label || po.status
     ]);
@@ -235,12 +307,14 @@ function PurchaseOrderListPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th style={{ width: 50 }}>#</th>
-                  <th style={{ width: 130 }}>Mã đơn</th>
-                  <th style={{ width: 110 }}>Ngày lập</th>
+                  <th style={{ width: 45 }}>#</th>
+                  <th style={{ width: 110 }}>Mã đơn</th>
+                  <th style={{ width: 95 }}>Ngày lập</th>
                   <th>Nhà cung cấp</th>
-                  <th style={{ width: 130, textAlign: 'right' }}>Công nợ</th>
-                  <th style={{ width: 110 }}>Trạng thái</th>
+                  <th style={{ width: 125 }}>Hạn công nợ</th>
+                  <th style={{ width: 130 }}>Ngày giao DK</th>
+                  <th style={{ width: 125, textAlign: 'right' }}>Tổng tiền</th>
+                  <th style={{ width: 100 }}>Trạng thái</th>
                   <th style={{ width: 120, textAlign: 'center' }}>Thao tác</th>
                 </tr>
               </thead>
@@ -264,6 +338,8 @@ function PurchaseOrderListPage() {
                       </td>
                       <td>{fmtDate(po.poDate)}</td>
                       <td>{po.partnerName || `#${po.partnerId}`}</td>
+                      <td>{renderPaymentDueDateBadge(po)}</td>
+                      <td>{renderDeliveryDateBadge(po)}</td>
                       <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>
                         {money(po.totalAmount)}
                       </td>
@@ -319,7 +395,7 @@ function PurchaseOrderListPage() {
                   );
                 }) : (
                   <tr>
-                    <td colSpan={7} className={styles.textCenter} style={{ padding: 40 }}>
+                    <td colSpan={9} className={styles.textCenter} style={{ padding: 40 }}>
                       {loading ? 'Đang tải dữ liệu...' : 'Không tìm thấy đơn mua hàng nào'}
                     </td>
                   </tr>

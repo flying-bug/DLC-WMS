@@ -25,4 +25,12 @@ public interface AppNotificationRepository extends JpaRepository<AppNotification
     @Modifying
     @Query("UPDATE AppNotification n SET n.isRead = true WHERE n.userId = :userId OR n.recipientRole IN :roles")
     void markAllAsRead(@Param("userId") Long userId, @Param("roles") List<String> roles);
+
+    @Query("SELECT COUNT(n) > 0 FROM AppNotification n WHERE n.referenceType = :referenceType AND n.referenceId = :referenceId AND n.recipientRole = :recipientRole AND n.createdAt >= :after")
+    boolean existsRecentNotification(
+        @Param("referenceType") String referenceType,
+        @Param("referenceId") Long referenceId,
+        @Param("recipientRole") String recipientRole,
+        @Param("after") java.time.LocalDateTime after
+    );
 }

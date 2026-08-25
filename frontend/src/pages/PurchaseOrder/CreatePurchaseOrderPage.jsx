@@ -437,6 +437,12 @@ function CreatePurchaseOrderPage() {
         focusField(`po-line-price-${i}`);
         return false;
       }
+      const vat = Number(lines[i].vatRate ?? 0);
+      if (Number.isNaN(vat) || vat < 0 || vat > 10) {
+        showToast('error', `Dòng ${i + 1}: Thuế VAT (%) phải từ 0% đến 10%`);
+        focusField(`po-line-vat-${i}`);
+        return false;
+      }
     }
     return true;
   };
@@ -789,10 +795,24 @@ function CreatePurchaseOrderPage() {
                               className={styles.cellInput}
                               style={{ textAlign: 'center' }}
                               min="0"
-                              max="100"
+                              max="10"
                               step="1"
                               value={line.vatRate}
-                              onChange={e => updateLine(idx, 'vatRate', e.target.value)}
+                              onChange={e => {
+                                const val = e.target.value;
+                                if (val === '') {
+                                  updateLine(idx, 'vatRate', '');
+                                } else {
+                                  updateLine(idx, 'vatRate', Math.min(10, Math.max(0, Number(val))));
+                                }
+                              }}
+                              onBlur={() => {
+                                if (line.vatRate === '' || line.vatRate == null) {
+                                  updateLine(idx, 'vatRate', 0);
+                                } else {
+                                  updateLine(idx, 'vatRate', Math.min(10, Math.max(0, Number(line.vatRate))));
+                                }
+                              }}
                             />
                           </td>
                           <td style={{ textAlign: 'right', fontWeight: 600, color: '#1e40af', fontSize: 13, whiteSpace: 'nowrap' }}>

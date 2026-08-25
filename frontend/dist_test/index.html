@@ -5,14 +5,27 @@
     <link rel="icon" type="image/png" href="/dl-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Duy Long Computer</title>
+    <!-- Pre-render Theme Script (Chặn chớp giao diện mặc định khi tải trang) -->
+    <script>
+      (function() {
+        try {
+          var storedTheme = localStorage.getItem('app-theme');
+          var validThemes = ['default', 'emerald', 'violet', 'pink', 'dark'];
+          if (storedTheme && validThemes.indexOf(storedTheme) !== -1) {
+            document.documentElement.setAttribute('data-theme', storedTheme);
+            document.documentElement.style.colorScheme = storedTheme === 'dark' ? 'dark' : 'light';
+          }
+        } catch (e) {}
+      })();
+    </script>
     <!-- FontAwesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <!-- Thêm thư viện Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- Font chữ chuyên nghiệp (Inter) giống hệ thống MISA -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-b0h70_GI.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BR6clBA4.css">
+    <script type="module" crossorigin src="/assets/index-DH486ldz.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BCf-1-JC.css">
   </head>
   <body>
     <div id="root"></div>

@@ -47,4 +47,13 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
 
     @Query("SELECT po.poCode FROM PurchaseOrder po WHERE po.poCode LIKE :prefixLike ORDER BY po.poCode DESC")
     List<String> findCodesByPrefix(@Param("prefixLike") String prefixLike);
+
+    @Query("""
+        SELECT DISTINCT po FROM PurchaseOrder po
+        LEFT JOIN FETCH po.partner
+        LEFT JOIN FETCH po.lines l
+        WHERE po.status IN ('APPROVED', 'POSTED')
+        ORDER BY po.createdAt DESC
+    """)
+    List<PurchaseOrder> findActiveOrdersForReminder();
 }

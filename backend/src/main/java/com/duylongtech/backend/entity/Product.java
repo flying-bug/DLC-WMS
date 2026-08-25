@@ -48,6 +48,10 @@ public class Product {
     @Builder.Default
     private BigDecimal salePrice = BigDecimal.ZERO;
 
+    @Column(name = "vat_rate", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal vatRate = BigDecimal.valueOf(8);
+
     @Column(name = "track_serial")
     @Builder.Default
     private Boolean trackSerial = false;

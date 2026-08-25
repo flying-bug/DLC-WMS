@@ -152,6 +152,9 @@ public class ProductService {
         product.setProductName(dto.getProductName());
         product.setProductType(resolveProductType(dto.getProductType()));
         product.setSalePrice(resolveMoney(dto.getSalePrice()));
+        if (dto.getVatRate() != null) {
+            product.setVatRate(dto.getVatRate());
+        }
         product.setTrackSerial(dto.getTrackSerial());
         product.setTrackLot(dto.getTrackLot());
         product.setIsAssembly(dto.getIsAssembly());
@@ -518,6 +521,7 @@ public class ProductService {
                 .variantName(variant.getVariantName())
                 .costPrice(variant.getCostPrice())
                 .salePrice((variant.getSalePrice() == null || variant.getSalePrice().compareTo(BigDecimal.ZERO) == 0) && product != null ? product.getSalePrice() : variant.getSalePrice())
+                .vatRate(product != null && product.getVatRate() != null ? product.getVatRate() : BigDecimal.valueOf(8))
                 .manufacturerPartNumber(variant.getManufacturerPartNumber())
                 .specsJson(variant.getSpecsJson())
                 .active(variant.getActive())
@@ -566,6 +570,7 @@ public class ProductService {
                 .productName(dto.getProductName())
                 .productType(resolveProductType(dto.getProductType()))
                 .salePrice(resolveMoney(dto.getSalePrice()))
+                .vatRate(dto.getVatRate() != null ? dto.getVatRate() : BigDecimal.valueOf(8))
                 .trackSerial(dto.getTrackSerial() != null ? dto.getTrackSerial() : false)
                 .trackLot(dto.getTrackLot() != null ? dto.getTrackLot() : false)
                 .isAssembly(dto.getIsAssembly() != null ? dto.getIsAssembly() : false)
@@ -627,6 +632,7 @@ public class ProductService {
                 .productName(product.getProductName())
                 .productType(product.getProductType())
                 .salePrice(product.getSalePrice())
+                .vatRate(product.getVatRate() != null ? product.getVatRate() : BigDecimal.valueOf(8))
                 .trackSerial(product.getTrackSerial())
                 .trackLot(product.getTrackLot())
                 .isAssembly(product.getIsAssembly())

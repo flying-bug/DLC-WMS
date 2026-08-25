@@ -184,7 +184,8 @@ const QuickAddProductModal = ({
         categoryId: '',
         unitId: '',
         warrantyPeriodMonths: '',
-        salePrice: ''
+        salePrice: '',
+        vatRate: 8
     });
     const [trackSerial, setTrackSerial] = useState(false);
     
@@ -325,6 +326,7 @@ const QuickAddProductModal = ({
                 brandId: formData.brandId ? Number(formData.brandId) : null,
                 warrantyPeriodMonths: formData.warrantyPeriodMonths ? Number(formData.warrantyPeriodMonths) : 0,
                 salePrice: formData.salePrice ? Number(formData.salePrice) : 0,
+                vatRate: formData.vatRate !== undefined ? Number(formData.vatRate) : 8,
                 trackSerial: trackSerial,
                 isAssembly: isAssemblyType,
                 active: true,
@@ -439,6 +441,18 @@ const QuickAddProductModal = ({
                                     onChange={e => setFormData(f => ({...f, salePrice: e.target.value.replace(/\D/g, '')}))} 
                                     placeholder="0"
                                 />
+                            </div>
+                            <div className={styles.field} style={{ flex: 1 }}>
+                                <label>Thuế VAT (%)</label>
+                                <SearchableSelect 
+                                    value={formData.vatRate !== undefined ? formData.vatRate : 8} 
+                                    onChange={e => setFormData(f => ({...f, vatRate: Number(e.target.value)}))}
+                                >
+                                    <option value={0}>0%</option>
+                                    <option value={5}>5%</option>
+                                    <option value={8}>8%</option>
+                                    <option value={10}>10%</option>
+                                </SearchableSelect>
                             </div>
                         </div>
 

@@ -31,6 +31,7 @@ public class ProductVariantResponse {
     private String variantName;
     private BigDecimal costPrice;
     private BigDecimal salePrice;
+    private BigDecimal vatRate;
     private String manufacturerPartNumber;
     private String specsJson;
     private Boolean active;

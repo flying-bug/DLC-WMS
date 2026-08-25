@@ -248,11 +248,39 @@ function PurchaseOrderDetailPage() {
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Hạn công nợ</span>
-              <span className={styles.infoValue}>{fmtDate(po.paymentDueDate)}</span>
+              <span className={styles.infoValue}>
+                {fmtDate(po.paymentDueDate)}
+                {(() => {
+                  if (!po.paymentDueDate) return null;
+                  const today = new Date(); today.setHours(0, 0, 0, 0);
+                  const dueDate = new Date(po.paymentDueDate); dueDate.setHours(0, 0, 0, 0);
+                  const diffDays = Math.round((dueDate - today) / (1000 * 60 * 60 * 24));
+                  const isPaid = po.paymentStatus === 'PAID';
+                  if (isPaid) return <span className={`${styles.badgePill} ${styles.pillPaid}`}><i className="bi bi-check-circle-fill" /> Đã thanh toán</span>;
+                  if (diffDays < 0) return <span className={`${styles.badgePill} ${styles.pillOverdue}`}><i className="bi bi-exclamation-triangle-fill" /> Quá hạn {Math.abs(diffDays)} ngày</span>;
+                  if (diffDays === 0) return <span className={`${styles.badgePill} ${styles.pillDueToday}`}><i className="bi bi-clock-fill" /> Hạn hôm nay</span>;
+                  if (diffDays <= 3) return <span className={`${styles.badgePill} ${styles.pillDueSoon}`}><i className="bi bi-hourglass-split" /> Còn {diffDays} ngày</span>;
+                  return null;
+                })()}
+              </span>
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Ngày giao hàng DK</span>
-              <span className={styles.infoValue}>{fmtDate(po.expectedDeliveryDate)}</span>
+              <span className={styles.infoValue}>
+                {fmtDate(po.expectedDeliveryDate)}
+                {(() => {
+                  if (!po.expectedDeliveryDate) return null;
+                  const today = new Date(); today.setHours(0, 0, 0, 0);
+                  const delivDate = new Date(po.expectedDeliveryDate); delivDate.setHours(0, 0, 0, 0);
+                  const diffDays = Math.round((delivDate - today) / (1000 * 60 * 60 * 24));
+                  const isDone = po.isFullyImported || po.status === 'POSTED';
+                  if (isDone) return <span className={`${styles.badgePill} ${styles.pillPaid}`}><i className="bi bi-check2-all" /> Đã nhận đủ</span>;
+                  if (diffDays < 0) return <span className={`${styles.badgePill} ${styles.pillDeliveryLate}`}><i className="bi bi-truck" /> Trễ hạn {Math.abs(diffDays)} ngày</span>;
+                  if (diffDays === 0) return <span className={`${styles.badgePill} ${styles.pillDeliveryToday}`}><i className="bi bi-box-seam" /> Giao hôm nay</span>;
+                  if (diffDays === 1) return <span className={`${styles.badgePill} ${styles.pillDeliverySoon}`}><i className="bi bi-calendar-event" /> Giao ngày mai</span>;
+                  return null;
+                })()}
+              </span>
             </div>
             {(() => {
               const { note: cleanNote } = parseNoteAndAttachments(po.note);
