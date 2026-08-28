@@ -53,6 +53,9 @@ public class VoiceCommandService {
     @Value("${ai.gemini.model:gemini-2.0-flash}")
     private String geminiModel;
 
+    @Value("${ai.gemini.thinking-budget:0}")
+    private int geminiThinkingBudget;
+
     @Value("${ai.gemini.base-url:https://generativelanguage.googleapis.com/v1beta}")
     private String geminiBaseUrl;
 
@@ -356,6 +359,10 @@ public class VoiceCommandService {
         Map<String, Object> generationConfig = new LinkedHashMap<>();
         generationConfig.put("maxOutputTokens", 500);
         generationConfig.put("responseMimeType", "application/json");
+
+        Map<String, Object> thinkingConfig = new LinkedHashMap<>();
+        thinkingConfig.put("thinkingBudget", geminiThinkingBudget);
+        generationConfig.put("thinkingConfig", thinkingConfig);
 
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("contents", List.of(content));

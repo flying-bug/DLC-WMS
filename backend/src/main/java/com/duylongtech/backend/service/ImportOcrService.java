@@ -27,11 +27,19 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -74,6 +82,9 @@ public class ImportOcrService {
 
     @Value("${ai.gemini.model:gemini-2.0-flash}")
     private String geminiModel;
+
+    @Value("${ai.gemini.thinking-budget:0}")
+    private int geminiThinkingBudget;
 
     @Value("${ai.gemini.base-url:https://generativelanguage.googleapis.com/v1beta}")
     private String geminiBaseUrl;
@@ -214,26 +225,36 @@ public class ImportOcrService {
     @Transactional(readOnly = true)
     public OcrImportResponse scanDocumentBytes(byte[] imageBytes, String mimeType) {
         if (!systemSettingsService.isAiEnabled()) {
-            throw new RuntimeException("Tính năng quét AI OCR hiện đang tạm khóa bởi Quản trị viên.");
+            throw new BusinessException("Tính năng quét AI OCR hiện đang tạm khóa bởi Quản trị viên.");
         }
+        long startTime = System.currentTimeMillis();
         try {
-            // 1. Convert file thành Base64
-            String base64Image = Base64.getEncoder().encodeToString(imageBytes);
+            // 1. Tự động resize ảnh nếu dung lượng quá lớn (ví dụ chụp qua Mobile QR sync)
+            byte[] processedBytes = downscaleImageIfNeeded(imageBytes, mimeType);
+
+            // 2. Convert file thành Base64
+            String base64Image = Base64.getEncoder().encodeToString(processedBytes);
             String effectiveMimeType = (mimeType != null && !mimeType.isBlank()) ? mimeType : "image/jpeg";
 
-            // 2. Gọi Vision AI
+            // 3. Gọi Vision AI
+            long aiStart = System.currentTimeMillis();
             String rawJson = callVisionAi(base64Image, effectiveMimeType);
+            long aiDuration = System.currentTimeMillis() - aiStart;
 
-            // 3. Parse JSON response
+            // 4. Parse JSON response
             JsonNode ocrResult = objectMapper.readTree(rawJson);
 
-            // 4. Match Supplier
+            // 5. Match Supplier
             SupplierMatch supplierMatch = matchSupplier(ocrResult);
 
-            // 5. Match Items
+            // 6. Match Items
             List<OcrItemLine> itemLines = matchItems(ocrResult, supplierMatch.matchedId);
+            long totalDuration = System.currentTimeMillis() - startTime;
 
-            // 6. Build response
+            log.info("[OCR] Completed scan in {} ms (Vision AI: {} ms, Matching: {} ms, Items: {})",
+                    totalDuration, aiDuration, (totalDuration - aiDuration), itemLines.size());
+
+            // 7. Build response
             return OcrImportResponse.builder()
                     .invoiceCode(textOrNull(ocrResult, "invoice_code"))
                     .invoiceDate(dateOrNull(ocrResult, "invoice_date"))
@@ -245,9 +266,65 @@ public class ImportOcrService {
                     .supplierConfidence(supplierMatch.confidence)
                     .items(itemLines)
                     .build();
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("OCR scan failed", e);
-            throw new RuntimeException(String.format(SystemMessage.OCR_ERR_002.getMessage(), e.getMessage()));
+            log.error("OCR scan failed after {} ms: {}", (System.currentTimeMillis() - startTime), e.getMessage(), e);
+            throw new BusinessException(String.format(SystemMessage.OCR_ERR_002.getMessage(), e.getMessage()));
+        }
+    }
+
+
+    /**
+     * Tự động nén và thu nhỏ ảnh ở Server nếu dung lượng vượt quá 1MB (bảo vệ khi upload qua Mobile QR hoặc API ngoài)
+     */
+    private byte[] downscaleImageIfNeeded(byte[] imageBytes, String mimeType) {
+        if (imageBytes == null || imageBytes.length <= 1024 * 1024) {
+            return imageBytes;
+        }
+        try {
+            BufferedImage original = ImageIO.read(new ByteArrayInputStream(imageBytes));
+            if (original == null) return imageBytes;
+
+            int width = original.getWidth();
+            int height = original.getHeight();
+            int maxDim = 1800;
+
+            if (width <= maxDim && height <= maxDim && imageBytes.length < 1.5 * 1024 * 1024) {
+                return imageBytes;
+            }
+
+            int targetWidth = width;
+            int targetHeight = height;
+            if (width > height) {
+                if (width > maxDim) {
+                    targetHeight = (int) Math.round(((double) height * maxDim) / width);
+                    targetWidth = maxDim;
+                }
+            } else {
+                if (height > maxDim) {
+                    targetWidth = (int) Math.round(((double) width * maxDim) / height);
+                    targetHeight = maxDim;
+                }
+            }
+
+            BufferedImage resized = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g2d = resized.createGraphics();
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.drawImage(original, 0, 0, targetWidth, targetHeight, Color.WHITE, null);
+            g2d.dispose();
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(resized, "jpg", baos);
+            byte[] downscaled = baos.toByteArray();
+            log.info("[OCR] Auto-downscaled image: {} KB -> {} KB ({}x{} -> {}x{})",
+                    imageBytes.length / 1024, downscaled.length / 1024, width, height, targetWidth, targetHeight);
+            return downscaled;
+        } catch (Exception e) {
+            log.warn("[OCR] Image downscale fallback error, using original bytes: {}", e.getMessage());
+            return imageBytes;
         }
     }
 
@@ -283,15 +360,31 @@ public class ImportOcrService {
     // =========================================================================
 
     private String callVisionAi(String base64Image, String mimeType) throws Exception {
-        String selectedProvider = provider == null ? "openai" : provider.trim().toLowerCase(Locale.ROOT);
-        if ("gemini".equals(selectedProvider) && geminiEnabled) {
+        boolean hasGeminiKey = (geminiApiKey != null && !geminiApiKey.isBlank());
+        boolean hasOpenAiKey = (openAiApiKey != null && !openAiApiKey.isBlank());
+
+        String selectedProvider = provider == null ? "gemini" : provider.trim().toLowerCase(Locale.ROOT);
+        if ("gemini".equals(selectedProvider)) {
+            if (!hasGeminiKey) {
+                throw new BusinessException("Chưa cấu hình GEMINI_API_KEY. Vui lòng thêm API Key vào biến môi trường GEMINI_API_KEY hoặc file cấu hình.");
+            }
             return callGeminiVision(base64Image, mimeType);
         }
-        if (openAiEnabled) {
+        if ("openai".equals(selectedProvider)) {
+            if (!hasOpenAiKey) {
+                throw new BusinessException("Chưa cấu hình OPENAI_API_KEY. Vui lòng thêm API Key vào biến môi trường OPENAI_API_KEY hoặc file cấu hình.");
+            }
             return callOpenAiVision(base64Image, mimeType);
         }
-        throw new RuntimeException(SystemMessage.OCR_ERR_001.getMessage());
+        if (hasGeminiKey) {
+            return callGeminiVision(base64Image, mimeType);
+        }
+        if (hasOpenAiKey) {
+            return callOpenAiVision(base64Image, mimeType);
+        }
+        throw new BusinessException("Không tìm thấy API Key cho AI (GEMINI_API_KEY hoặc OPENAI_API_KEY). Vui lòng cấu hình API Key để sử dụng tính năng quét chứng từ.");
     }
+
 
     private String callOpenAiVision(String base64Image, String mimeType) throws Exception {
         Map<String, Object> textContent = new LinkedHashMap<>();
@@ -305,7 +398,7 @@ public class ImportOcrService {
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("model", openAiModel);
         request.put("input", List.of(textContent, imageContent));
-        request.put("max_tokens", 4096);
+        request.put("max_tokens", 3072);
 
         String rawResponse = restClient.post()
                 .uri(openAiBaseUrl + "/responses")
@@ -322,7 +415,7 @@ public class ImportOcrService {
         Map<String, Object> textPart = Map.of("text", VISION_SYSTEM_PROMPT);
 
         Map<String, Object> inlineData = new LinkedHashMap<>();
-        inlineData.put("mime_type", mimeType);
+        inlineData.put("mime_type", mimeType != null && !mimeType.isBlank() ? mimeType : "image/jpeg");
         inlineData.put("data", base64Image);
         Map<String, Object> imagePart = Map.of("inline_data", inlineData);
 
@@ -330,22 +423,58 @@ public class ImportOcrService {
         content.put("role", "user");
         content.put("parts", List.of(textPart, imagePart));
 
-        Map<String, Object> generationConfig = Map.of("maxOutputTokens", 8192);
+        Map<String, Object> generationConfig = new LinkedHashMap<>();
+        generationConfig.put("maxOutputTokens", 2048);
+        generationConfig.put("temperature", 0.1);
+        generationConfig.put("responseMimeType", "application/json");
+
+        // Bắt buộc gửi thinkingBudget = 0 đối với các model 2.5 / thinking để tắt suy luận ngầm
+        boolean isThinkingModel = geminiModel != null && (geminiModel.contains("2.5") || geminiModel.contains("thinking"));
+        if (isThinkingModel || geminiThinkingBudget > 0) {
+            Map<String, Object> thinkingConfig = new LinkedHashMap<>();
+            thinkingConfig.put("thinkingBudget", geminiThinkingBudget);
+            generationConfig.put("thinkingConfig", thinkingConfig);
+        }
 
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("contents", List.of(content));
         request.put("generationConfig", generationConfig);
 
         String modelPath = geminiModel.startsWith("models/") ? geminiModel : "models/" + geminiModel;
-        String rawResponse = restClient.post()
-                .uri(geminiBaseUrl + "/" + modelPath + ":generateContent?key=" + geminiApiKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
-                .retrieve()
-                .body(String.class);
+        log.info("[OCR] Calling Gemini model: {} with thinkingBudget: {}...", modelPath, generationConfig.get("thinkingConfig"));
 
-        return extractGeminiText(rawResponse);
+        try {
+            String rawResponse = restClient.post()
+                    .uri(geminiBaseUrl + "/" + modelPath + ":generateContent?key=" + geminiApiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(String.class);
+
+            return extractGeminiText(rawResponse);
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            log.error("[OCR] Gemini API error: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            // Fallback retry nếu 400 do generationConfig
+            if (e.getStatusCode().value() == 400) {
+                if (generationConfig.containsKey("thinkingConfig") || generationConfig.containsKey("responseMimeType")) {
+                    log.warn("[OCR] Retrying Gemini call with standard generationConfig...");
+                    Map<String, Object> fallbackConfig = new LinkedHashMap<>();
+                    fallbackConfig.put("maxOutputTokens", 3072);
+                    request.put("generationConfig", fallbackConfig);
+                    String retryResponse = restClient.post()
+                            .uri(geminiBaseUrl + "/" + modelPath + ":generateContent?key=" + geminiApiKey)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(request)
+                            .retrieve()
+                            .body(String.class);
+                    return extractGeminiText(retryResponse);
+                }
+            }
+            throw new RuntimeException("Gemini Vision AI error (" + e.getStatusCode() + "): " + e.getResponseBodyAsString(), e);
+        }
     }
+
+
 
     private String extractOpenAiText(String rawResponse) throws Exception {
         JsonNode root = objectMapper.readTree(rawResponse);

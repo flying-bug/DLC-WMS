@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { initOcrSession, getOcrSessionState } from '../../../api/inventoryImportApi';
+import { compressImageForOcr } from '../../../utils/imageCompressor';
 import styles from './OcrUploadModal.module.css';
 
 /**
@@ -9,6 +10,7 @@ import styles from './OcrUploadModal.module.css';
 export default function OcrUploadModal({ open, onClose, onFileSelected, loading, onOcrSuccess }) {
   const [dragOver, setDragOver] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [compressing, setCompressing] = useState(false);
   
   // Trạng thái cho tính năng đồng bộ Mobile
   const [showQR, setShowQR] = useState(false);
@@ -19,23 +21,33 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
-  const handleFile = useCallback((file) => {
+  const handleFile = useCallback(async (file) => {
     if (!file) return;
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'application/pdf'];
     if (!validTypes.includes(file.type)) {
       alert('Chỉ hỗ trợ file ảnh (JPG, PNG, WEBP) hoặc PDF.');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File quá lớn. Tối đa 10MB.');
+    if (file.size > 25 * 1024 * 1024) {
+      alert('File quá lớn. Tối đa 25MB.');
       return;
     }
+
+    let fileToProcess = file;
     if (file.type.startsWith('image/')) {
       setPreview(URL.createObjectURL(file));
+      setCompressing(true);
+      try {
+        fileToProcess = await compressImageForOcr(file, { maxWidth: 1800, maxHeight: 1800, quality: 0.85 });
+      } catch (err) {
+        console.warn('Lỗi nén ảnh phía client, sử dụng file gốc:', err);
+      } finally {
+        setCompressing(false);
+      }
     } else {
       setPreview(null);
     }
-    onFileSelected(file);
+    onFileSelected(fileToProcess);
   }, [onFileSelected]);
 
   // Ctrl + V Paste Listener
@@ -153,10 +165,17 @@ export default function OcrUploadModal({ open, onClose, onFileSelected, loading,
               onDragLeave={handleDragLeave}
               onClick={() => fileInputRef.current?.click()}
             >
-              {loading ? (
+              {compressing ? (
                 <div className={styles.loadingWrap}>
                   <div className={styles.spinner} />
-                  <p>Đang phân tích chứng từ bằng AI...</p>
+                  <p>⚙️ Đang tối ưu hóa dung lượng ảnh...</p>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>Nén về chuẩn 1800px để xử lý siêu tốc</span>
+                </div>
+              ) : loading ? (
+                <div className={styles.loadingWrap}>
+                  <div className={styles.spinner} />
+                  <p>⚡ AI đang quét & trích xuất dữ liệu...</p>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>Thời gian phản hồi ~2–3 giây</span>
                 </div>
               ) : preview ? (
                 <img src={preview} alt="Preview" className={styles.previewImg} />

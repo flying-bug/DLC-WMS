@@ -52,17 +52,19 @@ cloudinary:
   max-file-size: ${CLOUDINARY_MAX_FILE_SIZE:5242880}
 
 ai:
-  provider: ${AI_PROVIDER:openai}
+  provider: ${AI_PROVIDER:gemini}
   openai:
     enabled: ${OPENAI_ENABLED:false}
     api-key: ${OPENAI_API_KEY:}
     model: ${OPENAI_MODEL:gpt-4o-mini}
     base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
   gemini:
-    enabled: ${GEMINI_ENABLED:false}
+    enabled: ${GEMINI_ENABLED:true}
     api-key: ${GEMINI_API_KEY:}
     model: ${GEMINI_MODEL:gemini-2.0-flash}
+    thinking-budget: ${GEMINI_THINKING_BUDGET:0}
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+
 
 einvoice:
   active-provider: ${EINVOICE_PROVIDER:XINVOICE}
