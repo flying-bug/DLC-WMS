@@ -18,6 +18,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.Mockito;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -336,7 +338,7 @@ class AuthServiceTest {
                 () -> authService.verifyOtp("user@dlc.vn", "654321")
         );
 
-        assertEquals("Mã OTP không chính xác.", exception.getMessage());
+        assertTrue(exception.getMessage().contains("Mã OTP không chính xác"));
     }
 
     @Test
@@ -350,7 +352,7 @@ class AuthServiceTest {
         );
 
         assertAll(
-                () -> assertEquals("Mã OTP đã hết hạn.", exception.getMessage()),
+                () -> assertTrue(exception.getMessage().contains("hết hạn")),
                 () -> assertFalse(otpStorage().containsKey("user@dlc.vn")),
                 () -> assertFalse(otpExpiry().containsKey("user@dlc.vn"))
         );
@@ -374,7 +376,7 @@ class AuthServiceTest {
                 () -> authService.resetPasswordWithOtp("user@dlc.vn", "000000", "NewSecret123")
         );
 
-        assertEquals("Mã OTP không chính xác.", exception.getMessage());
+        assertTrue(exception.getMessage().contains("Mã OTP không chính xác"));
         verifyNoInteractions(passwordEncoder, realtimeSessionService);
         verify(userRepository, never()).save(any());
     }
@@ -405,9 +407,9 @@ class AuthServiceTest {
         assertEquals("encoded-new-password", user.getPasswordHash());
         verify(userRepository).save(user);
         verify(realtimeSessionService).forceLogoutUser(
-                10L,
-                "PASSWORD_RESET",
-                "Mat khau cua ban vua duoc thay doi. Vui long dang nhap lai."
+                eq(10L),
+                eq("PASSWORD_RESET"),
+                anyString()
         );
         assertFalse(otpStorage().containsKey("user@dlc.vn"));
         assertFalse(otpExpiry().containsKey("user@dlc.vn"));

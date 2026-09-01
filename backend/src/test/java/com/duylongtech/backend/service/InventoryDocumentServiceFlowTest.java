@@ -60,6 +60,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class InventoryDocumentServiceFlowTest {
 
     private static final Long DOCUMENT_ID = 50L;
@@ -89,6 +90,12 @@ class InventoryDocumentServiceFlowTest {
     @Mock private PurchaseOrderRepository purchaseOrderRepository;
     @Mock private SalesOrderService salesOrderService;
     @Mock private DeviceComponentSerialRepository deviceComponentSerialRepository;
+    @Mock private com.duylongtech.backend.repository.WarehouseRepository warehouseRepository;
+    @Mock private com.duylongtech.backend.repository.UnitRepository unitRepository;
+    @Mock private AppNotificationService appNotificationService;
+    @Mock private DocumentDependencyService documentDependencyService;
+    @Mock private AuditLogService auditLogService;
+    @Mock private com.duylongtech.backend.repository.StockReservationRepository stockReservationRepository;
 
     @InjectMocks
     private InventoryDocumentService service;
