@@ -1,231 +1,341 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Modal from '../../components/ui/Modal/Modal';
 import styles from './ManageSerialModal.module.css';
-import { getAvailableSerials } from '../../api/warehouseApi';
 
-function ManageSerialModal({ isOpen, onClose, productName, targetQuantity, initialSerials = [], mode = 'import', warehouseId, variantId, onValidateSerial }) {
-  const [serials, setSerials] = useState([]);
-  const [availableSerials, setAvailableSerials] = useState([]);
-  const [loadingAvailable, setLoadingAvailable] = useState(false);
+export default function ManageSerialModal({
+  isOpen,
+  onClose,
+  productName = 'Sản phẩm',
+  sku = '',
+  targetQuantity = 1,
+  initialSerials = [],
+  currentSerials = [],
+  invoiceSerials = [],
+  mode = 'import'
+}) {
+  // Danh sách Hóa đơn NCC / Kế toán đã nhập sẵn
+  const [expectedSerials, setExpectedSerials] = useState([]);
+  // Danh sách Thủ kho ĐÃ QUÉT THỰC TẾ TRÊN HỘP
+  const [verifiedSerials, setVerifiedSerials] = useState([]);
+
   const [inputValue, setInputValue] = useState('');
-  const [errorText, setErrorText] = useState('');
-  const [isValidating, setIsValidating] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+  const [activeSubTab, setActiveSubTab] = useState('verified'); // 'verified' | 'expected'
+
   const inputRef = useRef(null);
+  const prevIsOpenRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !prevIsOpenRef.current) {
+      // 1. Danh sách serial ĐÃ QUÉT TRƯỚC ĐÓ
+      const currentArr = Array.isArray(currentSerials) && currentSerials.length > 0
+        ? currentSerials.filter(Boolean)
+        : (Array.isArray(initialSerials) ? initialSerials.filter(Boolean) : []);
 
-      setSerials([...initialSerials]);
+      // 2. Danh sách serial theo HÓA ĐƠN NCC
+      const invArr = Array.isArray(invoiceSerials) && invoiceSerials.length > 0
+        ? invoiceSerials.filter(Boolean)
+        : [];
+
+      setVerifiedSerials([...currentArr]);
+      setExpectedSerials([...invArr]);
       setInputValue('');
-      setErrorText('');
 
-      if (mode === 'export' && warehouseId && variantId) {
-        setLoadingAvailable(true);
-        getAvailableSerials(warehouseId, variantId)
-          .then(res => {
-            if (res.data?.success) {
-              setAvailableSerials(res.data.data || []);
-            }
-          })
-          .catch(err => console.error("Error fetching available serials", err))
-          .finally(() => setLoadingAvailable(false));
+      if (currentArr.length > 0) {
+        setFeedback({
+          type: 'success',
+          message: `✅ Đã nạp ${currentArr.length} Serial đã quét trước đó. Bạn có thể quét thêm hoặc chỉnh sửa.`
+        });
+      } else if (invArr.length > 0) {
+        setFeedback({
+          type: 'info',
+          message: `📋 Hóa đơn NCC có ${invArr.length} Serial. Vui lòng dùng máy quét bắn từng hộp thực tế để đối soát!`
+        });
+      } else {
+        setFeedback({
+          type: 'info',
+          message: '📷 Bắn súng mã vạch hoặc gõ Serial thực tế trên từng vỏ hộp.'
+        });
       }
-    }
-  }, [isOpen, initialSerials, mode, warehouseId, variantId]);
 
-  const handleAdd = async () => {
-    setErrorText('');
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen, initialSerials, currentSerials, invoiceSerials]);
+
+  if (!isOpen) return null;
+
+  // Xử lý quét từng Serial hoặc dán hàng loạt
+  const handleScanSubmit = (e) => {
+    e?.preventDefault();
     const val = inputValue.trim();
     if (!val) return;
 
-    if (serials.length >= targetQuantity) {
-      return;
-    }
+    // Tách các serial nếu dán nhiều mã cùng lúc
+    const scannedCodes = val.split(/[\s,;\n\t]+/).filter(Boolean);
+    if (scannedCodes.length === 0) return;
 
-    if (serials.includes(val)) {
-      setErrorText('Mã Serial này đã được quét!');
-      return;
-    }
+    let newVerified = [...verifiedSerials];
+    let lastMsg = '';
+    let lastType = 'success';
 
-    if (onValidateSerial) {
-      setIsValidating(true);
-      try {
-        await onValidateSerial(val);
-      } catch (err) {
-        setErrorText(err.message || 'Mã Serial không hợp lệ.');
-        setIsValidating(false);
-        return;
+    for (const code of scannedCodes) {
+      if (newVerified.includes(code)) {
+        lastType = 'info';
+        lastMsg = `ℹ️ Serial [${code}] đã được quét trước đó.`;
+        continue;
       }
-      setIsValidating(false);
+
+      newVerified.push(code);
+
+      // Đối chiếu với danh sách Kế toán / Hóa đơn
+      const isMatchInvoice = expectedSerials.includes(code);
+      if (newVerified.length > targetQuantity && targetQuantity > 0) {
+        lastType = 'warning';
+        lastMsg = `⚠️ Đã nhận [${code}] (${newVerified.length}/${targetQuantity} - Vượt số lượng ban đầu)`;
+      } else if (isMatchInvoice) {
+        lastType = 'success';
+        lastMsg = `✅ Đã kiểm khớp: [${code}] (Có trên hóa đơn NCC)`;
+      } else if (expectedSerials.length > 0) {
+        lastType = 'warning';
+        lastMsg = `⚠️ CẢNH BÁO: Serial [${code}] KHÔNG CÓ trên hóa đơn NCC! Đã ghi nhận theo thực tế kho.`;
+      } else {
+        lastType = 'success';
+        lastMsg = `✅ Đã quét thực tế: [${code}]`;
+      }
     }
 
-    setSerials([...serials, val]);
+    setVerifiedSerials(newVerified);
+    setFeedback({ type: lastType, message: lastMsg });
     setInputValue('');
 
     setTimeout(() => {
-      if (inputRef.current) inputRef.current.focus();
+      inputRef.current?.focus();
     }, 10);
   };
 
-  const handleSelectAvailable = (val) => {
-    setErrorText('');
-    if (serials.length >= targetQuantity) return;
-    if (serials.includes(val)) return;
-    setSerials([...serials, val]);
-  };
-
-  const handleRemove = (indexToRemove) => {
-    setSerials(serials.filter((_, idx) => idx !== indexToRemove));
+  const handleRemoveVerified = (idxToRemove) => {
+    setVerifiedSerials((prev) => prev.filter((_, idx) => idx !== idxToRemove));
+    setFeedback({ type: 'info', message: 'Đã xóa Serial khỏi danh sách thực nhận.' });
   };
 
   const handleClearAll = () => {
-    setSerials([]);
+    if (window.confirm('Bạn có chắc muốn xóa toàn bộ Serial đã quét thực tế không?')) {
+      setVerifiedSerials([]);
+      setFeedback({ type: 'info', message: 'Đã xóa toàn bộ Serial đã quét.' });
+    }
   };
 
-  const progressPercent = Math.min((serials.length / targetQuantity) * 100, 100);
-  const isFull = serials.length >= targetQuantity;
+  // Xác nhận lưu số lượng thực tế
+  const handleConfirm = () => {
+    onClose(verifiedSerials);
+  };
+
+  const progressPercent = Math.min(
+    (verifiedSerials.length / (targetQuantity || 1)) * 100,
+    100
+  );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} dialogClassName={styles.customModal}>
+    <Modal isOpen={isOpen} onClose={() => onClose(null)} dialogClassName={styles.customModal}>
+      {/* HEADER */}
       <div className={styles.header}>
         <div>
-          <h2 className={styles.headerTitle}>Quản lý Serial Number</h2>
-          <p className={styles.headerSubtitle}>Sản phẩm: {productName}</p>
+          <h2 className={styles.headerTitle}>
+            <i className="fas fa-barcode"></i> Quản lý & Đối soát Serial Number Thực Tế
+          </h2>
+          <p className={styles.headerSubtitle}>
+            Sản phẩm: <strong>{productName}</strong> | SKU: <strong>{sku || '-'}</strong> | Cần kiểm:{' '}
+            <strong>{targetQuantity} chiếc</strong>
+          </p>
         </div>
-        <button className={styles.closeBtn} onClick={onClose}>&times;</button>
+        <button type="button" className={styles.closeBtn} onClick={() => onClose(null)}>
+          &times;
+        </button>
       </div>
 
+      {/* BODY */}
       <div className={styles.body}>
+        {/* LEFT COLUMN: SCANNER & ENTRY */}
         <div className={styles.leftCol}>
-          <div className={styles.sectionTitle}>CÁCH 1: NHẬP THỦ CÔNG</div>
-          <div className={styles.inputRow} style={{ marginBottom: errorText ? '12px' : '32px' }}>
+          <div className={styles.sectionTitle}>1. BẮN MÃ VẠCH / QUÉT THỰC TẾ TRÊN HỘP</div>
+
+          <form onSubmit={handleScanSubmit} className={styles.scannerBox}>
             <div className={styles.inputWrapper}>
-              <i className={`bi bi-keyboard ${styles.inputIcon}`}></i>
+              <i className={`fas fa-qrcode ${styles.inputIcon}`}></i>
               <input
                 ref={inputRef}
                 type="text"
                 className={styles.serialInput}
-                placeholder={isFull ? "Đã nhập đủ số lượng" : "Gõ Serial number..."}
+                placeholder="📷 Bắn súng mã vạch hoặc gõ Serial thực tế..."
                 value={inputValue}
-                onChange={(e) => {
-                  setInputValue(e.target.value);
-                  if (errorText) setErrorText('');
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAdd();
-                }}
-                disabled={isFull}
-                style={{ backgroundColor: isFull ? '#f3f4f6' : 'white' }}
+                onChange={(e) => setInputValue(e.target.value)}
               />
             </div>
-            <button
-              className={styles.addBtn}
-              onClick={handleAdd}
-              disabled={isFull || isValidating}
-              style={{ opacity: (isFull || isValidating) ? 0.6 : 1, cursor: (isFull || isValidating) ? 'not-allowed' : 'pointer' }}
-            >
-              {isValidating ? '...' : 'Thêm'}
+            <button type="submit" className={styles.addBtn}>
+              <i className="fas fa-plus"></i> Nhận
             </button>
-          </div>
-          {errorText && <div style={{ color: '#ef4444', fontSize: '13px', marginBottom: '20px', fontWeight: 500 }}>{errorText}</div>}
+          </form>
 
-          {mode === 'export' ? (
-            <>
-              <div className={styles.sectionTitle}>CÁCH 2: CHỌN TỪ KHO</div>
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', maxHeight: '200px', overflowY: 'auto', padding: '8px', backgroundColor: '#f8fafc' }}>
-                {loadingAvailable ? (
-                  <div style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', padding: '16px' }}>Đang tải...</div>
-                ) : availableSerials.length > 0 ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {availableSerials.map(s => {
-                      const isSelected = serials.includes(s);
-                      return (
-                        <div
-                          key={s}
-                          onClick={() => !isSelected && handleSelectAvailable(s)}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: isSelected ? '#dcfce7' : 'white',
-                            border: `1px solid ${isSelected ? '#86efac' : '#cbd5e1'}`,
-                            borderRadius: '4px',
-                            fontSize: '13px',
-                            color: isSelected ? '#166534' : '#334155',
-                            cursor: (isSelected || isFull) ? 'not-allowed' : 'pointer',
-                            opacity: (isFull && !isSelected) ? 0.6 : 1,
-                            fontWeight: isSelected ? 600 : 400
-                          }}
-                        >
-                          {s}
-                          {isSelected && <i className="bi bi-check2" style={{ marginLeft: '6px' }}></i>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '13px', color: '#64748b', textAlign: 'center', padding: '16px' }}>Không có Serial nào khả dụng trong kho</div>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className={styles.sectionTitle}>CÁCH 2: QUÉT MÃ VẠCH</div>
-              <div className={styles.scanBox} style={{ opacity: isFull ? 0.6 : 1, cursor: isFull ? 'not-allowed' : 'pointer' }}>
-                <i className={`bi bi-upc-scan ${styles.scanIcon}`}></i>
-                <span className={styles.scanText}>{isFull ? "Đã hoàn thành" : "Bấm để bật Camera quét"}</span>
-              </div>
-            </>
+          {/* FEEDBACK BANNER */}
+          {feedback && (
+            <div
+              className={`${styles.feedbackBanner} ${
+                feedback.type === 'success'
+                  ? styles.feedbackSuccess
+                  : feedback.type === 'warning'
+                  ? styles.feedbackWarning
+                  : feedback.type === 'error'
+                  ? styles.feedbackError
+                  : styles.feedbackInfo
+              }`}
+            >
+              {feedback.message}
+            </div>
           )}
+
+          {/* HINT & RULES */}
+          <div className={styles.scanHintCard}>
+            <div style={{ fontWeight: '700', marginBottom: '6px', color: '#1e293b' }}>
+              <i className="fas fa-shield-alt" style={{ color: '#2563eb', marginRight: '6px' }}></i>
+              Nguyên tắc kiểm đếm Zero-Trust:
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <li>
+                <strong>Bắt buộc quét thực tế:</strong> Chỉ những chiếc được bắn súng mã vạch mới được ghi nhận vào kho.
+              </li>
+              <li>
+                <strong>Tự động đối soát:</strong> Nếu NCC giao sai mã serial khác với hóa đơn, hệ thống sẽ cảnh báo cam và nhận mã thực tế để đảm bảo bảo hành.
+              </li>
+              <li>
+                <strong>Hỗ trợ dán nhiều mã:</strong> Bạn có thể copy/paste nhiều serial cùng lúc (cách nhau bởi phẩy hoặc xuống dòng).
+              </li>
+            </ul>
+          </div>
         </div>
 
+        {/* RIGHT COLUMN: VERIFICATION LIST */}
         <div className={styles.rightCol}>
-          <div className={styles.progressTitle}>TIẾN ĐỘ NHẬP</div>
+          {/* PROGRESS */}
           <div className={styles.progressRow}>
-            <div className={styles.progressText}>
-              <span className={styles.progressNumber}>{serials.length}</span> / {targetQuantity} Serial
+            <div>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', textTransform: 'uppercase' }}>
+                Tiến độ quét thực tế
+              </div>
+              <div className={styles.progressText}>
+                <span className={styles.progressNumber}>{verifiedSerials.length}</span> / {targetQuantity} Serial
+              </div>
             </div>
             <div className={styles.progressBarContainer}>
-              <div
-                className={styles.progressBarFill}
-                style={{ width: `${progressPercent}%` }}
-              ></div>
+              <div className={styles.progressBarFill} style={{ width: `${progressPercent}%` }}></div>
             </div>
           </div>
 
+          {/* SUB-TABS: THỰC NHẬN vs HÓA ĐƠN */}
+          <div className={styles.tabHeader}>
+            <button
+              type="button"
+              className={`${styles.subTabBtn} ${activeSubTab === 'verified' ? styles.activeSubTab : ''}`}
+              onClick={() => setActiveSubTab('verified')}
+            >
+              Thực nhận ({verifiedSerials.length})
+            </button>
+            {expectedSerials.length > 0 && (
+              <button
+                type="button"
+                className={`${styles.subTabBtn} ${activeSubTab === 'expected' ? styles.activeSubTab : ''}`}
+                onClick={() => setActiveSubTab('expected')}
+              >
+                Theo Hóa đơn NCC ({expectedSerials.length})
+              </button>
+            )}
+          </div>
+
+          {/* LIST */}
           <div className={styles.serialList}>
-            {serials.map((serial, idx) => (
-              <div key={idx} className={styles.serialItem} style={{ justifyContent: 'space-between' }}>
-                <div>
-                  <span className={styles.serialIndex}>{idx + 1}.</span>
-                  <span className={styles.serialValue}>{serial}</span>
+            {activeSubTab === 'verified' ? (
+              verifiedSerials.length === 0 ? (
+                <div style={{ color: '#94a3b8', fontSize: '0.8125rem', textAlign: 'center', padding: '32px' }}>
+                  <i className="fas fa-barcode" style={{ fontSize: '1.5rem', marginBottom: '8px', display: 'block' }}></i>
+                  Chưa quét chiếc nào. Hãy dùng máy quét bắn mã trên vỏ hộp!
                 </div>
-                <button
-                  onClick={() => handleRemove(idx)}
-                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '16px' }}
-                  onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                  onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
-                >
-                  <i className="bi bi-trash3"></i>
-                </button>
-              </div>
-            ))}
-            {serials.length === 0 && (
-              <div style={{color: '#94a3b8', fontSize: '14px', textAlign: 'center', marginTop: '20px'}}>
-                Chưa có serial nào được nhập
-              </div>
+              ) : (
+                verifiedSerials.map((sn, idx) => {
+                  const isMatchInvoice = expectedSerials.includes(sn);
+                  return (
+                    <div key={idx} className={styles.serialItem}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className={styles.serialIndex}>{idx + 1}.</span>
+                        <span className={styles.serialValue}>{sn}</span>
+                        {expectedSerials.length > 0 && (
+                          <span className={isMatchInvoice ? styles.tagMatch : styles.tagMismatch}>
+                            {isMatchInvoice ? '✓ Khớp HĐ' : '⚠️ Khác HĐ'}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.removeBtn}
+                        onClick={() => handleRemoveVerified(idx)}
+                        title="Xóa mã này để quét lại"
+                      >
+                        <i className="fas fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  );
+                })
+              )
+            ) : (
+              /* TAB EXPECTED (HÓA ĐƠN NCC) */
+              expectedSerials.map((sn, idx) => {
+                const isScanned = verifiedSerials.includes(sn);
+                return (
+                  <div key={idx} className={styles.serialItem} style={{ background: isScanned ? '#f0fdf4' : '#ffffff' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className={styles.serialIndex}>{idx + 1}.</span>
+                      <span className={styles.serialValue}>{sn}</span>
+                      <span className={isScanned ? styles.tagMatch : styles.tagPending}>
+                        {isScanned ? '✓ Đã kiểm' : '⏳ Chưa thấy'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
       </div>
 
+      {/* FOOTER */}
       <div className={styles.footer}>
-        <button className={styles.clearAllBtn} onClick={handleClearAll}>Xóa tất cả Serial</button>
+        <div className={styles.footerSummary}>
+          Đã quét thực tế: <strong style={{ color: '#2563eb' }}>{verifiedSerials.length}</strong> / {targetQuantity} Serial{' '}
+          {verifiedSerials.length < targetQuantity && (
+            <span style={{ color: '#c2410c' }}>(Còn thiếu {targetQuantity - verifiedSerials.length} chiếc)</span>
+          )}
+        </div>
+
         <div className={styles.footerActions}>
-          <button className={styles.btnCancel} onClick={() => onClose()}>Hủy</button>
-          <button className={styles.btnConfirm} onClick={() => onClose(serials)}>Xác nhận</button>
+          {verifiedSerials.length > 0 && (
+            <button
+              type="button"
+              className={styles.btnCancel}
+              style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+              onClick={handleClearAll}
+            >
+              Xóa quét lại
+            </button>
+          )}
+          <button type="button" className={styles.btnCancel} onClick={() => onClose(null)}>
+            Hủy
+          </button>
+          <button type="button" className={styles.btnConfirm} onClick={handleConfirm}>
+            <i className="fas fa-check"></i> Xác nhận SL thực nhận ({verifiedSerials.length})
+          </button>
         </div>
       </div>
     </Modal>
   );
 }
-
-export default ManageSerialModal;

@@ -2,7 +2,11 @@ import axiosClient from './axiosClient';
 
 const BASE = '/payments';
 
+export const getAllPayments = (params = {}) =>
+  axiosClient.get(BASE, { params });
+
 export const createReceipt = (data) =>
+
   axiosClient.post(`${BASE}/receipts`, data);
 
 export const createVoucher = (data) =>

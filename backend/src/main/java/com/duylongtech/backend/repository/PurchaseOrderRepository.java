@@ -34,7 +34,7 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
     );
 
     @Query("""
-        SELECT po FROM PurchaseOrder po
+        SELECT DISTINCT po FROM PurchaseOrder po
         LEFT JOIN FETCH po.partner
         LEFT JOIN FETCH po.createdByUser
         LEFT JOIN FETCH po.lines l

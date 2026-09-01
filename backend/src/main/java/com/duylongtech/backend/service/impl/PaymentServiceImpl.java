@@ -273,4 +273,31 @@ public class PaymentServiceImpl implements PaymentService {
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> getAllPayments(String type, String status) {
+        List<PaymentTransaction> list;
+        if (type != null && !type.isBlank()) {
+            list = paymentTransactionRepository.findByTypeOrderByCreatedAtDesc(type.trim().toUpperCase());
+        } else {
+
+            list = paymentTransactionRepository.findAllByOrderByCreatedAtDesc();
+        }
+        if (status != null && !status.isBlank()) {
+            String s = status.trim().toUpperCase();
+            list = list.stream().filter(p -> s.equalsIgnoreCase(p.getStatus())).collect(Collectors.toList());
+        }
+        return list.stream().map(p -> {
+            Partner partner = p.getPartnerId() != null ? partnerRepository.findById(p.getPartnerId()).orElse(null) : null;
+            if (partner == null) {
+                partner = new Partner();
+                partner.setId(p.getPartnerId());
+                partner.setName(p.getPartnerId() != null ? ("Đối tác #" + p.getPartnerId()) : "Vãng lai");
+            }
+            return toResponse(p, partner);
+        }).collect(Collectors.toList());
+    }
 }
+
+

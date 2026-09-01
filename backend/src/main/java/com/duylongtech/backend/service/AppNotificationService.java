@@ -19,18 +19,20 @@ public class AppNotificationService {
 
     @Transactional(readOnly = true)
     public List<AppNotification> getNotifications(Long userId, List<String> roles) {
+        boolean isAdmin = roles != null && roles.stream().anyMatch(r -> r != null && (r.equalsIgnoreCase("ROLE_ADMIN") || r.equalsIgnoreCase("ADMIN")));
         if (roles == null || roles.isEmpty()) {
             roles = Collections.singletonList("ROLE_STAFF");
         }
-        return notificationRepository.findForUserAndRoles(userId, roles);
+        return notificationRepository.findForUserAndRoles(userId, roles, isAdmin);
     }
 
     @Transactional(readOnly = true)
     public long getUnreadCount(Long userId, List<String> roles) {
+        boolean isAdmin = roles != null && roles.stream().anyMatch(r -> r != null && (r.equalsIgnoreCase("ROLE_ADMIN") || r.equalsIgnoreCase("ADMIN")));
         if (roles == null || roles.isEmpty()) {
             roles = Collections.singletonList("ROLE_STAFF");
         }
-        return notificationRepository.countUnreadForUserAndRoles(userId, roles);
+        return notificationRepository.countUnreadForUserAndRoles(userId, roles, isAdmin);
     }
 
     @Transactional
@@ -40,10 +42,11 @@ public class AppNotificationService {
 
     @Transactional
     public void markAllAsRead(Long userId, List<String> roles) {
+        boolean isAdmin = roles != null && roles.stream().anyMatch(r -> r != null && (r.equalsIgnoreCase("ROLE_ADMIN") || r.equalsIgnoreCase("ADMIN")));
         if (roles == null || roles.isEmpty()) {
             roles = Collections.singletonList("ROLE_STAFF");
         }
-        notificationRepository.markAllAsRead(userId, roles);
+        notificationRepository.markAllAsRead(userId, roles, isAdmin);
     }
 
     @Transactional

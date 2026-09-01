@@ -56,6 +56,12 @@ import PaymentHistoryPage from '../pages/Payment/PaymentHistoryPage';
 import EInvoiceListPage from '../pages/EInvoice/EInvoiceListPage';
 import BusinessSettingsPage from '../pages/BusinessSettings/BusinessSettingsPage';
 import MobileScannerPage from '../pages/MobileScanner/MobileScannerPage';
+import WarehouseWorkspacePage from '../pages/WarehouseWorkspace/WarehouseWorkspacePage';
+import WarehouseDocumentFormPage from '../pages/WarehouseWorkspace/WarehouseDocumentFormPage';
+import CashierWorkspacePage from '../pages/CashierWorkspace/CashierWorkspacePage';
+
+
+
 
 // Helper to check valid token
 const isValidToken = () => {
@@ -129,7 +135,13 @@ function AppRouter() {
                 {/* Business Routes for Staff & Manager only */}
                 <Route element={<ProtectedRoute disallowedRoles={['SUPER_ADMIN', 'ROLE_SUPER_ADMIN', 'ADMIN', 'ROLE_ADMIN']} />}>
                     <Route path="/main-dashboard" element={<AnalyticsDashboard />} />
+                    <Route path="/warehouse-workspace" element={<WarehouseWorkspacePage />} />
+                    <Route path="/warehouse-workspace/imports/:id" element={<WarehouseDocumentFormPage />} />
+                    <Route path="/warehouse-workspace/exports/:id" element={<WarehouseDocumentFormPage />} />
+                    <Route path="/cashier-workspace" element={<CashierWorkspacePage />} />
+
                     <Route path="/export-slips" element={<ExportSlipPage />} />
+
                     <Route path="/export-slips/create" element={<CreateExportSlipPage />} />
                     <Route path="/export-slips/usage" element={<CreateExportSlipPage mode="USAGE" />} />
                     <Route path="/export-slips/assembly" element={<CreateExportSlipPage mode="ASSEMBLY" />} />

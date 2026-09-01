@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
+import UnpostConfirmModal from '../../components/ui/UnpostConfirmModal/UnpostConfirmModal';
+
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as importApi from '../../api/inventoryImportApi';
@@ -137,6 +139,8 @@ function ImportHistoryPage() {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [unpostTarget, setUnpostTarget] = useState(null);
+
 
   const [columns, setColumns] = useState(() => {
     const saved = localStorage.getItem('dlc_import_columns');
@@ -573,16 +577,23 @@ function ImportHistoryPage() {
                       </td>
                     )}
                     <td className={styles.textCenter}>
-                      <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}></i>
-                      <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu nhập kho" onClick={(e) => {
+                      <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '10px' }} title="Xem chi tiết" onClick={(e) => { e.stopPropagation(); setSelectedSlip(slip); }}></i>
+                      <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '10px' }} title="Sửa phiếu nhập kho" onClick={(e) => {
                         e.stopPropagation();
-                        if (slip.status !== 'DRAFT') {
-                          showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm.');
+                        if (slip.status !== 'DRAFT' && slip.status !== 'UNPOSTED') {
+                          showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm hoặc đã bỏ ghi sổ.');
                         } else {
                           navigate(`/import-slips/${slip.id}/edit`);
                         }
                       }}></i>
+                      {slip.status === 'POSTED' && (
+                        <i className="bi bi-arrow-counterclockwise" style={{ cursor: 'pointer', color: '#dc2626', fontSize: '16px' }} title="Bỏ ghi sổ kho an toàn" onClick={(e) => {
+                          e.stopPropagation();
+                          setUnpostTarget(slip);
+                        }}></i>
+                      )}
                     </td>
+
                   </tr>
                 )) : (
                   <tr>
@@ -971,8 +982,21 @@ function ImportHistoryPage() {
             </button>
           </div>
         </Modal>
+        <UnpostConfirmModal
+          open={Boolean(unpostTarget)}
+          onClose={() => setUnpostTarget(null)}
+          docCode={unpostTarget?.docCode}
+          onCheckDependency={() => importApi.checkImportUnpost(unpostTarget?.id)}
+          onConfirmUnpost={async (reason) => {
+            await importApi.unpostImportSlip(unpostTarget?.id, reason);
+            showToast('success', 'Bỏ ghi sổ phiếu nhập kho thành công!');
+            loadSlips();
+          }}
+          docType="nhập kho"
+        />
         <Toast {...toast} onClose={() => setToast(prev => ({ ...prev, isVisible: false }))} />
       </div>
+
     </AdminLayout>
   );
 }

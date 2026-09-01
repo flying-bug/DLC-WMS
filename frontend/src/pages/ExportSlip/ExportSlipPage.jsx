@@ -9,6 +9,8 @@ import { exportToExcel } from '../../utils/excelExport';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
+import UnpostConfirmModal from '../../components/ui/UnpostConfirmModal/UnpostConfirmModal';
+
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import TimeInfoBadge from '../../components/ui/TimeInfoBadge/TimeInfoBadge';
 import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
@@ -147,6 +149,8 @@ function ExportSlipPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [confirmPost, setConfirmPost] = useState(false);
+  const [unpostTarget, setUnpostTarget] = useState(null);
+
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
@@ -553,16 +557,23 @@ function ExportSlipPage() {
                       </td>
                     )}
                     <td className={styles.textCenter}>
-                      <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(event) => { event.stopPropagation(); setSelectedSlip(slip); }}></i>
-                      <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu xuất kho" onClick={(event) => {
+                      <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '10px' }} title="Xem chi tiết" onClick={(event) => { event.stopPropagation(); setSelectedSlip(slip); }}></i>
+                      <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '10px' }} title="Sửa phiếu xuất kho" onClick={(event) => {
                         event.stopPropagation();
-                        if (slip.status !== 'DRAFT') {
-                          showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm.');
+                        if (slip.status !== 'DRAFT' && slip.status !== 'UNPOSTED') {
+                          showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm hoặc đã bỏ ghi sổ.');
                         } else {
                           navigate(`/export-slips/${slip.id}/edit`);
                         }
                       }}></i>
+                      {slip.status === 'POSTED' && (
+                        <i className="bi bi-arrow-counterclockwise" style={{ cursor: 'pointer', color: '#dc2626', fontSize: '16px' }} title="Bỏ ghi sổ kho an toàn" onClick={(event) => {
+                          event.stopPropagation();
+                          setUnpostTarget(slip);
+                        }}></i>
+                      )}
                     </td>
+
                   </tr>
                 )) : (
                   <tr>
@@ -947,7 +958,20 @@ function ExportSlipPage() {
           </div>
         </Modal>
       </div>
+      <UnpostConfirmModal
+        open={Boolean(unpostTarget)}
+        onClose={() => setUnpostTarget(null)}
+        docCode={unpostTarget?.docCode}
+        onCheckDependency={() => exportApi.checkExportUnpost(unpostTarget?.id)}
+        onConfirmUnpost={async (reason) => {
+          await exportApi.unpostExportSlip(unpostTarget?.id, reason);
+          showToast('success', 'Bỏ ghi sổ phiếu xuất kho thành công!');
+          loadSlips();
+        }}
+        docType="xuất kho"
+      />
       <Toast
+
         isVisible={toast.isVisible}
         type={toast.type}
         message={toast.message}

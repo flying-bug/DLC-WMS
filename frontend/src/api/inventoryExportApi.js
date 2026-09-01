@@ -57,3 +57,18 @@ export const createCustomer = (data) => {
 export const getInventoryBalance = (params = {}) => {
   return axiosClient.get('/reports/inventory-balance', { params });
 };
+
+export const checkExportUnpost = (id) => {
+  return axiosClient.get(`${EXPORT_BASE}/${id}/check-unpost`);
+};
+
+export const unpostExportSlip = (id, reason = '') => {
+  return axiosClient.post(`${EXPORT_BASE}/${id}/unpost`, null, {
+    params: { reason }
+  });
+};
+
+export const getExportSlipLogs = (id) => {
+  return axiosClient.get(`${EXPORT_BASE}/${id}/logs`);
+};
+

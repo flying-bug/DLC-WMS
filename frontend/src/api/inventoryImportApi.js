@@ -75,3 +75,19 @@ export const uploadOcrForSession = (sessionId, file) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+
+export const checkImportUnpost = (id) => {
+
+  return axiosClient.get(`${IMPORT_BASE}/${id}/check-unpost`);
+};
+
+export const unpostImportSlip = (id, reason = '') => {
+  return axiosClient.post(`${IMPORT_BASE}/${id}/unpost`, null, {
+    params: { reason }
+  });
+};
+
+export const getImportSlipLogs = (id) => {
+  return axiosClient.get(`${IMPORT_BASE}/${id}/logs`);
+};
+

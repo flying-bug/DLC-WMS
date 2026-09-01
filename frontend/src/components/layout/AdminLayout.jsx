@@ -5,7 +5,10 @@ import { useAiFeature } from '../../contexts/AiFeatureContext';
 import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
 import NotificationBell from '../ui/NotificationBell/NotificationBell';
 import VoiceCommandButton from '../ui/VoiceCommandButton/VoiceCommandButton';
+import WorkspaceModeDropdown from '../ui/WorkspaceModeDropdown/WorkspaceModeDropdown';
+import { useWorkspaceMode, WORKSPACE_MODES } from '../../contexts/WorkspaceModeContext';
 import ActiveWorkflowGuide from '../workflow/ActiveWorkflowGuide';
+
 import styles from './AdminLayout.module.css';
 
 const MENU_CONFIG = [
@@ -59,6 +62,7 @@ const AdminLayout = ({ children }) => {
     const isSuperAdmin = userRoles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'ADMIN' || r === 'ROLE_ADMIN');
     const isManager = userRoles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
     const { aiEnabled } = useAiFeature();
+    const { workspaceMode } = useWorkspaceMode();
     
     // Configuration for top header tabs based on active module
     const TABS_CONFIG = {
@@ -76,6 +80,13 @@ const AdminLayout = ({ children }) => {
             { path: '/warehouses', label: 'Quản lý kho', moduleKey: 'warehouse_master' },
             { path: '/reports', label: 'Báo cáo kho', moduleKeys: ['report_balance', 'report_ledger', 'report_transfer'] }
         ],
+        warehouse_workspace: [
+            { path: '/warehouse-workspace?tab=imports', tabId: 'imports', label: '1. Đề nghị nhập kho' },
+            { path: '/warehouse-workspace?tab=exports', tabId: 'exports', label: '2. Đề nghị xuất kho' },
+            { path: '/warehouse-workspace?tab=transfers', tabId: 'transfers', label: '3. Đề nghị chuyển kho' },
+            { path: '/warehouse-workspace?tab=stocktakes', tabId: 'stocktakes', label: '4. Biên bản kiểm kê' },
+            { path: '/reports', label: '5. Báo cáo kho' }
+        ],
         purchase: [
             { path: '/purchase-orders', label: 'Đơn mua hàng', moduleKey: 'purchase_order' }
         ],
@@ -86,6 +97,13 @@ const AdminLayout = ({ children }) => {
         finance: [
             { path: '/payments/receipt', label: 'Phiếu Thu', moduleKey: 'payment' },
             { path: '/payments/expense', label: 'Phiếu Chi', moduleKey: 'payment' }
+        ],
+        cashier_workspace: [
+            { path: '/cashier-workspace?tab=receipts', tabId: 'receipts', label: '1. Đề nghị thu tiền' },
+            { path: '/cashier-workspace?tab=vouchers', tabId: 'vouchers', label: '2. Đề nghị chi tiền' },
+            { path: '/cashier-workspace?tab=cash-book', tabId: 'cash-book', label: '3. Sổ quỹ tiền mặt' },
+            { path: '/cashier-workspace?tab=bank', tabId: 'bank', label: '4. Tiền gửi ngân hàng' },
+            { path: '/reports', label: '5. Báo cáo dòng tiền' }
         ],
         service: [
             { path: '/warranties', label: 'Bảo hành', moduleKey: 'warranty' },
@@ -110,6 +128,8 @@ const AdminLayout = ({ children }) => {
 
     // Determine the active module based on currentPath
     const getActiveModule = () => {
+        if (currentPath.startsWith('/warehouse-workspace')) return 'warehouse_workspace';
+        if (currentPath.startsWith('/cashier-workspace')) return 'cashier_workspace';
         if (currentPath === '/main-dashboard') return 'overview';
         if (['/dashboard', '/import-history', '/import-slips', '/export-slips', '/transfer-history', '/stocktakes', '/assembly-orders', '/assembly-boms', '/warehouses', '/reports'].some(p => currentPath.startsWith(p))) return 'warehouse';
         if (currentPath.startsWith('/purchase-orders')) return 'purchase';
@@ -169,6 +189,19 @@ const AdminLayout = ({ children }) => {
     });
 
     const checkItemPermission = (item) => {
+        // Lọc menu sidebar theo Chế độ làm việc (Persona / Workspace Mode)
+        if (workspaceMode === WORKSPACE_MODES.WAREHOUSE) {
+            const allowedWarehouseModules = ['warehouse', 'catalog'];
+            if (!allowedWarehouseModules.includes(item.moduleId) && item.moduleKey !== 'ai_chat') {
+                return false;
+            }
+        } else if (workspaceMode === WORKSPACE_MODES.CASHIER) {
+            const allowedCashierModules = ['finance', 'partner'];
+            if (!allowedCashierModules.includes(item.moduleId) && item.moduleKey !== 'ai_chat') {
+                return false;
+            }
+        }
+
         if (item.adminOnly && !isSuperAdmin) return false;
         if (item.managerOrAdmin && !isSuperAdmin && !isManager) return false;
         if (item.path === '/ai-chat' && !aiEnabled) return false;
@@ -214,7 +247,13 @@ const AdminLayout = ({ children }) => {
         if (navMenuRef.current) {
             sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(navMenuRef.current.scrollTop));
         }
-        navigate(path);
+        if (path === '/dashboard' && workspaceMode === WORKSPACE_MODES.WAREHOUSE) {
+            navigate('/warehouse-workspace');
+        } else if (path === '/payments' && workspaceMode === WORKSPACE_MODES.CASHIER) {
+            navigate('/cashier-workspace');
+        } else {
+            navigate(path);
+        }
         setMobileMenuOpen(false);
     };
 
@@ -270,7 +309,7 @@ const AdminLayout = ({ children }) => {
                                                 if (item.adminOnly && !isSuperAdmin) return null;
 
                                                 const isActive = item.moduleId 
-                                                    ? item.moduleId === activeModule
+                                                    ? (item.moduleId === activeModule || (item.moduleId === 'warehouse' && activeModule === 'warehouse_workspace') || (item.moduleId === 'finance' && activeModule === 'cashier_workspace'))
                                                     : currentPath === item.path || currentPath.startsWith(item.path + '/');
 
                                                 return (
@@ -311,9 +350,12 @@ const AdminLayout = ({ children }) => {
                             if (tab.adminOnly && !isSuperAdmin) return null;
                             
                             // Check if current path matches the tab
-                            const isActive = tab.matches 
-                                ? tab.matches.some(m => currentPath.startsWith(m))
-                                : (tab.exact ? currentPath === tab.path : currentPath.startsWith(tab.path));
+                            const currentQueryTab = new URLSearchParams(location.search).get('tab');
+                            const isActive = tab.tabId
+                                ? (currentQueryTab === tab.tabId || (!currentQueryTab && (tab.tabId === 'imports' || tab.tabId === 'receipts')))
+                                : (tab.matches 
+                                    ? tab.matches.some(m => currentPath.startsWith(m))
+                                    : (tab.exact ? currentPath === tab.path : currentPath.startsWith(tab.path)));
 
                             return (
                                 <button
@@ -330,9 +372,11 @@ const AdminLayout = ({ children }) => {
                         })}
                     </nav>
                     <div className={styles.headerRight} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <WorkspaceModeDropdown />
                         <NotificationBell />
                         <UserProfileDropdown voiceEnabled={voiceEnabled} onToggleVoice={toggleVoice} aiEnabled={aiEnabled} />
                     </div>
+
                 </header>
 
                 <main className={styles.content}>

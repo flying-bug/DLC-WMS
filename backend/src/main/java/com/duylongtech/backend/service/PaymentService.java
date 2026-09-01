@@ -24,4 +24,7 @@ public interface PaymentService {
     List<PaymentResponse> getPartnerPaymentHistory(Long partnerId);
 
     List<PartnerLedgerResponse> getPartnerLedgerDetails(Long partnerId);
+
+    List<PaymentResponse> getAllPayments(String type, String status);
 }
+

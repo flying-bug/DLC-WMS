@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useWorkspaceMode, WORKSPACE_MODES } from '../../../contexts/WorkspaceModeContext';
 import * as notificationApi from '../../../api/notificationApi';
 import styles from './NotificationBell.module.css';
 
 export default function NotificationBell() {
     const navigate = useNavigate();
+    const { mode } = useWorkspaceMode();
     const [unreadCount, setUnreadCount] = useState(0);
     const [notifications, setNotifications] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
@@ -69,8 +71,20 @@ export default function NotificationBell() {
             }
         }
         setIsOpen(false);
-        if (notif.link) {
-            navigate(notif.link);
+
+        let targetLink = notif.link;
+        if (notif.referenceType === 'IMPORT_DOCUMENT' || targetLink?.includes('/import-slips/') || targetLink?.includes('/imports/')) {
+            const docId = notif.referenceId || (targetLink ? targetLink.match(/\d+/)?.[0] : '');
+            targetLink = `/warehouse-workspace/imports/${docId}`;
+        } else if (notif.referenceType === 'EXPORT_DOCUMENT' || targetLink?.includes('/export-slips/') || targetLink?.includes('/exports/')) {
+            const docId = notif.referenceId || (targetLink ? targetLink.match(/\d+/)?.[0] : '');
+            targetLink = `/warehouse-workspace/exports/${docId}`;
+        } else if ((notif.referenceType === 'PO_DELIVERY_OVERDUE' || notif.referenceType === 'PO_PAYMENT_OVERDUE' || notif.referenceType === 'PURCHASE_ORDER') && notif.referenceId) {
+            targetLink = `/purchase-orders/${notif.referenceId}`;
+        }
+
+        if (targetLink) {
+            navigate(targetLink);
         }
     };
 

@@ -26,7 +26,9 @@ public class InventoryDocumentResponse {
     private String status;
     private String note;
     private Long createdBy;
+    private String createdByName;
     private Long approvedBy;
+    private String approvedByName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String recipientName;
@@ -35,5 +37,10 @@ public class InventoryDocumentResponse {
     private String salespersonName;
     private Boolean hasDiscrepancy;
     private String discrepancyNote;
+    private Long unpostedBy;
+    private String unpostedByName;
+    private LocalDateTime unpostedAt;
+    private String unpostReason;
     private List<InventoryDocumentLineResponse> lines;
 }
+

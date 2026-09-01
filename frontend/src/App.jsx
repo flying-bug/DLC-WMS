@@ -3,14 +3,17 @@ import RealtimeSessionBridge from './components/realtime/RealtimeSessionBridge';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { ToastProvider } from './contexts/ToastContext';
 import { AiFeatureProvider } from './contexts/AiFeatureContext';
+import { WorkspaceModeProvider } from './contexts/WorkspaceModeContext';
 
 function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
         <AiFeatureProvider>
-          <RealtimeSessionBridge />
-          <AppRouter />
+          <WorkspaceModeProvider>
+            <RealtimeSessionBridge />
+            <AppRouter />
+          </WorkspaceModeProvider>
         </AiFeatureProvider>
       </ToastProvider>
     </ThemeProvider>
@@ -18,3 +21,4 @@ function App() {
 }
 
 export default App;
+

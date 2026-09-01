@@ -22,7 +22,17 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    @GetMapping
+    @PreAuthorize("hasAuthority('payment:view')")
+    @Operation(summary = "Get all payment receipts and vouchers")
+    public ResponseEntity<List<PaymentResponse>> getAllPayments(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(paymentService.getAllPayments(type, status));
+    }
+
     @PostMapping("/receipts")
+
     @PreAuthorize("hasAuthority('payment:add')")
     @Operation(summary = "Create customer receipt")
     public ResponseEntity<PaymentResponse> createReceipt(@RequestBody PaymentRequest request) {

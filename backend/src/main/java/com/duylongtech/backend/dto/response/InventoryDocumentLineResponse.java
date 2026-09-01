@@ -9,6 +9,10 @@ import java.util.List;
 public class InventoryDocumentLineResponse {
     private Long id;
     private Long variantId;
+    private String sku;
+    private String productName;
+    private String variantName;
+    private String barcode;
     private BigDecimal quantityIn;
     private BigDecimal quantityOut;
     private BigDecimal unitCost;

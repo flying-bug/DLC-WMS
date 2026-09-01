@@ -27,6 +27,7 @@ public class ImportDocumentController {
     private final InventoryDocumentService inventoryDocumentService;
     private final AuditLogService auditLogService;
     private final ImportOcrService importOcrService;
+    private final com.duylongtech.backend.repository.UserRepository userRepository;
 
     private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
         String ipAddress = request.getHeader("X-Forwarded-For");
@@ -172,15 +173,51 @@ public class ImportDocumentController {
         return ApiResponse.success(importOcrService.scanDocument(file));
     }
 
-    @PostMapping("/ocr-confirm-mapping")
-    @Operation(summary = "Confirm OCR product mapping for learning")
-    @PreAuthorize("hasAuthority('import:add')")
-    public ApiResponse<Void> confirmOcrMapping(
-            @RequestParam Long partnerId,
-            @RequestParam String vendorProductName,
-            @RequestParam Long variantId
+    @GetMapping("/{id}/check-unpost")
+    @Operation(summary = "Check if import slip can be safely unposted")
+    @PreAuthorize("hasAuthority('import:edit') or hasAuthority('import:add')")
+    public ApiResponse<com.duylongtech.backend.dto.response.DependencyCheckResponse> checkUnpost(@PathVariable Long id) {
+        return ApiResponse.success(inventoryDocumentService.checkImportUnpostable(id));
+    }
+
+    @PostMapping("/{id}/unpost")
+    @Operation(summary = "Unpost import slip and rollback inventory safely")
+    @PreAuthorize("hasAuthority('import:edit') or hasAuthority('import:add')")
+    public ApiResponse<InventoryDocumentResponse> unpostImport(
+            @PathVariable Long id,
+            @RequestParam(required = false) String reason,
+            jakarta.servlet.http.HttpServletRequest request
     ) {
-        importOcrService.confirmMapping(partnerId, vendorProductName, variantId);
-        return ApiResponse.success();
+        String actor = getCurrentUser();
+        String ip = getClientIp(request);
+        Long currentUserId = null;
+        try {
+            currentUserId = userRepository.findByUsername(actor).map(com.duylongtech.backend.entity.User::getId).orElse(null);
+        } catch (Exception ignored) {}
+        InventoryDocumentResponse res = inventoryDocumentService.unpostImport(id, reason, currentUserId);
+        auditLogService.logEvent(actor, "UNPOST", "ImportSlip", id, "SUCCESS",
+                "Bỏ ghi sổ phiếu nhập kho " + res.getDocCode() + ". Lý do: " + (reason != null ? reason : "Không có"),
+                ip, null);
+        return ApiResponse.success(res);
+    }
+
+    @GetMapping("/{id}/logs")
+    @Operation(summary = "Get all audit logs for this import document")
+    @PreAuthorize("hasAuthority('import:view') or hasAuthority('import:edit') or hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
+    public ApiResponse<List<com.duylongtech.backend.dto.response.AuditLogResponse>> getImportLogs(@PathVariable Long id) {
+        org.springframework.data.domain.Page<com.duylongtech.backend.entity.AuditLog> page = auditLogService.getLogsForEntity("ImportSlip", id, 0, 100);
+        List<com.duylongtech.backend.dto.response.AuditLogResponse> logs = page.getContent().stream()
+                .map(l -> com.duylongtech.backend.dto.response.AuditLogResponse.builder()
+                        .id(l.getId())
+                        .timestamp(l.getCreatedAt() != null ? l.getCreatedAt().toString() : "")
+                        .user(l.getUser() != null ? (l.getUser().getFullName() != null ? l.getUser().getFullName() : l.getUser().getUsername()) : "Hệ thống")
+                        .action(l.getAction())
+                        .description(l.getDescription())
+                        .status(l.getStatus())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+        return ApiResponse.success(logs);
     }
 }
+
+
