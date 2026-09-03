@@ -10,7 +10,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   /* Báo cáo dạng HTML và list trên console */
-  reporter: [['html', { open: 'never' }], ['list']],
+  reporter: [['html', { open: 'never' }], ['list'], ['./e2e/utils/ExcelReporter.js']],
   /* Cấu hình dùng chung cho tất cả các bài test */
   use: {
     /* URL máy chủ frontend */
