@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import {
     listBackups, createBackup, deleteBackup,
     uploadBackupToDrive, restoreBackup, getDownloadUrl,
-    getBackupSchedule, saveBackupSchedule
+    getBackupSchedule, saveBackupSchedule,
+    fetchDriveBackups, pullBackupFromDrive
 } from '../../../api/backupApi';
 import { useToast } from '../../../contexts/ToastContext';
 import ConfirmModal from '../../../components/ui/ConfirmModal/ConfirmModal';
@@ -12,11 +13,11 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 
 
 const STATUS_CONFIG = {
-    LOCAL:     { label: 'Chỉ Local',   color: '#f59e0b', icon: 'bi bi-hdd-fill' },
-    DRIVE:     { label: 'Drive',        color: '#6366f1', icon: 'bi bi-cloud-fill' },
-    BOTH:      { label: 'Local + Drive',color: '#10b981', icon: 'bi bi-check2-circle' },
-    FAILED:    { label: 'Thất bại',     color: '#ef4444', icon: 'bi bi-x-circle-fill' },
-    RESTORING: { label: 'Đang restore', color: '#06b6d4', icon: 'bi bi-arrow-repeat' },
+    LOCAL:     { label: 'Chỉ Local (Unpushed)', color: '#f59e0b', icon: 'bi bi-hdd-fill' },
+    DRIVE:     { label: 'Chỉ Drive (Remote)',   color: '#6366f1', icon: 'bi bi-cloud-fill' },
+    BOTH:      { label: 'Đã đồng bộ (Both)',    color: '#10b981', icon: 'bi bi-check2-circle' },
+    FAILED:    { label: 'Thất bại',             color: '#ef4444', icon: 'bi bi-x-circle-fill' },
+    RESTORING: { label: 'Đang restore',         color: '#06b6d4', icon: 'bi bi-arrow-repeat' },
 };
 
 const formatDateTime = (iso) => iso ? formatVietnamDateTime(iso, { withSeconds: false }) : '—';
@@ -36,8 +37,15 @@ function RestoreConfirmModal({ record, onConfirm, onCancel, loading }) {
                 </div>
                 <div className={styles.modalBody}>
                     <div className={styles.dangerBox}>
-                        <strong>⚠️ CẢNH BÁO:</strong> Thao tác này sẽ ghi đè toàn bộ dữ liệu hiện tại
-                        bằng bản sao lưu <strong>{record?.filename}</strong>. Không thể hoàn tác!
+                        <strong>⚠️ CẢNH BÁO:</strong> Thao tác này sẽ khôi phục dữ liệu bằng bản sao lưu <strong>{record?.filename}</strong>.
+                        {record?.status === 'DRIVE' && (
+                            <div style={{ marginTop: '8px', color: '#2563eb', fontWeight: 600 }}>
+                                ☁️ File hiện chỉ có trên Google Drive. Hệ thống sẽ tự động Pull về máy trước khi nạp dữ liệu.
+                            </div>
+                        )}
+                        <div style={{ marginTop: '8px', padding: '6px 10px', background: '#ecfdf5', borderRadius: '6px', color: '#065f46', fontSize: '12px', border: '1px solid #a7f3d0' }}>
+                            🛡️ <strong>Safety Snapshot:</strong> Hệ thống sẽ tự động chụp lại 1 bản sao lưu dữ liệu hiện tại trước khi khôi phục, giúp bạn có thể hoàn tác bất cứ lúc nào.
+                        </div>
                     </div>
 
                     {isEncrypted && (
@@ -159,6 +167,40 @@ function BackupCenterTab() {
         }
     };
 
+    const handleFetchDrive = async () => {
+        setActionLoading(p => ({ ...p, fetchDrive: true }));
+        try {
+            const res = await fetchDriveBackups();
+            if (res.success) {
+                showToast('success', 'Đồng bộ danh sách từ Google Drive thành công.');
+                setBackups(res.data || []);
+            } else {
+                showToast('error', res.message || 'Không thể đồng bộ từ Drive.');
+            }
+        } catch (err) {
+            showToast('error', err.response?.data?.message || 'Không thể kết nối Google Drive.');
+        } finally {
+            setActionLoading(p => ({ ...p, fetchDrive: false }));
+        }
+    };
+
+    const handlePullDrive = async (id) => {
+        setActionLoading(p => ({ ...p, [id + '_pull']: true }));
+        try {
+            const res = await pullBackupFromDrive(id);
+            if (res.success) {
+                showToast('success', 'Đã tải bản sao lưu từ Drive về máy chủ thành công.');
+                fetchBackups();
+            } else {
+                showToast('error', res.message || 'Kéo bản sao lưu thất bại.');
+            }
+        } catch (err) {
+            showToast('error', err.response?.data?.message || 'Thao tác thất bại.');
+        } finally {
+            setActionLoading(p => ({ ...p, [id + '_pull']: false }));
+        }
+    };
+
     const handleUploadDrive = async (id) => {
         setActionLoading(p => ({ ...p, [id + '_drv']: true }));
         try {
@@ -231,14 +273,25 @@ function BackupCenterTab() {
                     </h1>
                     <p className={styles.pageSubtitle}>Quản lý sao lưu và khôi phục cơ sở dữ liệu</p>
                 </div>
-                <button
-                    className={styles.createBtn}
-                    onClick={handleCreateBackup}
-                    disabled={actionLoading.create}
-                >
-                    <i className={actionLoading.create ? 'bi bi-hourglass-split' : 'bi bi-database-add'} />
-                    {actionLoading.create ? 'Đang tạo...' : 'Tạo Backup mới'}
-                </button>
+                <div className={styles.headerActions}>
+                    <button
+                        className={styles.syncBtn}
+                        onClick={handleFetchDrive}
+                        disabled={actionLoading.fetchDrive}
+                        title="Quét và đồng bộ danh sách bản sao lưu từ Google Drive (Remote)"
+                    >
+                        <i className={actionLoading.fetchDrive ? 'bi bi-arrow-repeat spin' : 'bi bi-cloud-arrow-down-fill'} />
+                        {actionLoading.fetchDrive ? 'Đang đồng bộ...' : 'Đồng bộ Drive (Fetch)'}
+                    </button>
+                    <button
+                        className={styles.createBtn}
+                        onClick={handleCreateBackup}
+                        disabled={actionLoading.create}
+                    >
+                        <i className={actionLoading.create ? 'bi bi-hourglass-split' : 'bi bi-database-add'} />
+                        {actionLoading.create ? 'Đang tạo...' : 'Tạo Backup mới'}
+                    </button>
+                </div>
             </div>
 
             {/* Sub-tabs */}
@@ -296,25 +349,51 @@ function BackupCenterTab() {
                                             </td>
                                             <td>
                                                 <div className={styles.actions}>
-                                                    <button
-                                                        className={`${styles.actionBtn} ${styles.downloadBtn}`}
-                                                        onClick={() => handleDownload(b.id)}
-                                                        title="Tải xuống"
-                                                    >
-                                                        <i className="bi bi-download" />
-                                                    </button>
-                                                    <button
-                                                        className={`${styles.actionBtn} ${styles.driveBtn}`}
-                                                        onClick={() => handleUploadDrive(b.id)}
-                                                        disabled={actionLoading[b.id + '_drv']}
-                                                        title="Upload Google Drive"
-                                                    >
-                                                        <i className={actionLoading[b.id + '_drv'] ? 'bi bi-hourglass-split' : 'bi bi-cloud-upload'} />
-                                                    </button>
+                                                    {b.status !== 'DRIVE' && (
+                                                        <button
+                                                            className={`${styles.actionBtn} ${styles.downloadBtn}`}
+                                                            onClick={() => handleDownload(b.id)}
+                                                            title="Tải xuống máy cá nhân"
+                                                        >
+                                                            <i className="bi bi-download" />
+                                                        </button>
+                                                    )}
+                                                    {b.status === 'LOCAL' && (
+                                                        <button
+                                                            className={`${styles.actionBtn} ${styles.driveBtn}`}
+                                                            onClick={() => handleUploadDrive(b.id)}
+                                                            disabled={actionLoading[b.id + '_drv']}
+                                                            title="Push lên Google Drive (Remote)"
+                                                        >
+                                                            <i className={actionLoading[b.id + '_drv'] ? 'bi bi-hourglass-split' : 'bi bi-cloud-upload'} />
+                                                        </button>
+                                                    )}
+                                                    {b.status === 'DRIVE' && (
+                                                        <button
+                                                            className={`${styles.actionBtn} ${styles.pullBtn}`}
+                                                            onClick={() => handlePullDrive(b.id)}
+                                                            disabled={actionLoading[b.id + '_pull']}
+                                                            title="Pull về máy chủ (Local)"
+                                                        >
+                                                            <i className={actionLoading[b.id + '_pull'] ? 'bi bi-hourglass-split' : 'bi bi-cloud-arrow-down-fill'} />
+                                                        </button>
+                                                    )}
+                                                    {b.driveLink && (
+                                                        <a
+                                                            href={b.driveLink}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={styles.actionBtn}
+                                                            style={{ background: 'rgba(99,102,241,0.12)', color: '#6366f1', textDecoration: 'none' }}
+                                                            title="Mở trên Google Drive"
+                                                        >
+                                                            <i className="bi bi-box-arrow-up-right" />
+                                                        </a>
+                                                    )}
                                                     <button
                                                         className={`${styles.actionBtn} ${styles.restoreBtn}`}
                                                         onClick={() => setRestoreTarget(b)}
-                                                        title="Restore"
+                                                        title={b.status === 'DRIVE' ? "Tự động Pull về & Khôi phục" : "Khôi phục Database"}
                                                     >
                                                         <i className="bi bi-arrow-counterclockwise" />
                                                     </button>

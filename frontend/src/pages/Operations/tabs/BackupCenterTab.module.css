@@ -21,6 +21,24 @@
 .createBtn:hover { transform: translateY(-1px); }
 .createBtn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
 
+.headerActions { display: flex; align-items: center; gap: 10px; }
+
+.syncBtn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 18px;
+    background: #2563eb;
+    border: none; border-radius: 10px;
+    color: #fff; font-size: 13px; font-weight: 600;
+    cursor: pointer; flex-shrink: 0;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(37,99,235,0.2);
+}
+.syncBtn:hover { background: #1d4ed8; transform: translateY(-1px); }
+.syncBtn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+.pullBtn { background: rgba(37,99,235,0.12); color: #2563eb; }
+.pullBtn:hover { background: rgba(37,99,235,0.25); }
+
 .msgBar {
     padding: 11px 16px; border-radius: 10px; font-size: 13px; font-weight: 500;
     animation: slideIn 0.3s ease;

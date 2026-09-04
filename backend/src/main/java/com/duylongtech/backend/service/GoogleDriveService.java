@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import java.io.*;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.List;
 
 import com.google.auth.oauth2.UserCredentials;
 
@@ -45,6 +46,26 @@ public class GoogleDriveService {
      * Build an authenticated Google Drive client using OAuth2 Refresh Token OR Service Account JSON.
      */
     private Drive buildDrive() throws Exception {
+        // 1. Prioritize uploaded Service Account JSON (standard for Google Drive server-to-server)
+        String base64Json = settingRepo.findBySettingKey("drive.service.account")
+                .map(SystemSetting::getSettingValue)
+                .orElse("");
+
+        if (base64Json != null && !base64Json.isBlank()) {
+            byte[] jsonBytes = Base64.getDecoder().decode(base64Json);
+            try (InputStream is = new ByteArrayInputStream(jsonBytes)) {
+                GoogleCredentials credentials = GoogleCredentials
+                        .fromStream(is)
+                        .createScoped(Collections.singleton(DriveScopes.DRIVE));
+
+                return new Drive.Builder(
+                        GoogleNetHttpTransport.newTrustedTransport(),
+                        GsonFactory.getDefaultInstance(),
+                        new HttpCredentialsAdapter(credentials)).setApplicationName(APP_NAME).build();
+            }
+        }
+
+        // 2. Otherwise check if explicit OAuth refresh token is configured for Drive
         String refreshToken = settingRepo.findBySettingKey("drive.oauth.refresh_token")
                 .map(SystemSetting::getSettingValue)
                 .filter(v -> !v.isBlank())
@@ -72,25 +93,7 @@ public class GoogleDriveService {
                     new HttpCredentialsAdapter(credentials)).setApplicationName(APP_NAME).build();
         }
 
-        String base64Json = settingRepo.findBySettingKey("drive.service.account")
-                .map(s -> s.getSettingValue())
-                .orElse("");
-
-        if (base64Json == null || base64Json.isBlank()) {
-            throw new IllegalStateException(SystemMessage.DRIVE_ERR_003.getMessage());
-        }
-
-        byte[] jsonBytes = Base64.getDecoder().decode(base64Json);
-        try (InputStream is = new ByteArrayInputStream(jsonBytes)) {
-            GoogleCredentials credentials = GoogleCredentials
-                    .fromStream(is)
-                    .createScoped(Collections.singleton(DriveScopes.DRIVE));
-
-            return new Drive.Builder(
-                    GoogleNetHttpTransport.newTrustedTransport(),
-                    GsonFactory.getDefaultInstance(),
-                    new HttpCredentialsAdapter(credentials)).setApplicationName(APP_NAME).build();
-        }
+        throw new IllegalStateException(SystemMessage.DRIVE_ERR_003.getMessage());
     }
 
     /**
@@ -244,5 +247,45 @@ public class GoogleDriveService {
     public void deleteFile(String driveFileId) throws Exception {
         Drive drive = buildDrive();
         drive.files().delete(driveFileId).execute();
+    }
+
+    /**
+     * List all backup files (.sql.gz or .sql) from the configured Google Drive folder (or root if not set).
+     */
+    public List<com.google.api.services.drive.model.File> listBackupFiles() throws Exception {
+        Drive drive = buildDrive();
+        String folderId = settingRepo.findBySettingKey("drive.folder.id")
+                .map(s -> s.getSettingValue()).orElse("").trim();
+
+        String q = "trashed = false and (name contains '.sql.gz' or name contains '.sql')";
+        if (!folderId.isBlank()) {
+            q = "'" + folderId + "' in parents and " + q;
+        }
+
+        FileList result = drive.files().list()
+                .setQ(q)
+                .setSupportsAllDrives(true)
+                .setIncludeItemsFromAllDrives(true)
+                .setFields("files(id, name, size, createdTime, modifiedTime, webViewLink)")
+                .setOrderBy("createdTime desc")
+                .setPageSize(100)
+                .execute();
+
+        return result.getFiles() != null ? result.getFiles() : Collections.emptyList();
+    }
+
+    /**
+     * Download a file from Google Drive to local destination file.
+     */
+    public void downloadFile(String driveFileId, File targetFile) throws Exception {
+        Drive drive = buildDrive();
+        if (targetFile.getParentFile() != null && !targetFile.getParentFile().exists()) {
+            targetFile.getParentFile().mkdirs();
+        }
+        try (OutputStream outputStream = new FileOutputStream(targetFile)) {
+            drive.files().get(driveFileId)
+                    .setSupportsAllDrives(true)
+                    .executeMediaAndDownloadTo(outputStream);
+        }
     }
 }

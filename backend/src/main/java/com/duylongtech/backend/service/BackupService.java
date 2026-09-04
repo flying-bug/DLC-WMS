@@ -255,11 +255,7 @@ public class BackupService {
 
         record.setDriveFileId(driveFileId);
         record.setDriveLink(webLink);
-        record.setStatus(
-                record.getStatus() == BackupRecord.BackupStatus.LOCAL
-                        ? BackupRecord.BackupStatus.DRIVE
-                        : BackupRecord.BackupStatus.BOTH
-        );
+        record.setStatus(BackupRecord.BackupStatus.BOTH);
         return backupRecordRepo.save(record);
     }
 
@@ -270,17 +266,121 @@ public class BackupService {
         return uploadToDrive(record);
     }
 
+    // ─── Git-like Drive Synchronization (Fetch & Pull) ─────────────────────────
+
+    @Transactional
+    public List<BackupRecordDto> fetchFromDrive() throws Exception {
+        // 1. Sync local disk files first
+        syncDiskBackupsWithDb();
+
+        // 2. Fetch remote files from Google Drive
+        List<com.google.api.services.drive.model.File> driveFiles = driveService.listBackupFiles();
+        Path backupDir = ensureBackupDir();
+
+        for (com.google.api.services.drive.model.File df : driveFiles) {
+            String fname = df.getName();
+            String driveFileId = df.getId();
+            String driveLink = df.getWebViewLink();
+            Long size = df.getSize();
+
+            boolean existsOnDisk = Files.exists(backupDir.resolve(fname));
+
+            // Check if record exists by driveFileId or filename
+            var optRecord = backupRecordRepo.findByDriveFileId(driveFileId)
+                    .or(() -> backupRecordRepo.findByFilename(fname));
+
+            if (optRecord.isPresent()) {
+                BackupRecord rec = optRecord.get();
+                rec.setDriveFileId(driveFileId);
+                if (driveLink != null && !driveLink.isBlank()) {
+                    rec.setDriveLink(driveLink);
+                }
+                if (rec.getFileSize() == null || rec.getFileSize() == 0) {
+                    rec.setFileSize(size);
+                }
+                rec.setStatus(existsOnDisk ? BackupRecord.BackupStatus.BOTH : BackupRecord.BackupStatus.DRIVE);
+                backupRecordRepo.save(rec);
+            } else {
+                LocalDateTime createdAt = LocalDateTime.now();
+                if (df.getCreatedTime() != null) {
+                    try {
+                        createdAt = LocalDateTime.ofInstant(
+                                java.time.Instant.ofEpochMilli(df.getCreatedTime().getValue()),
+                                java.time.ZoneId.systemDefault()
+                        );
+                    } catch (Exception ignored) {}
+                }
+
+                BackupRecord newRecord = BackupRecord.builder()
+                        .filename(fname)
+                        .fileSize(size)
+                        .driveFileId(driveFileId)
+                        .driveLink(driveLink)
+                        .status(existsOnDisk ? BackupRecord.BackupStatus.BOTH : BackupRecord.BackupStatus.DRIVE)
+                        .createdBy("google-drive")
+                        .createdAt(createdAt)
+                        .note("Đồng bộ từ Google Drive (Remote)")
+                        .build();
+                backupRecordRepo.save(newRecord);
+            }
+        }
+
+        return listBackups();
+    }
+
+    @Transactional
+    public BackupRecordDto pullFromDrive(Long id) throws Exception {
+        BackupRecord record = backupRecordRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Backup không tồn tại: " + id));
+
+        if (record.getDriveFileId() == null || record.getDriveFileId().isBlank()) {
+            throw new IllegalArgumentException("Bản sao lưu này không có liên kết trên Google Drive.");
+        }
+
+        Path backupDir = ensureBackupDir();
+        Path targetPath = backupDir.resolve(record.getFilename());
+
+        // Download from Drive
+        log.info("Pulling backup from Google Drive: {} (fileId={})", record.getFilename(), record.getDriveFileId());
+        driveService.downloadFile(record.getDriveFileId(), targetPath.toFile());
+
+        long fileSize = Files.size(targetPath);
+        record.setFileSize(fileSize);
+        record.setStatus(BackupRecord.BackupStatus.BOTH);
+        record = backupRecordRepo.save(record);
+
+        log.info("Pulled backup from Drive successfully: {}", record.getFilename());
+        return toDto(record);
+    }
+
     // ─── Restore ───────────────────────────────────────────────────────────────
 
     public void restoreBackup(Long id, String userEncryptionKey) throws Exception {
         BackupRecord record = backupRecordRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Backup không tồn tại: " + id));
 
+        // Auto Safety Snapshot before restore (like git stash / commit snapshot)
+        try {
+            log.info("Creating automatic safety snapshot before restoring backup id={}", id);
+            createBackup("safety-auto-snapshot-before-restore");
+        } catch (Exception e) {
+            log.warn("Could not create pre-restore safety snapshot: {}", e.getMessage());
+        }
+
         Path backupDir = ensureBackupDir();
         Path filePath  = backupDir.resolve(record.getFilename());
 
+        // If local file is missing but available on Google Drive, auto-pull it
         if (!Files.exists(filePath)) {
-            throw new FileNotFoundException(String.format(SystemMessage.BACKUP_ERR_003.getMessage(), record.getFilename()));
+            if (record.getDriveFileId() != null && !record.getDriveFileId().isBlank()) {
+                log.info("Local file missing. Auto-pulling from Drive before restore: {}", record.getFilename());
+                driveService.downloadFile(record.getDriveFileId(), filePath.toFile());
+                record.setStatus(BackupRecord.BackupStatus.BOTH);
+                record.setFileSize(Files.size(filePath));
+                backupRecordRepo.save(record);
+            } else {
+                throw new FileNotFoundException(String.format(SystemMessage.BACKUP_ERR_003.getMessage(), record.getFilename()));
+            }
         }
 
         boolean isEncryptedFile = record.getFilename().endsWith(".enc");

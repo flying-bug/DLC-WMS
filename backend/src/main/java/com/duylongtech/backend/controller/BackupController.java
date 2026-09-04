@@ -73,13 +73,37 @@ public class BackupController {
     // ── Upload to Drive ─────────────────────────────────────────────────────────
 
     @PostMapping("/{id}/upload-drive")
-    @Operation(summary = "Upload a backup file to Google Drive")
+    @Operation(summary = "Upload a backup file to Google Drive (Git-like push)")
     public ApiResponse<BackupRecordDto> uploadToDrive(@PathVariable Long id) {
         try {
             BackupRecord updated = backupService.uploadToDriveById(id);
             return ApiResponse.success(backupService.toDto(updated));
         } catch (Exception e) {
             return ApiResponse.error("DRIVE_UPLOAD_FAILED", "Upload Drive thất bại: " + e.getMessage());
+        }
+    }
+
+    // ── Fetch from Drive (Git-like fetch) ───────────────────────────────────────
+
+    @PostMapping("/fetch-drive")
+    @Operation(summary = "Fetch and synchronize backup list from Google Drive (Git-like fetch)")
+    public ApiResponse<List<BackupRecordDto>> fetchFromDrive() {
+        try {
+            return ApiResponse.success(backupService.fetchFromDrive());
+        } catch (Exception e) {
+            return ApiResponse.error("DRIVE_FETCH_FAILED", "Không thể đồng bộ từ Google Drive: " + e.getMessage());
+        }
+    }
+
+    // ── Pull from Drive (Git-like pull) ─────────────────────────────────────────
+
+    @PostMapping("/{id}/pull-drive")
+    @Operation(summary = "Pull a backup file from Google Drive to local server (Git-like pull)")
+    public ApiResponse<BackupRecordDto> pullFromDrive(@PathVariable Long id) {
+        try {
+            return ApiResponse.success(backupService.pullFromDrive(id));
+        } catch (Exception e) {
+            return ApiResponse.error("DRIVE_PULL_FAILED", "Kéo bản sao lưu từ Drive thất bại: " + e.getMessage());
         }
     }
 

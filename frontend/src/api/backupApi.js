@@ -45,6 +45,12 @@ export const deleteBackup = (id) =>
 export const uploadBackupToDrive = (id) =>
     axiosClient.post(`/backup/${id}/upload-drive`).then(r => r.data);
 
+export const fetchDriveBackups = () =>
+    axiosClient.post('/backup/fetch-drive').then(r => r.data);
+
+export const pullBackupFromDrive = (id) =>
+    axiosClient.post(`/backup/${id}/pull-drive`).then(r => r.data);
+
 export const restoreBackup = (id, encryptionKey) =>
     axiosClient.post(`/backup/${id}/restore`, { encryptionKey }).then(r => r.data);
 
