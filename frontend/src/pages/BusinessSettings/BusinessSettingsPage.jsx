@@ -21,10 +21,6 @@ function BusinessSettingsPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
   const fetchSettings = async () => {
     try {
       setLoading(true);
@@ -44,6 +40,10 @@ function BusinessSettingsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
 
   const handleSave = async (e) => {
     e.preventDefault();

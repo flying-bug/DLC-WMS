@@ -345,6 +345,8 @@ function UpdateImportSlipPage() {
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
   const grandTotal = totalPrice + totalVat;
+  const totalExpectedQuantity = items.reduce((sum, item) => sum + Number(item.expectedQuantity !== undefined && item.expectedQuantity !== '' ? item.expectedQuantity : (item.quantity || 0)), 0);
+  const totalRejectedQuantity = items.reduce((sum, item) => sum + Number(item.rejectedQuantity || 0), 0);
   const isLineValid = (item) => {
     const product = productById.get(String(item.variantId));
     const quantity = Number(item.quantity || 0);

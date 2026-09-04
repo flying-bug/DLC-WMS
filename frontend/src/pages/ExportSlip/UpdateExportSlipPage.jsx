@@ -359,12 +359,9 @@ function UpdateExportSlipPage() {
   const getStockForLine = (variantId, warehouseId, item) => {
     if (!variantId) return 0;
     const effectiveWh = warehouseId || form.warehouseId;
-    let baseStock = 0;
-    if (effectiveWh) {
-      baseStock = inventoryMap.get(`${variantId}_${effectiveWh}`) || 0;
-    } else {
-      baseStock = inventoryMap.get(String(variantId)) || 0;
-    }
+    const baseStock = effectiveWh
+      ? (inventoryMap.get(`${variantId}_${effectiveWh}`) || 0)
+      : (inventoryMap.get(String(variantId)) || 0);
 
     // Nếu phiếu xuất này gắn với Đơn bán hàng (SO), cộng bù số lượng cố định đã giữ chỗ (reservedQuantity)
     const isSoExport = Boolean(form.salesOrderId || form.referenceType === 'SALES_ORDER' || form.referenceType === 'SO');

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getAuthRoles } from '../auth/session';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const WORKSPACE_MODES = {
   ACCOUNTANT: 'ACCOUNTANT',
   WAREHOUSE: 'WAREHOUSE',
@@ -91,6 +92,7 @@ export const WorkspaceModeProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useWorkspaceMode = () => {
   const ctx = useContext(WorkspaceModeContext);
   if (!ctx) {
