@@ -60,52 +60,17 @@ jobs:
       - name: Build and Package Backend
         run: ./mvnw clean package -DskipTests
 
-      - name: Clean Old Jars on VPS (CD)
+      - name: Deploy to AWS EC2 (CD)
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
-        run: |
-          sudo apt-get update && sudo apt-get install -y sshpass
-          export SSHPASS="${{ secrets.VPS_PASSWORD }}"
-          sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_IP }} << 'EOF'
-            mkdir -p /root/backend
-            pkill -f 'java -jar' || true
-            rm -f /root/backend/*.jar
-          EOF
-
-      - name: Create .env file from Secret
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
-        run: |
-          cat << 'EOF' > target/.env
-          ${{ secrets.ENV_PRODUCT }}
-          EOF
-          # Xóa các khoảng trắng thừa ở đầu dòng (nếu có do thụt lề YAML)
-          sed -i 's/^[ \t]*//' target/.env
-
-      - name: Upload JAR and .env to VPS (CD)
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
-        uses: appleboy/scp-action@master
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.VPS_USERNAME }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          source: "backend/target/*.jar,backend/target/.env"
-          target: "/root/backend"
-          strip_components: 2
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/DLC-WMS
+            git pull origin main
+            docker compose up -d --build backend
+            docker image prune -f
+            echo "Successfully deployed backend to EC2!"
 
-      - name: Start Spring Boot on VPS (CD)
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
-        run: |
-          sudo apt-get update && sudo apt-get install -y sshpass
-          export SSHPASS="${{ secrets.VPS_PASSWORD }}"
-          sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USERNAME }}@${{ secrets.VPS_IP }} << 'EOF'
-            cd /root/backend
-            
-            # Tải các biến môi trường từ file .env vừa upload
-            set -a
-            [ -f .env ] && source .env
-            set +a
-            
-            # Khởi động ứng dụng (nó sẽ tự nhận các biến môi trường vừa load)
-            nohup java -jar *.jar > app.log 2>&1 &
-            sleep 3
-          EOF
-          echo "Successfully deployed!"
