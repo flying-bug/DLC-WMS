@@ -206,11 +206,14 @@ function BackupCenterTab() {
         try {
             const res = await uploadBackupToDrive(id);
             if (res.success) {
-                showToast('success', 'Cập nhật thành công.');
+                showToast('success', 'Đẩy lên Google Drive thành công!');
                 fetchBackups();
-            } else showToast('error', 'Thao tác thất bại.');
-        } catch {
-            showToast('error', 'Thao tác thất bại.');
+            } else {
+                showToast('error', res.message || 'Thao tác thất bại.');
+            }
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message || 'Thao tác thất bại.';
+            showToast('error', msg);
         } finally {
             setActionLoading(p => ({ ...p, [id + '_drv']: false }));
         }

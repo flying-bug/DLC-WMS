@@ -69,7 +69,11 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /home/ubuntu/DLC-WMS
-            git pull origin main
+            BRANCH_NAME="${{ github.ref_name }}"
+            echo "Deploying branch: $BRANCH_NAME to EC2..."
+            git fetch --all
+            git checkout $BRANCH_NAME
+            git pull origin $BRANCH_NAME
             docker compose up -d --build backend
             docker image prune -f
             echo "Successfully deployed backend to EC2!"
