@@ -36,9 +36,30 @@ public class AssemblyBom {
     @Builder.Default
     private BigDecimal versionNo = BigDecimal.ONE;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     @Builder.Default
-    private String status = "APPROVED";
+    private String status = "DRAFT";
+
+    @Column(name = "submitted_by")
+    private Long submittedBy;
+
+    @Column(name = "submitted_at")
+    private LocalDateTime submittedAt;
+
+    @Column(name = "approved_by")
+    private Long approvedBy;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
+    @Column(name = "rejected_by")
+    private Long rejectedBy;
+
+    @Column(name = "rejected_at")
+    private LocalDateTime rejectedAt;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

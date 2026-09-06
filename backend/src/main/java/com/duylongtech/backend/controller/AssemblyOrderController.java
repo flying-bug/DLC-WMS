@@ -3,11 +3,15 @@ package com.duylongtech.backend.controller;
 import com.duylongtech.backend.dto.request.AssemblyBomRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderRequest;
 import com.duylongtech.backend.dto.request.AssemblyOrderSerialRequest;
+import com.duylongtech.backend.dto.request.WorkflowActionRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.AssemblyBomResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderResponse;
 import com.duylongtech.backend.dto.response.AssemblyOrderSerialResponse;
+import com.duylongtech.backend.dto.response.InventoryDocumentResponse;
 import com.duylongtech.backend.dto.response.SerialTreeResponse;
+import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.security.UserDetailsImpl;
 import com.duylongtech.backend.service.AssemblyOrderService;
 import com.duylongtech.backend.service.AuditLogService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,6 +47,14 @@ public class AssemblyOrderController {
     private String getCurrentUser() {
         if (org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication() == null) return "System";
         return org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+    }
+
+    private Long getCurrentUserId() {
+        var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl userDetails) {
+            return userDetails.getId();
+        }
+        throw new BusinessException("Không xác định được người dùng đang đăng nhập");
     }
 
     @GetMapping("/assembly-boms")
@@ -94,6 +106,33 @@ public class AssemblyOrderController {
         }
     }
 
+    @PostMapping("/assembly-boms/{id}/submit")
+    @PreAuthorize("hasAuthority('assembly_config:edit')")
+    @Operation(summary = "Submit or resubmit an assembly BOM")
+    public ApiResponse<AssemblyBomResponse> submitBom(@PathVariable Long id) {
+        AssemblyBomResponse result = assemblyOrderService.submitBom(id, getCurrentUserId());
+        auditLogService.logEvent(getCurrentUser(), "SUBMIT", "AssemblyBom", id, "SUCCESS", "Gửi duyệt BOM", null, null);
+        return ApiResponse.success(result);
+    }
+
+    @PostMapping("/assembly-boms/{id}/approve")
+    @PreAuthorize("hasAuthority('assembly:approve')")
+    @Operation(summary = "Approve an assembly BOM")
+    public ApiResponse<AssemblyBomResponse> approveBom(@PathVariable Long id) {
+        AssemblyBomResponse result = assemblyOrderService.approveBom(id, getCurrentUserId());
+        auditLogService.logEvent(getCurrentUser(), "APPROVE", "AssemblyBom", id, "SUCCESS", "Duyệt BOM", null, null);
+        return ApiResponse.success(result);
+    }
+
+    @PostMapping("/assembly-boms/{id}/reject")
+    @PreAuthorize("hasAuthority('assembly:approve')")
+    @Operation(summary = "Reject an assembly BOM")
+    public ApiResponse<AssemblyBomResponse> rejectBom(@PathVariable Long id, @RequestBody WorkflowActionRequest request) {
+        AssemblyBomResponse result = assemblyOrderService.rejectBom(id, getCurrentUserId(), request.getReason());
+        auditLogService.logEvent(getCurrentUser(), "REJECT", "AssemblyBom", id, "SUCCESS", "Từ chối BOM: " + request.getReason(), null, null);
+        return ApiResponse.success(result);
+    }
+
     @GetMapping("/assembly-orders")
     @Operation(summary = "View assembly/disassembly history")
     @PreAuthorize("hasAuthority('assembly:view')")
@@ -122,6 +161,7 @@ public class AssemblyOrderController {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
+            request.setCreatedBy(getCurrentUserId());
             AssemblyOrderResponse created = assemblyOrderService.createAssemblyOrder(request);
             auditLogService.logEvent(actor, "CREATE", "AssemblyOrder", created.getId(), "SUCCESS", "Tạo Lệnh Lắp ráp: " + created.getOrderCode(), ip, null);
             return ApiResponse.success(created);
@@ -138,6 +178,7 @@ public class AssemblyOrderController {
         String ip = getClientIp(servletRequest);
         String actor = getCurrentUser();
         try {
+            request.setCreatedBy(getCurrentUserId());
             AssemblyOrderResponse created = assemblyOrderService.createDisassemblyOrder(request);
             auditLogService.logEvent(actor, "CREATE", "DisassemblyOrder", created.getId(), "SUCCESS", "Tạo Lệnh Tháo dỡ: " + created.getOrderCode(), ip, null);
             return ApiResponse.success(created);
@@ -145,6 +186,54 @@ public class AssemblyOrderController {
             auditLogService.logEvent(actor, "CREATE", "DisassemblyOrder", null, "FAILED", "Tạo Lệnh Tháo dỡ thất bại: " + e.getMessage(), ip, null);
             throw e;
         }
+    }
+
+    @PostMapping("/assembly-orders/{id}/submit")
+    @PreAuthorize("hasAuthority('assembly:submit')")
+    @Operation(summary = "Submit or resubmit an assembly order")
+    public ApiResponse<AssemblyOrderResponse> submitOrder(@PathVariable Long id) {
+        AssemblyOrderResponse result = assemblyOrderService.submitOrder(id, getCurrentUserId());
+        auditLogService.logEvent(getCurrentUser(), "SUBMIT", "AssemblyOrder", id, "SUCCESS", "Gửi duyệt lệnh", null, null);
+        return ApiResponse.success(result);
+    }
+
+    @PostMapping("/assembly-orders/{id}/approve")
+    @PreAuthorize("hasAuthority('assembly:approve')")
+    @Operation(summary = "Approve an assembly order and create its inventory document pair")
+    public ApiResponse<AssemblyOrderResponse> approveOrder(@PathVariable Long id) {
+        AssemblyOrderResponse result = assemblyOrderService.approveOrder(id, getCurrentUserId());
+        auditLogService.logEvent(getCurrentUser(), "APPROVE", "AssemblyOrder", id, "SUCCESS", "Duyệt lệnh và tạo cặp phiếu kho", null, null);
+        return ApiResponse.success(result);
+    }
+
+    @PostMapping("/assembly-orders/{id}/reject")
+    @PreAuthorize("hasAuthority('assembly:approve')")
+    @Operation(summary = "Reject an assembly order")
+    public ApiResponse<AssemblyOrderResponse> rejectOrder(@PathVariable Long id, @RequestBody WorkflowActionRequest request) {
+        AssemblyOrderResponse result = assemblyOrderService.rejectOrder(id, getCurrentUserId(), request.getReason());
+        auditLogService.logEvent(getCurrentUser(), "REJECT", "AssemblyOrder", id, "SUCCESS", "Từ chối lệnh: " + request.getReason(), null, null);
+        return ApiResponse.success(result);
+    }
+
+    @PostMapping("/assembly-orders/{id}/cancel-request")
+    @PreAuthorize("hasAuthority('assembly:submit')")
+    @Operation(summary = "Request cancellation of an assembly order")
+    public ApiResponse<AssemblyOrderResponse> requestCancel(@PathVariable Long id, @RequestBody WorkflowActionRequest request) {
+        return ApiResponse.success(assemblyOrderService.requestCancel(id, getCurrentUserId(), request.getReason()));
+    }
+
+    @PostMapping("/assembly-orders/{id}/cancel-confirm")
+    @PreAuthorize("hasAuthority('assembly:approve')")
+    @Operation(summary = "Confirm cancellation of an approved assembly order")
+    public ApiResponse<AssemblyOrderResponse> confirmCancel(@PathVariable Long id) {
+        return ApiResponse.success(assemblyOrderService.confirmCancel(id, getCurrentUserId()));
+    }
+
+    @GetMapping("/assembly-orders/{id}/inventory-documents")
+    @PreAuthorize("hasAuthority('assembly:view')")
+    @Operation(summary = "Get the export/import document pair of an assembly order")
+    public ApiResponse<List<InventoryDocumentResponse>> getOrderDocuments(@PathVariable Long id) {
+        return ApiResponse.success(assemblyOrderService.getOrderDocuments(id));
     }
 
     @PutMapping("/assembly-orders/{id}")
@@ -165,7 +254,7 @@ public class AssemblyOrderController {
 
     @PutMapping("/assembly-orders/{id}/status")
     @Operation(summary = "Update assembly order status")
-    @PreAuthorize("hasAuthority('assembly:edit')")
+    @PreAuthorize("denyAll()")
     public ApiResponse<AssemblyOrderResponse> updateOrderStatus(
             @PathVariable Long id,
             @RequestParam String status,
@@ -203,7 +292,7 @@ public class AssemblyOrderController {
 
     @PostMapping("/assembly-orders/{id}/inventory-documents")
     @Operation(summary = "Generate inventory document for assembly order")
-    @PreAuthorize("hasAuthority('assembly:edit')")
+    @PreAuthorize("denyAll()")
     public ApiResponse<Void> generateInventoryDocument(
             @PathVariable Long id,
             @Valid @RequestBody com.duylongtech.backend.dto.request.GenerateInventoryDocumentRequest request,
@@ -229,7 +318,7 @@ public class AssemblyOrderController {
 
     @PostMapping("/assembly-orders/{id}/serials")
     @Operation(summary = "Save assembly order serials")
-    @PreAuthorize("hasAuthority('assembly:edit')")
+    @PreAuthorize("denyAll()")
     public ApiResponse<Void> saveSerials(
             @PathVariable Long id,
             @RequestBody @Valid List<AssemblyOrderSerialRequest> requests) {
@@ -249,7 +338,7 @@ public class AssemblyOrderController {
 
     @PostMapping("/assembly-orders/{id}/execute")
     @Operation(summary = "Execute assembly order (scan and go)")
-    @PreAuthorize("hasAuthority('assembly:edit')")
+    @PreAuthorize("denyAll()")
     public ApiResponse<Void> executeAssemblyOrder(
             @PathVariable Long id,
             @RequestBody @Valid com.duylongtech.backend.dto.request.AssemblyExecutionRequest request,
