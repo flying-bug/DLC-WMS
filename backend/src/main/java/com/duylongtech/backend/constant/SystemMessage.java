@@ -161,6 +161,13 @@ public enum SystemMessage {
     ASM_ERR_037("ASM_037", "Các phiếu xuất và nhập kho liên kết đang lưu nháp phải được ghi sổ hoặc hủy bỏ."),
     ASM_ERR_038("ASM_038", "Từ ngày không được lớn hơn đến ngày"),
     ASM_ERR_039("ASM_039", "Cấu hình này trùng với cấu hình %s"),
+    ASM_ERR_040("ASM_040", "Thao tác không hợp lệ với trạng thái hiện tại"),
+    ASM_ERR_041("ASM_041", "Lý do từ chối hoặc hủy là bắt buộc"),
+    ASM_ERR_042("ASM_042", "Lệnh đã có đủ cặp phiếu kho liên kết"),
+    ASM_ERR_043("ASM_043", "Phải ghi sổ phiếu xuất trước phiếu nhập"),
+    ASM_ERR_044("ASM_044", "Không thể hủy hoặc bỏ ghi sổ vì phiếu nhập đã được ghi sổ"),
+    ASM_ERR_045("ASM_045", "Lệnh đang chờ Kế toán xác nhận hủy"),
+    ASM_ERR_046("ASM_046", "Chỉ có thể bỏ ghi sổ phiếu xuất của lệnh đã hủy và đang chờ tất toán"),
 
     // Auth
     AUTH_ERR_001("AUTH_001", "Google Login Failed: %s"),
@@ -300,6 +307,17 @@ public enum SystemMessage {
     PROD_ERR_018("PROD_018", "Không thể xóa hàng hóa '%s' vì đã có dữ liệu giao dịch phát sinh trong hệ thống. Bạn có thể chọn 'Ngừng sử dụng' để ẩn hàng hóa."),
     PROD_ERR_019("PROD_019", "Mã hàng hóa '%s' đã tồn tại trên hệ thống."),
     PROD_ERR_020("PROD_020", "Mã hàng hóa '%s' đã tồn tại."),
+    PROD_ERR_021("PROD_021", "Chế độ SKU không khớp với biến thể."),
+    PROD_ERR_022("PROD_022", "Sản phẩm multi SKU phải có từ 1 đến 100 SKU."),
+    PROD_ERR_023("PROD_023", "Mã sản phẩm là bắt buộc khi tạo multi SKU."),
+    PROD_ERR_024("PROD_024", "Mỗi sản phẩm phải có ít nhất một SKU đang sử dụng."),
+    PROD_ERR_025("PROD_025", "Variant dòng %s: %s."),
+    PROD_ERR_026("PROD_026", "Tổ hợp thuộc tính SKU bị trùng."),
+    PROD_ERR_027("PROD_027", "specsJson phải là JSON object hợp lệ."),
+    PROD_ERR_028("PROD_028", "SKU đã có dữ liệu phát sinh nên không thể đổi mã SKU."),
+    PROD_ERR_029("PROD_029", "SKU đã có dữ liệu phát sinh nên không thể đổi tracking mode."),
+    PROD_ERR_030("PROD_030", "Sản phẩm dịch vụ chỉ được tạo một SKU và tracking NONE."),
+    PROD_ERR_031("PROD_031", "Sản phẩm thành phẩm/lắp ráp phải quản lý theo serial."),
 
     // Purchase Order
     PO_ERR_001("PO_001", "Không thể hủy đơn ở trạng thái: %s"),
