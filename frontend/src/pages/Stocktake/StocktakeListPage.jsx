@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as stocktakeApi from '../../api/stocktakeApi';
+import { getMyWarehouses } from '../../api/warehouseApi';
 import { exportToExcel } from '../../utils/excelExport';
 import StocktakeInitModal from './components/StocktakeInitModal';
 import Toast from '../../components/ui/Toast/Toast';
@@ -31,6 +32,7 @@ function StocktakeListPage() {
     const range = getDateRangePreset('THIS_YEAR');
     return {
       stocktakeCode: '',
+      warehouseId: '',
       preset: 'THIS_YEAR',
       fromDate: range ? range.fromDate : '',
       toDate: range ? range.toDate : '',
@@ -62,8 +64,12 @@ function StocktakeListPage() {
 
   const loadLookups = useCallback(async () => {
     try {
-      const warehouseRes = await stocktakeApi.getWarehouses({ size: 100 });
-      setWarehouses(pageContent(unwrap(warehouseRes)));
+      const warehouseRes = await getMyWarehouses();
+      const whList = pageContent(unwrap(warehouseRes));
+      setWarehouses(whList);
+      if (whList.length === 1) {
+        setFilters(prev => ({ ...prev, warehouseId: String(whList[0].id) }));
+      }
     } catch (err) {
       console.error('Failed to load warehouses', err);
     }
@@ -74,6 +80,7 @@ function StocktakeListPage() {
     try {
       const params = {
         stocktakeCode: filters.stocktakeCode || undefined,
+        warehouseId: filters.warehouseId || undefined,
         fromDate: filters.fromDate || undefined,
         toDate: filters.toDate || undefined,
         status: filters.status || undefined,
@@ -195,6 +202,19 @@ function StocktakeListPage() {
                 value={filters.toDate}
                 onChange={(e) => setFilters(prev => ({ ...prev, toDate: e.target.value, preset: 'CUSTOM' }))}
               />
+            </div>
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>KHO KIỂM KÊ</span>
+              <SearchableSelect
+                className={styles.filterSelect}
+                value={filters.warehouseId || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, warehouseId: e.target.value }))}
+              >
+                <option value="">{warehouses.length > 1 ? 'Tất cả kho được giao' : 'Tất cả'}</option>
+                {warehouses.map(w => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </SearchableSelect>
             </div>
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>TRẠNG THÁI</span>

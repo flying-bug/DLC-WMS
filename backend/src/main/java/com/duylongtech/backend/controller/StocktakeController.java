@@ -53,12 +53,14 @@ public class StocktakeController {
     public ResponseEntity<ApiResponse<Page<StocktakeResponse>>> searchStocktakes(
             @RequestParam(required = false) String stocktakeCode,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<StocktakeResponse> responses = stocktakeService.searchStocktakes(stocktakeCode, status, fromDate, toDate, pageable);
+        Page<StocktakeResponse> responses = stocktakeService.searchStocktakes(stocktakeCode, status, warehouseId, fromDate, toDate, pageable, userPrincipal);
         return ResponseEntity.ok(ApiResponse.<Page<StocktakeResponse>>builder()
                 .success(true)
                 .data(responses)
@@ -67,8 +69,10 @@ public class StocktakeController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<StocktakeResponse>> getStocktakeDetail(@PathVariable Long id) {
-        StocktakeResponse response = stocktakeService.getStocktakeDetail(id);
+    public ResponseEntity<ApiResponse<StocktakeResponse>> getStocktakeDetail(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
+        StocktakeResponse response = stocktakeService.getStocktakeDetail(id, userPrincipal);
         return ResponseEntity.ok(ApiResponse.<StocktakeResponse>builder()
                 .success(true)
                 .data(response)

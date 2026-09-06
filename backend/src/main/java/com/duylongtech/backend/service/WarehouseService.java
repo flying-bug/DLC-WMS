@@ -7,6 +7,7 @@ import com.duylongtech.backend.dto.response.WarehouseResponse;
 import com.duylongtech.backend.dto.response.SerialTreeResponse;
 import com.duylongtech.backend.entity.DeviceComponentSerial;
 import com.duylongtech.backend.entity.SerialNumber;
+import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.entity.UserWarehouseRole;
 import com.duylongtech.backend.entity.Warehouse;
 import com.duylongtech.backend.exception.BusinessException;
@@ -105,6 +106,46 @@ public class WarehouseService {
     public Page<WarehouseResponse> getWarehouses(String search, String status, Pageable pageable) {
         Page<Warehouse> page = warehouseRepository.searchWarehouses(search, status, pageable);
         return page.map(this::mapToResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WarehouseResponse> getMyWarehouses(Long userId) {
+        if (userId == null) {
+            return warehouseRepository.findAll().stream()
+                    .filter(w -> "APPROVED".equalsIgnoreCase(w.getStatus()))
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+        }
+
+        User user = userRepository.findById(userId).orElse(null);
+        boolean isAdminOrManager = user != null && user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(r -> r.getCode() != null && (
+                        r.getCode().toUpperCase().contains("ADMIN") ||
+                        r.getCode().toUpperCase().contains("MANAGER")
+                ));
+
+        if (isAdminOrManager) {
+            return warehouseRepository.findAll().stream()
+                    .filter(w -> "APPROVED".equalsIgnoreCase(w.getStatus()))
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+        }
+
+        List<UserWarehouseRole> userRoles = userWarehouseRoleRepository.findByUserId(userId);
+        List<Long> assignedWarehouseIds = userRoles.stream()
+                .filter(ur -> Boolean.TRUE.equals(ur.getIsActive()))
+                .map(UserWarehouseRole::getWarehouseId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (assignedWarehouseIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return warehouseRepository.findAllById(assignedWarehouseIds).stream()
+                .filter(w -> "APPROVED".equalsIgnoreCase(w.getStatus()))
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     // ──────────────────────────────────────────────────────────

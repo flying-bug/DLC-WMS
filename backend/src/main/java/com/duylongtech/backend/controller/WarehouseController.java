@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
@@ -94,6 +95,15 @@ public class WarehouseController {
         snapshot.put("status", warehouse.getStatus());
         return snapshot;
     }
+
+    @GetMapping("/my-warehouses")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<WarehouseResponse>>> getMyWarehouses(
+            @AuthenticationPrincipal UserDetailsImpl userPrincipal) {
+        Long userId = userPrincipal != null ? userPrincipal.getId() : getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(warehouseService.getMyWarehouses(userId)));
+    }
+
     // US2: GET - Danh sách kho
     // ──────────────────────────────────────────────────────────
 

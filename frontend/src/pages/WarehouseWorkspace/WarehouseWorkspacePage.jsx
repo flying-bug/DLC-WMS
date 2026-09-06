@@ -11,6 +11,7 @@ import * as importApi from '../../api/inventoryImportApi';
 import * as exportApi from '../../api/inventoryExportApi';
 import * as stockTransferApi from '../../api/stockTransferApi';
 import * as stocktakeApi from '../../api/stocktakeApi';
+import { getMyWarehouses } from '../../api/warehouseApi';
 import styles from './WarehouseWorkspacePage.module.css';
 
 export default function WarehouseWorkspacePage() {
@@ -24,6 +25,8 @@ export default function WarehouseWorkspacePage() {
   const [loadingMaster, setLoadingMaster] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [periodPreset, setPeriodPreset] = useState('ALL');
+  const [warehouses, setWarehouses] = useState([]);
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState('');
 
   // Detail State
   const [detailLines, setDetailLines] = useState([]);
@@ -45,6 +48,23 @@ export default function WarehouseWorkspacePage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
+  // Load User Assigned Warehouses
+  useEffect(() => {
+    const loadWh = async () => {
+      try {
+        const res = await getMyWarehouses();
+        const list = res.data?.data || res.data || [];
+        setWarehouses(list);
+        if (list.length === 1) {
+          setSelectedWarehouseId(String(list[0].id));
+        }
+      } catch (err) {
+        console.error('Failed to load user warehouses', err);
+      }
+    };
+    loadWh();
+  }, []);
+
   // Fetch Master list
   const fetchMasterData = useCallback(async () => {
     try {
@@ -55,6 +75,9 @@ export default function WarehouseWorkspacePage() {
       setPage(1);
 
       const params = { keyword: searchTerm };
+      if (selectedWarehouseId) {
+        params.warehouseId = selectedWarehouseId;
+      }
       if (periodPreset !== 'ALL') {
         const range = getDateRangePreset(periodPreset);
         if (range?.fromDate) params.fromDate = range.fromDate;
@@ -77,10 +100,17 @@ export default function WarehouseWorkspacePage() {
         setMasterList(data);
         if (data.length > 0) setSelectedItem(data[0]);
       } else if (activeTab === 'stocktakes') {
-        const res = await stocktakeApi.getStocktakes(params);
-        const data = res.data?.data || res.data || [];
-        setMasterList(data);
-        if (data.length > 0) setSelectedItem(data[0]);
+        const stParams = {
+          stocktakeCode: searchTerm || undefined,
+          warehouseId: selectedWarehouseId || undefined,
+          fromDate: params.fromDate,
+          toDate: params.toDate,
+        };
+        const res = await stocktakeApi.getStocktakes(stParams);
+        const data = res.data?.data?.content || res.data?.content || res.data?.data || res.data || [];
+        const arr = Array.isArray(data) ? data : [];
+        setMasterList(arr);
+        if (arr.length > 0) setSelectedItem(arr[0]);
       }
     } catch (err) {
       console.error('Error loading warehouse master list:', err);
@@ -88,7 +118,7 @@ export default function WarehouseWorkspacePage() {
     } finally {
       setLoadingMaster(false);
     }
-  }, [activeTab, searchTerm, periodPreset]);
+  }, [activeTab, searchTerm, periodPreset, selectedWarehouseId]);
 
   useEffect(() => {
     fetchMasterData();
@@ -171,6 +201,10 @@ export default function WarehouseWorkspacePage() {
   // Open Form
   const handleOpenForm = (slip) => {
     if (!slip) return;
+    if (activeTab === 'stocktakes') {
+      navigate(`/stocktakes/${slip.id}`);
+      return;
+    }
     navigate(`/warehouse-workspace/${activeTab === 'imports' ? 'imports' : 'exports'}/${slip.id}`);
   };
 
@@ -206,214 +240,390 @@ export default function WarehouseWorkspacePage() {
   };
 
   // MASTER COLUMNS
-  const masterColumns = useMemo(() => [
-    {
-      key: 'postedDate',
-      label: 'Ngày ghi sổ',
-      width: '115px',
-      render: (_, r) => {
-        const isPosted = r.status === 'POSTED' || r.status === 'COMPLETED';
-        return isPosted ? (r.postedAt ? new Date(r.postedAt).toLocaleDateString('vi-VN') : r.docDate || '-') : '-';
-      }
-    },
-    { key: 'docDate', label: 'Ngày chứng từ', width: '110px' },
-    {
-      key: 'docCode',
-      label: 'Số chứng từ',
-      width: '125px',
-      render: (v, r) => (
-        <span className={styles.docCodeLink} onClick={() => handleOpenForm(r)} title="Mở chứng từ kho">
-          {v || r.code}
-        </span>
-      )
-    },
-    {
-      key: 'partnerCode',
-      label: 'Mã đối tác',
-      width: '110px',
-      render: (_, r) => r.partnerCode || (r.partnerId ? `DT${String(r.partnerId).padStart(5, '0')}` : '-')
-    },
-    {
-      key: 'partnerName',
-      label: 'Đối tác / Khách hàng / NCC',
-      width: '180px',
-      render: (v) => (
-        <span
-          style={{
-            display: 'block',
-            maxWidth: '180px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}
-          title={v || '-'}
-        >
-          {v || '-'}
-        </span>
-      )
-    },
-    {
-      key: 'status',
-      label: 'Trạng thái',
-      width: '125px',
-      render: (v) => renderStatus(v)
-    },
-    {
-      key: 'note',
-      label: 'Ghi chú',
-      width: '220px',
-      render: (v, r) => {
-        const noteText = v || `${activeTab === 'imports' ? 'Nhập hàng từ' : 'Xuất hàng cho'} ${r.partnerName || ''}`;
-        return (
-          <span
-            style={{
-              display: 'block',
-              maxWidth: '220px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
-            title={noteText}
-          >
-            {noteText}
-          </span>
-        );
-      }
-    },
-    {
-      key: 'actions',
-      label: 'Thao tác',
-      width: '100px',
-      render: (_, r) => {
-        const isPosted = r.status === 'POSTED' || r.status === 'COMPLETED';
-        const isOpen = openDropdownId === r.id;
-
-        return (
-          <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              className={styles.misaActionLink}
-              onClick={() => setOpenDropdownId(isOpen ? null : r.id)}
-            >
-              {isPosted ? 'Xem' : 'Thực hiện'} <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
-            </button>
-
-            {isOpen && (
-              <div className={styles.actionDropdownMenu}>
+  const masterColumns = useMemo(() => {
+    if (activeTab === 'stocktakes') {
+      return [
+        {
+          key: 'stocktakeDate',
+          label: 'Ngày kiểm kê',
+          width: '120px',
+          render: (v) => v ? new Date(v).toLocaleDateString('vi-VN') : '-'
+        },
+        {
+          key: 'stocktakeCode',
+          label: 'Số kiểm kê',
+          width: '130px',
+          render: (v, r) => (
+            <span className={styles.docCodeLink} onClick={() => handleOpenForm(r)} title="Mở bảng kiểm kê">
+              {v || r.code}
+            </span>
+          )
+        },
+        {
+          key: 'warehouseName',
+          label: 'Kho kiểm kê',
+          width: '160px',
+          render: (v, r) => v || (r.warehouseId ? `Kho #${r.warehouseId}` : '-')
+        },
+        {
+          key: 'purpose',
+          label: 'Mục đích kiểm kê',
+          width: '200px',
+          render: (v) => (
+            <span style={{ display: 'block', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={v || '-'}>
+              {v || '-'}
+            </span>
+          )
+        },
+        {
+          key: 'conclusion',
+          label: 'Kết luận',
+          width: '200px',
+          render: (v) => (
+            <span style={{ display: 'block', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={v || '-'}>
+              {v || '-'}
+            </span>
+          )
+        },
+        {
+          key: 'status',
+          label: 'Trạng thái',
+          width: '130px',
+          render: (v) => {
+            const isPosted = v === 'POSTED';
+            return isPosted ? (
+              <span className={`${styles.badge} ${styles.badgeSuccess}`}>
+                <i className="fas fa-check" style={{ marginRight: 4 }}></i>Đã xử lý
+              </span>
+            ) : (
+              <span className={`${styles.badge} ${styles.badgeDraft}`}>
+                <i className="fas fa-clock" style={{ marginRight: 4 }}></i>Lưu tạm
+              </span>
+            );
+          }
+        },
+        {
+          key: 'actions',
+          label: 'Thao tác',
+          width: '100px',
+          render: (_, r) => {
+            const isOpen = openDropdownId === r.id;
+            return (
+              <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
-                  className={styles.dropdownItem}
-                  onClick={() => {
-                    setOpenDropdownId(null);
-                    handleOpenForm(r);
-                  }}
+                  className={styles.misaActionLink}
+                  onClick={() => setOpenDropdownId(isOpen ? null : r.id)}
                 >
-                  <i className="fas fa-edit"></i> {isPosted ? 'Xem chi tiết' : 'Ghi sổ / Quét Serial'}
+                  Xem <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
                 </button>
-                <button
-                  type="button"
-                  className={styles.dropdownItem}
-                  onClick={() => {
-                    setOpenDropdownId(null);
-                    handlePrint(r);
-                  }}
-                >
-                  <i className="fas fa-print"></i> In phiếu
-                </button>
-                {isPosted && (
-                  <button
-                    type="button"
-                    className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
-                    onClick={() => {
-                      setOpenDropdownId(null);
-                      setTargetSlip(r);
-                      setUnpostModalOpen(true);
-                    }}
-                  >
-                    <i className="fas fa-undo-alt"></i> Bỏ ghi sổ
-                  </button>
+                {isOpen && (
+                  <div className={styles.actionDropdownMenu}>
+                    <button
+                      type="button"
+                      className={styles.dropdownItem}
+                      onClick={() => {
+                        setOpenDropdownId(null);
+                        handleOpenForm(r);
+                      }}
+                    >
+                      <i className="fas fa-eye"></i> Xem chi tiết
+                    </button>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        );
-      }
+            );
+          }
+        }
+      ];
     }
-  ], [activeTab, openDropdownId, handleOpenForm, handlePrint]);
 
-  // DETAIL COLUMNS
-  const detailColumns = useMemo(() => [
-    { key: 'stt', label: '#', width: '45px', render: (_, __, idx) => idx + 1 },
-    {
-      key: 'sku',
-      label: 'Mã hàng (SKU)',
-      width: '130px',
-      render: (_, r) => <strong style={{ color: 'var(--color-primary)' }}>{r.sku || r.productSku || '-'}</strong>
-    },
-    {
-      key: 'productName',
-      label: 'Tên hàng hóa, quy cách',
-      width: '240px',
-      render: (_, r) => {
-        const text = r.productName || r.variantName || '-';
-        return (
+    return [
+      {
+        key: 'postedDate',
+        label: 'Ngày ghi sổ',
+        width: '115px',
+        render: (_, r) => {
+          const isPosted = r.status === 'POSTED' || r.status === 'COMPLETED';
+          return isPosted ? (r.postedAt ? new Date(r.postedAt).toLocaleDateString('vi-VN') : r.docDate || '-') : '-';
+        }
+      },
+      { key: 'docDate', label: 'Ngày chứng từ', width: '110px' },
+      {
+        key: 'docCode',
+        label: 'Số chứng từ',
+        width: '125px',
+        render: (v, r) => (
+          <span className={styles.docCodeLink} onClick={() => handleOpenForm(r)} title="Mở chứng từ kho">
+            {v || r.code}
+          </span>
+        )
+      },
+      {
+        key: 'partnerCode',
+        label: 'Mã đối tác',
+        width: '110px',
+        render: (_, r) => r.partnerCode || (r.partnerId ? `DT${String(r.partnerId).padStart(5, '0')}` : '-')
+      },
+      {
+        key: 'partnerName',
+        label: 'Đối tác / Khách hàng / NCC',
+        width: '180px',
+        render: (v) => (
           <span
             style={{
               display: 'block',
-              maxWidth: '240px',
+              maxWidth: '180px',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap'
             }}
-            title={text}
+            title={v || '-'}
           >
-            {text}
+            {v || '-'}
           </span>
-        );
+        )
+      },
+      {
+        key: 'status',
+        label: 'Trạng thái',
+        width: '125px',
+        render: (v) => renderStatus(v)
+      },
+      {
+        key: 'note',
+        label: 'Ghi chú',
+        width: '220px',
+        render: (v, r) => {
+          const noteText = v || `${activeTab === 'imports' ? 'Nhập hàng từ' : 'Xuất hàng cho'} ${r.partnerName || ''}`;
+          return (
+            <span
+              style={{
+                display: 'block',
+                maxWidth: '220px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+              title={noteText}
+            >
+              {noteText}
+            </span>
+          );
+        }
+      },
+      {
+        key: 'actions',
+        label: 'Thao tác',
+        width: '100px',
+        render: (_, r) => {
+          const isPosted = r.status === 'POSTED' || r.status === 'COMPLETED';
+          const isOpen = openDropdownId === r.id;
+
+          return (
+            <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className={styles.misaActionLink}
+                onClick={() => setOpenDropdownId(isOpen ? null : r.id)}
+              >
+                {isPosted ? 'Xem' : 'Thực hiện'} <i className="fas fa-chevron-down" style={{ fontSize: '0.65rem' }}></i>
+              </button>
+
+              {isOpen && (
+                <div className={styles.actionDropdownMenu}>
+                  <button
+                    type="button"
+                    className={styles.dropdownItem}
+                    onClick={() => {
+                      setOpenDropdownId(null);
+                      handleOpenForm(r);
+                    }}
+                  >
+                    <i className="fas fa-edit"></i> {isPosted ? 'Xem chi tiết' : 'Ghi sổ / Quét Serial'}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.dropdownItem}
+                    onClick={() => {
+                      setOpenDropdownId(null);
+                      handlePrint(r);
+                    }}
+                  >
+                    <i className="fas fa-print"></i> In phiếu
+                  </button>
+                  {isPosted && (
+                    <button
+                      type="button"
+                      className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+                      onClick={() => {
+                        setOpenDropdownId(null);
+                        setTargetSlip(r);
+                        setUnpostModalOpen(true);
+                      }}
+                    >
+                      <i className="fas fa-undo-alt"></i> Bỏ ghi sổ
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        }
       }
-    },
-    { key: 'warehouseName', label: 'Kho hàng', width: '120px', render: (_, r) => r.warehouseName || r.warehouseCode || 'Kho chính' },
-    { key: 'unitName', label: 'ĐVT', width: '80px', render: (_, r) => r.unitName || r.baseUnitName || 'Chiếc' },
-    {
-      key: 'expectedQuantity',
-      label: 'SL Yêu cầu',
-      width: '100px',
-      render: (_, r) => (
-        <span style={{ textAlign: 'right', display: 'block', fontWeight: '500' }}>
-          {Number(r.expectedQuantity || r.quantity || 0).toLocaleString('vi-VN')}
-        </span>
-      )
-    },
-    {
-      key: 'actualQuantity',
-      label: activeTab === 'imports' ? 'SL Thực nhập' : 'SL Thực xuất',
-      width: '110px',
-      render: (_, r) => (
-        <span style={{ textAlign: 'right', display: 'block', fontWeight: '700', color: 'var(--color-primary)' }}>
-          {Number(r.quantityIn || r.quantityOut || r.actualQuantity || r.expectedQuantity || 0).toLocaleString('vi-VN')}
-        </span>
-      )
-    },
-    {
-      key: 'note',
-      label: 'Ghi chú dòng',
-      width: '180px',
-      render: (v) => (
-        <span
-          style={{
-            display: 'block',
-            maxWidth: '180px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}
-          title={v || '-'}
-        >
-          {v || '-'}
-        </span>
-      )
+    ];
+  }, [activeTab, openDropdownId, handleOpenForm, handlePrint]);
+
+  // DETAIL COLUMNS
+  const detailColumns = useMemo(() => {
+    if (activeTab === 'stocktakes') {
+      return [
+        { key: 'stt', label: '#', width: '45px', render: (_, __, idx) => idx + 1 },
+        {
+          key: 'sku',
+          label: 'Mã hàng (SKU)',
+          width: '130px',
+          render: (_, r) => <strong style={{ color: 'var(--color-primary)' }}>{r.sku || r.itemCode || r.variantSku || '-'}</strong>
+        },
+        {
+          key: 'productName',
+          label: 'Tên hàng hóa, quy cách',
+          width: '240px',
+          render: (_, r) => {
+            const text = r.itemName || r.productName || r.variantName || '-';
+            return (
+              <span
+                style={{
+                  display: 'block',
+                  maxWidth: '240px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+                title={text}
+              >
+                {text}
+              </span>
+            );
+          }
+        },
+        { key: 'unitName', label: 'ĐVT', width: '80px', render: (_, r) => r.unit || r.unitName || r.baseUnitName || 'Chiếc' },
+        {
+          key: 'bookQty',
+          label: 'SL Sổ sách',
+          width: '110px',
+          render: (_, r) => (
+            <span style={{ textAlign: 'right', display: 'block', fontWeight: '500' }}>
+              {Number(r.bookQty ?? r.bookQuantity ?? 0).toLocaleString('vi-VN')}
+            </span>
+          )
+        },
+        {
+          key: 'countQty',
+          label: 'SL Kiểm kê',
+          width: '110px',
+          render: (_, r) => (
+            <span style={{ textAlign: 'right', display: 'block', fontWeight: '700', color: 'var(--color-primary)' }}>
+              {Number(r.countQty ?? r.actualQuantity ?? 0).toLocaleString('vi-VN')}
+            </span>
+          )
+        },
+        {
+          key: 'diffQty',
+          label: 'Chênh lệch',
+          width: '110px',
+          render: (_, r) => {
+            const diff = Number(r.diffQty ?? r.diffQuantity ?? 0);
+            const color = diff > 0 ? '#16a34a' : diff < 0 ? '#dc2626' : 'inherit';
+            return (
+              <span style={{ textAlign: 'right', display: 'block', fontWeight: '700', color }}>
+                {diff > 0 ? `+${diff.toLocaleString('vi-VN')}` : diff.toLocaleString('vi-VN')}
+              </span>
+            );
+          }
+        },
+        {
+          key: 'action',
+          label: 'Xử lý chênh lệch',
+          width: '150px',
+          render: (_, r) => r.action || '-'
+        }
+      ];
     }
-  ], [activeTab]);
+
+    return [
+      { key: 'stt', label: '#', width: '45px', render: (_, __, idx) => idx + 1 },
+      {
+        key: 'sku',
+        label: 'Mã hàng (SKU)',
+        width: '130px',
+        render: (_, r) => <strong style={{ color: 'var(--color-primary)' }}>{r.sku || r.productSku || '-'}</strong>
+      },
+      {
+        key: 'productName',
+        label: 'Tên hàng hóa, quy cách',
+        width: '240px',
+        render: (_, r) => {
+          const text = r.productName || r.variantName || '-';
+          return (
+            <span
+              style={{
+                display: 'block',
+                maxWidth: '240px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+              title={text}
+            >
+              {text}
+            </span>
+          );
+        }
+      },
+      { key: 'warehouseName', label: 'Kho hàng', width: '120px', render: (_, r) => r.warehouseName || r.warehouseCode || 'Kho chính' },
+      { key: 'unitName', label: 'ĐVT', width: '80px', render: (_, r) => r.unitName || r.baseUnitName || 'Chiếc' },
+      {
+        key: 'expectedQuantity',
+        label: 'SL Yêu cầu',
+        width: '100px',
+        render: (_, r) => (
+          <span style={{ textAlign: 'right', display: 'block', fontWeight: '500' }}>
+            {Number(r.expectedQuantity || r.quantity || 0).toLocaleString('vi-VN')}
+          </span>
+        )
+      },
+      {
+        key: 'actualQuantity',
+        label: activeTab === 'imports' ? 'SL Thực nhập' : 'SL Thực xuất',
+        width: '110px',
+        render: (_, r) => (
+          <span style={{ textAlign: 'right', display: 'block', fontWeight: '700', color: 'var(--color-primary)' }}>
+            {Number(r.quantityIn || r.quantityOut || r.actualQuantity || r.expectedQuantity || 0).toLocaleString('vi-VN')}
+          </span>
+        )
+      },
+      {
+        key: 'note',
+        label: 'Ghi chú dòng',
+        width: '180px',
+        render: (v) => (
+          <span
+            style={{
+              display: 'block',
+              maxWidth: '180px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+            title={v || '-'}
+          >
+            {v || '-'}
+          </span>
+        )
+      }
+    ];
+  }, [activeTab]);
 
   return (
     <AdminLayout>
@@ -471,6 +681,19 @@ export default function WarehouseWorkspacePage() {
               {DATE_PRESET_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   Kỳ: {opt.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className={styles.periodSelect}
+              value={selectedWarehouseId}
+              onChange={(e) => setSelectedWarehouseId(e.target.value)}
+            >
+              <option value="">{warehouses.length > 1 ? 'Tất cả kho được giao' : 'Tất cả kho'}</option>
+              {warehouses.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
                 </option>
               ))}
             </select>

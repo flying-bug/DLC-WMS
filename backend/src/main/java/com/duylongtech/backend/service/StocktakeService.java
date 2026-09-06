@@ -1,8 +1,6 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.constant.SystemMessage;
-import com.duylongtech.backend.dto.request.InventoryDocumentLineRequest;
-import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
 import com.duylongtech.backend.dto.request.StocktakeLineRequest;
 import com.duylongtech.backend.dto.request.StocktakeRequest;
 import com.duylongtech.backend.dto.response.StocktakeResponse;
@@ -13,12 +11,12 @@ import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -39,6 +37,9 @@ public class StocktakeService {
     private final InventoryDocumentService inventoryDocumentService;
     private final SerialNumberRepository serialNumberRepository;
 
+    @Autowired(required = false)
+    private UserWarehouseRoleRepository userWarehouseRoleRepository;
+
     @Transactional(readOnly = true)
     public String generateNextStocktakeCode() {
         return codeGeneratorService.generateCode("stocktakes", "stocktake_code", "KK", 6);
@@ -47,17 +48,78 @@ public class StocktakeService {
     @Transactional(readOnly = true)
     public Page<StocktakeResponse> searchStocktakes(String stocktakeCode, String status, LocalDate fromDate,
             LocalDate toDate, Pageable pageable) {
+        return searchStocktakes(stocktakeCode, status, null, fromDate, toDate, pageable, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<StocktakeResponse> searchStocktakes(String stocktakeCode, String status, Long warehouseId,
+            LocalDate fromDate, LocalDate toDate, Pageable pageable, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {
         String normalizedCode = stocktakeCode != null && !stocktakeCode.trim().isEmpty() ? stocktakeCode.trim() : null;
         String normalizedStatus = status != null && !status.trim().isEmpty() ? status.trim() : null;
+
+        List<Long> allowedWarehouseIds = null;
+
+        if (userPrincipal != null && userWarehouseRoleRepository != null) {
+            boolean isAdminOrManager = userPrincipal.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority() != null && (
+                            a.getAuthority().contains("ADMIN") ||
+                            a.getAuthority().contains("MANAGER")
+                    ));
+
+            if (!isAdminOrManager) {
+                List<UserWarehouseRole> roles = userWarehouseRoleRepository.findByUserId(userPrincipal.getId());
+                List<Long> assignedWarehouseIds = roles.stream()
+                        .filter(r -> Boolean.TRUE.equals(r.getIsActive()))
+                        .map(UserWarehouseRole::getWarehouseId)
+                        .distinct()
+                        .toList();
+
+                if (assignedWarehouseIds.isEmpty()) {
+                    return Page.empty(pageable);
+                }
+
+                if (warehouseId != null) {
+                    if (!assignedWarehouseIds.contains(warehouseId)) {
+                        return Page.empty(pageable);
+                    }
+                } else {
+                    allowedWarehouseIds = assignedWarehouseIds;
+                }
+            }
+        }
+
         Page<Stocktake> page = stocktakeRepository.searchStocktakes(normalizedCode, normalizedStatus, fromDate, toDate,
-                pageable);
+                warehouseId, allowedWarehouseIds, pageable);
         return page.map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     public StocktakeResponse getStocktakeDetail(Long id) {
+        return getStocktakeDetail(id, null);
+    }
+
+    @Transactional(readOnly = true)
+    public StocktakeResponse getStocktakeDetail(Long id, com.duylongtech.backend.security.UserDetailsImpl userPrincipal) {
         Stocktake stocktake = stocktakeRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
+
+        if (userPrincipal != null && userWarehouseRoleRepository != null) {
+            boolean isAdminOrManager = userPrincipal.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority() != null && (
+                            a.getAuthority().contains("ADMIN") ||
+                            a.getAuthority().contains("MANAGER")
+                    ));
+
+            if (!isAdminOrManager) {
+                List<UserWarehouseRole> roles = userWarehouseRoleRepository.findByUserId(userPrincipal.getId());
+                boolean hasAccess = roles.stream()
+                        .anyMatch(r -> Boolean.TRUE.equals(r.getIsActive()) && r.getWarehouseId().equals(stocktake.getWarehouseId()));
+                if (!hasAccess) {
+                    throw new BusinessException("Bạn không có quyền truy cập phiếu kiểm kê của kho này");
+                }
+            }
+        }
+
         return toResponse(stocktake);
     }
 

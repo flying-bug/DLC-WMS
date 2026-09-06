@@ -37,7 +37,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -98,13 +97,13 @@ class StocktakeServiceTest {
     @Test
     void searchStocktakes_blankFilters_normalizesToNull() {
         Pageable pageable = PageRequest.of(0, 20);
-        when(stocktakeRepository.searchStocktakes(null, null, null, null, pageable))
+        when(stocktakeRepository.searchStocktakes(null, null, null, null, null, null, pageable))
                 .thenReturn(Page.empty(pageable));
 
         Page<StocktakeResponse> result = stocktakeService.searchStocktakes("   ", "", null, null, pageable);
 
         assertEquals(0, result.getTotalElements());
-        verify(stocktakeRepository).searchStocktakes(null, null, null, null, pageable);
+        verify(stocktakeRepository).searchStocktakes(null, null, null, null, null, null, pageable);
         verifyNoInteractions(codeGeneratorService, productVariantRepository, warehouseRepository,
                 inventoryDocumentService, serialNumberRepository);
     }
@@ -115,7 +114,7 @@ class StocktakeServiceTest {
         LocalDate fromDate = LocalDate.of(2026, 8, 1);
         LocalDate toDate = LocalDate.of(2026, 8, 31);
         Stocktake stocktake = stocktake("KK000001", "DRAFT");
-        when(stocktakeRepository.searchStocktakes("KK000", "DRAFT", fromDate, toDate, pageable))
+        when(stocktakeRepository.searchStocktakes("KK000", "DRAFT", fromDate, toDate, null, null, pageable))
                 .thenReturn(new PageImpl<>(List.of(stocktake), pageable, 1));
 
         Page<StocktakeResponse> result = stocktakeService.searchStocktakes(
@@ -127,7 +126,7 @@ class StocktakeServiceTest {
                 () -> assertEquals("KK000001", result.getContent().get(0).getStocktakeCode()),
                 () -> assertEquals("DRAFT", result.getContent().get(0).getStatus())
         );
-        verify(stocktakeRepository).searchStocktakes("KK000", "DRAFT", fromDate, toDate, pageable);
+        verify(stocktakeRepository).searchStocktakes("KK000", "DRAFT", fromDate, toDate, null, null, pageable);
     }
 
     @Test

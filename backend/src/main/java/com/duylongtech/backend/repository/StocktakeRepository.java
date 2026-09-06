@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface StocktakeRepository extends JpaRepository<Stocktake, Long> {
@@ -17,11 +18,15 @@ public interface StocktakeRepository extends JpaRepository<Stocktake, Long> {
            "AND (:status IS NULL OR s.status = :status) " +
            "AND (:fromDate IS NULL OR s.stocktakeDate >= :fromDate) " +
            "AND (:toDate IS NULL OR s.stocktakeDate <= :toDate) " +
+           "AND (:warehouseId IS NULL OR s.warehouseId = :warehouseId) " +
+           "AND (:allowedWarehouseIds IS NULL OR s.warehouseId IN :allowedWarehouseIds) " +
            "ORDER BY s.updatedAt DESC, s.id DESC")
     Page<Stocktake> searchStocktakes(@Param("stocktakeCode") String stocktakeCode,
                                      @Param("status") String status,
                                      @Param("fromDate") LocalDate fromDate,
                                      @Param("toDate") LocalDate toDate,
+                                     @Param("warehouseId") Long warehouseId,
+                                     @Param("allowedWarehouseIds") List<Long> allowedWarehouseIds,
                                      Pageable pageable);
 
     @Query("SELECT DISTINCT s FROM Stocktake s LEFT JOIN FETCH s.lines l WHERE s.id = :id")

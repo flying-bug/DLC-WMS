@@ -10,6 +10,13 @@ export const getWarehouses = (params = {}) => {
 };
 
 /**
+ * Lấy danh sách kho được phân quyền của người dùng hiện tại
+ */
+export const getMyWarehouses = () => {
+    return axiosClient.get(`${WAREHOUSE_BASE}/my-warehouses`);
+};
+
+/**
  * Xuất Excel danh sách kho
  */
 export const exportWarehouses = (params = {}) => {
