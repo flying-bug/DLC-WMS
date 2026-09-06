@@ -9,9 +9,11 @@ import java.nio.file.Path;
 import java.util.List;
 
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
 @EnableScheduling
+@EnableAsync
 public class BackendApplication {
 
     public static void main(String[] args) {

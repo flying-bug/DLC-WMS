@@ -24,6 +24,7 @@ public class UserDto {
     @Pattern(regexp = com.duylongtech.backend.constant.AppConstants.MOBILE_REGEX, message = "INVALID_PHONE")
     private String phone;
     private String status;
+    private String avatarUrl;
     
     @NotBlank(message = "FIELD_REQUIRED")
     private String idCard;

@@ -43,6 +43,9 @@ public class SalesOrderResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // Export tracking
+    private Boolean isFullyExported;
+
     // Lines
     private List<SalesOrderLineResponse> lines;
 
@@ -67,6 +70,9 @@ public class SalesOrderResponse {
         private String note;
         // Tồn kho khả dụng — dùng để hiển thị cảnh báo trên UI
         private BigDecimal availableQuantity;
+        // Xuất kho tracking
+        private BigDecimal exportedQuantity;
+        private BigDecimal remainingQuantity;
     }
 
     @Data

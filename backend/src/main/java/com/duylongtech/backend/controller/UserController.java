@@ -48,6 +48,12 @@ public class UserController {
         return ApiResponse.success(userService.getCurrentUserProfile());
     }
 
+    @PutMapping("/me")
+    @Operation(summary = "Cập nhật thông tin cá nhân", description = "Chỉ cho phép user hiện tại cập nhật họ tên và số điện thoại.")
+    public ApiResponse<UserDetailResponseDTO> updateCurrentUserProfile(@RequestBody UserDto userDto) {
+        return ApiResponse.success(userService.updateCurrentUserProfile(userDto));
+    }
+
     @PutMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Cap nhat anh dai dien", description = "Tai anh len Cloudinary va luu URL vao profile user dang dang nhap.")
     public ApiResponse<UserDetailResponseDTO> updateCurrentUserAvatar(@RequestParam("file") MultipartFile file) {
@@ -189,7 +195,7 @@ public class UserController {
                 detailJson
             );
             realtimeSessionService.publishUserUpdated(after, "USER_PERMISSIONS_CHANGED");
-            realtimeSessionService.forceLogoutUser(after.getId(), "PERMISSIONS_CHANGED", "Quyen truy cap cua ban vua duoc cap nhat. Vui long dang nhap lai.");
+            realtimeSessionService.forceLogoutUser(after.getId(), "PERMISSIONS_CHANGED", "Quyền truy cập của bạn vừa được cập nhật. Vui lòng đăng nhập lại");
             return ApiResponse.success();
         } catch (Exception e) {
             auditLogService.logEvent(

@@ -1,7 +1,7 @@
 // ── App identity ─────────────────────────────────────────────
 export const APP_NAME = 'DLC-WMS';
-export const COMPANY_NAME = 'Duy Long Computer System';
-export const APP_DISPLAY_NAME = 'Duy Long Warehouse';
+export const COMPANY_NAME = 'Duy Long Computer';
+export const APP_DISPLAY_NAME = 'Duy Long Computer';
 export const COPYRIGHT_YEAR = 2026;
 
 // ── Client-side routes ────────────────────────────────────────

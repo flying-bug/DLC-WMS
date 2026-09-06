@@ -27,7 +27,7 @@ public class WarrantyController {
 
     @GetMapping
     @Operation(summary = "View warranty list")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('warranty:view')")
     public ApiResponse<Page<WarrantyResponse>> getWarranties(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
@@ -41,7 +41,7 @@ public class WarrantyController {
 
     @GetMapping("/{id}")
     @Operation(summary = "View warranty detail")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('warranty:view')")
     public ApiResponse<WarrantyResponse> getWarrantyById(@PathVariable Long id) {
         return ApiResponse.success(warrantyService.getWarrantyById(id));
     }

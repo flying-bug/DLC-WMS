@@ -20,6 +20,8 @@ import * as exportApi from '../../api/inventoryExportApi';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import styles from './RepairFormPage.module.css';
 import { formatDateTime, getTodayIsoDate } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const money = (value) => Number(value || 0).toLocaleString('vi-VN');
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -582,7 +584,8 @@ function RepairFormPage() {
             serialNumber: line.serialNumber || null,
             serialNumberId: line.serialNumberId || null,
             replacementSerialNumber: line.replacementSerialNumber || null,
-            replacementSerialNumberId: line.replacementSerialNumberId || null
+            replacementSerialNumberId: line.replacementSerialNumberId || null,
+            vatPercent: Number(line.vatPercent || 0)
           });
         }
         for (const fee of pendingFees) {
@@ -592,7 +595,8 @@ function RepairFormPage() {
             quantity: Number(fee.quantity || 1),
             unitName: fee.unitName || null,
             isFreeWarranty: fee.isFreeWarranty,
-            note: fee.note || null
+            note: fee.note || null,
+            vatPercent: Number(fee.vatPercent || 0)
           });
         }
         showToast('success', 'Tạo lệnh sửa chữa thành công');
@@ -668,7 +672,8 @@ function RepairFormPage() {
       serialNumber: form.serialNumber || null,
       serialNumberId: form.serialNumberId || null,
       replacementSerialNumber: form.replacementSerialNumber || null,
-      replacementSerialNumberId: form.replacementSerialNumberId || null
+      replacementSerialNumberId: form.replacementSerialNumberId || null,
+      vatPercent: Number(form.vatPercent || 0)
     };
     if (isNew) {
       const variant = variants.find(p => p.id === form.componentVariantId);
@@ -696,7 +701,8 @@ function RepairFormPage() {
       quantity: Number(form.quantity || 1),
       unitName: form.unitName || null,
       isFreeWarranty: form.isFreeWarranty,
-      note: form.note || null
+      note: form.note || null,
+      vatPercent: Number(form.vatPercent || 0)
     };
     if (isNew) {
       const variant = products.find(p => p.productName === form.feeName);
@@ -945,16 +951,37 @@ function RepairFormPage() {
   const showRepairCols = ['UNDER_REPAIR', 'DONE'].includes(currentStatus);
   const lines = isNew ? pendingLines : (repair?.lines || []);
   const fees = isNew ? pendingFees : (repair?.fees || []);
-  const detailTableColSpan = 9
+  const detailTableColSpan = 10
     + (visibleColumns.description ? 1 : 0)
     + (showRepairCols && visibleColumns.serialNumber ? 1 : 0);
 
-  const totalLinesAmount = lines.reduce((acc, l) => {
-    if (l.isFreeWarranty || !['ADD', 'REPLACE'].includes(l.actionType)) return acc;
+  const totals = {
+    linesSubtotal: 0,
+    linesVat: 0,
+    feesSubtotal: 0,
+    feesVat: 0
+  };
+
+  lines.forEach(l => {
+    if (l.isFreeWarranty || !['ADD', 'REPLACE'].includes(l.actionType)) return;
     const qty = Number(l.quantity || 0);
-    return acc + (qty * Number(l.unitPrice));
-  }, 0);
-  const totalFeesAmount = fees.reduce((acc, f) => acc + (f.isFreeWarranty ? 0 : Number(f.quantity || 1) * Number(f.feeAmount)), 0);
+    const amount = qty * Number(l.unitPrice);
+    const vatAmt = amount * Number(l.vatPercent || 0) / 100;
+    totals.linesSubtotal += amount;
+    totals.linesVat += vatAmt;
+  });
+
+  fees.forEach(f => {
+    if (f.isFreeWarranty) return;
+    const amount = Number(f.quantity || 1) * Number(f.feeAmount);
+    const vatAmt = amount * Number(f.vatPercent || 0) / 100;
+    totals.feesSubtotal += amount;
+    totals.feesVat += vatAmt;
+  });
+
+  const totalLinesAmount = totals.linesSubtotal + totals.linesVat;
+  const totalFeesAmount = totals.feesSubtotal + totals.feesVat;
+  const totalVAT = totals.linesVat + totals.feesVat;
   const totalAmount = totalLinesAmount + totalFeesAmount;
 
   return (
@@ -1173,6 +1200,7 @@ function RepairFormPage() {
                   <th style={{ width: '80px', textAlign: 'right', whiteSpace: 'nowrap' }}>Số lượng</th>
                   <th style={{ whiteSpace: 'nowrap' }}>ĐVT</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá / Phí</th>
+                  <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '80px' }}>% VAT</th>
                   <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
                   <th style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>Bảo hành</th>
                   {visibleColumns.description && <th style={{ whiteSpace: 'nowrap' }}>Ghi chú</th>}
@@ -1193,11 +1221,11 @@ function RepairFormPage() {
                   <tr key={line.id || line._key}>
                     <td>
                       {isEditable ? (
-                        <select className="misa-input" style={{ padding: '2px 28px 2px 8px', height: '28px', minWidth: '126px', width: '126px' }} value={line.actionType} onChange={(e) => handleChangeLineActionType(line.id, line._key, e.target.value)}>
+                        <SearchableSelect className="misa-input" style={{ padding: '2px 28px 2px 8px', height: '28px', minWidth: '126px', width: '126px' }} value={line.actionType} onChange={(e) => handleChangeLineActionType(line.id, line._key, e.target.value)}>
                           <option value="ADD">Thêm</option>
                           <option value="REPLACE">Thay thế</option>
                           <option value="REMOVE">Loại bỏ</option>
-                        </select>
+                        </SearchableSelect>
                       ) : (line.actionType === 'ADD' ? 'Thêm' : line.actionType === 'REPLACE' ? 'Thay thế' : 'Loại bỏ')}
                     </td>
                     <td style={{ minWidth: '220px' }}>
@@ -1240,10 +1268,17 @@ function RepairFormPage() {
                         <input type="text" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} value={line.isFreeWarranty ? 0 : money(line.unitPrice)} onChange={(e) => handleUpdateLineField(line.id, line._key, 'unitPrice', Number(e.target.value.replace(/\D/g, '')))} />
                       ) : money(line.unitPrice)}
                     </td>
+                    <td align="right">
+                      {isEditable ? (
+                        <input type="number" min="0" step="1" max="100" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} value={line.vatPercent || 0} onChange={(e) => handleUpdateLineField(line.id, line._key, 'vatPercent', Number(e.target.value))} />
+                      ) : (line.vatPercent || 0)}
+                    </td>
                     <td align="right" style={{ fontWeight: '500' }}>
                       {(() => {
                         if (line.isFreeWarranty || !['ADD', 'REPLACE'].includes(line.actionType)) return money(0);
-                        return money(Number(line.quantity || 0) * Number(line.unitPrice));
+                        const amount = Number(line.quantity || 0) * Number(line.unitPrice);
+                        const vatAmt = amount * Number(line.vatPercent || 0) / 100;
+                        return money(amount + vatAmt);
                       })()}
                     </td>
                     <td align="center">
@@ -1337,8 +1372,18 @@ function RepairFormPage() {
                         <input type="text" className="misa-input" style={{ width: '100px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={fee.isFreeWarranty} value={fee.isFreeWarranty ? 0 : money(fee.feeAmount)} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'feeAmount', Number(e.target.value.replace(/\D/g, '')))} />
                       ) : money(fee.feeAmount)}
                     </td>
+                    <td align="right">
+                      {isEditable ? (
+                        <input type="number" min="0" step="1" max="100" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={fee.isFreeWarranty} value={fee.vatPercent || 0} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'vatPercent', Number(e.target.value))} />
+                      ) : (fee.vatPercent || 0)}
+                    </td>
                     <td align="right" style={{ fontWeight: '500' }}>
-                      {money((fee.isFreeWarranty ? 0 : Number(fee.quantity || 1) * Number(fee.feeAmount)))}
+                      {(() => {
+                         if (fee.isFreeWarranty) return money(0);
+                         const amount = Number(fee.quantity || 1) * Number(fee.feeAmount);
+                         const vatAmt = amount * Number(fee.vatPercent || 0) / 100;
+                         return money(amount + vatAmt);
+                      })()}
                     </td>
                     <td align="center">
                       <input type="checkbox" disabled={!isEditable} checked={fee.isFreeWarranty} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'isFreeWarranty', e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
@@ -1414,9 +1459,13 @@ function RepairFormPage() {
                 <span>Tổng tiền linh kiện:</span>
                 <span style={{ fontWeight: '600', color: '#0f172a' }}>{money(totalLinesAmount)} đ</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '15px', color: '#475569' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '15px', color: '#475569' }}>
                 <span>Tổng tiền dịch vụ:</span>
                 <span style={{ fontWeight: '600', color: '#0f172a' }}>{money(totalFeesAmount)} đ</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '15px', color: '#475569' }}>
+                <span>Tiền thuế VAT:</span>
+                <span style={{ fontWeight: '600', color: '#0f172a' }}>{money(totalVAT)} đ</span>
               </div>
               <div style={{ borderTop: '2px dashed #cbd5e1', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#0f172a' }}>TỔNG CỘNG ĐƠN:</span>
@@ -1723,8 +1772,8 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
   const showRepairCols = repair && !['DRAFT', 'QUOTATION'].includes(repair.repairStatus);
   const [form, setForm] = useState(
     type === 'PART'
-      ? { actionType: 'ADD', componentVariantId: '', quantity: 1, unitPrice: 0, isFreeWarranty: underWarranty || false, note: '' }
-      : { feeName: '', feeAmount: 0, isFreeWarranty: underWarranty || false, note: '' }
+      ? { actionType: 'ADD', componentVariantId: '', quantity: 1, unitPrice: 0, vatPercent: 0, isFreeWarranty: underWarranty || false, note: '' }
+      : { feeName: '', feeAmount: 0, vatPercent: 0, isFreeWarranty: underWarranty || false, note: '' }
   );
   const [isSaving, setIsSaving] = useState(false);
   const skipPartCommitRef = useRef(false);
@@ -1748,7 +1797,8 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       const success = await onSave({
         ...nextForm,
         quantity: Number(nextForm.quantity || 1),
-        unitPrice: Number(nextForm.unitPrice || 0)
+        unitPrice: Number(nextForm.unitPrice || 0),
+        vatPercent: Number(nextForm.vatPercent || 0)
       });
       if (!success) setIsSaving(false);
     } catch (err) {
@@ -1767,7 +1817,8 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       const success = await onSave({
         ...nextForm,
         quantity: Number(nextForm.quantity || 1),
-        feeAmount: Number(nextForm.feeAmount || 0)
+        feeAmount: Number(nextForm.feeAmount || 0),
+        vatPercent: Number(nextForm.vatPercent || 0)
       });
       if (!success) setIsSaving(false);
     } catch (err) {
@@ -1779,7 +1830,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
     <tr>
       {/* 1. Loại */}
       <td>
-        <select
+        <SearchableSelect
           className="misa-input"
           value={form.actionType}
           disabled={isSaving}
@@ -1793,7 +1844,7 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
           <option value="ADD">Thêm</option>
           <option value="REPLACE">Thay thế</option>
           <option value="REMOVE">Loại bỏ</option>
-        </select>
+        </SearchableSelect>
       </td>
       {/* 2. Hạng mục */}
       <td>
@@ -1848,8 +1899,30 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
           style={{ padding: '2px 4px', height: '28px', width: '100px', textAlign: 'right' }}
         />
       </td>
+      <td align="right">
+        <input
+          type="number"
+          min="0" step="1" max="100"
+          className="misa-input"
+          disabled={isSaving || isFree}
+          value={form.vatPercent || 0}
+          onChange={e => setForm({ ...form, vatPercent: Number(e.target.value) })}
+          onBlur={() => savePart(form)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') savePart(form);
+          }}
+          style={{ padding: '2px 4px', height: '28px', width: '60px', textAlign: 'right' }}
+        />
+      </td>
       {/* 7. Thành tiền */}
-      <td align="right" style={{ fontWeight: '500' }}>{money((isFree || !['ADD', 'REPLACE'].includes(form.actionType)) ? 0 : form.quantity * form.unitPrice)}</td>
+      <td align="right" style={{ fontWeight: '500' }}>
+        {(() => {
+           if (isFree || !['ADD', 'REPLACE'].includes(form.actionType)) return money(0);
+           const amount = form.quantity * form.unitPrice;
+           const vatAmt = amount * Number(form.vatPercent || 0) / 100;
+           return money(amount + vatAmt);
+        })()}
+      </td>
       {/* 8. Bảo hành */}
       <td align="center"><input type="checkbox" disabled={isSaving} checked={form.isFreeWarranty} onChange={e => {
         const nextForm = { ...form, isFreeWarranty: e.target.checked };
@@ -1957,9 +2030,29 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
           }}
         />
       </td>
+      <td align="right">
+        <input
+          type="number"
+          min="0" step="1" max="100"
+          className="misa-input"
+          disabled={isSaving || isFree}
+          style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }}
+          value={form.vatPercent || 0}
+          onChange={e => setForm({ ...form, vatPercent: Number(e.target.value) })}
+          onBlur={() => saveFee(form)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') saveFee(form);
+          }}
+        />
+      </td>
       {/* 7. Thành tiền */}
       <td align="right" style={{ fontWeight: '500' }}>
-        {money(isFree ? 0 : (form.quantity || 1) * form.feeAmount)}
+        {(() => {
+           if (isFree) return money(0);
+           const amount = (form.quantity || 1) * form.feeAmount;
+           const vatAmt = amount * Number(form.vatPercent || 0) / 100;
+           return money(amount + vatAmt);
+        })()}
       </td>
       {/* 8. Bảo hành */}
       <td align="center">

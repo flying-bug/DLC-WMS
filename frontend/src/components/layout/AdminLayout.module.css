@@ -256,8 +256,40 @@
 .headerRight {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 12px;
     margin-left: 16px;
+    flex-shrink: 0;
+}
+
+.headerContext {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+}
+
+.headerContext i {
+    font-size: 0.68rem;
+    color: var(--color-border-strong);
+}
+
+.headerContext strong {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--color-text-strong);
+    font-size: 0.95rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.headerSection {
+    color: var(--color-text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
 }
 
 .userInfo {
@@ -409,8 +441,28 @@
         padding: 0 12px;
     }
 
+    .headerContext {
+        flex: 1;
+    }
+
+    .headerSection,
+    .headerContext > i {
+        display: none;
+    }
+
+    .topTabs {
+        display: none;
+    }
+
     .content {
         padding: 12px;
+    }
+}
+
+@media (max-width: 520px) {
+    .headerRight {
+        gap: 8px;
+        margin-left: 8px;
     }
 }
 
@@ -443,6 +495,11 @@
     align-items: center;
     cursor: pointer;
     transition: color 0.2s;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    text-align: left;
 }
 
 .navGroupLabel:hover {

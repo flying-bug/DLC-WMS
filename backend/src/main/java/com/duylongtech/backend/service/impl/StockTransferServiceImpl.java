@@ -137,7 +137,7 @@ public class StockTransferServiceImpl implements StockTransferService {
                 try {
                     serialsJson = objectMapper.writeValueAsString(lineDTO.getSerialNumbers());
                 } catch (JsonProcessingException e) {
-                    throw new BusinessException("Lỗi định dạng Serial Numbers.");
+                    throw new BusinessException(SystemMessage.ST_ERR_001.getMessage());
                 }
             }
 
@@ -169,7 +169,7 @@ public class StockTransferServiceImpl implements StockTransferService {
                 .orElseThrow(() -> new BusinessException(SystemMessage.INV_DOC_NOT_FOUND));
 
         if (!"DRAFT".equals(stockTransfer.getStatus()) && !"SUBMITTED".equals(stockTransfer.getStatus())) {
-            throw new BusinessException("Chỉ được phép sửa phiếu khi ở trạng thái Lưu nháp.");
+            throw new BusinessException(SystemMessage.ST_ERR_002.getMessage());
         }
 
         if (requestDTO.getFromWarehouseId().equals(requestDTO.getToWarehouseId())) {
@@ -198,7 +198,7 @@ public class StockTransferServiceImpl implements StockTransferService {
                 try {
                     serialsJson = objectMapper.writeValueAsString(lineDTO.getSerialNumbers());
                 } catch (JsonProcessingException e) {
-                    throw new BusinessException("Lỗi định dạng Serial Numbers.");
+                    throw new BusinessException(SystemMessage.ST_ERR_001.getMessage());
                 }
             }
 

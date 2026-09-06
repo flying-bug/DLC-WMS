@@ -13,6 +13,7 @@ import java.util.List;
 @Data
 @Builder
 public class WarrantyHistoryResponse {
+    private Long warrantyId;
     private String warrantyCode;
     private String serialNumber;
     private LocalDate startDate;
@@ -23,6 +24,7 @@ public class WarrantyHistoryResponse {
     @Data
     @Builder
     public static class RepairHistory {
+        private Long repairId;
         private String repairCode;
         private LocalDate receivedDate;
         private String repairStatus;

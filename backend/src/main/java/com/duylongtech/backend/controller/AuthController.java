@@ -7,11 +7,13 @@ import com.duylongtech.backend.service.AuthService;
 import com.duylongtech.backend.service.AuditLogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final AuthService authService;
@@ -32,8 +34,8 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<?> login(@Valid @RequestBody LoginRequest request, jakarta.servlet.http.HttpServletRequest servletRequest) {
         String ip = getClientIp(servletRequest);
+        var response = authService.login(request);
         try {
-            var response = authService.login(request);
             auditLogService.logEvent(
                 request.getUsername(),
                 "POST",
@@ -44,20 +46,10 @@ public class AuthController {
                 ip,
                 null
             );
-            return ApiResponse.success(response);
         } catch (Exception e) {
-            auditLogService.logEvent(
-                request.getUsername(),
-                "POST",
-                "Auth",
-                null,
-                "FAILED",
-                "Thử đăng nhập sai mật khẩu",
-                ip,
-                null
-            );
-            throw e;
+            log.error("Failed to save login audit log: ", e);
         }
+        return ApiResponse.success(response);
     }
 
     // 2. Login with Google

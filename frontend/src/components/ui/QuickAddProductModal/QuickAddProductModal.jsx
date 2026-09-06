@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import axiosClient from '../../../api/axiosClient';
 import styles from './QuickAddProductModal.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -158,7 +160,17 @@ const SearchableCategoryDropdown = ({ categories, value, onChange }) => {
 
 const WAREHOUSE_PRODUCT_TYPES = ['Hàng hóa', 'Thành phẩm'];
 
-const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thành phẩm', allowedProductTypes }) => {
+const QuickAddProductModal = ({ 
+    isOpen, 
+    onClose, 
+    onSuccess, 
+    productType = 'Hàng hóa', 
+    allowedProductTypes = ['Hàng hóa', 'Thành phẩm'],
+    initialProductName = '',
+    initialUnitName = '',
+    initialCategoryName = '',
+    initialWarrantyMonths = ''
+}) => {
     const productTypeOptions = (Array.isArray(allowedProductTypes) && allowedProductTypes.length > 0
         ? allowedProductTypes
         : [productType])
@@ -168,12 +180,13 @@ const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thàn
     const [units, setUnits] = useState([]);
     const [selectedProductType, setSelectedProductType] = useState(defaultProductType);
     const [formData, setFormData] = useState({
-        productName: '',
+        productName: initialProductName,
         categoryId: '',
         unitId: '',
         warrantyPeriodMonths: '',
         salePrice: ''
     });
+    const [trackSerial, setTrackSerial] = useState(false);
     
     // Thêm state cho định mức cấu hình (BOM)
     const [bomLines, setBomLines] = useState([]);
@@ -192,9 +205,27 @@ const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thàn
             const getPageContent = (response) => response?.data?.data?.content || response?.data?.content || response?.data?.data || response?.data || [];
             
             const cats = getPageContent(catRes);
-            setCategories(cats.filter(c => c.status !== 'INACTIVE'));
+            const fetchedCategories = cats.filter(c => c.status !== 'INACTIVE');
+            setCategories(fetchedCategories);
             
-            setUnits(getPageContent(unitRes));
+            const unitsList = getPageContent(unitRes);
+            setUnits(unitsList);
+            
+            setFormData(prev => {
+                let newCatId = prev.categoryId;
+                let newUnitId = prev.unitId;
+
+                if (initialCategoryName && !newCatId) {
+                    const matchedCat = fetchedCategories.find(c => c.name?.trim().toLowerCase() === initialCategoryName.trim().toLowerCase());
+                    if (matchedCat) newCatId = String(matchedCat.id);
+                }
+                if (initialUnitName && !newUnitId) {
+                    const matchedUnit = unitsList.find(u => u.name?.trim().toLowerCase() === initialUnitName.trim().toLowerCase());
+                    if (matchedUnit) newUnitId = String(matchedUnit.id);
+                }
+                
+                return { ...prev, categoryId: newCatId, unitId: newUnitId };
+            });
             
             let brands = getPageContent(brandRes);
             let defaultBrand = brands.find(b => b.name.toLowerCase() === 'khác' || b.name.toLowerCase() === 'other');
@@ -221,18 +252,19 @@ const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thàn
         if (isOpen) {
             setSelectedProductType(defaultProductType);
             setFormData({
-                productName: '',
+                productName: initialProductName || '',
                 categoryId: '',
                 unitId: '',
                 brandId: '',
-                warrantyPeriodMonths: '',
+                warrantyPeriodMonths: initialWarrantyMonths || '',
                 salePrice: ''
             });
+            setTrackSerial(false);
             setBomLines([]);
             setErrorMsg('');
             fetchLookups();
         }
-    }, [isOpen, defaultProductType]);
+    }, [isOpen, defaultProductType, initialProductName, initialUnitName, initialCategoryName, initialWarrantyMonths]);
 
     const effectiveProductType = selectedProductType || defaultProductType;
     const isAssemblyType = effectiveProductType === 'Thành phẩm';
@@ -293,7 +325,7 @@ const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thàn
                 brandId: formData.brandId ? Number(formData.brandId) : null,
                 warrantyPeriodMonths: formData.warrantyPeriodMonths ? Number(formData.warrantyPeriodMonths) : 0,
                 salePrice: formData.salePrice ? Number(formData.salePrice) : 0,
-                trackSerial: isAssemblyType,
+                trackSerial: trackSerial,
                 isAssembly: isAssemblyType,
                 active: true,
                 minStockQty: 0
@@ -369,21 +401,21 @@ const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thàn
                         <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
                             <div className={styles.field} style={{ flex: 1 }}>
                                 <label>Danh mục <span style={{color: 'red'}}>*</span></label>
-                                <select value={formData.categoryId} onChange={e => setFormData(f => ({...f, categoryId: e.target.value}))}>
+                                <SearchableSelect value={formData.categoryId} onChange={e => setFormData(f => ({...f, categoryId: e.target.value}))}>
                                     <option value="">Chọn danh mục</option>
                                     {categories.map(c => (
                                         <option key={c.id} value={c.id}>{c.name}</option>
                                     ))}
-                                </select>
+                                </SearchableSelect>
                             </div>
                             <div className={styles.field} style={{ flex: 1 }}>
                                 <label>Đơn vị tính <span style={{color: 'red'}}>*</span></label>
-                                <select value={formData.unitId} onChange={e => setFormData(f => ({...f, unitId: e.target.value}))}>
+                                <SearchableSelect value={formData.unitId} onChange={e => setFormData(f => ({...f, unitId: e.target.value}))}>
                                     <option value="">Chọn ĐVT</option>
                                     {units.map(u => (
                                         <option key={u.id} value={u.id}>{u.name}</option>
                                     ))}
-                                </select>
+                                </SearchableSelect>
                             </div>
                         </div>
 
@@ -401,13 +433,26 @@ const QuickAddProductModal = ({ isOpen, onClose, onSuccess, productType = 'Thàn
                             <div className={styles.field} style={{ flex: 1 }}>
                                 <label>Giá bán dự kiến</label>
                                 <input 
-                                    type="number" 
-                                    min="0"
-                                    value={formData.salePrice} 
-                                    onChange={e => setFormData(f => ({...f, salePrice: e.target.value}))} 
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formData.salePrice ? new Intl.NumberFormat('vi-VN').format(formData.salePrice) : ''} 
+                                    onChange={e => setFormData(f => ({...f, salePrice: e.target.value.replace(/\D/g, '')}))} 
                                     placeholder="0"
                                 />
                             </div>
+                        </div>
+
+                        <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input 
+                                type="checkbox" 
+                                id="trackSerial"
+                                checked={trackSerial}
+                                onChange={(e) => setTrackSerial(e.target.checked)}
+                                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                            />
+                            <label htmlFor="trackSerial" style={{ fontSize: '13.5px', fontWeight: 500, cursor: 'pointer', color: '#374151', margin: 0 }}>
+                                Có quản lý theo số Serial / IMEI
+                            </label>
                         </div>
                     </div>
 

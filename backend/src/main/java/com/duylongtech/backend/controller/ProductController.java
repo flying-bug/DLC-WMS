@@ -5,6 +5,7 @@ import com.duylongtech.backend.dto.request.ProductVariantRequest;
 import com.duylongtech.backend.dto.response.ApiResponse;
 import com.duylongtech.backend.dto.response.ProductResponse;
 import com.duylongtech.backend.dto.response.ProductVariantResponse;
+import com.duylongtech.backend.dto.response.StockAlertSummaryResponse;
 import com.duylongtech.backend.service.ProductService;
 import com.duylongtech.backend.service.AuditLogService;
 import jakarta.validation.Valid;
@@ -47,6 +48,12 @@ public class ProductController {
             @RequestParam(required = false) Long brandId,
             @RequestParam(required = false) Long unitId) {
         return ResponseEntity.ok(productService.getProducts(page, size, search, categoryId, productType, brandId, unitId));
+    }
+
+    @GetMapping("/stock-alert-summary")
+    @PreAuthorize("hasAuthority('product:view')")
+    public ResponseEntity<StockAlertSummaryResponse> getStockAlertSummary() {
+        return ResponseEntity.ok(productService.getStockAlertSummary());
     }
 
     @GetMapping("/export")
@@ -93,6 +100,15 @@ public class ProductController {
     @PreAuthorize("hasAuthority('product:view')")
     public ResponseEntity<java.util.List<ProductVariantResponse>> getProductVariants(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getVariantsByProduct(id));
+    }
+
+    @PostMapping("/{id}/variants/{variantId}/serial-codes")
+    @PreAuthorize("hasAuthority('product:view')")
+    public ResponseEntity<ApiResponse<java.util.List<String>>> generateSerialCodes(
+            @PathVariable Long id,
+            @PathVariable Long variantId,
+            @RequestParam int quantity) {
+        return ResponseEntity.ok(ApiResponse.success(productService.generateSerialCodes(id, variantId, quantity)));
     }
 
     @PostMapping("/{id}/variants")

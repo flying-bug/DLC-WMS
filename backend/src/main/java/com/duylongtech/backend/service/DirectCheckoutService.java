@@ -1,8 +1,10 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.DirectCheckoutRequest;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.request.InventoryDocumentLineRequest;
 import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
+import com.duylongtech.backend.dto.request.PaymentRequest;
 import com.duylongtech.backend.dto.response.InventoryDocumentResponse;
 import com.duylongtech.backend.dto.response.SalesOrderResponse;
 import com.duylongtech.backend.entity.Partner;
@@ -40,6 +42,7 @@ public class DirectCheckoutService {
     private final CodeGeneratorService codeGeneratorService;
     private final InventoryDocumentService inventoryDocumentService;
     private final PartnerLedgerService partnerLedgerService;
+    private final PaymentService paymentService;
 
     @Transactional(rollbackFor = Exception.class)
     public SalesOrderResponse directCheckout(DirectCheckoutRequest request, String actor) {
@@ -61,12 +64,12 @@ public class DirectCheckoutService {
 
     private void validateRequest(DirectCheckoutRequest request) {
         if (request == null) {
-            throw new BusinessException("Dữ liệu bán hàng trực tiếp không hợp lệ");
+            throw new BusinessException(SystemMessage.CHK_ERR_009.getMessage());
         }
         warehouseRepository.findById(request.getWarehouseId())
                 .orElseThrow(() -> new BusinessException("Kho không tồn tại"));
         if (request.getLines() == null || request.getLines().isEmpty()) {
-            throw new BusinessException("Phải có ít nhất 1 dòng sản phẩm");
+            throw new BusinessException(SystemMessage.CHK_ERR_008.getMessage());
         }
         for (int i = 0; i < request.getLines().size(); i++) {
             DirectCheckoutRequest.Line line = request.getLines().get(i);
@@ -74,15 +77,22 @@ public class DirectCheckoutService {
             productVariantRepository.findById(line.getVariantId())
                     .orElseThrow(() -> new BusinessException("Dòng " + rowNumber + ": Sản phẩm không tồn tại"));
             if (line.getQuantity() == null || line.getQuantity().compareTo(ZERO) <= 0) {
-                throw new BusinessException("Dòng " + rowNumber + ": Số lượng phải lớn hơn 0");
+                throw new BusinessException(String.format(SystemMessage.CHK_ERR_007.getMessage(), rowNumber));
             }
             if (line.getUnitPrice() == null || line.getUnitPrice().compareTo(ZERO) < 0) {
-                throw new BusinessException("Dòng " + rowNumber + ": Đơn giá không được âm");
+                throw new BusinessException(String.format(SystemMessage.CHK_ERR_006.getMessage(), rowNumber));
             }
         }
     }
 
     private Partner resolveCustomer(DirectCheckoutRequest request) {
+        if (request.getPartnerId() != null) {
+            Partner customer = partnerRepository.findById(request.getPartnerId())
+                    .orElseThrow(() -> new BusinessException("Khách hàng không tồn tại: " + request.getPartnerId()));
+            requireActiveCustomer(customer);
+            return customer;
+        }
+
         String phone = trimToNull(request.getCustomerPhone());
         if (phone == null) {
             return partnerRepository.findByCode(WALK_IN_CUSTOMER_CODE)
@@ -95,10 +105,10 @@ public class DirectCheckoutService {
 
     private void requireActiveCustomer(Partner customer) {
         if (customer == null || !Boolean.TRUE.equals(customer.getIsCustomer())) {
-            throw new BusinessException("Khách hàng không tồn tại");
+            throw new BusinessException(SystemMessage.CHK_ERR_005.getMessage());
         }
         if (!"APPROVED".equals(customer.getStatus())) {
-            throw new BusinessException("Khách hàng đã ngừng hoạt động, không thể tạo đơn bán hàng");
+            throw new BusinessException(SystemMessage.CHK_ERR_004.getMessage());
         }
     }
 
@@ -227,27 +237,20 @@ public class DirectCheckoutService {
     }
 
     private void recordDirectCheckoutLedger(SalesOrder order, BigDecimal requestedPayment, String exportCode) {
-        partnerLedgerService.recordLedger(
-                order.getPartnerId(),
-                "SALES_ORDER",
-                order.getId(),
-                order.getSoCode(),
-                order.getTotalAmount(),
-                ZERO,
-                "Ghi nhận doanh thu bán hàng trực tiếp " + order.getSoCode()
-        );
+        // Ghi chú: Việc tăng công nợ (Debt) đã được thực hiện tự động trong hàm postExport 
+        // của InventoryDocumentService, do đó không ghi nhận lại ở đây để tránh bị nhân đôi công nợ.
 
         BigDecimal paidAmount = normalizePaymentAmount(requestedPayment, order.getTotalAmount());
         if (paidAmount.compareTo(ZERO) > 0) {
-            partnerLedgerService.recordLedger(
-                    order.getPartnerId(),
-                    "PAYMENT_RECEIPT",
-                    order.getId(),
-                    order.getSoCode(),
-                    ZERO,
-                    paidAmount,
-                    "Thu tiền bán hàng trực tiếp " + order.getSoCode() + " / " + exportCode
-            );
+            // Tự động tạo và ghi sổ phiếu thu
+            PaymentRequest paymentRequest = new PaymentRequest();
+            paymentRequest.setPartnerId(order.getPartnerId());
+            paymentRequest.setAmount(paidAmount);
+            paymentRequest.setPaymentMethod("CASH"); // Mặc định bán hàng trực tiếp dùng tiền mặt
+            paymentRequest.setNote("Thu tiền bán hàng trực tiếp " + order.getSoCode() + " / " + exportCode);
+            paymentRequest.setStatus("POSTED"); // Ghi sổ luôn
+            
+            paymentService.createPaymentReceipt(paymentRequest);
         }
     }
 
@@ -306,10 +309,10 @@ public class DirectCheckoutService {
     private BigDecimal normalizePaymentAmount(BigDecimal amount, BigDecimal total) {
         BigDecimal safeAmount = amount != null ? amount : total;
         if (safeAmount.compareTo(ZERO) < 0) {
-            throw new BusinessException("Số tiền thanh toán không được âm");
+            throw new BusinessException(SystemMessage.CHK_ERR_003.getMessage());
         }
         if (safeAmount.compareTo(total) > 0) {
-            throw new BusinessException("Số tiền thanh toán vượt quá tổng đơn hàng");
+            throw new BusinessException(SystemMessage.CHK_ERR_002.getMessage());
         }
         return safeAmount.setScale(2, RoundingMode.HALF_UP);
     }
@@ -331,7 +334,7 @@ public class DirectCheckoutService {
         if (customer == null || WALK_IN_CUSTOMER_CODE.equals(customer.getCode())
                 || trimToNull(customer.getPhone()) == null
                 || trimToNull(customer.getName()) == null) {
-            throw new BusinessException("Khách nợ phải có đầy đủ thông tin khách hàng, không được dùng khách vãng lai");
+            throw new BusinessException(SystemMessage.CHK_ERR_001.getMessage());
         }
     }
 

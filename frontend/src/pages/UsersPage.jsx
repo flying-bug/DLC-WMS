@@ -5,10 +5,28 @@ import { useToast } from '../contexts/ToastContext';
 import ConfirmModal from '../components/ui/ConfirmModal/ConfirmModal';
 import { exportToExcel } from '../utils/excelExport';
 import styles from './UsersPage.module.css';
-import UserProfileDropdown from '../components/ui/UserProfileDropdown/UserProfileDropdown';
+import SuperAdminLayout from '../components/layout/SuperAdminLayout';
 import EmployeeDrawer from '../components/ui/EmployeeDrawer/EmployeeDrawer';
 import Pagination from '../components/ui/Pagination/Pagination';
 import { USER_EVENT } from '../auth/session';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
+
+const GENDER_LABELS = {
+    male: 'Nam',
+    female: 'Nữ',
+    other: 'Khác',
+    nam: 'Nam',
+    nữ: 'Nữ',
+    nu: 'Nữ',
+    khác: 'Khác',
+    khac: 'Khác'
+};
+
+const toVietnameseGender = (value) => {
+    const key = String(value || '').trim().toLowerCase();
+    return GENDER_LABELS[key] || value || '';
+};
 
 function UsersPage() {
     const navigate = useNavigate();
@@ -75,12 +93,13 @@ function UsersPage() {
             status: u.status,
             statusLabel: u.status === 'APPROVED' ? 'Đang hoạt động' : 'Đã khóa',
             statusClass: u.status === 'APPROVED' ? styles.statusActive : styles.statusInactive,
-            dob: u.dob || 'Chưa cập nhật',
-            gender: u.gender || 'Chưa cập nhật',
+            dob: u.dob || '',
+            gender: toVietnameseGender(u.gender) || 'Chưa cập nhật',
             address: u.address || 'Chưa cập nhật',
             idCard: u.idCard || 'Chưa cập nhật',
             startDate: u.startDate || 'Chưa cập nhật',
             contractType: u.contractType || 'Chưa cập nhật',
+            imageUrl: u.imageUrl || u.avatarUrl || u.avatar || null,
             systemRole,
             roles: u.roles || []
         };
@@ -194,14 +213,14 @@ function UsersPage() {
 
     const handleSaveUser = async (updatedData) => {
         try {
-            const targetRoleCode = updatedData.systemRole === 'admin' ? 'SUPER_ADMIN' : 'STAFF';
+            const targetRoleCode = updatedData.systemRole === 'admin' ? 'MANAGER' : 'STAFF';
             await axiosClient.put(`/users/${updatedData.id}`, {
                 username: updatedData.username || updatedData.code,
                 fullName: updatedData.name,
                 email: updatedData.email,
                 phone: (updatedData.phone || '').replace(/[\s.-]/g, ''),
                 idCard: updatedData.idCard === 'Chưa cập nhật' ? 'Chưa cập nhật' : updatedData.idCard,
-                dob: updatedData.dob === 'Chưa cập nhật' ? null : updatedData.dob,
+                dob: updatedData.dob || null,
                 gender: updatedData.gender === 'Chưa cập nhật' ? null : updatedData.gender,
                 startDate: updatedData.startDate === 'Chưa cập nhật' ? null : updatedData.startDate,
                 position: updatedData.position === 'Chưa xác định' ? null : updatedData.position,
@@ -245,7 +264,9 @@ function UsersPage() {
                 u.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 u.email.toLowerCase().includes(searchTerm.toLowerCase())) : true;
 
-        const matchStatus = statusFilter ? u.status === statusFilter : true;
+        const matchStatus = statusFilter === 'APPROVED' ? u.status === 'APPROVED'
+                          : statusFilter === 'INACTIVE' ? u.status !== 'APPROVED'
+                          : true;
         const matchRole = roleFilter ? (u.roles && u.roles.some(r => r === roleFilter || r === `ROLE_${roleFilter}`)) : true;
 
         return matchSearch && matchStatus && matchRole;
@@ -283,69 +304,46 @@ function UsersPage() {
 
     const totalStaff = usersData.length;
     const activeStaff = usersData.filter(u => u.status === 'APPROVED').length;
-    const inactiveStaff = usersData.filter(u => u.status === 'INACTIVE').length;
+    const inactiveStaff = usersData.filter(u => u.status !== 'APPROVED').length;
 
     return (
-        <div className={styles.page}>
-            {/* Top Header */}
-            <header className={styles.header}>
-                <div className={styles.headerLeft}>
-                    <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '10px', marginRight: '32px' }} onClick={() => navigate('/')}>
-                        <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <img src="/dl-logo.png" alt="Duy Long Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                        </div>
-                        <div className={styles.brandName} style={{ margin: 0 }}>Duy Long Computer</div>
-                    </div>
-                    <nav className={styles.navLinks}>
-                        <a onClick={() => navigate('/users')} className={styles.navLinkActive}>Quản lý người dùng</a>
-                        <a onClick={() => navigate('/audit-log')} className={styles.navLink}>Nhật ký hệ thống</a>
-                        <a onClick={() => navigate('/operations')} className={styles.navLink}>Trung tâm điều hành</a>
-                    </nav>
-                </div>
-                <div className={styles.headerRight}>
-
-                    <div className={styles.userInfoContainer}>
-                        <UserProfileDropdown />
-                    </div>
-                </div>
-            </header>
-
+        <SuperAdminLayout>
             {/* Main Content */}
-            <main className={styles.main}>
+            <div className={styles.main}>
                 <div className={styles.pageHeader}>
                     <div>
                         <h1 className={styles.pageTitle}>Quản lý tài khoản & Phân quyền</h1>
                         <p className={styles.pageSubtitle}>Quản lý vai trò, quyền hạn và trạng thái của nhân viên Duy Long Computer.</p>
                     </div>
-                    <button className="btnPrimary" onClick={() => navigate('/users/create')}>
+                    <button type="button" className="btnPrimary" onClick={() => navigate('/users/create')}>
                         <i className="bi bi-person-plus" /> Thêm nhân viên
                     </button>
                 </div>
 
                 {/* Stat Cards */}
                 <div className={styles.statsGrid}>
-                    <div className={styles.statCard}>
+                    <button type="button" aria-pressed={statusFilter === ''} className={`${styles.statCard} ${statusFilter === '' ? styles.statCardActive : ''}`} onClick={() => { setStatusFilter(''); setCurrentPage(1); }}>
                         <div className={`${styles.statIcon} ${styles.iconBlue}`}><i className="bi bi-people-fill" /></div>
                         <div className={styles.statInfo}>
                             <span className={styles.statLabel}>TỔNG NHÂN SỰ</span>
                             <span className={`${styles.statValue} ${styles.textBlue}`}>{totalStaff}</span>
                         </div>
-                    </div>
-                    <div className={styles.statCard}>
+                    </button>
+                    <button type="button" aria-pressed={statusFilter === 'APPROVED'} className={`${styles.statCard} ${statusFilter === 'APPROVED' ? styles.statCardActive : ''}`} onClick={() => { setStatusFilter('APPROVED'); setCurrentPage(1); }}>
                         <div className={`${styles.statIcon} ${styles.iconGreen}`}><i className="bi bi-person-check-fill" /></div>
                         <div className={styles.statInfo}>
                             <span className={styles.statLabel}>ĐANG LÀM VIỆC</span>
                             <span className={`${styles.statValue} ${styles.textGreen}`}>{activeStaff}</span>
                         </div>
-                    </div>
+                    </button>
 
-                    <div className={styles.statCard}>
+                    <button type="button" aria-pressed={statusFilter === 'INACTIVE'} className={`${styles.statCard} ${statusFilter === 'INACTIVE' ? styles.statCardActive : ''}`} onClick={() => { setStatusFilter('INACTIVE'); setCurrentPage(1); }}>
                         <div className={`${styles.statIcon} ${styles.iconRed}`}><i className="bi bi-person-x-fill" /></div>
                         <div className={styles.statInfo}>
                             <span className={styles.statLabel}>KHÓA TÀI KHOẢN</span>
                             <span className={`${styles.statValue} ${styles.textRed}`}>{inactiveStaff}</span>
                         </div>
-                    </div>
+                    </button>
                 </div>
 
                 {/* Table Container */}
@@ -360,41 +358,35 @@ function UsersPage() {
                                     placeholder="Nhập tên, mã nhân viên hoặc email..."
                                     value={searchTerm}
                                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                    aria-label="Tìm kiếm nhân viên"
                                 />
                             </div>
                             <div className={styles.filterSelectGroup}>
-                                <select
+                                <SearchableSelect
                                     className={styles.filterSelect}
                                     value={roleFilter}
                                     onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
+                                    aria-label="Lọc theo vai trò"
                                 >
                                     <option value="">Vai trò</option>
                                     <option value="SUPER_ADMIN">Super Admin</option>
                                     <option value="MANAGER">Quản lý</option>
                                     <option value="STAFF">Nhân viên</option>
-                                </select>
-                                <select
-                                    className={styles.filterSelect}
-                                    value={statusFilter}
-                                    onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                                >
-                                    <option value="">Trạng thái</option>
-                                    <option value="APPROVED">Đang hoạt động</option>
-                                    <option value="INACTIVE">Đã khóa</option>
-                                </select>
+                                </SearchableSelect>
                             </div>
                         </div>
                         <div className={styles.filterActions}>
-                            <button className={styles.iconBtn} onClick={() => { setSearchTerm(''); setStatusFilter(''); setRoleFilter(''); setCurrentPage(1); }} title="Làm mới">
+                            <button type="button" className={styles.iconBtn} onClick={() => { setSearchTerm(''); setStatusFilter(''); setRoleFilter(''); setCurrentPage(1); }} title="Làm mới" aria-label="Làm mới bộ lọc">
                                 <i className="bi bi-arrow-clockwise" />
                             </button>
-                            <button className={styles.iconBtn} onClick={handleExport} title="Xuất Excel">
+                            <button type="button" className={styles.iconBtn} onClick={handleExport} title="Xuất Excel" aria-label="Xuất danh sách ra Excel">
                                 <i className="bi bi-file-earmark-excel" />
                             </button>
                         </div>
                     </div>
 
-                    <table className={styles.table}>
+                    <div className="table-responsive">
+                        <table className={styles.table}>
                         <thead>
                             <tr>
                                 <th>AVATAR</th>
@@ -409,50 +401,69 @@ function UsersPage() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan="7" style={{ textAlign: 'center', padding: '30px' }}>Đang tải dữ liệu...</td>
+                                    <td colSpan="7" style={{ textAlign: 'center', padding: '20px 0', color: '#64748b' }}>
+                                        <i className="bi bi-arrow-repeat" style={{ animation: 'spin 1s linear infinite', display: 'inline-block', marginRight: '8px' }}></i>
+                                        Đang tải dữ liệu...
+                                    </td>
                                 </tr>
                             ) : paginatedUsers.length === 0 ? (
                                 <tr>
                                     <td colSpan="7" style={{ textAlign: 'center', padding: '50px 0' }}>
-                                        <div className={styles.emptyState}>
-                                            <div className={styles.emptyIcon}>
-                                                <i className="bi bi-folder-x"></i>
-                                            </div>
-                                            <div className={styles.emptyText}>Không tìm thấy dữ liệu</div>
+                                        <div style={{ color: 'var(--color-text-muted)' }}>
+                                            Không tìm thấy nhân viên nào
                                         </div>
                                     </td>
                                 </tr>
                             ) : (
                                 paginatedUsers.map((user, index) => (
-                                    <tr key={user.id} className={styles.tableRow} onClick={() => handleRowClick(user)}>
-                                        <td><div className={`${styles.avatarCircle} ${user.avatarColorClass}`}>{user.initials}</div></td>
-                                        <td><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: 'var(--color-text-subtle)' }}>{user.email}</span></td>
-                                        <td>{user.code}</td>
-                                        <td>{user.departmentShort}</td>
-                                        <td><span className={`${styles.roleBadge} ${user.roleClass}`}>{user.roleBadge}</span></td>
-                                        <td><span className={`${styles.statusBadge} ${user.statusClass}`}><i className="bi bi-circle-fill"></i> {user.statusLabel}</span></td>
-                                        <td className={styles.actionCell}>
+                                    <tr
+                                        key={user.id}
+                                        className={`${styles.tableRow} ${activeMenuId === user.id ? styles.tableRowActive : ''}`}
+                                        onClick={() => handleRowClick(user)}
+                                        onKeyDown={(event) => {
+                                            if (event.key === 'Enter') handleRowClick(user);
+                                        }}
+                                        tabIndex={0}
+                                        aria-label={`Xem chi tiết ${user.name}`}
+                                    >
+                                        <td data-label="AVATAR">
+                                            {user.imageUrl ? (
+                                                <img src={user.imageUrl} className={styles.avatarImage} alt={user.name} />
+                                            ) : (
+                                                <div className={`${styles.avatarCircle} ${user.avatarColorClass}`}>{user.initials}</div>
+                                            )}
+                                        </td>
+                                        <td data-label="HỌ VÀ TÊN"><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: 'var(--color-text-subtle)' }}>{user.email}</span></td>
+                                        <td data-label="TÀI KHOẢN NHÂN VIÊN">{user.code}</td>
+                                        <td data-label="BỘ PHẬN">{user.departmentShort}</td>
+                                        <td data-label="VAI TRÒ"><span className={`${styles.roleBadge} ${user.roleClass}`}>{user.roleBadge}</span></td>
+                                        <td data-label="TRẠNG THÁI"><span className={`${styles.statusBadge} ${user.statusClass}`}><i className="bi bi-circle-fill"></i> {user.statusLabel}</span></td>
+                                        <td data-label="THAO TÁC" className={styles.actionCell}>
                                             <button
+                                                type="button"
                                                 className={styles.btnAction}
                                                 onClick={(e) => toggleActionMenu(e, user.id)}
+                                                aria-label={`Mở thao tác cho ${user.name}`}
+                                                aria-expanded={activeMenuId === user.id}
+                                                aria-haspopup="menu"
                                             >
                                                 <i className="bi bi-three-dots-vertical"></i>
                                             </button>
 
                                             {activeMenuId === user.id && (
-                                                <div className={`${styles.actionMenu} ${index >= Math.max(paginatedUsers.length - 2, 2) ? styles.actionMenuUp : ''}`}>
-                                                    <div className={styles.actionMenuItem} onClick={(e) => handleViewInfo(e, user)}>
+                                                <div role="menu" className={`${styles.actionMenu} ${index >= Math.max(paginatedUsers.length - 2, 2) ? styles.actionMenuUp : ''}`}>
+                                                    <button type="button" role="menuitem" className={styles.actionMenuItem} onClick={(e) => handleViewInfo(e, user)}>
                                                         <i className="bi bi-eye"></i> Xem thông tin chi tiết
-                                                    </div>
+                                                    </button>
                                                     {user.roles && user.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF') && (
-                                                        <div className={styles.actionMenuItem} onClick={(e) => handleAssignPermissions(e, user.id)}>
+                                                        <button type="button" role="menuitem" className={styles.actionMenuItem} onClick={(e) => handleAssignPermissions(e, user.id)}>
                                                             <i className="bi bi-shield-lock"></i> Phân quyền chức năng
-                                                        </div>
+                                                        </button>
                                                     )}
-                                                    <div className={`${styles.actionMenuItem} ${user.status === 'APPROVED' ? styles.actionMenuItemDanger : styles.actionMenuItemSuccess}`} onClick={(e) => openConfirmModal(e, user)}>
+                                                    <button type="button" role="menuitem" className={`${styles.actionMenuItem} ${user.status === 'APPROVED' ? styles.actionMenuItemDanger : styles.actionMenuItemSuccess}`} onClick={(e) => openConfirmModal(e, user)}>
                                                         <i className={`bi ${user.status === 'APPROVED' ? 'bi-lock' : 'bi-unlock'}`}></i>
                                                         {user.status === 'APPROVED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
-                                                    </div>
+                                                    </button>
                                                 </div>
                                             )}
                                         </td>
@@ -461,6 +472,7 @@ function UsersPage() {
                             )}
                         </tbody>
                     </table>
+                    </div>
 
                     <Pagination
                         page={currentPage - 1}
@@ -471,7 +483,7 @@ function UsersPage() {
                         onSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
                     />
                 </div>
-            </main>
+            </div>
 
             <EmployeeDrawer
                 isOpen={isDrawerOpen}
@@ -490,7 +502,7 @@ function UsersPage() {
                 cancelText="Hủy"
                 isDanger={confirmModal.isLocking}
             />
-        </div>
+        </SuperAdminLayout>
     );
 }
 

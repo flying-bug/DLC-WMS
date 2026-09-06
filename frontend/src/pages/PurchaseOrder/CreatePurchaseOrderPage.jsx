@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import SupplierModal from '../Supplier/components/SupplierModal';
+import OcrUploadModal from '../CreateImportSlip/components/OcrUploadModal';
+import OcrResultPreviewModal from '../CreateImportSlip/components/OcrResultPreviewModal';
+import { useAiFeature } from '../../contexts/AiFeatureContext';
+import { scanImportSlipOcr, confirmOcrMapping } from '../../api/inventoryImportApi';
 import * as poApi from '../../api/purchaseOrderApi';
 import styles from './CreatePurchaseOrderPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import { findBestMatch } from '../../utils/fuzzyMatch';
 
 const unwrap      = (res) => res?.data?.data ?? res?.data;
 const pageContent = (p)   => p?.content ?? p ?? [];
@@ -39,8 +44,11 @@ const emptyLine = () => ({
 
 function CreatePurchaseOrderPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id }   = useParams();
   const isEdit   = Boolean(id);
+  const voiceData = location.state?.voiceData || null;
+  const { aiEnabled } = useAiFeature();
 
   const [suppliers, setSuppliers] = useState([]);
   const [variants,  setVariants]  = useState([]);
@@ -50,6 +58,16 @@ function CreatePurchaseOrderPage() {
   const [quickAddLineIndex, setQuickAddLineIndex] = useState(null);
   const [saving,    setSaving]    = useState(false);
   const [toast,     setToast]     = useState({ isVisible: false, type: 'info', message: '' });
+
+  // ── AI OCR States ──
+  const [showOcrModal, setShowOcrModal] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrPreviewData, setOcrPreviewData] = useState(null);
+  const [ocrQuickAddPreviewIndex, setOcrQuickAddPreviewIndex] = useState(null);
+  const [ocrQuickAddProductName, setOcrQuickAddProductName] = useState('');
+  const [ocrQuickAddUnitName, setOcrQuickAddUnitName] = useState('');
+  const [ocrQuickAddCategoryName, setOcrQuickAddCategoryName] = useState('');
+  const [ocrQuickAddWarrantyMonths, setOcrQuickAddWarrantyMonths] = useState('');
 
   const [form, setForm] = useState({
     poCode: '',
@@ -64,13 +82,93 @@ function CreatePurchaseOrderPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(p => ({ ...p, isVisible: false }));
 
+  // ── AI OCR Handlers ──
+  const handleOcrPreviewQuickAdd = (index, rawProductName, unit, category, warrantyMonths) => {
+    setOcrQuickAddPreviewIndex(index);
+    setOcrQuickAddProductName(rawProductName);
+    setOcrQuickAddUnitName(unit || '');
+    setOcrQuickAddCategoryName(category || '');
+    setOcrQuickAddWarrantyMonths(warrantyMonths !== null && warrantyMonths !== undefined ? String(warrantyMonths) : '');
+    setShowQuickAddProduct(true);
+  };
+
+  const handleOcrSuccess = (data) => {
+    setShowOcrModal(false);
+    setOcrPreviewData(data);
+  };
+
+  const handleOcrFile = async (file) => {
+    setOcrLoading(true);
+    try {
+      const res = await scanImportSlipOcr(file);
+      const data = unwrap(res);
+      if (!data) {
+        showToast('error', 'Không nhận diện được nội dung từ file hóa đơn / báo giá.');
+        return;
+      }
+      handleOcrSuccess(data);
+    } catch (err) {
+      console.error('OCR scan error:', err);
+      showToast('error', err.response?.data?.userMessage || err.message || 'Lỗi khi quét OCR.');
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  const confirmOcrPreview = () => {
+    if (!ocrPreviewData) return;
+    const data = ocrPreviewData;
+
+    // Auto-fill Supplier
+    if (data.matchedSupplierId) {
+      setForm(prev => ({
+        ...prev,
+        partnerId: data.matchedSupplierId
+      }));
+    }
+
+    // Auto-fill Date if available
+    if (data.invoiceDate) {
+      setForm(prev => ({
+        ...prev,
+        poDate: data.invoiceDate
+      }));
+    }
+
+    if (data.invoiceCode) {
+      setForm(prev => ({
+        ...prev,
+        note: prev.note ? `${prev.note} - Hóa đơn/Báo giá: ${data.invoiceCode}` : `Hóa đơn/Báo giá: ${data.invoiceCode}`
+      }));
+    }
+
+    if (data.items && data.items.length > 0) {
+      const ocrLines = data.items.map(item => {
+        const matchedVariant = variants.find(v => String(v.id) === String(item.matchedVariantId));
+        return {
+          variantId: item.matchedVariantId || null,
+          quantity: Number(item.quantity) || 1,
+          unitPrice: Number(item.unitPrice) || (matchedVariant ? Number(matchedVariant.importPrice || matchedVariant.costPrice || 0) : 0),
+          unitName: item.unitName || matchedVariant?.unitName || 'Cái',
+          vatRate: item.vatRate !== undefined && item.vatRate !== null ? Number(item.vatRate) : Number(matchedVariant?.vatPercent || matchedVariant?.vatRate || 0),
+          note: item.rawProductName && item.rawProductName !== item.matchedVariantName ? `Tên gốc: ${item.rawProductName}` : '',
+          _ocrRawName: item.rawProductName,
+        };
+      });
+      setLines(ocrLines);
+    }
+
+    setOcrPreviewData(null);
+    showToast('success', 'Đã áp dụng dữ liệu từ chứng từ AI vào đơn mua hàng!');
+  };
+
   // Load lookups
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
         const [supplierRes, variantRes, codeRes] = await Promise.allSettled([
-          poApi.getSuppliers({ isSupplier: true, size: 1000 }),
+          poApi.getSuppliers({ isSupplier: true, status: 'APPROVED', size: 1000 }),
           poApi.getProducts({ size: 500 }),
           !isEdit ? poApi.getNextPoCode() : Promise.resolve(null),
         ]);
@@ -91,6 +189,41 @@ function CreatePurchaseOrderPage() {
     };
     load();
   }, [isEdit]);
+
+  // ── Voice Data auto-fill ──────────────────────────────────
+  useEffect(() => {
+    if (!voiceData || isEdit) return;
+
+    // Auto-select supplier
+    if (voiceData.supplierKeyword && suppliers.length > 0) {
+      const matchSupp = findBestMatch(suppliers, voiceData.supplierKeyword, s => [s.name, s.code, s.phone]);
+      if (matchSupp) {
+        setForm(prev => ({ ...prev, partnerId: matchSupp.id }));
+      }
+    }
+
+    // Auto-fill note
+    if (voiceData.note) {
+      setForm(prev => ({ ...prev, note: prev.note ? `${prev.note} - ${voiceData.note}` : voiceData.note }));
+    }
+
+    // Auto-add product line
+    if (voiceData.productKeyword && variants.length > 0) {
+      const matchProd = findBestMatch(variants, voiceData.productKeyword, v => [v.productName, v.variantName, v.sku]);
+      if (matchProd) {
+        const qty = Number(voiceData.quantity) || 1;
+        const price = voiceData.unitPrice != null ? Number(voiceData.unitPrice) : (Number(matchProd.importPrice || matchProd.costPrice || matchProd.price || 0));
+        setLines([{
+          variantId: matchProd.id,
+          quantity: qty,
+          unitPrice: price,
+          unitName: matchProd.unitName || 'Cái',
+          vatRate: Number(matchProd.vatPercent || matchProd.vatRate || 0),
+          note: '',
+        }]);
+      }
+    }
+  }, [voiceData, isEdit, suppliers, variants]);
 
   // Load PO data if editing
   useEffect(() => {
@@ -146,6 +279,21 @@ function CreatePurchaseOrderPage() {
           vatRate: Number(createdVariant.vatPercent || createdVariant.vatRate || 0),
         });
         showToast('success', `Đã thêm và chọn sản phẩm ${createdVariant.productName || ''}`.trim());
+      } else if (createdVariant && ocrQuickAddPreviewIndex !== null) {
+        setOcrPreviewData(prev => {
+          if (!prev) return prev;
+          const newData = { ...prev, items: [...prev.items] };
+          newData.items[ocrQuickAddPreviewIndex] = {
+            ...newData.items[ocrQuickAddPreviewIndex],
+            matchedVariantId: createdVariant.id,
+            matchedVariantName: createdVariant.variantName || createdVariant.productName,
+            matchedSku: createdVariant.sku,
+            unitName: createdVariant.unitName || 'Cái',
+            matchConfidence: 1.0
+          };
+          return newData;
+        });
+        showToast('success', `Đã tạo và khớp sản phẩm: ${createdVariant.productName || ''}`);
       } else {
         showToast('warning', 'Đã thêm sản phẩm nhưng chưa tìm thấy biến thể để chọn.');
       }
@@ -154,6 +302,11 @@ function CreatePurchaseOrderPage() {
     } finally {
       setShowQuickAddProduct(false);
       setQuickAddLineIndex(null);
+      setOcrQuickAddPreviewIndex(null);
+      setOcrQuickAddProductName('');
+      setOcrQuickAddUnitName('');
+      setOcrQuickAddCategoryName('');
+      setOcrQuickAddWarrantyMonths('');
     }
   };
 
@@ -210,6 +363,15 @@ function CreatePurchaseOrderPage() {
       }
       const saved = unwrap(res);
 
+      if (!isEdit && form.partnerId) {
+        lines.forEach(item => {
+          if (item._ocrRawName && item.variantId) {
+            confirmOcrMapping(form.partnerId, item._ocrRawName, item.variantId)
+              .catch(e => console.warn('Lỗi lưu OCR mapping:', e));
+          }
+        });
+      }
+
       if (andApprove && saved?.id) {
         try {
           await poApi.approvePurchaseOrder(saved.id);
@@ -256,7 +418,9 @@ function CreatePurchaseOrderPage() {
   };
 
   // ── react-select options ──
-  const supplierOptions = suppliers.map(s => ({ value: s.id, label: `${s.code} — ${s.name}` }));
+  const supplierOptions = suppliers
+    .filter(s => s.status === 'APPROVED' || s.id === form.partnerId)
+    .map(s => ({ value: s.id, label: `${s.code} — ${s.name}` }));
   const productOptions = variants.map(v => ({
     ...v,
     productName: v.productName || v.variantName || `Sản phẩm #${v.id}`,
@@ -269,19 +433,54 @@ function CreatePurchaseOrderPage() {
       <div className={styles.page}>
         {/* ── Page Header ── */}
         <div className={styles.pageHeader}>
-          <div className={styles.breadcrumb}>
-            <span className={styles.breadcrumbLink} onClick={() => navigate('/purchase-orders')}>
-              Đơn mua hàng
-            </span>
-            <i className="bi bi-chevron-right" style={{ margin: '0 6px', fontSize: 12 }} />
-            <span>{isEdit ? 'Cập nhật đơn mua hàng' : 'Tạo đơn mua hàng mới'}</span>
+          <div>
+            <div className={styles.breadcrumb}>
+              <span className={styles.breadcrumbLink} onClick={() => navigate('/purchase-orders')}>
+                Đơn mua hàng
+              </span>
+              <i className="bi bi-chevron-right" style={{ margin: '0 6px', fontSize: 12 }} />
+              <span>{isEdit ? 'Cập nhật đơn mua hàng' : 'Tạo đơn mua hàng mới'}</span>
+            </div>
+            <h1 className={styles.pageTitle}>
+              <i className="bi bi-bag-plus" style={{ marginRight: 8 }} />
+              {isEdit
+                ? `Cập nhật: ${form.poCode}`
+                : `Tạo đơn mua hàng mới${form.poCode ? `: ${form.poCode}` : ''}`}
+            </h1>
           </div>
-          <h1 className={styles.pageTitle}>
-            <i className="bi bi-bag-plus" style={{ marginRight: 8 }} />
-            {isEdit
-              ? `Cập nhật: ${form.poCode}`
-              : `Tạo đơn mua hàng mới${form.poCode ? `: ${form.poCode}` : ''}`}
-          </h1>
+
+          {!isEdit && aiEnabled && (
+            <button
+              type="button"
+              onClick={() => setShowOcrModal(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                background: 'var(--brand-gradient, linear-gradient(135deg, var(--color-primary, #059669) 0%, var(--color-primary-accent, #10b981) 100%))',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.12)';
+              }}
+            >
+              <i className="bi bi-robot" style={{ fontSize: '15px' }} />
+              <span>Quét AI (OCR Báo giá / Hóa đơn)</span>
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -466,13 +665,13 @@ function CreatePurchaseOrderPage() {
                           </td>
                           <td>
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="numeric"
                               className={styles.cellInput}
                               style={{ textAlign: 'right' }}
-                              min="0"
-                              step="1000"
-                              value={line.unitPrice}
-                              onChange={e => updateLine(idx, 'unitPrice', e.target.value)}
+                              value={line.unitPrice ? new Intl.NumberFormat('vi-VN').format(line.unitPrice) : ''}
+                              onChange={e => updateLine(idx, 'unitPrice', e.target.value.replace(/\D/g, ''))}
+                              placeholder="0"
                             />
                           </td>
                           <td>
@@ -554,9 +753,18 @@ function CreatePurchaseOrderPage() {
         onClose={() => {
           setShowQuickAddProduct(false);
           setQuickAddLineIndex(null);
+          setOcrQuickAddPreviewIndex(null);
+          setOcrQuickAddProductName('');
+          setOcrQuickAddUnitName('');
+          setOcrQuickAddCategoryName('');
+          setOcrQuickAddWarrantyMonths('');
         }}
         onSuccess={handleQuickAddProductSuccess}
         productType="Hàng hóa"
+        initialProductName={ocrQuickAddProductName}
+        initialUnitName={ocrQuickAddUnitName}
+        initialCategoryName={ocrQuickAddCategoryName}
+        initialWarrantyMonths={ocrQuickAddWarrantyMonths}
       />
 
       {showSupplierModal && (
@@ -565,6 +773,22 @@ function CreatePurchaseOrderPage() {
           onSave={handleSaveSupplier}
         />
       )}
+
+      <OcrUploadModal
+        open={showOcrModal}
+        onClose={() => setShowOcrModal(false)}
+        onFileSelected={handleOcrFile}
+        loading={ocrLoading}
+        onOcrSuccess={handleOcrSuccess}
+      />
+
+      <OcrResultPreviewModal
+        open={Boolean(ocrPreviewData)}
+        data={ocrPreviewData}
+        onConfirm={confirmOcrPreview}
+        onCancel={() => setOcrPreviewData(null)}
+        onQuickAdd={handleOcrPreviewQuickAdd}
+      />
     </AdminLayout>
   );
 }

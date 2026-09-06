@@ -1,6 +1,8 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.SalesOrderRequest;
+import com.duylongtech.backend.constant.SystemMessage;
+import com.duylongtech.backend.dto.request.PaymentRequest;
 import com.duylongtech.backend.dto.response.SalesOrderResponse;
 import com.duylongtech.backend.entity.*;
 import com.duylongtech.backend.exception.BusinessException;
@@ -32,6 +34,9 @@ public class SalesOrderService {
     private final AuditLogService auditLogService;
     private final PartnerLedgerService partnerLedgerService;
     private final EmailService emailService;
+    private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
+    private final PaymentService paymentService;
+    private final SystemSettingsService systemSettingsService;
 
     // =========================================================
     // QUERY
@@ -39,9 +44,18 @@ public class SalesOrderService {
 
     @Transactional(readOnly = true)
     public List<SalesOrderResponse> getSalesOrders(
-            String keyword, String status, Long partnerId,
+            String keyword, String status, String reservationStatus, String exportDocumentStatus, Long partnerId,
             Long warehouseId, LocalDate fromDate, LocalDate toDate) {
-        return salesOrderRepository.findAllWithFilters(keyword, status, partnerId, warehouseId, fromDate, toDate)
+        return salesOrderRepository.findAllWithFilters(
+                        keyword,
+                        status,
+                        reservationStatus,
+                        exportDocumentStatus,
+                        partnerId,
+                        warehouseId,
+                        fromDate,
+                        toDate
+                )
                 .stream().map(this::toSummaryResponse).collect(Collectors.toList());
     }
 
@@ -83,10 +97,10 @@ public class SalesOrderService {
 
         if (request.getPaymentDueDate() != null) {
             if (request.getPaymentDueDate().isBefore(request.getSoDate())) {
-                throw new BusinessException("Hạn thanh toán không được nhỏ hơn ngày lập đơn");
+                throw new BusinessException(SystemMessage.SO_ERR_008.getMessage());
             }
             if (request.getPaymentDueDate().isBefore(LocalDate.now())) {
-                throw new BusinessException("Hạn thanh toán không được nằm trong quá khứ");
+                throw new BusinessException(SystemMessage.SO_ERR_007.getMessage());
             }
         }
 
@@ -95,7 +109,7 @@ public class SalesOrderService {
                 ? request.getSoCode() : generateNextSoCode();
 
         if (salesOrderRepository.existsBySoCode(soCode)) {
-            throw new BusinessException("Mã đơn hàng '" + soCode + "' đã tồn tại");
+            throw new BusinessException(String.format(SystemMessage.PO_ERR_005.getMessage(), soCode));
         }
 
         // Resolve createdBy từ username
@@ -168,18 +182,17 @@ public class SalesOrderService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng ID: " + id));
 
         if (!"DRAFT".equals(so.getStatus())) {
-            throw new BusinessException(
-                    "Chỉ được sửa đơn hàng ở trạng thái Nháp (DRAFT). Trạng thái hiện tại: " + so.getStatus());
+            throw new BusinessException(String.format(SystemMessage.SO_ERR_009.getMessage(), so.getStatus()));
         }
 
         requireActiveCustomer(request.getPartnerId());
 
         if (request.getPaymentDueDate() != null) {
             if (request.getPaymentDueDate().isBefore(request.getSoDate())) {
-                throw new BusinessException("Hạn thanh toán không được nhỏ hơn ngày lập đơn");
+                throw new BusinessException(SystemMessage.SO_ERR_008.getMessage());
             }
             if (request.getPaymentDueDate().isBefore(LocalDate.now())) {
-                throw new BusinessException("Hạn thanh toán không được nằm trong quá khứ");
+                throw new BusinessException(SystemMessage.SO_ERR_007.getMessage());
             }
         }
 
@@ -235,13 +248,19 @@ public class SalesOrderService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng ID: " + id));
 
         if (!"DRAFT".equals(so.getStatus())) {
-            throw new BusinessException(
-                    "Chỉ được duyệt đơn hàng ở trạng thái Nháp. Trạng thái hiện tại: " + so.getStatus());
+            throw new BusinessException(String.format(SystemMessage.SO_ERR_006.getMessage(), so.getStatus()));
         }
 
         requireActiveCustomer(so.getPartnerId());
 
-        LocalDateTime expiresAt = LocalDateTime.now().plusHours(72); // giữ chỗ 72 giờ
+        int expiryHours = 24;
+        try {
+            expiryHours = Integer.parseInt(systemSettingsService.getSetting("sales.reservation.expiry_hours", "24"));
+            if (expiryHours <= 0) expiryHours = 24;
+        } catch (Exception e) {
+            log.warn("Invalid expiry_hours setting, defaulting to 24", e);
+        }
+        LocalDateTime expiresAt = LocalDateTime.now().plusHours(expiryHours);
 
         for (SalesOrderLine line : so.getLines()) {
             // Kiểm tra tồn kho khả dụng (on_hand - reserved)
@@ -287,16 +306,7 @@ public class SalesOrderService {
         SalesOrder approved = salesOrderRepository.save(so);
         log.info("Duyệt đơn bán hàng {} bởi {}", approved.getSoCode(), actor);
 
-        // Ghi nhận tăng công nợ khách hàng trong sổ partner_ledger
-        partnerLedgerService.recordLedger(
-                approved.getPartnerId(),
-                "SALES_ORDER",
-                approved.getId(),
-                approved.getSoCode(),
-                approved.getTotalAmount(),
-                BigDecimal.ZERO,
-                "Ghi nhận công nợ đơn bán hàng " + approved.getSoCode()
-        );
+
 
         List<StockReservation> reservations = stockReservationRepository.findBySalesOrderId(id);
         return toDetailResponse(approved, reservations);
@@ -311,9 +321,8 @@ public class SalesOrderService {
         SalesOrder so = salesOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng ID: " + id));
 
-        if ("POSTED".equals(so.getStatus()) || "CANCELLED".equals(so.getStatus())) {
-            throw new BusinessException(
-                    "Không thể hủy đơn hàng ở trạng thái: " + so.getStatus());
+        if ("POSTED".equals(so.getStatus()) || "CANCELLED".equals(so.getStatus()) || "APPROVED".equals(so.getStatus())) {
+            throw new BusinessException(String.format(SystemMessage.SO_ERR_005.getMessage(), so.getStatus()));
         }
 
         // Release tất cả reservations HOLDING
@@ -331,13 +340,13 @@ public class SalesOrderService {
 
     private Partner requireActiveCustomer(Long partnerId) {
         if (partnerId == null) {
-            throw new BusinessException("Khách hàng là bắt buộc");
+            throw new BusinessException(SystemMessage.SO_ERR_004.getMessage());
         }
 
         Partner customer = partnerRepository.findByIdAndIsCustomerTrue(partnerId)
                 .orElseThrow(() -> new BusinessException("Khách hàng không tồn tại"));
         if (!"APPROVED".equals(customer.getStatus())) {
-            throw new BusinessException("Khách hàng đã ngừng hoạt động, không thể tạo đơn bán hàng");
+            throw new BusinessException(SystemMessage.CHK_ERR_004.getMessage());
         }
         return customer;
     }
@@ -369,7 +378,7 @@ public class SalesOrderService {
      * Sau khi phiếu xuất kho EX_SO được POST, gọi method này để fulfill reservation.
      */
     @Transactional
-    public void fulfillReservation(Long salesOrderId, Long variantId, Long warehouseId, BigDecimal quantityFulfilled) {
+    public void fulfillReservation(Long salesOrderId, Long variantId, Long warehouseId, BigDecimal quantityFulfilled, BigDecimal costAmountFulfilled) {
         stockReservationRepository
                 .findBySalesOrderIdAndVariantIdAndWarehouseId(salesOrderId, variantId, warehouseId)
                 .ifPresent(r -> {
@@ -393,6 +402,22 @@ public class SalesOrderService {
                     stockReservationRepository.save(r);
                 });
 
+        // Cập nhật giá vốn FIFO vào SalesOrderLine
+        salesOrderRepository.findByIdWithDetails(salesOrderId).ifPresent(so -> {
+            boolean isUpdated = false;
+            for (SalesOrderLine line : so.getLines()) {
+                if (line.getVariantId().equals(variantId)) {
+                    BigDecimal currentCost = line.getCostAmount() != null ? line.getCostAmount() : BigDecimal.ZERO;
+                    line.setCostAmount(currentCost.add(costAmountFulfilled != null ? costAmountFulfilled : BigDecimal.ZERO));
+                    isUpdated = true;
+                    break;
+                }
+            }
+            if (isUpdated) {
+                salesOrderRepository.save(so);
+            }
+        });
+
         // Kiểm tra nếu tất cả reservations đều FULFILLED → SO = POSTED
         List<StockReservation> all = stockReservationRepository.findBySalesOrderId(salesOrderId);
         boolean allFulfilled = all.stream().allMatch(r -> "FULFILLED".equals(r.getStatus()));
@@ -404,23 +429,75 @@ public class SalesOrderService {
         }
     }
 
+    /**
+     * Tự động rà soát các reservation BACKORDERED và chuyển sang HOLDING nếu tồn kho đã đủ.
+     */
+    @Transactional
+    public void reEvaluateBackorders(Long warehouseId, Long variantId) {
+        // Tìm tất cả BACKORDERED reservation theo FIFO
+        List<StockReservation> backorderedList = stockReservationRepository
+            .findBackorderedByVariantAndWarehouseOrderByCreatedAtAsc(variantId, warehouseId);
+        
+        if (backorderedList.isEmpty()) {
+            return;
+        }
+        
+        // Lấy quantityOnHand
+        InventoryBalance balance = inventoryBalanceRepository
+            .findByWarehouseAndVariant(warehouseId, variantId, "GOOD")
+            .orElse(null);
+            
+        if (balance == null || balance.getQuantityOnHand().compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        
+        BigDecimal onHand = balance.getQuantityOnHand();
+        
+        // Tổng số lượng đang HOLDING
+        BigDecimal holdingSum = stockReservationRepository.sumHoldingQuantity(variantId, warehouseId);
+        if (holdingSum == null) holdingSum = BigDecimal.ZERO;
+        
+        // Đọc cài đặt thời gian giữ chỗ
+        int expiryHours = 24;
+        try {
+            expiryHours = Integer.parseInt(systemSettingsService.getSetting("sales.reservation.expiry_hours", "24"));
+            if (expiryHours <= 0) expiryHours = 24;
+        } catch (Exception e) {
+            log.warn("Invalid expiry_hours setting, defaulting to 24", e);
+        }
+        LocalDateTime newExpiresAt = LocalDateTime.now().plusHours(expiryHours);
+        
+        for (StockReservation r : backorderedList) {
+            BigDecimal needed = holdingSum.add(r.getQuantityReserved());
+            if (onHand.compareTo(needed) >= 0) {
+                r.setStatus("HOLDING");
+                r.setExpiresAt(newExpiresAt);
+                stockReservationRepository.save(r);
+                holdingSum = holdingSum.add(r.getQuantityReserved());
+                log.info("Chuyển trạng thái reservation {} từ BACKORDERED sang HOLDING. ExpiresAt mới: {}", r.getId(), newExpiresAt);
+            } else {
+                break;
+            }
+        }
+    }
+
     @Transactional
     public SalesOrderResponse recordPayment(Long id, BigDecimal amount, String actor) {
         SalesOrder so = salesOrderRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng"));
         
         if ("CANCELLED".equals(so.getStatus())) {
-            throw new BusinessException("Không thể ghi nhận thanh toán cho đơn hàng đã hủy");
+            throw new BusinessException(SystemMessage.SO_ERR_003.getMessage());
         }
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("Số tiền thanh toán phải lớn hơn 0");
+            throw new BusinessException(SystemMessage.SO_ERR_002.getMessage());
         }
 
         BigDecimal currentPaidAmount = so.getPaidAmount() != null ? so.getPaidAmount() : BigDecimal.ZERO;
         BigDecimal newPaidAmount = currentPaidAmount.add(amount);
         if (newPaidAmount.compareTo(so.getTotalAmount()) > 0) {
-            throw new BusinessException("Số tiền thanh toán vượt quá tổng giá trị đơn hàng");
+            throw new BusinessException(SystemMessage.SO_ERR_001.getMessage());
         }
 
         so.setPaidAmount(newPaidAmount);
@@ -435,16 +512,15 @@ public class SalesOrderService {
 
         salesOrderRepository.save(so);
         
-        // Ghi nhận thu tiền (giảm nợ khách hàng) trong sổ partner_ledger
-        partnerLedgerService.recordLedger(
-                so.getPartnerId(),
-                "PAYMENT_RECEIPT",
-                so.getId(),
-                so.getSoCode(),
-                BigDecimal.ZERO,
-                amount,
-                "Thanh toán cho đơn hàng " + so.getSoCode()
-        );
+        // Tự động tạo và ghi sổ phiếu thu
+        PaymentRequest paymentRequest = new PaymentRequest();
+        paymentRequest.setPartnerId(so.getPartnerId());
+        paymentRequest.setAmount(amount);
+        paymentRequest.setPaymentMethod("CASH"); // Mặc định tiền mặt
+        paymentRequest.setNote("Thanh toán cho đơn hàng " + so.getSoCode());
+        paymentRequest.setStatus("POSTED"); // Ghi sổ luôn
+        
+        paymentService.createPaymentReceipt(paymentRequest);
 
         auditLogService.logEvent(
                 actor,
@@ -505,6 +581,12 @@ public class SalesOrderService {
                     BigDecimal available = inventoryBalanceRepository
                             .sumAvailableQuantityByWarehouseAndVariant(so.getWarehouseId(), line.getVariantId(), "GOOD");
 
+                    BigDecimal exported = inventoryDocumentLineRepository
+                            .sumExportedQuantityBySalesOrderIdAndVariantId(so.getId(), line.getVariantId());
+                    if (exported == null) exported = BigDecimal.ZERO;
+                    BigDecimal remaining = line.getQuantity().subtract(exported);
+                    if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
+
                     return SalesOrderResponse.SalesOrderLineResponse.builder()
                             .id(line.getId())
                             .variantId(line.getVariantId())
@@ -520,9 +602,14 @@ public class SalesOrderService {
                             .lineAmount(line.getLineAmount())
                             .note(line.getNote())
                             .availableQuantity(available != null ? available : BigDecimal.ZERO)
+                            .exportedQuantity(exported)
+                            .remainingQuantity(remaining)
                             .build();
                 })
                 .collect(Collectors.toList());
+
+        boolean isFullyExported = !lineResponses.isEmpty() && lineResponses.stream()
+                .allMatch(l -> l.getRemainingQuantity().compareTo(BigDecimal.ZERO) <= 0);
 
         List<SalesOrderResponse.StockReservationResponse> reservationResponses = reservations.stream()
                 .map(r -> SalesOrderResponse.StockReservationResponse.builder()
@@ -540,6 +627,7 @@ public class SalesOrderService {
                 .collect(Collectors.toList());
 
         SalesOrderResponse response = toSummaryResponse(so);
+        response.setIsFullyExported(isFullyExported);
         response.setLines(lineResponses);
         response.setReservations(reservationResponses);
         return response;

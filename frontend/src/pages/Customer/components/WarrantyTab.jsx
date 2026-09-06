@@ -1,4 +1,4 @@
-
+import { Link } from 'react-router-dom';
 import TabPagination from './TabPagination';
 
 const WarrantyTab = ({ data, loading, page, setPage, formatDate, styles }) => {
@@ -28,17 +28,44 @@ const WarrantyTab = ({ data, loading, page, setPage, formatDate, styles }) => {
                         </tr>
                     ) : data.content.map((item, idx) => (
                         <tr key={idx}>
-                            <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{item.warrantyCode}</td>
+                            <td style={{ fontWeight: 600 }}>
+                                <Link to={`/warranties/${item.warrantyId}`} style={{ color: 'var(--color-primary)', textDecoration: 'none' }}>
+                                    {item.warrantyCode}
+                                </Link>
+                            </td>
                             <td>{item.serialNumber || '-'}</td>
                             <td>{formatDate(item.startDate)} - {formatDate(item.endDate)}</td>
-                            <td>{item.warrantyStatus}</td>
+                            <td>
+                                <span className={`${styles.badge} ${
+                                    item.warrantyStatus === 'ACTIVE' ? styles.badgeSuccess : 
+                                    item.warrantyStatus === 'VOIDED' ? styles.badgeDanger : 
+                                    styles.badgeWarning
+                                }`}>
+                                    {item.warrantyStatus === 'ACTIVE' ? 'Đang hoạt động' : 
+                                     item.warrantyStatus === 'VOIDED' ? 'Vô hiệu hóa' : 
+                                     item.warrantyStatus === 'EXPIRED' ? 'Hết hạn' : item.warrantyStatus}
+                                </span>
+                            </td>
                             <td>
                                 {item.repairs?.length > 0 ? (
-                                    item.repairs.map(r => (
-                                        <div key={r.repairCode} style={{ fontSize: '12px' }}>
-                                            {r.repairCode} - {r.repairStatus} ({formatDate(r.receivedDate)})
-                                        </div>
-                                    ))
+                                    item.repairs.map(r => {
+                                        const statusMap = {
+                                            'DRAFT': 'Nháp',
+                                            'QUOTATION': 'Báo giá',
+                                            'CONFIRMED': 'Đã xác nhận',
+                                            'UNDER_REPAIR': 'Đang sửa chữa',
+                                            'DONE': 'Đã hoàn thành',
+                                            'CANCELLED': 'Đã hủy'
+                                        };
+                                        const translatedStatus = statusMap[r.repairStatus] || r.repairStatus;
+                                        return (
+                                            <div key={r.repairCode} style={{ fontSize: '12px', marginBottom: '4px' }}>
+                                                <Link to={`/repairs/${r.repairId}`} style={{ color: 'var(--color-primary)', textDecoration: 'none', fontWeight: 600 }}>
+                                                    {r.repairCode}
+                                                </Link> - {translatedStatus} ({formatDate(r.receivedDate)})
+                                            </div>
+                                        );
+                                    })
                                 ) : '-'}
                             </td>
                         </tr>

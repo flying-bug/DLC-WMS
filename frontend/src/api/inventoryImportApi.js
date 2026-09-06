@@ -45,3 +45,33 @@ export const getWarehouses = (params = {}) => {
 export const getUsers = (params = {}) => {
   return axiosClient.get('/users/search', { params });
 };
+
+export const scanImportSlipOcr = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return axiosClient.post(`${IMPORT_BASE}/ocr-scan`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const confirmOcrMapping = (partnerId, vendorProductName, variantId) => {
+  return axiosClient.post(`${IMPORT_BASE}/ocr-confirm-mapping`, null, {
+    params: { partnerId, vendorProductName, variantId },
+  });
+};
+
+export const initOcrSession = () => {
+  return axiosClient.get(`${IMPORT_BASE}/ocr-session/init`);
+};
+
+export const getOcrSessionState = (sessionId) => {
+  return axiosClient.get(`${IMPORT_BASE}/ocr-session/${sessionId}`);
+};
+
+export const uploadOcrForSession = (sessionId, file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return axiosClient.post(`${IMPORT_BASE}/ocr-session/${sessionId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};

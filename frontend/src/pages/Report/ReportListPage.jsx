@@ -9,11 +9,15 @@ import {
     getStockTransferReport,
     getDebtReport,
     getInventorySummaryReport,
+    getSalesProfitReport,
     exportReportExcel
 } from '../../api/reportApi';
 import styles from './ReportListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
 import { getDateRangePreset } from '../../utils/datePresets';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import Pagination from '../../components/ui/Pagination/Pagination';
+
 
 const MOCK_CATEGORIES = [
     {
@@ -50,6 +54,14 @@ const MOCK_CATEGORIES = [
         reports: [
             { id: 'debt', name: 'Báo cáo công nợ đối tác (Khách hàng / Nhà cung cấp)', desc: 'Xem số dư nợ đầu kỳ, phát sinh tăng/giảm và nợ cuối kỳ của đối tác.' }
         ]
+    },
+    {
+        id: 'sales-reports',
+        title: 'Báo cáo kinh doanh',
+        icon: 'fas fa-chart-line',
+        reports: [
+            { id: 'sales-profit', name: 'Báo cáo Doanh thu & Lợi nhuận gộp', desc: 'Thống kê lượng hàng bán ra, tổng doanh thu, giá vốn và lợi nhuận gộp theo từng mặt hàng.' }
+        ]
     }
 ];
 
@@ -70,6 +82,8 @@ const ReportListPage = () => {
     const [loading, setLoading] = useState(false);
     const [reportData, setReportData] = useState([]);
     const [viewMode, setViewMode] = useState('list'); // 'list' or 'detail'
+    const [currentPage, setCurrentPage] = useState(0);
+    const [pageSize, setPageSize] = useState(20);
 
     // Filter inputs
     const [filters, setFilters] = useState({
@@ -103,6 +117,7 @@ const ReportListPage = () => {
             if (foundReport) {
                 setActiveReport(foundReport);
                 setViewMode('detail');
+                setCurrentPage(0);
             }
         }
     }, [location.state]);
@@ -144,12 +159,14 @@ const ReportListPage = () => {
     const handleReportClick = (report) => {
         setActiveReport(report);
         setViewMode('detail');
+        setCurrentPage(0);
     };
 
     // Submit report query
     const handleViewReport = async () => {
         if (!activeReport) return;
         setLoading(true);
+        setCurrentPage(0);
 
         try {
             // Prepare query parameters (append start/end time if API expects ISO Date Time)
@@ -186,6 +203,9 @@ const ReportListPage = () => {
                 case 'debt':
                     params.partnerType = filters.partnerType !== 'ALL' ? filters.partnerType : undefined;
                     response = await getDebtReport(params);
+                    break;
+                case 'sales-profit':
+                    response = await getSalesProfitReport(params);
                     break;
                 default:
                     throw new Error('Loại báo cáo không hợp lệ');
@@ -403,7 +423,7 @@ const ReportListPage = () => {
                                 {activeReport.id !== 'debt' && (
                                     <div className={styles.filterGroup}>
                                         <label>Kho chứa</label>
-                                        <select
+                                        <SearchableSelect
                                             className={styles.filterSelect}
                                             value={filters.warehouseId}
                                             onChange={(e) => setFilters({ ...filters, warehouseId: e.target.value })}
@@ -412,7 +432,7 @@ const ReportListPage = () => {
                                             {warehouses.map((w) => (
                                                 <option key={w.id} value={w.id}>{w.warehouseCode} - {w.name}</option>
                                             ))}
-                                        </select>
+                                        </SearchableSelect>
                                     </div>
                                 )}
 
@@ -444,7 +464,7 @@ const ReportListPage = () => {
                                 {activeReport.id === 'debt' && (
                                     <div className={styles.filterGroup}>
                                         <label>Loại đối tác</label>
-                                        <select
+                                        <SearchableSelect
                                             className={styles.filterSelect}
                                             value={filters.partnerType}
                                             onChange={(e) => setFilters({ ...filters, partnerType: e.target.value })}
@@ -452,7 +472,7 @@ const ReportListPage = () => {
                                             <option value="ALL">Tất cả đối tác</option>
                                             <option value="CUSTOMER">Khách hàng</option>
                                             <option value="SUPPLIER">Nhà cung cấp</option>
-                                        </select>
+                                        </SearchableSelect>
                                     </div>
                                 )}
 
@@ -460,7 +480,7 @@ const ReportListPage = () => {
                                 {activeReport.id === 'stock-transfers' && (
                                     <div className={styles.filterGroup}>
                                         <label>Trạng thái</label>
-                                        <select
+                                        <SearchableSelect
                                             className={styles.filterSelect}
                                             value={filters.status}
                                             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -469,7 +489,7 @@ const ReportListPage = () => {
                                             <option value="COMPLETED">Hoàn thành</option>
                                             <option value="PENDING">Chờ duyệt</option>
                                             <option value="CANCELLED">Đã hủy</option>
-                                        </select>
+                                        </SearchableSelect>
                                     </div>
                                 )}
 
@@ -492,11 +512,11 @@ const ReportListPage = () => {
                                 </button>
 
                                 <button className={styles.btnExport} onClick={handleExport}>
-                                    <i className="fas fa-file-excel" style={{ color: 'var(--color-excel)' }}></i> Xuất Excel
+                                    <i className="fas fa-file-excel" style={{ color: 'var(--color-excel)' }}></i>
                                 </button>
 
                                 <button className={styles.btnPrint} onClick={() => window.print()}>
-                                    <i className="fas fa-print"></i> In ấn
+                                    <i className="bi bi-printer"></i> In ấn
                                 </button>
                             </div>
 
@@ -519,201 +539,266 @@ const ReportListPage = () => {
                                         <p>Không có dữ liệu phù hợp với bộ lọc đã chọn.</p>
                                     </div>
                                 ) : (
-                                    <div className={styles.reportTableContainer}>
-                                        {/* 1. INVENTORY SUMMARY REPORT */}
-                                        {activeReport.id === 'inventory-summary' && (
-                                            <table className={`${styles.reportTable} ${styles.summaryTable}`}>
-                                                <thead>
-                                                    <tr>
-                                                        <th rowSpan="2" className={styles.fixedHeaderBold} style={{ whiteSpace: 'nowrap' }}>Kho</th>
-                                                        <th rowSpan="2" className={styles.fixedHeaderBold} style={{ whiteSpace: 'nowrap' }}>Mã hàng</th>
-                                                        <th rowSpan="2" className={styles.fixedHeaderBold}>Tên hàng</th>
-                                                        <th rowSpan="2" className={styles.fixedHeaderBold} style={{ whiteSpace: 'nowrap' }}>ĐVT</th>
-                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Tồn đầu kỳ</th>
-                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Nhập trong kỳ</th>
-                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Xuất trong kỳ</th>
-                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Tồn cuối kỳ</th>
-                                                    </tr>
-                                                    <tr>
-                                                        <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
-                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
-                                                        <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
-                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
-                                                        <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
-                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
-                                                        <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
-                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {reportData.map((item, idx) => (
-                                                        <tr key={idx}>
-                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.warehouseName || '-'}</td>
-                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.productCode}</td>
-                                                            <td className={styles.fontSemibold}>{item.productName}</td>
-                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.unitName || '-'}</td>
-                                                            <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.openingQuantity)}</td>
-                                                            <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.openingValue)}</td>
-                                                            <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.receiptQuantity)}</td>
-                                                            <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.receiptValue)}</td>
-                                                            <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.issueQuantity)}</td>
-                                                            <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.issueValue)}</td>
-                                                            <td className={`${styles.textRight} ${styles.fontSemibold} ${styles.groupBorderLeft}`} style={{ color: 'var(--misa-primary)', whiteSpace: 'nowrap' }}>{formatQuantity(item.endingQuantity)}</td>
-                                                            <td className={`${styles.textRight} ${styles.fontSemibold} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.endingValue)}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        )}
+                                    <>
+                                        {(() => {
+                                            const totalElements = reportData.length;
+                                            const totalPages = Math.ceil(totalElements / pageSize) || 1;
+                                            const paginatedData = reportData.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
-                                        {/* 2. INVENTORY BALANCE REPORT */}
-                                        {activeReport.id === 'inventory-balance' && (
-                                            <table className={styles.reportTable}>
-                                                <thead>
-                                                    <tr>
-                                                        <th>Mã hàng</th>
-                                                        <th>Tên hàng</th>
-                                                        <th>Đơn vị tính</th>
-                                                        <th>Kho chứa</th>
-                                                        <th className={styles.textRight}>Số lượng tồn</th>
-                                                        <th className={styles.textRight}>Giá trị tồn</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {reportData.map((item, idx) => (
-                                                        <tr key={idx}>
-                                                            <td className={styles.fontSemibold}>{item.itemCode}</td>
-                                                            <td>{item.itemName}</td>
-                                                            <td>{item.unitName || '-'}</td>
-                                                            <td>{item.warehouseCode ? `${item.warehouseCode} - ${item.warehouseName}` : '-'}</td>
-                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: 'var(--color-success)' }}>{formatQuantity(item.totalQuantity)}</td>
-                                                            <td className={styles.textRight}>{formatCurrency(item.totalValue)}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        )}
+                                            return (
+                                                <>
+                                                    <div className={styles.reportTableContainer}>
+                                                        {/* 1. INVENTORY SUMMARY REPORT */}
+                                                        {activeReport.id === 'inventory-summary' && (
+                                                            <table className={`${styles.reportTable} ${styles.summaryTable}`}>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th rowSpan="2" className={`${styles.fixedHeaderBold} ${styles.colWarehouse}`}>Kho</th>
+                                                                        <th rowSpan="2" className={`${styles.fixedHeaderBold} ${styles.colProductCode}`}>Mã hàng</th>
+                                                                        <th rowSpan="2" className={`${styles.fixedHeaderBold} ${styles.colProductName}`}>Tên hàng</th>
+                                                                        <th rowSpan="2" className={`${styles.fixedHeaderBold} ${styles.colUnit}`}>ĐVT</th>
+                                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Tồn đầu kỳ</th>
+                                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Nhập trong kỳ</th>
+                                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Xuất trong kỳ</th>
+                                                                        <th colSpan="2" className={`${styles.textCenter} ${styles.summaryGroupHeader}`}>Tồn cuối kỳ</th>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
+                                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
+                                                                        <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
+                                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
+                                                                        <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
+                                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
+                                                                        <th className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Số lượng</th>
+                                                                        <th className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap', fontWeight: '600' }}>Giá trị</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {paginatedData.map((item, idx) => (
+                                                                        <tr key={idx}>
+                                                                            <td className={`${styles.fontSemibold} ${styles.colWarehouse}`}>{item.warehouseName || '-'}</td>
+                                                                            <td className={`${styles.fontSemibold} ${styles.colProductCode}`}>{item.productCode}</td>
+                                                                            <td className={`${styles.fontSemibold} ${styles.colProductName}`}>{item.productName}</td>
+                                                                            <td className={`${styles.fontSemibold} ${styles.colUnit}`}>{item.unitName || '-'}</td>
+                                                                            <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.openingQuantity)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.openingValue)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.receiptQuantity)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.receiptValue)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.groupBorderLeft}`} style={{ whiteSpace: 'nowrap' }}>{formatQuantity(item.issueQuantity)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.issueValue)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.fontSemibold} ${styles.groupBorderLeft}`} style={{ color: 'var(--misa-primary)', whiteSpace: 'nowrap' }}>{formatQuantity(item.endingQuantity)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.fontSemibold} ${styles.groupBorderRight}`} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.endingValue)}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        )}
 
-                                        {/* 3. STOCK LEDGER REPORT */}
-                                        {activeReport.id === 'stock-ledger' && (
-                                            <table className={styles.reportTable}>
-                                                <thead>
-                                                    <tr>
-                                                        <th>Ngày CT</th>
-                                                        <th>Số chứng từ</th>
-                                                        <th>Loại CT</th>
-                                                        <th>Mã hàng</th>
-                                                        <th>Tên hàng</th>
-                                                        <th>Kho</th>
-                                                        <th>ĐVT</th>
-                                                        <th className={styles.textRight}>Đơn giá</th>
-                                                        <th className={styles.textRight}>Số lượng nhập</th>
-                                                        <th className={styles.textRight}>Số lượng xuất</th>
-                                                        <th className={styles.textRight}>Tồn sau CT</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {reportData.map((item, idx) => (
-                                                        <tr key={idx}>
-                                                            <td>{formatDate(item.documentDate)}</td>
-                                                            <td className={styles.fontSemibold}>{item.documentNumber}</td>
-                                                            <td>
-                                                                <span className={`${styles.badge} ${item.documentType?.includes('NHAP') || item.documentType?.includes('IMPORT') ? styles.badgeImport : styles.badgeExport}`}>
-                                                                    {item.documentType}
-                                                                </span>
-                                                            </td>
-                                                            <td>{item.productCode}</td>
-                                                            <td>{item.productName}</td>
-                                                            <td>{item.warehouseName}</td>
-                                                            <td>{item.unitName || '-'}</td>
-                                                            <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>
-                                                            <td className={`${styles.textRight} ${styles.textSuccess}`}>{item.quantityIn > 0 ? `+${formatQuantity(item.quantityIn)}` : '-'}</td>
-                                                            <td className={`${styles.textRight} ${styles.textDanger}`}>{item.quantityOut > 0 ? `-${formatQuantity(item.quantityOut)}` : '-'}</td>
-                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`}>{formatQuantity(item.balanceAfter)}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        )}
+                                                        {/* 2. INVENTORY BALANCE REPORT */}
+                                                        {activeReport.id === 'inventory-balance' && (
+                                                            <table className={styles.reportTable}>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th className={styles.colProductCode}>Mã hàng</th>
+                                                                        <th className={styles.colProductName}>Tên hàng</th>
+                                                                        <th className={styles.colUnit}>Đơn vị tính</th>
+                                                                        <th className={styles.colWarehouse}>Kho chứa</th>
+                                                                        <th className={styles.textRight}>Số lượng tồn</th>
+                                                                        <th className={styles.textRight}>Giá trị tồn</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {paginatedData.map((item, idx) => (
+                                                                        <tr key={idx}>
+                                                                            <td className={`${styles.fontSemibold} ${styles.colProductCode}`}>{item.itemCode}</td>
+                                                                            <td className={styles.colProductName}>{item.itemName}</td>
+                                                                            <td className={styles.colUnit}>{item.unitName || '-'}</td>
+                                                                            <td className={styles.colWarehouse}>{item.warehouseCode ? `${item.warehouseCode} - ${item.warehouseName}` : '-'}</td>
+                                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: 'var(--color-success)' }}>{formatQuantity(item.totalQuantity)}</td>
+                                                                            <td className={styles.textRight}>{formatCurrency(item.totalValue)}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        )}
 
-                                        {/* 4. STOCK TRANSFERS REPORT */}
-                                        {activeReport.id === 'stock-transfers' && (
-                                            <table className={styles.reportTable}>
-                                                <thead>
-                                                    <tr>
-                                                        <th>Ngày CT</th>
-                                                        <th>Số chứng từ</th>
-                                                        <th>Mã hàng</th>
-                                                        <th>Tên hàng</th>
-                                                        <th>Kho chuyển</th>
-                                                        <th>Kho nhận</th>
-                                                        <th>ĐVT</th>
-                                                        <th className={styles.textRight}>Số lượng</th>
-                                                        <th className={styles.textRight}>Đơn giá</th>
-                                                        <th className={styles.textRight}>Thành tiền</th>
-                                                        <th>Trạng thái</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {reportData.map((item, idx) => (
-                                                        <tr key={idx}>
-                                                            <td>{formatDate(item.documentDate)}</td>
-                                                            <td className={styles.fontSemibold}>{item.documentNumber}</td>
-                                                            <td>{item.itemCode}</td>
-                                                            <td>{item.itemName}</td>
-                                                            <td>{item.sourceWarehouse}</td>
-                                                            <td>{item.destinationWarehouse}</td>
-                                                            <td>{item.unitName}</td>
-                                                            <td className={styles.textRight}>{formatQuantity(item.quantity)}</td>
-                                                            <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>
-                                                            <td className={styles.textRight}>{formatCurrency(item.amount)}</td>
-                                                            <td>
-                                                                <span className={`${styles.badge} ${item.status === 'COMPLETED' ? styles.badgeSuccess : styles.badgeWarning}`}>
-                                                                    {item.status === 'COMPLETED' ? 'Hoàn thành' : item.status}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        )}
+                                                        {/* 3. STOCK LEDGER REPORT */}
+                                                        {activeReport.id === 'stock-ledger' && (
+                                                            <table className={styles.reportTable}>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th style={{ whiteSpace: 'nowrap' }}>Ngày CT</th>
+                                                                        <th style={{ whiteSpace: 'nowrap' }}>Số chứng từ</th>
+                                                                        <th style={{ whiteSpace: 'nowrap' }}>Loại CT</th>
+                                                                        <th className={styles.colProductCode}>Mã hàng</th>
+                                                                        <th className={styles.colProductName}>Tên hàng</th>
+                                                                        <th className={styles.colWarehouse}>Kho</th>
+                                                                        <th className={styles.colUnit}>ĐVT</th>
+                                                                        <th className={styles.textRight}>Đơn giá</th>
+                                                                        <th className={styles.textRight}>Số lượng nhập</th>
+                                                                        <th className={styles.textRight}>Số lượng xuất</th>
+                                                                        <th className={styles.textRight}>Tồn sau CT</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {paginatedData.map((item, idx) => (
+                                                                        <tr key={idx}>
+                                                                            <td style={{ whiteSpace: 'nowrap' }}>{formatDate(item.documentDate)}</td>
+                                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.documentNumber}</td>
+                                                                            <td>
+                                                                                <span className={`${styles.badge} ${item.documentType?.includes('NHAP') || item.documentType?.includes('IMPORT') ? styles.badgeImport : styles.badgeExport}`}>
+                                                                                    {item.documentType}
+                                                                                </span>
+                                                                            </td>
+                                                                            <td className={styles.colProductCode}>{item.productCode}</td>
+                                                                            <td className={styles.colProductName}>{item.productName}</td>
+                                                                            <td className={styles.colWarehouse}>{item.warehouseName}</td>
+                                                                            <td className={styles.colUnit}>{item.unitName || '-'}</td>
+                                                                            <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.textSuccess}`}>{item.quantityIn > 0 ? `+${formatQuantity(item.quantityIn)}` : '-'}</td>
+                                                                            <td className={`${styles.textRight} ${styles.textDanger}`}>{item.quantityOut > 0 ? `-${formatQuantity(item.quantityOut)}` : '-'}</td>
+                                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`}>{formatQuantity(item.balanceAfter)}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        )}
 
-                                        {/* 5. DEBT REPORT */}
-                                        {activeReport.id === 'debt' && (
-                                            <table className={styles.reportTable}>
-                                                <thead>
-                                                    <tr>
-                                                        <th>Mã đối tác</th>
-                                                        <th>Tên đối tác</th>
-                                                        <th>Phân loại</th>
-                                                        <th className={styles.textRight}>Dư đầu kỳ</th>
-                                                        <th className={styles.textRight}>Phát sinh tăng (Nợ)</th>
-                                                        <th className={styles.textRight}>Phát sinh giảm (Có)</th>
-                                                        <th className={styles.textRight}>Dư cuối kỳ (Nợ cuối)</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {reportData.map((item, idx) => (
-                                                        <tr key={idx}>
-                                                            <td className={styles.fontSemibold}>{item.partnerCode}</td>
-                                                            <td>{item.partnerName}</td>
-                                                            <td>
-                                                                <span className={`${styles.badge} ${item.partnerType === 'SUPPLIER' ? styles.badgeSupplier : styles.badgeCustomer}`}>
-                                                                    {item.partnerType === 'SUPPLIER' ? 'Nhà cung cấp' : 'Khách hàng'}
-                                                                </span>
-                                                            </td>
-                                                            <td className={styles.textRight}>{formatCurrency(item.openingBalance)}</td>
-                                                            <td className={`${styles.textRight} ${styles.textSuccess}`}>{formatCurrency(item.debitIncrease)}</td>
-                                                            <td className={`${styles.textRight} ${styles.textDanger}`}>{formatCurrency(item.creditDecrease)}</td>
-                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: item.closingBalance >= 0 ? 'var(--color-primary)' : 'var(--color-danger)' }}>
-                                                                {formatCurrency(item.closingBalance)}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        )}
-                                    </div>
+                                                        {/* 4. STOCK TRANSFERS REPORT */}
+                                                        {activeReport.id === 'stock-transfers' && (
+                                                            <table className={styles.reportTable}>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th style={{ whiteSpace: 'nowrap' }}>Ngày CT</th>
+                                                                        <th style={{ whiteSpace: 'nowrap' }}>Số chứng từ</th>
+                                                                        <th className={styles.colProductCode}>Mã hàng</th>
+                                                                        <th className={styles.colProductName}>Tên hàng</th>
+                                                                        <th className={styles.colWarehouse}>Kho chuyển</th>
+                                                                        <th className={styles.colWarehouse}>Kho nhận</th>
+                                                                        <th className={styles.colUnit}>ĐVT</th>
+                                                                        <th className={styles.textRight}>Số lượng</th>
+                                                                        <th className={styles.textRight}>Đơn giá</th>
+                                                                        <th className={styles.textRight}>Thành tiền</th>
+                                                                        <th>Trạng thái</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {paginatedData.map((item, idx) => (
+                                                                        <tr key={idx}>
+                                                                            <td style={{ whiteSpace: 'nowrap' }}>{formatDate(item.documentDate)}</td>
+                                                                            <td className={styles.fontSemibold} style={{ whiteSpace: 'nowrap' }}>{item.documentNumber}</td>
+                                                                            <td className={styles.colProductCode}>{item.itemCode}</td>
+                                                                            <td className={styles.colProductName}>{item.itemName}</td>
+                                                                            <td className={styles.colWarehouse}>{item.sourceWarehouse}</td>
+                                                                            <td className={styles.colWarehouse}>{item.destinationWarehouse}</td>
+                                                                            <td className={styles.colUnit}>{item.unitName}</td>
+                                                                            <td className={styles.textRight}>{formatQuantity(item.quantity)}</td>
+                                                                            <td className={styles.textRight}>{formatCurrency(item.unitPrice)}</td>
+                                                                            <td className={styles.textRight}>{formatCurrency(item.amount)}</td>
+                                                                            <td>
+                                                                                <span className={`${styles.badge} ${item.status === 'COMPLETED' ? styles.badgeSuccess : styles.badgeWarning}`}>
+                                                                                    {item.status === 'COMPLETED' ? 'Hoàn thành' : item.status}
+                                                                                </span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        )}
+
+                                                        {/* 5. DEBT REPORT */}
+                                                        {activeReport.id === 'debt' && (
+                                                            <table className={styles.reportTable}>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th className={styles.colProductCode}>Mã đối tác</th>
+                                                                        <th className={styles.colPartnerName}>Tên đối tác</th>
+                                                                        <th>Phân loại</th>
+                                                                        <th className={styles.textRight}>Dư đầu kỳ</th>
+                                                                        <th className={styles.textRight}>Phát sinh tăng (Nợ)</th>
+                                                                        <th className={styles.textRight}>Phát sinh giảm (Có)</th>
+                                                                        <th className={styles.textRight}>Dư cuối kỳ (Nợ cuối)</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {paginatedData.map((item, idx) => (
+                                                                        <tr key={idx}>
+                                                                            <td className={`${styles.fontSemibold} ${styles.colProductCode}`}>{item.partnerCode}</td>
+                                                                            <td className={styles.colPartnerName}>{item.partnerName}</td>
+                                                                            <td>
+                                                                                <span className={`${styles.badge} ${item.partnerType === 'SUPPLIER' ? styles.badgeSupplier : styles.badgeCustomer}`}>
+                                                                                    {item.partnerType === 'SUPPLIER' ? 'Nhà cung cấp' : 'Khách hàng'}
+                                                                                </span>
+                                                                            </td>
+                                                                            <td className={styles.textRight}>{formatCurrency(item.openingBalance)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.textSuccess}`}>{formatCurrency(item.debitIncrease)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.textDanger}`}>{formatCurrency(item.creditDecrease)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: item.closingBalance >= 0 ? 'var(--color-primary)' : 'var(--color-danger)' }}>
+                                                                                {formatCurrency(item.closingBalance)}
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        )}
+
+                                                        {/* 6. SALES & PROFIT REPORT */}
+                                                        {activeReport.id === 'sales-profit' && (
+                                                            <table className={styles.reportTable}>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th className={styles.colProductCode}>Mã hàng</th>
+                                                                        <th className={styles.colProductName}>Tên hàng</th>
+                                                                        <th className={styles.colUnit}>ĐVT</th>
+                                                                        <th className={styles.textRight}>Số lượng bán</th>
+                                                                        <th className={styles.textRight}>Tổng doanh thu</th>
+                                                                        <th className={styles.textRight}>Tổng giá vốn</th>
+                                                                        <th className={styles.textRight}>Lợi nhuận gộp</th>
+                                                                        <th className={styles.textRight}>Tỷ suất LN (%)</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {paginatedData.map((item, idx) => (
+                                                                        <tr key={idx}>
+                                                                            <td className={`${styles.fontSemibold} ${styles.colProductCode}`}>{item.sku}</td>
+                                                                            <td className={styles.colProductName}>{item.variantName}</td>
+                                                                            <td className={styles.colUnit}>{item.unitName || '-'}</td>
+                                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: 'var(--color-primary)' }}>{formatQuantity(item.quantitySold)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.textSuccess}`}>{formatCurrency(item.salesAmount)}</td>
+                                                                            <td className={styles.textRight}>{formatCurrency(item.costAmount)}</td>
+                                                                            <td className={`${styles.textRight} ${styles.fontSemibold}`} style={{ color: item.grossProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                                                                                {formatCurrency(item.grossProfit)}
+                                                                            </td>
+                                                                            <td className={styles.textRight}>
+                                                                                {item.profitMarginPercent != null ? item.profitMarginPercent.toFixed(2) + '%' : '0%'}
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        )}
+                                                    </div>
+
+                                                    {totalElements > 0 && (
+                                                        <div className={styles.paginationWrapper}>
+                                                            <Pagination
+                                                                page={currentPage}
+                                                                totalPages={totalPages}
+                                                                totalElements={totalElements}
+                                                                size={pageSize}
+                                                                onPageChange={(p) => setCurrentPage(p)}
+                                                                onSizeChange={(s) => {
+                                                                    setPageSize(s);
+                                                                    setCurrentPage(0);
+                                                                }}
+                                                                sizeOptions={[10, 20, 50, 100]}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
+                                    </>
                                 )}
                             </div>
                         </div>

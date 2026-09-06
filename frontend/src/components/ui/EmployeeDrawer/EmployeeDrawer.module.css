@@ -5,7 +5,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: var(--overlay-dark);
+    background: rgba(15, 23, 42, 0.6);
     z-index: 1050;
     opacity: 0;
     visibility: hidden;
@@ -62,9 +62,17 @@
     font-size: 20px;
     color: var(--color-text-muted);
     cursor: pointer;
-    padding: 4px;
+    width: var(--touch-target-min);
+    height: var(--touch-target-min);
+    padding: 0;
     border-radius: 4px;
     transition: background 0.2s;
+}
+
+.btnClose:focus-visible,
+.tabBtn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
 }
 
 .btnClose:hover {
@@ -90,6 +98,15 @@
     justify-content: center;
     font-size: 18px;
     font-weight: 700;
+}
+
+.avatarImage {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 2px solid #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .userDetails {
@@ -152,6 +169,13 @@
 .tabs {
     display: flex;
     gap: 24px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .tabBtn {
@@ -164,6 +188,8 @@
     cursor: pointer;
     position: relative;
     transition: color 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .tabBtn:hover {
@@ -510,5 +536,20 @@
     .btnSave,
     .btnDanger {
         width: 100%;
+    }
+
+    .tabs {
+        gap: 20px;
+        margin-right: -18px;
+        padding-right: 18px;
+    }
+
+    .tabBtn {
+        min-height: var(--touch-target-min);
+    }
+
+    .footer > button {
+        flex: 1 1 100%;
+        min-height: var(--touch-target-min);
     }
 }

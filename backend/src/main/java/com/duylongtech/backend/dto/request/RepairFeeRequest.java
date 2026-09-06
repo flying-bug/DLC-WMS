@@ -33,4 +33,7 @@ public class RepairFeeRequest {
 
     /** Ghi chú */
     private String note;
+    
+    /** Thuế GTGT (%) */
+    private BigDecimal vatPercent;
 }

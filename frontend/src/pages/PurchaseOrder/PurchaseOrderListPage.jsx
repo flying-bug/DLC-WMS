@@ -4,8 +4,12 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as poApi from '../../api/purchaseOrderApi';
+import { printPurchaseOrder } from '../../utils/printPurchaseOrder';
 import styles from './PurchaseOrderListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { exportToExcel } from '../../utils/excelExport';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const STATUS_LABELS = {
   DRAFT:     { label: 'Nháp',         code: 'info'    },
@@ -44,19 +48,32 @@ function PurchaseOrderListPage() {
   const loadOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await poApi.getPurchaseOrders({
-        keyword:  filters.keyword  || undefined,
-        status:   filters.status   || undefined,
-        fromDate: filters.fromDate || undefined,
-        toDate:   filters.toDate   || undefined,
-      });
-      setOrders(unwrap(res) || []);
-    } catch {
-      showToast('error', 'Không thể tải danh sách đơn mua hàng');
+      const res = await poApi.getPurchaseOrders(filters);
+      const list = unwrap(res);
+      setOrders(Array.isArray(list) ? list : []);
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || 'Không thể tải danh sách đơn mua hàng');
     } finally {
       setLoading(false);
     }
   }, [filters]);
+
+  const handleExport = () => {
+    if (!orders || orders.length === 0) {
+      showToast('warning', 'Không có dữ liệu để xuất Excel');
+      return;
+    }
+    const headers = ['Mã đơn', 'Ngày lập', 'Nhà cung cấp', 'Tổng tiền', 'Trạng thái'];
+    const data = orders.map(po => [
+      po.poCode,
+      fmtDate(po.poDate),
+      po.partnerName || `#${po.partnerId}`,
+      money(po.totalAmount),
+      STATUS_LABELS[po.status]?.label || po.status
+    ]);
+    exportToExcel(headers, data, 'Danh_sach_don_mua_hang');
+    showToast('success', 'Xuất Excel thành công!');
+  };
 
   useEffect(() => { loadOrders(); }, [loadOrders]);
 
@@ -87,6 +104,16 @@ function PurchaseOrderListPage() {
       showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể hủy đơn hàng');
     }
     setConfirmCancel(null);
+  };
+
+  const handlePrintPo = async (po) => {
+    try {
+      const res = await poApi.getPurchaseOrderById(po.id);
+      const detail = unwrap(res);
+      printPurchaseOrder(detail);
+    } catch {
+      showToast('error', 'Không thể tải dữ liệu để in đơn mua hàng');
+    }
   };
 
   // Pagination
@@ -124,14 +151,14 @@ function PurchaseOrderListPage() {
 
             <div className={styles.filterField}>
               <span className={styles.filterLabel}>TRẠNG THÁI</span>
-              <select
+              <SearchableSelect
                 className={styles.filterSelect}
                 value={filters.status}
                 onChange={e => setFilters(p => ({ ...p, status: e.target.value }))}
               >
                 <option value="">Tất cả</option>
                 {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+              </SearchableSelect>
             </div>
 
             <div className={styles.filterField}>
@@ -162,6 +189,13 @@ function PurchaseOrderListPage() {
               title="Đặt lại"
             >
               <i className="bi bi-arrow-clockwise" />
+            </button>
+            <button
+              className={styles.iconBtn}
+              onClick={handleExport}
+              title="Xuất tệp Excel"
+            >
+              <i className="bi bi-file-earmark-excel" />
             </button>
             <button className={styles.btnPrimary} onClick={loadOrders}>
               <i className="bi bi-funnel" /> Lọc
@@ -224,6 +258,12 @@ function PurchaseOrderListPage() {
                           style={{ cursor: 'pointer', marginRight: 8, color: 'var(--color-text-muted-2)', fontSize: 15 }}
                           onClick={() => navigate(`/purchase-orders/${po.id}`)}
                         />
+                        <i
+                          className="bi bi-printer"
+                          title="In đơn mua hàng"
+                          style={{ cursor: 'pointer', marginRight: 8, color: '#0284c7', fontSize: 15 }}
+                          onClick={() => handlePrintPo(po)}
+                        />
                         {po.status === 'DRAFT' && (
                           <i
                             className="bi bi-pencil"
@@ -240,7 +280,7 @@ function PurchaseOrderListPage() {
                             onClick={() => setConfirmApprove(po)}
                           />
                         )}
-                        {(po.status === 'DRAFT' || po.status === 'APPROVED') && (
+                        {po.status === 'DRAFT' && (
                           <i
                             className="bi bi-x-circle"
                             title="Hủy đơn"
@@ -266,7 +306,7 @@ function PurchaseOrderListPage() {
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>Hiển thị</span>
-              <select
+              <SearchableSelect
                 className="misa-select"
                 style={{ width: 70, height: 32, padding: '0 8px' }}
                 value={pageSize}
@@ -275,7 +315,7 @@ function PurchaseOrderListPage() {
                 <option value={10}>10</option>
                 <option value={20}>20</option>
                 <option value={50}>50</option>
-              </select>
+              </SearchableSelect>
               <span>trên tổng số {totalItems} bản ghi</span>
             </div>
             {totalPages > 1 && (

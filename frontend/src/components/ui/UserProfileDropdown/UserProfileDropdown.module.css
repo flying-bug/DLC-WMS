@@ -8,6 +8,8 @@
     border-radius: 8px;
     transition: background 0.15s;
     position: relative;
+    min-width: 0;
+    min-height: var(--touch-target-min, 44px);
 }
 
 .userInfo:hover {
@@ -182,6 +184,16 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--color-text-strong);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 400px) {
+    .userName {
+        max-width: 72px;
+    }
 }
 
 .chevronIcon {

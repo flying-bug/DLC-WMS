@@ -39,6 +39,9 @@ public class PurchaseOrderResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // Import tracking
+    private Boolean isFullyImported;
+
     // Lines
     private List<PurchaseOrderLineResponse> lines;
 
@@ -58,5 +61,8 @@ public class PurchaseOrderResponse {
         private BigDecimal vatAmount;
         private BigDecimal lineAmount;
         private String note;
+        // Import tracking
+        private BigDecimal importedQuantity;
+        private BigDecimal remainingQuantity;
     }
 }

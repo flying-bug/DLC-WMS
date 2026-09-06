@@ -274,7 +274,6 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                                 <th style={{ textAlign: 'right' }}>Tồn kho thực tế</th>
                                 <th style={{ textAlign: 'right' }}>Đang giữ hàng</th>
                                 <th style={{ textAlign: 'right' }}>Khả dụng</th>
-                                <th style={{ textAlign: 'right' }}>Giá trị tồn</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -315,13 +314,10 @@ const WarehouseInventoryList = ({ warehouseId }) => {
                                                     {formatNumber(item.availableQuantity)}
                                                 </span>
                                             </td>
-                                            <td style={{ textAlign: 'right', fontWeight: '500' }}>
-                                                {formatCurrency(item.inventoryValue)}
-                                            </td>
                                         </tr>
                                         {isExpanded && (
                                             <tr className={styles.subRowWrapper}>
-                                                <td colSpan="9" className={styles.subRowCell}>
+                                                <td colSpan="8" className={styles.subRowCell}>
                                                     {renderVariantTree(item.variantId)}
                                                 </td>
                                             </tr>

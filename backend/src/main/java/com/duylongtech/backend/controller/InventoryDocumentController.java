@@ -53,7 +53,7 @@ public class InventoryDocumentController {
     @Operation(summary = "View export slip history")
     @PreAuthorize("hasAuthority('export:view')")
     public ApiResponse<List<InventoryDocumentResponse>> getExportHistory(
-            @RequestParam(required = false) String docCode,
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) String status,
@@ -63,7 +63,7 @@ public class InventoryDocumentController {
             @RequestParam(required = false) Long referenceId
     ) {
         return ApiResponse.success(inventoryDocumentService.getExportHistory(
-                docCode, fromDate, toDate, status, warehouseId, issuePurpose, referenceType, referenceId
+                keyword, fromDate, toDate, status, warehouseId, issuePurpose, referenceType, referenceId
         ));
     }
 

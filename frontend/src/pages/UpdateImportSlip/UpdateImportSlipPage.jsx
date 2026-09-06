@@ -1,3 +1,4 @@
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
@@ -15,6 +16,7 @@ import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import Select from 'react-select';
+import { printImportSlip } from '../../utils/printImportSlip';
 import styles from './UpdateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
 
@@ -196,7 +198,12 @@ function UpdateImportSlipPage() {
         const list = pageContent(unwrap(res));
         const invMap = new Map();
         list.forEach(b => {
-          if (b.variantId) invMap.set(String(b.variantId), Number(b.totalQuantity || 0));
+          const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+          const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+          const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+          const stock = Math.max(0, availableQuantity);
+          if (b.variantId) invMap.set(String(b.variantId), stock);
+          else if (b.itemId) invMap.set(String(b.itemId), stock);
         });
         setInventoryMap(invMap);
       })
@@ -293,7 +300,17 @@ function UpdateImportSlipPage() {
     const hasValidSerials = !product?.trackSerial || (Number.isInteger(quantity) && item.serialNumbers?.length === quantity);
     return product && isWarehouseProduct(product) && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
   };
-  const isFormValid = Boolean(form.warehouseId && form.docDate && items.length && items.every(isLineValid));
+  const isFormValid = Boolean(
+    form.warehouseId &&
+    form.docDate &&
+    (importType === 'PURCHASE' ? (form.partnerId && form.referenceId)
+      : (importType === 'PRODUCTION' || importType === 'SCRAP') ? form.assemblyOrderId
+        : importType === 'RETURN' ? (form.customerId && form.referenceId)
+          : true) &&
+    items.length &&
+    items.every(isLineValid)
+  );
+
 
   const handleFormChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -390,6 +407,12 @@ function UpdateImportSlipPage() {
 
   const submit = async (status, shouldPost = false) => {
     if (!isFormValid) {
+      if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho nhập.');
+      if (importType === 'PURCHASE' && !form.partnerId) return showToast('error', 'Vui lòng chọn nhà cung cấp.');
+      if ((importType === 'PRODUCTION' || importType === 'SCRAP') && !form.assemblyOrderId) return showToast('error', 'Vui lòng chọn lệnh quản lý cấu hình.');
+      if (importType === 'RETURN' && !form.customerId) return showToast('error', 'Vui lòng chọn khách hàng.');
+      if ((importType === 'PURCHASE' || importType === 'RETURN') && !form.referenceId) return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
+      if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày nhập kho.');
       const invalidVat = items.some(item => {
         const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
         return isNaN(vat) || vat < 0 || vat > 10;
@@ -413,6 +436,30 @@ function UpdateImportSlipPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePrint = () => {
+    const slipForPrint = {
+      ...buildPayload(form.status),
+      docCode: form.docCode
+    };
+    
+    const supplier = suppliers.find(s => String(s.id) === String(slipForPrint.partnerId)) || {};
+    const customer = customers.find(c => String(c.id) === String(slipForPrint.partnerId)) || {};
+    const warehouse = warehouses.find(w => String(w.id) === String(slipForPrint.warehouseId)) || {};
+
+    printImportSlip(slipForPrint, {
+      supplier,
+      customer,
+      warehouseName: warehouse.name || '',
+      supplierById: new Map(suppliers.map(s => [s.id, s])),
+      customerById: new Map(customers.map(c => [c.id, c])),
+      warehouseById: new Map(warehouses.map(w => [w.id, w])),
+      assemblyOrderById: new Map(assemblyOrders.map(a => [a.id, a])),
+      productById: new Map(products.map(p => [p.id, p])),
+      userById: new Map(users.map(u => [u.id, u])),
+      isImport: true
+    });
   };
 
   return (
@@ -674,7 +721,10 @@ function UpdateImportSlipPage() {
 
                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <label className="misa-label" style={{ marginBottom: 0 }}>Kèm theo chứng từ</label>
+                    <label className="misa-label" style={{ marginBottom: 0 }}>
+                      Kèm theo chứng từ
+                      {(importType === 'PURCHASE' || importType === 'RETURN') && <span className="required" style={{ marginLeft: '4px' }}>*</span>}
+                    </label>
                     {!form.referenceId && (
                       <button
                         type="button"
@@ -843,9 +893,9 @@ function UpdateImportSlipPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: '350px' }}>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-                    <select style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
+                    <SearchableSelect style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px' }}>
                       <option>20 bản ghi trên 1 trang</option>
-                    </select>
+                    </SearchableSelect>
                     <div style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#6b7280' }}>
                       <span style={{ cursor: 'pointer' }}>Trước</span>
                       <span style={{ fontWeight: 'bold', color: '#111827' }}>1</span>
@@ -876,14 +926,20 @@ function UpdateImportSlipPage() {
 
         <div className={styles.stickyFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>Hủy bỏ</button>
+            <button className="btn-misa-cancel" onClick={() => navigate('/import-history')}>
+              <i className="bi bi-x-circle"></i> Hủy bỏ
+            </button>
           </div>
           <div className={styles.footerRight}>
-            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={() => window.print()}>
+            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={handlePrint}>
               <i className="bi bi-printer"></i> In phiếu
             </button>
-            <button className="btn-misa-draft" disabled={saving || loading} onClick={() => submit('DRAFT')}>Lưu tạm</button>
-            <button className="btn-misa-post" disabled={!isFormValid || saving || loading} onClick={() => setShowConfirm(true)}><i className="bi bi-printer"></i> Lưu và ghi sổ</button>
+            <button className="btn-misa-draft" disabled={saving || loading} onClick={() => submit('DRAFT')}>
+              <i className="bi bi-save"></i> Lưu tạm
+            </button>
+            <button className="btn-misa-post" disabled={!isFormValid || saving || loading} onClick={() => setShowConfirm(true)}>
+              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
+            </button>
           </div>
         </div>
       </div>
@@ -927,8 +983,8 @@ function UpdateImportSlipPage() {
       <ReferenceDocumentModal
         isOpen={showReferenceModal}
         onClose={() => setShowReferenceModal(false)}
-        onSelect={(docType, docId, docCode) => {
-          setForm(prev => ({ ...prev, referenceType: docType, referenceId: docId, referenceCode: docCode }));
+        onSelect={(data) => {
+          setForm(prev => ({ ...prev, referenceType: data.referenceType, referenceId: data.referenceId, referenceCode: data.docCode }));
           setShowReferenceModal(false);
         }}
       />

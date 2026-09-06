@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { getSystemSettings, saveSystemSettings, uploadServiceAccount, testDriveConnection } from '../../../api/backupApi';
 import { useToast } from '../../../contexts/ToastContext';
+import { useAiFeature } from '../../../contexts/AiFeatureContext';
 import styles from './SystemSettingsTab.module.css';
 
 function SystemSettingsTab() {
+    const { setAiEnabled: updateGlobalAiState } = useAiFeature();
     const [settings, setSettings] = useState({
         backupPath: '/tmp/backups',
         driveEnabled: false,
@@ -13,11 +15,15 @@ function SystemSettingsTab() {
         encryptKey: '',
         notifyEmailEnabled: false,
         notifyEmailTo: '',
+        snapshotTime: '00:05',
+        reservationExpiryHours: 72,
+        aiEnabled: true,
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [testing, setTesting] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [testResult, setTestResult] = useState(null); // { success: boolean, message: string }
     const { showToast } = useToast();
     const fileInputRef = useRef(null);
 
@@ -25,22 +31,34 @@ function SystemSettingsTab() {
         const fetch = async () => {
             try {
                 const res = await getSystemSettings();
-                if (res.success) setSettings(res.data);
+                if (res.success) {
+                    setSettings(res.data);
+                    if (typeof res.data?.aiEnabled === 'boolean') {
+                        updateGlobalAiState(res.data.aiEnabled);
+                    }
+                }
             } finally {
                 setLoading(false);
             }
         };
         fetch();
-    }, []);
+    }, [updateGlobalAiState]);
 
     const handleSave = async () => {
         setSaving(true);
         try {
             const res = await saveSystemSettings(settings);
-            if (res.success) showToast('success', 'Cập nhật thành công.');
-            else showToast('error', 'Thao tác thất bại.');
-        } catch {
-            showToast('error', 'Thao tác thất bại.');
+            const msg = res.data?.message || res.message || 'Cài đặt hệ thống đã được lưu thành công.';
+            if (res.success) {
+                showToast('success', msg);
+                if (typeof settings.aiEnabled === 'boolean') {
+                    updateGlobalAiState(settings.aiEnabled);
+                }
+            } else {
+                showToast('error', res.message || 'Lưu cài đặt thất bại.');
+            }
+        } catch (err) {
+            showToast('error', err.response?.data?.message || err.message || 'Lưu cài đặt thất bại.');
         } finally {
             setSaving(false);
         }
@@ -48,17 +66,24 @@ function SystemSettingsTab() {
 
     const handleTestDrive = async () => {
         setTesting(true);
+        setTestResult(null);
         try {
             // Auto save current form inputs (Folder ID, etc.) to backend before testing
             await saveSystemSettings(settings);
             const res = await testDriveConnection();
             if (res.success && res.data?.connected) {
-                showToast('success', 'Cập nhật thành công.');
+                const msg = res.data?.message || 'Kết nối Google Drive thành công!';
+                setTestResult({ success: true, message: msg });
+                showToast('success', msg);
             } else {
-                showToast('error', 'Thao tác thất bại.');
+                const msg = res.message || 'Không thể kết nối Google Drive. Vui lòng kiểm tra lại cấu hình.';
+                setTestResult({ success: false, message: msg });
+                showToast('error', msg);
             }
-        } catch {
-            showToast('error', 'Thao tác thất bại.');
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message || 'Lỗi kết nối Google Drive.';
+            setTestResult({ success: false, message: msg });
+            showToast('error', msg);
         } finally {
             setTesting(false);
         }
@@ -70,14 +95,16 @@ function SystemSettingsTab() {
         setUploading(true);
         try {
             const res = await uploadServiceAccount(file);
+            const msg = res.data?.message || res.message || 'Tải lên Service Account JSON thành công!';
             if (res.success) {
-                showToast('success', 'Cập nhật thành công.');
+                showToast('success', msg);
                 setSettings(s => ({ ...s, driveConfigured: true }));
+                setTestResult(null);
             } else {
-                showToast('error', 'Thao tác thất bại.');
+                showToast('error', res.message || 'Tải lên thất bại.');
             }
-        } catch {
-            showToast('error', 'Thao tác thất bại.');
+        } catch (err) {
+            showToast('error', err.response?.data?.message || err.message || 'Tải lên file JSON thất bại.');
         } finally {
             setUploading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -108,6 +135,100 @@ function SystemSettingsTab() {
             </div>
 
             <div className={styles.settingsGrid}>
+                {/* ── AI & Vision Integration (Trí Tuệ Nhân Tạo AI) ─────────────────────────── */}
+                <div className={styles.settingSection} style={{ borderLeft: '4px solid var(--color-primary, #059669)' }}>
+                    <div className={styles.sectionHeader}>
+                        <i className="bi bi-robot" style={{ color: 'var(--color-primary, #059669)', fontSize: '18px' }} />
+                        <span style={{ fontWeight: 700 }}>Cấu hình Tính năng AI (AI &amp; Vision Integration)</span>
+                        <span style={{
+                            marginLeft: 'auto',
+                            padding: '3px 10px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            backgroundColor: settings.aiEnabled ? '#ecfdf5' : '#fef2f2',
+                            color: settings.aiEnabled ? '#059669' : '#dc2626',
+                            border: `1px solid ${settings.aiEnabled ? '#a7f3d0' : '#fecaca'}`
+                        }}>
+                            {settings.aiEnabled ? '🟢 Đang Bật' : '🔴 Đã Tắt'}
+                        </span>
+                    </div>
+                    <div className={styles.sectionBody}>
+                        <div className={styles.formGroup}>
+                            <div className={styles.formRow}>
+                                <div style={{ flex: 1, paddingRight: '16px' }}>
+                                    <label className={styles.label} style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>
+                                        Cho phép sử dụng AI trên toàn hệ thống
+                                    </label>
+                                    <p className={styles.hint} style={{ marginTop: '4px', lineHeight: 1.5 }}>
+                                        Bật / Tắt tất cả các chức năng AI: <strong>Trợ lý AI Chat</strong>, <strong>Quét hóa đơn OCR bằng AI (Vision AI)</strong> tại Đơn mua hàng &amp; Nhập kho, và <strong>Nhập liệu giọng nói (Voice AI)</strong>. Khi tắt, các chức năng này sẽ tự động ẩn hoàn toàn đối với Quản lý (Manager) và Nhân viên (Staff).
+                                    </p>
+                                </div>
+                                <label className={styles.toggle}>
+                                    <input
+                                        type="checkbox"
+                                        checked={Boolean(settings.aiEnabled)}
+                                        onChange={e => setSettings(s => ({ ...s, aiEnabled: e.target.checked }))}
+                                    />
+                                    <span className={styles.toggleSlider} />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Daily Inventory Snapshot Config ─────────────────────────── */}
+                <div className={styles.settingSection}>
+                    <div className={styles.sectionHeader}>
+                        <i className="bi bi-clock-history" style={{ color: 'var(--color-primary)' }} />
+                        <span>Daily Inventory Snapshot (Chốt Sổ Kho Hàng Ngày)</span>
+                    </div>
+                    <div className={styles.sectionBody}>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Giờ tự động chốt sổ kho mỗi ngày</label>
+                            <div className={styles.inputWithIcon}>
+                                <i className="bi bi-alarm" />
+                                <input
+                                    type="time"
+                                    className={styles.input}
+                                    value={settings.snapshotTime || '00:05'}
+                                    onChange={e => setSettings(s => ({ ...s, snapshotTime: e.target.value }))}
+                                />
+                            </div>
+                            <p className={styles.hint}>
+                                Hệ thống sẽ tự động tổng hợp và chốt số lượng tồn kho của ngày hôm trước vào thời điểm được thiết lập này mỗi ngày.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Sales Config ───────────────────────────────────────────── */}
+                <div className={styles.settingSection}>
+                    <div className={styles.sectionHeader}>
+                        <i className="bi bi-cart-check-fill" style={{ color: '#0ea5e9' }} />
+                        <span>Sales Configuration</span>
+                    </div>
+                    <div className={styles.sectionBody}>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Thời gian giữ hàng đơn bán (Giờ)</label>
+                            <div className={styles.inputWithIcon}>
+                                <i className="bi bi-hourglass-bottom" />
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="720"
+                                    className={styles.input}
+                                    value={settings.reservationExpiryHours !== undefined ? settings.reservationExpiryHours : ''}
+                                    onChange={e => setSettings(s => ({ ...s, reservationExpiryHours: e.target.value }))}
+                                />
+                            </div>
+                            <p className={styles.hint}>
+                                Số giờ tối đa hệ thống tạm giữ tồn kho cho Đơn bán hàng trước khi tự động hủy giữ hàng nếu chưa thanh toán (Mặc định: 72 giờ).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* ── Storage Config ─────────────────────────────────────────── */}
                 <div className={styles.settingSection}>
                     <div className={styles.sectionHeader}>
@@ -214,6 +335,13 @@ function SystemSettingsTab() {
                             <i className={testing ? 'bi bi-hourglass-split' : 'bi bi-wifi'} />
                             {testing ? 'Đang kiểm tra...' : 'Kiểm tra kết nối Drive'}
                         </button>
+
+                        {testResult && (
+                            <div className={`${styles.testStatusBox} ${testResult.success ? styles.testStatusSuccess : styles.testStatusError}`}>
+                                <i className={testResult.success ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-triangle-fill'} />
+                                <span>{testResult.message}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 

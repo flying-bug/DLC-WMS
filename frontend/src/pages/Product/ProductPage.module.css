@@ -1725,3 +1725,174 @@
     font-size: 13px;
     color: #666;
 }
+
+/* Excel Preview Modal */
+.previewModalContent {
+    max-width: 1200px !important;
+    width: 90vw !important;
+}
+
+.previewTableContainer {
+    max-height: 550px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.previewTable {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.previewTable th {
+    position: sticky;
+    top: 0;
+    background-color: #e0f2fe; /* Light blue to match Excel */
+    padding: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0369a1; /* Dark blue text */
+    border-bottom: 2px solid #bae6fd;
+    text-align: left;
+    z-index: 10;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.previewTable td {
+    padding: 10px 12px;
+    font-size: 14px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #475569;
+}
+
+.rowValid {
+    background-color: #ffffff;
+    transition: background-color 0.2s ease;
+}
+.rowValid:hover {
+    background-color: #f8fafc;
+}
+
+.rowInvalidMain {
+    background-color: #fff5f5;
+    transition: background-color 0.2s ease;
+}
+.rowInvalidMain:hover {
+    background-color: #ffe4e4;
+}
+.rowInvalidMain td {
+    border-bottom: none !important; /* Remove bottom border to connect with error row */
+}
+
+.rowInvalidError {
+    background-color: #fff5f5;
+}
+.rowInvalidError td {
+    border-top: none !important;
+}
+
+.errorReasonInline {
+    font-size: 13px;
+    color: #b91c1c;
+    background-color: transparent;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.quickAddBtn {
+    margin-left: 8px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #0369a1;
+    background-color: #e0f2fe;
+    border: 1px solid #bae6fd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.quickAddBtn:hover {
+    background-color: #bae6fd;
+    color: #0c4a6e;
+}
+
+.quickAddBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.inlineInput,
+.inlineSelect {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #1e293b;
+    background-color: #fff;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+.inlineInput:focus,
+.inlineSelect:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.inlineInput:disabled,
+.inlineSelect:disabled {
+    background-color: #f1f5f9;
+    cursor: not-allowed;
+    color: #94a3b8;
+}
+
+.statusBadgeValid {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    background-color: #dcfce7;
+    color: #166534;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid #bbf7d0;
+}
+
+.statusBadgeInvalid {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid #fecaca;
+}
+
+.errorReason {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #b91c1c;
+    background-color: transparent;
+    padding: 8px 0 0 0;
+    border-radius: 0;
+    border: none;
+    line-height: 1.5;
+    max-width: 250px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}

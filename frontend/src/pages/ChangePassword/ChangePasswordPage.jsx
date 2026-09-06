@@ -177,7 +177,7 @@ function ChangePasswordPage() {
                                     )}
                                     {loading ? ' Đang cập nhật...' : ' Cập nhật mật khẩu'}
                                 </button>
-                                <button type="button" className={styles.btnSecondary} onClick={() => navigate('/dashboard')} disabled={loading}>
+                                <button type="button" className={styles.btnSecondary} onClick={() => navigate('/profile')} disabled={loading}>
                                     Hủy bỏ
                                 </button>
                             </div>

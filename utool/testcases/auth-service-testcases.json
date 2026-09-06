@@ -1,0 +1,879 @@
+﻿{
+    "login(LoginRequest request)":  {
+                                        "technique":  "Equivalence Partitioning (EP)",
+                                        "testCases":  [
+                                                          {
+                                                              "id":  "UTCID01",
+                                                              "purpose":  "Verify valid credentials with a role authority return a JWT response using that role.",
+                                                              "type":  "N",
+                                                              "status":  "P",
+                                                              "executedDate":  "2026-08-09",
+                                                              "defectId":  "",
+                                                              "cellValues":  {
+                                                                                 "8":  {
+                                                                                           "label":  "Precondition"
+                                                                                       },
+                                                                                 "9":  {
+                                                                                           "value":  "Authentication principal is enabled user manager id 10 with PRODUCT_VIEW and ROLE_MANAGER authorities"
+                                                                                       },
+                                                                                 "12":  {
+                                                                                            "label":  "Mock setup"
+                                                                                        },
+                                                                                 "13":  {
+                                                                                            "value":  "AuthenticationManager returns the principal; generateJwtToken(\"manager\", \"ROLE_MANAGER\") returns \"jwt-manager\""
+                                                                                        },
+                                                                                 "16":  {
+                                                                                            "label":  "username"
+                                                                                        },
+                                                                                 "17":  {
+                                                                                            "value":  "\"manager\""
+                                                                                        },
+                                                                                 "19":  {
+                                                                                            "label":  "password"
+                                                                                        },
+                                                                                 "20":  {
+                                                                                            "value":  "\"secret\""
+                                                                                        },
+                                                                                 "22":  {
+                                                                                            "label":  "Expected"
+                                                                                        },
+                                                                                 "23":  {
+                                                                                            "value":  "Authentication token contains manager/secret; SecurityContext stores authentication; JWT generator receives ROLE_MANAGER"
+                                                                                        },
+                                                                                 "29":  {
+                                                                                            "label":  "return"
+                                                                                        },
+                                                                                 "30":  {
+                                                                                            "value":  "JwtResponse{token=\"jwt-manager\", id=10, username=\"manager\", role=\"ROLE_MANAGER\"}"
+                                                                                        },
+                                                                                 "32":  {
+                                                                                            "label":  "Exception"
+                                                                                        },
+                                                                                 "34":  {
+                                                                                            "label":  "Log message"
+                                                                                        },
+                                                                                 "35":  {
+                                                                                            "value":  "No application log is expected"
+                                                                                        }
+                                                                             }
+                                                          },
+                                                          {
+                                                              "id":  "UTCID02",
+                                                              "purpose":  "Verify an authenticated principal without any ROLE_ authority uses the ROLE_USER fallback.",
+                                                              "type":  "N",
+                                                              "status":  "P",
+                                                              "executedDate":  "2026-08-09",
+                                                              "defectId":  "",
+                                                              "cellValues":  {
+                                                                                 "10":  {
+                                                                                            "value":  "Authentication principal is enabled user staff id 11 with only PRODUCT_VIEW authority"
+                                                                                        },
+                                                                                 "14":  {
+                                                                                            "value":  "AuthenticationManager returns principal; generateJwtToken(\"staff\", \"ROLE_USER\") returns \"jwt-staff\""
+                                                                                        },
+                                                                                 "18":  {
+                                                                                            "value":  "\"staff\""
+                                                                                        },
+                                                                                 "20":  {
+                                                                                            "value":  "\"secret\""
+                                                                                        },
+                                                                                 "24":  {
+                                                                                            "value":  "JWT generator receives fallback role ROLE_USER"
+                                                                                        },
+                                                                                 "31":  {
+                                                                                            "value":  "JwtResponse{token=\"jwt-staff\", id=11, username=\"staff\", role=\"ROLE_USER\"}"
+                                                                                        },
+                                                                                 "35":  {
+                                                                                            "value":  "No application log is expected"
+                                                                                        }
+                                                                             }
+                                                          },
+                                                          {
+                                                              "id":  "UTCID03",
+                                                              "purpose":  "Verify invalid credentials propagate the authentication exception without generating a JWT.",
+                                                              "type":  "A",
+                                                              "status":  "P",
+                                                              "executedDate":  "2026-08-09",
+                                                              "defectId":  "",
+                                                              "cellValues":  {
+                                                                                 "11":  {
+                                                                                            "value":  "AuthenticationManager rejects manager with the supplied password"
+                                                                                        },
+                                                                                 "15":  {
+                                                                                            "value":  "authenticate(manager, wrong-password) throws BadCredentialsException(\"Bad credentials\")"
+                                                                                        },
+                                                                                 "17":  {
+                                                                                            "value":  "\"manager\""
+                                                                                        },
+                                                                                 "21":  {
+                                                                                            "value":  "\"wrong-password\""
+                                                                                        },
+                                                                                 "25":  {
+                                                                                            "value":  "SecurityContext remains unauthenticated and JwtUtils is not called"
+                                                                                        },
+                                                                                 "81":  {
+                                                                                            "value":  "No JwtResponse is returned"
+                                                                                        },
+                                                                                 "33":  {
+                                                                                            "value":  "BadCredentialsException: Bad credentials"
+                                                                                        },
+                                                                                 "35":  {
+                                                                                            "value":  "No application log is expected"
+                                                                                        }
+                                                                             }
+                                                          }
+                                                      ]
+                                    },
+    "loginWithGoogle(String token)":  {
+                                          "technique":  "Branch Coverage",
+                                          "testCases":  [
+                                                            {
+                                                                "id":  "UTCID01",
+                                                                "purpose":  "Verify a Google token for another OAuth audience follows the invalid-token branch.",
+                                                                "type":  "A",
+                                                                "status":  "P",
+                                                                "executedDate":  "2026-08-09",
+                                                                "defectId":  "",
+                                                                "cellValues":  {
+                                                                                   "8":  {
+                                                                                             "label":  "Precondition"
+                                                                                         },
+                                                                                   "9":  {
+                                                                                             "value":  "Configured Google client id is dlc-client.apps.googleusercontent.com"
+                                                                                         },
+                                                                                   "17":  {
+                                                                                              "label":  "Mock setup"
+                                                                                          },
+                                                                                   "18":  {
+                                                                                              "value":  "Google tokeninfo returns aud=\"another-client\" and email=\"user@dlc.vn\""
+                                                                                          },
+                                                                                   "26":  {
+                                                                                              "label":  "token"
+                                                                                          },
+                                                                                   "27":  {
+                                                                                              "value":  "\"invalid-audience-token\""
+                                                                                          },
+                                                                                   "39":  {
+                                                                                              "label":  "Expected"
+                                                                                          },
+                                                                                   "40":  {
+                                                                                              "value":  "User repository and JWT generator are not called"
+                                                                                          },
+                                                                                   "29":  {
+                                                                                              "label":  "return"
+                                                                                          },
+                                                                                   "30":  {
+                                                                                              "value":  "No JwtResponse is returned"
+                                                                                          },
+                                                                                   "32":  {
+                                                                                              "label":  "Exception"
+                                                                                          },
+                                                                                   "33":  {
+                                                                                              "value":  "BusinessException: Google Token không hợp lệ."
+                                                                                          },
+                                                                                   "34":  {
+                                                                                              "label":  "Log message"
+                                                                                          },
+                                                                                   "35":  {
+                                                                                              "value":  "No application log is expected"
+                                                                                          }
+                                                                               }
+                                                            },
+                                                            {
+                                                                "id":  "UTCID02",
+                                                                "purpose":  "Verify a valid Google token whose email has no local account follows the user-not-found branch.",
+                                                                "type":  "A",
+                                                                "status":  "P",
+                                                                "executedDate":  "2026-08-09",
+                                                                "defectId":  "",
+                                                                "cellValues":  {
+                                                                                   "10":  {
+                                                                                              "value":  "No user has email or username missing@dlc.vn"
+                                                                                          },
+                                                                                   "19":  {
+                                                                                              "value":  "Google tokeninfo audience matches; both repository lookups return Optional.empty"
+                                                                                          },
+                                                                                   "28":  {
+                                                                                              "value":  "\"valid-google-token\""
+                                                                                          },
+                                                                                   "41":  {
+                                                                                              "value":  "JWT generator is not called"
+                                                                                          },
+                                                                                   "30":  {
+                                                                                              "value":  "No JwtResponse is returned"
+                                                                                          },
+                                                                                   "91":  {
+                                                                                              "value":  "BusinessException: Không tìm thấy tài khoản trong hệ thống."
+                                                                                          },
+                                                                                   "35":  {
+                                                                                              "value":  "No application log is expected"
+                                                                                          }
+                                                                               }
+                                                            },
+                                                            {
+                                                                "id":  "UTCID03",
+                                                                "purpose":  "Verify a valid Google token for an inactive account follows the locked-user branch.",
+                                                                "type":  "A",
+                                                                "status":  "P",
+                                                                "executedDate":  "2026-08-09",
+                                                                "defectId":  "",
+                                                                "cellValues":  {
+                                                                                   "11":  {
+                                                                                              "value":  "User locked has status INACTIVE and STAFF role"
+                                                                                          },
+                                                                                   "20":  {
+                                                                                              "value":  "Google tokeninfo returns locked@dlc.vn; email lookup returns the inactive user"
+                                                                                          },
+                                                                                   "28":  {
+                                                                                              "value":  "\"valid-google-token\""
+                                                                                          },
+                                                                                   "41":  {
+                                                                                              "value":  "JWT generator is not called"
+                                                                                          },
+                                                                                   "30":  {
+                                                                                              "value":  "No JwtResponse is returned"
+                                                                                          },
+                                                                                   "92":  {
+                                                                                              "value":  "BusinessException: Tài khoản đã bị khóa hoặc chưa được phê duyệt."
+                                                                                          },
+                                                                                   "35":  {
+                                                                                              "value":  "No application log is expected"
+                                                                                          }
+                                                                               }
+                                                            },
+                                                            {
+                                                                "id":  "UTCID04",
+                                                                "purpose":  "Verify an approved Google user receives a JWT and a normalized ROLE_ authority.",
+                                                                "type":  "N",
+                                                                "status":  "P",
+                                                                "executedDate":  "2026-08-09",
+                                                                "defectId":  "",
+                                                                "cellValues":  {
+                                                                                   "12":  {
+                                                                                              "value":  "User manager id 10 has status approved and role code MANAGER"
+                                                                                          },
+                                                                                   "21":  {
+                                                                                              "value":  "Google tokeninfo audience matches and email lookup returns manager; JWT generator returns jwt-google"
+                                                                                          },
+                                                                                   "28":  {
+                                                                                              "value":  "\"valid-google-token\""
+                                                                                          },
+                                                                                   "42":  {
+                                                                                              "value":  "Role MANAGER is normalized to ROLE_MANAGER before JWT generation"
+                                                                                          },
+                                                                                   "31":  {
+                                                                                              "value":  "JwtResponse{token=\"jwt-google\", id=10, username=\"manager\", role=\"ROLE_MANAGER\"}"
+                                                                                          },
+                                                                                   "35":  {
+                                                                                              "value":  "No application log is expected"
+                                                                                          }
+                                                                               }
+                                                            },
+                                                            {
+                                                                "id":  "UTCID05",
+                                                                "purpose":  "Verify a Google tokeninfo transport failure is wrapped in the service business exception.",
+                                                                "type":  "A",
+                                                                "status":  "P",
+                                                                "executedDate":  "2026-08-09",
+                                                                "defectId":  "",
+                                                                "cellValues":  {
+                                                                                   "13":  {
+                                                                                              "value":  "Google tokeninfo endpoint is unavailable"
+                                                                                          },
+                                                                                   "22":  {
+                                                                                              "value":  "RestTemplate.getForObject throws RestClientException(\"connection timeout\")"
+                                                                                          },
+                                                                                   "37":  {
+                                                                                              "value":  "\"google-token\""
+                                                                                          },
+                                                                                   "40":  {
+                                                                                              "value":  "User repository and JWT generator are not called"
+                                                                                          },
+                                                                                   "30":  {
+                                                                                              "value":  "No JwtResponse is returned"
+                                                                                          },
+                                                                                   "93":  {
+                                                                                              "value":  "BusinessException: Google Login Failed: connection timeout"
+                                                                                          },
+                                                                                   "35":  {
+                                                                                              "value":  "No application log is expected"
+                                                                                          }
+                                                                               }
+                                                            },
+                                                            {
+                                                                "id":  "UTCID06",
+                                                                "purpose":  "[Condition Coverage] Verify a null Google token-info response is rejected before any user lookup.",
+                                                                "type":  "A",
+                                                                "status":  "P",
+                                                                "executedDate":  "2026-08-09",
+                                                                "defectId":  "",
+                                                                "cellValues":  {
+                                                                                   "14":  {
+                                                                                              "value":  "Google token-info endpoint returns no response body"
+                                                                                          },
+                                                                                   "23":  {
+                                                                                              "value":  "RestTemplate.getForObject returns null"
+                                                                                          },
+                                                                                   "38":  {
+                                                                                              "value":  "\"empty-response-token\""
+                                                                                          },
+                                                                                   "40":  {
+                                                                                              "value":  "User repository and JWT generator are not called"
+                                                                                          },
+                                                                                   "81":  {
+                                                                                              "value":  "No normal completion"
+                                                                                          },
+                                                                                   "33":  {
+                                                                                              "value":  "BusinessException: Google Token không hợp lệ."
+                                                                                          },
+                                                                                   "35":  {
+                                                                                              "value":  "No application log is expected"
+                                                                                          }
+                                                                               }
+                                                            },
+                                                            {
+                                                                "id":  "UTCID07",
+                                                                "purpose":  "[Path Coverage] Verify username fallback resolves an approved Google user and preserves an existing ROLE_ prefix.",
+                                                                "type":  "N",
+                                                                "status":  "P",
+                                                                "executedDate":  "2026-08-09",
+                                                                "defectId":  "",
+                                                                "cellValues":  {
+                                                                                   "15":  {
+                                                                                              "value":  "Approved user admin exists by username with role ROLE_ADMIN but not by email"
+                                                                                          },
+                                                                                   "24":  {
+                                                                                              "value":  "findByEmail returns empty; findByUsername returns user id 10; JWT generator returns jwt-admin"
+                                                                                          },
+                                                                                   "28":  {
+                                                                                              "value":  "\"valid-google-token\""
+                                                                                          },
+                                                                                   "43":  {
+                                                                                              "value":  "Email lookup falls back to username and role remains ROLE_ADMIN without a duplicate prefix"
+                                                                                          },
+                                                                                   "82":  {
+                                                                                              "value":  "JwtResponse{token=\"jwt-admin\", id=10, username=\"admin\", role=\"ROLE_ADMIN\"}"
+                                                                                          },
+                                                                                   "94":  {
+                                                                                              "value":  "No exception"
+                                                                                          },
+                                                                                   "35":  {
+                                                                                              "value":  "No application log is expected"
+                                                                                          }
+                                                                               }
+                                                            },
+                                                            {
+                                                                "id":  "UTCID08",
+                                                                "purpose":  "[Boundary Value Analysis] Verify an approved Google user with an empty role set receives ROLE_USER.",
+                                                                "type":  "B",
+                                                                "status":  "P",
+                                                                "executedDate":  "2026-08-09",
+                                                                "defectId":  "",
+                                                                "cellValues":  {
+                                                                                   "16":  {
+                                                                                              "value":  "Approved user staff has an empty role set"
+                                                                                          },
+                                                                                   "25":  {
+                                                                                              "value":  "findByEmail returns user id 12; JWT generator returns jwt-staff for ROLE_USER"
+                                                                                          },
+                                                                                   "28":  {
+                                                                                              "value":  "\"valid-google-token\""
+                                                                                          },
+                                                                                   "44":  {
+                                                                                              "value":  "Default role ROLE_USER is used to generate the JWT"
+                                                                                          },
+                                                                                   "83":  {
+                                                                                              "value":  "JwtResponse{token=\"jwt-staff\", id=12, username=\"staff\", role=\"ROLE_USER\"}"
+                                                                                          },
+                                                                                   "94":  {
+                                                                                              "value":  "No exception"
+                                                                                          },
+                                                                                   "35":  {
+                                                                                              "value":  "No application log is expected"
+                                                                                          }
+                                                                               }
+                                                            }
+                                                        ]
+                                      },
+    "requestOtp(String email)":  {
+                                     "technique":  "Equivalence Partitioning (EP)",
+                                     "testCases":  [
+                                                       {
+                                                           "id":  "UTCID01",
+                                                           "purpose":  "Verify requesting an OTP for an unknown email is rejected without sending an email.",
+                                                           "type":  "A",
+                                                           "status":  "P",
+                                                           "executedDate":  "2026-08-09",
+                                                           "defectId":  "",
+                                                           "cellValues":  {
+                                                                              "8":  {
+                                                                                        "label":  "Precondition"
+                                                                                    },
+                                                                              "9":  {
+                                                                                        "value":  "No user has email missing@dlc.vn"
+                                                                                    },
+                                                                              "11":  {
+                                                                                         "label":  "Mock setup"
+                                                                                     },
+                                                                              "12":  {
+                                                                                         "value":  "findByEmail(\"missing@dlc.vn\") returns Optional.empty"
+                                                                                     },
+                                                                              "14":  {
+                                                                                         "label":  "email"
+                                                                                     },
+                                                                              "15":  {
+                                                                                         "value":  "\"missing@dlc.vn\""
+                                                                                     },
+                                                                              "17":  {
+                                                                                         "label":  "Expected"
+                                                                                     },
+                                                                              "18":  {
+                                                                                         "value":  "EmailService is not called and no OTP is stored"
+                                                                                     },
+                                                                              "29":  {
+                                                                                         "label":  "return"
+                                                                                     },
+                                                                              "30":  {
+                                                                                         "value":  "No normal completion"
+                                                                                     },
+                                                                              "32":  {
+                                                                                         "label":  "Exception"
+                                                                                     },
+                                                                              "33":  {
+                                                                                         "value":  "BusinessException: Không tìm thấy tài khoản trong hệ thống."
+                                                                                     },
+                                                                              "34":  {
+                                                                                         "label":  "Log message"
+                                                                                     },
+                                                                              "35":  {
+                                                                                         "value":  "No application log is expected"
+                                                                                     }
+                                                                          }
+                                                       },
+                                                       {
+                                                           "id":  "UTCID02",
+                                                           "purpose":  "Verify requesting an OTP for an existing user stores and emails a six-digit expiring code.",
+                                                           "type":  "N",
+                                                           "status":  "P",
+                                                           "executedDate":  "2026-08-09",
+                                                           "defectId":  "",
+                                                           "cellValues":  {
+                                                                              "10":  {
+                                                                                         "value":  "Approved user exists with email user@dlc.vn"
+                                                                                     },
+                                                                              "13":  {
+                                                                                         "value":  "findByEmail returns the user and EmailService accepts the reset email"
+                                                                                     },
+                                                                              "16":  {
+                                                                                         "value":  "\"user@dlc.vn\""
+                                                                                     },
+                                                                              "19":  {
+                                                                                         "value":  "A six-digit OTP is stored for user@dlc.vn with expiry later than current time and the same OTP is emailed"
+                                                                                     },
+                                                                              "31":  {
+                                                                                         "value":  "void completes normally"
+                                                                                     },
+                                                                              "35":  {
+                                                                                         "value":  "No application log is expected"
+                                                                                     }
+                                                                          }
+                                                       }
+                                                   ]
+                                 },
+    "verifyOtp(String email, String otp)":  {
+                                                "technique":  "Branch Coverage",
+                                                "testCases":  [
+                                                                  {
+                                                                      "id":  "UTCID01",
+                                                                      "purpose":  "Verify an incorrect OTP follows the invalid-code exception branch.",
+                                                                      "type":  "A",
+                                                                      "status":  "P",
+                                                                      "executedDate":  "2026-08-09",
+                                                                      "defectId":  "",
+                                                                      "cellValues":  {
+                                                                                         "8":  {
+                                                                                                   "label":  "Precondition"
+                                                                                               },
+                                                                                         "9":  {
+                                                                                                   "value":  "Stored OTP for user@dlc.vn is 123456 and has not expired"
+                                                                                               },
+                                                                                         "12":  {
+                                                                                                    "label":  "Mock setup"
+                                                                                                },
+                                                                                         "13":  {
+                                                                                                    "value":  "OTP storage contains 123456 with expiry current time plus 60 seconds"
+                                                                                                },
+                                                                                         "16":  {
+                                                                                                    "label":  "email"
+                                                                                                },
+                                                                                         "17":  {
+                                                                                                    "value":  "\"user@dlc.vn\""
+                                                                                                },
+                                                                                         "18":  {
+                                                                                                    "label":  "otp"
+                                                                                                },
+                                                                                         "19":  {
+                                                                                                    "value":  "\"654321\""
+                                                                                                },
+                                                                                         "21":  {
+                                                                                                    "label":  "Expected"
+                                                                                                },
+                                                                                         "22":  {
+                                                                                                    "value":  "Stored OTP remains unchanged"
+                                                                                                },
+                                                                                         "29":  {
+                                                                                                    "label":  "return"
+                                                                                                },
+                                                                                         "30":  {
+                                                                                                    "value":  "No normal completion"
+                                                                                                },
+                                                                                         "32":  {
+                                                                                                    "label":  "Exception"
+                                                                                                },
+                                                                                         "33":  {
+                                                                                                    "value":  "BusinessException: Mã OTP không chính xác."
+                                                                                                },
+                                                                                         "34":  {
+                                                                                                    "label":  "Log message"
+                                                                                                },
+                                                                                         "35":  {
+                                                                                                    "value":  "No application log is expected"
+                                                                                                }
+                                                                                     }
+                                                                  },
+                                                                  {
+                                                                      "id":  "UTCID02",
+                                                                      "purpose":  "Verify a correct but expired OTP is removed and follows the expired-code exception branch.",
+                                                                      "type":  "B",
+                                                                      "status":  "P",
+                                                                      "executedDate":  "2026-08-09",
+                                                                      "defectId":  "",
+                                                                      "cellValues":  {
+                                                                                         "10":  {
+                                                                                                    "value":  "Stored OTP for user@dlc.vn is 123456 with expiry before current time"
+                                                                                                },
+                                                                                         "14":  {
+                                                                                                    "value":  "OTP storage and expiry maps contain the expired code"
+                                                                                                },
+                                                                                         "17":  {
+                                                                                                    "value":  "\"user@dlc.vn\""
+                                                                                                },
+                                                                                         "20":  {
+                                                                                                    "value":  "\"123456\""
+                                                                                                },
+                                                                                         "23":  {
+                                                                                                    "value":  "Both OTP and expiry entries for user@dlc.vn are removed"
+                                                                                                },
+                                                                                         "30":  {
+                                                                                                    "value":  "No normal completion"
+                                                                                                },
+                                                                                         "91":  {
+                                                                                                    "value":  "BusinessException: Mã OTP đã hết hạn."
+                                                                                                },
+                                                                                         "35":  {
+                                                                                                    "value":  "No application log is expected"
+                                                                                                }
+                                                                                     }
+                                                                  },
+                                                                  {
+                                                                      "id":  "UTCID03",
+                                                                      "purpose":  "Verify a correct unexpired OTP completes verification while retaining it for password reset.",
+                                                                      "type":  "N",
+                                                                      "status":  "P",
+                                                                      "executedDate":  "2026-08-09",
+                                                                      "defectId":  "",
+                                                                      "cellValues":  {
+                                                                                         "11":  {
+                                                                                                    "value":  "Stored OTP for user@dlc.vn is 123456 with expiry current time plus 60 seconds"
+                                                                                                },
+                                                                                         "15":  {
+                                                                                                    "value":  "OTP storage and expiry maps contain the active code"
+                                                                                                },
+                                                                                         "17":  {
+                                                                                                    "value":  "\"user@dlc.vn\""
+                                                                                                },
+                                                                                         "20":  {
+                                                                                                    "value":  "\"123456\""
+                                                                                                },
+                                                                                         "24":  {
+                                                                                                    "value":  "OTP remains stored until resetPasswordWithOtp consumes it"
+                                                                                                },
+                                                                                         "31":  {
+                                                                                                    "value":  "void completes normally"
+                                                                                                },
+                                                                                         "35":  {
+                                                                                                    "value":  "No application log is expected"
+                                                                                                }
+                                                                                     }
+                                                                  }
+                                                              ]
+                                            },
+    "resetPasswordWithOtp(String email, String otp, String newPassword)":  {
+                                                                               "technique":  "Path Coverage",
+                                                                               "testCases":  [
+                                                                                                 {
+                                                                                                     "id":  "UTCID01",
+                                                                                                     "purpose":  "Verify an invalid OTP stops password reset before user lookup encoding and save.",
+                                                                                                     "type":  "A",
+                                                                                                     "status":  "P",
+                                                                                                     "executedDate":  "2026-08-09",
+                                                                                                     "defectId":  "",
+                                                                                                     "cellValues":  {
+                                                                                                                        "8":  {
+                                                                                                                                  "label":  "Precondition"
+                                                                                                                              },
+                                                                                                                        "9":  {
+                                                                                                                                  "value":  "No matching OTP is stored for user@dlc.vn"
+                                                                                                                              },
+                                                                                                                        "12":  {
+                                                                                                                                   "label":  "Mock setup"
+                                                                                                                               },
+                                                                                                                        "13":  {
+                                                                                                                                   "value":  "OTP storage does not contain code 000000"
+                                                                                                                               },
+                                                                                                                        "16":  {
+                                                                                                                                   "label":  "email"
+                                                                                                                               },
+                                                                                                                        "17":  {
+                                                                                                                                   "value":  "\"user@dlc.vn\""
+                                                                                                                               },
+                                                                                                                        "18":  {
+                                                                                                                                   "label":  "otp"
+                                                                                                                               },
+                                                                                                                        "19":  {
+                                                                                                                                   "value":  "\"000000\""
+                                                                                                                               },
+                                                                                                                        "21":  {
+                                                                                                                                   "label":  "newPassword"
+                                                                                                                               },
+                                                                                                                        "22":  {
+                                                                                                                                   "value":  "\"NewSecret123\""
+                                                                                                                               },
+                                                                                                                        "23":  {
+                                                                                                                                   "label":  "Expected"
+                                                                                                                               },
+                                                                                                                        "24":  {
+                                                                                                                                   "value":  "PasswordEncoder, user save, and force logout are not called"
+                                                                                                                               },
+                                                                                                                        "29":  {
+                                                                                                                                   "label":  "return"
+                                                                                                                               },
+                                                                                                                        "30":  {
+                                                                                                                                   "value":  "No normal completion"
+                                                                                                                               },
+                                                                                                                        "32":  {
+                                                                                                                                   "label":  "Exception"
+                                                                                                                               },
+                                                                                                                        "33":  {
+                                                                                                                                   "value":  "BusinessException: Mã OTP không chính xác."
+                                                                                                                               },
+                                                                                                                        "34":  {
+                                                                                                                                   "label":  "Log message"
+                                                                                                                               },
+                                                                                                                        "35":  {
+                                                                                                                                   "value":  "No application log is expected"
+                                                                                                                               }
+                                                                                                                    }
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "id":  "UTCID02",
+                                                                                                     "purpose":  "Verify a valid OTP with a missing user stops before encoding and preserves the OTP.",
+                                                                                                     "type":  "A",
+                                                                                                     "status":  "P",
+                                                                                                     "executedDate":  "2026-08-09",
+                                                                                                     "defectId":  "",
+                                                                                                     "cellValues":  {
+                                                                                                                        "10":  {
+                                                                                                                                   "value":  "Active OTP 123456 exists but no user has email user@dlc.vn"
+                                                                                                                               },
+                                                                                                                        "14":  {
+                                                                                                                                   "value":  "OTP verification succeeds; findByEmail returns Optional.empty"
+                                                                                                                               },
+                                                                                                                        "17":  {
+                                                                                                                                   "value":  "\"user@dlc.vn\""
+                                                                                                                               },
+                                                                                                                        "20":  {
+                                                                                                                                   "value":  "\"123456\""
+                                                                                                                               },
+                                                                                                                        "22":  {
+                                                                                                                                   "value":  "\"NewSecret123\""
+                                                                                                                               },
+                                                                                                                        "25":  {
+                                                                                                                                   "value":  "PasswordEncoder, user save, and force logout are not called; OTP remains stored"
+                                                                                                                               },
+                                                                                                                        "30":  {
+                                                                                                                                   "value":  "No normal completion"
+                                                                                                                               },
+                                                                                                                        "91":  {
+                                                                                                                                   "value":  "BusinessException: Không tìm thấy tài khoản trong hệ thống."
+                                                                                                                               },
+                                                                                                                        "35":  {
+                                                                                                                                   "value":  "No application log is expected"
+                                                                                                                               }
+                                                                                                                    }
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "id":  "UTCID03",
+                                                                                                     "purpose":  "Verify valid reset data updates the password hash forces logout and consumes the OTP.",
+                                                                                                     "type":  "N",
+                                                                                                     "status":  "P",
+                                                                                                     "executedDate":  "2026-08-09",
+                                                                                                     "defectId":  "",
+                                                                                                     "cellValues":  {
+                                                                                                                        "11":  {
+                                                                                                                                   "value":  "Active OTP 123456 and approved user id 10 exist for user@dlc.vn"
+                                                                                                                               },
+                                                                                                                        "15":  {
+                                                                                                                                   "value":  "PasswordEncoder.encode returns encoded-new-password and user save succeeds"
+                                                                                                                               },
+                                                                                                                        "17":  {
+                                                                                                                                   "value":  "\"user@dlc.vn\""
+                                                                                                                               },
+                                                                                                                        "20":  {
+                                                                                                                                   "value":  "\"123456\""
+                                                                                                                               },
+                                                                                                                        "22":  {
+                                                                                                                                   "value":  "\"NewSecret123\""
+                                                                                                                               },
+                                                                                                                        "26":  {
+                                                                                                                                   "value":  "User passwordHash becomes encoded-new-password; save is called; force logout reason is PASSWORD_RESET; OTP and expiry are removed"
+                                                                                                                               },
+                                                                                                                        "31":  {
+                                                                                                                                   "value":  "void completes normally"
+                                                                                                                               },
+                                                                                                                        "35":  {
+                                                                                                                                   "value":  "No application log is expected"
+                                                                                                                               }
+                                                                                                                    }
+                                                                                                 }
+                                                                                             ]
+                                                                           },
+    "changePassword(ChangePasswordRequest request)":  {
+                                                          "technique":  "Branch Coverage",
+                                                          "testCases":  [
+                                                                            {
+                                                                                "id":  "UTCID01",
+                                                                                "purpose":  "Verify changing password for an authenticated username without a user follows the not-found branch.",
+                                                                                "type":  "A",
+                                                                                "status":  "P",
+                                                                                "executedDate":  "2026-08-09",
+                                                                                "defectId":  "",
+                                                                                "cellValues":  {
+                                                                                                   "8":  {
+                                                                                                             "label":  "Precondition"
+                                                                                                         },
+                                                                                                   "9":  {
+                                                                                                             "value":  "SecurityContext username is missing and repository has no matching user"
+                                                                                                         },
+                                                                                                   "11":  {
+                                                                                                              "label":  "Mock setup"
+                                                                                                          },
+                                                                                                   "12":  {
+                                                                                                              "value":  "findByUsername(\"missing\") returns Optional.empty"
+                                                                                                          },
+                                                                                                   "15":  {
+                                                                                                              "label":  "oldPassword"
+                                                                                                          },
+                                                                                                   "16":  {
+                                                                                                              "value":  "\"Old123\""
+                                                                                                          },
+                                                                                                   "18":  {
+                                                                                                              "label":  "newPassword"
+                                                                                                          },
+                                                                                                   "19":  {
+                                                                                                              "value":  "\"New123\""
+                                                                                                          },
+                                                                                                   "20":  {
+                                                                                                              "label":  "Expected"
+                                                                                                          },
+                                                                                                   "21":  {
+                                                                                                              "value":  "PasswordEncoder, user save, and force logout are not called"
+                                                                                                          },
+                                                                                                   "29":  {
+                                                                                                              "label":  "return"
+                                                                                                          },
+                                                                                                   "30":  {
+                                                                                                              "value":  "No normal completion"
+                                                                                                          },
+                                                                                                   "32":  {
+                                                                                                              "label":  "Exception"
+                                                                                                          },
+                                                                                                   "33":  {
+                                                                                                              "value":  "BusinessException: Không tìm thấy tài khoản trong hệ thống."
+                                                                                                          },
+                                                                                                   "34":  {
+                                                                                                              "label":  "Log message"
+                                                                                                          },
+                                                                                                   "35":  {
+                                                                                                              "value":  "No application log is expected"
+                                                                                                          }
+                                                                                               }
+                                                                            },
+                                                                            {
+                                                                                "id":  "UTCID02",
+                                                                                "purpose":  "Verify a wrong old password follows the password-mismatch branch without changing stored data.",
+                                                                                "type":  "A",
+                                                                                "status":  "P",
+                                                                                "executedDate":  "2026-08-09",
+                                                                                "defectId":  "",
+                                                                                "cellValues":  {
+                                                                                                   "10":  {
+                                                                                                              "value":  "SecurityContext username is user and stored hash is encoded-old-password"
+                                                                                                          },
+                                                                                                   "13":  {
+                                                                                                              "value":  "findByUsername returns user id 10; matches(\"Wrong123\", \"encoded-old-password\") returns false"
+                                                                                                          },
+                                                                                                   "17":  {
+                                                                                                              "value":  "\"Wrong123\""
+                                                                                                          },
+                                                                                                   "19":  {
+                                                                                                              "value":  "\"New123\""
+                                                                                                          },
+                                                                                                   "22":  {
+                                                                                                              "value":  "New password is not encoded; user is not saved; force logout is not called"
+                                                                                                          },
+                                                                                                   "30":  {
+                                                                                                              "value":  "No normal completion"
+                                                                                                          },
+                                                                                                   "91":  {
+                                                                                                              "value":  "BusinessException: Mật khẩu cũ không chính xác."
+                                                                                                          },
+                                                                                                   "35":  {
+                                                                                                              "value":  "No application log is expected"
+                                                                                                          }
+                                                                                               }
+                                                                            },
+                                                                            {
+                                                                                "id":  "UTCID03",
+                                                                                "purpose":  "Verify valid old and new passwords update the hash and force every active session to log out.",
+                                                                                "type":  "N",
+                                                                                "status":  "P",
+                                                                                "executedDate":  "2026-08-09",
+                                                                                "defectId":  "",
+                                                                                "cellValues":  {
+                                                                                                   "10":  {
+                                                                                                              "value":  "SecurityContext username is user and stored hash is encoded-old-password"
+                                                                                                          },
+                                                                                                   "14":  {
+                                                                                                              "value":  "Old password matches; encode(\"New123\") returns encoded-new-password; save succeeds"
+                                                                                                          },
+                                                                                                   "16":  {
+                                                                                                              "value":  "\"Old123\""
+                                                                                                          },
+                                                                                                   "19":  {
+                                                                                                              "value":  "\"New123\""
+                                                                                                          },
+                                                                                                   "23":  {
+                                                                                                              "value":  "User passwordHash becomes encoded-new-password; save is called; force logout reason is PASSWORD_CHANGED"
+                                                                                                          },
+                                                                                                   "31":  {
+                                                                                                              "value":  "void completes normally"
+                                                                                                          },
+                                                                                                   "35":  {
+                                                                                                              "value":  "No application log is expected"
+                                                                                                          }
+                                                                                               }
+                                                                            }
+                                                                        ]
+                                                      }
+}

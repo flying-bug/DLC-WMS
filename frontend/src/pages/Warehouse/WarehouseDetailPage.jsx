@@ -255,18 +255,6 @@ const WarehouseDetailPage = () => {
                                     {new Intl.NumberFormat('vi-VN').format(warehouse.totalQuantity || 0)}
                                 </div>
                             </div>
-                            <div className={styles.kpiCard}>
-                                <div className={styles.kpiHeader}>
-                                    <div className={styles.kpiIconWrapper} style={{ backgroundColor: '#f0fdf4', color: '#16a34a' }}>
-                                        <i className="fas fa-money-bill-wave"></i>
-                                    </div>
-                                    <span className={styles.kpiTrend} style={{ color: '#16a34a' }}>Ước tính</span>
-                                </div>
-                                <div className={styles.kpiLabel}>Giá trị tồn kho</div>
-                                <div className={styles.kpiValue}>
-                                    {formatCurrency(warehouse.totalValue)}
-                                </div>
-                            </div>
                         </div>
 
                         {/* 4. Main Content */}

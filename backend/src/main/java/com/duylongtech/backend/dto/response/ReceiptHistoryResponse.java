@@ -27,6 +27,7 @@ public class ReceiptHistoryResponse {
     @Data
     @Builder
     public static class ReceiptItem {
+        private Long receiptId;
         private String receiptCode;
         private BigDecimal amount;
         private String status;

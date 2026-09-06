@@ -1,9 +1,11 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.ProductRequest;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.request.ProductVariantRequest;
 import com.duylongtech.backend.dto.response.ProductResponse;
 import com.duylongtech.backend.dto.response.ProductVariantResponse;
+import com.duylongtech.backend.dto.response.StockAlertSummaryResponse;
 import com.duylongtech.backend.entity.Brand;
 import com.duylongtech.backend.entity.Product;
 import com.duylongtech.backend.entity.ProductCategory;
@@ -43,14 +45,22 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ProductService {
+    private static final SecureRandom SERIAL_RANDOM = new SecureRandom();
+    private static final long SERIAL_MIN = 100_000_000_000L;
+    private static final long SERIAL_RANGE = 900_000_000_000L;
+    private static final int MAX_SERIAL_ATTEMPTS_PER_CODE = 20;
+
     private final ProductRepository productRepository;
     private final BrandRepository brandRepository;
     private final ProductCategoryRepository categoryRepository;
@@ -81,6 +91,21 @@ public class ProductService {
         return productPage.map(product -> convertToDtoWithStock(product, stockMap.getOrDefault(product.getId(), BigDecimal.ZERO)));
     }
 
+    public StockAlertSummaryResponse getStockAlertSummary() {
+        ProductRepository.StockAlertSummaryProjection summary = productRepository.getStockAlertSummary();
+        int lowStockCount = summary != null && summary.getLowStockCount() != null
+                ? summary.getLowStockCount()
+                : 0;
+        int outOfStockCount = summary != null && summary.getOutOfStockCount() != null
+                ? summary.getOutOfStockCount()
+                : 0;
+
+        return StockAlertSummaryResponse.builder()
+                .lowStockCount(lowStockCount)
+                .outOfStockCount(outOfStockCount)
+                .build();
+    }
+
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy hàng hóa với ID: " + id));
@@ -98,7 +123,7 @@ public class ProductService {
             dto.setProductCode(codeGeneratorService.generateCode("products", "product_code", "SP", 5));
         }
         if (productRepository.findByProductCode(dto.getProductCode()).isPresent()) {
-            throw new BusinessException("Mã hàng hóa '" + dto.getProductCode() + "' đã tồn tại.");
+            throw new BusinessException(String.format(SystemMessage.PROD_ERR_020.getMessage(), dto.getProductCode()));
         }
 
         validateProductRequest(dto);
@@ -117,7 +142,7 @@ public class ProductService {
         // Kiểm tra trùng mã khi cập nhật mã khác
         if (!product.getProductCode().equals(dto.getProductCode())) {
             if (productRepository.findByProductCode(dto.getProductCode()).isPresent()) {
-                throw new BusinessException("Mã hàng hóa '" + dto.getProductCode() + "' đã tồn tại trên hệ thống.");
+                throw new BusinessException(String.format(SystemMessage.PROD_ERR_019.getMessage(), dto.getProductCode()));
             }
         }
 
@@ -177,7 +202,7 @@ public class ProductService {
                     || assemblyOrderRepository.existsByComponentVariantIdIn(variantIds);
 
             if (hasTransactions) {
-                throw new BusinessException("Không thể xóa hàng hóa '" + product.getProductName() + "' vì đã có dữ liệu giao dịch phát sinh trong hệ thống. Bạn có thể chọn 'Ngừng sử dụng' để ẩn hàng hóa.");
+                throw new BusinessException(String.format(SystemMessage.PROD_ERR_018.getMessage(), product.getProductName()));
             }
 
             // Cleanup non-transaction inventory balances & cost layers for these variants
@@ -277,7 +302,7 @@ public class ProductService {
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {
-            throw new BusinessException("Khong the xuat Excel san pham.");
+            throw new BusinessException(SystemMessage.PROD_ERR_017.getMessage());
         }
     }
 
@@ -298,20 +323,52 @@ public class ProductService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<String> generateSerialCodes(Long productId, Long variantId, int quantity) {
+        if (quantity < 1 || quantity > 1000) {
+            throw new BusinessException(SystemMessage.PROD_ERR_016.getMessage());
+        }
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new BusinessException("SKU khong ton tai."));
+        if (variant.getProduct() == null || !variant.getProduct().getId().equals(productId)) {
+            throw new BusinessException(SystemMessage.PROD_ERR_013.getMessage());
+        }
+        if (!Boolean.TRUE.equals(variant.getProduct().getTrackSerial())) {
+            throw new BusinessException(SystemMessage.PROD_ERR_015.getMessage());
+        }
+
+        Set<String> codes = new LinkedHashSet<>(quantity);
+        int maxAttempts = quantity * MAX_SERIAL_ATTEMPTS_PER_CODE;
+        for (int attempts = 0; codes.size() < quantity && attempts < maxAttempts; attempts++) {
+            String code = generateRandomSerialCode();
+            if (!codes.contains(code) && !serialNumberRepository.existsBySerialNumber(code)) {
+                codes.add(code);
+            }
+        }
+        if (codes.size() < quantity) {
+            throw new BusinessException(SystemMessage.PROD_ERR_014.getMessage());
+        }
+        return List.copyOf(codes);
+    }
+
+    static String generateRandomSerialCode() {
+        return String.valueOf(SERIAL_MIN + Math.floorMod(SERIAL_RANDOM.nextLong(), SERIAL_RANGE));
+    }
+
     @Transactional
     public ProductVariantResponse createVariant(Long productId, ProductVariantRequest request) {
         Product product = getProductEntity(productId);
         validateVariantRequest(request);
         String sku = normalizeCode(request.getSku());
         if (productVariantRepository.findBySku(sku).isPresent()) {
-            throw new BusinessException("SKU da ton tai.");
+            throw new BusinessException(SystemMessage.PROD_ERR_012.getMessage());
         }
         String barcode = trimToNull(request.getBarcode());
         if (barcode == null) {
-            barcode = sku;
+            barcode = generateBarcode();
         }
         if (barcode != null && productVariantRepository.findByBarcode(barcode).isPresent()) {
-            throw new BusinessException("Barcode da ton tai.");
+            throw new BusinessException(SystemMessage.PROD_ERR_011.getMessage());
         }
 
         ProductVariant variant = ProductVariant.builder()
@@ -334,7 +391,7 @@ public class ProductService {
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new BusinessException("SKU khong ton tai."));
         if (variant.getProduct() == null || !variant.getProduct().getId().equals(productId)) {
-            throw new BusinessException("SKU khong thuoc san pham nay.");
+            throw new BusinessException(SystemMessage.PROD_ERR_013.getMessage());
         }
         validateVariantRequest(request);
 
@@ -342,17 +399,17 @@ public class ProductService {
         productVariantRepository.findBySku(sku)
                 .filter(existing -> !existing.getId().equals(variantId))
                 .ifPresent(existing -> {
-                    throw new BusinessException("SKU da ton tai.");
+                    throw new BusinessException(SystemMessage.PROD_ERR_012.getMessage());
                 });
         String barcode = trimToNull(request.getBarcode());
         if (barcode == null) {
-            barcode = sku;
+            barcode = variant.getBarcode();
         }
         if (barcode != null) {
             productVariantRepository.findByBarcode(barcode)
                     .filter(existing -> !existing.getId().equals(variantId))
                     .ifPresent(existing -> {
-                        throw new BusinessException("Barcode da ton tai.");
+                        throw new BusinessException(SystemMessage.PROD_ERR_011.getMessage());
                     });
         }
 
@@ -373,10 +430,10 @@ public class ProductService {
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new BusinessException("SKU không tồn tại."));
         if (variant.getProduct() == null || !variant.getProduct().getId().equals(productId)) {
-            throw new BusinessException("SKU không thuộc sản phẩm này.");
+            throw new BusinessException(SystemMessage.PROD_ERR_010.getMessage());
         }
         if (productVariantRepository.countByProductId(productId) <= 1) {
-            throw new BusinessException("Sản phẩm phải có ít nhất một SKU.");
+            throw new BusinessException(SystemMessage.PROD_ERR_009.getMessage());
         }
 
         List<Long> variantIds = List.of(variantId);
@@ -390,7 +447,7 @@ public class ProductService {
                 || assemblyOrderRepository.existsByComponentVariantIdIn(variantIds);
 
         if (hasTransactions) {
-            throw new BusinessException("Không thể xóa SKU '" + variant.getSku() + "' vì đã có dữ liệu giao dịch phát sinh. Bạn có thể chọn 'Ngừng sử dụng' SKU.");
+            throw new BusinessException(String.format(SystemMessage.PROD_ERR_008.getMessage(), variant.getSku()));
         }
 
         inventoryBalanceRepository.deleteByVariantIdIn(variantIds);
@@ -406,7 +463,7 @@ public class ProductService {
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
                 .sku(sku)
-                .barcode(sku)
+                .barcode(generateBarcode())
                 .variantName(dto.getProductName().trim())
                 .costPrice(BigDecimal.ZERO)
                 .salePrice(resolveMoney(dto.getSalePrice()))
@@ -416,6 +473,10 @@ public class ProductService {
         productVariantRepository.save(variant);
     }
 
+    private String generateBarcode() {
+        return codeGeneratorService.generateCode("product_variants", "barcode", "BC", 8);
+    }
+
     private Product getProductEntity(Long productId) {
         return productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException("San pham khong ton tai."));
@@ -423,16 +484,16 @@ public class ProductService {
 
     private void ensureProductExists(Long productId) {
         if (!productRepository.existsById(productId)) {
-            throw new BusinessException("San pham khong ton tai.");
+            throw new BusinessException(SystemMessage.PROD_ERR_007.getMessage());
         }
     }
 
     private void validateVariantRequest(ProductVariantRequest request) {
         if (request.getSalePrice() != null && request.getSalePrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("Gia ban khong duoc am.");
+            throw new BusinessException(SystemMessage.PROD_ERR_003.getMessage());
         }
         if (request.getCostPrice() != null && request.getCostPrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("Gia von khong duoc am.");
+            throw new BusinessException(SystemMessage.PROD_ERR_006.getMessage());
         }
     }
 
@@ -483,7 +544,7 @@ public class ProductService {
                     .orElseThrow(() -> new BusinessException("Danh muc khong ton tai."));
             product.setCategory(category);
         } else if (!isDichVu) {
-            throw new BusinessException("Danh muc la bat buoc.");
+            throw new BusinessException(SystemMessage.PROD_ERR_005.getMessage());
         } else {
             product.setCategory(null);
         }
@@ -493,7 +554,7 @@ public class ProductService {
                     .orElseThrow(() -> new BusinessException("Don vi tinh khong ton tai."));
             product.setUnit(unit);
         } else if (!isDichVu) {
-            throw new BusinessException("Don vi tinh la bat buoc.");
+            throw new BusinessException(SystemMessage.PROD_ERR_004.getMessage());
         } else {
             product.setUnit(null);
         }
@@ -526,13 +587,13 @@ public class ProductService {
 
     private void validateProductRequest(ProductRequest dto) {
         if (dto.getSalePrice() != null && dto.getSalePrice().compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("Gia ban khong duoc am.");
+            throw new BusinessException(SystemMessage.PROD_ERR_003.getMessage());
         }
         if (dto.getStockQty() != null && dto.getStockQty().compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("So luong ton khong duoc am.");
+            throw new BusinessException(SystemMessage.PROD_ERR_002.getMessage());
         }
         if (dto.getStockValue() != null && dto.getStockValue().compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("Gia tri ton khong duoc am.");
+            throw new BusinessException(SystemMessage.PROD_ERR_001.getMessage());
         }
     }
 

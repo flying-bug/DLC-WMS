@@ -1,4 +1,6 @@
 import styles from './Pagination.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const Pagination = ({ 
     page, 
@@ -41,7 +43,7 @@ const Pagination = ({
             <div className={styles.pageInfo}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>Hiển thị</span>
-                    <select 
+                    <SearchableSelect 
                         className="misa-select"
                         style={{ width: '70px', height: '32px', padding: '0 8px', border: '1px solid #d4d4d7', borderRadius: '4px', outline: 'none' }}
                         value={size} 
@@ -52,7 +54,7 @@ const Pagination = ({
                         {sizeOptions.map(opt => (
                             <option key={opt} value={opt}>{opt}</option>
                         ))}
-                    </select>
+                    </SearchableSelect>
                     <span>trên tổng số {totalElements} bản ghi</span>
                 </div>
             </div>

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
-import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
+import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import { useToast } from '../../contexts/ToastContext';
 import styles from './PermissionDetailPage.module.css';
 
@@ -11,6 +11,18 @@ function PermissionDetailPage() {
     const [user, setUser] = useState(null);
     const [activeCategory, setActiveCategory] = useState('warehouse');
     const { showToast } = useToast();
+    const matrixRef = useRef(null);
+
+    const scrollMatrix = (direction) => {
+        const matrix = matrixRef.current;
+        if (!matrix) return;
+
+        const distance = Math.max(matrix.clientWidth * 0.75, 180);
+        matrix.scrollTo({
+            left: matrix.scrollLeft + direction * distance,
+            behavior: 'smooth',
+        });
+    };
 
     // Initial state matching the UC list
     const [permissions, setPermissions] = useState({
@@ -19,7 +31,17 @@ function PermissionDetailPage() {
         export: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         transfer: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         stocktake: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+        assembly_config: { full: false, view: false, add: false, edit: false },
         assembly: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
+
+        // Giao dịch
+        purchase_order: { full: false, view: false, add: false, edit: false },
+        sales_order: { full: false, view: false, add: false, edit: false, export: false, print: false },
+        payment: { full: false, view: false, add: false, edit: false },
+
+        // Dịch vụ
+        warranty: { full: false, view: false },
+        repair: { full: false, view: false, add: false, edit: false, delete: false },
 
         // Danh mục
         product: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
@@ -33,9 +55,13 @@ function PermissionDetailPage() {
         // Báo cáo
         report_balance: { full: false, view: false, export: false },
         report_ledger: { full: false, view: false, export: false },
+        report_transfer: { full: false, view: false, export: false },
+        report_debt: { full: false, view: false, export: false },
         report_summary: { full: false, view: false, export: false },
+        report_sales: { full: false, view: false, export: false },
 
         // Quản trị hệ thống
+        ai_chat: { full: false, view: false },
         account: { full: false, view: false, add: false, edit: false, delete: false, export: false, print: false },
         auth: { full: false, view: false, edit: false },
         audit: { full: false, view: false, export: false }
@@ -88,10 +114,15 @@ function PermissionDetailPage() {
                                     });
                                 });
                             } else if (hasStaff) {
+                                const defaultStaffModules = [
+                                    'import', 'export', 'purchase_order', 'sales_order', 'payment',
+                                    'transfer', 'stocktake', 'assembly_config', 'assembly', 'warranty', 'repair',
+                                    'product', 'report_balance', 'report_sales', 'ai_chat'
+                                ];
                                 Object.keys(newPerms).forEach(mod => {
-                                    const isWarehouse = ['import', 'export', 'transfer', 'stocktake', 'assembly'].includes(mod);
+                                    const isDefaultStaffModule = defaultStaffModules.includes(mod);
                                     Object.keys(newPerms[mod]).forEach(act => {
-                                        newPerms[mod][act] = isWarehouse;
+                                        newPerms[mod][act] = isDefaultStaffModule;
                                     });
                                 });
                             }
@@ -167,17 +198,24 @@ function PermissionDetailPage() {
         }
     };
 
-    const renderCheckbox = (module, action) => {
+    const renderCheckbox = (module, action, featureName) => {
         if (permissions[module][action] === undefined) {
-            return <input type="checkbox" className={styles.checkbox} disabled style={{ opacity: 0.3 }} />;
+            return (
+                <label className={styles.checkboxTarget}>
+                    <input type="checkbox" className={styles.checkbox} disabled aria-label={`${action} cho ${featureName} không khả dụng`} />
+                </label>
+            );
         }
         return (
-            <input
-                type="checkbox"
-                className={styles.checkbox}
-                checked={permissions[module][action]}
-                onChange={(e) => handleCheck(module, action, e.target.checked)}
-            />
+            <label className={styles.checkboxTarget}>
+                <input
+                    type="checkbox"
+                    className={styles.checkbox}
+                    checked={permissions[module][action]}
+                    onChange={(e) => handleCheck(module, action, e.target.checked)}
+                    aria-label={`${action} cho ${featureName}`}
+                />
+            </label>
         );
     };
 
@@ -189,13 +227,13 @@ function PermissionDetailPage() {
                     {name}
                 </div>
             </td>
-            <td>{renderCheckbox(module, 'full')}</td>
-            <td>{renderCheckbox(module, 'view')}</td>
-            <td>{renderCheckbox(module, 'add')}</td>
-            <td>{renderCheckbox(module, 'edit')}</td>
-            <td>{renderCheckbox(module, 'delete')}</td>
-            <td>{renderCheckbox(module, 'export')}</td>
-            <td>{renderCheckbox(module, 'print')}</td>
+            <td>{renderCheckbox(module, 'full', name)}</td>
+            <td>{renderCheckbox(module, 'view', name)}</td>
+            <td>{renderCheckbox(module, 'add', name)}</td>
+            <td>{renderCheckbox(module, 'edit', name)}</td>
+            <td>{renderCheckbox(module, 'delete', name)}</td>
+            <td>{renderCheckbox(module, 'export', name)}</td>
+            <td>{renderCheckbox(module, 'print', name)}</td>
         </tr>
     );
 
@@ -204,12 +242,28 @@ function PermissionDetailPage() {
             case 'warehouse':
                 return (
                     <>
-                        {renderRow('warehouse_master', 'Danh mục kho bãi', 'bi-houses')}
+                        {renderRow('warehouse_master', 'Kho', 'bi-houses')}
                         {renderRow('import', 'Nhập kho', 'bi-box-arrow-in-right')}
                         {renderRow('export', 'Xuất kho', 'bi-box-arrow-right')}
                         {renderRow('transfer', 'Chuyển kho', 'bi-arrow-left-right')}
                         {renderRow('stocktake', 'Kiểm kê kho', 'bi-clipboard2-check')}
-                        {renderRow('assembly', 'Đóng gói / Tháo dỡ', 'bi-box-seam')}
+                        {renderRow('assembly_config', 'Quản lý Cấu hình', 'bi-diagram-3')}
+                        {renderRow('assembly', 'Lắp ráp/Tháo dỡ', 'bi-box-seam')}
+                    </>
+                );
+            case 'transactions':
+                return (
+                    <>
+                        {renderRow('purchase_order', 'Đơn mua hàng', 'bi-bag-plus')}
+                        {renderRow('sales_order', 'Đơn bán hàng', 'bi-cart3')}
+                        {renderRow('payment', 'Thu chi & Công nợ', 'bi-cash-coin')}
+                    </>
+                );
+            case 'services':
+                return (
+                    <>
+                        {renderRow('warranty', 'Bảo hành', 'bi-shield-check')}
+                        {renderRow('repair', 'Sửa chữa', 'bi-tools')}
                     </>
                 );
             case 'master_data':
@@ -226,15 +280,19 @@ function PermissionDetailPage() {
             case 'reports':
                 return (
                     <>
-                        {renderRow('report_balance', 'Tồn kho hiện tại', 'bi-bar-chart')}
-                        {renderRow('report_ledger', 'Sổ kho', 'bi-journal-text')}
-                        {renderRow('report_summary', 'Báo cáo tổng hợp', 'bi-file-earmark-bar-graph')}
+                        {renderRow('report_balance', 'Báo cáo tồn kho hiện tại', 'bi-bar-chart')}
+                        {renderRow('report_ledger', 'Sổ chi tiết vật tư hàng hóa', 'bi-journal-text')}
+                        {renderRow('report_transfer', 'Báo cáo chuyển kho nội bộ', 'bi-arrow-left-right')}
+                        {renderRow('report_debt', 'Báo cáo công nợ đối tác', 'bi-receipt')}
+                        {renderRow('report_summary', 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)', 'bi-file-earmark-bar-graph')}
+                        {renderRow('report_sales', 'Báo cáo lợi nhuận bán hàng', 'bi-currency-dollar')}
                     </>
                 );
             case 'system':
                 return (
                     <>
-                        {renderRow('account', 'Quản lý tài khoản', 'bi-people')}
+                        {renderRow('ai_chat', 'AI Chat', 'bi-robot')}
+                        {renderRow('account', 'Quản lý người dùng', 'bi-people')}
                         {renderRow('auth', 'Phân quyền', 'bi-shield-lock')}
                         {renderRow('audit', 'Nhật ký hệ thống', 'bi-journal-medical')}
                     </>
@@ -248,104 +306,110 @@ function PermissionDetailPage() {
     const userRolesDisplay = user && user.roles ? user.roles.join(', ') : 'Chưa có vai trò';
 
     return (
+        <SuperAdminLayout>
         <div className={styles.page}>
-            {/* Header */}
-            <header className={styles.header}>
-                <div className={styles.headerLeft}>
-                    <div className={styles.brandName}>DUY LONG COMPUTER</div>
-                    <div className={styles.breadcrumb}>
-                        <span className={styles.breadcrumbItem} onClick={() => navigate('/users')}>Quản lý người dùng</span>
-                        <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right"></i></span>
-                        <span className={styles.breadcrumbItem}>{userName}</span>
-                        <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right"></i></span>
-                        <span className={styles.breadcrumbActive}>Phân quyền chi tiết</span>
-                    </div>
-                </div>
-                <div className={styles.headerRight}>
-                    <div className={styles.searchBar}>
-                        <i className="bi bi-search" />
-                        <input type="text" placeholder="Tìm kiếm chức năng..." />
-                    </div>
-                    <button className={styles.headerRightBtn}><i className="bi bi-bell"></i></button>
-                    <button className={styles.headerRightBtn}><i className="bi bi-question-circle"></i></button>
-                    <UserProfileDropdown />
-                </div>
-            </header>
-
             {/* Main */}
-            <main className={styles.main}>
+            <div className={styles.main}>
+                <nav className={styles.breadcrumb} aria-label="Breadcrumb">
+                    <button type="button" className={styles.breadcrumbItem} onClick={() => navigate('/users')}>Quản lý người dùng</button>
+                    <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right" aria-hidden="true"></i></span>
+                    <span className={styles.breadcrumbItem}>{userName}</span>
+                    <span className={styles.breadcrumbSeparator}><i className="bi bi-chevron-right" aria-hidden="true"></i></span>
+                    <span className={styles.breadcrumbActive}>Phân quyền chi tiết</span>
+                </nav>
                 <h1 className={styles.pageTitle}>Phân quyền chức năng cho nhân viên: {userName}</h1>
                 <p className={styles.pageSubtitle}>Vai trò hiện tại: {userRolesDisplay}</p>
 
                 <div className={styles.layout}>
                     {/* Sidebar */}
-                    <div className={styles.sidebar}>
+                    <nav className={styles.sidebar} aria-label="Danh mục module">
                         <div className={styles.sidebarHeader}>DANH MỤC MODULE</div>
-                        <div className={`${styles.menuItem} ${activeCategory === 'warehouse' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('warehouse')}>
+                        <button type="button" aria-pressed={activeCategory === 'warehouse'} className={`${styles.menuItem} ${activeCategory === 'warehouse' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('warehouse')}>
                             <div className={styles.menuItemLeft}><i className="bi bi-box-seam"></i> Quản lý kho</div>
                             <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>
-                        </div>
-                        <div className={`${styles.menuItem} ${activeCategory === 'master_data' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('master_data')}>
+                        </button>
+                        <button type="button" aria-pressed={activeCategory === 'transactions'} className={`${styles.menuItem} ${activeCategory === 'transactions' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('transactions')}>
+                            <div className={styles.menuItemLeft}><i className="bi bi-receipt"></i> Giao dịch</div>
+                            {activeCategory === 'transactions' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
+                        </button>
+                        <button type="button" aria-pressed={activeCategory === 'services'} className={`${styles.menuItem} ${activeCategory === 'services' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('services')}>
+                            <div className={styles.menuItemLeft}><i className="bi bi-tools"></i> Dịch vụ</div>
+                            {activeCategory === 'services' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
+                        </button>
+                        <button type="button" aria-pressed={activeCategory === 'master_data'} className={`${styles.menuItem} ${activeCategory === 'master_data' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('master_data')}>
                             <div className={styles.menuItemLeft}><i className="bi bi-database"></i> Danh mục</div>
                             {activeCategory === 'master_data' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
-                        </div>
-                        <div className={`${styles.menuItem} ${activeCategory === 'reports' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('reports')}>
+                        </button>
+                        <button type="button" aria-pressed={activeCategory === 'reports'} className={`${styles.menuItem} ${activeCategory === 'reports' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('reports')}>
                             <div className={styles.menuItemLeft}><i className="bi bi-bar-chart"></i> Báo cáo</div>
                             {activeCategory === 'reports' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
-                        </div>
-                        <div className={`${styles.menuItem} ${activeCategory === 'system' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('system')}>
+                        </button>
+                        <button type="button" aria-pressed={activeCategory === 'system'} className={`${styles.menuItem} ${activeCategory === 'system' ? styles.menuItemActive : ''}`} onClick={() => setActiveCategory('system')}>
                             <div className={styles.menuItemLeft}><i className="bi bi-gear"></i> Quản trị hệ thống</div>
                             {activeCategory === 'system' && <i className="bi bi-chevron-right" style={{ fontSize: '12px' }}></i>}
-                        </div>
-                    </div>
+                        </button>
+                    </nav>
 
                     {/* Matrix Content */}
-                    <div className={styles.matrixContent}>
-                        <table className={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th>CHỨC NĂNG CHI TIẾT</th>
-                                    <th>Toàn quyền</th>
-                                    <th>Xem</th>
-                                    <th>Thêm</th>
-                                    <th>Sửa</th>
-                                    <th>Xóa</th>
-                                    <th>Xuất Excel</th>
-                                    <th>In</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {renderTableBody()}
-                            </tbody>
-                        </table>
+                    <div className={styles.matrixPanel}>
+                        <div className={styles.matrixScrollControls} aria-label="Điều khiển cuộn ngang ma trận phân quyền">
+                            <span className={styles.matrixScrollHint}>Vuốt ngang hoặc dùng nút</span>
+                            <button type="button" className={styles.matrixScrollButton} onClick={() => scrollMatrix(-1)} aria-label="Cuộn ma trận sang trái">
+                                <i className="bi bi-chevron-left" aria-hidden="true" />
+                            </button>
+                            <button type="button" className={styles.matrixScrollButton} onClick={() => scrollMatrix(1)} aria-label="Cuộn ma trận sang phải">
+                                <i className="bi bi-chevron-right" aria-hidden="true" />
+                            </button>
+                        </div>
 
-                        <div className={styles.legend}>
-                            <div className={styles.legendLeft}>
-                                <div className={styles.legendItem}>
-                                    <div className={`${styles.legendIcon} ${styles.legendIconSelected}`}></div>
-                                    <span>Đã chọn</span>
+                        <div ref={matrixRef} className={styles.matrixContent}>
+                            <table className={styles.table}>
+                                <thead>
+                                    <tr>
+                                        <th>CHỨC NĂNG CHI TIẾT</th>
+                                        <th>Toàn quyền</th>
+                                        <th>Xem</th>
+                                        <th>Thêm</th>
+                                        <th>Sửa</th>
+                                        <th>Xóa</th>
+                                        <th>Xuất Excel</th>
+                                        <th>In</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {renderTableBody()}
+                                </tbody>
+                            </table>
+
+                            <div className={styles.legend}>
+                                <div className={styles.legendLeft}>
+                                    <div className={styles.legendItem}>
+                                        <div className={`${styles.legendIcon} ${styles.legendIconSelected}`}></div>
+                                        <span>Đã chọn</span>
+                                    </div>
+                                    <div className={styles.legendItem}>
+                                        <div className={`${styles.legendIcon} ${styles.legendIconUnselected}`}></div>
+                                        <span>Chưa chọn</span>
+                                    </div>
                                 </div>
-                                <div className={styles.legendItem}>
-                                    <div className={`${styles.legendIcon} ${styles.legendIconUnselected}`}></div>
-                                    <span>Chưa chọn</span>
+                                <div className={styles.legendRight}>
+                                    <i className="bi bi-info-circle"></i> Đối với nghiệp vụ nào không cho sử dụng sẽ làm mờ và không thể tick
                                 </div>
-                            </div>
-                            <div className={styles.legendRight}>
-                                <i className="bi bi-info-circle"></i> Đối với nghiệp vụ nào không cho sử dụng sẽ làm mờ và không thể tick
                             </div>
                         </div>
                     </div>
                 </div>
-            </main>
+            </div>
 
             {/* Footer Actions */}
             <div className={styles.footer}>
-                <button className="btnDefault" onClick={() => navigate('/users')}>Hủy</button>
-                <button className="btnPrimary" onClick={handleSave}>
+                <button type="button" className="btnDefault" onClick={() => navigate('/users')}>Hủy</button>
+                <button type="button" className="btnPrimary" onClick={handleSave}>
                     <i className="bi bi-save"></i> Lưu thay đổi
                 </button>
             </div>
         </div>
+        </SuperAdminLayout>
     );
 }
 

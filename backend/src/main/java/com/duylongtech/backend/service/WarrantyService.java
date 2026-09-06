@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.response.WarrantyResponse;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.entity.Partner;
 import com.duylongtech.backend.entity.ProductVariant;
 import com.duylongtech.backend.entity.Repair;
@@ -37,7 +38,7 @@ public class WarrantyService {
     @Transactional(readOnly = true)
     public WarrantyResponse getWarrantyById(Long id) {
         if (id == null) {
-            throw new BusinessException("ID bao hanh la bat buoc");
+            throw new BusinessException(SystemMessage.WARR_ERR_009.getMessage());
         }
         Warranty warranty = warrantyRepository.findWithDetailsById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu bảo hành"));
@@ -57,6 +58,8 @@ public class WarrantyService {
                 .partnerEmail(partner != null ? partner.getEmail() : null)
                 .partnerAddress(partner != null ? partner.getAddress() : null)
                 .salesOrderId(warranty.getSalesOrderId())
+                .exportSlipId(warranty.getExportSlipId())
+                .exportSlipCode(warranty.getExportSlip() != null ? warranty.getExportSlip().getDocCode() : null)
                 .startDate(warranty.getStartDate())
                 .endDate(warranty.getEndDate())
                 .warrantyStatus(warranty.getWarrantyStatus())

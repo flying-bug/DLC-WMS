@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -24,6 +24,7 @@
     "react-router-dom": "^7.17.0",
     "react-select": "^5.10.2",
     "react-to-print": "^3.3.0",
+    "recharts": "^3.10.1",
     "sweetalert2": "^11.26.25",
     "xlsx": "^0.18.5"
   },

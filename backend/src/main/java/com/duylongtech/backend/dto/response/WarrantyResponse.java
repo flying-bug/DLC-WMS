@@ -17,6 +17,8 @@ public class WarrantyResponse {
     private String partnerEmail;
     private String partnerAddress;
     private Long salesOrderId;
+    private Long exportSlipId;
+    private String exportSlipCode;
     private LocalDate startDate;
     private LocalDate endDate;
     private String warrantyStatus;

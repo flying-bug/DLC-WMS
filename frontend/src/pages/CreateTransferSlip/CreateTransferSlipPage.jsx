@@ -14,6 +14,9 @@ import { printTransferSlip } from '../../utils/printTransferSlip';
 import axiosClient from '../../api/axiosClient';
 import styles from './CreateTransferSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { findBestMatch } from '../../utils/fuzzyMatch';
+
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -122,7 +125,7 @@ function CreateTransferSlipPage() {
   const [showReferenceModal, setShowReferenceModal] = useState(false);
 
   const handleSerialModalClose = (serials) => {
-    if (serials) {
+    if (Array.isArray(serials)) {
       handleItemChange(serialModalItemId, 'serialNumbers', serials);
       if (serials.length > 0 && items.find(i => i.localId === serialModalItemId)?.quantity < serials.length) {
         handleItemChange(serialModalItemId, 'quantity', serials.length);
@@ -142,7 +145,12 @@ function CreateTransferSlipPage() {
         const list = pageContent(unwrap(res));
         const invMap = new Map();
         list.forEach(b => {
-          if (b.variantId) invMap.set(String(b.variantId), Number(b.totalQuantity || 0));
+          if (b.variantId) {
+            const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+            const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+            const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+            invMap.set(String(b.variantId), Math.max(0, availableQuantity));
+          }
         });
         setSourceInventory(invMap);
       } catch (err) {
@@ -187,33 +195,32 @@ function CreateTransferSlipPage() {
 
     // Auto-select warehouses by keyword
     if (voiceData.fromWarehouseKeyword && warehouses.length > 0) {
-      const kw = voiceData.fromWarehouseKeyword.toLowerCase();
-      const match = warehouses.find(w => w.name?.toLowerCase().includes(kw) || w.code?.toLowerCase().includes(kw));
-      if (match) {
-        setForm(prev => ({ ...prev, fromWarehouseId: match.id }));
+      const matchFrom = findBestMatch(warehouses, voiceData.fromWarehouseKeyword, w => [w.name, w.code]);
+      if (matchFrom) {
+        setForm(prev => ({ ...prev, fromWarehouseId: matchFrom.id }));
       }
     }
 
     if (voiceData.toWarehouseKeyword && warehouses.length > 0) {
-      const kw = voiceData.toWarehouseKeyword.toLowerCase();
-      const match = warehouses.find(w => w.name?.toLowerCase().includes(kw) || w.code?.toLowerCase().includes(kw));
-      if (match) {
-        setForm(prev => ({ ...prev, toWarehouseId: match.id }));
+      const matchTo = findBestMatch(warehouses, voiceData.toWarehouseKeyword, w => [w.name, w.code]);
+      if (matchTo) {
+        setForm(prev => ({ ...prev, toWarehouseId: matchTo.id }));
       }
+    }
+
+    // Auto-fill note
+    if (voiceData.note) {
+      setForm(prev => ({ ...prev, note: prev.note ? `${prev.note} - ${voiceData.note}` : voiceData.note }));
     }
 
     // Auto-add product line by keyword
     if (voiceData.productKeyword && products.length > 0) {
-      const kw = voiceData.productKeyword.toLowerCase();
-      const match = products.find(p =>
-        p.productName?.toLowerCase().includes(kw)
-        || p.variantName?.toLowerCase().includes(kw)
-      );
-      if (match) {
+      const matchProd = findBestMatch(products, voiceData.productKeyword, p => [p.productName, p.variantName, p.sku]);
+      if (matchProd) {
         const qty = Number(voiceData.quantity) || 1;
         setItems([{
           ...emptyLine(),
-          variantId: String(match.id),
+          variantId: String(matchProd.id),
           quantity: qty,
         }]);
       }
@@ -453,17 +460,17 @@ function CreateTransferSlipPage() {
               <div className="misa-form-row">
                 <div className="misa-form-group">
                   <label className="misa-label">Từ kho (Xuất) <span className="required">*</span></label>
-                  <select className="misa-select" value={form.fromWarehouseId} onChange={(e) => handleFormChange('fromWarehouseId', e.target.value)}>
+                  <SearchableSelect className="misa-select" value={form.fromWarehouseId} onChange={(e) => handleFormChange('fromWarehouseId', e.target.value)}>
                     <option value="">Chọn kho xuất</option>
                     {warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} - {warehouse.name}</option>)}
-                  </select>
+                  </SearchableSelect>
                 </div>
                 <div className="misa-form-group">
                   <label className="misa-label">Đến kho (Nhập) <span className="required">*</span></label>
-                  <select className="misa-select" value={form.toWarehouseId} onChange={(e) => handleFormChange('toWarehouseId', e.target.value)}>
+                  <SearchableSelect className="misa-select" value={form.toWarehouseId} onChange={(e) => handleFormChange('toWarehouseId', e.target.value)}>
                     <option value="">Chọn kho nhập</option>
                     {warehouses.map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.code} - {warehouse.name}</option>)}
-                  </select>
+                  </SearchableSelect>
                 </div>
               </div>
 
@@ -655,25 +662,32 @@ function CreateTransferSlipPage() {
 
         <div className={styles.fixedFooter}>
           <div className={styles.footerLeft}>
-            <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>Hủy bỏ</button>
+            <button className="btn-misa-cancel" onClick={() => navigate('/transfer-history')}>
+              <i className="bi bi-x-circle"></i> Hủy bỏ
+            </button>
           </div>
           <div className={styles.footerRight}>
             <button className="btn-misa-draft" disabled={!isFormValid || saving} onClick={() => submit('DRAFT')} style={{ marginRight: '8px' }}>
-              Lưu tạm
+              <i className="bi bi-save"></i> Lưu tạm
             </button>
             <button className="btn-misa-post" disabled={!isFormValid || saving} onClick={() => submit('POSTED')}>
-              <i className="bi bi-printer"></i> Lưu và ghi sổ
+              <i className="bi bi-check-circle-fill"></i> Lưu và ghi sổ
             </button>
           </div>
         </div>
       </div>
-      <ManageSerialModal
-        isOpen={Boolean(serialModalItemId)}
-        onClose={handleSerialModalClose}
-        productName={variantLabel(selectedSerialProduct)}
-        targetQuantity={Number(selectedSerialItem?.quantity || 0)}
-        initialSerials={selectedSerialItem?.serialNumbers || []}
-      />
+      {serialModalItemId && selectedSerialProduct && (
+        <ManageSerialModal
+          isOpen={true}
+          onClose={handleSerialModalClose}
+          productName={variantLabel(selectedSerialProduct)}
+          targetQuantity={Number(selectedSerialItem?.quantity || 0)}
+          initialSerials={selectedSerialItem?.serialNumbers || []}
+          mode="export"
+          warehouseId={form.fromWarehouseId}
+          variantId={selectedSerialProduct.id}
+        />
+      )}
       <ReferenceDocumentModal
         isOpen={showReferenceModal}
         onClose={() => setShowReferenceModal(false)}

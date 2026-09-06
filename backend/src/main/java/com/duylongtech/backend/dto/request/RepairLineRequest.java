@@ -36,7 +36,7 @@ public class RepairLineRequest {
 
     private Boolean isWarrantyCovered;
     private Boolean isFreeWarranty;
-
+    private BigDecimal vatPercent;
 
     private String note;
 }

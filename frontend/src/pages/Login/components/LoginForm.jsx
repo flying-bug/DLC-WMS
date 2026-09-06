@@ -6,9 +6,9 @@ import { setAuthSession } from '../../../auth/session';
 
 function LoginForm() {
     const [formData, setFormData] = useState({
-        usernameOrEmail: '',
+        usernameOrEmail: localStorage.getItem('rememberedUser') || '',
         password: '',
-        rememberMe: false,
+        rememberMe: !!localStorage.getItem('rememberedUser'),
     });
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState({});
@@ -58,7 +58,7 @@ function LoginForm() {
             });
 
             if (response.data && response.data.data.token) {
-                setAuthSession(response.data.data);
+                setAuthSession(response.data.data, formData.rememberMe);
                 // Handle remember me if necessary (e.g. store username or token preference)
                 if (formData.rememberMe) {
                     localStorage.setItem('rememberedUser', formData.usernameOrEmail);

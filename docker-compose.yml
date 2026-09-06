@@ -32,6 +32,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
+      JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true"
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/duylongcomputer?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: "123456"

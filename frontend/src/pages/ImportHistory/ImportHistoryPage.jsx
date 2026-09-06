@@ -14,6 +14,8 @@ import { printImportSlip } from '../../utils/printImportSlip';
 import { formatDateOnly } from '../../utils/dateFormat';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import styles from './ImportHistoryPage.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const DEFAULT_COLUMNS = {
   date: true,
@@ -109,7 +111,7 @@ function ImportHistoryPage() {
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const DEFAULT_FILTERS = useMemo(() => ({
-    docCode: location.state?.filterDocCode || '',
+    keyword: location.state?.filterKeyword || location.state?.filterDocCode || '',
     fromDate: '',
     toDate: '',
     preset: 'ALL',
@@ -120,7 +122,7 @@ function ImportHistoryPage() {
     issuePurpose: '',
     referenceId: location.state?.referenceId || '',
     referenceType: location.state?.referenceType || '',
-  }), [location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
+  }), [location.state?.filterKeyword, location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
@@ -149,11 +151,11 @@ function ImportHistoryPage() {
 
   const loadLookups = useCallback(async () => {
     const [warehouseRes, supplierRes, productRes, customerRes, assemblyOrderRes, userRes] = await Promise.allSettled([
-      importApi.getWarehouses({ size: 100 }),
+      importApi.getWarehouses({ size: 1000 }),
       importApi.getSuppliers(),
-      importApi.getProducts({ size: 100 }),
-      customerApi.searchCustomers('', '', '', 0, 100),
-      assemblyOrderApi.getAssemblyOrders({ size: 100 }),
+      importApi.getProducts({ size: 2000 }),
+      customerApi.searchCustomers('', '', '', 0, 1000),
+      assemblyOrderApi.getAssemblyOrders({ size: 1000 }),
       exportApi.getUsers({ size: 1000 })
     ]);
 
@@ -170,7 +172,7 @@ function ImportHistoryPage() {
     setError('');
     try {
       const params = {
-        docCode: filters.docCode || undefined,
+        keyword: filters.keyword || undefined,
         fromDate: filters.fromDate || undefined,
         toDate: filters.toDate || undefined,
         status: filters.status || undefined,
@@ -351,7 +353,14 @@ function ImportHistoryPage() {
   };
 
   const handlePrintSlip = (slip, isImport = true) => {
+    const supplier = supplierById.get(slip.partnerId) || supplierById.get(Number(slip.partnerId)) || {};
+    const customer = customerById.get(slip.partnerId) || customerById.get(Number(slip.partnerId)) || {};
+    const warehouseName = warehouseById.get(slip.warehouseId)?.name || warehouseById.get(Number(slip.warehouseId))?.name || '';
+
     printImportSlip(slip, {
+      supplier,
+      customer,
+      warehouseName,
       supplierById,
       customerById,
       assemblyOrderById,
@@ -380,12 +389,12 @@ function ImportHistoryPage() {
               <input
                 type="text"
                 className={styles.searchInput}
-                placeholder="Nhập từ khóa tìm kiếm mã phiếu..."
-                value={filters.docCode}
-                onChange={(e) => setFilters(prev => ({ ...prev, docCode: e.target.value }))}
+                placeholder="Tìm theo mã phiếu, Serial, SKU..."
+                value={filters.keyword}
+                onChange={(e) => setFilters(prev => ({ ...prev, keyword: e.target.value }))}
               />
-              {filters.docCode && (
-                <button className={styles.clearSearchBtn} onClick={() => setFilters(prev => ({ ...prev, docCode: '' }))}>
+              {filters.keyword && (
+                <button className={styles.clearSearchBtn} onClick={() => setFilters(prev => ({ ...prev, keyword: '' }))}>
                   <i className="bi bi-x-circle-fill"></i>
                 </button>
               )}
@@ -559,7 +568,7 @@ function ImportHistoryPage() {
                     <i className="bi bi-printer"></i> In phiếu
                   </button>
                   <button className={styles.btnSecondary} onClick={handleExport} style={{ backgroundColor: 'white', color: '#16a34a', borderColor: '#bbf7d0' }}>
-                    <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                    <i className="bi bi-file-earmark-excel"></i>
                   </button>
                 </div>
               </div>
@@ -569,7 +578,7 @@ function ImportHistoryPage() {
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>Hiển thị</span>
-              <select
+              <SearchableSelect
                 className="misa-select"
                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
                 value={pageSize}
@@ -579,7 +588,7 @@ function ImportHistoryPage() {
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-              </select>
+              </SearchableSelect>
               <span>trên tổng số {totalItems} bản ghi</span>
             </div>
 

@@ -8,7 +8,10 @@ import { exportToExcel } from '../../utils/excelExport';
 import * as assemblyApi from '../../api/assemblyOrderApi';
 import * as warehouseApi from '../../api/warehouseApi';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
 import styles from './AssemblyOrderListPage.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const STATUS_META = {
     DRAFT: { label: 'Lưu tạm', code: 'secondary' },
@@ -189,6 +192,23 @@ function AssemblyOrderListPage() {
         return pages;
     };
 
+    const handlePrintOrder = async (item, e) => {
+        e.stopPropagation();
+        try {
+            const res = await assemblyApi.getAssemblyOrderById(item.id);
+            const detail = res?.data?.data || res?.data || item;
+            printAssemblyOrder(detail, {
+                warehouseName: warehouseName(item.warehouseId),
+                onError: (msg) => showToast('error', msg)
+            });
+        } catch {
+            printAssemblyOrder(item, {
+                warehouseName: warehouseName(item.warehouseId),
+                onError: (msg) => showToast('error', msg)
+            });
+        }
+    };
+
     return (
         <AdminLayout>
             <div className={styles.pageBody}>
@@ -318,6 +338,12 @@ function AssemblyOrderListPage() {
                                             )}
                                             <td className={styles.textCenter} style={{ whiteSpace: 'nowrap' }}>
                                                 <i
+                                                    className="bi bi-printer"
+                                                    style={{ cursor: 'pointer', color: '#0284c7', fontSize: '16px', marginRight: '12px' }}
+                                                    title="In phiếu lệnh"
+                                                    onClick={(e) => handlePrintOrder(item, e)}
+                                                ></i>
+                                                <i
                                                     className="bi bi-eye"
                                                     style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }}
                                                     title="Xem chi tiết"
@@ -347,7 +373,7 @@ function AssemblyOrderListPage() {
                     <div className={styles.pagination}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span>Hiển thị</span>
-                            <select
+                            <SearchableSelect
                                 className="misa-select"
                                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
                                 value={pageSize}
@@ -356,7 +382,7 @@ function AssemblyOrderListPage() {
                                 <option value={10}>10</option>
                                 <option value={20}>20</option>
                                 <option value={50}>50</option>
-                            </select>
+                            </SearchableSelect>
                             <span>trên tổng số {totalElements} bản ghi</span>
                         </div>
 

@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 
 const BarcodeLabel = ({ 
     product, 
+    variant,
     barcodeType, 
     labelSize, 
     showProductName, 
@@ -50,8 +51,10 @@ const BarcodeLabel = ({
         color: '#000'
     };
 
-    // The actual value to encode
-    const encodeValue = (showSerial && serial) ? serial : (product?.productCode || 'N/A');
+    const sku = variant?.sku || product?.productCode || 'N/A';
+    const serialValue = serial ? String(serial) : '';
+    const encodeValue = serialValue || String(variant?.barcode || sku);
+    const displayValue = serialValue ? (showSerial ? serialValue : '') : encodeValue;
 
     return (
         <div style={containerStyle}>
@@ -63,7 +66,7 @@ const BarcodeLabel = ({
             
             {showSKU && (
                 <div style={{...textStyle, fontSize: labelSize === '35x22' ? '7px' : '9px', fontWeight: 'normal'}}>
-                    SKU: {product?.productCode || 'N/A'}
+                    SKU: {sku}
                 </div>
             )}
             
@@ -79,20 +82,21 @@ const BarcodeLabel = ({
                     <Barcode 
                         value={encodeValue} 
                         format="CODE128"
-                        width={labelSize === '35x22' ? 1.2 : 1.5}
+                        width={labelSize === '35x22' ? 1 : 1.5}
                         height={labelSize === '35x22' ? 25 : 35}
                         displayValue={false}
-                        margin={0}
+                        margin={6}
                         background="#ffffff"
                         lineColor="#000000"
                     />
                 )}
             </div>
 
-            {/* Display the encoded value at the bottom if it's a barcode or if they want serial shown explicitly */}
-            <div style={{...textStyle, marginTop: '2px', marginBottom: 0, fontSize: labelSize === '35x22' ? '7px' : '9px'}}>
-                {encodeValue}
-            </div>
+            {displayValue && (
+                <div style={{...textStyle, marginTop: '2px', marginBottom: 0, fontSize: labelSize === '35x22' ? '7px' : '9px'}}>
+                    {displayValue}
+                </div>
+            )}
         </div>
     );
 };

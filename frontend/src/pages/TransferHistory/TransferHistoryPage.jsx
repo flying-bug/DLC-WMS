@@ -11,6 +11,8 @@ import { exportToExcel } from '../../utils/excelExport';
 import { printTransferSlip } from '../../utils/printTransferSlip';
 import { formatDateOnly } from '../../utils/dateFormat';
 import styles from './TransferHistoryPage.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const DEFAULT_COLUMNS = {
   date: true,
@@ -376,7 +378,7 @@ function TransferHistoryPage() {
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>Hiển thị</span>
-              <select
+              <SearchableSelect
                 className="misa-select"
                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
                 value={pageSize}
@@ -386,7 +388,7 @@ function TransferHistoryPage() {
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-              </select>
+              </SearchableSelect>
               <span>trên tổng số {totalItems} bản ghi</span>
             </div>
 

@@ -164,9 +164,11 @@ public class RepairService {
         if (request.getDiagnosisNote() != null) repair.setDiagnosisNote(trimToNull(request.getDiagnosisNote()));
         if (request.getInternalNotes() != null) repair.setInternalNotes(trimToNull(request.getInternalNotes()));
         if (request.getUnderWarranty() != null) {
-            repair.setUnderWarranty(request.getUnderWarranty());
-            // Nếu chuyển thành under_warranty -> recalculate prices
-            if (Boolean.TRUE.equals(request.getUnderWarranty())) {
+            boolean oldWarranty = Boolean.TRUE.equals(repair.getUnderWarranty());
+            boolean newWarranty = Boolean.TRUE.equals(request.getUnderWarranty());
+            repair.setUnderWarranty(newWarranty);
+            // Nếu chuyển từ không bảo hành sang có bảo hành -> recalculate prices
+            if (!oldWarranty && newWarranty) {
                 applyWarrantyZeroPriceToLines(repair);
             }
         }
@@ -177,7 +179,7 @@ public class RepairService {
 
         if (repair.getExpectedDate() != null && repair.getReceivedDate() != null
                 && repair.getExpectedDate().isBefore(repair.getReceivedDate())) {
-            throw new BusinessException("Ngày dự kiến không thể nhỏ hơn ngày tiếp nhận.");
+            throw new BusinessException(SystemMessage.REP_ERR_004.getMessage());
         }
 
         Repair saved = repairRepository.save(repair);
@@ -215,9 +217,8 @@ public class RepairService {
 
         validateLineRequest(request);
 
-        // Logic giá bảo hành: nếu lệnh đang bảo hành hoặc line is_free_warranty -> unit_price = 0
-        boolean isFreeWarranty = Boolean.TRUE.equals(request.getIsFreeWarranty())
-                || Boolean.TRUE.equals(repair.getUnderWarranty());
+        // Sử dụng giá trị truyền lên từ request
+        boolean isFreeWarranty = Boolean.TRUE.equals(request.getIsFreeWarranty());
 
         BigDecimal unitPrice = isFreeWarranty ? BigDecimal.ZERO
                 : (request.getUnitPrice() != null ? request.getUnitPrice() : BigDecimal.ZERO);
@@ -237,7 +238,7 @@ public class RepairService {
                 .serialNumberText(request.getSerialNumber())
                 .replacementSerialNumberId(request.getReplacementSerialNumberId())
                 .replacementSerialNumberText(request.getReplacementSerialNumber())
-
+                .vatPercent(request.getVatPercent() != null ? request.getVatPercent() : BigDecimal.ZERO)
                 .note(trimToNull(request.getNote()))
                 .build();
 
@@ -269,14 +270,14 @@ public class RepairService {
         }
         if (request.getQuantity() != null) {
             if (request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new BusinessException("quantity phải lớn hơn 0");
+                throw new BusinessException(SystemMessage.REP_ERR_001.getMessage());
             }
             line.setQuantity(request.getQuantity());
         }
         if (request.getActionType() != null) {
             String normalizedActionType = request.getActionType().toUpperCase();
             if (!VALID_ACTION_TYPES.contains(normalizedActionType)) {
-                throw new BusinessException("actionType phải là ADD, REPLACE hoặc REMOVE");
+                throw new BusinessException(SystemMessage.REP_ERR_002.getMessage());
             }
             if (!normalizedActionType.equals(line.getActionType())) {
                 line.setActionType(normalizedActionType);
@@ -286,10 +287,8 @@ public class RepairService {
         if (request.getUnitPrice() != null) line.setUnitPrice(request.getUnitPrice());
         if (request.getIsFreeWarranty() != null) {
             line.setIsFreeWarranty(request.getIsFreeWarranty());
-            if (Boolean.TRUE.equals(request.getIsFreeWarranty())) {
-                line.setUnitPrice(BigDecimal.ZERO);
-            }
         }
+        if (request.getVatPercent() != null) line.setVatPercent(request.getVatPercent());
 
         if (request.getNote() != null) line.setNote(trimToNull(request.getNote()));
         if (request.getSerialNumberId() != null) line.setSerialNumberId(request.getSerialNumberId() == -1 ? null : request.getSerialNumberId());
@@ -359,6 +358,7 @@ public class RepairService {
                 .quantity(request.getQuantity() != null ? request.getQuantity() : BigDecimal.ONE)
                 .unitName(request.getUnitName())
                 .isFreeWarranty(isFreeWarranty)
+                .vatPercent(request.getVatPercent() != null ? request.getVatPercent() : BigDecimal.ZERO)
                 .note(trimToNull(request.getNote()))
                 .build();
 
@@ -410,12 +410,15 @@ public class RepairService {
         }
         if (request.getIsFreeWarranty() != null) {
             fee.setIsFreeWarranty(request.getIsFreeWarranty());
-            if (fee.getIsFreeWarranty()) {
+            if (Boolean.TRUE.equals(request.getIsFreeWarranty())) {
                 fee.setFeeAmount(BigDecimal.ZERO);
             }
         }
         if (request.getQuantity() != null) {
             fee.setQuantity(request.getQuantity());
+        }
+        if (request.getVatPercent() != null) {
+            fee.setVatPercent(request.getVatPercent());
         }
 
         RepairFee saved = repairFeeRepository.save(fee);
@@ -436,12 +439,21 @@ public class RepairService {
                 .filter(l -> "ADD".equals(l.getActionType()) || "REPLACE".equals(l.getActionType()))
                 .map(l -> {
                     BigDecimal qty = l.getQuantity() != null ? l.getQuantity() : BigDecimal.ZERO;
-                    return l.getUnitPrice().multiply(qty);
+                    BigDecimal amount = l.getUnitPrice().multiply(qty);
+                    BigDecimal vat = l.getVatPercent() != null ? l.getVatPercent() : BigDecimal.ZERO;
+                    BigDecimal vatAmount = amount.multiply(vat).divide(BigDecimal.valueOf(100));
+                    return amount.add(vatAmount);
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal feeTotal = fees.stream()
-                .map(f -> f.getFeeAmount().multiply(f.getQuantity() != null ? f.getQuantity() : BigDecimal.ONE))
+                .map(f -> {
+                    BigDecimal qty = f.getQuantity() != null ? f.getQuantity() : BigDecimal.ONE;
+                    BigDecimal amount = f.getFeeAmount().multiply(qty);
+                    BigDecimal vat = f.getVatPercent() != null ? f.getVatPercent() : BigDecimal.ZERO;
+                    BigDecimal vatAmount = amount.multiply(vat).divide(BigDecimal.valueOf(100));
+                    return amount.add(vatAmount);
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         repair.setTotalAmount(lineTotal.add(feeTotal));
@@ -709,6 +721,7 @@ public class RepairService {
                 .serialNumber(serialNum)
                 .replacementSerialNumberId(line.getReplacementSerialNumberId())
                 .replacementSerialNumber(replacementSerialNum)
+                .vatPercent(line.getVatPercent())
 
                 .note(line.getNote())
                 .createdAt(line.getCreatedAt())
@@ -725,6 +738,7 @@ public class RepairService {
                 .quantity(fee.getQuantity())
                 .unitName(fee.getUnitName())
                 .isFreeWarranty(fee.getIsFreeWarranty())
+                .vatPercent(fee.getVatPercent())
                 .note(fee.getNote())
                 .createdAt(fee.getCreatedAt())
                 .updatedAt(fee.getUpdatedAt())
@@ -743,23 +757,23 @@ public class RepairService {
             throw new BusinessException(SystemMessage.REP_PARTNER_REQUIRED);
         }
         if (request.getProductId() == null) {
-            throw new BusinessException("productId là bắt buộc");
+            throw new BusinessException(SystemMessage.REP_ERR_005.getMessage());
         }
         if (request.getExpectedDate() != null && request.getReceivedDate() != null
                 && request.getExpectedDate().isBefore(request.getReceivedDate())) {
-            throw new BusinessException("Ngày dự kiến không thể nhỏ hơn ngày tiếp nhận.");
+            throw new BusinessException(SystemMessage.REP_ERR_004.getMessage());
         }
     }
 
     private void validateLineRequest(RepairLineRequest request) {
         if (request.getComponentVariantId() == null) {
-            throw new BusinessException("componentVariantId là bắt buộc");
+            throw new BusinessException(SystemMessage.REP_ERR_003.getMessage());
         }
         if (!VALID_ACTION_TYPES.contains(request.getActionType().toUpperCase())) {
-            throw new BusinessException("actionType phải là ADD, REPLACE hoặc REMOVE");
+            throw new BusinessException(SystemMessage.REP_ERR_002.getMessage());
         }
         if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("quantity phải lớn hơn 0");
+            throw new BusinessException(SystemMessage.REP_ERR_001.getMessage());
         }
     }
 

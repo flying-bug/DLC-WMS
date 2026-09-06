@@ -1,6 +1,6 @@
 /* CreateEmployeePage.module.css */
 .page {
-    min-height: 100vh;
+    min-height: calc(100vh - 60px);
     background-color: var(--page-bg);
     font-family: var(--font-sans);
     color: var(--color-text-strong);
@@ -138,7 +138,7 @@
 
 /* Main Content */
 .main {
-    padding: 24px;
+    padding: 0;
     max-width: 900px;
     margin: 0 auto;
     min-width: 0;
@@ -150,6 +150,8 @@
     font-size: 13px;
     color: var(--color-text-muted);
     margin-bottom: 24px;
+    flex-wrap: wrap;
+    row-gap: 8px;
 }
 
 .breadcrumb span {
@@ -159,6 +161,24 @@
 
 .breadcrumb span:hover {
     color: var(--color-primary);
+}
+
+.breadcrumbLink {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.breadcrumbLink:hover {
+    color: var(--color-primary);
+}
+
+.breadcrumbLink:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
 }
 
 .breadcrumb .active {
@@ -335,7 +355,9 @@
     display: flex;
     align-items: center;
     gap: 32px;
-    height: 44px;
+    min-height: 44px;
+    flex-wrap: wrap;
+    padding: 4px 0;
 }
 
 .radioLabel {
@@ -508,7 +530,7 @@
     }
 
     .main {
-        padding: 24px 16px;
+        padding: 0 0 24px;
     }
 }
 
@@ -540,7 +562,15 @@
     }
 
     .card {
-        padding: 20px;
+        padding: 16px;
+    }
+
+    .input {
+        min-height: var(--touch-target-min, 44px);
+    }
+
+    .radioLabel {
+        min-height: var(--touch-target-min, 44px);
     }
 
     .grid2 {
@@ -549,6 +579,7 @@
 
     .actionsBar {
         padding: 12px 16px;
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
     }
 
     .btnCancel,

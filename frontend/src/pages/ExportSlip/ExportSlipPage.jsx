@@ -13,6 +13,8 @@ import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import { printExportSlip } from '../../utils/printExportSlip';
 import { formatDateOnly } from '../../utils/dateFormat';
 import styles from './ExportSlipPage.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const DEFAULT_COLUMNS = {
   date: true,
@@ -71,17 +73,30 @@ const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
 const money = (value) => `${Number(value || 0).toLocaleString('vi-VN')} đ`;
 const formatDate = formatDateOnly;
-const sumAmount = (lines = []) => lines.reduce((sum, line) => sum + Number(line.lineAmount || 0), 0);
-const sumSubtotal = (lines = []) => lines.reduce((sum, line) => {
+const lineVatAmount = (line = {}) => {
   const qty = Number(line.quantityIn || line.quantityOut || 0);
-  const price = Number(line.unitCost || line.unitPrice || 0);
+  const price = Number(line.unitPrice || 0);
+  const vatRate = Number(line.vatPercent ?? line.vatRate ?? 0) / 100;
+  return qty * price * vatRate;
+};
+const sumVat = (lines = []) => lines.reduce((sum, line) => sum + lineVatAmount(line), 0);
+const sumSubtotal = (lines = []) => lines.reduce((sum, line) => {
+  const lineAmount = Number(line.lineAmount || 0);
+  if (lineAmount > 0) {
+    return sum + (lineAmount - lineVatAmount(line));
+  }
+  const qty = Number(line.quantityIn || line.quantityOut || 0);
+  const price = Number(line.unitPrice || 0);
   return sum + (qty * price);
 }, 0);
-const sumVat = (lines = []) => lines.reduce((sum, line) => {
+const sumAmount = (lines = []) => lines.reduce((sum, line) => {
+  const lineAmount = Number(line.lineAmount || 0);
+  if (lineAmount > 0) {
+    return sum + lineAmount;
+  }
   const qty = Number(line.quantityIn || line.quantityOut || 0);
-  const price = Number(line.unitCost || line.unitPrice || 0);
-  const vatRate = Number(line.vatPercent ?? line.vatRate ?? 0) / 100;
-  return sum + (qty * price * vatRate);
+  const price = Number(line.unitPrice || 0);
+  return sum + (qty * price) + lineVatAmount(line);
 }, 0);
 const sumQuantity = (lines = []) => lines.reduce((sum, line) => sum + Number(line.quantityOut || 0), 0);
 const variantLabel = (item) => item?.variantName && item.variantName !== item.productName
@@ -101,7 +116,7 @@ function ExportSlipPage() {
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const DEFAULT_FILTERS = useMemo(() => ({
-    docCode: location.state?.filterDocCode || '',
+    keyword: location.state?.filterKeyword || location.state?.filterDocCode || '',
     fromDate: '',
     toDate: '',
     preset: 'ALL',
@@ -112,7 +127,7 @@ function ExportSlipPage() {
     issuePurpose: '',
     referenceId: location.state?.referenceId || '',
     referenceType: location.state?.referenceType || '',
-  }), [location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
+  }), [location.state?.filterKeyword, location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
@@ -181,7 +196,7 @@ function ExportSlipPage() {
 
     try {
       const response = await exportApi.getExportHistory({
-        docCode: filters.docCode || undefined,
+        keyword: filters.keyword || undefined,
         fromDate: filters.fromDate || undefined,
         toDate: filters.toDate || undefined,
         status: filters.status || undefined,
@@ -263,7 +278,7 @@ function ExportSlipPage() {
         warehouse: warehouseById.get(slip.warehouseId)?.name || (slip.warehouseId ? `Kho #${slip.warehouseId}` : 'Chưa chọn'),
         salespersonName: slip.salespersonName || userById.get(slip.salespersonId)?.fullName || userById.get(slip.salespersonId)?.username || (slip.salespersonId ? String(slip.salespersonId) : 'Chưa rõ'),
         recipientName: slip.recipientName || 'Chưa rõ',
-        total: money(sumSubtotal(slip.lines) + sumVat(slip.lines)),
+        total: money(sumAmount(slip.lines)),
         vat: money(sumVat(slip.lines)),
         quantity: sumQuantity(slip.lines),
         statusLabel: status.label,
@@ -385,12 +400,12 @@ function ExportSlipPage() {
               <input
                 type="text"
                 className={styles.searchInput}
-                placeholder="Nhập từ khóa tìm kiếm mã phiếu..."
-                value={filters.docCode}
-                onChange={(event) => setFilters(prev => ({ ...prev, docCode: event.target.value }))}
+                placeholder="Tìm theo mã phiếu, Serial, SKU..."
+                value={filters.keyword}
+                onChange={(event) => setFilters(prev => ({ ...prev, keyword: event.target.value }))}
               />
-              {filters.docCode && (
-                <button className={styles.clearSearchBtn} onClick={() => setFilters(prev => ({ ...prev, docCode: '' }))}>
+              {filters.keyword && (
+                <button className={styles.clearSearchBtn} onClick={() => setFilters(prev => ({ ...prev, keyword: '' }))}>
                   <i className="bi bi-x-circle-fill"></i>
                 </button>
               )}
@@ -548,7 +563,7 @@ function ExportSlipPage() {
                     <i className="bi bi-printer"></i> In phiếu
                   </button>
                   <button className={styles.btnSecondary} onClick={handleExport} style={{ backgroundColor: 'white', color: '#16a34a', borderColor: '#bbf7d0' }}>
-                    <i className="bi bi-file-earmark-excel"></i> Xuất Excel
+                    <i className="bi bi-file-earmark-excel"></i>
                   </button>
                 </div>
               </div>
@@ -558,7 +573,7 @@ function ExportSlipPage() {
           <div className={styles.pagination}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>Hiển thị</span>
-              <select
+              <SearchableSelect
                 className="misa-select"
                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
                 value={pageSize}
@@ -568,7 +583,7 @@ function ExportSlipPage() {
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
-              </select>
+              </SearchableSelect>
               <span>trên tổng số {totalItems} bản ghi</span>
             </div>
 
@@ -761,7 +776,6 @@ function ExportSlipPage() {
                       <th>Tên hàng</th>
                       <th>DVT</th>
                       <th className={styles.textCenter}>Số lượng</th>
-                      <th className={styles.textRight}>Đơn giá</th>
                       <th className={styles.textRight}>Giá xuất</th>
                       <th className={styles.textRight}>% VAT</th>
                       <th className={styles.textRight}>Tiền VAT</th>
@@ -781,7 +795,6 @@ function ExportSlipPage() {
                           </td>
                           <td>{product?.unitName || ''}</td>
                           <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(line.quantityOut || 0).toLocaleString('vi-VN')}</td>
-                          <td className={styles.textRight}>{money(line.unitCost || line.unitPrice)}</td>
                           <td className={styles.textRight}>{money(line.unitPrice)}</td>
                           <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>
                           <td className={styles.textRight}>{money(Number(line.quantityOut || 0) * Number(line.unitPrice || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>
@@ -810,7 +823,7 @@ function ExportSlipPage() {
                   <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ fontSize: '13px', color: '#64748b' }}>Tổng tiền hàng: <strong>{money(sumSubtotal(selectedSlip.lines))}</strong></div>
                     <div style={{ fontSize: '13px', color: '#64748b' }}>Tiền VAT: <strong>{money(sumVat(selectedSlip.lines))}</strong></div>
-                    <div style={{ fontSize: '16px', color: 'var(--color-primary)', marginTop: '4px' }}>Tổng thanh toán: <strong>{money(sumSubtotal(selectedSlip.lines) + sumVat(selectedSlip.lines))}</strong></div>
+                    <div style={{ fontSize: '16px', color: 'var(--color-primary)', marginTop: '4px' }}>Tổng thanh toán: <strong>{money(sumAmount(selectedSlip.lines))}</strong></div>
                   </div>
                 </div>
               </div>
@@ -880,3 +893,5 @@ function ExportSlipPage() {
 }
 
 export default ExportSlipPage;
+
+

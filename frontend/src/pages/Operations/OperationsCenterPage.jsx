@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import UserProfileDropdown from '../../components/ui/UserProfileDropdown/UserProfileDropdown';
+import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import DashboardTab from './tabs/DashboardTab';
 import BackupCenterTab from './tabs/BackupCenterTab';
 import SystemMonitorTab from './tabs/SystemMonitorTab';
@@ -49,36 +49,7 @@ function OperationsCenterPage() {
     };
 
     return (
-        <div className={styles.page}>
-            {/* ── Top Header ─────────────────────────────────────────────────── */}
-            <header className={styles.header}>
-                <div className={styles.headerLeft}>
-                    <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '10px', marginRight: '32px' }} onClick={() => navigate('/dashboard')}>
-                        <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <img src="/dl-logo.png" alt="Duy Long Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                        </div>
-                        <div className={styles.brandName} style={{ margin: 0 }}>Duy Long Computer</div>
-                    </div>
-                    <nav className={styles.navLinks}>
-                        <a onClick={() => navigate('/users')} className={styles.navLink}>
-                            Quản lý người dùng
-                        </a>
-                        <a onClick={() => navigate('/audit-log')} className={styles.navLink}>
-                            Nhật ký hệ thống
-                        </a>
-                        <a className={styles.navLinkActive}>
-                            Trung tâm điều hành
-                        </a>
-                    </nav>
-                </div>
-                <div className={styles.headerRight}>
-
-                    <div className={styles.userInfoContainer}>
-                        <UserProfileDropdown />
-                    </div>
-                </div>
-            </header>
-
+        <SuperAdminLayout>
             <main className={styles.main}>
                 <div className={styles.pageHeader}>
                     <div>
@@ -104,7 +75,7 @@ function OperationsCenterPage() {
                     {renderTab()}
                 </div>
             </main>
-        </div>
+        </SuperAdminLayout>
     );
 }
 

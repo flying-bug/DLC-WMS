@@ -1,6 +1,6 @@
 /* PermissionDetailPage.module.css */
 .page {
-    min-height: 100vh;
+    min-height: calc(100vh - 60px);
     background-color: var(--color-bg-page-alt);
     font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
     color: var(--color-text-strong);
@@ -53,6 +53,12 @@
 .breadcrumbItem {
     cursor: pointer;
     transition: color 0.2s;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
 }
 
 .breadcrumbItem:hover {
@@ -118,7 +124,7 @@
 /* Main Content */
 .main {
     flex: 1;
-    padding: 32px;
+    padding: 0 0 96px;
     max-width: 1400px;
     margin: 0 auto;
     width: 100%;
@@ -177,6 +183,13 @@
     color: var(--color-text-body);
     font-size: 14px;
     font-weight: 600;
+    width: 100%;
+    border-right: 0;
+    border-left: 0;
+    border-top: 0;
+    background: transparent;
+    font-family: inherit;
+    text-align: left;
 }
 
 .menuItem:last-child {
@@ -209,8 +222,16 @@
 }
 
 /* Matrix Content */
-.matrixContent {
+.matrixPanel {
     flex: 1;
+    min-width: 0;
+}
+
+.matrixScrollControls {
+    display: none;
+}
+
+.matrixContent {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 8px;
@@ -281,6 +302,24 @@
     accent-color: var(--color-primary);
 }
 
+.checkboxTarget {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkbox:disabled {
+    cursor: not-allowed;
+    opacity: 0.3;
+}
+
+.breadcrumbItem:focus-visible,
+.menuItem:focus-visible,
+.checkbox:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
 .tableRow:hover {
     background: var(--color-bg-soft);
 }
@@ -295,7 +334,6 @@
     align-items: center;
     font-size: 13px;
     gap: 16px;
-    min-width: 760px;
 }
 
 .legendLeft {
@@ -407,15 +445,85 @@
     }
 
     .main {
-        padding: 24px 16px 112px;
+        padding: 0 0 112px;
     }
 
     .layout {
         flex-direction: column;
+        align-items: stretch;
     }
 
     .sidebar {
         width: 100%;
+    }
+
+    .matrixContent {
+        width: 100%;
+        max-width: 100%;
+        max-height: max(240px, calc(100dvh - 220px));
+        overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        touch-action: pan-x pan-y;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .matrixPanel {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .matrixScrollControls {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .matrixScrollHint {
+        margin-right: auto;
+        color: var(--color-text-muted);
+        font-size: 12px;
+    }
+
+    .matrixScrollButton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--touch-target-min, 44px);
+        height: var(--touch-target-min, 44px);
+        border: 1px solid var(--color-border-strong);
+        border-radius: var(--radius-control);
+        background: var(--color-surface);
+        color: var(--color-primary);
+        cursor: pointer;
+    }
+
+    .matrixScrollButton:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+
+    .matrixContent::-webkit-scrollbar {
+        width: 12px;
+        height: 12px;
+    }
+
+    .matrixContent::-webkit-scrollbar-track {
+        background: var(--color-bg-soft);
+    }
+
+    .matrixContent::-webkit-scrollbar-thumb {
+        background: var(--color-border-strong);
+        border: 3px solid var(--color-bg-soft);
+        border-radius: 999px;
+    }
+
+    .table th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
     }
 }
 
@@ -442,5 +550,18 @@
     .btnSave {
         width: 100%;
         justify-content: center;
+    }
+
+    .footer {
+        padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+
+    .checkboxTarget {
+        width: var(--touch-target-min, 44px);
+        height: var(--touch-target-min, 44px);
+    }
+
+    .matrixContent {
+        max-height: max(240px, calc(100dvh - 270px));
     }
 }

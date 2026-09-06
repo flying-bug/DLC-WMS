@@ -1,0 +1,1038 @@
+﻿{
+    "generateNextStocktakeCode()":  {
+                                        "technique":  "Statement Coverage",
+                                        "testCases":  {
+                                                          "id":  "UTCID01",
+                                                          "purpose":  "Verify the next stocktake code is returned from the code generator with the configured format.",
+                                                          "type":  "N",
+                                                          "status":  "P",
+                                                          "executedDate":  "2026-08-09",
+                                                          "defectId":  "",
+                                                          "cellValues":  {
+                                                                             "8":  {
+                                                                                       "label":  "Precondition"
+                                                                                   },
+                                                                             "9":  {
+                                                                                       "value":  "CodeGeneratorService is available"
+                                                                                   },
+                                                                             "10":  {
+                                                                                        "label":  "Mock setup"
+                                                                                    },
+                                                                             "11":  {
+                                                                                        "value":  "generateCode(\"stocktakes\", \"stocktake_code\", \"KK\", 6) returns \"KK000123\""
+                                                                                    },
+                                                                             "12":  {
+                                                                                        "label":  "Expected"
+                                                                                    },
+                                                                             "13":  {
+                                                                                        "value":  "Code generator is called exactly once with table stocktakes, column stocktake_code, prefix KK, and padding 6"
+                                                                                    },
+                                                                             "29":  {
+                                                                                        "label":  "return"
+                                                                                    },
+                                                                             "30":  {
+                                                                                        "value":  "\"KK000123\""
+                                                                                    },
+                                                                             "32":  {
+                                                                                        "label":  "Exception"
+                                                                                    },
+                                                                             "34":  {
+                                                                                        "label":  "Log message"
+                                                                                    },
+                                                                             "35":  {
+                                                                                        "value":  "No application log is expected"
+                                                                                    }
+                                                                         }
+                                                      }
+                                    },
+    "searchStocktakes(String stocktakeCode, String status, LocalDate fromDate, LocalDate toDate, Pageable pageable)":  {
+                                                                                                                           "technique":  "Equivalence Partitioning (EP)",
+                                                                                                                           "testCases":  [
+                                                                                                                                             {
+                                                                                                                                                 "id":  "UTCID01",
+                                                                                                                                                 "purpose":  "Verify blank code and status filters are normalized to null before repository search.",
+                                                                                                                                                 "type":  "B",
+                                                                                                                                                 "status":  "P",
+                                                                                                                                                 "executedDate":  "2026-08-09",
+                                                                                                                                                 "defectId":  "",
+                                                                                                                                                 "cellValues":  {
+                                                                                                                                                                    "8":  {
+                                                                                                                                                                              "label":  "Precondition"
+                                                                                                                                                                          },
+                                                                                                                                                                    "9":  {
+                                                                                                                                                                              "value":  "Stocktake repository contains no matching records"
+                                                                                                                                                                          },
+                                                                                                                                                                    "11":  {
+                                                                                                                                                                               "label":  "Mock setup"
+                                                                                                                                                                           },
+                                                                                                                                                                    "12":  {
+                                                                                                                                                                               "value":  "searchStocktakes(null, null, null, null, PageRequest[0,20]) returns an empty page"
+                                                                                                                                                                           },
+                                                                                                                                                                    "14":  {
+                                                                                                                                                                               "label":  "stocktakeCode"
+                                                                                                                                                                           },
+                                                                                                                                                                    "15":  {
+                                                                                                                                                                               "value":  "\"   \""
+                                                                                                                                                                           },
+                                                                                                                                                                    "17":  {
+                                                                                                                                                                               "label":  "status"
+                                                                                                                                                                           },
+                                                                                                                                                                    "18":  {
+                                                                                                                                                                               "value":  "\"\""
+                                                                                                                                                                           },
+                                                                                                                                                                    "20":  {
+                                                                                                                                                                               "label":  "fromDate"
+                                                                                                                                                                           },
+                                                                                                                                                                    "21":  {
+                                                                                                                                                                               "value":  "null"
+                                                                                                                                                                           },
+                                                                                                                                                                    "23":  {
+                                                                                                                                                                               "label":  "toDate"
+                                                                                                                                                                           },
+                                                                                                                                                                    "24":  {
+                                                                                                                                                                               "value":  "null"
+                                                                                                                                                                           },
+                                                                                                                                                                    "26":  {
+                                                                                                                                                                               "label":  "pageable"
+                                                                                                                                                                           },
+                                                                                                                                                                    "27":  {
+                                                                                                                                                                               "value":  "PageRequest.of(0, 20)"
+                                                                                                                                                                           },
+                                                                                                                                                                    "29":  {
+                                                                                                                                                                               "label":  "return"
+                                                                                                                                                                           },
+                                                                                                                                                                    "30":  {
+                                                                                                                                                                               "value":  "Empty Page\u003cStocktakeResponse\u003e"
+                                                                                                                                                                           },
+                                                                                                                                                                    "32":  {
+                                                                                                                                                                               "label":  "Exception"
+                                                                                                                                                                           },
+                                                                                                                                                                    "34":  {
+                                                                                                                                                                               "label":  "Log message"
+                                                                                                                                                                           },
+                                                                                                                                                                    "35":  {
+                                                                                                                                                                               "value":  "No application log is expected"
+                                                                                                                                                                           },
+                                                                                                                                                                    "37":  {
+                                                                                                                                                                               "label":  "Expected"
+                                                                                                                                                                           },
+                                                                                                                                                                    "38":  {
+                                                                                                                                                                               "value":  "Repository receives null code and status filters"
+                                                                                                                                                                           }
+                                                                                                                                                                }
+                                                                                                                                             },
+                                                                                                                                             {
+                                                                                                                                                 "id":  "UTCID02",
+                                                                                                                                                 "purpose":  "Verify nonblank code and status filters are trimmed and each repository entity is mapped.",
+                                                                                                                                                 "type":  "N",
+                                                                                                                                                 "status":  "P",
+                                                                                                                                                 "executedDate":  "2026-08-09",
+                                                                                                                                                 "defectId":  "",
+                                                                                                                                                 "cellValues":  {
+                                                                                                                                                                    "10":  {
+                                                                                                                                                                               "value":  "Repository has DRAFT stocktake KK000001 dated within August 2026"
+                                                                                                                                                                           },
+                                                                                                                                                                    "13":  {
+                                                                                                                                                                               "value":  "searchStocktakes(\"KK000\", \"DRAFT\", 2026-08-01, 2026-08-31, PageRequest[0,10]) returns one entity"
+                                                                                                                                                                           },
+                                                                                                                                                                    "16":  {
+                                                                                                                                                                               "value":  "\"  KK000  \""
+                                                                                                                                                                           },
+                                                                                                                                                                    "19":  {
+                                                                                                                                                                               "value":  "\"  DRAFT  \""
+                                                                                                                                                                           },
+                                                                                                                                                                    "22":  {
+                                                                                                                                                                               "value":  "2026-08-01"
+                                                                                                                                                                           },
+                                                                                                                                                                    "25":  {
+                                                                                                                                                                               "value":  "2026-08-31"
+                                                                                                                                                                           },
+                                                                                                                                                                    "28":  {
+                                                                                                                                                                               "value":  "PageRequest.of(0, 10)"
+                                                                                                                                                                           },
+                                                                                                                                                                    "31":  {
+                                                                                                                                                                               "value":  "Page\u003cStocktakeResponse\u003e with 1 element"
+                                                                                                                                                                           },
+                                                                                                                                                                    "35":  {
+                                                                                                                                                                               "value":  "No application log is expected"
+                                                                                                                                                                           },
+                                                                                                                                                                    "39":  {
+                                                                                                                                                                               "value":  "Repository receives trimmed filters and the entity is mapped with code KK000001 and status DRAFT"
+                                                                                                                                                                           }
+                                                                                                                                                                }
+                                                                                                                                             }
+                                                                                                                                         ]
+                                                                                                                       },
+    "getStocktakeDetail(Long id)":  {
+                                        "technique":  "Equivalence Partitioning (EP)",
+                                        "testCases":  [
+                                                          {
+                                                              "id":  "UTCID01",
+                                                              "purpose":  "Verify a nonexistent stocktake id is rejected with the business exception.",
+                                                              "type":  "A",
+                                                              "status":  "P",
+                                                              "executedDate":  "2026-08-09",
+                                                              "defectId":  "",
+                                                              "cellValues":  {
+                                                                                 "8":  {
+                                                                                           "label":  "Precondition"
+                                                                                       },
+                                                                                 "9":  {
+                                                                                           "value":  "Stocktake 999 does not exist"
+                                                                                       },
+                                                                                 "11":  {
+                                                                                            "label":  "Mock setup"
+                                                                                        },
+                                                                                 "12":  {
+                                                                                            "value":  "findByIdWithDetails(999) returns Optional.empty"
+                                                                                        },
+                                                                                 "14":  {
+                                                                                            "label":  "id"
+                                                                                        },
+                                                                                 "15":  {
+                                                                                            "value":  "999"
+                                                                                        },
+                                                                                 "17":  {
+                                                                                            "label":  "Expected"
+                                                                                        },
+                                                                                 "18":  {
+                                                                                            "value":  "Warehouse and product variant lookups are not called"
+                                                                                        },
+                                                                                 "29":  {
+                                                                                            "label":  "return"
+                                                                                        },
+                                                                                 "30":  {
+                                                                                            "value":  "No StocktakeResponse is returned"
+                                                                                        },
+                                                                                 "32":  {
+                                                                                            "label":  "Exception"
+                                                                                        },
+                                                                                 "33":  {
+                                                                                            "value":  "BusinessException: Không tìm thấy phiếu kiểm kê"
+                                                                                        },
+                                                                                 "34":  {
+                                                                                            "label":  "Log message"
+                                                                                        },
+                                                                                 "35":  {
+                                                                                            "value":  "No application log is expected"
+                                                                                        }
+                                                                             }
+                                                          },
+                                                          {
+                                                              "id":  "UTCID02",
+                                                              "purpose":  "Verify an existing stocktake maps its line serial and participant details.",
+                                                              "type":  "N",
+                                                              "status":  "P",
+                                                              "executedDate":  "2026-08-09",
+                                                              "defectId":  "",
+                                                              "cellValues":  {
+                                                                                 "10":  {
+                                                                                            "value":  "Stocktake 50 contains variant 100, serial SN-001, and participant Nguyễn Văn A"
+                                                                                        },
+                                                                                 "13":  {
+                                                                                            "value":  "findByIdWithDetails(50) returns stocktake KK000001; warehouse and variant details are absent"
+                                                                                        },
+                                                                                 "16":  {
+                                                                                            "value":  "50"
+                                                                                        },
+                                                                                 "19":  {
+                                                                                            "value":  "Response contains one line with serial SN-001 status MATCHED and one participant Nguyễn Văn A"
+                                                                                        },
+                                                                                 "31":  {
+                                                                                            "value":  "StocktakeResponse{id=50, stocktakeCode=\"KK000001\", lineCount=1, participantCount=1}"
+                                                                                        },
+                                                                                 "35":  {
+                                                                                            "value":  "No application log is expected"
+                                                                                        }
+                                                                             }
+                                                          }
+                                                      ]
+                                    },
+    "getAvailableSerials(Long warehouseId, Long variantId)":  {
+                                                                  "technique":  "Equivalence Partitioning (EP)",
+                                                                  "testCases":  [
+                                                                                    {
+                                                                                        "id":  "UTCID01",
+                                                                                        "purpose":  "Verify a null warehouseId returns an empty list without querying serial data.",
+                                                                                        "type":  "A",
+                                                                                        "status":  "P",
+                                                                                        "executedDate":  "2026-08-09",
+                                                                                        "defectId":  "",
+                                                                                        "cellValues":  {
+                                                                                                           "8":  {
+                                                                                                                     "label":  "Precondition"
+                                                                                                                 },
+                                                                                                           "9":  {
+                                                                                                                     "value":  "SerialNumberRepository is available"
+                                                                                                                 },
+                                                                                                           "11":  {
+                                                                                                                      "label":  "Mock setup"
+                                                                                                                  },
+                                                                                                           "12":  {
+                                                                                                                      "value":  "No repository behavior is stubbed"
+                                                                                                                  },
+                                                                                                           "14":  {
+                                                                                                                      "label":  "warehouseId"
+                                                                                                                  },
+                                                                                                           "15":  {
+                                                                                                                      "value":  "null"
+                                                                                                                  },
+                                                                                                           "17":  {
+                                                                                                                      "label":  "variantId"
+                                                                                                                  },
+                                                                                                           "18":  {
+                                                                                                                      "value":  "100"
+                                                                                                                  },
+                                                                                                           "20":  {
+                                                                                                                      "label":  "Expected"
+                                                                                                                  },
+                                                                                                           "21":  {
+                                                                                                                      "value":  "SerialNumberRepository is not called"
+                                                                                                                  },
+                                                                                                           "29":  {
+                                                                                                                      "label":  "return"
+                                                                                                                  },
+                                                                                                           "30":  {
+                                                                                                                      "value":  "Empty List\u003cSerialNumber\u003e"
+                                                                                                                  },
+                                                                                                           "32":  {
+                                                                                                                      "label":  "Exception"
+                                                                                                                  },
+                                                                                                           "34":  {
+                                                                                                                      "label":  "Log message"
+                                                                                                                  },
+                                                                                                           "35":  {
+                                                                                                                      "value":  "No application log is expected"
+                                                                                                                  }
+                                                                                                       }
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "UTCID02",
+                                                                                        "purpose":  "Verify a null variantId returns an empty list without querying serial data.",
+                                                                                        "type":  "A",
+                                                                                        "status":  "P",
+                                                                                        "executedDate":  "2026-08-09",
+                                                                                        "defectId":  "",
+                                                                                        "cellValues":  {
+                                                                                                           "9":  {
+                                                                                                                     "value":  "SerialNumberRepository is available"
+                                                                                                                 },
+                                                                                                           "12":  {
+                                                                                                                      "value":  "No repository behavior is stubbed"
+                                                                                                                  },
+                                                                                                           "16":  {
+                                                                                                                      "value":  "1"
+                                                                                                                  },
+                                                                                                           "19":  {
+                                                                                                                      "value":  "null"
+                                                                                                                  },
+                                                                                                           "21":  {
+                                                                                                                      "value":  "SerialNumberRepository is not called"
+                                                                                                                  },
+                                                                                                           "30":  {
+                                                                                                                      "value":  "Empty List\u003cSerialNumber\u003e"
+                                                                                                                  },
+                                                                                                           "35":  {
+                                                                                                                      "value":  "No application log is expected"
+                                                                                                                  }
+                                                                                                       }
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "UTCID03",
+                                                                                        "purpose":  "Verify valid warehouse and variant ids return only AVAILABLE serials from the repository.",
+                                                                                        "type":  "N",
+                                                                                        "status":  "P",
+                                                                                        "executedDate":  "2026-08-09",
+                                                                                        "defectId":  "",
+                                                                                        "cellValues":  {
+                                                                                                           "10":  {
+                                                                                                                      "value":  "Warehouse 1 and variant 100 have AVAILABLE serial SN-001"
+                                                                                                                  },
+                                                                                                           "13":  {
+                                                                                                                      "value":  "findByWarehouseIdAndVariantIdAndStatus(1, 100, \"AVAILABLE\") returns serial SN-001"
+                                                                                                                  },
+                                                                                                           "16":  {
+                                                                                                                      "value":  "1"
+                                                                                                                  },
+                                                                                                           "18":  {
+                                                                                                                      "value":  "100"
+                                                                                                                  },
+                                                                                                           "22":  {
+                                                                                                                      "value":  "Repository is queried with status AVAILABLE"
+                                                                                                                  },
+                                                                                                           "31":  {
+                                                                                                                      "value":  "List\u003cSerialNumber\u003e containing SN-001"
+                                                                                                                  },
+                                                                                                           "35":  {
+                                                                                                                      "value":  "No application log is expected"
+                                                                                                                  }
+                                                                                                       }
+                                                                                    }
+                                                                                ]
+                                                              },
+    "createStocktake(StocktakeRequest req)":  {
+                                                  "technique":  "Equivalence Partitioning (EP)",
+                                                  "testCases":  [
+                                                                    {
+                                                                        "id":  "UTCID01",
+                                                                        "purpose":  "Verify the null request partition is rejected before any dependency is called.",
+                                                                        "type":  "A",
+                                                                        "status":  "P",
+                                                                        "executedDate":  "2026-08-09",
+                                                                        "defectId":  "",
+                                                                        "cellValues":  {
+                                                                                           "8":  {
+                                                                                                     "label":  "Precondition"
+                                                                                                 },
+                                                                                           "9":  {
+                                                                                                     "value":  "All dependencies are available as Mockito mocks"
+                                                                                                 },
+                                                                                           "15":  {
+                                                                                                      "label":  "Mock setup"
+                                                                                                  },
+                                                                                           "16":  {
+                                                                                                      "value":  "No collaborator behavior is stubbed"
+                                                                                                  },
+                                                                                           "19":  {
+                                                                                                      "label":  "stocktakeCode"
+                                                                                                  },
+                                                                                           "23":  {
+                                                                                                      "label":  "warehouseId"
+                                                                                                  },
+                                                                                           "26":  {
+                                                                                                      "label":  "createdBy"
+                                                                                                  },
+                                                                                           "37":  {
+                                                                                                      "label":  "lines"
+                                                                                                  },
+                                                                                           "41":  {
+                                                                                                      "label":  "stocktakeDate"
+                                                                                                  },
+                                                                                           "43":  {
+                                                                                                      "label":  "lines[].serials"
+                                                                                                  },
+                                                                                           "45":  {
+                                                                                                      "label":  "participants[]"
+                                                                                                  },
+                                                                                           "47":  {
+                                                                                                      "label":  "Expected"
+                                                                                                  },
+                                                                                           "48":  {
+                                                                                                      "value":  "No code generation, duplicate check, or save occurs"
+                                                                                                  },
+                                                                                           "29":  {
+                                                                                                      "label":  "return"
+                                                                                                  },
+                                                                                           "30":  {
+                                                                                                      "value":  "No StocktakeResponse is returned"
+                                                                                                  },
+                                                                                           "32":  {
+                                                                                                      "label":  "Exception"
+                                                                                                  },
+                                                                                           "33":  {
+                                                                                                      "value":  "BusinessException: Dữ liệu không hợp lệ"
+                                                                                                  },
+                                                                                           "34":  {
+                                                                                                      "label":  "Log message"
+                                                                                                  },
+                                                                                           "35":  {
+                                                                                                      "value":  "No application log is expected"
+                                                                                                  }
+                                                                                       }
+                                                                    },
+                                                                    {
+                                                                        "id":  "UTCID02",
+                                                                        "purpose":  "Verify a request without warehouseId is rejected before code resolution.",
+                                                                        "type":  "A",
+                                                                        "status":  "P",
+                                                                        "executedDate":  "2026-08-09",
+                                                                        "defectId":  "",
+                                                                        "cellValues":  {
+                                                                                           "10":  {
+                                                                                                      "value":  "Request has one line and createdBy=7"
+                                                                                                  },
+                                                                                           "16":  {
+                                                                                                      "value":  "No collaborator behavior is stubbed"
+                                                                                                  },
+                                                                                           "20":  {
+                                                                                                      "value":  "\"KK000001\""
+                                                                                                  },
+                                                                                           "24":  {
+                                                                                                      "value":  "null"
+                                                                                                  },
+                                                                                           "27":  {
+                                                                                                      "value":  "7"
+                                                                                                  },
+                                                                                           "38":  {
+                                                                                                      "value":  "1"
+                                                                                                  },
+                                                                                           "48":  {
+                                                                                                      "value":  "No code generation, duplicate check, or save occurs"
+                                                                                                  },
+                                                                                           "30":  {
+                                                                                                      "value":  "No StocktakeResponse is returned"
+                                                                                                  },
+                                                                                           "35":  {
+                                                                                                      "value":  "No application log is expected"
+                                                                                                  },
+                                                                                           "91":  {
+                                                                                                      "value":  "BusinessException: Kho kiểm kê là bắt buộc"
+                                                                                                  }
+                                                                                       }
+                                                                    },
+                                                                    {
+                                                                        "id":  "UTCID03",
+                                                                        "purpose":  "Verify the empty lines boundary is rejected before code resolution.",
+                                                                        "type":  "B",
+                                                                        "status":  "P",
+                                                                        "executedDate":  "2026-08-09",
+                                                                        "defectId":  "",
+                                                                        "cellValues":  {
+                                                                                           "11":  {
+                                                                                                      "value":  "Request has warehouseId=1 and createdBy=7"
+                                                                                                  },
+                                                                                           "16":  {
+                                                                                                      "value":  "No collaborator behavior is stubbed"
+                                                                                                  },
+                                                                                           "20":  {
+                                                                                                      "value":  "\"KK000001\""
+                                                                                                  },
+                                                                                           "25":  {
+                                                                                                      "value":  "1"
+                                                                                                  },
+                                                                                           "27":  {
+                                                                                                      "value":  "7"
+                                                                                                  },
+                                                                                           "39":  {
+                                                                                                      "value":  "[]"
+                                                                                                  },
+                                                                                           "48":  {
+                                                                                                      "value":  "No code generation, duplicate check, or save occurs"
+                                                                                                  },
+                                                                                           "30":  {
+                                                                                                      "value":  "No StocktakeResponse is returned"
+                                                                                                  },
+                                                                                           "35":  {
+                                                                                                      "value":  "No application log is expected"
+                                                                                                  },
+                                                                                           "92":  {
+                                                                                                      "value":  "BusinessException: Phiếu kiểm kê phải có ít nhất một dòng"
+                                                                                                  }
+                                                                                       }
+                                                                    },
+                                                                    {
+                                                                        "id":  "UTCID04",
+                                                                        "purpose":  "Verify a request without createdBy is rejected before code resolution.",
+                                                                        "type":  "A",
+                                                                        "status":  "P",
+                                                                        "executedDate":  "2026-08-09",
+                                                                        "defectId":  "",
+                                                                        "cellValues":  {
+                                                                                           "12":  {
+                                                                                                      "value":  "Request has warehouseId=1 and one stocktake line"
+                                                                                                  },
+                                                                                           "16":  {
+                                                                                                      "value":  "No collaborator behavior is stubbed"
+                                                                                                  },
+                                                                                           "20":  {
+                                                                                                      "value":  "\"KK000001\""
+                                                                                                  },
+                                                                                           "25":  {
+                                                                                                      "value":  "1"
+                                                                                                  },
+                                                                                           "28":  {
+                                                                                                      "value":  "null"
+                                                                                                  },
+                                                                                           "38":  {
+                                                                                                      "value":  "1"
+                                                                                                  },
+                                                                                           "48":  {
+                                                                                                      "value":  "No code generation, duplicate check, or save occurs"
+                                                                                                  },
+                                                                                           "30":  {
+                                                                                                      "value":  "No StocktakeResponse is returned"
+                                                                                                  },
+                                                                                           "35":  {
+                                                                                                      "value":  "No application log is expected"
+                                                                                                  },
+                                                                                           "93":  {
+                                                                                                      "value":  "BusinessException: Người tạo là bắt buộc"
+                                                                                                  }
+                                                                                       }
+                                                                    },
+                                                                    {
+                                                                        "id":  "UTCID05",
+                                                                        "purpose":  "Verify a trimmed custom stocktake code that already exists is rejected.",
+                                                                        "type":  "A",
+                                                                        "status":  "P",
+                                                                        "executedDate":  "2026-08-09",
+                                                                        "defectId":  "",
+                                                                        "cellValues":  {
+                                                                                           "13":  {
+                                                                                                      "value":  "Stocktake code KK-CUSTOM already exists"
+                                                                                                  },
+                                                                                           "17":  {
+                                                                                                      "value":  "existsByStocktakeCode(\"KK-CUSTOM\") returns true"
+                                                                                                  },
+                                                                                           "21":  {
+                                                                                                      "value":  "\"  KK-CUSTOM  \""
+                                                                                                  },
+                                                                                           "25":  {
+                                                                                                      "value":  "1"
+                                                                                                  },
+                                                                                           "27":  {
+                                                                                                      "value":  "7"
+                                                                                                  },
+                                                                                           "38":  {
+                                                                                                      "value":  "1"
+                                                                                                  },
+                                                                                           "49":  {
+                                                                                                      "value":  "Generated-code service is not called and stocktake is not saved"
+                                                                                                  },
+                                                                                           "30":  {
+                                                                                                      "value":  "No StocktakeResponse is returned"
+                                                                                                  },
+                                                                                           "35":  {
+                                                                                                      "value":  "No application log is expected"
+                                                                                                  },
+                                                                                           "94":  {
+                                                                                                      "value":  "BusinessException: Mã kiểm kê đã tồn tại: KK-CUSTOM"
+                                                                                                  }
+                                                                                       }
+                                                                    },
+                                                                    {
+                                                                        "id":  "UTCID06",
+                                                                        "purpose":  "Verify a blank code generates a unique code and maps line serial participant and default fields.",
+                                                                        "type":  "N",
+                                                                        "status":  "P",
+                                                                        "executedDate":  "2026-08-09",
+                                                                        "defectId":  "",
+                                                                        "cellValues":  {
+                                                                                           "14":  {
+                                                                                                      "value":  "Generated code KK000001 is unique"
+                                                                                                  },
+                                                                                           "18":  {
+                                                                                                      "value":  "Code generator returns KK000001; duplicate check returns false; save assigns id 50"
+                                                                                                  },
+                                                                                           "22":  {
+                                                                                                      "value":  "\"   \""
+                                                                                                  },
+                                                                                           "25":  {
+                                                                                                      "value":  "1"
+                                                                                                  },
+                                                                                           "27":  {
+                                                                                                      "value":  "7"
+                                                                                                  },
+                                                                                           "38":  {
+                                                                                                      "value":  "1"
+                                                                                                  },
+                                                                                           "42":  {
+                                                                                                      "value":  "null"
+                                                                                                  },
+                                                                                           "44":  {
+                                                                                                      "value":  "SN-001 with scanStatus=null"
+                                                                                                  },
+                                                                                           "46":  {
+                                                                                                      "value":  "Nguyễn Văn A"
+                                                                                                  },
+                                                                                           "50":  {
+                                                                                                      "value":  "Saved entity has status DRAFT, current date, one child line, serial status MATCHED, and one participant with correct parent references"
+                                                                                                  },
+                                                                                           "31":  {
+                                                                                                      "value":  "StocktakeResponse{id=50, stocktakeCode=\"KK000001\", status=\"DRAFT\"}"
+                                                                                                  },
+                                                                                           "35":  {
+                                                                                                      "value":  "No application log is expected"
+                                                                                                  }
+                                                                                       }
+                                                                    }
+                                                                ]
+                                              },
+    "updateStocktake(Long id, StocktakeRequest req)":  {
+                                                           "technique":  "Branch Coverage",
+                                                           "testCases":  [
+                                                                             {
+                                                                                 "id":  "UTCID01",
+                                                                                 "purpose":  "Verify updating a nonexistent stocktake follows the not-found exception branch.",
+                                                                                 "type":  "A",
+                                                                                 "status":  "P",
+                                                                                 "executedDate":  "2026-08-09",
+                                                                                 "defectId":  "",
+                                                                                 "cellValues":  {
+                                                                                                    "8":  {
+                                                                                                              "label":  "Precondition"
+                                                                                                          },
+                                                                                                    "9":  {
+                                                                                                              "value":  "Stocktake 999 does not exist and request fields are valid"
+                                                                                                          },
+                                                                                                    "14":  {
+                                                                                                               "label":  "Mock setup"
+                                                                                                           },
+                                                                                                    "15":  {
+                                                                                                               "value":  "findByIdWithDetails(999) returns Optional.empty"
+                                                                                                           },
+                                                                                                    "20":  {
+                                                                                                               "label":  "id"
+                                                                                                           },
+                                                                                                    "21":  {
+                                                                                                               "value":  "999"
+                                                                                                           },
+                                                                                                    "23":  {
+                                                                                                               "label":  "stocktakeCode"
+                                                                                                           },
+                                                                                                    "24":  {
+                                                                                                               "value":  "\"KK000001\""
+                                                                                                           },
+                                                                                                    "26":  {
+                                                                                                               "label":  "warehouseId"
+                                                                                                           },
+                                                                                                    "27":  {
+                                                                                                               "value":  "1"
+                                                                                                           },
+                                                                                                    "28":  {
+                                                                                                               "label":  "createdBy"
+                                                                                                           },
+                                                                                                    "37":  {
+                                                                                                               "value":  "7"
+                                                                                                           },
+                                                                                                    "38":  {
+                                                                                                               "label":  "lines"
+                                                                                                           },
+                                                                                                    "39":  {
+                                                                                                               "value":  "1"
+                                                                                                           },
+                                                                                                    "40":  {
+                                                                                                               "label":  "stocktakeDate"
+                                                                                                           },
+                                                                                                    "42":  {
+                                                                                                               "label":  "purpose"
+                                                                                                           },
+                                                                                                    "44":  {
+                                                                                                               "label":  "Expected"
+                                                                                                           },
+                                                                                                    "45":  {
+                                                                                                               "value":  "StocktakeRepository.save is not called"
+                                                                                                           },
+                                                                                                    "29":  {
+                                                                                                               "label":  "return"
+                                                                                                           },
+                                                                                                    "30":  {
+                                                                                                               "value":  "No StocktakeResponse is returned"
+                                                                                                           },
+                                                                                                    "32":  {
+                                                                                                               "label":  "Exception"
+                                                                                                           },
+                                                                                                    "33":  {
+                                                                                                               "value":  "BusinessException: Không tìm thấy phiếu kiểm kê"
+                                                                                                           },
+                                                                                                    "34":  {
+                                                                                                               "label":  "Log message"
+                                                                                                           },
+                                                                                                    "35":  {
+                                                                                                               "value":  "No application log is expected"
+                                                                                                           }
+                                                                                                }
+                                                                             },
+                                                                             {
+                                                                                 "id":  "UTCID02",
+                                                                                 "purpose":  "Verify updating a POSTED stocktake follows the noneditable-status exception branch.",
+                                                                                 "type":  "A",
+                                                                                 "status":  "P",
+                                                                                 "executedDate":  "2026-08-09",
+                                                                                 "defectId":  "",
+                                                                                 "cellValues":  {
+                                                                                                    "10":  {
+                                                                                                               "value":  "Stocktake 50 exists with status POSTED"
+                                                                                                           },
+                                                                                                    "16":  {
+                                                                                                               "value":  "findByIdWithDetails(50) returns POSTED stocktake KK000001"
+                                                                                                           },
+                                                                                                    "22":  {
+                                                                                                               "value":  "50"
+                                                                                                           },
+                                                                                                    "24":  {
+                                                                                                               "value":  "\"KK000001\""
+                                                                                                           },
+                                                                                                    "27":  {
+                                                                                                               "value":  "1"
+                                                                                                           },
+                                                                                                    "37":  {
+                                                                                                               "value":  "7"
+                                                                                                           },
+                                                                                                    "39":  {
+                                                                                                               "value":  "1"
+                                                                                                           },
+                                                                                                    "46":  {
+                                                                                                               "value":  "Duplicate-code check and save are not called"
+                                                                                                           },
+                                                                                                    "30":  {
+                                                                                                               "value":  "No StocktakeResponse is returned"
+                                                                                                           },
+                                                                                                    "35":  {
+                                                                                                               "value":  "No application log is expected"
+                                                                                                           },
+                                                                                                    "91":  {
+                                                                                                               "value":  "BusinessException: Chỉ có thể cập nhật phiếu lưu tạm"
+                                                                                                           }
+                                                                                                }
+                                                                             },
+                                                                             {
+                                                                                 "id":  "UTCID03",
+                                                                                 "purpose":  "Verify changing to an existing stocktake code follows the duplicate-code exception branch.",
+                                                                                 "type":  "A",
+                                                                                 "status":  "P",
+                                                                                 "executedDate":  "2026-08-09",
+                                                                                 "defectId":  "",
+                                                                                 "cellValues":  {
+                                                                                                    "11":  {
+                                                                                                               "value":  "Stocktake 50 is DRAFT and code KK000002 belongs to another stocktake"
+                                                                                                           },
+                                                                                                    "17":  {
+                                                                                                               "value":  "findByIdWithDetails(50) returns KK000001; existsByStocktakeCode(\"KK000002\") returns true"
+                                                                                                           },
+                                                                                                    "22":  {
+                                                                                                               "value":  "50"
+                                                                                                           },
+                                                                                                    "25":  {
+                                                                                                               "value":  "\"  KK000002  \""
+                                                                                                           },
+                                                                                                    "27":  {
+                                                                                                               "value":  "1"
+                                                                                                           },
+                                                                                                    "37":  {
+                                                                                                               "value":  "7"
+                                                                                                           },
+                                                                                                    "39":  {
+                                                                                                               "value":  "1"
+                                                                                                           },
+                                                                                                    "47":  {
+                                                                                                               "value":  "Existing stocktake remains unsaved"
+                                                                                                           },
+                                                                                                    "30":  {
+                                                                                                               "value":  "No StocktakeResponse is returned"
+                                                                                                           },
+                                                                                                    "35":  {
+                                                                                                               "value":  "No application log is expected"
+                                                                                                           },
+                                                                                                    "92":  {
+                                                                                                               "value":  "BusinessException: Mã phiếu kiểm kê đã tồn tại"
+                                                                                                           }
+                                                                                                }
+                                                                             },
+                                                                             {
+                                                                                 "id":  "UTCID04",
+                                                                                 "purpose":  "Verify keeping the same code replaces child data and preserves the original date when omitted.",
+                                                                                 "type":  "N",
+                                                                                 "status":  "P",
+                                                                                 "executedDate":  "2026-08-09",
+                                                                                 "defectId":  "",
+                                                                                 "cellValues":  {
+                                                                                                    "12":  {
+                                                                                                               "value":  "Stocktake 50 is DRAFT with code KK000001, date 2026-08-01, and old child data"
+                                                                                                           },
+                                                                                                    "18":  {
+                                                                                                               "value":  "findByIdWithDetails(50) and save return the existing stocktake"
+                                                                                                           },
+                                                                                                    "22":  {
+                                                                                                               "value":  "50"
+                                                                                                           },
+                                                                                                    "24":  {
+                                                                                                               "value":  "\"KK000001\""
+                                                                                                           },
+                                                                                                    "27":  {
+                                                                                                               "value":  "1"
+                                                                                                           },
+                                                                                                    "37":  {
+                                                                                                               "value":  "7"
+                                                                                                           },
+                                                                                                    "39":  {
+                                                                                                               "value":  "1"
+                                                                                                           },
+                                                                                                    "41":  {
+                                                                                                               "value":  "null"
+                                                                                                           },
+                                                                                                    "43":  {
+                                                                                                               "value":  "\"Kiểm kê cuối tháng\""
+                                                                                                           },
+                                                                                                    "48":  {
+                                                                                                               "value":  "Duplicate-code lookup is skipped; old children are replaced; date remains 2026-08-01"
+                                                                                                           },
+                                                                                                    "31":  {
+                                                                                                               "value":  "StocktakeResponse{id=50, stocktakeCode=\"KK000001\", purpose=\"Kiểm kê cuối tháng\"}"
+                                                                                                           },
+                                                                                                    "35":  {
+                                                                                                               "value":  "No application log is expected"
+                                                                                                           }
+                                                                                                }
+                                                                             },
+                                                                             {
+                                                                                 "id":  "UTCID05",
+                                                                                 "purpose":  "Verify changing to a unique stocktake code follows the successful code-update branch.",
+                                                                                 "type":  "N",
+                                                                                 "status":  "P",
+                                                                                 "executedDate":  "2026-08-09",
+                                                                                 "defectId":  "",
+                                                                                 "cellValues":  {
+                                                                                                    "13":  {
+                                                                                                               "value":  "Stocktake 50 is DRAFT and code KK000002 is unused"
+                                                                                                           },
+                                                                                                    "19":  {
+                                                                                                               "value":  "findByIdWithDetails(50) returns KK000001; duplicate check returns false; save returns updated entity"
+                                                                                                           },
+                                                                                                    "22":  {
+                                                                                                               "value":  "50"
+                                                                                                           },
+                                                                                                    "25":  {
+                                                                                                               "value":  "\"  KK000002  \""
+                                                                                                           },
+                                                                                                    "27":  {
+                                                                                                               "value":  "1"
+                                                                                                           },
+                                                                                                    "37":  {
+                                                                                                               "value":  "7"
+                                                                                                           },
+                                                                                                    "39":  {
+                                                                                                               "value":  "1"
+                                                                                                           },
+                                                                                                    "49":  {
+                                                                                                               "value":  "Code is trimmed to KK000002 and stocktake is saved"
+                                                                                                           },
+                                                                                                    "35":  {
+                                                                                                               "value":  "No application log is expected"
+                                                                                                           },
+                                                                                                    "81":  {
+                                                                                                               "value":  "StocktakeResponse{id=50, stocktakeCode=\"KK000002\"}"
+                                                                                                           }
+                                                                                                }
+                                                                             }
+                                                                         ]
+                                                       },
+    "postStocktake(Long id, Long processedBy)":  {
+                                                     "technique":  "Branch Coverage",
+                                                     "testCases":  [
+                                                                       {
+                                                                           "id":  "UTCID01",
+                                                                           "purpose":  "Verify posting a nonexistent stocktake follows the not-found exception branch.",
+                                                                           "type":  "A",
+                                                                           "status":  "P",
+                                                                           "executedDate":  "2026-08-09",
+                                                                           "defectId":  "",
+                                                                           "cellValues":  {
+                                                                                              "8":  {
+                                                                                                        "label":  "Precondition"
+                                                                                                    },
+                                                                                              "9":  {
+                                                                                                        "value":  "Stocktake 999 does not exist"
+                                                                                                    },
+                                                                                              "12":  {
+                                                                                                         "label":  "Mock setup"
+                                                                                                     },
+                                                                                              "13":  {
+                                                                                                         "value":  "findByIdWithDetails(999) returns Optional.empty"
+                                                                                                     },
+                                                                                              "16":  {
+                                                                                                         "label":  "id"
+                                                                                                     },
+                                                                                              "17":  {
+                                                                                                         "value":  "999"
+                                                                                                     },
+                                                                                              "19":  {
+                                                                                                         "label":  "processedBy"
+                                                                                                     },
+                                                                                              "20":  {
+                                                                                                         "value":  "7"
+                                                                                                     },
+                                                                                              "21":  {
+                                                                                                         "label":  "Expected"
+                                                                                                     },
+                                                                                              "22":  {
+                                                                                                         "value":  "No serial is updated and no stocktake is saved"
+                                                                                                     },
+                                                                                              "29":  {
+                                                                                                         "label":  "return"
+                                                                                                     },
+                                                                                              "30":  {
+                                                                                                         "value":  "No StocktakeResponse is returned"
+                                                                                                     },
+                                                                                              "32":  {
+                                                                                                         "label":  "Exception"
+                                                                                                     },
+                                                                                              "33":  {
+                                                                                                         "value":  "BusinessException: Không tìm thấy phiếu kiểm kê"
+                                                                                                     },
+                                                                                              "34":  {
+                                                                                                         "label":  "Log message"
+                                                                                                     },
+                                                                                              "35":  {
+                                                                                                         "value":  "No application log is expected"
+                                                                                                     }
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "UTCID02",
+                                                                           "purpose":  "Verify posting a non-DRAFT stocktake follows the invalid-status exception branch.",
+                                                                           "type":  "A",
+                                                                           "status":  "P",
+                                                                           "executedDate":  "2026-08-09",
+                                                                           "defectId":  "",
+                                                                           "cellValues":  {
+                                                                                              "10":  {
+                                                                                                         "value":  "Stocktake 50 exists with status POSTED"
+                                                                                                     },
+                                                                                              "14":  {
+                                                                                                         "value":  "findByIdWithDetails(50) returns POSTED stocktake KK000001"
+                                                                                                     },
+                                                                                              "18":  {
+                                                                                                         "value":  "50"
+                                                                                                     },
+                                                                                              "20":  {
+                                                                                                         "value":  "7"
+                                                                                                     },
+                                                                                              "23":  {
+                                                                                                         "value":  "No serial is updated and stocktake is not saved again"
+                                                                                                     },
+                                                                                              "30":  {
+                                                                                                         "value":  "No StocktakeResponse is returned"
+                                                                                                     },
+                                                                                              "35":  {
+                                                                                                         "value":  "No application log is expected"
+                                                                                                     },
+                                                                                              "91":  {
+                                                                                                         "value":  "BusinessException: Chỉ phiếu lưu tạm mới có thể xử lý chênh lệch"
+                                                                                                     }
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "UTCID03",
+                                                                           "purpose":  "Verify posting a DRAFT stocktake processes missing and unexpected serial branches and changes status.",
+                                                                           "type":  "N",
+                                                                           "status":  "P",
+                                                                           "executedDate":  "2026-08-09",
+                                                                           "defectId":  "",
+                                                                           "cellValues":  {
+                                                                                              "11":  {
+                                                                                                         "value":  "DRAFT stocktake 50 contains MISSING, UNEXPECTED existing, UNEXPECTED new, and MATCHED serial rows"
+                                                                                                     },
+                                                                                              "15":  {
+                                                                                                         "value":  "Missing serial exists; SN-EXIST exists in warehouse 2; SN-NEW does not exist; stocktake save succeeds"
+                                                                                                     },
+                                                                                              "18":  {
+                                                                                                         "value":  "50"
+                                                                                                     },
+                                                                                              "20":  {
+                                                                                                         "value":  "7"
+                                                                                                     },
+                                                                                              "24":  {
+                                                                                                         "value":  "Missing serial becomes LOST; existing unexpected serial moves to warehouse 1 as AVAILABLE; new serial is created AVAILABLE; MATCHED serial is unchanged; stocktake becomes POSTED"
+                                                                                                     },
+                                                                                              "31":  {
+                                                                                                         "value":  "StocktakeResponse{id=50, stocktakeCode=\"KK000001\", status=\"POSTED\"}"
+                                                                                                     },
+                                                                                              "35":  {
+                                                                                                         "value":  "No application log is expected"
+                                                                                                     }
+                                                                                          }
+                                                                       }
+                                                                   ]
+                                                 }
+}

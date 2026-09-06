@@ -7,6 +7,8 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import { searchCustomers, deactivateCustomer, activateCustomer, exportCustomersToExcel } from '../../api/customerApi';
 import styles from './CustomerListPage.module.css';
+import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+
 
 const STATUS_LABELS = {
     APPROVED: { label: 'Đang hoạt động', code: 'success' },
@@ -186,7 +188,7 @@ const CustomerListPage = () => {
                         </div>
                         <div className={styles.filterField}>
                             <span className={styles.filterLabel}>TÌNH TRẠNG</span>
-                            <select
+                            <SearchableSelect
                                 className={styles.filterSelect}
                                 value={filters.status}
                                 onChange={(e) => handleFilterChange('status', e.target.value)}
@@ -194,11 +196,11 @@ const CustomerListPage = () => {
                                 <option value="">Tất cả</option>
                                 <option value="APPROVED">Đang hoạt động</option>
                                 <option value="INACTIVE">Ngừng hoạt động</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
                         <div className={styles.filterField}>
                             <span className={styles.filterLabel}>NHÓM KHÁCH</span>
-                            <select
+                            <SearchableSelect
                                 className={styles.filterSelect}
                                 value={filters.groupType}
                                 onChange={(e) => handleFilterChange('groupType', e.target.value)}
@@ -207,7 +209,7 @@ const CustomerListPage = () => {
                                 <option value="RETAIL">Khách lẻ</option>
                                 <option value="WHOLESALE">Khách thợ</option>
                                 <option value="DISTRIBUTOR">Đại lý</option>
-                            </select>
+                            </SearchableSelect>
                         </div>
                     </div>
                     <div className={styles.filterActions}>
@@ -349,7 +351,7 @@ const CustomerListPage = () => {
                     <div className={styles.pagination}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span>Hiển thị</span>
-                            <select
+                            <SearchableSelect
                                 className="misa-select"
                                 style={{ width: '70px', height: '32px', padding: '0 8px' }}
                                 value={pageSize}
@@ -359,7 +361,7 @@ const CustomerListPage = () => {
                                 <option value={20}>20</option>
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
-                            </select>
+                            </SearchableSelect>
                             <span>trên tổng số {totalElements} bản ghi</span>
                         </div>
 

@@ -1,6 +1,7 @@
 package com.duylongtech.backend.service;
 
 import com.duylongtech.backend.dto.request.InventoryDocumentLineRequest;
+import com.duylongtech.backend.constant.SystemMessage;
 import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
 import com.duylongtech.backend.dto.request.StocktakeRequest;
 import com.duylongtech.backend.dto.response.StocktakeResponse;
@@ -92,13 +93,13 @@ public class StocktakeService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
 
         if (!"DRAFT".equals(stocktake.getStatus())) {
-            throw new BusinessException("Chỉ có thể cập nhật phiếu lưu tạm");
+            throw new BusinessException(SystemMessage.INV_ERR_014.getMessage());
         }
 
         String requestedCode = req.getStocktakeCode() != null ? req.getStocktakeCode().trim() : null;
         if (requestedCode != null && !requestedCode.equals(stocktake.getStocktakeCode())) {
             if (stocktakeRepository.existsByStocktakeCode(requestedCode)) {
-                throw new BusinessException("Mã phiếu kiểm kê đã tồn tại");
+                throw new BusinessException(SystemMessage.STK_ERR_006.getMessage());
             }
             stocktake.setStocktakeCode(requestedCode);
         }
@@ -124,7 +125,7 @@ public class StocktakeService {
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu kiểm kê"));
 
         if (!"DRAFT".equals(stocktake.getStatus())) {
-            throw new BusinessException("Chỉ phiếu lưu tạm mới có thể xử lý chênh lệch");
+            throw new BusinessException(SystemMessage.STK_ERR_005.getMessage());
         }
 
         for (StocktakeLine line : stocktake.getLines()) {
@@ -167,13 +168,13 @@ public class StocktakeService {
 
     private void validateRequest(StocktakeRequest req) {
         if (req == null)
-            throw new BusinessException("Dữ liệu không hợp lệ");
+            throw new BusinessException(SystemMessage.STK_ERR_004.getMessage());
         if (req.getWarehouseId() == null)
-            throw new BusinessException("Kho kiểm kê là bắt buộc");
+            throw new BusinessException(SystemMessage.STK_ERR_003.getMessage());
         if (req.getLines() == null || req.getLines().isEmpty())
-            throw new BusinessException("Phiếu kiểm kê phải có ít nhất một dòng");
+            throw new BusinessException(SystemMessage.STK_ERR_002.getMessage());
         if (req.getCreatedBy() == null)
-            throw new BusinessException("Người tạo là bắt buộc");
+            throw new BusinessException(SystemMessage.ASM_ERR_026.getMessage());
     }
 
     private String resolveDocCode(String requestedCode) {
@@ -182,7 +183,7 @@ public class StocktakeService {
             docCode = codeGeneratorService.generateCode("stocktakes", "stocktake_code", "KK", 6);
         }
         if (stocktakeRepository.existsByStocktakeCode(docCode)) {
-            throw new BusinessException("Mã kiểm kê đã tồn tại: " + docCode);
+            throw new BusinessException(String.format(SystemMessage.STK_ERR_001.getMessage(), docCode));
         }
         return docCode;
     }
