@@ -15,6 +15,7 @@ import { saveAs } from 'file-saver';
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
 import Modal from '../../components/ui/Modal/Modal';
 import ProductDetailModal from './components/ProductDetailModal';
+import ProductVariantConfigurator from './components/ProductVariantConfigurator';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { canViewPricing } from '../../auth/session';
 
@@ -33,6 +34,7 @@ const defaultFormData = {
     trackSerial: false,
     trackLot: false,
     isAssembly: false,
+    applyWarrantyToVariants: false,
     active: true,
     minStockQty: '',
     taxReductionStatus: 'NORMAL'
@@ -63,6 +65,21 @@ const defaultVariantData = {
     active: true,
     warrantyMonths: ''
 };
+
+const defaultVariantDraft = {
+    enabled: false,
+    attributes: [{ id: 1, name: '', valuesText: '' }],
+    rows: [],
+    excludedKeys: [],
+    error: ''
+};
+
+const resetVariantDraft = () => ({
+    ...defaultVariantDraft,
+    attributes: [{ id: Date.now(), name: '', valuesText: '' }],
+    rows: [],
+    excludedKeys: []
+});
 
 const getPageContent = (response) => {
     const payload = response.data?.data ?? response.data;
@@ -279,6 +296,7 @@ const ProductPage = () => {
     const [printBarcodeProduct, setPrintBarcodeProduct] = useState(null);
     const [formData, setFormData] = useState(defaultFormData);
     const [unitConversions, setUnitConversions] = useState([]);
+    const [variantDraft, setVariantDraft] = useState(defaultVariantDraft);
     const [errorMsg, setErrorMsg] = useState('');
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
@@ -321,7 +339,6 @@ const ProductPage = () => {
     const [bomLines, setBomLines] = useState([]);
     const [allVariants, setAllVariants] = useState([]);
     const [warrantyQty, setWarrantyQty] = useState('');
-    const [warrantyUnit, setWarrantyUnit] = useState('Tháng');
     const [showTypeMenu, setShowTypeMenu] = useState(false);
     const [showQuickAddCat, setShowQuickAddCat] = useState(false);
     const [quickCatForm, setQuickCatForm] = useState({ name: '', description: '' });
@@ -926,11 +943,11 @@ const ProductPage = () => {
     const handleOpenAdd = () => {
         setIsEdit(false);
         setFormData(buildInitialFormData());
+        setVariantDraft(resetVariantDraft());
         setUnitConversions([]);
         setBomLines(getPredefinedBomLines(categories));
         setActiveTab(formData.productType === 'Thành phẩm' ? 'bom' : 'units');
         setWarrantyQty('');
-        setWarrantyUnit('Tháng');
         setErrorMsg('');
         setShowQuickAddCat(false);
         setShowQuickAddUnit(false);
@@ -940,6 +957,7 @@ const ProductPage = () => {
 
     const handleOpenEdit = async (product) => {
         setIsEdit(true);
+        setVariantDraft(resetVariantDraft());
         setFormData(buildInitialFormData({
             id: product.id,
             productCode: product.productCode || '',
@@ -955,24 +973,13 @@ const ProductPage = () => {
             trackSerial: Boolean(product.trackSerial),
             trackLot: Boolean(product.trackLot),
             isAssembly: Boolean(product.isAssembly),
+            applyWarrantyToVariants: false,
             active: product.active !== false,
             minStockQty: Number(product.minStockQty) || '',
             taxReductionStatus: product.taxReductionStatus || 'NORMAL'
         }));
 
-        if (product.warrantyPeriod) {
-            const parts = product.warrantyPeriod.split(' ');
-            if (parts.length >= 2) {
-                setWarrantyQty(Number(parts[0]) || 0);
-                setWarrantyUnit(parts[1]);
-            } else {
-                setWarrantyQty(product.warrantyPeriodMonths || 0);
-                setWarrantyUnit('Tháng');
-            }
-        } else {
-            setWarrantyQty(product.warrantyPeriodMonths || 0);
-            setWarrantyUnit('Tháng');
-        }
+        setWarrantyQty(product.warrantyPeriodMonths || 0);
 
         let loadedBomLines = product.bomLines || [];
         if (product.productType === 'Thành phẩm') {
@@ -1002,6 +1009,7 @@ const ProductPage = () => {
 
     const handleDuplicate = (product) => {
         setIsEdit(false);
+        setVariantDraft(resetVariantDraft());
         setFormData(buildInitialFormData({
             productCode: `${product.productCode}-CP`,
             productName: `${product.productName} - Copy`,
@@ -1016,23 +1024,12 @@ const ProductPage = () => {
             trackSerial: Boolean(product.trackSerial),
             trackLot: Boolean(product.trackLot),
             isAssembly: Boolean(product.isAssembly),
+            applyWarrantyToVariants: false,
             active: product.active !== false,
             taxReductionStatus: product.taxReductionStatus || 'NORMAL'
         }));
 
-        if (product.warrantyPeriod) {
-            const parts = product.warrantyPeriod.split(' ');
-            if (parts.length >= 2) {
-                setWarrantyQty(Number(parts[0]) || '');
-                setWarrantyUnit(parts[1]);
-            } else {
-                setWarrantyQty(product.warrantyPeriodMonths || '');
-                setWarrantyUnit('Tháng');
-            }
-        } else {
-            setWarrantyQty(product.warrantyPeriodMonths || '');
-            setWarrantyUnit('Tháng');
-        }
+        setWarrantyQty(product.warrantyPeriodMonths || '');
 
         setErrorMsg('');
         setUnitConversions((product.unitConversions || []).map(u => ({ ...u, ratio: u.ratio != null ? u.ratio : '' })));
@@ -1044,8 +1041,25 @@ const ProductPage = () => {
         setOpenDropdownId(null);
     };
 
+    const isMultiVariantCreate = () => !isEdit && Boolean(variantDraft.enabled);
+
+    const buildVariantPayload = () => (variantDraft.rows || []).map(row => ({
+        sku: String(row.sku || '').trim().toUpperCase(),
+        barcode: String(row.barcode || '').trim() || null,
+        variantName: String(row.variantName || '').trim(),
+        costPrice: Number(row.costPrice || 0),
+        salePrice: Number(row.salePrice || 0),
+        manufacturerPartNumber: String(row.manufacturerPartNumber || '').trim() || null,
+        specsJson: JSON.stringify(row.specs || {}),
+        trackingMode: row.trackingMode || 'NONE',
+        minStockQty: Number(row.minStockQty || 0),
+        warrantyMonths: Number(row.warrantyMonths || 0),
+        active: row.active !== false
+    }));
+
     const buildPayload = (data) => {
         const isService = isServiceType(data.productType);
+        const hasExplicitVariants = isMultiVariantCreate();
         let finalBrandId = Number(data.brandId) || null;
         if (!finalBrandId && !isService) {
             const khacBrand = brands.find(b => b.name && b.name.trim().toLowerCase() === 'khác');
@@ -1083,8 +1097,11 @@ const ProductPage = () => {
                     note: u.note || ''
                 })),
             minStockQty: isService ? 0 : Number(data.minStockQty || 0),
-            warrantyPeriod: warrantyQty > 0 ? `${warrantyQty} ${warrantyUnit}` : null,
-            warrantyPeriodMonths: warrantyQty > 0 ? (warrantyUnit === 'Năm' ? warrantyQty * 12 : warrantyQty) : 0
+            warrantyPeriod: warrantyQty > 0 ? `${warrantyQty} tháng` : null,
+            warrantyPeriodMonths: warrantyQty > 0 ? warrantyQty : 0,
+            applyWarrantyToVariants: Boolean(data.applyWarrantyToVariants),
+            hasVariants: hasExplicitVariants,
+            variants: hasExplicitVariants ? buildVariantPayload() : []
         };
     };
 
@@ -1119,13 +1136,17 @@ const ProductPage = () => {
     };
 
     const validateForm = () => {
+        const multiVariantCreate = isMultiVariantCreate();
         if (isEdit && !formData.productCode.trim()) return 'Mã sản phẩm không được để trống.';
+        if (multiVariantCreate && !formData.productCode.trim()) return 'Vui lòng nhập mã sản phẩm để sinh SKU phiên bản.';
         if (!formData.productName.trim()) return 'Tên sản phẩm không được để trống.';
-        if (!formData.categoryId && formData.productType !== 'Dịch vụ') return 'Vui lòng chọn danh mục.';
+        if (!formData.categoryId && !isServiceType(formData.productType)) return 'Vui lòng chọn danh mục.';
         if (!formData.unitId) return 'Vui lòng chọn đơn vị tính.';
-        if (formData.salePrice === '' || Number.isNaN(Number(formData.salePrice))) return 'Giá bán không hợp lệ.';
-        if (Number(formData.salePrice) < 0) return 'Giá bán không được âm.';
-        if (formData.productType === 'Thành phẩm') {
+        if (multiVariantCreate && (!variantDraft.rows || variantDraft.rows.length === 0)) return 'Vui lòng sinh ít nhất một SKU.';
+        if (multiVariantCreate && variantDraft.rows.some(row => !String(row.sku || '').trim() || !String(row.variantName || '').trim())) return 'Vui lòng nhập đầy đủ tên phiên bản và SKU.';
+        if (!multiVariantCreate && (formData.salePrice === '' || Number.isNaN(Number(formData.salePrice)))) return 'Giá bán không hợp lệ.';
+        if (!multiVariantCreate && Number(formData.salePrice) < 0) return 'Giá bán không được âm.';
+        if (normalizeText(formData.productType) === 'thanh pham') {
             const validBomLines = bomLines.filter(l => l.categoryId);
             if (validBomLines.length === 0) return 'Vui lòng chọn ít nhất một danh mục cho định mức cấu hình.';
         }
@@ -1134,6 +1155,7 @@ const ProductPage = () => {
 
     const resetAddForm = () => {
         setFormData(buildInitialFormData());
+        setVariantDraft(resetVariantDraft());
         setIsEdit(false);
     };
 
@@ -1879,17 +1901,30 @@ const ProductPage = () => {
 
                                         {/* Row 2: Mã + (Danh mục OR Đơn vị tính chính for Dịch vụ) */}
                                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-                                            {isEdit && (
-                                                <div className={styles.formField} style={{ width: '38%', flexShrink: 0 }}>
-                                                    <label className={styles.fieldLabel}>Mã</label>
+                                            <div className={styles.formField} style={{ width: '38%', flexShrink: 0 }}>
+                                                    <label className={styles.fieldLabel}>
+                                                        {isMultiVariantCreate() ? 'Mã sản phẩm (*)' : 'Mã sản phẩm'}
+                                                    </label>
                                                     <input
                                                         type="text"
                                                         className={styles.fieldInput}
                                                         value={formData.productCode}
-                                                        disabled={true}
+                                                        disabled={isEdit}
+                                                        onChange={(e) => setFormData(fd => ({ ...fd, productCode: e.target.value }))}
+                                                        placeholder={isEdit
+                                                            ? 'Không cho sửa sau khi đã tạo'
+                                                            : isMultiVariantCreate()
+                                                                ? 'Nhập mã gốc để sinh SKU'
+                                                                : 'Để trống nếu muốn hệ thống tự sinh'}
                                                     />
+                                                    <div style={{ marginTop: 4, fontSize: 11, color: '#6b7280', lineHeight: 1.35 }}>
+                                                        {isEdit
+                                                            ? 'Mã sản phẩm không thay đổi sau khi phát sinh dữ liệu.'
+                                                            : isMultiVariantCreate()
+                                                                ? 'Mã này dùng làm tiền tố cho các SKU phiên bản.'
+                                                                : 'Không bắt buộc khi tạo hàng hóa một SKU.'}
+                                                    </div>
                                                 </div>
-                                            )}
 
                                             {formData.productType !== 'Dịch vụ' ? (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
@@ -2101,7 +2136,7 @@ const ProductPage = () => {
 
                                             {formData.productType === 'Thành phẩm' && (
                                                 <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>Thời hạn bảo hành</label>
+                                                    <label className={styles.fieldLabel}>Thời hạn bảo hành (tháng)</label>
                                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                         <input
                                                             type="text" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
@@ -2111,21 +2146,24 @@ const ProductPage = () => {
                                                             }}
                                                             placeholder="0"
                                                         />
-                                                        <SearchableSelect
-                                                            className={styles.fieldInput} style={{ width: '110px', flexShrink: 0 }}
-                                                            value={warrantyUnit} onChange={(e) => setWarrantyUnit(e.target.value)}
-                                                        >
-                                                            <option value="Tháng">Tháng</option>
-                                                            <option value="Năm">Năm</option>
-                                                        </SearchableSelect>
                                                     </div>
+                                                    {isEdit && (
+                                                        <label className={styles.checkboxLabel} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={Boolean(formData.applyWarrantyToVariants)}
+                                                                onChange={(e) => setFormData(fd => ({ ...fd, applyWarrantyToVariants: e.target.checked }))}
+                                                            />
+                                                            <span>Áp dụng bảo hành mới cho tất cả SKU</span>
+                                                        </label>
+                                                    )}
                                                 </div>
                                             )}
 
                                             {formData.productType === 'Dịch vụ' && (
                                                 <>
                                                     <div className={styles.formField} style={{ flex: 1 }}>
-                                                        <label className={styles.fieldLabel}>Thời hạn bảo hành</label>
+                                                        <label className={styles.fieldLabel}>Thời hạn bảo hành (tháng)</label>
                                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                             <input
                                                                 type="text" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
@@ -2135,13 +2173,6 @@ const ProductPage = () => {
                                                                 }}
                                                                 placeholder="0"
                                                             />
-                                                            <SearchableSelect
-                                                                className={styles.fieldInput} style={{ width: '110px', flexShrink: 0 }}
-                                                                value={warrantyUnit} onChange={(e) => setWarrantyUnit(e.target.value)}
-                                                            >
-                                                                <option value="Tháng">Tháng</option>
-                                                                <option value="Năm">Năm</option>
-                                                            </SearchableSelect>
                                                         </div>
                                                     </div>
 
@@ -2308,7 +2339,7 @@ const ProductPage = () => {
                                         {formData.productType === 'Hàng hóa' && (
                                             <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                                                 <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>Cảnh báo hết hàng</label>
+                                                    <label className={styles.fieldLabel}>{isMultiVariantCreate() ? 'Tồn tối thiểu mặc định cho SKU' : 'Cảnh báo hết hàng'}</label>
                                                     <input
                                                         type="text" className={styles.fieldInput}
                                                         value={formData.minStockQty} onChange={(e) => {
@@ -2320,7 +2351,7 @@ const ProductPage = () => {
                                                 </div>
 
                                                 <div className={styles.formField} style={{ flex: 1 }}>
-                                                    <label className={styles.fieldLabel}>Thời hạn bảo hành</label>
+                                                    <label className={styles.fieldLabel}>Thời hạn bảo hành (tháng)</label>
                                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                         <input
                                                             type="text" className={styles.fieldInput} style={{ width: '80px', flexShrink: 0 }}
@@ -2329,14 +2360,17 @@ const ProductPage = () => {
                                                                 setWarrantyQty(val ? Number(val) : '');
                                                             }}
                                                         />
-                                                        <SearchableSelect
-                                                            className={styles.fieldInput} style={{ width: '110px', flexShrink: 0 }}
-                                                            value={warrantyUnit} onChange={(e) => setWarrantyUnit(e.target.value)}
-                                                        >
-                                                            <option value="Tháng">Tháng</option>
-                                                            <option value="Năm">Năm</option>
-                                                        </SearchableSelect>
                                                     </div>
+                                                    {isEdit && (
+                                                        <label className={styles.checkboxLabel} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={Boolean(formData.applyWarrantyToVariants)}
+                                                                onChange={(e) => setFormData(fd => ({ ...fd, applyWarrantyToVariants: e.target.checked }))}
+                                                            />
+                                                            <span>Áp dụng bảo hành mới cho tất cả SKU</span>
+                                                        </label>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
@@ -2344,7 +2378,7 @@ const ProductPage = () => {
                                         {/* Giá bán & Thuế VAT */}
                                         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
                                             <div className={styles.formField} style={{ flex: 1 }}>
-                                                <label className={styles.fieldLabel}>Giá bán (VNĐ)</label>
+                                                    <label className={styles.fieldLabel}>{isMultiVariantCreate() ? 'Giá bán mặc định cho SKU' : 'Giá bán (VNĐ)'}</label>
                                                 <input
                                                     type="text"
                                                     className={styles.fieldInput}
@@ -2395,7 +2429,7 @@ const ProductPage = () => {
                                                         disabled={formData.productType === 'Thành phẩm'}
                                                         onChange={(e) => setFormData(fd => ({ ...fd, trackSerial: e.target.checked }))}
                                                     />
-                                                    <span>Quản lý theo Serial</span>
+                                                    <span>{isMultiVariantCreate() ? 'Serial mặc định cho SKU' : 'Quản lý theo Serial'}</span>
                                                     {formData.productType === 'Thành phẩm' && (
                                                         <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: 500, marginLeft: '4px' }}>(Bắt buộc cho Thành phẩm)</span>
                                                     )}
@@ -2455,6 +2489,32 @@ const ProductPage = () => {
                                         </div>
                                     </div>
                                 </div>
+
+                                {!isEdit && !isServiceType(formData.productType) && (
+                                    <ProductVariantConfigurator
+                                        value={variantDraft}
+                                        onChange={setVariantDraft}
+                                        productCode={formData.productCode}
+                                        productType={formData.productType}
+                                        isEdit={isEdit}
+                                        defaults={{
+                                            salePrice: Number(formData.salePrice || 0),
+                                            costPrice: 0,
+                                            trackingMode: normalizeText(formData.productType) === 'thanh pham'
+                                                ? 'SERIAL'
+                                                : formData.trackSerial && formData.trackLot
+                                                    ? 'SERIAL_LOT'
+                                                    : formData.trackSerial
+                                                        ? 'SERIAL'
+                                                        : formData.trackLot
+                                                            ? 'LOT'
+                                                            : 'NONE',
+                                            minStockQty: Number(formData.minStockQty || 0),
+                                            warrantyMonths: warrantyQty > 0 ? warrantyQty : 0,
+                                            active: formData.active !== false
+                                        }}
+                                    />
+                                )}
 
                                 {/* ─── Tabs Section (BOM & Unit Conversions) ─── */}
                                 {formData.productType !== 'Dịch vụ' && (
