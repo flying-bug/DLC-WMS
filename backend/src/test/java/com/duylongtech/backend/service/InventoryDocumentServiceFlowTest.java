@@ -3,6 +3,10 @@ package com.duylongtech.backend.service;
 import com.duylongtech.backend.dto.request.InventoryDocumentLineRequest;
 import com.duylongtech.backend.dto.request.InventoryDocumentRequest;
 import com.duylongtech.backend.dto.response.InventoryDocumentResponse;
+import com.duylongtech.backend.dto.response.DependencyCheckResponse;
+import com.duylongtech.backend.entity.AssemblyBom;
+import com.duylongtech.backend.entity.AssemblyOrder;
+import com.duylongtech.backend.entity.AssemblyOrderLine;
 import com.duylongtech.backend.entity.InventoryBalance;
 import com.duylongtech.backend.entity.InventoryCostLayer;
 import com.duylongtech.backend.entity.InventoryDocument;
@@ -15,6 +19,7 @@ import com.duylongtech.backend.entity.Warranty;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.AssemblyBomRepository;
 import com.duylongtech.backend.repository.AssemblyOrderRepository;
+import com.duylongtech.backend.repository.AssemblyOrderSerialRepository;
 import com.duylongtech.backend.repository.DeviceComponentSerialRepository;
 import com.duylongtech.backend.repository.InventoryBalanceRepository;
 import com.duylongtech.backend.repository.InventoryCostLayerRepository;
@@ -83,6 +88,7 @@ class InventoryDocumentServiceFlowTest {
     @Mock private UserRepository userRepository;
     @Mock private ProductRepository productRepository;
     @Mock private AssemblyOrderRepository assemblyOrderRepository;
+    @Mock private AssemblyOrderSerialRepository assemblyOrderSerialRepository;
     @Mock private AssemblyBomRepository assemblyBomRepository;
     @Mock private StocktakeRepository stocktakeRepository;
     @Mock private SalesOrderRepository salesOrderRepository;
@@ -99,6 +105,101 @@ class InventoryDocumentServiceFlowTest {
 
     @InjectMocks
     private InventoryDocumentService service;
+
+    @Test
+    void assemblyImport_beforeExportPost_isRejected() {
+        AssemblyOrder order = assemblyOrder("APPROVED");
+        InventoryDocument export = exportDocument("DRAFT", BigDecimal.ONE);
+        export.setReferenceType("ASSEMBLY_ORDER");
+        export.setReferenceId(order.getId());
+        InventoryDocument receipt = importDocument("DRAFT", BigDecimal.ONE, BigDecimal.ZERO);
+        receipt.setReferenceType("ASSEMBLY_ORDER");
+        receipt.setReferenceId(order.getId());
+        receipt.getLines().get(0).setVariantId(order.getTargetVariant().getId());
+        when(inventoryDocumentRepository.findImportByIdWithLines(DOCUMENT_ID)).thenReturn(Optional.of(receipt));
+        when(assemblyOrderRepository.findByIdWithLines(order.getId())).thenReturn(Optional.of(order));
+        when(inventoryDocumentRepository.findByReferenceWithLines("ASSEMBLY_ORDER", order.getId()))
+                .thenReturn(List.of(export, receipt));
+
+        assertThrows(BusinessException.class, () -> service.postImport(DOCUMENT_ID));
+    }
+
+    @Test
+    void assemblyExport_partialQuantity_isRejected() {
+        AssemblyOrder order = assemblyOrder("APPROVED");
+        InventoryDocument export = exportDocument("DRAFT", decimal("0.5"));
+        export.setReferenceType("ASSEMBLY_ORDER");
+        export.setReferenceId(order.getId());
+        InventoryDocument receipt = importDocument("DRAFT", BigDecimal.ONE, BigDecimal.ZERO);
+        receipt.setReferenceType("ASSEMBLY_ORDER");
+        receipt.setReferenceId(order.getId());
+        when(inventoryDocumentRepository.findExportByIdWithLines(DOCUMENT_ID)).thenReturn(Optional.of(export));
+        when(assemblyOrderRepository.findByIdWithLines(order.getId())).thenReturn(Optional.of(order));
+        when(inventoryDocumentRepository.findByReferenceWithLines("ASSEMBLY_ORDER", order.getId()))
+                .thenReturn(List.of(export, receipt));
+
+        assertThrows(BusinessException.class, () -> service.postExport(DOCUMENT_ID));
+    }
+
+    @Test
+    void cancelledAssemblyExport_unpostSettlesOrder() {
+        AssemblyOrder order = assemblyOrder("CANCELLED");
+        order.setCancellationSettlementStatus("PENDING_UNPOST");
+        InventoryDocument export = exportDocument("POSTED", BigDecimal.ONE);
+        export.setReferenceType("ASSEMBLY_ORDER");
+        export.setReferenceId(order.getId());
+        InventoryDocument receipt = importDocument("CANCELLED", BigDecimal.ONE, BigDecimal.ZERO);
+        receipt.setReferenceType("ASSEMBLY_ORDER");
+        receipt.setReferenceId(order.getId());
+        when(inventoryDocumentRepository.findExportByIdWithLines(DOCUMENT_ID)).thenReturn(Optional.of(export));
+        when(assemblyOrderRepository.findById(order.getId())).thenReturn(Optional.of(order));
+        when(inventoryDocumentRepository.findByReferenceWithLines("ASSEMBLY_ORDER", order.getId()))
+                .thenReturn(List.of(export, receipt));
+        when(documentDependencyService.checkExportSlipUnpostable(DOCUMENT_ID)).thenReturn(
+                DependencyCheckResponse.builder().canUnpost(true).build());
+        when(inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(WAREHOUSE_ID, VARIANT_ID, "GOOD"))
+                .thenReturn(Optional.of(balance(BigDecimal.ZERO, BigDecimal.ZERO)));
+        when(inventoryDocumentRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(assemblyOrderRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        InventoryDocumentResponse response = service.unpostExport(DOCUMENT_ID, "Trả đủ vật tư", USER_ID);
+
+        assertEquals("UNPOSTED", response.getStatus());
+        assertEquals("SETTLED", order.getCancellationSettlementStatus());
+    }
+
+    @Test
+    void assemblyImport_afterExportPost_completesOrder() {
+        AssemblyOrder order = assemblyOrder("IN_PROGRESS");
+        InventoryDocument export = exportDocument("POSTED", BigDecimal.ONE);
+        export.setReferenceType("ASSEMBLY_ORDER");
+        export.setReferenceId(order.getId());
+        InventoryDocument receipt = importDocument("DRAFT", BigDecimal.ONE, BigDecimal.ZERO);
+        receipt.setReferenceType("ASSEMBLY_ORDER");
+        receipt.setReferenceId(order.getId());
+        receipt.getLines().get(0).setVariantId(order.getTargetVariant().getId());
+        when(inventoryDocumentRepository.findImportByIdWithLines(DOCUMENT_ID)).thenReturn(Optional.of(receipt));
+        when(assemblyOrderRepository.findByIdWithLines(order.getId())).thenReturn(Optional.of(order));
+        when(assemblyOrderRepository.findById(order.getId())).thenReturn(Optional.of(order));
+        when(inventoryDocumentRepository.findByReferenceWithLines("ASSEMBLY_ORDER", order.getId()))
+                .thenReturn(List.of(export, receipt));
+        when(inventoryDocumentRepository.saveAndFlush(receipt)).thenReturn(receipt);
+        when(inventoryDocumentRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(assemblyOrderRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(productVariantRepository.findById(order.getTargetVariant().getId()))
+                .thenReturn(Optional.of(order.getTargetVariant()));
+        when(inventoryBalanceRepository.findByWarehouseAndVariantForUpdate(
+                WAREHOUSE_ID, order.getTargetVariant().getId(), "GOOD"))
+                .thenReturn(Optional.of(InventoryBalance.builder().warehouseId(WAREHOUSE_ID)
+                        .variantId(order.getTargetVariant().getId()).stockStatus("GOOD")
+                        .quantityOnHand(BigDecimal.ZERO).quantityReserved(BigDecimal.ZERO)
+                        .averageCost(BigDecimal.ZERO).build()));
+
+        service.postImport(DOCUMENT_ID);
+
+        assertEquals("COMPLETED", order.getStatus());
+        assertEquals(0, order.getQuantity().compareTo(order.getQuantityProduced()));
+    }
 
     @Test
     void createImport_validRequest_mapsImportLineAndReturnsDraft() {
@@ -965,6 +1066,18 @@ class InventoryDocumentServiceFlowTest {
                 .quantityReserved(BigDecimal.ZERO)
                 .averageCost(averageCost)
                 .build();
+    }
+
+    private AssemblyOrder assemblyOrder(String status) {
+        Product product = Product.builder().id(10L).productName("PC").build();
+        ProductVariant target = ProductVariant.builder().id(200L).sku("PC-1").product(product).build();
+        ProductVariant component = ProductVariant.builder().id(VARIANT_ID).sku("RAM-1").product(product).build();
+        AssemblyOrder order = AssemblyOrder.builder().id(70L).orderCode("LR-70").orderType("ASSEMBLY")
+                .status(status).bom(AssemblyBom.builder().id(60L).status("APPROVED").product(product).build())
+                .targetVariant(target).warehouseId(WAREHOUSE_ID).quantity(BigDecimal.ONE).createdBy(USER_ID).build();
+        order.getLines().add(AssemblyOrderLine.builder().assemblyOrder(order).componentVariant(component)
+                .quantityRequired(BigDecimal.ONE).quantityActual(BigDecimal.ONE).build());
+        return order;
     }
 
     private static BigDecimal decimal(String value) {

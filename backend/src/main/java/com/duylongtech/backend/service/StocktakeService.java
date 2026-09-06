@@ -20,11 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,7 +34,6 @@ public class StocktakeService {
     private final CodeGeneratorService codeGeneratorService;
     private final ProductVariantRepository productVariantRepository;
     private final WarehouseRepository warehouseRepository;
-    private final InventoryDocumentService inventoryDocumentService;
     private final SerialNumberRepository serialNumberRepository;
 
     @Transactional(readOnly = true)
@@ -131,38 +128,14 @@ public class StocktakeService {
             throw new BusinessException(SystemMessage.STK_ERR_005.getMessage());
         }
 
-        for (StocktakeLine line : stocktake.getLines()) {
-            // Process serial updates if available
-            if (line.getSerials() != null && !line.getSerials().isEmpty()) {
-                for (StocktakeLineSerial sLine : line.getSerials()) {
-                    if ("MISSING".equals(sLine.getScanStatus())) {
-                        if (sLine.getSerialNumberId() != null) {
-                            serialNumberRepository.findById(sLine.getSerialNumberId()).ifPresent(sn -> {
-                                sn.setStatus("LOST");
-                                serialNumberRepository.save(sn);
-                            });
-                        }
-                    } else if ("UNEXPECTED".equals(sLine.getScanStatus())) {
-                        Optional<SerialNumber> existingOpt = serialNumberRepository
-                                .findByVariantIdAndSerialNumber(line.getVariantId(), sLine.getSerialNumber());
-                        if (existingOpt.isPresent()) {
-                            SerialNumber sn = existingOpt.get();
-                            sn.setWarehouseId(stocktake.getWarehouseId());
-                            sn.setStatus("AVAILABLE");
-                            serialNumberRepository.save(sn);
-                        } else {
-                            SerialNumber newSn = SerialNumber.builder()
-                                    .variantId(line.getVariantId())
-                                    .warehouseId(stocktake.getWarehouseId())
-                                    .serialNumber(sLine.getSerialNumber())
-                                    .status("AVAILABLE")
-                                    .importedAt(LocalDateTime.now())
-                                    .build();
-                            serialNumberRepository.save(newSn);
-                        }
-                    }
-                }
-            }
+        boolean hasAdjustment = stocktake.getLines().stream().anyMatch(line ->
+                line.getDiffQty() != null && line.getDiffQty().compareTo(BigDecimal.ZERO) != 0
+                        || line.getSerials().stream().anyMatch(serial ->
+                        "MISSING".equals(serial.getScanStatus())
+                                || "UNEXPECTED".equals(serial.getScanStatus())));
+        if (hasAdjustment) {
+            throw new BusinessException(
+                    "Phieu kiem ke con chenh lech. Hay ghi so phieu nhap/xuat dieu chinh truoc khi hoan thanh.");
         }
 
         stocktake.setStatus("POSTED");
@@ -263,7 +236,7 @@ public class StocktakeService {
                             .build())
                     .collect(Collectors.toList());
 
-            Boolean trackSerial = (product != null && Boolean.TRUE.equals(product.getTrackSerial()));
+            Boolean trackSerial = variant != null && variant.isSerialTracked();
 
             return StocktakeLineResponse.builder()
                     .id(line.getId())

@@ -258,14 +258,21 @@ public class AiChatService {
         }
         answer.append(".\n\nSản phẩm tìm thấy: ").append(products.getTotalElements());
 
+        java.util.Map<Long, BigDecimal> stockByProduct = new java.util.HashMap<>();
+        List<Long> productIds = products.getContent().stream().map(Product::getId).toList();
+        if (!productIds.isEmpty()) {
+            inventoryBalanceRepository.sumQuantityOnHandByProductIds(productIds)
+                    .forEach(row -> stockByProduct.put((Long) row[0], (BigDecimal) row[1]));
+        }
+
         products.getContent().forEach(product -> answer.append("\n- ")
                 .append(product.getProductCode())
                 .append(": ")
                 .append(product.getProductName())
                 .append(", loại ")
                 .append(product.getProductType())
-                .append(", tồn MVP ")
-                .append(formatNumber(product.getStockQty())));
+                .append(", tồn kho ")
+                .append(formatNumber(stockByProduct.getOrDefault(product.getId(), BigDecimal.ZERO))));
 
         answer.append("\n\nSKU/biến thể tìm thấy: ").append(variants.getTotalElements());
         variants.getContent().forEach(variant -> answer.append("\n- ")

@@ -642,9 +642,7 @@ public class RepairWorkflowService {
     }
 
     private boolean productTracksSerial(ProductVariant variant) {
-        return variant != null
-                && variant.getProduct() != null
-                && Boolean.TRUE.equals(variant.getProduct().getTrackSerial());
+        return variant != null && variant.isSerialTracked();
     }
 
     private String resolveLineSerial(RepairLine line) {

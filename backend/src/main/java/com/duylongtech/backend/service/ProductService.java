@@ -30,8 +30,12 @@ import com.duylongtech.backend.repository.SerialNumberRepository;
 import com.duylongtech.backend.repository.StockTransferLineRepository;
 import com.duylongtech.backend.repository.UnitRepository;
 import com.duylongtech.backend.exception.BusinessException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Font;
@@ -49,11 +53,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -65,6 +73,7 @@ public class ProductService {
     private static final long SERIAL_MIN = 100_000_000_000L;
     private static final long SERIAL_RANGE = 900_000_000_000L;
     private static final int MAX_SERIAL_ATTEMPTS_PER_CODE = 20;
+    private static final int MAX_VARIANTS_PER_CREATE = 100;
 
     private final ProductRepository productRepository;
     private final BrandRepository brandRepository;
@@ -82,6 +91,12 @@ public class ProductService {
     private final AssemblyBomRepository assemblyBomRepository;
     private final AssemblyOrderRepository assemblyOrderRepository;
     private final CodeGeneratorService codeGeneratorService;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    private enum ProductCreateMode {
+        SINGLE,
+        MULTI
+    }
 
     public Page<ProductResponse> getProducts(int page, int size, String search, Long categoryId, String productType, Long brandId, Long unitId) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
@@ -94,7 +109,7 @@ public class ProductService {
                 stockMap.put((Long) result[0], (BigDecimal) result[1]);
             }
         }
-        return productPage.map(product -> convertToDtoWithStock(product, stockMap.getOrDefault(product.getId(), BigDecimal.ZERO)));
+        return productPage.map(product -> convertToDtoWithStock(product, stockMap.getOrDefault(product.getId(), BigDecimal.ZERO), false));
     }
 
     public StockAlertSummaryResponse getStockAlertSummary() {
@@ -115,7 +130,7 @@ public class ProductService {
     public ProductResponse getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy hàng hóa với ID: " + id));
-        return convertToDtoWithStock(product, getActualStock(id));
+        return convertToDtoWithStock(product, getActualStock(id), true);
     }
 
     private BigDecimal getActualStock(Long productId) {
@@ -125,20 +140,40 @@ public class ProductService {
 
     @Transactional
     public ProductResponse createProduct(ProductRequest dto) {
-        if (dto.getProductCode() == null || dto.getProductCode().isBlank()) {
+        ProductCreateMode mode = resolveCreateMode(dto);
+        if (mode == ProductCreateMode.SINGLE && (dto.getProductCode() == null || dto.getProductCode().isBlank())) {
             dto.setProductCode(codeGeneratorService.generateCode("products", "product_code", "SP", 5));
         }
+        if (mode == ProductCreateMode.MULTI && trimToNull(dto.getProductCode()) == null) {
+            throw new BusinessException(SystemMessage.PROD_ERR_023.getMessage());
+        }
+        dto.setProductCode(normalizeCode(dto.getProductCode()));
         if (productRepository.findByProductCode(dto.getProductCode()).isPresent()) {
             throw new BusinessException(String.format(SystemMessage.PROD_ERR_020.getMessage(), dto.getProductCode()));
         }
 
-        validateProductRequest(dto);
+        validateProductRequest(dto, mode);
+        List<ProductVariantRequest> variantRequests = mode == ProductCreateMode.MULTI
+                ? validateExplicitVariants(dto)
+                : List.of();
 
-        Product product = convertToEntity(dto);
-        updateUnitConversions(product, dto.getUnitConversions());
-        Product saved = productRepository.save(product);
-        createDefaultVariant(saved, dto);
-        return convertToDto(saved);
+        try {
+            Product product = convertToEntity(dto);
+            updateUnitConversions(product, dto.getUnitConversions());
+            Product saved = productRepository.save(product);
+            if (mode == ProductCreateMode.MULTI) {
+                productVariantRepository.saveAll(variantRequests.stream()
+                        .map(request -> buildVariant(saved, request))
+                        .toList());
+            } else {
+                createDefaultVariant(saved, dto);
+            }
+            productVariantRepository.flush();
+            productRepository.flush();
+            return convertToDto(saved);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException("SKU/barcode/product code da ton tai.");
+        }
     }
 
     @Transactional
@@ -153,7 +188,7 @@ public class ProductService {
             }
         }
 
-        validateProductRequest(dto);
+        validateProductRequest(dto, ProductCreateMode.SINGLE);
 
         product.setProductCode(dto.getProductCode());
         product.setProductName(dto.getProductName());
@@ -175,22 +210,16 @@ public class ProductService {
             product.setMinStockQty(dto.getMinStockQty());
         }
 
-        if (dto.getStockQty() != null) {
-            product.setStockQty(dto.getStockQty());
-        }
-        if (dto.getStockValue() != null) {
-            product.setStockValue(dto.getStockValue());
-        }
-
         product.setWarrantyPeriod(dto.getWarrantyPeriod());
         product.setWarrantyPeriodMonths(dto.getWarrantyPeriodMonths());
 
         // Cập nhật quan hệ
         updateRelations(product, dto);
         updateUnitConversions(product, dto.getUnitConversions());
+        syncVariantDefaultsAfterProductUpdate(product, dto);
 
         Product updated = productRepository.save(product);
-        return convertToDtoWithStock(updated, getActualStock(updated.getId()));
+        return convertToDtoWithStock(updated, getActualStock(updated.getId()), true);
     }
 
     @Transactional
@@ -293,6 +322,7 @@ public class ProductService {
             int rowIdx = 6;
             int index = 1;
             for (Product product : products) {
+                ProductVariant primaryVariant = getPrimaryVariant(product.getId());
                 Row row = sheet.createRow(rowIdx++);
                 row.createCell(0).setCellValue(index++);
                 row.createCell(1).setCellValue(product.getProductCode());
@@ -300,7 +330,7 @@ public class ProductService {
                 row.createCell(3).setCellValue(product.getCategory() != null ? product.getCategory().getName() : "");
                 row.createCell(4).setCellValue(product.getBrand() != null ? product.getBrand().getName() : "");
                 row.createCell(5).setCellValue(product.getUnit() != null ? product.getUnit().getName() : "");
-                row.createCell(6).setCellValue(toDouble(product.getSalePrice()));
+                row.createCell(6).setCellValue(toDouble(primaryVariant != null ? primaryVariant.getSalePrice() : BigDecimal.ZERO));
                 row.createCell(7).setCellValue(toDouble(stockMap.getOrDefault(product.getId(), BigDecimal.ZERO)));
                 row.createCell(8).setCellValue(Boolean.FALSE.equals(product.getActive()) ? "Ngung su dung" : "Dang su dung");
                 row.createCell(9).setCellValue(product.getDescription() != null ? product.getDescription() : "");
@@ -344,7 +374,7 @@ public class ProductService {
         if (variant.getProduct() == null || !variant.getProduct().getId().equals(productId)) {
             throw new BusinessException(SystemMessage.PROD_ERR_013.getMessage());
         }
-        if (!Boolean.TRUE.equals(variant.getProduct().getTrackSerial())) {
+        if (!variant.isSerialTracked()) {
             throw new BusinessException(SystemMessage.PROD_ERR_015.getMessage());
         }
 
@@ -352,7 +382,7 @@ public class ProductService {
         int maxAttempts = quantity * MAX_SERIAL_ATTEMPTS_PER_CODE;
         for (int attempts = 0; codes.size() < quantity && attempts < maxAttempts; attempts++) {
             String code = generateRandomSerialCode();
-            if (!codes.contains(code) && !serialNumberRepository.existsBySerialNumber(code)) {
+            if (!codes.contains(code) && !serialNumberRepository.existsByVariantIdAndSerialNumber(variantId, code)) {
                 codes.add(code);
             }
         }
@@ -382,18 +412,9 @@ public class ProductService {
             throw new BusinessException(SystemMessage.PROD_ERR_011.getMessage());
         }
 
-        ProductVariant variant = ProductVariant.builder()
-                .product(product)
-                .sku(sku)
-                .barcode(barcode)
-                .variantName(request.getVariantName().trim())
-                .costPrice(resolveMoney(request.getCostPrice()))
-                .salePrice(resolveMoney(request.getSalePrice()))
-                .manufacturerPartNumber(trimToNull(request.getManufacturerPartNumber()))
-                .specsJson(trimToNull(request.getSpecsJson()))
-                .active(request.getActive() != null ? request.getActive() : true)
-                .warrantyMonths(request.getWarrantyMonths())
-                .build();
+        request.setSku(sku);
+        request.setBarcode(barcode);
+        ProductVariant variant = buildVariant(product, request);
         return convertVariantToDto(productVariantRepository.save(variant));
     }
 
@@ -424,6 +445,17 @@ public class ProductService {
                     });
         }
 
+        String trackingMode = request.getTrackingMode() != null
+                ? resolveTrackingMode(request.getTrackingMode(), variant.getProduct())
+                : variant.getTrackingMode();
+        boolean hasReferences = hasOperationalReferences(List.of(variantId));
+        if (hasReferences && !sku.equals(variant.getSku())) {
+            throw new BusinessException(SystemMessage.PROD_ERR_028.getMessage());
+        }
+        if (hasReferences && !trackingMode.equals(variant.getTrackingMode())) {
+            throw new BusinessException(SystemMessage.PROD_ERR_029.getMessage());
+        }
+
         variant.setSku(sku);
         variant.setBarcode(barcode);
         variant.setVariantName(request.getVariantName().trim());
@@ -431,6 +463,10 @@ public class ProductService {
         variant.setSalePrice(resolveMoney(request.getSalePrice()));
         variant.setManufacturerPartNumber(trimToNull(request.getManufacturerPartNumber()));
         variant.setSpecsJson(trimToNull(request.getSpecsJson()));
+        variant.setTrackingMode(trackingMode);
+        if (request.getMinStockQty() != null) {
+            variant.setMinStockQty(request.getMinStockQty());
+        }
         variant.setActive(request.getActive() != null ? request.getActive() : true);
         variant.setWarrantyMonths(request.getWarrantyMonths());
         return convertVariantToDto(productVariantRepository.save(variant));
@@ -448,16 +484,7 @@ public class ProductService {
         }
 
         List<Long> variantIds = List.of(variantId);
-        boolean hasTransactions = inventoryDocumentLineRepository.existsByVariantIdIn(variantIds)
-                || inventoryLedgerRepository.existsByVariantIdIn(variantIds)
-                || stockTransferLineRepository.existsByVariantIdIn(variantIds)
-                || salesOrderLineRepository.existsByVariantIdIn(variantIds)
-                || serialNumberRepository.existsByVariantIdIn(variantIds)
-                || assemblyBomRepository.existsByComponentVariantIdIn(variantIds)
-                || assemblyOrderRepository.existsByTargetVariantIdIn(variantIds)
-                || assemblyOrderRepository.existsByComponentVariantIdIn(variantIds);
-
-        if (hasTransactions) {
+        if (hasOperationalReferences(variantIds)) {
             throw new BusinessException(String.format(SystemMessage.PROD_ERR_008.getMessage(), variant.getSku()));
         }
 
@@ -478,10 +505,136 @@ public class ProductService {
                 .variantName(dto.getProductName().trim())
                 .costPrice(BigDecimal.ZERO)
                 .salePrice(resolveMoney(dto.getSalePrice()))
+                .trackingMode(resolveTrackingMode(null, product))
+                .minStockQty(resolveMoney(dto.getMinStockQty()))
                 .active(dto.getActive() != null ? dto.getActive() : true)
-                .warrantyMonths(dto.getWarrantyPeriodMonths())
+                .warrantyMonths(dto.getWarrantyPeriodMonths() != null ? dto.getWarrantyPeriodMonths() : 0)
                 .build();
         productVariantRepository.save(variant);
+    }
+
+    private ProductVariant buildVariant(Product product, ProductVariantRequest request) {
+        String barcode = trimToNull(request.getBarcode());
+        if (barcode == null) {
+            barcode = generateBarcode();
+        }
+        return ProductVariant.builder()
+                .product(product)
+                .sku(normalizeCode(request.getSku()))
+                .barcode(barcode)
+                .variantName(request.getVariantName().trim())
+                .costPrice(resolveMoney(request.getCostPrice()))
+                .salePrice(resolveMoney(request.getSalePrice()))
+                .manufacturerPartNumber(trimToNull(request.getManufacturerPartNumber()))
+                .specsJson(trimToNull(request.getSpecsJson()))
+                .trackingMode(resolveTrackingMode(request.getTrackingMode(), product))
+                .minStockQty(resolveMoney(request.getMinStockQty()))
+                .active(request.getActive() != null ? request.getActive() : true)
+                .warrantyMonths(request.getWarrantyMonths() != null ? request.getWarrantyMonths() : defaultWarrantyMonths(product))
+                .build();
+    }
+
+    private ProductCreateMode resolveCreateMode(ProductRequest dto) {
+        boolean hasVariantRows = dto.getVariants() != null && !dto.getVariants().isEmpty();
+        if (Boolean.TRUE.equals(dto.getHasVariants())) {
+            if (!hasVariantRows) {
+                throw new BusinessException(SystemMessage.PROD_ERR_022.getMessage());
+            }
+            return ProductCreateMode.MULTI;
+        }
+        if (hasVariantRows) {
+            throw new BusinessException(SystemMessage.PROD_ERR_021.getMessage());
+        }
+        return ProductCreateMode.SINGLE;
+    }
+
+    private List<ProductVariantRequest> validateExplicitVariants(ProductRequest dto) {
+        List<ProductVariantRequest> variants = dto.getVariants() != null ? dto.getVariants() : List.of();
+        if (variants.isEmpty() || variants.size() > MAX_VARIANTS_PER_CREATE) {
+            throw new BusinessException(SystemMessage.PROD_ERR_022.getMessage());
+        }
+
+        Set<String> requestSkus = new HashSet<>();
+        Set<String> requestBarcodes = new HashSet<>();
+        Set<String> requestSpecs = new HashSet<>();
+        List<String> skuBatch = new ArrayList<>();
+        List<String> barcodeBatch = new ArrayList<>();
+        boolean hasActive = false;
+
+        for (int i = 0; i < variants.size(); i++) {
+            ProductVariantRequest variant = variants.get(i);
+            int row = i + 1;
+            validateExplicitVariantRow(variant, row);
+            String sku = normalizeCode(variant.getSku());
+            String barcode = trimToNull(variant.getBarcode());
+            String normalizedBarcode = normalizeLookup(barcode);
+            String trackingMode = resolveTrackingMode(variant.getTrackingMode(), null);
+
+            if (!requestSkus.add(sku)) {
+                throw rowError(row, SystemMessage.PROD_ERR_012.getMessage());
+            }
+            if (normalizedBarcode != null && !requestBarcodes.add(normalizedBarcode)) {
+                throw rowError(row, SystemMessage.PROD_ERR_011.getMessage());
+            }
+
+            String specsKey = canonicalSpecsKey(variant.getSpecsJson(), true);
+            if (!requestSpecs.add(specsKey)) {
+                throw rowError(row, SystemMessage.PROD_ERR_026.getMessage());
+            }
+
+            if (isServiceProductType(dto.getProductType()) && !"NONE".equals(trackingMode)) {
+                throw rowError(row, SystemMessage.PROD_ERR_030.getMessage());
+            }
+            if (requiresSerialTracking(dto) && !isSerialTrackingMode(trackingMode)) {
+                throw rowError(row, SystemMessage.PROD_ERR_031.getMessage());
+            }
+
+            variant.setSku(sku);
+            variant.setBarcode(barcode);
+            variant.setTrackingMode(trackingMode);
+            skuBatch.add(sku);
+            if (normalizedBarcode != null) {
+                barcodeBatch.add(normalizedBarcode);
+            }
+            hasActive = hasActive || !Boolean.FALSE.equals(variant.getActive());
+        }
+
+        if (!hasActive) {
+            throw new BusinessException(SystemMessage.PROD_ERR_024.getMessage());
+        }
+        if (!skuBatch.isEmpty() && !productVariantRepository.findByNormalizedSkuIn(skuBatch).isEmpty()) {
+            throw new BusinessException(SystemMessage.PROD_ERR_012.getMessage());
+        }
+        if (!barcodeBatch.isEmpty() && !productVariantRepository.findByNormalizedBarcodeIn(barcodeBatch).isEmpty()) {
+            throw new BusinessException(SystemMessage.PROD_ERR_011.getMessage());
+        }
+        return variants;
+    }
+
+    private void validateExplicitVariantRow(ProductVariantRequest variant, int row) {
+        if (variant == null) {
+            throw rowError(row, SystemMessage.FIELD_REQUIRED.getMessage());
+        }
+        if (trimToNull(variant.getSku()) == null) {
+            throw rowError(row, "SKU la bat buoc");
+        }
+        if (normalizeCode(variant.getSku()).length() > 50) {
+            throw rowError(row, "SKU khong duoc vuot qua 50 ky tu");
+        }
+        if (trimToNull(variant.getBarcode()) != null && trimToNull(variant.getBarcode()).length() > 100) {
+            throw rowError(row, "Barcode khong duoc vuot qua 100 ky tu");
+        }
+        if (trimToNull(variant.getVariantName()) == null) {
+            throw rowError(row, "Ten phien ban la bat buoc");
+        }
+        if (variant.getSalePrice() == null) {
+            throw rowError(row, SystemMessage.FIELD_REQUIRED.getMessage());
+        }
+        validateVariantRequest(variant);
+    }
+
+    private BusinessException rowError(int row, String message) {
+        return new BusinessException(String.format(SystemMessage.PROD_ERR_025.getMessage(), row, message));
     }
 
     private String generateBarcode() {
@@ -491,6 +644,17 @@ public class ProductService {
     private Product getProductEntity(Long productId) {
         return productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException("San pham khong ton tai."));
+    }
+
+    private boolean hasOperationalReferences(List<Long> variantIds) {
+        return inventoryDocumentLineRepository.existsByVariantIdIn(variantIds)
+                || inventoryLedgerRepository.existsByVariantIdIn(variantIds)
+                || stockTransferLineRepository.existsByVariantIdIn(variantIds)
+                || salesOrderLineRepository.existsByVariantIdIn(variantIds)
+                || serialNumberRepository.existsByVariantIdIn(variantIds)
+                || assemblyBomRepository.existsByComponentVariantIdIn(variantIds)
+                || assemblyOrderRepository.existsByTargetVariantIdIn(variantIds)
+                || assemblyOrderRepository.existsByComponentVariantIdIn(variantIds);
     }
 
     private void ensureProductExists(Long productId) {
@@ -506,6 +670,59 @@ public class ProductService {
         if (request.getCostPrice() != null && request.getCostPrice().compareTo(BigDecimal.ZERO) < 0) {
             throw new BusinessException(SystemMessage.PROD_ERR_006.getMessage());
         }
+        if (request.getMinStockQty() != null && request.getMinStockQty().compareTo(BigDecimal.ZERO) < 0) {
+            throw new BusinessException(SystemMessage.PROD_ERR_002.getMessage());
+        }
+        if (request.getWarrantyMonths() != null && (request.getWarrantyMonths() < 0 || request.getWarrantyMonths() > 120)) {
+            throw new BusinessException("Thoi han bao hanh phai tu 0 den 120 thang.");
+        }
+        canonicalSpecsKey(request.getSpecsJson(), false);
+        if (request.getTrackingMode() != null) {
+            resolveTrackingMode(request.getTrackingMode(), null);
+        }
+    }
+
+    private String canonicalSpecsKey(String specsJson, boolean requireNonEmpty) {
+        String raw = trimToNull(specsJson);
+        if (raw == null) {
+            if (requireNonEmpty) {
+                throw new BusinessException(SystemMessage.PROD_ERR_027.getMessage());
+            }
+            return "";
+        }
+        try {
+            JsonNode node = objectMapper.readTree(raw);
+            if (!node.isObject() || (requireNonEmpty && node.isEmpty())) {
+                throw new BusinessException(SystemMessage.PROD_ERR_027.getMessage());
+            }
+            List<String> parts = new ArrayList<>();
+            node.fields().forEachRemaining(entry -> {
+                JsonNode value = entry.getValue();
+                if (value == null || value.isNull() || value.isContainerNode()) {
+                    throw new BusinessException(SystemMessage.PROD_ERR_027.getMessage());
+                }
+                String key = normalizeAttribute(entry.getKey());
+                String text = normalizeAttribute(value.asText());
+                if (key.isEmpty() || text.isEmpty()) {
+                    throw new BusinessException(SystemMessage.PROD_ERR_027.getMessage());
+                }
+                parts.add(key + "=" + text);
+            });
+            if (requireNonEmpty && parts.isEmpty()) {
+                throw new BusinessException(SystemMessage.PROD_ERR_027.getMessage());
+            }
+            parts.sort(String::compareTo);
+            return String.join("|", parts);
+        } catch (JsonProcessingException e) {
+            throw new BusinessException(SystemMessage.PROD_ERR_027.getMessage());
+        }
+    }
+
+    private String normalizeAttribute(String value) {
+        return Normalizer.normalize(value != null ? value : "", Normalizer.Form.NFC)
+                .trim()
+                .replaceAll("\\s+", " ")
+                .toLowerCase(Locale.ROOT);
     }
 
     private ProductVariantResponse convertVariantToDto(ProductVariant variant) {
@@ -531,7 +748,7 @@ public class ProductService {
                 .productCode(product != null ? product.getProductCode() : null)
                 .productName(product != null ? product.getProductName() : null)
                 .productType(product != null ? product.getProductType() : null)
-                .trackSerial(product != null ? product.getTrackSerial() : false)
+                .trackSerial(variant.isSerialTracked())
                 .brandId(product != null && product.getBrand() != null ? product.getBrand().getId() : null)
                 .brandName(product != null && product.getBrand() != null ? product.getBrand().getName() : null)
                 .categoryId(product != null && product.getCategory() != null ? product.getCategory().getId() : null)
@@ -543,12 +760,15 @@ public class ProductService {
                 .barcode(variant.getBarcode())
                 .variantName(variant.getVariantName())
                 .costPrice(variant.getCostPrice())
-                .salePrice((variant.getSalePrice() == null || variant.getSalePrice().compareTo(BigDecimal.ZERO) == 0) && product != null ? product.getSalePrice() : variant.getSalePrice())
+                .salePrice(variant.getSalePrice())
                 .vatRate(product != null && product.getVatRate() != null ? product.getVatRate() : BigDecimal.valueOf(8))
                 .manufacturerPartNumber(variant.getManufacturerPartNumber())
                 .specsJson(variant.getSpecsJson())
+                .trackingMode(variant.getTrackingMode())
+                .trackLot(variant.isLotTracked())
+                .minStockQty(variant.getMinStockQty())
                 .active(variant.getActive())
-                .warrantyMonths((variant.getWarrantyMonths() == null || variant.getWarrantyMonths() <= 0) && product != null ? product.getWarrantyPeriodMonths() : variant.getWarrantyMonths())
+                .warrantyMonths(variant.getWarrantyMonths())
                 .unitConversions(conversions)
                 .createdAt(variant.getCreatedAt())
                 .updatedAt(variant.getUpdatedAt())
@@ -556,7 +776,7 @@ public class ProductService {
     }
 
     private void updateRelations(Product product, ProductRequest dto) {
-        boolean isDichVu = "Dịch vụ".equals(dto.getProductType()) || "Dich vu".equals(dto.getProductType());
+        boolean isDichVu = isServiceProductType(dto.getProductType());
 
         if (dto.getBrandId() != null) {
             Brand brand = brandRepository.findById(dto.getBrandId())
@@ -614,7 +834,10 @@ public class ProductService {
         return product;
     }
 
-    private void validateProductRequest(ProductRequest dto) {
+    private void validateProductRequest(ProductRequest dto, ProductCreateMode mode) {
+        if (mode == ProductCreateMode.SINGLE && dto.getSalePrice() == null) {
+            throw new BusinessException(SystemMessage.FIELD_REQUIRED.getMessage());
+        }
         if (dto.getSalePrice() != null && dto.getSalePrice().compareTo(BigDecimal.ZERO) < 0) {
             throw new BusinessException(SystemMessage.PROD_ERR_003.getMessage());
         }
@@ -624,18 +847,76 @@ public class ProductService {
         if (dto.getStockValue() != null && dto.getStockValue().compareTo(BigDecimal.ZERO) < 0) {
             throw new BusinessException(SystemMessage.PROD_ERR_001.getMessage());
         }
+        if (mode == ProductCreateMode.MULTI && isServiceProductType(dto.getProductType())) {
+            throw new BusinessException(SystemMessage.PROD_ERR_030.getMessage());
+        }
+        if (mode == ProductCreateMode.SINGLE && isServiceProductType(dto.getProductType())) {
+            dto.setTrackSerial(false);
+            dto.setTrackLot(false);
+            dto.setMinStockQty(BigDecimal.ZERO);
+        }
+        if (mode == ProductCreateMode.SINGLE && requiresSerialTracking(dto)
+                && !Boolean.TRUE.equals(dto.getTrackSerial())) {
+            throw new BusinessException(SystemMessage.PROD_ERR_031.getMessage());
+        }
     }
 
     private String resolveProductType(String productType) {
         return productType != null && !productType.trim().isEmpty() ? productType.trim() : "Hang hoa";
     }
 
+    private boolean isServiceProductType(String productType) {
+        String value = normalizeVietnameseLookup(productType);
+        return "dich vu".equals(value) || "service".equals(value);
+    }
+
+    private boolean requiresSerialTracking(ProductRequest dto) {
+        String value = normalizeVietnameseLookup(dto.getProductType());
+        return Boolean.TRUE.equals(dto.getIsAssembly())
+                || "thanh pham".equals(value)
+                || "finished product".equals(value)
+                || "finished_product".equals(value);
+    }
+
+    private boolean isSerialTrackingMode(String trackingMode) {
+        return "SERIAL".equals(trackingMode) || "SERIAL_LOT".equals(trackingMode);
+    }
+
+    private String normalizeVietnameseLookup(String value) {
+        String normalized = Normalizer.normalize(value != null ? value : "", Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'D');
+        return normalized.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    }
+
     private BigDecimal resolveMoney(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
     }
 
+    private String resolveTrackingMode(String requestedMode, Product product) {
+        String mode = trimToNull(requestedMode);
+        if (mode == null) {
+            boolean serial = product != null && Boolean.TRUE.equals(product.getTrackSerial());
+            boolean lot = product != null && Boolean.TRUE.equals(product.getTrackLot());
+            if (serial && lot) return "SERIAL_LOT";
+            if (serial) return "SERIAL";
+            if (lot) return "LOT";
+            return "NONE";
+        }
+        mode = mode.toUpperCase(Locale.ROOT);
+        if (!Set.of("NONE", "LOT", "SERIAL", "SERIAL_LOT").contains(mode)) {
+            throw new BusinessException("trackingMode khong hop le.");
+        }
+        return mode;
+    }
+
     private String normalizeCode(String value) {
-        return value != null ? value.trim().toUpperCase() : "";
+        return value != null ? value.trim().toUpperCase(Locale.ROOT) : "";
+    }
+
+    private String normalizeLookup(String value) {
+        return value != null ? value.trim().toLowerCase(Locale.ROOT) : null;
     }
 
     private String trimToNull(String value) {
@@ -672,10 +953,16 @@ public class ProductService {
     }
 
     private ProductResponse convertToDto(Product product) {
-        return convertToDtoWithStock(product, product.getStockQty());
+        return convertToDtoWithStock(product, getActualStock(product.getId()), true);
     }
 
     private ProductResponse convertToDtoWithStock(Product product, BigDecimal stockQty) {
+        return convertToDtoWithStock(product, stockQty, true);
+    }
+
+    private ProductResponse convertToDtoWithStock(Product product, BigDecimal stockQty, boolean includeVariants) {
+        List<ProductVariant> variants = productVariantRepository.findByProductIdOrderByIdAsc(product.getId());
+        ProductVariant primaryVariant = getPrimaryVariant(variants);
         List<ProductUnitConversionResponse> convList = new java.util.ArrayList<>();
         if (product.getUnitConversions() != null) {
             for (ProductUnitConversion c : product.getUnitConversions()) {
@@ -695,22 +982,23 @@ public class ProductService {
                 .productCode(product.getProductCode())
                 .productName(product.getProductName())
                 .productType(product.getProductType())
-                .salePrice(product.getSalePrice())
+                .salePrice(primaryVariant != null ? primaryVariant.getSalePrice() : BigDecimal.ZERO)
                 .vatRate(product.getVatRate() != null ? product.getVatRate() : BigDecimal.valueOf(8))
-                .trackSerial(product.getTrackSerial())
-                .trackLot(product.getTrackLot())
+                .trackSerial(variants.stream().anyMatch(ProductVariant::isSerialTracked))
+                .trackLot(variants.stream().anyMatch(ProductVariant::isLotTracked))
                 .isAssembly(product.getIsAssembly())
                 .description(product.getDescription())
                 .active(product.getActive())
                 .taxReductionStatus(product.getTaxReductionStatus())
                 .stockQty(stockQty)
-                .minStockQty(product.getMinStockQty())
-                .stockValue(product.getStockValue())
+                .minStockQty(primaryVariant != null ? primaryVariant.getMinStockQty() : BigDecimal.ZERO)
+                .stockValue(BigDecimal.ZERO)
                 .imageUrl(product.getImageUrl())
                 .bomTemplate(product.getBomTemplate())
                 .warrantyPeriod(product.getWarrantyPeriod())
-                .warrantyPeriodMonths(product.getWarrantyPeriodMonths())
+                .warrantyPeriodMonths(defaultWarrantyMonths(product))
                 .unitConversions(convList)
+                .variants(includeVariants ? variants.stream().map(this::convertVariantToDto).toList() : null)
                 .brandId(product.getBrand() != null ? product.getBrand().getId() : null)
                 .brandName(product.getBrand() != null ? product.getBrand().getName() : null)
                 .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
@@ -720,5 +1008,37 @@ public class ProductService {
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .build();
+    }
+
+    private void syncVariantDefaultsAfterProductUpdate(Product product, ProductRequest dto) {
+        List<ProductVariant> variants = productVariantRepository.findByProductIdOrderByIdAsc(product.getId());
+        if (variants.size() == 1) {
+            ProductVariant variant = variants.get(0);
+            variant.setSalePrice(resolveMoney(dto.getSalePrice()));
+            variant.setTrackingMode(resolveTrackingMode(null, product));
+            variant.setMinStockQty(resolveMoney(dto.getMinStockQty()));
+            variant.setWarrantyMonths(defaultWarrantyMonths(product));
+            productVariantRepository.save(variant);
+            return;
+        }
+        if (Boolean.TRUE.equals(dto.getApplyWarrantyToVariants())) {
+            variants.forEach(variant -> variant.setWarrantyMonths(defaultWarrantyMonths(product)));
+            productVariantRepository.saveAll(variants);
+        }
+    }
+
+    private Integer defaultWarrantyMonths(Product product) {
+        return product.getWarrantyPeriodMonths() != null ? product.getWarrantyPeriodMonths() : 0;
+    }
+
+    private ProductVariant getPrimaryVariant(Long productId) {
+        return getPrimaryVariant(productVariantRepository.findByProductIdOrderByIdAsc(productId));
+    }
+
+    private ProductVariant getPrimaryVariant(List<ProductVariant> variants) {
+        return variants.stream()
+                .filter(variant -> !Boolean.FALSE.equals(variant.getActive()))
+                .findFirst()
+                .orElse(variants.isEmpty() ? null : variants.get(0));
     }
 }

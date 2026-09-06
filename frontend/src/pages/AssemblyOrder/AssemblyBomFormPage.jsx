@@ -9,6 +9,7 @@ import axiosClient from '../../api/axiosClient';
 import { exportBomToExcel } from '../../utils/bomExcelExport';
 import styles from './AssemblyOrderPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { hasPermission } from '../../auth/session';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -22,7 +23,8 @@ const createDefaultForm = () => ({
     bomCode: '',
     bomName: '',
     versionNo: '1',
-    status: 'APPROVED',
+    status: 'DRAFT',
+    rejectionReason: '',
     lines: [{ ...defaultBomLine }]
 });
 
@@ -41,7 +43,9 @@ function AssemblyBomFormPage() {
     const [showQuickAddModal, setShowQuickAddModal] = useState(false);
 
     const isApproved = editing && form.status === 'APPROVED';
-    const canEdit = !isApproved;
+    const canEdit = (!editing || ['DRAFT', 'REJECTED'].includes(form.status))
+        && hasPermission(editing ? 'assembly_config:edit' : 'assembly_config:add');
+    const canApprove = hasPermission('assembly:approve');
 
     const showToast = (type, message) => {
         setToast({ isVisible: true, type, message });
@@ -95,7 +99,8 @@ function AssemblyBomFormPage() {
                 bomCode: bom.bomCode || '',
                 bomName: bom.bomName || '',
                 versionNo: bom.versionNo || '1',
-                status: bom.status || 'APPROVED',
+                status: bom.status || 'DRAFT',
+                rejectionReason: bom.rejectionReason || '',
                 lines: bom.lines?.length ? bom.lines.map((line) => ({
                     componentVariantId: line.componentVariantId || '',
                     categoryId: '',
@@ -295,11 +300,43 @@ function AssemblyBomFormPage() {
                 }
             }
             setSaving(false);
-            return true;
+            return unwrap(res)?.id || form.id;
         } catch (err) {
             showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không lưu được cấu hình.');
             setSaving(false);
             return false;
+        }
+    };
+
+    const submitBom = async () => {
+        const bomId = await saveBom('DRAFT', false);
+        if (!bomId) return;
+        setSaving(true);
+        try {
+            await assemblyApi.submitAssemblyBom(bomId);
+            showToast('success', 'Đã gửi cấu hình cho Kế toán duyệt.');
+            setTimeout(() => navigate('/assembly-boms'), 700);
+        } catch (err) {
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không gửi duyệt được cấu hình.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const reviewBom = async (approved) => {
+        const reason = approved ? null : window.prompt('Nhập lý do từ chối cấu hình:');
+        if (!approved && !reason?.trim()) return;
+        setSaving(true);
+        try {
+            await (approved
+                ? assemblyApi.approveAssemblyBom(form.id)
+                : assemblyApi.rejectAssemblyBom(form.id, reason.trim()));
+            showToast('success', approved ? 'Đã duyệt cấu hình.' : 'Đã từ chối cấu hình.');
+            await loadBom();
+        } catch (err) {
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không cập nhật được cấu hình.');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -373,9 +410,14 @@ function AssemblyBomFormPage() {
                         <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', color: '#166534', display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <i className="bi bi-shield-lock-fill" style={{ fontSize: '20px' }}></i>
                             <div>
-                                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>Cấu hình đã được duyệt</h4>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>Cấu hình này đã được duyệt và đang có hiệu lực. Bạn không thể chỉnh sửa cấu hình này để đảm bảo tính nhất quán của dữ liệu. Nếu cần thay đổi cấu hình, vui lòng tạo phiên bản cấu hình mới.</p>
+                                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>{form.status === 'PENDING_APPROVAL' ? 'Cấu hình đang chờ duyệt' : 'Cấu hình đã được duyệt'}</h4>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '13px' }}>Cấu hình đang bị khóa chỉnh sửa. Nếu cấu hình đã duyệt cần thay đổi, hãy tạo phiên bản mới.</p>
                             </div>
+                        </div>
+                    )}
+                    {form.status === 'REJECTED' && (
+                        <div style={{ marginBottom: '20px', padding: '12px 16px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b' }}>
+                            <strong>Lý do từ chối:</strong> {form.rejectionReason || 'Không có nội dung.'}
                         </div>
                     )}
 
@@ -606,21 +648,16 @@ function AssemblyBomFormPage() {
                                     <button className="btn-misa-draft" type="button" onClick={() => saveBom('DRAFT')} disabled={saving}>
                                         <i className="bi bi-save"></i> Lưu nháp
                                     </button>
-                                    <button className="btn-misa-post" type="button" onClick={() => saveBom('APPROVED')} disabled={saving}>
+                                    <button className="btn-misa-post" type="button" onClick={submitBom} disabled={saving}>
                                         <i className="bi bi-check-circle"></i>
-                                        {saving ? 'Đang lưu...' : 'Duyệt cấu hình'}
+                                        {saving ? 'Đang gửi...' : form.status === 'REJECTED' ? 'Gửi lại duyệt' : 'Gửi duyệt'}
                                     </button>
                                 </>
                             )}
-                            {isApproved && (
-                                <button className="btn-misa-draft" style={{ backgroundColor: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }} type="button" onClick={() => {
-                                    if (window.confirm('Bạn có chắc chắn muốn ngừng sử dụng cấu hình này?')) {
-                                        saveBom('INACTIVE');
-                                    }
-                                }} disabled={saving}>
-                                    <i className="bi bi-x-circle"></i> Ngừng sử dụng
-                                </button>
-                            )}
+                            {form.status === 'PENDING_APPROVAL' && canApprove && <>
+                                <button className="btn-misa-draft" type="button" onClick={() => reviewBom(false)} disabled={saving}>Từ chối</button>
+                                <button className="btn-misa-post" type="button" onClick={() => reviewBom(true)} disabled={saving}>Duyệt cấu hình</button>
+                            </>}
                         </div>
                     </div>
                 </div>

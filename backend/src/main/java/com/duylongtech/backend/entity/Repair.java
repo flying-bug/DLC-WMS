@@ -41,6 +41,13 @@ public class Repair {
     @Column(name = "product_id")
     private Long productId;
 
+    @Column(name = "product_variant_id")
+    private Long productVariantId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_variant_id", insertable = false, updatable = false)
+    private ProductVariant productVariant;
+
     @Column(name = "product_quantity")
     @Builder.Default
     private Integer productQuantity = 1;

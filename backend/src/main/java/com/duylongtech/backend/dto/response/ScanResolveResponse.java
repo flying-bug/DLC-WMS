@@ -19,6 +19,7 @@ public class ScanResolveResponse {
     private String sku;
     private String barcode;
     private String serialNumber;
+    private String assetTag;
     private String unitName;
     private Boolean trackSerial;
     private BigDecimal salePrice;

@@ -26,6 +26,9 @@ public class RepairResponse {
     // Sản phẩm/thiết bị
     private Long productId;
     private String productName;
+    private Long productVariantId;
+    private String sku;
+    private String variantName;
     private Integer productQuantity;
     private String productUnit;
 

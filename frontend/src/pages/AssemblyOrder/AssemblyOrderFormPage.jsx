@@ -12,9 +12,9 @@ import axiosClient from '../../api/axiosClient';
 import { formatDateOnly, formatDateTime, getTodayIsoDate } from '../../utils/dateFormat';
 import styles from './AssemblyOrderFormPage.module.css';
 import bomStyles from './AssemblyOrderPage.module.css';
-import AssemblyExecutionModal from './AssemblyExecutionModal';
 import { printAssemblyOrder } from '../../utils/printAssemblyOrder';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { hasPermission } from '../../auth/session';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -23,8 +23,11 @@ const today = getTodayIsoDate;
 
 const STATUS_META = {
     DRAFT: { label: 'Lưu tạm', code: 'info' },
+    PENDING_APPROVAL: { label: 'Chờ duyệt', code: 'warning' },
+    REJECTED: { label: 'Từ chối', code: 'danger' },
     APPROVED: { label: 'Đã duyệt', code: 'primary' },
-    SUBMITTED: { label: 'Hoàn thành', code: 'success' },
+    IN_PROGRESS: { label: 'Đang thực hiện', code: 'warning' },
+    COMPLETED: { label: 'Hoàn thành', code: 'success' },
     CANCELLED: { label: 'Đã hủy', code: 'danger' }
 };
 
@@ -41,7 +44,7 @@ const createDefaultBomForm = () => ({
     bomCode: '',
     bomName: '',
     versionNo: '1',
-    status: 'APPROVED',
+    status: 'DRAFT',
     lines: [{ ...defaultBomLine }]
 });
 
@@ -81,7 +84,6 @@ function AssemblyOrderFormPage() {
 
     // Modal states
     const [showBomModal, setShowBomModal] = useState(false);
-    const [showExecutionModal, setShowExecutionModal] = useState(false);
     const [bomForm, setBomForm] = useState(createDefaultBomForm);
     const [bomError, setBomError] = useState('');
 
@@ -127,7 +129,10 @@ function AssemblyOrderFormPage() {
 
     const selectedBom = useMemo(() => boms.find((bom) => String(bom.id) === String(form.bomId)), [boms, form.bomId]);
     const isViewMode = searchParams.get('mode') === 'view';
-    const canEdit = (!editing || form.status === 'DRAFT') && !isViewMode;
+    const canEdit = (!editing || ['DRAFT', 'REJECTED'].includes(form.status)) && !isViewMode
+        && hasPermission(editing ? 'assembly:edit' : 'assembly:add');
+    const canApprove = hasPermission('assembly:approve');
+    const canSubmit = hasPermission('assembly:submit');
     const status = STATUS_META[form.status] || { label: form.status || 'Chưa rõ', code: 'info' };
 
     const loadBaseData = useCallback(async () => {
@@ -195,7 +200,7 @@ function AssemblyOrderFormPage() {
                 note: order.note || ''
             });
 
-            if (searchParams.get('mode') !== 'view' && order.status === 'SUBMITTED') {
+            if (searchParams.get('mode') !== 'view' && ['COMPLETED', 'CANCELLED'].includes(order.status)) {
                 setSearchParams({ mode: 'view' }, { replace: true });
             }
         } catch (err) {
@@ -363,7 +368,6 @@ function AssemblyOrderFormPage() {
         status: overrideStatus || form.status,
         executionDate: form.executionDate,
         note: form.note || null,
-        createdBy: Number(sessionStorage.getItem('userId') || 1),
         lines: form.orderType === 'ASSEMBLY' && customLinesDirty ? customLines.map(line => ({
             componentVariantId: Number(line.componentVariantId),
             quantityRequired: Number(line.quantityRequired),
@@ -392,33 +396,77 @@ function AssemblyOrderFormPage() {
 
         setSaving(true);
         try {
-            if (overrideStatus === 'SUBMITTED' && editing) {
-                await assemblyApi.updateOrderStatus(id, overrideStatus);
-                showToast('success', 'Lệnh đã hoàn thành.');
-                setTimeout(() => loadOrder(), 1000);
+            const validationMessage = validate();
+            if (validationMessage) {
+                showToast('error', validationMessage);
+                return;
+            }
+            const response = editing
+                ? await assemblyApi.updateAssemblyOrder(id, buildPayload('DRAFT'))
+                : form.orderType === 'DISASSEMBLY'
+                    ? await assemblyApi.createDisassemblyOrder(buildPayload('DRAFT'))
+                    : await assemblyApi.createAssemblyOrder(buildPayload('DRAFT'));
+            const saved = unwrap(response);
+            const orderId = saved?.id || id;
+            if (overrideStatus === 'PENDING_APPROVAL') {
+                await assemblyApi.submitAssemblyOrder(orderId);
+                showToast('success', 'Đã gửi lệnh cho Kế toán duyệt.');
             } else {
-                const validationMessage = validate();
-                if (validationMessage) {
-                    showToast('error', validationMessage);
-                    setSaving(false);
-                    return;
-                }
-                const payload = buildPayload(overrideStatus);
-                const response = editing
-                    ? await assemblyApi.updateAssemblyOrder(id, payload)
-                    : form.orderType === 'DISASSEMBLY'
-                        ? await assemblyApi.createDisassemblyOrder(payload)
-                        : await assemblyApi.createAssemblyOrder(payload);
-                const saved = unwrap(response);
                 showToast('success', editing ? 'Cập nhật lệnh thành công.' : 'Tạo lệnh thành công.');
-                if (!editing && saved?.id) {
-                    setTimeout(() => navigate(`/assembly-orders/${saved.id}`), 1000);
-                } else if (editing) {
-                    setTimeout(() => loadOrder(), 1000);
-                }
+            }
+            if (!editing && orderId) {
+                setTimeout(() => navigate(`/assembly-orders/${orderId}`), 700);
+            } else {
+                setTimeout(() => loadOrder(), 700);
             }
         } catch (err) {
             showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không lưu được lệnh lắp ráp/tháo dỡ.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const reviewOrder = async (approved) => {
+        const reason = approved ? null : window.prompt('Nhập lý do từ chối lệnh:');
+        if (!approved && !reason?.trim()) return;
+        setSaving(true);
+        try {
+            await (approved
+                ? assemblyApi.approveAssemblyOrder(id)
+                : assemblyApi.rejectAssemblyOrder(id, reason.trim()));
+            showToast('success', approved ? 'Đã duyệt lệnh và tạo cặp phiếu kho.' : 'Đã từ chối lệnh.');
+            await loadOrder();
+        } catch (err) {
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không cập nhật được lệnh.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const requestCancel = async () => {
+        const reason = window.prompt('Nhập lý do hủy lệnh:');
+        if (!reason?.trim()) return;
+        setSaving(true);
+        try {
+            await assemblyApi.requestAssemblyOrderCancel(id, reason.trim());
+            showToast('success', ['DRAFT', 'REJECTED', 'PENDING_APPROVAL'].includes(form.status)
+                ? 'Đã hủy lệnh.' : 'Đã gửi yêu cầu hủy cho Kế toán.');
+            await loadOrder();
+        } catch (err) {
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không hủy được lệnh.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const confirmCancel = async () => {
+        setSaving(true);
+        try {
+            await assemblyApi.confirmAssemblyOrderCancel(id);
+            showToast('success', 'Đã xác nhận hủy lệnh.');
+            await loadOrder();
+        } catch (err) {
+            showToast('error', err.response?.data?.userMessage || err.response?.data?.message || 'Không xác nhận hủy được lệnh.');
         } finally {
             setSaving(false);
         }
@@ -632,7 +680,7 @@ function AssemblyOrderFormPage() {
                 bomCode: bomForm.bomCode.trim() || null,
                 bomName: bomForm.bomName.trim(),
                 versionNo: Number(bomForm.versionNo),
-                status: 'APPROVED',
+                status: 'DRAFT',
                 lines: cleanedLines.map((line) => ({
                     componentVariantId: Number(line.componentVariantId),
                     quantity: Number.parseInt(line.quantity, 10),
@@ -641,11 +689,9 @@ function AssemblyOrderFormPage() {
                 }))
             };
             const savedBom = unwrap(await assemblyApi.createAssemblyBom(payload));
-            const refreshed = listFrom(unwrap(await assemblyApi.getAssemblyBoms({ status: 'APPROVED' })));
-            setBoms(refreshed);
-            setField('bomId', savedBom.id || '');
+            await assemblyApi.submitAssemblyBom(savedBom.id);
             setShowBomModal(false);
-            showToast('success', 'Đã tạo cấu hình nhanh và tự động chọn vào lệnh.');
+            showToast('success', 'Đã tạo cấu hình nháp và gửi Kế toán duyệt. Hãy chọn sau khi cấu hình được duyệt.');
         } catch (err) {
             setBomError(err.response?.data?.userMessage || err.response?.data?.message || 'Không tạo được cấu hình nhanh.');
         } finally {
@@ -732,6 +778,21 @@ function AssemblyOrderFormPage() {
                                     <div className={styles.detailItem}><span>Ngày tạo</span><strong>{orderDetail?.createdAt ? formatDateTime(orderDetail.createdAt) : '---'}</strong></div>
                                 </div>
                             )}
+                            {orderDetail?.status === 'REJECTED' && (
+                                <div style={{ marginBottom: '16px', padding: '12px 16px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b' }}>
+                                    <strong>Lý do từ chối:</strong> {orderDetail.rejectionReason || 'Không có nội dung.'}
+                                </div>
+                            )}
+                            {orderDetail?.cancellationSettlementStatus === 'PENDING_UNPOST' && (
+                                <div style={{ marginBottom: '16px', padding: '12px 16px', backgroundColor: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '8px', color: '#9a3412' }}>
+                                    Lệnh đã hủy và đang chờ Thủ kho bỏ ghi sổ phiếu xuất.
+                                </div>
+                            )}
+                            {orderDetail?.cancellationSettlementStatus === 'REQUESTED' && (
+                                <div style={{ marginBottom: '16px', padding: '12px 16px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', color: '#92400e' }}>
+                                    Yêu cầu hủy đang chờ Kế toán xác nhận. Mọi thao tác ghi sổ đã bị khóa.
+                                </div>
+                            )}
 
                             <div className={styles.cardBody}>
                                 <div className="misa-form-row">
@@ -778,7 +839,7 @@ function AssemblyOrderFormPage() {
                                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <label className="misa-label">Ghi chú</label>
-                                        {!canEdit && orderDetail && orderDetail.status !== 'SUBMITTED' && orderDetail.status !== 'CANCELLED' && form.note !== orderDetail.note && (
+                                        {!canEdit && orderDetail && orderDetail.status !== 'COMPLETED' && orderDetail.status !== 'CANCELLED' && form.note !== orderDetail.note && (
                                             <button
                                                 className={styles.btnOutline}
                                                 type="button"
@@ -790,7 +851,7 @@ function AssemblyOrderFormPage() {
                                             </button>
                                         )}
                                     </div>
-                                    <textarea className="misa-input" style={{ resize: 'vertical' }} disabled={!canEdit && (orderDetail?.status === 'SUBMITTED' || orderDetail?.status === 'CANCELLED')} value={form.note} onChange={(event) => setField('note', event.target.value)} placeholder="Ghi chú nội bộ cho lệnh" rows={2} />
+                                    <textarea className="misa-input" style={{ resize: 'vertical' }} disabled={!canEdit && (orderDetail?.status === 'COMPLETED' || orderDetail?.status === 'CANCELLED')} value={form.note} onChange={(event) => setField('note', event.target.value)} placeholder="Ghi chú nội bộ cho lệnh" rows={2} />
                                 </div>
                             </div>
                         </div>
@@ -924,13 +985,8 @@ function AssemblyOrderFormPage() {
                 <button className="btn-misa-cancel" type="button" onClick={() => navigate('/assembly-orders')}>
                     {canEdit ? 'Hủy bỏ' : 'Đóng'}
                 </button>
-                {orderDetail?.status === 'APPROVED' && (
+                {['APPROVED', 'IN_PROGRESS', 'COMPLETED'].includes(orderDetail?.status) && (
                     <div className={styles.actionButtons}>
-                        {['ASSEMBLY', 'DISASSEMBLY'].includes(form.orderType) && (
-                            <button className="btn-misa-post" style={{ backgroundColor: '#10b981', marginRight: '8px' }} type="button" onClick={() => setShowExecutionModal(true)}>
-                                <i className="bi bi-upc-scan"></i> {form.orderType === 'ASSEMBLY' ? 'Thực thi Lắp ráp' : 'Thực thi Tháo dỡ'}
-                            </button>
-                        )}
                         {linkedExports?.length > 0 && (
                             <button className={styles.btnOutline} type="button" onClick={() => navigate('/export-slips', { state: { referenceId: id, referenceType: 'ASSEMBLY_ORDER' } })}>
                                 <i className="bi bi-box-arrow-up"></i> Xem phiếu xuất kho
@@ -941,22 +997,22 @@ function AssemblyOrderFormPage() {
                                 <i className="bi bi-box-arrow-in-down"></i> Xem phiếu nhập kho
                             </button>
                         )}
-                        <button className="btn-misa-post" style={{ backgroundColor: '#0ea5e9' }} type="button" onClick={(e) => handleSubmit(e, 'SUBMITTED')} disabled={disableComplete}>
-                            <i className="bi bi-check-circle-fill"></i> Hoàn thành
-                        </button>
+                        {orderDetail.status !== 'COMPLETED' && canSubmit && <button className="btn-misa-draft" type="button" onClick={requestCancel} disabled={saving}>Yêu cầu hủy</button>}
                     </div>
                 )}
-                {orderDetail?.status === 'SUBMITTED' && (
+                {orderDetail?.status === 'PENDING_APPROVAL' && canApprove && (
                     <div className={styles.actionButtons}>
-                        <button className={styles.btnOutline} type="button" onClick={() => navigate('/export-slips', { state: { referenceId: id, referenceType: 'ASSEMBLY_ORDER' } })}>
-                            <i className="bi bi-box-arrow-up"></i> Xem phiếu xuất kho
-                        </button>
-                        <button className={styles.btnOutline} type="button" onClick={() => navigate('/import-history', { state: { referenceId: id, referenceType: 'ASSEMBLY_ORDER' } })}>
-                            <i className="bi bi-box-arrow-in-down"></i> Xem phiếu nhập kho
-                        </button>
+                        <button className="btn-misa-draft" type="button" onClick={() => reviewOrder(false)} disabled={saving}>Từ chối</button>
+                        <button className="btn-misa-post" type="button" onClick={() => reviewOrder(true)} disabled={saving}>Duyệt lệnh</button>
                     </div>
                 )}
-                
+                {orderDetail?.cancellationSettlementStatus === 'REQUESTED' && canApprove && (
+                    <button className="btn-misa-post" type="button" onClick={confirmCancel} disabled={saving}>Xác nhận hủy</button>
+                )}
+                {orderDetail && ['DRAFT', 'REJECTED', 'PENDING_APPROVAL'].includes(orderDetail.status) && canSubmit && (
+                    <button className="btn-misa-draft" type="button" onClick={requestCancel} disabled={saving}>Hủy lệnh</button>
+                )}
+
                 {orderDetail && (
                     <div className={styles.actionButtons} style={{ marginBottom: '16px', justifyContent: 'flex-end' }}>
                         <button className="btn-misa-draft" style={{ backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} type="button" onClick={() => {
@@ -976,10 +1032,10 @@ function AssemblyOrderFormPage() {
                         <button className="btn-misa-draft" type="button" onClick={(e) => handleSubmit(e, 'DRAFT')} disabled={saving}>
                             <i className="bi bi-save"></i> Lưu tạm
                         </button>
-                        <button className="btn-misa-post" type="button" onClick={(e) => handleSubmit(e, 'APPROVED')} disabled={saving}>
+                        {canSubmit && <button className="btn-misa-post" type="button" onClick={(e) => handleSubmit(e, 'PENDING_APPROVAL')} disabled={saving}>
                             <i className="bi bi-check-circle"></i>
-                            {saving ? 'Đang lưu...' : 'Duyệt lệnh (Lưu)'}
-                        </button>
+                            {saving ? 'Đang gửi...' : form.status === 'REJECTED' ? 'Gửi lại duyệt' : 'Gửi duyệt'}
+                        </button>}
                     </div>
                 )}
             </div>
@@ -1277,16 +1333,6 @@ function AssemblyOrderFormPage() {
                     </>
                 )}
             </Modal>
-
-            <AssemblyExecutionModal
-                visible={showExecutionModal}
-                onCancel={() => setShowExecutionModal(false)}
-                order={orderDetail}
-                onSuccess={() => {
-                    setShowExecutionModal(false);
-                    loadOrder();
-                }}
-            />
 
             <Toast {...toast} onClose={hideToast} />
         </AdminLayout>
