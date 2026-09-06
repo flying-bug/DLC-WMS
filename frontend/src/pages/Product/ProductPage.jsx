@@ -58,6 +58,8 @@ const defaultVariantData = {
     salePrice: 0,
     manufacturerPartNumber: '',
     specsJson: '',
+    trackingMode: 'NONE',
+    minStockQty: 0,
     active: true,
     warrantyMonths: ''
 };
@@ -1283,6 +1285,10 @@ const ProductPage = () => {
             sku: product.productCode || '',
             variantName: product.productName || '',
             salePrice: Number(product.salePrice || 0),
+            trackingMode: product.trackSerial && product.trackLot
+                ? 'SERIAL_LOT'
+                : product.trackSerial ? 'SERIAL' : product.trackLot ? 'LOT' : 'NONE',
+            minStockQty: Number(product.minStockQty || 0),
             warrantyMonths: Number(product.warrantyPeriodMonths) || ''
         });
         setSpecList([{ id: globalSpecIdCounter++, key: '', value: '' }]);
@@ -1303,6 +1309,8 @@ const ProductPage = () => {
             salePrice: Number(variant.salePrice || 0),
             manufacturerPartNumber: variant.manufacturerPartNumber || '',
             specsJson: variant.specsJson || '',
+            trackingMode: variant.trackingMode || (variant.trackSerial ? 'SERIAL' : 'NONE'),
+            minStockQty: Number(variant.minStockQty || 0),
             active: variant.active !== false,
             warrantyMonths: Number(variant.warrantyMonths) || ''
         });
@@ -1317,6 +1325,10 @@ const ProductPage = () => {
             sku: selectedProduct?.productCode || '',
             variantName: selectedProduct?.productName || '',
             salePrice: Number(selectedProduct?.salePrice || 0),
+            trackingMode: selectedProduct?.trackSerial && selectedProduct?.trackLot
+                ? 'SERIAL_LOT'
+                : selectedProduct?.trackSerial ? 'SERIAL' : selectedProduct?.trackLot ? 'LOT' : 'NONE',
+            minStockQty: Number(selectedProduct?.minStockQty || 0),
             warrantyMonths: Number(selectedProduct?.warrantyPeriodMonths) || ''
         });
         setSpecList([{ id: globalSpecIdCounter++, key: '', value: '' }]);
@@ -1330,6 +1342,7 @@ const ProductPage = () => {
         if (variantForm.salePrice === '' || Number.isNaN(Number(variantForm.salePrice))) return 'Giá bán không hợp lệ.';
         if (Number(variantForm.salePrice) < 0) return 'Giá bán không được âm.';
         if (Number(variantForm.costPrice || 0) < 0) return 'Giá vốn không được âm.';
+        if (Number(variantForm.minStockQty || 0) < 0) return 'Tồn tối thiểu không được âm.';
         return '';
     };
 
@@ -1352,6 +1365,8 @@ const ProductPage = () => {
                 salePrice: Number(variantForm.salePrice || 0),
                 manufacturerPartNumber: variantForm.manufacturerPartNumber?.trim() || '',
                 specsJson: specsJsonPayload,
+                trackingMode: variantForm.trackingMode,
+                minStockQty: Number(variantForm.minStockQty || 0),
                 active: variantForm.active,
                 warrantyMonths: Number(variantForm.warrantyMonths || 0)
             };
@@ -2773,6 +2788,33 @@ const ProductPage = () => {
 
                                 <div className="misa-form-row">
                                     <div className="misa-form-group">
+                                        <label>Phương thức theo dõi kho</label>
+                                        <select
+                                            value={variantForm.trackingMode}
+                                            onChange={(event) => setVariantForm({ ...variantForm, trackingMode: event.target.value })}
+                                            className="misa-input"
+                                        >
+                                            <option value="NONE">Theo số lượng</option>
+                                            <option value="SERIAL">Theo serial</option>
+                                            <option value="LOT">Theo lô</option>
+                                            <option value="SERIAL_LOT">Theo serial và lô</option>
+                                        </select>
+                                    </div>
+                                    <div className="misa-form-group">
+                                        <label>Tồn tối thiểu</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={variantForm.minStockQty}
+                                            onChange={(event) => setVariantForm({ ...variantForm, minStockQty: event.target.value })}
+                                            className="misa-input"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="misa-form-row">
+                                    <div className="misa-form-group">
                                         <label>Trạng thái</label>
                                         <label className={styles.checkboxLabel} style={{ minHeight: 34 }}>
                                             <input
@@ -2867,6 +2909,7 @@ const ProductPage = () => {
                                                 <th>Tên SKU</th>
                                                 <th style={{ textAlign: 'right' }}>Giá vốn</th>
                                                 <th style={{ textAlign: 'right' }}>Giá bán</th>
+                                                <th>Theo dõi</th>
                                                 <th>Trạng thái</th>
                                                 <th style={{ textAlign: 'center' }}>Chức năng</th>
                                             </tr>
@@ -2874,11 +2917,11 @@ const ProductPage = () => {
                                         <tbody>
                                             {loadingVariants ? (
                                                 <tr>
-                                                    <td colSpan="6" style={{ textAlign: 'center', padding: 24 }}>Đang tải SKU...</td>
+                                                    <td colSpan="7" style={{ textAlign: 'center', padding: 24 }}>Đang tải SKU...</td>
                                                 </tr>
                                             ) : variants.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan="6" style={{ textAlign: 'center', padding: 24 }}>Chưa có SKU.</td>
+                                                    <td colSpan="7" style={{ textAlign: 'center', padding: 24 }}>Chưa có SKU.</td>
                                                 </tr>
                                             ) : (
                                                 variants.map((variant) => (
@@ -2887,6 +2930,7 @@ const ProductPage = () => {
                                                         <td>{variant.variantName}</td>
                                                         <td style={{ textAlign: 'right' }}>{formatCurrency(variant.costPrice)}</td>
                                                         <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(variant.salePrice)}</td>
+                                                        <td>{variant.trackingMode || 'NONE'}</td>
                                                         <td>{variant.active === false ? 'Ngừng sử dụng' : 'Đang sử dụng'}</td>
                                                         <td style={{ textAlign: 'center' }}>
                                                             <span className={styles.editLink} onClick={() => editVariant(variant)}>Sửa</span>

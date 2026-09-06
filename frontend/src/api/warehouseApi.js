@@ -71,8 +71,8 @@ export const getAvailableSerials = (warehouseId, variantId) => {
 /**
  * Kiểm tra xem serial đã tồn tại trong hệ thống chưa
  */
-export const checkSerialExists = (serialNumber) => {
-    return axiosClient.get(`/warehouses/serials/check`, { params: { serialNumber } });
+export const checkSerialExists = (serialNumber, variantId) => {
+    return axiosClient.get(`/warehouses/serials/check`, { params: { serialNumber, variantId } });
 };
 
 /**
