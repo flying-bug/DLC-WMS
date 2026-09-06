@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -78,7 +79,6 @@ class StocktakeServiceTest {
                 codeGeneratorService,
                 productVariantRepository,
                 warehouseRepository,
-                inventoryDocumentService,
                 serialNumberRepository
         );
     }
@@ -475,7 +475,7 @@ class StocktakeServiceTest {
     }
 
     @Test
-    void postStocktake_draft_processesSerialDifferencesAndPosts() {
+    void postStocktake_draftWithSerialDifferences_requiresAdjustmentDocuments() {
         Stocktake stocktake = stocktake("KK000001", "DRAFT");
         StocktakeLine line = stocktakeLine(stocktake);
         line.getSerials().addAll(List.of(
@@ -486,36 +486,17 @@ class StocktakeServiceTest {
                 stocktakeSerial(line, 405L, "SN-MATCHED", "MATCHED")
         ));
         stocktake.getLines().add(line);
-        SerialNumber missing = serial(401L, "SN-MISSING", "AVAILABLE", WAREHOUSE_ID);
-        SerialNumber unexpectedExisting = serial(402L, "SN-EXIST", "SOLD", 2L);
         when(stocktakeRepository.findByIdWithDetails(STOCKTAKE_ID)).thenReturn(Optional.of(stocktake));
-        when(serialNumberRepository.findById(401L)).thenReturn(Optional.of(missing));
-        when(serialNumberRepository.findByVariantIdAndSerialNumber(VARIANT_ID, "SN-EXIST"))
-                .thenReturn(Optional.of(unexpectedExisting));
-        when(serialNumberRepository.findByVariantIdAndSerialNumber(VARIANT_ID, "SN-NEW"))
-                .thenReturn(Optional.empty());
-        when(stocktakeRepository.save(stocktake)).thenReturn(stocktake);
 
-        StocktakeResponse result = stocktakeService.postStocktake(STOCKTAKE_ID, CREATOR_ID);
-
-        ArgumentCaptor<SerialNumber> serialCaptor = ArgumentCaptor.forClass(SerialNumber.class);
-        verify(serialNumberRepository, times(3)).save(serialCaptor.capture());
-        SerialNumber created = serialCaptor.getAllValues().stream()
-                .filter(serial -> "SN-NEW".equals(serial.getSerialNumber()))
-                .findFirst()
-                .orElseThrow();
-        assertAll(
-                () -> assertEquals("LOST", missing.getStatus()),
-                () -> assertEquals("AVAILABLE", unexpectedExisting.getStatus()),
-                () -> assertEquals(WAREHOUSE_ID, unexpectedExisting.getWarehouseId()),
-                () -> assertEquals(VARIANT_ID, created.getVariantId()),
-                () -> assertEquals(WAREHOUSE_ID, created.getWarehouseId()),
-                () -> assertEquals("AVAILABLE", created.getStatus()),
-                () -> assertNotNull(created.getImportedAt()),
-                () -> assertEquals("POSTED", stocktake.getStatus()),
-                () -> assertEquals("POSTED", result.getStatus())
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> stocktakeService.postStocktake(STOCKTAKE_ID, CREATOR_ID)
         );
-        verifyNoInteractions(inventoryDocumentService);
+
+        assertTrue(exception.getMessage().contains("phieu nhap/xuat dieu chinh"));
+        assertEquals("DRAFT", stocktake.getStatus());
+        verify(stocktakeRepository, never()).save(any());
+        verifyNoInteractions(serialNumberRepository, inventoryDocumentService);
     }
 
     private static StocktakeRequest validRequest() {

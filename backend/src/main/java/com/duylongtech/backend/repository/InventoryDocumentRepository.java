@@ -66,6 +66,12 @@ public interface InventoryDocumentRepository extends JpaRepository<InventoryDocu
 
     boolean existsByReferenceTypeAndReferenceId(String referenceType, Long referenceId);
 
+    boolean existsByReferenceTypeAndReferenceIdAndDocType(String referenceType, Long referenceId, String docType);
+
+    @Query("SELECT DISTINCT d FROM InventoryDocument d LEFT JOIN FETCH d.lines WHERE d.referenceType = :referenceType AND d.referenceId = :referenceId ORDER BY d.id")
+    List<InventoryDocument> findByReferenceWithLines(@Param("referenceType") String referenceType,
+                                                     @Param("referenceId") Long referenceId);
+
     Optional<InventoryDocument> findByDocCode(String docCode);
 
     @Query("SELECT d FROM InventoryDocument d LEFT JOIN FETCH d.lines WHERE d.referenceRepairId = :repairId ORDER BY d.createdAt DESC")

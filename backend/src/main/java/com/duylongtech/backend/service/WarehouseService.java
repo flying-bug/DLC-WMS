@@ -397,7 +397,9 @@ public class WarehouseService {
     }
 
     @Transactional(readOnly = true)
-    public boolean checkSerialExists(String serialNumber) {
-        return serialNumberRepository.existsBySerialNumber(serialNumber);
+    public boolean checkSerialExists(Long variantId, String serialNumber) {
+        return variantId != null
+                ? serialNumberRepository.existsByVariantIdAndSerialNumber(variantId, serialNumber)
+                : serialNumberRepository.existsBySerialNumber(serialNumber);
     }
 }
