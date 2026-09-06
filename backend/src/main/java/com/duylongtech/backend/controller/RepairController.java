@@ -92,7 +92,7 @@ public class RepairController {
     @PreAuthorize("hasAuthority('repair:add')")
     @Operation(
             summary = "Tạo lệnh sửa chữa mới",
-            description = "Tạo lệnh sửa chữa với trạng thái DRAFT. Bắt buộc: partnerId, productId."
+            description = "Tạo lệnh sửa chữa với trạng thái DRAFT. Bắt buộc: partnerId, productVariantId."
     )
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Tạo thành công")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Dữ liệu không hợp lệ")

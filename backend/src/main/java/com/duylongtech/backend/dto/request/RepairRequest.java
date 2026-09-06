@@ -19,8 +19,10 @@ public class RepairRequest {
     private Long partnerId;
 
     /** Sản phẩm/thiết bị đang sửa */
-    @NotNull(message = "productId là bắt buộc")
     private Long productId;
+
+    @NotNull(message = "productVariantId là bắt buộc")
+    private Long productVariantId;
 
     private Integer productQuantity;
     private String productUnit;
