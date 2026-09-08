@@ -13,12 +13,15 @@ import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import Select from 'react-select';
 import { printImportSlip } from '../../utils/printImportSlip';
 import styles from './UpdateImportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import { focusField } from '../../utils/focusField';
+import { canViewPricing } from '../../auth/session';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -35,8 +38,9 @@ const normalizeProductType = (value) =>
     .toLowerCase();
 
 const isWarehouseProduct = (item) => {
+  if (!item) return false;
   const type = normalizeProductType(item?.productType);
-  return type === 'hang hoa' || type === 'thanh pham';
+  return type !== 'dich vu' && type !== 'service';
 };
 
 const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
@@ -98,11 +102,19 @@ const customSelectStyles = {
   })
 };
 
-const emptyLine = () => ({
+const emptyLine = (defaultWarehouseId = '') => ({
   localId: crypto.randomUUID(),
   id: null,
   variantId: '',
+  warehouseId: defaultWarehouseId,
+  unitId: '',
+  baseUnitId: '',
+  conversionRatio: 1,
+  conversionOperator: 'MULTIPLY',
   quantity: 1,
+  expectedQuantity: 1,
+  rejectedQuantity: 0,
+  discrepancyReason: '',
   price: 0,
   vatPercent: 0,
   note: '',
@@ -114,6 +126,7 @@ function UpdateImportSlipPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
+  const showPricing = canViewPricing();
   const returnUrl = location.state?.returnUrl || null;
   const [warehouses, setWarehouses] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -126,6 +139,8 @@ function UpdateImportSlipPage() {
   const [toast, setToast] = useState({ isVisible: false, type: 'error', message: '' });
   const [serialModalItemId, setSerialModalItemId] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [savedSlip, setSavedSlip] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [form, setForm] = useState({
     docCode: '',
     warehouseId: '',
@@ -144,6 +159,7 @@ function UpdateImportSlipPage() {
   const [showAssemblyOrderModal, setShowAssemblyOrderModal] = useState(false);
   const [showReferenceModal, setShowReferenceModal] = useState(false);
   const [items, setItems] = useState([emptyLine()]);
+  const [inventoryBalances, setInventoryBalances] = useState([]);
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
@@ -186,32 +202,58 @@ function UpdateImportSlipPage() {
     }
   };
 
-  const [inventoryMap, setInventoryMap] = useState(new Map());
-
   useEffect(() => {
-    if (!form.warehouseId) {
-      setInventoryMap(new Map());
-      return;
-    }
-    exportApi.getInventoryBalance({ warehouseId: form.warehouseId })
-      .then(res => {
-        const list = pageContent(unwrap(res));
-        const invMap = new Map();
-        list.forEach(b => {
-          const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
-          const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
-          const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
-          const stock = Math.max(0, availableQuantity);
-          if (b.variantId) invMap.set(String(b.variantId), stock);
-          else if (b.itemId) invMap.set(String(b.itemId), stock);
-        });
-        setInventoryMap(invMap);
-      })
-      .catch(err => {
-        console.error('Failed to load inventory balance', err);
-        setInventoryMap(new Map());
+    exportApi.getInventoryBalance({ size: 10000 })
+      .then(res => setInventoryBalances(pageContent(unwrap(res))))
+      .catch(err => console.error('Lỗi khi tải tồn kho', err));
+  }, []);
+
+  const inventoryMap = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(inventoryBalances)) {
+      inventoryBalances.forEach(b => {
+        const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+        const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+        const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+        const stock = Math.max(0, availableQuantity);
+        const vId = b.variantId || b.itemId;
+        const wId = b.warehouseId;
+        if (vId && wId) {
+          map.set(`${vId}_${wId}`, stock);
+        }
+        if (vId) {
+          const currentTotal = map.get(String(vId)) || 0;
+          map.set(String(vId), currentTotal + stock);
+        }
       });
-  }, [form.warehouseId]);
+    }
+    return map;
+  }, [inventoryBalances]);
+
+  const handleApplyWarehouseToAllLines = (whId) => {
+    if (!whId) return;
+    setItems(prev => {
+      const mergedMap = new Map();
+      const result = [];
+      prev.forEach(item => {
+        if (!item.variantId) {
+          result.push({ ...item, warehouseId: String(whId), serialNumbers: [] });
+          return;
+        }
+        const key = String(item.variantId);
+        if (mergedMap.has(key)) {
+          const existing = mergedMap.get(key);
+          existing.quantity = Number(existing.quantity || 0) + (Number(item.quantity) || 1);
+        } else {
+          const newItem = { ...item, warehouseId: String(whId), serialNumbers: [] };
+          mergedMap.set(key, newItem);
+          result.push(newItem);
+        }
+      });
+      return result;
+    });
+    showToast('info', 'Đã áp dụng kho cho tất cả các dòng sản phẩm và tự động gộp các dòng trùng');
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -262,12 +304,22 @@ function UpdateImportSlipPage() {
           docDate: detail.docDate ? detail.docDate.split('T')[0] : '',
           note: detail.note || '',
           status: detail.status || 'DRAFT',
+          hasDiscrepancy: detail.hasDiscrepancy || false,
+          discrepancyNote: detail.discrepancyNote || '',
         });
         setItems((detail.lines || []).map(line => ({
           localId: crypto.randomUUID(),
           id: line.id,
           variantId: line.variantId || '',
+          warehouseId: String(line.warehouseId || detail.warehouseId || ''),
+          unitId: line.unitId ? String(line.unitId) : '',
+          baseUnitId: line.baseUnitId ? String(line.baseUnitId) : '',
+          conversionRatio: line.conversionRatio != null ? Number(line.conversionRatio) : 1,
+          conversionOperator: line.conversionOperator || 'MULTIPLY',
           quantity: line.quantityIn || 1,
+          expectedQuantity: line.expectedQuantity !== undefined ? line.expectedQuantity : (line.quantityIn || 1),
+          rejectedQuantity: line.rejectedQuantity || 0,
+          discrepancyReason: line.discrepancyReason || '',
           price: line.unitCost || 0,
           vatPercent: line.vatPercent ?? line.vatRate ?? 0,
           warrantyMonths: line.warrantyMonths || 0,
@@ -300,27 +352,77 @@ function UpdateImportSlipPage() {
     const hasValidSerials = !product?.trackSerial || (Number.isInteger(quantity) && item.serialNumbers?.length === quantity);
     return product && isWarehouseProduct(product) && quantity > 0 && Number(item.price) >= 0 && !isNaN(vat) && vat >= 0 && vat <= 10 && hasValidSerials;
   };
-  const isFormValid = Boolean(form.warehouseId && form.docDate && items.length && items.every(isLineValid));
-
+  const isFormValid = Boolean(
+    form.warehouseId &&
+    form.docDate &&
+    (importType === 'PURCHASE' ? (form.partnerId && form.referenceId)
+      : (importType === 'PRODUCTION' || importType === 'SCRAP') ? form.assemblyOrderId
+        : importType === 'RETURN' ? (form.customerId && form.referenceId)
+          : true) &&
+    items.length &&
+    items.every(isLineValid)
+  );
 
   const handleFormChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
   const handleItemChange = (localId, field, value) => {
-    setItems(prev => prev.map(item => {
-      if (item.localId !== localId) return item;
-      if (field === 'variantId') {
-        const product = products.find(p => String(p.id) === String(value));
-        return {
+    setItems(prev => {
+      if (field === 'quantity') {
+        const quantity = Number(value || 0);
+        return prev.map(item => item.localId === localId ? {
           ...item,
-          [field]: value,
-          serialNumbers: [],
-          warrantyMonths: product ? Number(product.warrantyMonths || 0) : 0
-        };
+          quantity: value,
+          serialNumbers: item.serialNumbers?.slice(0, Math.max(0, quantity)) || []
+        } : item);
       }
-      return { ...item, [field]: value };
-    }));
+      if (field === 'variantId') {
+        if (!value) {
+          return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], warrantyMonths: 0, unitId: '', baseUnitId: '', conversionRatio: 1, conversionOperator: 'MULTIPLY' } : item);
+        }
+        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value));
+        if (existingIndex >= 0) {
+          const currentItem = prev.find(item => item.localId === localId);
+          const addedQty = Number(currentItem?.quantity) || 1;
+          const newItems = [...prev];
+          newItems[existingIndex] = {
+            ...newItems[existingIndex],
+            quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
+          };
+          showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động cộng dồn số lượng.');
+          return newItems.filter(item => item.localId !== localId);
+        }
+        const product = products.find(p => String(p.id) === String(value));
+        return prev.map(item => item.localId === localId ? {
+          ...item,
+          [field]: String(value),
+          serialNumbers: [],
+          warrantyMonths: product ? Number(product.warrantyMonths || 0) : 0,
+          unitId: product?.unitId ? String(product.unitId) : '',
+          baseUnitId: product?.unitId ? String(product.unitId) : '',
+          conversionRatio: 1,
+          conversionOperator: 'MULTIPLY',
+          price: product?.costPrice || product?.salePrice || item.price || 0,
+        } : item);
+      }
+      if (field === 'unitId') {
+        return prev.map(item => {
+          if (item.localId !== localId) return item;
+          const product = products.find(p => String(p.id) === String(item.variantId));
+          if (!product) return { ...item, unitId: value };
+          if (String(value) === String(product.unitId)) {
+            return { ...item, unitId: value, conversionRatio: 1, conversionOperator: 'MULTIPLY' };
+          }
+          const conv = (product.unitConversions || []).find(c => String(c.unitId) === String(value));
+          if (conv) {
+            return { ...item, unitId: value, conversionRatio: Number(conv.ratio) || 1, conversionOperator: conv.operator || 'MULTIPLY' };
+          }
+          return { ...item, unitId: value, conversionRatio: 1, conversionOperator: 'MULTIPLY' };
+        });
+      }
+      return prev.map(item => item.localId === localId ? { ...item, [field]: value } : item);
+    });
   };
 
   const handleQuickAddProductSuccess = async (newProduct) => {
@@ -352,76 +454,155 @@ function UpdateImportSlipPage() {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, { ...emptyLine(), variantId: filteredProducts[0]?.id || '' }]);
+    setItems(prev => [...prev, { ...emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : '')), variantId: filteredProducts[0]?.id || '' }]);
   };
 
   const removeItem = (localId) => {
-    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(), isNew: false }]);
+    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(form.warehouseId), isNew: false }]);
   };
 
   const handleSerialModalClose = (savedSerials) => {
     if (savedSerials !== null && serialModalItemId) {
-      handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
+handleItemChange(serialModalItemId, 'serialNumbers', savedSerials);
     }
     setSerialModalItemId(null);
   };
 
   const selectedSerialItem = useMemo(() => items.find(i => i.localId === serialModalItemId), [items, serialModalItemId]);
   const selectedSerialProduct = useMemo(() => selectedSerialItem ? productById.get(String(selectedSerialItem.variantId)) : null, [selectedSerialItem, productById]);
-
-  const buildPayload = (status) => ({
-    docCode: form.docCode || undefined,
-    warehouseId: Number(form.warehouseId),
-    partnerId: importType === 'RETURN' ? (form.customerId ? Number(form.customerId) : null)
-      : importType === 'OTHER' ? null
-        : (form.partnerId ? Number(form.partnerId) : null),
-    docDate: form.docDate,
-    status,
-    note: form.note,
-    lines: items.map(item => ({
-      variantId: Number(item.variantId),
-      quantityIn: Number(item.quantity),
-      quantityOut: 0,
-      unitCost: Number(item.price),
-      unitPrice: Number(item.price),
-      vatPercent: Number(item.vatPercent || 0),
-      warrantyMonths: Number(item.warrantyMonths || 0),
-      serialNumbers: item.serialNumbers || [],
-      note: item.note,
-    })),
-    issuePurpose: importType,
-    recipientName: importType === 'OTHER' ? form.otherObjectName : form.deliverer,
-    salespersonId: (!isNaN(Number(form.purchaser)) && String(form.purchaser).trim() !== '') ? Number(form.purchaser) : null,
-    referenceType: importType === 'PRODUCTION' && form.assemblyOrderId ? 'ASSEMBLY_ORDER' : (form.referenceType || undefined),
-    referenceId: importType === 'PRODUCTION' && form.assemblyOrderId ? Number(form.assemblyOrderId) : (form.referenceId || undefined),
-  });
+  
+  const buildPayload = (status) => {
+    return {
+      docCode: form.docCode || undefined,
+      warehouseId: Number(form.warehouseId),
+      partnerId: importType === 'RETURN' ? (form.customerId ? Number(form.customerId) : null)
+        : importType === 'OTHER' ? null
+          : (form.partnerId ? Number(form.partnerId) : null),
+      docDate: form.docDate,
+      status,
+      note: form.note,
+      createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
+      lines: items.map(item => {
+        const product = productById.get(String(item.variantId));
+        const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
+        const op = item.conversionOperator || 'MULTIPLY';
+        const qty = Number(item.quantity || 0);
+        const baseQty = (op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio);
+        return {
+          variantId: Number(item.variantId),
+          warehouseId: Number(item.warehouseId || form.warehouseId),
+          quantityIn: qty,
+          expectedQuantity: item.expectedQuantity !== undefined && item.expectedQuantity !== '' ? Number(item.expectedQuantity) : qty,
+          rejectedQuantity: item.rejectedQuantity !== undefined && item.rejectedQuantity !== '' ? Number(item.rejectedQuantity) : 0,
+          discrepancyReason: item.discrepancyReason || '',
+          unitId: item.unitId ? Number(item.unitId) : (product ? Number(product.unitId) : null),
+          baseUnitId: item.baseUnitId ? Number(item.baseUnitId) : (product ? Number(product.unitId) : null),
+          conversionOperator: op,
+          conversionRatio: ratio,
+          baseQuantity: baseQty,
+          unitCost: Number(item.price || 0),
+          vatPercent: Number(item.vatPercent || 0),
+          warrantyMonths: Number(item.warrantyMonths || 0),
+          serialNumbers: item.serialNumbers || [],
+          note: item.note,
+        };
+      }),
+      issuePurpose: importType,
+      recipientName: importType === 'OTHER' ? form.otherObjectName : form.deliverer,
+      salespersonId: (!isNaN(Number(form.purchaser)) && String(form.purchaser).trim() !== '') ? Number(form.purchaser) : null,
+      referenceType: importType === 'PRODUCTION' && form.assemblyOrderId ? 'ASSEMBLY_ORDER' : (form.referenceType || undefined),
+      referenceId: importType === 'PRODUCTION' && form.assemblyOrderId ? Number(form.assemblyOrderId) : (form.referenceId || undefined),
+    };
+  };
 
   const submit = async (status, shouldPost = false) => {
-    if (!isFormValid) {
-      if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho nhập.');
-      if (importType === 'PURCHASE' && !form.partnerId) return showToast('error', 'Vui lòng chọn nhà cung cấp.');
-      if ((importType === 'PRODUCTION' || importType === 'SCRAP') && !form.assemblyOrderId) return showToast('error', 'Vui lòng chọn lệnh quản lý cấu hình.');
-      if (importType === 'RETURN' && !form.customerId) return showToast('error', 'Vui lòng chọn khách hàng.');
-      if ((importType === 'PURCHASE' || importType === 'RETURN') && !form.referenceId) return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
-      if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày nhập kho.');
-      const invalidVat = items.some(item => {
-        const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-        return isNaN(vat) || vat < 0 || vat > 10;
-      });
-      if (invalidVat) {
-        showToast('error', 'Thuế VAT phải nằm trong khoảng từ 0% đến 10%.');
-        return;
+    if (importType === 'PURCHASE' && !form.partnerId) {
+      focusField('import-partnerId');
+      return showToast('error', 'Vui lòng chọn nhà cung cấp.');
+    }
+    if ((importType === 'PRODUCTION' || importType === 'SCRAP') && !form.assemblyOrderId) {
+      focusField('import-assemblyOrderId');
+      return showToast('error', 'Vui lòng chọn lệnh quản lý cấu hình.');
+    }
+    if (importType === 'RETURN' && !form.customerId) {
+      focusField('import-customerId');
+      return showToast('error', 'Vui lòng chọn khách hàng.');
+    }
+    if ((importType === 'PURCHASE' || importType === 'RETURN') && !form.referenceId) {
+      return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
+    }
+    if (!form.warehouseId) {
+      focusField('import-warehouseId');
+      return showToast('error', 'Vui lòng chọn kho nhập.');
+    }
+    if (!form.docDate) {
+      focusField('import-docDate');
+      return showToast('error', 'Vui lòng chọn ngày nhập kho.');
+    }
+
+    if (!items.length) {
+      return showToast('error', 'Vui lòng thêm ít nhất một dòng hàng hóa.');
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item.variantId) {
+        focusField(`import-line-product-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Vui lòng chọn hàng hóa.`);
       }
-      showToast('error', 'Vui lòng chọn kho, ngày nhập kho và ít nhất một dòng hàng hợp lệ.');
-      return;
+      const qty = Number(item.quantity);
+      if (!Number.isInteger(qty) || qty <= 0) {
+        focusField(`import-line-qty-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Số lượng phải là số nguyên lớn hơn 0.`);
+      }
+      const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
+      if (isNaN(vat) || vat < 0 || vat > 10) {
+        focusField(`import-line-vat-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Thuế VAT phải nằm trong khoảng từ 0% đến 10%.`);
+      }
+      const product = productById.get(String(item.variantId));
+      if (product?.trackSerial) {
+        const serialCount = item.serialNumbers ? item.serialNumbers.length : 0;
+        if (serialCount !== qty) {
+          setSerialModalItemId(item.localId);
+          return showToast('error', `Dòng ${i + 1}: Vui lòng nhập đủ ${qty} mã serial (hiện có ${serialCount}).`);
+        }
+      }
     }
     setSaving(true);
     try {
-      await importApi.updateImportSlip(id, buildPayload(status));
+      const response = await importApi.updateImportSlip(id, buildPayload(status));
+      const updated = unwrap(response);
       if (shouldPost) {
         await importApi.postImportSlip(id);
       }
-      navigate('/import-history', { state: { toastMessage: shouldPost ? 'Ghi sổ phiếu nhập kho thành công!' : 'Cập nhật phiếu nhập kho thành công!', toastType: 'success' } });
+
+      const fullSlipData = {
+        ...updated,
+        id,
+        docCode: form.docCode,
+        docDate: form.docDate,
+        status: shouldPost ? 'POSTED' : status,
+        warehouseId: form.warehouseId,
+        lines: items.map(item => ({
+          ...item,
+          warehouseId: Number(item.warehouseId),
+          warehouseName: warehouses.find(w => String(w.id) === String(item.warehouseId))?.name,
+          quantityIn: item.quantity,
+          unitCost: item.price,
+          unitPrice: item.price,
+          variantName: productById.get(String(item.variantId))?.variantName || productById.get(String(item.variantId))?.name,
+          sku: productById.get(String(item.variantId))?.sku,
+          unitName: productById.get(String(item.variantId))?.unitName,
+          warrantyMonths: item.warrantyMonths || productById.get(String(item.variantId))?.warrantyMonths,
+        })),
+        partnerName: form.partnerName || suppliers.find(s => String(s.id) === String(form.partnerId))?.name,
+        purchaserName: users.find(u => String(u.id) === String(form.purchaser))?.fullName,
+        delivererName: form.deliverer,
+      };
+
+      setSavedSlip(fullSlipData);
+      setShowSuccessModal(true);
     } catch (err) {
       showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không cập nhật được phiếu nhập kho');
     } finally {
@@ -429,20 +610,23 @@ function UpdateImportSlipPage() {
     }
   };
 
-  const handlePrint = () => {
-    const slipForPrint = {
+  const handlePrint = (printMode = 'SUMMARY') => {
+    const slipForPrint = savedSlip || {
       ...buildPayload(form.status),
       docCode: form.docCode
     };
-    
+
     printImportSlip(slipForPrint, {
+      supplier: suppliers.find(s => String(s.id) === String(slipForPrint.partnerId || form.partnerId)),
+      customer: customers.find(c => String(c.id) === String(slipForPrint.partnerId || form.partnerId)),
+      warehouseById: new Map(warehouses.map(w => [w.id, w])),
       supplierById: new Map(suppliers.map(s => [s.id, s])),
       customerById: new Map(customers.map(c => [c.id, c])),
-      warehouseById: new Map(warehouses.map(w => [w.id, w])),
       assemblyOrderById: new Map(assemblyOrders.map(a => [a.id, a])),
       productById: new Map(products.map(p => [p.id, p])),
       userById: new Map(users.map(u => [u.id, u])),
-      isImport: true
+      isImport: true,
+      printMode,
     });
   };
 
@@ -493,6 +677,34 @@ function UpdateImportSlipPage() {
           <div className={styles.card}>Đang tải dữ liệu...</div>
         ) : (
           <>
+            {form.hasDiscrepancy && (
+              <div style={{
+                background: '#fff7ed',
+                border: '1px solid #fed7aa',
+                borderRadius: 10,
+                padding: '16px 20px',
+                marginBottom: 20,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 14,
+                boxShadow: '0 2px 4px rgba(234, 88, 12, 0.06)'
+              }}>
+                <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: 24, color: '#ea580c', flexShrink: 0, marginTop: 2 }}></i>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#9a3412', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span>CẢNH BÁO CHÊNH LỆCH NHẬP KHO (THỦ KHO ĐÃ GHI NHẬN THIẾU / HÀNG LỖI)</span>
+                    <span style={{ fontSize: 11, background: '#ffedd5', color: '#c2410c', padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>Cần Kế toán đối soát</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: '#c2410c', lineHeight: 1.5, whiteSpace: 'pre-line', background: '#ffffff', padding: '8px 12px', borderRadius: 6, border: '1px dashed #fdba74', margin: '8px 0' }}>
+                    {form.discrepancyNote || 'Phiếu nhập kho này có phát sinh chênh lệch giữa số lượng dự kiến từ HĐ và số lượng thực nhận vào kho.'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#7c2d12', marginTop: 4, lineHeight: 1.4 }}>
+                    💡 <strong>Hướng dẫn nghiệp vụ cho Kế toán:</strong> Hệ thống đã tự động ghi nhận công nợ trả NCC theo đúng <strong>số lượng thực nhận</strong> (bảo vệ quỹ tiền). Kế toán vui lòng liên hệ NCC để: <strong>(1)</strong> Yêu cầu NCC hủy & xuất lại HĐGTGT theo đúng số lượng thực nhận, HOẶC <strong>(2)</strong> Lập biên bản yêu cầu NCC giao bù các sản phẩm còn thiếu trong đợt tiếp theo.
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className={styles.topGrid}>
               <div className={styles.card}>
                 <div className={styles.cardHeader}>
@@ -501,202 +713,209 @@ function UpdateImportSlipPage() {
                     Thông tin chung
                   </h2>
                 </div>
-                {importType === 'PURCHASE' && (
-                  <div className="misa-form-row">
-                    <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
-                      <label className="misa-label">Mã nhà cung cấp <span className="required">*</span></label>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <div style={{ flex: 1 }}>
-                          <Select
-                            options={suppliers.map(s => ({ value: s.id, label: `${s.code || `NCC#${s.id}`} - ${s.name || ''}`, codeOnly: s.code || `NCC#${s.id}` }))}
-                            value={suppliers.find(s => String(s.id) === String(form.partnerId)) ? { value: form.partnerId, label: `${suppliers.find(s => String(s.id) === String(form.partnerId)).code || `NCC#${form.partnerId}`} - ${suppliers.find(s => String(s.id) === String(form.partnerId)).name || ''}`, codeOnly: suppliers.find(s => String(s.id) === String(form.partnerId)).code || `NCC#${form.partnerId}` } : null}
-                            onChange={(selected) => {
-                              handleFormChange('partnerId', selected ? selected.value : '');
-                              handleFormChange('partnerName', selected ? (suppliers.find(s => String(s.id) === String(selected.value))?.name || '') : '');
-                            }}
-                            formatOptionLabel={(option, { context }) => context === 'value' ? option.codeOnly : option.label}
-                            placeholder="Chọn Mã nhà cung cấp..."
-                            isClearable
-                            styles={customSelectStyles}
-                          />
-                        </div>
-                        <button type="button" onClick={() => setShowPartnerModal(true)} style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <i className="bi bi-plus" style={{ fontSize: '18px', color: 'var(--color-primary)' }}></i>
-                        </button>
-                      </div>
-                    </div>
-                    <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
-                      <label className="misa-label">Tên nhà cung cấp</label>
-                      <input
-                        type="text"
-                        className="misa-input"
-                        value={form.partnerName !== undefined ? form.partnerName : (suppliers.find(s => String(s.id) === String(form.partnerId))?.name || '')}
-                        onChange={(e) => handleFormChange('partnerName', e.target.value)}
-                        placeholder="Nhập tên nhà cung cấp..."
-                        readOnly={!!form.partnerId}
-                        style={{ backgroundColor: form.partnerId ? '#f9fafb' : '#fff' }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {importType === 'PRODUCTION' && (
-                  <div className="misa-form-row">
-                    <div className="misa-form-group" style={{ flex: '0 0 100%' }}>
-                      <label className="misa-label">Lệnh sản xuất <span className="required">*</span></label>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <input
-                          type="text"
-                          className="misa-input"
-                          readOnly
-                          value={assemblyOrders.find(o => String(o.id) === String(form.assemblyOrderId))?.orderCode || ''}
-                          placeholder="Nhấn biểu tượng bên cạnh để chọn lệnh..."
-                          style={{ flex: 1, backgroundColor: '#f3f4f6', cursor: 'pointer' }}
-                          onClick={() => setShowAssemblyOrderModal(true)}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowAssemblyOrderModal(true)}
-                          style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <i className="bi bi-search" style={{ fontSize: '16px', color: 'var(--color-primary)' }}></i>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {importType === 'RETURN' && (
-                  <>
-                    <div className="misa-form-row">
-                      <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
-                        <label className="misa-label">Mã khách hàng <span className="required">*</span></label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <div style={{ flex: 1 }}>
-                            <Select
-                              options={customers.map(c => ({ value: c.id, label: `${c.code || `KH#${c.id}`} - ${c.name || ''}`, codeOnly: c.code || `KH#${c.id}` }))}
-                              value={customers.find(c => String(c.id) === String(form.customerId)) ? { value: form.customerId, label: `${customers.find(c => String(c.id) === String(form.customerId)).code || `KH#${form.customerId}`} - ${customers.find(c => String(c.id) === String(form.customerId)).name || ''}`, codeOnly: customers.find(c => String(c.id) === String(form.customerId)).code || `KH#${form.customerId}` } : null}
-                              onChange={(selected) => {
-                                handleFormChange('customerId', selected ? selected.value : '');
-                                handleFormChange('customerName', selected ? (customers.find(c => String(c.id) === String(selected.value))?.name || '') : '');
-                              }}
-                              formatOptionLabel={(option, { context }) => context === 'value' ? option.codeOnly : option.label}
-                              placeholder="Chọn Mã khách hàng..."
-                              isClearable
-                              styles={customSelectStyles}
-                            />
+                <div className={styles.cardBody}>
+                  {importType === 'PURCHASE' && (
+                    <>
+                      <div className="misa-form-row">
+                        <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
+                          <label className="misa-label">Mã nhà cung cấp <span className="required">*</span></label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <div style={{ flex: 1 }}>
+                              <Select
+                                inputId="import-partnerId"
+                                options={suppliers.map(s => ({ value: s.id, label: `${s.code || `NCC#${s.id}`} - ${s.name || ''}`, codeOnly: s.code || `NCC#${s.id}` }))}
+                                value={suppliers.find(s => String(s.id) === String(form.partnerId)) ? { value: form.partnerId, label: `${suppliers.find(s => String(s.id) === String(form.partnerId)).code || `NCC#${form.partnerId}`} - ${suppliers.find(s => String(s.id) === String(form.partnerId)).name || ''}`, codeOnly: suppliers.find(s => String(s.id) === String(form.partnerId)).code || `NCC#${form.partnerId}` } : null}
+                                onChange={(selected) => {
+                                  handleFormChange('partnerId', selected ? selected.value : '');
+                                  handleFormChange('partnerName', selected ? (suppliers.find(s => String(s.id) === String(selected.value))?.name || '') : '');
+                                }}
+                                formatOptionLabel={(option, { context }) => context === 'value' ? option.codeOnly : option.label}
+                                placeholder="Chọn Mã NCC..."
+                                isClearable
+                                styles={customSelectStyles}
+                              />
+                            </div>
+                            <button type="button" onClick={() => setShowPartnerModal(true)} style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <i className="bi bi-plus" style={{ fontSize: '18px', color: 'var(--color-primary)' }}></i>
+                            </button>
                           </div>
-                          <button type="button" onClick={() => setShowCustomerDrawer(true)} style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <i className="bi bi-plus" style={{ fontSize: '18px', color: 'var(--color-primary)' }}></i>
+                        </div>
+                        <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
+                          <label className="misa-label">Tên nhà cung cấp</label>
+                          <input type="text" className="misa-input" readOnly value={form.partnerName || suppliers.find(s => String(s.id) === String(form.partnerId))?.name || ''} style={{ backgroundColor: '#f9fafb' }} />
+                        </div>
+                      </div>
+                      <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                        <div className="misa-form-group" style={{ flex: '1' }}>
+                          <label className="misa-label">Địa chỉ</label>
+                          <input type="text" className="misa-input" readOnly value={suppliers.find(s => String(s.id) === String(form.partnerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {importType === 'PRODUCTION' && (
+                    <div className="misa-form-row">
+                      <div className="misa-form-group" style={{ flex: '1' }}>
+                        <label className="misa-label">Lệnh sản xuất / Lắp ráp <span className="required">*</span></label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input
+                            type="text"
+                            className="misa-input"
+                            readOnly
+                            value={assemblyOrders.find(a => String(a.id) === String(form.assemblyOrderId))?.orderCode || form.referenceCode || ''}
+                            placeholder="Nhấn chọn lệnh sản xuất..."
+                            style={{ flex: 1, backgroundColor: '#f3f4f6', cursor: 'pointer' }}
+                            onClick={() => setShowAssemblyOrderModal(true)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowAssemblyOrderModal(true)}
+                            style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <i className="bi bi-search" style={{ fontSize: '16px', color: 'var(--color-primary)' }}></i>
                           </button>
                         </div>
                       </div>
-                      <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
-                        <label className="misa-label">Tên khách hàng</label>
-                        <input
-                          type="text"
-                          className="misa-input"
-                          value={form.customerName !== undefined ? form.customerName : (customers.find(c => String(c.id) === String(form.customerId))?.name || '')}
-                          onChange={(e) => handleFormChange('customerName', e.target.value)}
-                          placeholder="Nhập tên khách hàng..."
-                          readOnly={!!form.customerId}
-                          style={{ backgroundColor: form.customerId ? '#f9fafb' : '#fff' }}
-                        />
-                      </div>
                     </div>
-                    <div className="misa-form-row" style={{ marginTop: '12px' }}>
-                      <div className="misa-form-group" style={{ flex: '1' }}>
-                        <label className="misa-label">Địa chỉ</label>
-                        <input type="text" className="misa-input" readOnly value={customers.find(c => String(c.id) === String(form.customerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} />
-                      </div>
-                    </div>
-                  </>
-                )}
+                  )}
 
-                {importType === 'OTHER' && (
-                  <>
-                    <div className="misa-form-row">
-                      <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
-                        <label className="misa-label">Mã đối tượng</label>
-                        <input
-                          type="text"
-                          className="misa-input"
-                          value={form.otherObjectCode || ''}
-                          onChange={(e) => handleFormChange('otherObjectCode', e.target.value)}
-                          placeholder="Nhập mã đối tượng..."
-                        />
+                  {importType === 'RETURN' && (
+                    <>
+                      <div className="misa-form-row">
+                        <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
+                          <label className="misa-label">Mã khách hàng <span className="required">*</span></label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <div style={{ flex: 1 }}>
+                              <Select
+                                inputId="import-customerId"
+                                options={customers.map(c => ({ value: c.id, label: `${c.code || `KH#${c.id}`} - ${c.name || ''}`, codeOnly: c.code || `KH#${c.id}` }))}
+                                value={customers.find(c => String(c.id) === String(form.customerId)) ? { value: form.customerId, label: `${customers.find(c => String(c.id) === String(form.customerId)).code || `KH#${form.customerId}`} - ${customers.find(c => String(c.id) === String(form.customerId)).name || ''}`, codeOnly: customers.find(c => String(c.id) === String(form.customerId)).code || `KH#${form.customerId}` } : null}
+                                onChange={(selected) => {
+                                  handleFormChange('customerId', selected ? selected.value : '');
+                                  handleFormChange('customerName', selected ? (customers.find(c => String(c.id) === String(selected.value))?.name || '') : '');
+                                }}
+                                formatOptionLabel={(option, { context }) => context === 'value' ? option.codeOnly : option.label}
+                                placeholder="Chọn Mã khách hàng..."
+                                isClearable
+                                styles={customSelectStyles}
+                              />
+                            </div>
+                            <button type="button" onClick={() => setShowCustomerDrawer(true)} style={{ width: '32px', height: '32px', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <i className="bi bi-plus" style={{ fontSize: '18px', color: 'var(--color-primary)' }}></i>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
+                          <label className="misa-label">Tên khách hàng</label>
+                          <input
+                            type="text"
+                            className="misa-input"
+                            value={form.customerName !== undefined ? form.customerName : (customers.find(c => String(c.id) === String(form.customerId))?.name || '')}
+                            onChange={(e) => handleFormChange('customerName', e.target.value)}
+                            placeholder="Nhập tên khách hàng..."
+                            readOnly={!!form.customerId}
+                            style={{ backgroundColor: form.customerId ? '#f9fafb' : '#fff' }}
+                          />
+                        </div>
                       </div>
-                      <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
-                        <label className="misa-label">Tên đối tượng</label>
-                        <input
-                          type="text"
-                          className="misa-input"
-                          value={form.otherObjectName || ''}
-                          onChange={(e) => handleFormChange('otherObjectName', e.target.value)}
-                          placeholder="Nhập tên đối tượng..."
-                        />
+                      <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                        <div className="misa-form-group" style={{ flex: '1' }}>
+                          <label className="misa-label">Địa chỉ</label>
+                          <input type="text" className="misa-input" readOnly value={customers.find(c => String(c.id) === String(form.customerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} />
+                        </div>
                       </div>
-                    </div>
-                    <div className="misa-form-row" style={{ marginTop: '12px' }}>
-                      <div className="misa-form-group" style={{ flex: '1' }}>
-                        <label className="misa-label">Địa chỉ</label>
-                        <input
-                          type="text"
-                          className="misa-input"
-                          value={form.otherObjectAddress || ''}
-                          onChange={(e) => handleFormChange('otherObjectAddress', e.target.value)}
-                          placeholder="Nhập địa chỉ..."
-                        />
-                      </div>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
 
-                <div className="misa-form-row" style={{ marginTop: '12px' }}>
-                  <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                    <label className="misa-label">Kho nhập <span className="required">*</span></label>
-                    <Select
-                      options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
-                      value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
-                      onChange={(selected) => handleFormChange('warehouseId', selected ? selected.value : '')}
-                      placeholder="Chọn kho"
-                      isClearable
-                      styles={customSelectStyles}
-                    />
-                  </div>
-                  <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                    <label className="misa-label">
-                      {importType === 'PURCHASE' && 'Nhân viên mua hàng'}
-                      {importType === 'PRODUCTION' && 'Nhân viên phụ trách'}
-                      {importType === 'RETURN' && 'Nhân viên nhận hàng'}
-                      {importType === 'OTHER' && 'Nhân viên nhận hàng'}
-                    </label>
-                    <input
-                      type="text"
-                      className="misa-input"
-                      value={users.find(u => String(u.id) === String(form.purchaser)) ? (users.find(u => String(u.id) === String(form.purchaser)).fullName || users.find(u => String(u.id) === String(form.purchaser)).username) : 'Đang tải...'}
-                      readOnly
-                      style={{ backgroundColor: '#f3f4f6' }}
-                    />
-                  </div>
-                </div>
+                  {importType === 'OTHER' && (
+                    <>
+                      <div className="misa-form-row">
+                        <div className="misa-form-group" style={{ flex: '0 0 38%' }}>
+                          <label className="misa-label">Mã đối tượng</label>
+                          <input
+                            type="text"
+                            className="misa-input"
+                            value={form.otherObjectCode || ''}
+                            onChange={(e) => handleFormChange('otherObjectCode', e.target.value)}
+                            placeholder="Nhập mã đối tượng..."
+                          />
+                        </div>
+                        <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
+                          <label className="misa-label">Tên đối tượng</label>
+                          <input
+                            type="text"
+                            className="misa-input"
+                            value={form.otherObjectName || ''}
+                            onChange={(e) => handleFormChange('otherObjectName', e.target.value)}
+                            placeholder="Nhập tên đối tượng..."
+                          />
+                        </div>
+                      </div>
+                      <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                        <div className="misa-form-group" style={{ flex: '1' }}>
+                          <label className="misa-label">Địa chỉ</label>
+                          <input
+                            type="text"
+                            className="misa-input"
+                            value={form.otherObjectAddress || ''}
+                            onChange={(e) => handleFormChange('otherObjectAddress', e.target.value)}
+                            placeholder="Nhập địa chỉ..."
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
 
-                {(importType === 'PURCHASE' || importType === 'PRODUCTION' || importType === 'OTHER') && (
                   <div className="misa-form-row" style={{ marginTop: '12px' }}>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
-                      <label className="misa-label">Người giao hàng</label>
-                      <input
-                        type="text"
-                        className="misa-input"
-                        value={form.deliverer || ''}
-                        onChange={(e) => handleFormChange('deliverer', e.target.value)}
-                        placeholder="Nhập người giao hàng..."
+                      <label className="misa-label">Kho nhập <span className="required">*</span></label>
+                      <Select
+                        inputId="import-warehouseId"
+                        options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
+                        value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
+                        onChange={(selected) => {
+                          const newWh = selected ? selected.value : '';
+                          handleFormChange('warehouseId', newWh);
+                          setItems(prev => prev.map(it => ({ ...it, warehouseId: newWh })));
+                        }}
+                        placeholder="Chọn kho"
+                        isClearable
+                        styles={customSelectStyles}
                       />
                     </div>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                      <label className="misa-label">
+                        {importType === 'PURCHASE' && 'Nhân viên mua hàng'}
+                        {importType === 'PRODUCTION' && 'Nhân viên phụ trách'}
+                        {importType === 'RETURN' && 'Nhân viên nhận hàng'}
+                        {importType === 'OTHER' && 'Nhân viên nhận hàng'}
+                      </label>
+                      <input
+                        type="text"
+                        className="misa-input"
+                        value={users.find(u => String(u.id) === String(form.purchaser)) ? (users.find(u => String(u.id) === String(form.purchaser)).fullName || users.find(u => String(u.id) === String(form.purchaser)).username) : 'Đang tải...'}
+                        readOnly
+                        style={{ backgroundColor: '#f3f4f6' }}
+                      />
                     </div>
                   </div>
-                )}
+
+                  {(importType === 'PURCHASE' || importType === 'PRODUCTION' || importType === 'OTHER') && (
+                    <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                      <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                        <label className="misa-label">Người giao hàng</label>
+                        <input
+                          type="text"
+                          className="misa-input"
+                          value={form.deliverer || ''}
+                          onChange={(e) => handleFormChange('deliverer', e.target.value)}
+                          placeholder="Nhập người giao hàng..."
+                        />
+                      </div>
+                      <div className="misa-form-group" style={{ flex: '0 0 50%' }}></div>
+                    </div>
+                  )}
 
                 <div className="misa-form-group" style={{ marginTop: '12px' }}>
                   <label className="misa-label">Ghi chú</label>
@@ -737,8 +956,9 @@ function UpdateImportSlipPage() {
                   )}
                 </div>
               </div>
+            </div>
 
-              <div className={styles.card}>
+            <div className={styles.card}>
                 <div className={styles.cardHeader}>
                   <h2 className={styles.cardTitle}>
                     <i className={`bi bi-file-earmark-text ${styles.cardIcon}`}></i>
@@ -753,7 +973,7 @@ function UpdateImportSlipPage() {
 
                 <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                   <label className="misa-label">Ngày nhập kho <span className="required">*</span></label>
-                  <input type="date" className="misa-input" value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
+                  <input id="import-docDate" type="date" className="misa-input" value={form.docDate} onChange={(e) => handleFormChange('docDate', e.target.value)} />
                 </div>
               </div>
             </div>
@@ -770,27 +990,42 @@ function UpdateImportSlipPage() {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                  <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>#</th>
-                  <th style={{ minWidth: '130px', width: '13%' }}>Mã hàng</th>
-                  <th style={{ minWidth: '200px', width: '29%' }}>Tên hàng</th>
-                  <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                  <th style={{ minWidth: '70px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL</th>
-                  <th style={{ minWidth: '80px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
-                  <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
-                  <th style={{ minWidth: '110px', width: '10%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>
-                  <th style={{ minWidth: '110px', width: '10%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
-                  <th style={{ minWidth: '90px', width: '8%', textAlign: 'right', whiteSpace: 'nowrap' }}>% thuế GTGT</th>
-                  <th style={{ width: '40px', textAlign: 'center' }}></th>
+                      <th style={{ width: '35px', textAlign: 'center', whiteSpace: 'nowrap' }}>#</th>
+                      <th style={{ minWidth: '110px', width: '12%' }}>Mã hàng</th>
+                      <th style={{ minWidth: '150px', width: '16%' }}>Tên hàng</th>
+                      <th style={{ minWidth: '85px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                      <th style={{ minWidth: '55px', width: '5%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng ghi trên Hóa đơn NCC">SL HĐ</th>
+                      <th style={{ minWidth: '55px', width: '5%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng thực tế dỡ vào kho">SL Nhận</th>
+                      <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>
+                      <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>
+                      <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>
+                      <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>
+                      <th style={{ minWidth: '50px', width: '4%', textAlign: 'right', whiteSpace: 'nowrap' }} title="Số lượng hàng hỏng/móp méo từ chối nhận">SL Lỗi</th>
+                      <th style={{ minWidth: '65px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                      <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                      {showPricing && <th style={{ minWidth: '85px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>}
+                      {showPricing && <th style={{ minWidth: '85px', width: '7%', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>}
+                      {showPricing && <th style={{ minWidth: '55px', width: '4%', textAlign: 'right', whiteSpace: 'nowrap' }}>% VAT</th>}
+                      <th style={{ minWidth: '90px', width: '8%', whiteSpace: 'nowrap' }}>Lý do chênh lệch</th>
+                      <th style={{ width: '35px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((item, index) => {
                       const product = productById.get(String(item.variantId));
+                      const baseUnitName = product?.unitName || '-';
+                      const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
+                      const op = item.conversionOperator || 'MULTIPLY';
+                      const qty = Number(item.quantity || 0);
+                      const baseQty = (op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio);
+                      const lineAmount = qty * Number(item.price || 0);
+                      const isDiscrepant = (Number(item.expectedQuantity || item.quantity || 0) > Number(item.quantity || 0)) || Number(item.rejectedQuantity || 0) > 0;
                       return (
-                        <tr key={item.localId}>
+                        <tr key={item.localId} style={isDiscrepant ? { backgroundColor: '#fffbeb' } : {}}>
                           <td className={styles.textCenter}>{index + 1}</td>
                           <td>
                             <ProductGridSelect
+                              id={`import-line-product-${index}`}
                               products={filteredProducts}
                               inventoryMap={inventoryMap}
                               value={item.variantId}
@@ -811,9 +1046,61 @@ function UpdateImportSlipPage() {
                               placeholder="Chọn hàng"
                             />
                           </td>
-                          <td>{product?.unitName || ''}</td>
+                          <td>
+                            <select
+                              className="misa-input"
+                              style={{ height: '32px', padding: '0 4px', fontSize: '12px', minWidth: '80px' }}
+                              value={item.unitId || (product?.unitId ? String(product.unitId) : '')}
+                              onChange={(e) => handleItemChange(item.localId, 'unitId', e.target.value)}
+                              disabled={!product}
+                            >
+                              {product?.unitId && (
+                                <option value={product.unitId}>{product.unitName} (Chính)</option>
+                              )}
+                              {product?.unitConversions?.map(conv => (
+                                <option key={conv.unitId} value={conv.unitId}>{conv.unitName}</option>
+                              ))}
+                              {!product?.unitId && <option value="">-</option>}
+                            </select>
+                          </td>
                           <td align="right">
-                            <input type="number" min="0" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)} />
+                            <input
+                              type="number"
+                              min="0"
+                              className="misa-input"
+                              style={{ height: '32px', padding: '0 6px', width: '55px', textAlign: 'right', fontSize: '13px', backgroundColor: '#f8fafc' }}
+                              value={item.expectedQuantity !== undefined ? item.expectedQuantity : item.quantity}
+                              onChange={(e) => handleItemChange(item.localId, 'expectedQuantity', e.target.value)}
+                              title="Số lượng trên Hóa đơn NCC"
+                            />
+                          </td>
+                          <td align="right">
+                            <input
+                              id={`import-line-qty-${index}`}
+                              type="number"
+                              min="0"
+                              className="misa-input"
+                              style={{ height: '32px', padding: '0 6px', width: '55px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold', color: isDiscrepant ? '#d97706' : '#1e293b' }}
+                              value={item.quantity}
+                              onChange={(e) => handleItemChange(item.localId, 'quantity', e.target.value)}
+                              title="Số lượng thực nhận vào kho"
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
+                          <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
+                          <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: '#2563eb' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+                          <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: '#059669' }}>{Number(baseQty.toFixed(4))}</td>
+                          <td align="right">
+                            <input
+                              type="number"
+                              min="0"
+                              className="misa-input"
+                              style={{ height: '32px', padding: '0 6px', width: '50px', textAlign: 'right', fontSize: '13px', color: Number(item.rejectedQuantity || 0) > 0 ? '#dc2626' : '#64748b' }}
+                              value={item.rejectedQuantity !== undefined ? item.rejectedQuantity : ''}
+                              onChange={(e) => handleItemChange(item.localId, 'rejectedQuantity', e.target.value)}
+                              placeholder="0"
+                              title="Số lượng hàng lỗi/từ chối nhận"
+                            />
                           </td>
                           <td align="center">
                             <div className={styles.serialCellContainer} style={{ justifyContent: 'center' }}>
@@ -830,16 +1117,32 @@ function UpdateImportSlipPage() {
                             </div>
                           </td>
                           <td align="center">
-                            <input type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(e) => handleItemChange(item.localId, 'warrantyMonths', e.target.value)} />
+                            <input id={`import-line-warranty-${index}`} type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 6px', width: '50px', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(e) => handleItemChange(item.localId, 'warrantyMonths', e.target.value)} />
                           </td>
-                          <td align="right">
-                            <input type="text" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
-                          </td>
-                          <td align="right" className={`${styles.textBold} ${styles.textBlue}`}>
-                            {money(Number(item.quantity || 0) * Number(item.price || 0))} đ
-                          </td>
-                          <td align="right">
-                            <input type="number" min="0" max="10" step="any" className="misa-input" style={{ height: '32px', padding: '0 8px', width: '60px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
+                          {showPricing && (
+                            <td align="right">
+                              <input id={`import-line-price-${index}`} type="text" className="misa-input" style={{ height: '32px', padding: '0 6px', width: '100%', maxWidth: '110px', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(e) => handleItemChange(item.localId, 'price', e.target.value.replace(/\D/g, ''))} />
+                            </td>
+                          )}
+                          {showPricing && (
+                            <td align="right" className={`${styles.textBold} ${styles.textBlue}`}>
+                              {money(lineAmount)} đ
+                            </td>
+                          )}
+                          {showPricing && (
+                            <td align="right">
+                              <input id={`import-line-vat-${index}`} type="number" min="0" max="10" step="any" className="misa-input" style={{ height: '32px', padding: '0 6px', width: '50px', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(e) => handleItemChange(item.localId, 'vatPercent', e.target.value)} />
+                            </td>
+                          )}
+                          <td>
+                            <input
+                              type="text"
+                              className="misa-input"
+                              style={{ height: '32px', padding: '0 6px', fontSize: '12px' }}
+                              value={item.discrepancyReason || ''}
+                              onChange={(e) => handleItemChange(item.localId, 'discrepancyReason', e.target.value)}
+                              placeholder={isDiscrepant ? "Nhập lý do thiếu/lỗi..." : "—"}
+                            />
                           </td>
                           <td><button className={styles.deleteBtn} onClick={() => removeItem(item.localId)}><i className="bi bi-trash"></i></button></td>
                         </tr>
@@ -852,12 +1155,26 @@ function UpdateImportSlipPage() {
                       <td style={{ borderRight: 'none' }}></td>
                       <td style={{ borderRight: 'none' }}></td>
                       <td></td>
+                      <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalExpectedQuantity)}</td>
                       <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalQuantity)}</td>
                       <td style={{ borderRight: 'none' }}></td>
                       <td style={{ borderRight: 'none' }}></td>
-                      <td></td>
-                      <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>
                       <td style={{ borderRight: 'none' }}></td>
+                      <td style={{ textAlign: 'right', padding: '12px', color: '#059669' }}>
+                        {Number(items.reduce((sum, it) => {
+                          const ratio = Number(it.conversionRatio) > 0 ? Number(it.conversionRatio) : 1;
+                          const op = it.conversionOperator || 'MULTIPLY';
+                          const qty = Number(it.quantity || 0);
+                          return sum + ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
+                        }, 0).toFixed(4))}
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '12px', color: '#dc2626' }}>{money(totalRejectedQuantity)}</td>
+                      <td style={{ borderRight: 'none' }}></td>
+                      <td style={{ borderRight: 'none' }}></td>
+                      {showPricing && <td></td>}
+                      {showPricing && <td style={{ textAlign: 'right', padding: '12px' }}>{money(totalPrice)}</td>}
+                      {showPricing && <td style={{ borderRight: 'none' }}></td>}
+                      <td></td>
                       <td></td>
                     </tr>
                   </tfoot>
@@ -871,7 +1188,7 @@ function UpdateImportSlipPage() {
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
-                    <button type="button" onClick={() => setItems([emptyLine()])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
+                    <button type="button" onClick={() => setItems([{ ...emptyLine(form.warehouseId), isNew: false }])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
                   </div>
                 </div>
 
@@ -886,22 +1203,33 @@ function UpdateImportSlipPage() {
                       <span style={{ cursor: 'pointer' }}>Sau</span>
                     </div>
                   </div>
-                  <table style={{ width: '100%', fontSize: '13px' }}>
-                    <tbody>
-                      <tr>
-                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền hàng</td>
-                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalPrice)}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Thuế GTGT</td>
-                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalVat)}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền thanh toán</td>
-                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(grandTotal)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  {showPricing ? (
+                    <table style={{ width: '100%', fontSize: '13px' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền hàng</td>
+                          <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalPrice)}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Thuế GTGT</td>
+                          <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalVat)}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền thanh toán</td>
+                          <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(grandTotal)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  ) : (
+                    <table style={{ width: '100%', fontSize: '13px' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng số lượng thực nhận</td>
+                          <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold', color: 'var(--color-primary)' }}>{money(totalQuantity)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
             </div>
@@ -915,9 +1243,6 @@ function UpdateImportSlipPage() {
             </button>
           </div>
           <div className={styles.footerRight}>
-            <button className="btn-misa-draft" style={{ marginRight: '8px', backgroundColor: '#fff', color: '#111827', border: '1px solid #d1d5db' }} onClick={handlePrint}>
-              <i className="bi bi-printer"></i> In phiếu
-            </button>
             <button className="btn-misa-draft" disabled={saving || loading} onClick={() => submit('DRAFT')}>
               <i className="bi bi-save"></i> Lưu tạm
             </button>
@@ -933,6 +1258,7 @@ function UpdateImportSlipPage() {
         productName={variantLabel(selectedSerialProduct)}
         targetQuantity={Number(selectedSerialItem?.quantity || 0)}
         initialSerials={selectedSerialItem?.serialNumbers || []}
+        warehouseId={selectedSerialItem?.warehouseId || form.warehouseId}
       />
       <QuickAddProductModal
         isOpen={showQuickAddProduct}
@@ -981,6 +1307,16 @@ function UpdateImportSlipPage() {
           submit('DRAFT', true);
         }}
         onCancel={() => setShowConfirm(false)}
+      />
+      <SuccessPrintModal
+        isOpen={showSuccessModal}
+        title={savedSlip?.status === 'POSTED' || savedSlip?.statusCode === 'POSTED' ? 'Ghi sổ phiếu nhập kho thành công!' : 'Cập nhật phiếu nhập kho thành công!'}
+        message="Phiếu nhập kho đã được lưu và cập nhật thành công. Bạn có thể chọn cách in phiếu dưới đây."
+        docCode={savedSlip?.docCode || form.docCode}
+        onPrintSummary={() => handlePrint('SUMMARY')}
+        onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
+        onViewList={() => navigate('/import-history')}
+        onClose={() => navigate('/import-history')}
       />
       <Toast
         isVisible={toast.isVisible}

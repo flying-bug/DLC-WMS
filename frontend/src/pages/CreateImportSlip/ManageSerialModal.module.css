@@ -1,6 +1,6 @@
 .customModal {
-  max-width: 800px !important;
-  border-radius: 8px !important;
+  max-width: 880px !important;
+  border-radius: 12px !important;
   padding: 0 !important;
   overflow: hidden !important;
   display: flex;
@@ -8,22 +8,25 @@
 }
 
 .header {
-  background-color: #0052cc;
+  background: linear-gradient(135deg, #1e40af, #2563eb);
   color: white;
   padding: 16px 24px;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .headerTitle {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 6px 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .headerSubtitle {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: rgba(255, 255, 255, 0.9);
   margin: 0;
 }
@@ -32,35 +35,44 @@
   background: none;
   border: none;
   color: white;
-  font-size: 24px;
+  font-size: 1.5rem;
   cursor: pointer;
   line-height: 1;
+  opacity: 0.8;
+}
+
+.closeBtn:hover {
+  opacity: 1;
+  color: #fecaca;
 }
 
 .body {
   display: flex;
-  min-height: 420px;
+  min-height: 440px;
 }
 
+/* LEFT COLUMN: SCANNER */
 .leftCol {
   flex: 0 0 48%;
-  padding: 24px;
-  background-color: white;
-  border-right: 1px solid #e5e7eb;
+  padding: 20px;
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .sectionTitle {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
-  color: #4b5563;
-  margin-bottom: 16px;
+  color: #475569;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.inputRow {
+.scannerBox {
   display: flex;
-  margin-bottom: 32px;
+  gap: 8px;
 }
 
 .inputWrapper {
@@ -73,91 +85,118 @@
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #6b7280;
-  font-size: 18px;
+  color: #64748b;
+  font-size: 1.1rem;
 }
 
 .serialInput {
   width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 4px 0 0 4px;
-  padding: 10px 12px 10px 40px;
-  font-size: 14px;
+  border: 1.5px solid #3b82f6;
+  border-radius: 8px;
+  padding: 10px 12px 10px 38px;
+  font-size: 0.875rem;
   outline: none;
-  color: #374151;
+  font-weight: 500;
+  background: #eff6ff;
 }
 
 .serialInput:focus {
-  border-color: #0052cc;
+  background: #ffffff;
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .addBtn {
-  background-color: #0052cc;
+  background-color: #2563eb;
   color: white;
   border: none;
-  border-radius: 0 4px 4px 0;
-  padding: 0 20px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-}
-.addBtn:hover {
-  background-color: #0043a8;
-}
-
-.scanBox {
-  background-color: #f3f4f6;
-  border: 2px dashed #d1d5db;
   border-radius: 8px;
-  height: 220px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
+  padding: 0 16px;
+  font-weight: 600;
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.scanBox:hover {
-  border-color: #9ca3af;
-  background-color: #e5e7eb;
+.addBtn:hover {
+  background-color: #1d4ed8;
 }
 
-.scanIcon {
-  font-size: 56px;
-  margin-bottom: 16px;
-  color: #9ca3af;
-}
-
-.scanText {
-  font-size: 15px;
+/* FEEDBACK BANNER */
+.feedbackBanner {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
   font-weight: 500;
+  animation: fadeIn 0.2s ease;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.feedbackSuccess {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.feedbackWarning {
+  background: #fff7ed;
+  color: #9a3412;
+  border: 1px solid #fed7aa;
+}
+
+.feedbackInfo {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.feedbackError {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* SCAN HINT CARD */
+.scanHintCard {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 0.8125rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.scanHintCard strong {
+  color: #0f172a;
+}
+
+/* RIGHT COLUMN: COMPARISON & VERIFICATION */
 .rightCol {
   flex: 0 0 52%;
   background-color: #f8fafc;
-  padding: 24px;
-}
-
-.progressTitle {
-  font-size: 12px;
-  font-weight: 700;
-  color: #94a3b8;
-  margin-bottom: 8px;
-  text-transform: uppercase;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .progressRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  background: #ffffff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
 }
 
 .progressText {
-  font-size: 15px;
+  font-size: 0.875rem;
   color: #64748b;
   font-weight: 600;
   display: flex;
@@ -166,13 +205,13 @@
 }
 
 .progressNumber {
-  font-size: 32px;
+  font-size: 1.5rem;
   font-weight: 700;
-  color: #0052cc;
+  color: #2563eb;
 }
 
 .progressBarContainer {
-  width: 140px;
+  width: 120px;
   height: 8px;
   background-color: #e2e8f0;
   border-radius: 4px;
@@ -181,101 +220,157 @@
 
 .progressBarFill {
   height: 100%;
-  background-color: #059669; /* emerald-600 */
+  background-color: #16a34a;
   border-radius: 4px;
   transition: width 0.3s ease;
+}
+
+/* TABS FOR COMPARISON */
+.tabHeader {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 6px;
+}
+
+.subTabBtn {
+  background: transparent;
+  border: none;
+  padding: 4px 10px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.subTabBtn.activeSubTab {
+  background: #e0e7ff;
+  color: #3730a3;
 }
 
 .serialList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-height: 320px;
+  gap: 6px;
+  max-height: 280px;
   overflow-y: auto;
-  padding-right: 6px;
-}
-
-.serialList::-webkit-scrollbar {
-  width: 6px;
-}
-.serialList::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
-  border-radius: 6px;
+  padding-right: 4px;
 }
 
 .serialItem {
-  background-color: white;
+  background-color: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  padding: 14px 16px;
+  border-radius: 6px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
-  font-size: 15px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  justify-content: space-between;
+  font-size: 0.8125rem;
 }
 
 .serialIndex {
   color: #94a3b8;
-  width: 28px;
-  font-weight: 500;
-  font-size: 13px;
+  width: 24px;
+  font-weight: 600;
+  font-size: 0.75rem;
 }
 
 .serialValue {
-  color: #334155;
+  color: #1e293b;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.tagMatch {
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.tagMismatch {
+  background: #ffedd5;
+  color: #c2410c;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.tagPending {
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
   font-weight: 500;
 }
 
+.removeBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0 4px;
+}
+
+.removeBtn:hover {
+  color: #ef4444;
+}
+
+/* FOOTER */
 .footer {
-  background-color: #e2e8f0;
-  padding: 16px 24px;
+  background-color: #f8fafc;
+  padding: 12px 20px;
+  border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.clearAllBtn {
-  background: none;
-  border: none;
-  color: #0052cc;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 0;
-}
-.clearAllBtn:hover {
-  text-decoration: underline;
+.footerSummary {
+  font-size: 0.8125rem;
+  color: #64748b;
 }
 
 .footerActions {
   display: flex;
-  gap: 16px;
+  gap: 10px;
 }
 
 .btnCancel {
-  background-color: transparent;
+  background: #ffffff;
   border: 1px solid #cbd5e1;
   color: #475569;
-  padding: 10px 24px;
-  border-radius: 4px;
-  font-weight: 500;
-  font-size: 15px;
+  padding: 7px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8125rem;
   cursor: pointer;
 }
+
 .btnCancel:hover {
   background-color: #f1f5f9;
 }
 
 .btnConfirm {
-  background-color: #0052cc;
+  background-color: #2563eb;
   border: none;
   color: white;
-  padding: 10px 28px;
-  border-radius: 4px;
-  font-weight: 600;
-  font-size: 15px;
+  padding: 7px 22px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.8125rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+
 .btnConfirm:hover {
-  background-color: #0043a8;
+  background-color: #1d4ed8;
 }

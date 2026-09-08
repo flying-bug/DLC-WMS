@@ -19,6 +19,12 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     List<ProductVariant> findByProductIdOrderByIdAsc(Long productId);
 
+    @Query("SELECT v FROM ProductVariant v WHERE UPPER(TRIM(v.sku)) IN :skus")
+    List<ProductVariant> findByNormalizedSkuIn(@Param("skus") List<String> skus);
+
+    @Query("SELECT v FROM ProductVariant v WHERE LOWER(TRIM(v.barcode)) IN :barcodes")
+    List<ProductVariant> findByNormalizedBarcodeIn(@Param("barcodes") List<String> barcodes);
+
     long countByProductId(Long productId);
 
     @Query(value = "SELECT v FROM ProductVariant v " +

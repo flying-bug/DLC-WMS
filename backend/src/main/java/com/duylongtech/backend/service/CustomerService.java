@@ -559,12 +559,17 @@ public class CustomerService {
             code = generateCustomerCode();
         }
 
+        String resolvedType = req.getType() != null && !req.getType().isBlank()
+                ? req.getType()
+                : (req.getTaxCode() != null && !req.getTaxCode().isBlank() ? "COMPANY" : INDIVIDUAL_TYPE);
+
         Partner partner = Partner.builder()
                 .code(code)
-                .type(INDIVIDUAL_TYPE)
+                .type(resolvedType)
                 .name(req.getName().trim())
                 .phone(phone)
                 .email(trimToNull(req.getEmail()))
+                .taxCode(trimToNull(req.getTaxCode()))
                 .address(trimToNull(req.getAddress()))
                 .groupType(resolveGroupType(req.getGroupType()))
                 .status(APPROVED)
@@ -613,7 +618,13 @@ public class CustomerService {
 
         customer.setName(req.getName().trim());
         customer.setEmail(trimToNull(req.getEmail()));
+        customer.setTaxCode(trimToNull(req.getTaxCode()));
         customer.setAddress(trimToNull(req.getAddress()));
+        if (req.getType() != null && !req.getType().isBlank()) {
+            customer.setType(req.getType());
+        } else if (req.getTaxCode() != null && !req.getTaxCode().isBlank()) {
+            customer.setType("COMPANY");
+        }
         if (req.getGroupType() != null) {
             customer.setGroupType(resolveGroupType(req.getGroupType()));
         }
@@ -726,6 +737,7 @@ public class CustomerService {
                 .name(partner.getName())
                 .phone(partner.getPhone())
                 .email(partner.getEmail())
+                .taxCode(partner.getTaxCode())
                 .address(partner.getAddress())
                 .groupType(partner.getGroupType())
                 .status(partner.getStatus())

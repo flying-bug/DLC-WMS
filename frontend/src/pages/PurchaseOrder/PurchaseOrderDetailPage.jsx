@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useReactToPrint } from 'react-to-print';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as poApi from '../../api/purchaseOrderApi';
 import * as importApi from '../../api/inventoryImportApi';
 import * as exportApi from '../../api/inventoryExportApi';
-import PurchaseOrderQuotationTemplate from './components/PurchaseOrderQuotationTemplate';
+import { printPurchaseOrder } from '../../utils/printPurchaseOrder';
+import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
+import { parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import styles from './PurchaseOrderDetailPage.module.css';
 import { formatDateOnly, formatDateTime } from '../../utils/dateFormat';
 
@@ -20,7 +21,7 @@ const fmtDateTime = (v)   => (v ? formatDateTime(v) : '—');
 const STATUS_CONFIG = {
   DRAFT:     { label: 'Nháp',       bg: '#f1f5f9', color: '#64748b', icon: 'bi-pencil-square' },
   APPROVED:  { label: 'Đã duyệt',   bg: '#dcfce7', color: '#16a34a', icon: 'bi-check-circle-fill' },
-  POSTED:    { label: 'Ghi sổ', bg: '#ede9fe', color: '#7c3aed', icon: 'bi-bag-check-fill' },
+  POSTED:    { label: 'Ghi sổ',     bg: '#ede9fe', color: '#7c3aed', icon: 'bi-bag-check-fill' },
   CANCELLED: { label: 'Đã hủy',     bg: '#fef2f2', color: '#dc2626', icon: 'bi-x-circle-fill' },
 };
 
@@ -36,15 +37,9 @@ function PurchaseOrderDetailPage() {
   const [toast,           setToast]           = useState({ isVisible: false, type: 'info', message: '' });
   const [confirmApprove,  setConfirmApprove]  = useState(false);
   const [confirmCancel,   setConfirmCancel]   = useState(false);
-  const printRef = useRef(null);
 
   const userById = useMemo(() => new Map(users.map(item => [item.id, item])), [users]);
   const warehouseById = useMemo(() => new Map(warehouses.map(item => [item.id, item])), [warehouses]);
-
-  const handlePrintQuote = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `Don-Mua-Hang-${po?.poCode || 'PO'}`,
-  });
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(p => ({ ...p, isVisible: false }));
@@ -184,8 +179,8 @@ function PurchaseOrderDetailPage() {
           </div>
 
           <div className={styles.headerActions}>
-            <button className={styles.btnPrimary} onClick={handlePrintQuote}>
-              <i className="bi bi-printer" /> In báo giá
+            <button className={styles.btnPrimary} onClick={() => printPurchaseOrder(po, { userById })}>
+              <i className="bi bi-printer" /> In đơn mua hàng
             </button>
             {po.status === 'DRAFT' && (
               <button className={styles.btnEdit} onClick={() => navigate(`/purchase-orders/${id}/edit`)}>
@@ -253,18 +248,49 @@ function PurchaseOrderDetailPage() {
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Hạn công nợ</span>
-              <span className={styles.infoValue}>{fmtDate(po.paymentDueDate)}</span>
+              <span className={styles.infoValue}>
+                {fmtDate(po.paymentDueDate)}
+                {(() => {
+                  if (!po.paymentDueDate) return null;
+                  const today = new Date(); today.setHours(0, 0, 0, 0);
+                  const dueDate = new Date(po.paymentDueDate); dueDate.setHours(0, 0, 0, 0);
+                  const diffDays = Math.round((dueDate - today) / (1000 * 60 * 60 * 24));
+                  const isPaid = po.paymentStatus === 'PAID';
+                  if (isPaid) return <span className={`${styles.badgePill} ${styles.pillPaid}`}><i className="bi bi-check-circle-fill" /> Đã thanh toán</span>;
+                  if (diffDays < 0) return <span className={`${styles.badgePill} ${styles.pillOverdue}`}><i className="bi bi-exclamation-triangle-fill" /> Quá hạn {Math.abs(diffDays)} ngày</span>;
+                  if (diffDays === 0) return <span className={`${styles.badgePill} ${styles.pillDueToday}`}><i className="bi bi-clock-fill" /> Hạn hôm nay</span>;
+                  if (diffDays <= 3) return <span className={`${styles.badgePill} ${styles.pillDueSoon}`}><i className="bi bi-hourglass-split" /> Còn {diffDays} ngày</span>;
+                  return null;
+                })()}
+              </span>
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Ngày giao hàng DK</span>
-              <span className={styles.infoValue}>{fmtDate(po.expectedDeliveryDate)}</span>
+              <span className={styles.infoValue}>
+                {fmtDate(po.expectedDeliveryDate)}
+                {(() => {
+                  if (!po.expectedDeliveryDate) return null;
+                  const today = new Date(); today.setHours(0, 0, 0, 0);
+                  const delivDate = new Date(po.expectedDeliveryDate); delivDate.setHours(0, 0, 0, 0);
+                  const diffDays = Math.round((delivDate - today) / (1000 * 60 * 60 * 24));
+                  const isDone = po.isFullyImported || po.status === 'POSTED';
+                  if (isDone) return <span className={`${styles.badgePill} ${styles.pillPaid}`}><i className="bi bi-check2-all" /> Đã nhận đủ</span>;
+                  if (diffDays < 0) return <span className={`${styles.badgePill} ${styles.pillDeliveryLate}`}><i className="bi bi-truck" /> Trễ hạn {Math.abs(diffDays)} ngày</span>;
+                  if (diffDays === 0) return <span className={`${styles.badgePill} ${styles.pillDeliveryToday}`}><i className="bi bi-box-seam" /> Giao hôm nay</span>;
+                  if (diffDays === 1) return <span className={`${styles.badgePill} ${styles.pillDeliverySoon}`}><i className="bi bi-calendar-event" /> Giao ngày mai</span>;
+                  return null;
+                })()}
+              </span>
             </div>
-            {po.note && (
-              <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>Ghi chú</span>
-                <span className={styles.infoValue}>{po.note}</span>
-              </div>
-            )}
+            {(() => {
+              const { note: cleanNote } = parseNoteAndAttachments(po.note);
+              return cleanNote ? (
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Ghi chú</span>
+                  <span className={styles.infoValue}>{cleanNote}</span>
+                </div>
+              ) : null;
+            })()}
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Người tạo</span>
               <span className={styles.infoValue}>{po.createdByName || userById.get(po.createdBy)?.fullName || userById.get(po.createdBy)?.username || `#${po.createdBy}`}</span>
@@ -309,6 +335,7 @@ function PurchaseOrderDetailPage() {
                   <th style={{ width: 40 }}>#</th>
                   <th>Sản phẩm</th>
                   <th style={{ width: 80 }}>SKU</th>
+                  <th style={{ width: 160 }}>Kho nhận dự kiến</th>
                   <th style={{ width: 80 }}>ĐVT</th>
                   <th style={{ width: 100, textAlign: 'right' }}>Số lượng</th>
                   <th style={{ width: 130, textAlign: 'right' }}>Đơn giá</th>
@@ -321,7 +348,7 @@ function PurchaseOrderDetailPage() {
               <tbody>
                 {(po.lines || []).length === 0 ? (
                   <tr>
-                    <td colSpan={10} style={{ textAlign: 'center', padding: 24, color: '#94a3b8' }}>
+                    <td colSpan={11} style={{ textAlign: 'center', padding: 24, color: '#94a3b8' }}>
                       Không có dòng sản phẩm
                     </td>
                   </tr>
@@ -329,8 +356,11 @@ function PurchaseOrderDetailPage() {
                   (po.lines || []).map((line, idx) => (
                     <tr key={line.id || idx}>
                       <td style={{ color: '#94a3b8' }}>{idx + 1}</td>
-                      <td style={{ fontWeight: 500 }}>{line.variantName || `#${line.variantId}`}</td>
+                      <td style={{ fontWeight: 500 }}>{line.variantName || line.productName || `#${line.variantId}`}</td>
                       <td style={{ color: '#64748b', fontSize: 12 }}>{line.sku || '—'}</td>
+                      <td style={{ color: '#1e40af', fontWeight: 500 }}>
+                        {line.warehouseName || (line.warehouseId ? warehouseById.get(line.warehouseId)?.name : null) || '—'}
+                      </td>
                       <td style={{ color: '#64748b' }}>{line.unitName || '—'}</td>
                       <td style={{ textAlign: 'right', fontWeight: 600 }}>
                         {Number(line.quantity).toLocaleString('vi-VN')}
@@ -366,6 +396,30 @@ function PurchaseOrderDetailPage() {
             </table>
           </div>
         </div>
+
+        {/* ── Ghi chú & Đính kèm ── */}
+        {(() => {
+          const { note: cleanNote, attachments: poAttachments } = parseNoteAndAttachments(po.note);
+          if (!cleanNote && (!poAttachments || poAttachments.length === 0)) return null;
+          return (
+            <div className={styles.card} style={{ marginTop: 20 }}>
+              <div className={styles.cardTitle}>
+                <i className="bi bi-paperclip" /> Ghi chú &amp; Tệp đính kèm
+              </div>
+              {cleanNote && (
+                <div style={{ marginBottom: (poAttachments && poAttachments.length > 0) ? 14 : 0, fontSize: 13.5, color: '#334155', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: 6, border: '1px solid #e2e8f0', lineHeight: 1.6 }}>
+                  <strong>Ghi chú:</strong> {cleanNote}
+                </div>
+              )}
+              {poAttachments && poAttachments.length > 0 && (
+                <AttachmentUpload
+                  files={poAttachments}
+                  disabled={true}
+                />
+              )}
+            </div>
+          );
+        })()}
         
         {/* ── Linked Import Slips ── */}
         {(po.status === 'APPROVED' || po.status === 'POSTED') && (
@@ -432,10 +486,6 @@ function PurchaseOrderDetailPage() {
         onCancel={() => setConfirmCancel(false)}
       />
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
-
-      <div style={{ display: 'none' }}>
-        <PurchaseOrderQuotationTemplate ref={printRef} order={po} />
-      </div>
     </AdminLayout>
   );
 }

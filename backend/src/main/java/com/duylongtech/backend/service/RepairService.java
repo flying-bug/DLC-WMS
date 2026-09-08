@@ -16,7 +16,6 @@ import com.duylongtech.backend.entity.SerialNumber;
 import com.duylongtech.backend.entity.User;
 import com.duylongtech.backend.exception.BusinessException;
 import com.duylongtech.backend.repository.PartnerRepository;
-import com.duylongtech.backend.repository.ProductRepository;
 import com.duylongtech.backend.repository.ProductVariantRepository;
 import com.duylongtech.backend.repository.RepairFeeRepository;
 import com.duylongtech.backend.repository.RepairLineRepository;
@@ -62,7 +61,6 @@ public class RepairService {
     private final RepairLineRepository repairLineRepository;
     private final RepairFeeRepository repairFeeRepository;
     private final PartnerRepository partnerRepository;
-    private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final SerialNumberRepository serialNumberRepository;
     private final UserRepository userRepository;
@@ -96,6 +94,8 @@ public class RepairService {
     @Transactional
     public RepairResponse createRepair(RepairRequest request) {
         validateCreateRequest(request);
+        ProductVariant repairVariant = resolveRepairVariant(request.getProductVariantId(),
+                request.getSerialNumberId(), request.getProductId());
 
         Long currentUserId = resolveCurrentUserId();
         String repairCode = trimToNull(request.getRepairCode()) != null
@@ -105,7 +105,8 @@ public class RepairService {
         Repair repair = Repair.builder()
                 .repairCode(repairCode)
                 .partnerId(request.getPartnerId())
-                .productId(request.getProductId())
+                .productId(repairVariant.getProduct().getId())
+                .productVariantId(repairVariant.getId())
                 .productQuantity(request.getProductQuantity() != null ? request.getProductQuantity() : 1)
                 .productUnit(trimToNull(request.getProductUnit()))
                 .warehouseId(request.getWarehouseId())
@@ -149,7 +150,13 @@ public class RepairService {
         }
 
         if (request.getPartnerId() != null) repair.setPartnerId(request.getPartnerId());
-        if (request.getProductId() != null) repair.setProductId(request.getProductId());
+        if (request.getProductVariantId() != null || request.getSerialNumberId() != null) {
+            ProductVariant repairVariant = resolveRepairVariant(
+                    request.getProductVariantId() != null ? request.getProductVariantId() : repair.getProductVariantId(),
+                    request.getSerialNumberId(), request.getProductId());
+            repair.setProductVariantId(repairVariant.getId());
+            repair.setProductId(repairVariant.getProduct().getId());
+        }
         if (request.getProductQuantity() != null) repair.setProductQuantity(request.getProductQuantity());
         if (request.getProductUnit() != null) repair.setProductUnit(trimToNull(request.getProductUnit()));
         if (request.getWarehouseId() != null) repair.setWarehouseId(request.getWarehouseId());
@@ -502,13 +509,18 @@ public class RepairService {
             } catch (Exception ignored) { /* best-effort */ }
         }
 
-        // Resolve product name (best effort)
+        // Resolve product and SKU (best effort)
         String productName = null;
-        if (repair.getProductId() != null) {
+        String sku = null;
+        String variantName = null;
+        if (repair.getProductVariantId() != null) {
             try {
-                var prodOpt = productRepository.findById(repair.getProductId());
-                if (prodOpt.isPresent()) {
-                    productName = prodOpt.get().getProductName();
+                var variantOpt = productVariantRepository.findById(repair.getProductVariantId());
+                if (variantOpt.isPresent()) {
+                    ProductVariant variant = variantOpt.get();
+                    sku = variant.getSku();
+                    variantName = variant.getVariantName();
+                    productName = variant.getProduct() != null ? variant.getProduct().getProductName() : variantName;
                 }
             } catch (Exception ignored) { /* best-effort */ }
         }
@@ -532,6 +544,9 @@ public class RepairService {
                 .partnerPhone(partnerPhone)
                 .productId(repair.getProductId())
                 .productName(productName)
+                .productVariantId(repair.getProductVariantId())
+                .sku(sku)
+                .variantName(variantName)
                 .productQuantity(repair.getProductQuantity())
                 .productUnit(repair.getProductUnit())
                 .warehouseId(repair.getWarehouseId())
@@ -582,13 +597,18 @@ public class RepairService {
             } catch (Exception ignored) { /* best-effort */ }
         }
 
-        // Resolve product name (best effort)
+        // Resolve product and SKU (best effort)
         String productName = null;
-        if (repair.getProductId() != null) {
+        String sku = null;
+        String variantName = null;
+        if (repair.getProductVariantId() != null) {
             try {
-                var prodOpt = productRepository.findById(repair.getProductId());
-                if (prodOpt.isPresent()) {
-                    productName = prodOpt.get().getProductName();
+                var variantOpt = productVariantRepository.findById(repair.getProductVariantId());
+                if (variantOpt.isPresent()) {
+                    ProductVariant variant = variantOpt.get();
+                    sku = variant.getSku();
+                    variantName = variant.getVariantName();
+                    productName = variant.getProduct() != null ? variant.getProduct().getProductName() : variantName;
                 }
             } catch (Exception ignored) { /* best-effort */ }
         }
@@ -612,6 +632,9 @@ public class RepairService {
                 .partnerPhone(partnerPhone)
                 .productId(repair.getProductId())
                 .productName(productName)
+                .productVariantId(repair.getProductVariantId())
+                .sku(sku)
+                .variantName(variantName)
                 .productQuantity(repair.getProductQuantity())
                 .productUnit(repair.getProductUnit())
                 .warehouseId(repair.getWarehouseId())
@@ -756,7 +779,7 @@ public class RepairService {
         if (request.getPartnerId() == null) {
             throw new BusinessException(SystemMessage.REP_PARTNER_REQUIRED);
         }
-        if (request.getProductId() == null) {
+        if (request.getProductVariantId() == null) {
             throw new BusinessException(SystemMessage.REP_ERR_005.getMessage());
         }
         if (request.getExpectedDate() != null && request.getReceivedDate() != null
@@ -775,6 +798,26 @@ public class RepairService {
         if (request.getQuantity() == null || request.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(SystemMessage.REP_ERR_001.getMessage());
         }
+    }
+
+    private ProductVariant resolveRepairVariant(Long variantId, Long serialNumberId, Long legacyProductId) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new BusinessException("SKU cua thiet bi sua chua khong ton tai"));
+        if (serialNumberId != null) {
+            SerialNumber serial = serialNumberRepository.findById(serialNumberId)
+                    .orElseThrow(() -> new BusinessException("Serial cua thiet bi sua chua khong ton tai"));
+            if (!variant.getId().equals(serial.getVariantId())) {
+                throw new BusinessException("Serial khong thuoc SKU cua thiet bi sua chua");
+            }
+        }
+        if (legacyProductId != null && (variant.getProduct() == null
+                || !legacyProductId.equals(variant.getProduct().getId()))) {
+            throw new BusinessException("SKU khong thuoc san pham da chon");
+        }
+        if (variant.getProduct() == null) {
+            throw new BusinessException("SKU chua duoc gan san pham");
+        }
+        return variant;
     }
 
     private String generateRepairCode() {

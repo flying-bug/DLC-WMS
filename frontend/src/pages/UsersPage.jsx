@@ -47,34 +47,41 @@ function UsersPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
 
+    const ROLE_BADGE_CONFIG = {
+        SUPER_ADMIN: { label: 'SUPER ADMIN', className: styles.rolePrimary, dept: 'Quản trị' },
+        ROLE_SUPER_ADMIN: { label: 'SUPER ADMIN', className: styles.rolePrimary, dept: 'Quản trị' },
+        MANAGER: { label: 'QUẢN LÝ', className: styles.rolePrimary, dept: 'Điều hành' },
+        ROLE_MANAGER: { label: 'QUẢN LÝ', className: styles.rolePrimary, dept: 'Điều hành' },
+        WAREHOUSE_CONTROLLER: { label: 'THỦ KHO', className: styles.roleSecondary, dept: 'Kho vận' },
+        ROLE_WAREHOUSE_CONTROLLER: { label: 'THỦ KHO', className: styles.roleSecondary, dept: 'Kho vận' },
+        TECHNICIAN: { label: 'KỸ THUẬT', className: styles.roleSecondary, dept: 'Kỹ thuật' },
+        ROLE_TECHNICIAN: { label: 'KỸ THUẬT', className: styles.roleSecondary, dept: 'Kỹ thuật' },
+        ACCOUNTANT: { label: 'KẾ TOÁN', className: styles.roleSecondary, dept: 'Kế toán' },
+        ROLE_ACCOUNTANT: { label: 'KẾ TOÁN', className: styles.roleSecondary, dept: 'Kế toán' },
+        CASHIER_CONTROLLER: { label: 'THỦ QUỸ', className: styles.roleSecondary, dept: 'Thu quỹ' },
+        ROLE_CASHIER_CONTROLLER: { label: 'THỦ QUỸ', className: styles.roleSecondary, dept: 'Thu quỹ' },
+        STAFF: { label: 'NHÂN VIÊN', className: styles.roleSecondary, dept: 'Kho' },
+        ROLE_STAFF: { label: 'NHÂN VIÊN', className: styles.roleSecondary, dept: 'Kho' }
+    };
+
     const mapUserToUi = (u) => {
-        const isSuperAdmin = u.roles && u.roles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
-        const isManager = u.roles && u.roles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
+        const rolesList = u.roles || [];
+        const isSuperAdmin = rolesList.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN');
+        const isManager = rolesList.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
         const systemRole = isSuperAdmin ? 'admin' : 'user';
         const initials = u.fullName ? u.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
 
         const colorClasses = [styles.bgBlue, styles.bgOrange, styles.bgGray];
         const avatarColorClass = colorClasses[u.id % colorClasses.length] || styles.bgBlue;
 
-        let department = 'Kho bãi';
-        let departmentShort = 'Kho';
-        let position = 'Nhân viên kho';
-        let roleBadge = 'NHÂN VIÊN';
-        let roleClass = styles.roleSecondary;
+        // Multi-role badges
+        const badges = rolesList.map(r => {
+            const cfg = ROLE_BADGE_CONFIG[r] || { label: r.replace('ROLE_', ''), className: styles.roleSecondary, dept: 'Kho' };
+            return cfg;
+        });
 
-        if (isSuperAdmin) {
-            department = 'Phòng Kỹ thuật & Bảo hành';
-            departmentShort = 'Quản trị';
-            position = 'Super Admin';
-            roleBadge = 'SUPER ADMIN';
-            roleClass = styles.rolePrimary;
-        } else if (isManager) {
-            department = 'Phòng Kinh doanh';
-            departmentShort = 'Kinh doanh';
-            position = 'Quản lý';
-            roleBadge = 'QUẢN LÝ';
-            roleClass = styles.rolePrimary;
-        }
+        const primaryBadge = badges[0] || { label: 'NHÂN VIÊN', className: styles.roleSecondary, dept: 'Kho' };
+        let departmentShort = u.department || primaryBadge.dept;
 
         return {
             id: u.id,
@@ -83,11 +90,14 @@ function UsersPage() {
             avatarColorClass,
             code: u.userCode || u.username || '(Chưa cấp)',
             username: u.username,
-            department,
+            department: u.department || primaryBadge.dept,
             departmentShort,
-            position,
-            roleBadge,
-            roleClass,
+            position: u.position || primaryBadge.label,
+            roleBadge: primaryBadge.label,
+            roleClass: primaryBadge.className,
+            badges,
+            isSuperAdmin,
+            isManager,
             email: u.email || '',
             phone: u.phone || '',
             status: u.status,
@@ -101,7 +111,7 @@ function UsersPage() {
             contractType: u.contractType || 'Chưa cập nhật',
             imageUrl: u.imageUrl || u.avatarUrl || u.avatar || null,
             systemRole,
-            roles: u.roles || []
+            roles: rolesList
         };
     };
 
@@ -368,10 +378,13 @@ function UsersPage() {
                                     onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
                                     aria-label="Lọc theo vai trò"
                                 >
-                                    <option value="">Vai trò</option>
+                                    <option value="">Tất cả vai trò</option>
                                     <option value="SUPER_ADMIN">Super Admin</option>
                                     <option value="MANAGER">Quản lý</option>
-                                    <option value="STAFF">Nhân viên</option>
+                                    <option value="WAREHOUSE_CONTROLLER">Thủ kho</option>
+                                    <option value="TECHNICIAN">Kỹ thuật viên</option>
+                                    <option value="ACCOUNTANT">Kế toán</option>
+                                    <option value="CASHIER_CONTROLLER">Thủ quỹ</option>
                                 </SearchableSelect>
                             </div>
                         </div>
@@ -436,7 +449,17 @@ function UsersPage() {
                                         <td data-label="HỌ VÀ TÊN"><strong>{user.name}</strong><br /><span style={{ fontSize: '12px', color: 'var(--color-text-subtle)' }}>{user.email}</span></td>
                                         <td data-label="TÀI KHOẢN NHÂN VIÊN">{user.code}</td>
                                         <td data-label="BỘ PHẬN">{user.departmentShort}</td>
-                                        <td data-label="VAI TRÒ"><span className={`${styles.roleBadge} ${user.roleClass}`}>{user.roleBadge}</span></td>
+                                        <td data-label="VAI TRÒ">
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                {user.badges && user.badges.length > 0 ? (
+                                                    user.badges.map((b, bIdx) => (
+                                                        <span key={bIdx} className={`${styles.roleBadge} ${b.className}`}>{b.label}</span>
+                                                    ))
+                                                ) : (
+                                                    <span className={`${styles.roleBadge} ${user.roleClass}`}>{user.roleBadge}</span>
+                                                )}
+                                            </div>
+                                        </td>
                                         <td data-label="TRẠNG THÁI"><span className={`${styles.statusBadge} ${user.statusClass}`}><i className="bi bi-circle-fill"></i> {user.statusLabel}</span></td>
                                         <td data-label="THAO TÁC" className={styles.actionCell}>
                                             <button
@@ -455,7 +478,7 @@ function UsersPage() {
                                                     <button type="button" role="menuitem" className={styles.actionMenuItem} onClick={(e) => handleViewInfo(e, user)}>
                                                         <i className="bi bi-eye"></i> Xem thông tin chi tiết
                                                     </button>
-                                                    {user.roles && user.roles.some(r => r === 'STAFF' || r === 'ROLE_STAFF') && (
+                                                    {!user.isSuperAdmin && (
                                                         <button type="button" role="menuitem" className={styles.actionMenuItem} onClick={(e) => handleAssignPermissions(e, user.id)}>
                                                             <i className="bi bi-shield-lock"></i> Phân quyền chức năng
                                                         </button>

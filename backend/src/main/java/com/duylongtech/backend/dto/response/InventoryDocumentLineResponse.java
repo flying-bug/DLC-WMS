@@ -9,6 +9,10 @@ import java.util.List;
 public class InventoryDocumentLineResponse {
     private Long id;
     private Long variantId;
+    private String sku;
+    private String productName;
+    private String variantName;
+    private String barcode;
     private BigDecimal quantityIn;
     private BigDecimal quantityOut;
     private BigDecimal unitCost;
@@ -21,4 +25,20 @@ public class InventoryDocumentLineResponse {
     private Integer warrantyMonths;
     private String note;
     private BigDecimal vatPercent;
+    private Long warehouseId;
+    private String warehouseName;
+    private String warehouseCode;
+    private Long targetWarehouseId;
+    private String targetWarehouseName;
+    private BigDecimal expectedQuantity;
+    private BigDecimal rejectedQuantity;
+    private String discrepancyReason;
+
+    private Long unitId;
+    private String unitName;
+    private Long baseUnitId;
+    private String baseUnitName;
+    private String conversionOperator;
+    private BigDecimal conversionRatio;
+    private BigDecimal baseQuantity;
 }

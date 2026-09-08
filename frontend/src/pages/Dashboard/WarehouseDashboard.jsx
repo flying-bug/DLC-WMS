@@ -1,34 +1,44 @@
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
+import { getAuthRoles, getAuthPermissions } from '../../auth/session';
 import styles from './WarehouseDashboard.module.css';
 
 function WarehouseDashboard() {
     const navigate = useNavigate();
+    const userRoles = getAuthRoles();
+    const userPermissions = getAuthPermissions();
+    const isSuperAdmin = userRoles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'ADMIN' || r === 'ROLE_ADMIN');
+    const isManager = userRoles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
+
+    const hasModule = (moduleCode) => {
+        if (isSuperAdmin || isManager) return true;
+        return userPermissions.some(p => p.startsWith(`${moduleCode}:`));
+    };
 
     const processItems = [
-        { label: 'Lắp ráp, tháo dỡ', icon: 'fas fa-tools' },
-        { label: 'Xuất kho', icon: 'fas fa-truck-loading', action: () => navigate('/export-slips') },
-        { label: 'Nhập kho', icon: 'fas fa-boxes', action: () => navigate('/import-history') },
-        { label: 'Chuyển kho', icon: 'fas fa-exchange-alt', action: () => navigate('/transfer-history') },
-        { label: 'Quản lý Cấu hình', icon: 'fas fa-sitemap', action: () => navigate('/assembly-boms') },
-        { label: 'Kiểm kê', icon: 'fas fa-clipboard-check' },
-    ];
+        { label: 'Lắp ráp, tháo dỡ', icon: 'fas fa-tools', module: 'assembly', action: () => navigate('/assembly-orders') },
+        { label: 'Xuất kho', icon: 'fas fa-truck-loading', module: 'export', action: () => navigate('/export-slips') },
+        { label: 'Nhập kho', icon: 'fas fa-boxes', module: 'import', action: () => navigate('/import-history') },
+        { label: 'Chuyển kho', icon: 'fas fa-exchange-alt', module: 'transfer', action: () => navigate('/transfer-history') },
+        { label: 'Quản lý Cấu hình', icon: 'fas fa-sitemap', module: 'assembly_config', action: () => navigate('/assembly-boms') },
+        { label: 'Kiểm kê', icon: 'fas fa-clipboard-check', module: 'stocktake', action: () => navigate('/stocktakes') },
+    ].filter(item => hasModule(item.module));
 
     const toolbarItems = [
-        { label: 'Kho', icon: 'fas fa-warehouse', action: () => navigate('/warehouses') },
-        { label: 'Hàng hóa dịch vụ', icon: 'fas fa-box', action: () => navigate('/products') },
-        { label: 'Đơn vị tính', icon: 'fas fa-balance-scale', action: () => navigate('/units') },
-        { label: 'Danh mục sản phẩm', icon: 'fas fa-list', action: () => navigate('/product-categories') },
-        { label: 'Bảo hành', icon: 'fas fa-shield-alt', action: () => navigate('/warranties') }
-    ];
+        { label: 'Kho', icon: 'fas fa-warehouse', module: 'warehouse_master', action: () => navigate('/warehouses') },
+        { label: 'Hàng hóa dịch vụ', icon: 'fas fa-box', module: 'product', action: () => navigate('/products') },
+        { label: 'Đơn vị tính', icon: 'fas fa-balance-scale', module: 'unit', action: () => navigate('/units') },
+        { label: 'Danh mục sản phẩm', icon: 'fas fa-list', module: 'product_category', action: () => navigate('/product-categories') },
+        { label: 'Bảo hành', icon: 'fas fa-shield-alt', module: 'warranty', action: () => navigate('/warranties') }
+    ].filter(item => hasModule(item.module));
 
     const reportItems = [
-        { id: 'inventory-summary', name: 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)' },
-        { id: 'stock-ledger', name: 'Sổ chi tiết vật tư hàng hóa' },
-        { id: 'inventory-balance', name: 'Báo cáo tồn kho hiện tại' },
-        { id: 'stock-transfers', name: 'Báo cáo chuyển kho nội bộ' },
-        { id: 'debt', name: 'Báo cáo công nợ đối tác' }
-    ];
+        { id: 'inventory-summary', name: 'Tổng hợp tồn kho (Nhập - Xuất - Tồn)', module: 'report_summary' },
+        { id: 'stock-ledger', name: 'Sổ chi tiết vật tư hàng hóa', module: 'report_ledger' },
+        { id: 'inventory-balance', name: 'Báo cáo tồn kho hiện tại', module: 'report_balance' },
+        { id: 'stock-transfers', name: 'Báo cáo chuyển kho nội bộ', module: 'report_transfer' },
+        { id: 'debt', name: 'Báo cáo công nợ đối tác', module: 'report_debt' }
+    ].filter(item => hasModule(item.module));
 
     return (
         <AdminLayout activeTab="dashboard">

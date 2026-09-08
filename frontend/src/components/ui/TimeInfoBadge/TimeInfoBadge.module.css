@@ -1,0 +1,12 @@
+.timeBadge {
+  display: inline-flex;
+  align-items: center;
+  color: #334155;
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  user-select: none;
+  padding: 0 4px;
+  line-height: 38px;
+  height: 38px;
+}

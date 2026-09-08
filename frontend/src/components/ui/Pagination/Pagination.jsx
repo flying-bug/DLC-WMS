@@ -3,36 +3,35 @@ import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect'
 
 
 const Pagination = ({ 
-    page, 
-    totalPages, 
-    totalElements, 
-    size, 
+    page = 0, 
+    totalPages = 1, 
+    totalElements = 0, 
+    size = 20, 
     onPageChange, 
     onSizeChange,
     sizeOptions = [10, 20, 50, 100]
 }) => {
-    if (totalElements === 0) return null;
-
     // Calculate which page numbers to show
     const getVisiblePages = () => {
         const pages = [];
-        if (totalPages <= 7) {
-            for (let i = 0; i < totalPages; i++) pages.push(i);
+        const maxPages = Math.max(1, totalPages);
+        if (maxPages <= 7) {
+            for (let i = 0; i < maxPages; i++) pages.push(i);
         } else {
             if (page <= 3) {
                 for (let i = 0; i < 5; i++) pages.push(i);
                 pages.push('...');
-                pages.push(totalPages - 1);
-            } else if (page >= totalPages - 4) {
+                pages.push(maxPages - 1);
+            } else if (page >= maxPages - 4) {
                 pages.push(0);
                 pages.push('...');
-                for (let i = totalPages - 5; i < totalPages; i++) pages.push(i);
+                for (let i = maxPages - 5; i < maxPages; i++) pages.push(i);
             } else {
                 pages.push(0);
                 pages.push('...');
                 for (let i = page - 1; i <= page + 1; i++) pages.push(i);
                 pages.push('...');
-                pages.push(totalPages - 1);
+                pages.push(maxPages - 1);
             }
         }
         return pages;
@@ -43,9 +42,8 @@ const Pagination = ({
             <div className={styles.pageInfo}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>Hiển thị</span>
-                    <SearchableSelect 
-                        className="misa-select"
-                        style={{ width: '70px', height: '32px', padding: '0 8px', border: '1px solid #d4d4d7', borderRadius: '4px', outline: 'none' }}
+                    <select 
+                        style={{ height: '32px', minWidth: '60px', padding: '0 8px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none', backgroundColor: '#fff', fontSize: '13px', cursor: 'pointer' }}
                         value={size} 
                         onChange={(e) => {
                             if(onSizeChange) onSizeChange(Number(e.target.value));
@@ -54,8 +52,8 @@ const Pagination = ({
                         {sizeOptions.map(opt => (
                             <option key={opt} value={opt}>{opt}</option>
                         ))}
-                    </SearchableSelect>
-                    <span>trên tổng số {totalElements} bản ghi</span>
+                    </select>
+                    <span>bản ghi / trang (Tổng số <strong>{totalElements}</strong> bản ghi)</span>
                 </div>
             </div>
             

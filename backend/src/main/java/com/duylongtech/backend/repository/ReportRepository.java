@@ -33,11 +33,12 @@ public class ReportRepository {
                         "pv.id AS variantId, " +
                         "pv.variant_name AS itemName, " +
                         "u.name AS unitName, " +
+                        "w.id AS warehouseId, " +
                         "w.code AS warehouseCode, " +
                         "w.name AS warehouseName, " +
-                        "p.track_serial AS trackSerial, " +
+                        "(pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')) AS trackSerial, " +
                         "SUM(CASE WHEN ( " +
-                        "  (COALESCE(p.track_serial, FALSE) = TRUE " +
+                        "  (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT') " +
                         "    AND ib.serial_number_id IS NOT NULL " +
                         "    AND sn.status = 'AVAILABLE' " +
                         "    AND NOT EXISTS ( " +
@@ -47,12 +48,12 @@ public class ReportRepository {
                         "        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
                         "    ) " +
                         "  ) " +
-                        "  OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
+                        "  OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL) " +
                         ") THEN ib.quantity_on_hand ELSE 0 END) AS totalQuantity, " +
                         "SUM(CASE WHEN ib.serial_number_id IS NULL THEN ib.quantity_reserved ELSE 0 END) AS totalReserved, " +
                         "( " +
                         "  SUM(CASE WHEN ( " +
-                        "    (COALESCE(p.track_serial, FALSE) = TRUE " +
+                        "    (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT') " +
                         "      AND ib.serial_number_id IS NOT NULL " +
                         "      AND sn.status = 'AVAILABLE' " +
                         "      AND NOT EXISTS ( " +
@@ -62,13 +63,13 @@ public class ReportRepository {
                         "          AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
                         "      ) " +
                         "    ) " +
-                        "    OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
+                        "    OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL) " +
                         "  ) THEN ib.quantity_on_hand ELSE 0 END) " +
                         "  - " +
                         "  SUM(CASE WHEN ib.serial_number_id IS NULL THEN ib.quantity_reserved ELSE 0 END) " +
                         ") AS availableQuantity, " +
                         "SUM(CASE WHEN ( " +
-                        "  (COALESCE(p.track_serial, FALSE) = TRUE " +
+                        "  (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT') " +
                         "    AND ib.serial_number_id IS NOT NULL " +
                         "    AND sn.status = 'AVAILABLE' " +
                         "    AND NOT EXISTS ( " +
@@ -78,7 +79,7 @@ public class ReportRepository {
                         "        AND (dcs.status IS NULL OR dcs.status = 'ACTIVE') " +
                         "    ) " +
                         "  ) " +
-                        "  OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
+                        "  OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL) " +
                         ") THEN ib.quantity_on_hand * ib.average_cost ELSE 0 END) AS totalValue " +
                         "FROM inventory_balances ib " +
                         "JOIN product_variants pv ON ib.variant_id = pv.id " +
@@ -88,8 +89,8 @@ public class ReportRepository {
                         "LEFT JOIN serial_numbers sn ON ib.serial_number_id = sn.id " +
                         "WHERE ib.stock_status = 'GOOD' " +
                         "AND ( " +
-                        "  (COALESCE(p.track_serial, FALSE) = TRUE) " +
-                        "  OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL) " +
+                        "  (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')) " +
+                        "  OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL) " +
                         ") "
         );
         List<Object> params = new ArrayList<>();
@@ -104,13 +105,14 @@ public class ReportRepository {
             params.add("%" + search + "%");
         }
 
-        sql.append(" GROUP BY pv.sku, pv.id, pv.variant_name, u.name, w.code, w.name, p.track_serial ");
+        sql.append(" GROUP BY pv.sku, pv.id, pv.variant_name, u.name, w.id, w.code, w.name, pv.tracking_mode ");
         sql.append(" ORDER BY w.code, pv.sku ");
 
         return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> InventoryBalanceReportResponse.builder()
                 .itemCode(rs.getString("itemCode"))
                 .itemName(rs.getString("itemName"))
                 .unitName(rs.getString("unitName"))
+                .warehouseId(rs.getLong("warehouseId"))
                 .warehouseCode(rs.getString("warehouseCode"))
                 .warehouseName(rs.getString("warehouseName"))
                 .totalQuantity(rs.getBigDecimal("totalQuantity"))
@@ -521,7 +523,7 @@ public class ReportRepository {
                     COALESCE(SUM(
                         CASE
                             WHEN (
-                                (COALESCE(p.track_serial, FALSE) = TRUE
+                                (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
                                     AND ib.serial_number_id IS NOT NULL
                                     AND sn.status = 'AVAILABLE'
                                     AND NOT EXISTS (
@@ -531,7 +533,7 @@ public class ReportRepository {
                                           AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
                                     )
                                 )
-                                OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL)
+                                OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL)
                             )
                             THEN ib.quantity_on_hand * ib.average_cost
                             ELSE 0
@@ -558,7 +560,7 @@ public class ReportRepository {
                 HAVING COALESCE(SUM(
                     CASE
                         WHEN (
-                            (COALESCE(p.track_serial, FALSE) = TRUE
+                            (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
                                 AND ib.serial_number_id IS NOT NULL
                                 AND sn.status = 'AVAILABLE'
                                 AND NOT EXISTS (
@@ -568,7 +570,7 @@ public class ReportRepository {
                                       AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
                                 )
                             )
-                            OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL)
+                            OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL)
                         )
                         THEN ib.quantity_on_hand * ib.average_cost
                         ELSE 0
@@ -828,7 +830,7 @@ public class ReportRepository {
                         ib.id,
                         CASE
                             WHEN (
-                                (COALESCE(p.track_serial, FALSE) = TRUE
+                                (pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
                                     AND ib.serial_number_id IS NOT NULL
                                     AND sn.status = 'AVAILABLE'
                                     AND NOT EXISTS (
@@ -838,7 +840,7 @@ public class ReportRepository {
                                           AND (dcs.status IS NULL OR dcs.status = 'ACTIVE')
                                     )
                                 )
-                                OR (COALESCE(p.track_serial, FALSE) = FALSE AND ib.serial_number_id IS NULL)
+                                OR (pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT') AND ib.serial_number_id IS NULL)
                             )
                             THEN ib.quantity_on_hand * ib.average_cost
                             ELSE 0
@@ -1007,9 +1009,11 @@ public class ReportRepository {
     private int getConfiguredLowStockProductsCount() {
         String sql = """
                 SELECT COUNT(1)
-                FROM products p
+                FROM product_variants pv
+                JOIN products p ON p.id = pv.product_id
                 WHERE p.active = TRUE
-                  AND COALESCE(p.min_stock_qty, 0) > 0
+                  AND pv.active = TRUE
+                  AND COALESCE(pv.min_stock_qty, 0) > 0
                   AND LOWER(TRIM(p.product_type)) NOT IN ('dịch vụ', 'dich vu', 'service')
                 """;
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class);
@@ -1020,24 +1024,30 @@ public class ReportRepository {
         String sql = """
                 SELECT
                     p.id AS productId,
-                    p.product_code AS productCode,
-                    p.product_name AS productName,
+                    pv.sku AS productCode,
+                    CONCAT(p.product_name, ' - ', pv.variant_name) AS productName,
                     p.product_type AS productType,
                     u.name AS unitName,
-                    COALESCE(p.min_stock_qty, 0) AS minStockQty,
-                    COALESCE(SUM(CASE WHEN ib.serial_number_id IS NULL THEN ib.quantity_on_hand ELSE 0 END), 0) AS stockQty
-                FROM products p
+                    COALESCE(pv.min_stock_qty, 0) AS minStockQty,
+                    COALESCE(SUM(CASE
+                        WHEN pv.tracking_mode IN ('SERIAL', 'SERIAL_LOT')
+                             AND ib.serial_number_id IS NOT NULL
+                             AND sn.status = 'AVAILABLE' THEN ib.quantity_on_hand
+                        WHEN pv.tracking_mode NOT IN ('SERIAL', 'SERIAL_LOT')
+                             AND ib.serial_number_id IS NULL THEN ib.quantity_on_hand
+                        ELSE 0 END), 0) AS stockQty
+                FROM product_variants pv
+                JOIN products p ON p.id = pv.product_id
                 LEFT JOIN units u ON p.unit_id = u.id
-                LEFT JOIN product_variants pv
-                    ON pv.product_id = p.id
-                   AND pv.active = TRUE
                 LEFT JOIN inventory_balances ib
                     ON ib.variant_id = pv.id
+                LEFT JOIN serial_numbers sn ON sn.id = ib.serial_number_id
                 WHERE p.active = TRUE
-                  AND COALESCE(p.min_stock_qty, 0) > 0
+                  AND pv.active = TRUE
+                  AND COALESCE(pv.min_stock_qty, 0) > 0
                   AND LOWER(TRIM(p.product_type)) NOT IN ('dịch vụ', 'dich vu', 'service')
-                GROUP BY p.id, p.product_code, p.product_name, p.product_type, u.name, p.min_stock_qty
-                HAVING COALESCE(SUM(CASE WHEN ib.serial_number_id IS NULL THEN ib.quantity_on_hand ELSE 0 END), 0) <= COALESCE(p.min_stock_qty, 0)
+                GROUP BY p.id, pv.id, pv.sku, p.product_name, pv.variant_name, p.product_type, u.name, pv.min_stock_qty
+                HAVING stockQty <= COALESCE(pv.min_stock_qty, 0)
                 ORDER BY stockQty ASC, p.product_name ASC
                 """;
         return jdbcTemplate.query(sql, (rs, rowNum) -> DashboardResponse.ConfiguredLowStockProductDto.builder()

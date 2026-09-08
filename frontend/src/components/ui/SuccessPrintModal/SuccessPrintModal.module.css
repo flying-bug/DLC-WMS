@@ -18,7 +18,7 @@
   background-color: #ffffff;
   border-radius: 12px;
   width: 100%;
-  max-width: 440px;
+  max-width: 480px;
   padding: 32px 24px 24px;
   text-align: center;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -58,7 +58,7 @@
 .modalMessage {
   font-size: 14px;
   color: #64748b;
-  margin: 0 0 24px 0;
+  margin: 0 0 20px 0;
   line-height: 1.5;
 }
 
@@ -68,26 +68,55 @@
   gap: 10px;
 }
 
-.btnPrint {
+.printButtonsRow {
+  display: flex;
+  gap: 10px;
   width: 100%;
+}
+
+.btnPrint {
+  flex: 1;
   background-color: #1d4ed8;
   color: #ffffff;
   border: none;
-  padding: 12px 20px;
+  padding: 11px 14px;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   transition: all 0.2s ease;
   box-shadow: 0 4px 6px -1px rgba(29, 78, 216, 0.2);
 }
 
 .btnPrint:hover {
   background-color: #1e40af;
+  transform: translateY(-1px);
+}
+
+.btnPrintSplit {
+  flex: 1;
+  background-color: #0284c7;
+  color: #ffffff;
+  border: none;
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.2);
+}
+
+.btnPrintSplit:hover {
+  background-color: #0369a1;
   transform: translateY(-1px);
 }
 

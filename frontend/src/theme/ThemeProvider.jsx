@@ -33,6 +33,8 @@ export function ThemeProvider({ children }) {
         themes: THEMES,
         setTheme: (nextTheme) => {
             if (isValidTheme(nextTheme)) {
+                applyTheme(nextTheme);
+                window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
                 setThemeState(nextTheme);
             }
         }

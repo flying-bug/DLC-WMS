@@ -214,47 +214,109 @@
 /* Filter Section */
 .filterSection {
   background: var(--color-white);
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   margin-bottom: 24px;
   border: 1px solid var(--color-border);
   gap: 16px;
-}
-
-.filterGroup {
-  display: flex;
-  gap: 24px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 10;
 }
 
-.filterField {
+.searchAndPopover {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 1;
 }
 
-.filterLabel {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text-muted-2);
-  text-transform: uppercase;
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 260px;
+  max-width: 380px;
+  flex: 1;
 }
 
-.filterInput, .filterSelect {
+.searchBox i:first-child {
+  position: absolute;
+  left: 12px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 8px 36px 8px 36px;
   border: 1px solid var(--color-border-strong);
-  border-radius: 4px;
-  padding: 8px 12px;
+  border-radius: 6px;
   font-size: 14px;
   outline: none;
-  min-width: 200px;
   color: var(--color-text-strong);
+  height: 38px;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
 }
 
-.filterInput:focus, .filterSelect:focus {
+.searchInput:focus {
   border-color: var(--color-primary);
+}
+
+.clearSearchBtn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
+}
+
+.clearSearchBtn:hover {
+  color: var(--color-danger);
+}
+
+.filterActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.iconBtn {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-white);
+  width: 38px;
+  height: 38px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--color-text-muted);
+  transition: all 0.2s ease;
+}
+
+.iconBtn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background-color: var(--color-primary-light-5);
 }
 
 .btnOutline {

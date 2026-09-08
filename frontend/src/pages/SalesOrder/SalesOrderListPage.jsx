@@ -1,20 +1,24 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
+import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
+import TimeInfoBadge from '../../components/ui/TimeInfoBadge/TimeInfoBadge';
 import * as soApi from '../../api/salesOrderApi';
 import styles from './SalesOrderListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import { exportToExcel } from '../../utils/excelExport';
+import { printQuotation } from '../../utils/printQuotation';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 
 const STATUS_LABELS = {
-  DRAFT: { label: 'Nháp', code: 'info' },
-  APPROVED: { label: 'Đã duyệt', code: 'success' },
-  POSTED: { label: 'Ghi sổ', code: 'purple' },
-  CANCELLED: { label: 'Đã hủy', code: 'danger' },
+  DRAFT:     { label: 'Nháp',         code: 'info'    },
+  APPROVED:  { label: 'Đã duyệt',     code: 'success' },
+  POSTED:    { label: 'Ghi sổ',       code: 'purple'  },
+  CANCELLED: { label: 'Đã hủy',       code: 'danger'  },
 };
 
 const PAYMENT_STATUS_LABELS = {
@@ -24,10 +28,17 @@ const PAYMENT_STATUS_LABELS = {
 };
 
 const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'Nháp' },
-  { value: 'APPROVED', label: 'Đã duyệt' },
-  { value: 'POSTED', label: 'Ghi sổ' },
-  { value: 'CANCELLED', label: 'Đã hủy' },
+  { value: 'DRAFT',     label: 'Nháp'         },
+  { value: 'APPROVED',  label: 'Đã duyệt'     },
+  { value: 'POSTED',    label: 'Ghi sổ'       },
+  { value: 'CANCELLED', label: 'Đã hủy'       },
+];
+
+const RESERVATION_STATUS_OPTIONS = [
+  { value: 'NOT_RESERVED', label: 'Chưa giữ hàng'  },
+  { value: 'RESERVED',     label: 'Đã giữ hàng'    },
+  { value: 'BACKORDERED',  label: 'Chờ nhập hàng'  },
+  { value: 'RELEASED',     label: 'Đã giải phóng'  },
 ];
 
 const money = (v) => `${Number(v || 0).toLocaleString('vi-VN')} đ`;
@@ -40,17 +51,25 @@ function SalesOrderListPage() {
   const location = useLocation();
 
   const [orders, setOrders] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState(() => {
+  const DEFAULT_FILTERS = useMemo(() => {
     const searchParams = new URLSearchParams(location.search);
+    const range = getDateRangePreset('THIS_YEAR');
     return {
       keyword: '',
       status: searchParams.get('status') || '',
       reservationStatus: searchParams.get('backordered') === 'true' ? 'BACKORDERED' : '',
-      fromDate: '',
-      toDate: ''
+      partnerId: '',
+      warehouseId: '',
+      preset: 'THIS_YEAR',
+      fromDate: range ? range.fromDate : '',
+      toDate: range ? range.toDate : '',
     };
-  });
+  }, [location.search]);
+
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
@@ -60,6 +79,22 @@ function SalesOrderListPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
+  useEffect(() => {
+    const loadLookups = async () => {
+      try {
+        const [cRes, wRes] = await Promise.all([
+          soApi.getCustomers({ size: 200 }),
+          soApi.getWarehouses({ size: 100 }),
+        ]);
+        setCustomers(pageContent(unwrap(cRes)));
+        setWarehouses(pageContent(unwrap(wRes)));
+      } catch (err) {
+        console.error('Không tải được danh mục bổ trợ', err);
+      }
+    };
+    loadLookups();
+  }, []);
+
   const loadOrders = useCallback(async () => {
     setLoading(true);
     try {
@@ -67,6 +102,8 @@ function SalesOrderListPage() {
         keyword: filters.keyword || undefined,
         status: filters.status || undefined,
         reservationStatus: filters.reservationStatus || undefined,
+        partnerId: filters.partnerId || undefined,
+        warehouseId: filters.warehouseId || undefined,
         fromDate: filters.fromDate || undefined,
         toDate: filters.toDate || undefined,
       });
@@ -137,6 +174,20 @@ function SalesOrderListPage() {
     }
   };
 
+  const handlePrintQuote = async (soSummary, e) => {
+    e.stopPropagation();
+    try {
+      let fullSo = soSummary;
+      if (!fullSo.lines || fullSo.lines.length === 0) {
+        const res = await soApi.getSalesOrderById(soSummary.id);
+        fullSo = unwrap(res);
+      }
+      printQuotation(fullSo);
+    } catch {
+      showToast('error', 'Không thể tải dữ liệu để in báo giá');
+    }
+  };
+
   // Pagination
   const totalItems = orders.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
@@ -157,64 +208,74 @@ function SalesOrderListPage() {
 
         {/* ── Filter ── */}
         <div className={styles.filterSection}>
-          <div className={styles.filterGroup}>
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TÌM KIẾM</span>
+          <div className={styles.searchAndPopover}>
+            <div className={styles.searchBox}>
+              <i className="bi bi-search" />
               <input
                 type="text"
-                className={styles.filterInput}
-                placeholder="Mã đơn, tên KH..."
+                className={styles.searchInput}
+                placeholder="Tìm theo mã đơn, khách hàng..."
                 value={filters.keyword}
-                onChange={e => setFilters(p => ({ ...p, keyword: e.target.value }))}
+                onChange={e => {
+                  setCurrentPage(1);
+                  setFilters(p => ({ ...p, keyword: e.target.value }));
+                }}
               />
+              {filters.keyword && (
+                <button
+                  className={styles.clearSearchBtn}
+                  onClick={() => {
+                    setCurrentPage(1);
+                    setFilters(p => ({ ...p, keyword: '' }));
+                  }}
+                >
+                  <i className="bi bi-x-circle-fill" />
+                </button>
+              )}
             </div>
 
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TRẠNG THÁI</span>
-              <SearchableSelect
-                className={styles.filterSelect}
-                value={filters.status}
-                onChange={e => setFilters(p => ({ ...p, status: e.target.value }))}
-              >
-                <option value="">Tất cả</option>
-                {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </SearchableSelect>
-            </div>
-
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>TỪ NGÀY</span>
-              <input
-                type="date"
-                className={styles.filterInput}
-                value={filters.fromDate}
-                onChange={e => setFilters(p => ({ ...p, fromDate: e.target.value }))}
-              />
-            </div>
-
-            <div className={styles.filterField}>
-              <span className={styles.filterLabel}>ĐẾN NGÀY</span>
-              <input
-                type="date"
-                className={styles.filterInput}
-                value={filters.toDate}
-                onChange={e => setFilters(p => ({ ...p, toDate: e.target.value }))}
-              />
-            </div>
+            <TimeInfoBadge filters={filters} />
           </div>
 
           <div className={styles.filterActions}>
-            <button className={styles.iconBtn} onClick={() => setFilters({ keyword: '', status: '', reservationStatus: '', fromDate: '', toDate: '' })} title="Đặt lại">
+            <button
+              className={styles.iconBtn}
+              onClick={() => {
+                setCurrentPage(1);
+                setFilters(DEFAULT_FILTERS);
+              }}
+              title="Đặt lại bộ lọc"
+            >
               <i className="bi bi-arrow-clockwise" />
             </button>
+            <FilterPopover
+              filters={filters}
+              onApply={(newFilters) => {
+                setCurrentPage(1);
+                setFilters(newFilters);
+              }}
+              onReset={() => {
+                setCurrentPage(1);
+                setFilters(DEFAULT_FILTERS);
+              }}
+              warehouses={warehouses}
+              partners={customers}
+              partnerLabel="Khách hàng"
+              statusOptions={STATUS_OPTIONS}
+              customSelects={[
+                {
+                  key: 'reservationStatus',
+                  label: 'Tình trạng giữ hàng',
+                  options: RESERVATION_STATUS_OPTIONS,
+                },
+              ]}
+            />
             <button
               className={styles.iconBtn}
               onClick={handleExport}
               title="Xuất tệp Excel"
             >
               <i className="bi bi-file-earmark-excel" />
-            </button>
-            <button className={styles.btnPrimary} onClick={loadOrders}>
-              <i className="bi bi-funnel" /> Lọc
             </button>
           </div>
         </div>
@@ -281,6 +342,12 @@ function SalesOrderListPage() {
                           title="Xem chi tiết"
                           style={{ cursor: 'pointer', marginRight: 10, color: 'var(--color-text-muted-2)', fontSize: 15 }}
                           onClick={() => navigate(`/sales-orders/${so.id}`)}
+                        />
+                        <i
+                          className="bi bi-printer"
+                          title="In báo giá"
+                          style={{ cursor: 'pointer', marginRight: 10, color: '#0284c7', fontSize: 15 }}
+                          onClick={(e) => handlePrintQuote(so, e)}
                         />
                         {so.status === 'DRAFT' && (
                           <i

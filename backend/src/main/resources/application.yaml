@@ -2,21 +2,25 @@ spring:
   application:
     name: backend
   datasource:
-    url: jdbc:mysql://localhost:3306/duylongcomputer?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/duylongcomputer?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&characterSetResults=UTF-8}
     username: root
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: computerduylong@gmail.com
-    password: sjvbpvpcyjcdqdun
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:computerduylong@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:sjvbpvpcyjcdqdun}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+            required: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
   jpa:
     hibernate:
       ddl-auto: update
@@ -35,7 +39,9 @@ backup:
   path: ${BACKUP_PATH:/tmp/backups}
 
 google:
-  client-id: 889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com
+  client-id: ${GMAIL_CLIENT_ID:889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com}
+  client-secret: ${GMAIL_CLIENT_SECRET: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}
+  refresh-token: ${GMAIL_REFRESH_TOKEN:1//04KBPq7hKygPUCgYIARAAGAQSNgF-L9Irb_g6d0iM3EJgsq6OGRXOQ-oPiugQgXmRjf5eylrUB013TdaOuRW5Fy-KdPNb--XHXQ}
 
 cloudinary:
   url: ${CLOUDINARY_URL:}
@@ -46,14 +52,24 @@ cloudinary:
   max-file-size: ${CLOUDINARY_MAX_FILE_SIZE:5242880}
 
 ai:
-  provider: ${AI_PROVIDER:openai}
+  provider: ${AI_PROVIDER:gemini}
   openai:
     enabled: ${OPENAI_ENABLED:false}
     api-key: ${OPENAI_API_KEY:}
     model: ${OPENAI_MODEL:gpt-4o-mini}
     base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
   gemini:
-    enabled: ${GEMINI_ENABLED:false}
+    enabled: ${GEMINI_ENABLED:true}
     api-key: ${GEMINI_API_KEY:}
     model: ${GEMINI_MODEL:gemini-2.0-flash}
+    thinking-budget: ${GEMINI_THINKING_BUDGET:0}
     base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+
+
+einvoice:
+  active-provider: ${EINVOICE_PROVIDER:XINVOICE}
+  xinvoice:
+    base-url: ${XINVOICE_BASE_URL:https://api.xinvoice.vn}
+    client-id: ${XINVOICE_CLIENT_ID:demo-client-id}
+    api-key: ${XINVOICE_API_KEY:demo-api-key}
+    auth-token: ${XINVOICE_AUTH_TOKEN:demo-auth-token}

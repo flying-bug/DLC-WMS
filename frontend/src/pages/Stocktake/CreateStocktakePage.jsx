@@ -9,6 +9,7 @@ import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import { printStocktakeReport } from '../../utils/printStocktakeReport';
 import { getTodayIsoDate, getCurrentDateTimeInput } from '../../utils/dateFormat';
+import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 
@@ -306,6 +307,29 @@ function CreateStocktakePage() {
   };
 
   const handleProductSelect = (index, variantId) => {
+    if (!variantId) {
+      setLines(prev => prev.map((line, idx) => {
+        if (idx !== index) return line;
+        return {
+          ...line,
+          variantId: '',
+          itemCode: '',
+          sku: '',
+          itemName: '',
+          unit: 'Cái',
+          trackSerial: false,
+          serials: []
+        };
+      }));
+      return;
+    }
+
+    const isDuplicate = lines.some((l, idx) => idx !== index && String(l.variantId) === String(variantId));
+    if (isDuplicate) {
+      showToast('warning', 'Sản phẩm này đã có trong danh sách kiểm kê!');
+      return;
+    }
+
     const selectedProduct = products.find(p => String(p.id) === String(variantId));
     if (!selectedProduct) return;
     
@@ -464,12 +488,41 @@ function CreateStocktakePage() {
     }))
   });
 
+  const validateForm = (payload) => {
+    if (!payload.warehouseId) {
+      focusField('stocktake-warehouseId');
+      showToast('error', 'Vui lòng chọn kho để kiểm kê');
+      return false;
+    }
+    if (!payload.lines || payload.lines.length === 0) {
+      showToast('error', 'Phiếu kiểm kê phải có ít nhất một dòng');
+      return false;
+    }
+    for (let i = 0; i < payload.lines.length; i++) {
+      if (!payload.lines[i].variantId) {
+        focusField(`stocktake-line-product-${i}`);
+        showToast('error', `Dòng ${i + 1}: Vui lòng chọn sản phẩm hoặc xóa dòng trống`);
+        return false;
+      }
+    }
+    const variantSet = new Map();
+    for (let i = 0; i < payload.lines.length; i++) {
+      const vid = String(payload.lines[i].variantId);
+      if (variantSet.has(vid)) {
+        focusField(`stocktake-line-product-${i}`);
+        showToast('error', `Dòng ${i + 1}: Sản phẩm bị trùng lặp với dòng ${variantSet.get(vid) + 1}`);
+        return false;
+      }
+      variantSet.set(vid, i);
+    }
+    return true;
+  };
+
   const handleDraft = async () => {
     try {
       const payload = buildPayload();
-      if (!payload.warehouseId) {
-         showToast('error', 'Vui lòng chọn kho để kiểm kê');
-         return;
+      if (!validateForm(payload)) {
+        return;
       }
       const response = await stocktakeApi.createStocktake(payload);
       navigate(`/stocktakes/${response.data.data.id}`, { state: { toastMessage: 'Lưu nháp thành công!', toastType: 'success' } });
@@ -482,9 +535,8 @@ function CreateStocktakePage() {
   const handleSaveAndClose = async () => {
     try {
       const payload = buildPayload();
-      if (!payload.warehouseId) {
-         showToast('error', 'Vui lòng chọn kho để kiểm kê');
-         return;
+      if (!validateForm(payload)) {
+        return;
       }
       const response = await stocktakeApi.createStocktake(payload);
       if (formData.isProcessed) {
@@ -499,39 +551,69 @@ function CreateStocktakePage() {
 
   // Navigation for Export/Import Slips
   const handleCreateExportSlip = () => {
-    const diffLackLines = lines.filter(l => Number(l.diffQty || 0) < 0);
+    const diffLackLines = lines.filter(l => Number(l.diffQty || 0) < 0
+      || (l.serials || []).some(s => s.scanStatus === 'MISSING'));
     if (diffLackLines.length === 0) {
       showToast('warning', 'Không có sản phẩm nào bị thiếu/hỏng để lập phiếu xuất kho xử lý!');
       return;
     }
-    navigate('/inventory/export/create', {
+    navigate('/export-slips/create?type=OTHER', {
       state: {
-        reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
-        items: diffLackLines.map(l => ({
-          variantId: l.variantId,
-          sku: l.sku,
-          productName: l.itemName,
-          quantity: Math.abs(Number(l.diffQty))
-        }))
+        returnUrl: '/stocktakes',
+        stocktakeData: {
+          code: formData.code,
+          warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
+          reason: `Phiếu xuất kho xử lý chênh lệch kiểm kê ${formData.code}`,
+          lines: diffLackLines.map(l => {
+            const serials = (l.serials || [])
+              .filter(s => s.scanStatus === 'MISSING' || !s.scanStatus)
+              .map(s => (typeof s === 'string' ? s : s.serialNumber))
+              .filter(Boolean);
+            return {
+              variantId: l.variantId,
+              sku: l.sku,
+              productName: l.itemName,
+              quantity: serials.length || Math.abs(Number(l.diffQty)),
+              serials,
+              serialNumbers: serials,
+              note: `Hàng thiếu từ kiểm kê ${formData.code}`
+            };
+          })
+        }
       }
     });
   };
 
   const handleCreateImportSlip = () => {
-    const diffSurplusLines = lines.filter(l => Number(l.diffQty || 0) > 0);
+    const diffSurplusLines = lines.filter(l => Number(l.diffQty || 0) > 0
+      || (l.serials || []).some(s => s.scanStatus === 'UNEXPECTED'));
     if (diffSurplusLines.length === 0) {
       showToast('warning', 'Không có sản phẩm nào bị thừa để lập phiếu nhập kho điều chỉnh!');
       return;
     }
-    navigate('/inventory/import/create', {
+    navigate('/import-history/create?type=OTHER', {
       state: {
-        reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
-        items: diffSurplusLines.map(l => ({
-          variantId: l.variantId,
-          sku: l.sku,
-          productName: l.itemName,
-          quantity: Number(l.diffQty)
-        }))
+        returnUrl: '/stocktakes',
+        stocktakeData: {
+          code: formData.code,
+          warehouseId: formData.warehouseId === 'all' ? '' : formData.warehouseId,
+          reason: `Phiếu nhập kho điều chỉnh tăng tồn kho theo kiểm kê ${formData.code}`,
+          lines: diffSurplusLines.map(l => {
+            const serials = (l.serials || [])
+              .filter(s => s.scanStatus === 'UNEXPECTED' || !s.scanStatus)
+              .map(s => (typeof s === 'string' ? s : s.serialNumber))
+              .filter(Boolean);
+            return {
+              variantId: l.variantId,
+              sku: l.sku,
+              productName: l.itemName,
+              quantity: serials.length || Number(l.diffQty),
+              serials,
+              serialNumbers: serials,
+              note: `Hàng thừa từ kiểm kê ${formData.code}`
+            };
+          })
+        }
       }
     });
   };
@@ -571,7 +653,7 @@ function CreateStocktakePage() {
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Kiểm kê kho</label>
-                <SearchableSelect className={styles.formSelect} name="warehouseId" value={formData.warehouseId} onChange={handleChange} disabled={isSaved}>
+                <SearchableSelect id="stocktake-warehouseId" className={styles.formSelect} name="warehouseId" value={formData.warehouseId} onChange={handleChange} disabled={isSaved}>
                   <option value="all">Tất cả kho</option>
                   {warehouses.map(wh => (
                     <option key={wh.id} value={wh.id}>{wh.name}</option>
@@ -766,7 +848,15 @@ function CreateStocktakePage() {
                     <td>
                       {line.isNew && !isSaved ? (
                         <Select
-                          options={products.map(p => ({ value: p.id, label: `${p.productName} - ${p.sku || p.productCode}` }))}
+                          inputId={`stocktake-line-product-${idx}`}
+                          options={products.map(p => {
+                            const isSelected = lines.some((l, lIdx) => lIdx !== idx && String(l.variantId) === String(p.id));
+                            return {
+                              value: p.id,
+                              label: `${p.productName} - ${p.sku || p.productCode}${isSelected ? ' (Đã chọn)' : ''}`,
+                              isDisabled: isSelected
+                            };
+                          })}
                           value={products.find(p => String(p.id) === String(line.variantId)) ? { value: line.variantId, label: `${products.find(p => String(p.id) === String(line.variantId)).productName} - ${products.find(p => String(p.id) === String(line.variantId)).sku || products.find(p => String(p.id) === String(line.variantId)).productCode}` } : null}
                           onChange={(selected) => handleProductSelect(idx, selected ? selected.value : '')}
                           placeholder="Chọn vật tư / hàng hóa..."

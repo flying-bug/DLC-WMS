@@ -53,6 +53,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC, DispatcherType.FORWARD)
@@ -62,6 +63,8 @@ public class SecurityConfig {
                             "/api/v1/auth/login",
                             "/api/v1/auth/login-google",
                             "/api/v1/auth/forgot-password/**",
+                            "/api/v1/imports/ocr-session/**",
+                            "/api/v1/einvoices/preview/**",
                             "/error",
                             "/v3/api-docs",
                             "/v3/api-docs/**",

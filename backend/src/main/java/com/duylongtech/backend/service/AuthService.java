@@ -13,6 +13,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 public class AuthService {
 
@@ -42,12 +45,17 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
-        String role = userDetails.getAuthorities().stream()
+        List<String> roles = userDetails.getAuthorities().stream()
                 .map(item -> item.getAuthority())
                 .filter(auth -> auth.startsWith("ROLE_"))
-                .findFirst()
-                .orElse("ROLE_USER");
+                .collect(Collectors.toList());
 
+        List<String> permissions = userDetails.getAuthorities().stream()
+                .map(item -> item.getAuthority())
+                .filter(auth -> !auth.startsWith("ROLE_"))
+                .collect(Collectors.toList());
+
+        String role = roles.stream().findFirst().orElse("ROLE_USER");
         String jwt = jwtUtils.generateJwtToken(userDetails.getUsername(), role);
 
         return JwtResponse.builder()
@@ -55,6 +63,8 @@ public class AuthService {
                 .id(userDetails.getId())
                 .username(userDetails.getUsername())
                 .role(role)
+                .roles(roles)
+                .permissions(permissions)
                 .build();
     }
 
@@ -77,13 +87,19 @@ public class AuthService {
                 throw new BusinessException(SystemMessage.USER_LOCKED);
             }
 
-            String role = user.getRoles().stream()
-                    .findFirst()
-                    .map(r -> {
-                        String code = r.getCode();
-                        return code.startsWith("ROLE_") ? code : "ROLE_" + code;
-                    })
-                    .orElse("ROLE_USER");
+            UserDetailsImpl userDetails = UserDetailsImpl.build(user);
+
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(item -> item.getAuthority())
+                    .filter(auth -> auth.startsWith("ROLE_"))
+                    .collect(Collectors.toList());
+
+            List<String> permissions = userDetails.getAuthorities().stream()
+                    .map(item -> item.getAuthority())
+                    .filter(auth -> !auth.startsWith("ROLE_"))
+                    .collect(Collectors.toList());
+
+            String role = roles.stream().findFirst().orElse("ROLE_USER");
             String jwt = jwtUtils.generateJwtToken(user.getUsername(), role);
 
             return JwtResponse.builder()
@@ -91,6 +107,8 @@ public class AuthService {
                     .id(user.getId())
                     .username(user.getUsername())
                     .role(role)
+                    .roles(roles)
+                    .permissions(permissions)
                     .build();
         } catch (Exception e) {
             if (e instanceof BusinessException) {
@@ -100,31 +118,69 @@ public class AuthService {
         }
     }
 
+    private static final int MAX_OTP_ATTEMPTS = 5;
+    private static final long OTP_EXPIRATION_MS = 5 * 60 * 1000L; // Hết hạn sau 5 phút
+    private static final long OTP_REQUEST_COOLDOWN_MS = 60 * 1000L; // Giới hạn gửi lại sau 60 giây
+    private static final java.security.SecureRandom SECURE_RANDOM = new java.security.SecureRandom();
+
     private final java.util.Map<String, String> otpStorage = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.Map<String, Long> otpExpiry = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<String, Integer> otpAttempts = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<String, Long> otpLastRequestTime = new java.util.concurrent.ConcurrentHashMap<>();
 
     public void requestOtp(String email) {
         com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
-        
-        // Sinh OTP 6 chữ số ngẫu nhiên
-        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
+
+        long now = System.currentTimeMillis();
+        Long lastRequest = otpLastRequestTime.get(email);
+        if (lastRequest != null && (now - lastRequest) < OTP_REQUEST_COOLDOWN_MS) {
+            throw new BusinessException(SystemMessage.OTP_REQUEST_TOO_FAST);
+        }
+
+        // Sinh OTP 6 chữ số an toàn tuyệt đối với SecureRandom (từ 000000 đến 999999)
+        int randomCode = SECURE_RANDOM.nextInt(1_000_000);
+        String otp = String.format("%06d", randomCode);
+
         otpStorage.put(email, otp);
-        otpExpiry.put(email, System.currentTimeMillis() + 5 * 60 * 1000); // Hết hạn sau 5 phút
+        otpExpiry.put(email, now + OTP_EXPIRATION_MS);
+        otpAttempts.put(email, 0);
+        otpLastRequestTime.put(email, now);
 
         // Gửi email kèm mã OTP
         emailService.sendResetPasswordEmail(email, otp);
     }
 
     public void verifyOtp(String email, String otp) {
-        if (!otpStorage.containsKey(email) || !otpStorage.get(email).equals(otp)) {
+        if (!otpStorage.containsKey(email) || !otpExpiry.containsKey(email)) {
             throw new BusinessException(SystemMessage.INVALID_OTP);
         }
-        if (System.currentTimeMillis() > otpExpiry.get(email)) {
-            otpStorage.remove(email);
-            otpExpiry.remove(email);
+
+        long now = System.currentTimeMillis();
+        if (now > otpExpiry.get(email)) {
+            clearOtpData(email);
             throw new BusinessException(SystemMessage.EXPIRED_OTP);
         }
+
+        String expectedOtp = otpStorage.get(email);
+        if (otp == null || !expectedOtp.equals(otp.trim())) {
+            int currentAttempts = otpAttempts.getOrDefault(email, 0) + 1;
+            otpAttempts.put(email, currentAttempts);
+
+            if (currentAttempts >= MAX_OTP_ATTEMPTS) {
+                clearOtpData(email);
+                throw new BusinessException(SystemMessage.TOO_MANY_OTP_ATTEMPTS);
+            }
+
+            int remaining = MAX_OTP_ATTEMPTS - currentAttempts;
+            throw new BusinessException(String.format("Mã OTP không chính xác. Bạn còn %d lần thử.", remaining));
+        }
+    }
+
+    private void clearOtpData(String email) {
+        otpStorage.remove(email);
+        otpExpiry.remove(email);
+        otpAttempts.remove(email);
     }
 
     public void resetPasswordWithOtp(String email, String otp, String newPassword) {
@@ -132,14 +188,13 @@ public class AuthService {
 
         com.duylongtech.backend.entity.User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(SystemMessage.USER_NOT_FOUND));
-        
+
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-        realtimeSessionService.forceLogoutUser(user.getId(), "PASSWORD_RESET", "Mat khau cua ban vua duoc thay doi. Vui long dang nhap lai.");
+        realtimeSessionService.forceLogoutUser(user.getId(), "PASSWORD_RESET", "Mật khẩu của bạn vừa được thay đổi. Vui lòng đăng nhập lại.");
 
-        // Xóa OTP sau khi đổi pass thành công
-        otpStorage.remove(email);
-        otpExpiry.remove(email);
+        // Xóa sạch OTP sau khi đổi pass thành công
+        clearOtpData(email);
     }
 
     public void changePassword(ChangePasswordRequest request) {

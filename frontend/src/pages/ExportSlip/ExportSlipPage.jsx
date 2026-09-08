@@ -9,11 +9,18 @@ import { exportToExcel } from '../../utils/excelExport';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import Modal from '../../components/ui/Modal/Modal';
+import UnpostConfirmModal from '../../components/ui/UnpostConfirmModal/UnpostConfirmModal';
+
 import FilterPopover from '../../components/ui/FilterPopover/FilterPopover';
+import TimeInfoBadge from '../../components/ui/TimeInfoBadge/TimeInfoBadge';
+import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
+import { parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import { printExportSlip } from '../../utils/printExportSlip';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import styles from './ExportSlipPage.module.css';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
+import { canViewPricing } from '../../auth/session';
 
 
 const DEFAULT_COLUMNS = {
@@ -35,7 +42,7 @@ const EXPORT_PURPOSE_OPTIONS = [
   { value: 'USAGE', label: 'Sử dụng nội bộ' },
   { value: 'ASSEMBLY', label: 'Xuất lắp ráp / tháo dỡ' },
   { value: 'REPAIR', label: 'Xuất sửa chữa' },
-  { value: 'OTHER', label: 'Khác' }
+  { value: 'OTHER', label: 'Khác' },
 ];
 
 const STATUS_OPTIONS = [
@@ -66,7 +73,9 @@ const EXPORT_PURPOSE_LABELS = {
   SALES: 'Bán hàng',
   USAGE: 'Sử dụng nội bộ',
   ASSEMBLY: 'Xuất lắp ráp / tháo dỡ',
-  REPAIR: 'Xuất sửa chữa'
+  REPAIR: 'Xuất sửa chữa',
+  INVENTORY_ADJUSTMENT: 'Xuất điều chỉnh kiểm kê',
+  OTHER: 'Khác',
 };
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -106,6 +115,7 @@ const variantLabel = (item) => item?.variantName && item.variantName !== item.pr
 function ExportSlipPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const showPricing = canViewPricing();
   const [slips, setSlips] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [products, setProducts] = useState([]);
@@ -115,19 +125,22 @@ function ExportSlipPage() {
   const [users, setUsers] = useState([]);
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const DEFAULT_FILTERS = useMemo(() => ({
-    keyword: location.state?.filterKeyword || location.state?.filterDocCode || '',
-    fromDate: '',
-    toDate: '',
-    preset: 'ALL',
-    status: '',
-    warehouseId: '',
-    partnerId: '',
-    staffId: '',
-    issuePurpose: '',
-    referenceId: location.state?.referenceId || '',
-    referenceType: location.state?.referenceType || '',
-  }), [location.state?.filterKeyword, location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
+  const DEFAULT_FILTERS = useMemo(() => {
+    const range = getDateRangePreset('THIS_YEAR');
+    return {
+      keyword: location.state?.filterKeyword || location.state?.filterDocCode || '',
+      fromDate: range?.fromDate || '',
+      toDate: range?.toDate || '',
+      preset: 'THIS_YEAR',
+      status: '',
+      warehouseId: '',
+      partnerId: '',
+      staffId: '',
+      issuePurpose: '',
+      referenceId: location.state?.referenceId || '',
+      referenceType: location.state?.referenceType || '',
+    };
+  }, [location.state?.filterKeyword, location.state?.filterDocCode, location.state?.referenceId, location.state?.referenceType]);
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
@@ -136,6 +149,8 @@ function ExportSlipPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [confirmPost, setConfirmPost] = useState(false);
+  const [unpostTarget, setUnpostTarget] = useState(null);
+
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
@@ -204,6 +219,8 @@ function ExportSlipPage() {
         issuePurpose: filters.issuePurpose || undefined,
         referenceId: filters.referenceId || undefined,
         referenceType: filters.referenceType || undefined,
+        partnerId: filters.partnerId || undefined,
+        salespersonId: filters.staffId || undefined,
       });
       const data = unwrap(response) || [];
       setSlips(data);
@@ -214,7 +231,7 @@ function ExportSlipPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters.docCode, filters.fromDate, filters.toDate, filters.status, filters.warehouseId, filters.issuePurpose, filters.referenceId, filters.referenceType]);
+  }, [filters]);
 
   const handleNavigateReference = (refType, refId) => {
     if (!refType || !refId) return;
@@ -268,6 +285,8 @@ function ExportSlipPage() {
         partnerLabel = customerById.get(slip.partnerId)?.name || (slip.partnerId ? `Khách hàng #${slip.partnerId}` : 'Chưa chọn');
       } else if (slip.issuePurpose === 'ASSEMBLY') {
         partnerLabel = assemblyOrderById.get(slip.referenceId)?.orderCode || (slip.referenceId ? `LSX #${slip.referenceId}` : 'Chưa chọn');
+      } else if (slip.issuePurpose === 'INVENTORY_ADJUSTMENT' || slip.referenceType === 'STOCKTAKE') {
+        partnerLabel = slip.referenceCode || (slip.referenceId ? `Kiểm kê #${slip.referenceId}` : 'Kiểm kê');
       }
 
       return {
@@ -402,19 +421,45 @@ function ExportSlipPage() {
                 className={styles.searchInput}
                 placeholder="Tìm theo mã phiếu, Serial, SKU..."
                 value={filters.keyword}
-                onChange={(event) => setFilters(prev => ({ ...prev, keyword: event.target.value }))}
+                onChange={(event) => {
+                  setCurrentPage(1);
+                  setFilters(prev => ({ ...prev, keyword: event.target.value }));
+                }}
               />
               {filters.keyword && (
-                <button className={styles.clearSearchBtn} onClick={() => setFilters(prev => ({ ...prev, keyword: '' }))}>
+                <button className={styles.clearSearchBtn} onClick={() => {
+                  setCurrentPage(1);
+                  setFilters(prev => ({ ...prev, keyword: '' }));
+                }}>
                   <i className="bi bi-x-circle-fill"></i>
                 </button>
               )}
             </div>
 
+            <TimeInfoBadge filters={filters} />
+          </div>
+
+          <div className={styles.filterActions}>
+            <button
+              className={styles.iconBtn}
+              onClick={() => {
+                setCurrentPage(1);
+                setFilters(DEFAULT_FILTERS);
+              }}
+              title="Đặt lại bộ lọc"
+            >
+              <i className="bi bi-arrow-clockwise"></i>
+            </button>
             <FilterPopover
               filters={filters}
-              onApply={(newFilters) => setFilters(newFilters)}
-              onReset={() => setFilters(DEFAULT_FILTERS)}
+              onApply={(newFilters) => {
+                setCurrentPage(1);
+                setFilters(newFilters);
+              }}
+              onReset={() => {
+                setCurrentPage(1);
+                setFilters(DEFAULT_FILTERS);
+              }}
               warehouses={warehouses}
               partners={customers}
               staffList={users}
@@ -424,16 +469,6 @@ function ExportSlipPage() {
               staffLabel="Nhân viên xuất"
               purposeLabel="Loại phiếu xuất"
             />
-          </div>
-
-          <div className={styles.filterActions}>
-            <button
-              className={styles.iconBtn}
-              onClick={() => setFilters(DEFAULT_FILTERS)}
-              title="Đặt lại bộ lọc"
-            >
-              <i className="bi bi-arrow-clockwise"></i>
-            </button>
             <button
               className={styles.iconBtn}
               onClick={handleExport}
@@ -468,8 +503,8 @@ function ExportSlipPage() {
                   {columns.warehouse && <th style={{ width: '120px' }}>Kho Xuất</th>}
                   {columns.salesperson && <th style={{ width: '150px' }}>Nhân viên xuất hàng</th>}
                   {columns.recipient && <th style={{ width: '150px' }}>Người nhận hàng</th>}
-                  {columns.vat && <th className={styles.textRight} style={{ width: '110px' }}>Tiền VAT</th>}
-                  {columns.total && <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>}
+                  {showPricing && columns.vat && <th className={styles.textRight} style={{ width: '110px' }}>Tiền VAT</th>}
+                  {showPricing && columns.total && <th className={styles.textRight} style={{ width: '110px' }}>Tổng Tiền</th>}
                   {columns.note && <th style={{ width: '180px' }}>Ghi Chú</th>}
                   {columns.status && <th style={{ width: '120px' }}>Trạng Thái</th>}
                   <th className={styles.textCenter} style={{ width: '100px' }}>Thao Tác</th>
@@ -500,8 +535,8 @@ function ExportSlipPage() {
                     {columns.warehouse && <td>{slip.warehouse}</td>}
                     {columns.salesperson && <td>{slip.salespersonName}</td>}
                     {columns.recipient && <td>{slip.recipientName}</td>}
-                    {columns.vat && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.vat}</td>}
-                    {columns.total && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.total}</td>}
+                    {showPricing && columns.vat && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.vat}</td>}
+                    {showPricing && columns.total && <td className={`${styles.money} ${styles.textRight}`} style={{ whiteSpace: 'nowrap' }}>{slip.total}</td>}
                     {columns.note && (
                       <td style={{ maxWidth: '180px' }}>
                         <div className={styles.tooltipContainer}>
@@ -522,16 +557,23 @@ function ExportSlipPage() {
                       </td>
                     )}
                     <td className={styles.textCenter}>
-                      <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '12px' }} title="Xem chi tiết" onClick={(event) => { event.stopPropagation(); setSelectedSlip(slip); }}></i>
-                      <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px' }} title="Sửa phiếu xuất kho" onClick={(event) => {
+                      <i className="bi bi-eye" style={{ cursor: 'pointer', color: 'var(--color-text-muted-2)', fontSize: '16px', marginRight: '10px' }} title="Xem chi tiết" onClick={(event) => { event.stopPropagation(); setSelectedSlip(slip); }}></i>
+                      <i className="bi bi-pencil" style={{ cursor: 'pointer', color: 'var(--color-primary)', fontSize: '16px', marginRight: '10px' }} title="Sửa phiếu xuất kho" onClick={(event) => {
                         event.stopPropagation();
-                        if (slip.status !== 'DRAFT') {
-                          showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm.');
+                        if (slip.status !== 'DRAFT' && slip.status !== 'UNPOSTED') {
+                          showToast('error', 'Chỉ có thể cập nhật phiếu lưu tạm hoặc đã bỏ ghi sổ.');
                         } else {
                           navigate(`/export-slips/${slip.id}/edit`);
                         }
                       }}></i>
+                      {slip.status === 'POSTED' && (
+                        <i className="bi bi-arrow-counterclockwise" style={{ cursor: 'pointer', color: '#dc2626', fontSize: '16px' }} title="Bỏ ghi sổ kho an toàn" onClick={(event) => {
+                          event.stopPropagation();
+                          setUnpostTarget(slip);
+                        }}></i>
+                      )}
                     </td>
+
                   </tr>
                 )) : (
                   <tr>
@@ -678,7 +720,7 @@ function ExportSlipPage() {
               <div className={styles.modalBody}>
                 <div className={styles.detailGrid}>
                   <div className={styles.infoGrid}>
-                    {(selectedSlip.partnerId || selectedSlip.issuePurpose === 'SALE') && (
+                    {(selectedSlip.partnerId || selectedSlip.issuePurpose === 'SALES') && (
                       <div className={styles.infoBlock}>
                         <span className={styles.infoLabel}>
                           <i className="bi bi-person-hearts"></i> Khách hàng
@@ -710,9 +752,9 @@ function ExportSlipPage() {
                     <div className={styles.infoBlock}>
                       <span className={styles.infoLabel}>
                         <i className="bi bi-person-badge"></i>
-                        {selectedSlip.issuePurpose === 'SALE'
+                        {selectedSlip.issuePurpose === 'SALES'
                           ? 'Nhân viên bán hàng'
-                          : selectedSlip.issuePurpose === 'PRODUCTION'
+                          : selectedSlip.issuePurpose === 'PRODUCTION' || selectedSlip.issuePurpose === 'ASSEMBLY'
                           ? 'Nhân viên phụ trách'
                           : 'Nhân viên lập phiếu'}
                       </span>
@@ -721,14 +763,19 @@ function ExportSlipPage() {
                       </span>
                     </div>
                     
-                    <div className={styles.infoBlock}>
-                      <span className={styles.infoLabel}>
-                        <i className="bi bi-chat-text"></i> Lý do xuất
-                      </span>
-                      <span className={styles.infoValue} style={{ color: selectedSlip.note ? 'inherit' : '#9ca3af', fontStyle: selectedSlip.note ? 'normal' : 'italic' }}>
-                        {selectedSlip.note || 'Không có ghi chú'}
-                      </span>
-                    </div>
+                    {(() => {
+                      const { note: cleanNote } = parseNoteAndAttachments(selectedSlip.note);
+                      return (
+                        <div className={styles.infoBlock}>
+                          <span className={styles.infoLabel}>
+                            <i className="bi bi-chat-text"></i> Lý do xuất
+                          </span>
+                          <span className={styles.infoValue} style={{ color: cleanNote ? 'inherit' : '#9ca3af', fontStyle: cleanNote ? 'normal' : 'italic' }}>
+                            {cleanNote || 'Không có ghi chú'}
+                          </span>
+                        </div>
+                      );
+                    })()}
 
                     {(selectedSlip.referenceType && selectedSlip.referenceId) && (
                       <div className={styles.infoBlock}>
@@ -772,20 +819,30 @@ function ExportSlipPage() {
                   <thead>
                     <tr>
                       <th>STT</th>
-                      <th>Mã hàng</th>
+                      <th>Mã SP</th>
                       <th>Tên hàng</th>
-                      <th>DVT</th>
+                      <th>ĐVT</th>
                       <th className={styles.textCenter}>Số lượng</th>
-                      <th className={styles.textRight}>Giá xuất</th>
-                      <th className={styles.textRight}>% VAT</th>
-                      <th className={styles.textRight}>Tiền VAT</th>
-                      <th className={styles.textRight}>Thành tiền</th>
+                      <th>ĐVC</th>
+                      <th className={styles.textCenter}>Tỷ lệ CĐ</th>
+                      <th className={styles.textCenter}>Phép tính</th>
+                      <th className={styles.textRight}>SL (ĐVC)</th>
+                      {showPricing && <th className={styles.textRight}>Giá xuất</th>}
+                      {showPricing && <th className={styles.textRight}>% VAT</th>}
+                      {showPricing && <th className={styles.textRight}>Tiền VAT</th>}
+                      {showPricing && <th className={styles.textRight}>Thành tiền</th>}
                       <th>Số Serial</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(selectedSlip.lines || []).map((line, index) => {
                       const product = productById.get(line.variantId);
+                      const baseUnitName = line.baseUnitName || product?.unitName || '-';
+                      const unitName = line.unitName || product?.unitName || '-';
+                      const ratio = Number(line.conversionRatio) > 0 ? Number(line.conversionRatio) : 1;
+                      const op = line.conversionOperator || 'MULTIPLY';
+                      const qty = Number(line.quantityOut || 0);
+                      const baseQty = line.baseQuantity != null ? Number(line.baseQuantity) : ((op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio));
                       return (
                         <tr key={line.id || index}>
                           <td>{index + 1}</td>
@@ -793,12 +850,16 @@ function ExportSlipPage() {
                           <td style={{ fontWeight: '500' }}>
                             {variantLabel(product) || 'Chưa có tên sản phẩm'}
                           </td>
-                          <td>{product?.unitName || ''}</td>
-                          <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(line.quantityOut || 0).toLocaleString('vi-VN')}</td>
-                          <td className={styles.textRight}>{money(line.unitPrice)}</td>
-                          <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>
-                          <td className={styles.textRight}>{money(Number(line.quantityOut || 0) * Number(line.unitPrice || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>
-                          <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{money(line.lineAmount)}</td>
+                          <td>{unitName}</td>
+                          <td className={styles.textCenter} style={{ fontWeight: '600' }}>{Number(qty).toLocaleString('vi-VN')}</td>
+                          <td>{baseUnitName}</td>
+                          <td className={styles.textCenter}>{ratio}</td>
+                          <td className={styles.textCenter} style={{ fontWeight: 600, color: '#2563eb' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+                          <td className={styles.textRight} style={{ fontWeight: '600', color: '#059669' }}>{Number(baseQty.toFixed(4)).toLocaleString('vi-VN')}</td>
+                          {showPricing && <td className={styles.textRight}>{money(line.unitPrice)}</td>}
+                          {showPricing && <td className={styles.textRight}>{line.vatPercent ?? line.vatRate ?? 0}%</td>}
+                          {showPricing && <td className={styles.textRight}>{money(Number(qty) * Number(line.unitPrice || 0) * (Number(line.vatPercent ?? line.vatRate ?? 0) / 100))}</td>}
+                          {showPricing && <td className={styles.textRight} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>{money(line.lineAmount)}</td>}
                           <td style={{ maxWidth: '220px', wordWrap: 'break-word', whiteSpace: 'normal' }}>
                             {line.serialNumbers && line.serialNumbers.length > 0 ? (
                               <span style={{ fontSize: '13px', color: '#334155', fontWeight: '500' }}>
@@ -814,17 +875,32 @@ function ExportSlipPage() {
                   </tbody>
                 </table>
 
+                {(() => {
+                  const { attachments } = parseNoteAndAttachments(selectedSlip.note);
+                  if (!attachments || attachments.length === 0) return null;
+                  return (
+                    <div style={{ marginTop: '16px', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <AttachmentUpload
+                        files={attachments}
+                        disabled={true}
+                      />
+                    </div>
+                  );
+                })()}
+
                 <div className={styles.detailFooter}>
                   <div className={styles.footerGroup}>
-                    <span className={styles.footerTotalLabel}>Tổng SL xuất:</span>
+                    <span className={styles.footerTotalLabel}>Tổng SL thực xuất:</span>
                     <span className={styles.footerQty}>{sumQuantity(selectedSlip.lines).toLocaleString('vi-VN')}</span>
                   </div>
                   <div style={{ flex: 1 }}></div>
-                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ fontSize: '13px', color: '#64748b' }}>Tổng tiền hàng: <strong>{money(sumSubtotal(selectedSlip.lines))}</strong></div>
-                    <div style={{ fontSize: '13px', color: '#64748b' }}>Tiền VAT: <strong>{money(sumVat(selectedSlip.lines))}</strong></div>
-                    <div style={{ fontSize: '16px', color: 'var(--color-primary)', marginTop: '4px' }}>Tổng thanh toán: <strong>{money(sumAmount(selectedSlip.lines))}</strong></div>
-                  </div>
+                  {showPricing && (
+                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ fontSize: '13px', color: '#64748b' }}>Tổng tiền hàng: <strong>{money(sumSubtotal(selectedSlip.lines))}</strong></div>
+                      <div style={{ fontSize: '13px', color: '#64748b' }}>Tiền VAT: <strong>{money(sumVat(selectedSlip.lines))}</strong></div>
+                      <div style={{ fontSize: '16px', color: 'var(--color-primary)', marginTop: '4px' }}>Tổng thanh toán: <strong>{money(sumAmount(selectedSlip.lines))}</strong></div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -882,7 +958,20 @@ function ExportSlipPage() {
           </div>
         </Modal>
       </div>
+      <UnpostConfirmModal
+        open={Boolean(unpostTarget)}
+        onClose={() => setUnpostTarget(null)}
+        docCode={unpostTarget?.docCode}
+        onCheckDependency={() => exportApi.checkExportUnpost(unpostTarget?.id)}
+        onConfirmUnpost={async (reason) => {
+          await exportApi.unpostExportSlip(unpostTarget?.id, reason);
+          showToast('success', 'Bỏ ghi sổ phiếu xuất kho thành công!');
+          loadSlips();
+        }}
+        docType="xuất kho"
+      />
       <Toast
+
         isVisible={toast.isVisible}
         type={toast.type}
         message={toast.message}

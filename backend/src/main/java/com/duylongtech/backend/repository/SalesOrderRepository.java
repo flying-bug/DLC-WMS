@@ -60,7 +60,7 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long> {
     );
 
     @Query("""
-        SELECT so FROM SalesOrder so
+        SELECT DISTINCT so FROM SalesOrder so
         LEFT JOIN FETCH so.partner
         LEFT JOIN FETCH so.warehouse
         LEFT JOIN FETCH so.createdByUser

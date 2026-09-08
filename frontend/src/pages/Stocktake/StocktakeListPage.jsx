@@ -8,6 +8,7 @@ import StocktakeInitModal from './components/StocktakeInitModal';
 import Toast from '../../components/ui/Toast/Toast';
 import styles from './StocktakeListPage.module.css';
 import { formatDateOnly } from '../../utils/dateFormat';
+import { DATE_PRESET_OPTIONS, getDateRangePreset } from '../../utils/datePresets';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 
 
@@ -26,7 +27,17 @@ function StocktakeListPage() {
   const [stocktakes, setStocktakes] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [filters, setFilters] = useState({ stocktakeCode: '', fromDate: '', status: '' });
+  const DEFAULT_FILTERS = useMemo(() => {
+    const range = getDateRangePreset('THIS_YEAR');
+    return {
+      stocktakeCode: '',
+      preset: 'THIS_YEAR',
+      fromDate: range ? range.fromDate : '',
+      toDate: range ? range.toDate : '',
+      status: '',
+    };
+  }, []);
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(false);
   const [showInitModal, setShowInitModal] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'success', message: '' });
@@ -64,6 +75,7 @@ function StocktakeListPage() {
       const params = {
         stocktakeCode: filters.stocktakeCode || undefined,
         fromDate: filters.fromDate || undefined,
+        toDate: filters.toDate || undefined,
         status: filters.status || undefined,
       };
       const response = await stocktakeApi.getStocktakes(params);
@@ -144,12 +156,44 @@ function StocktakeListPage() {
               />
             </div>
             <div className={styles.filterField}>
-              <span className={styles.filterLabel}>NGÀY KIỂM KÊ</span>
+              <span className={styles.filterLabel}>KỲ THỜI GIAN</span>
+              <SearchableSelect
+                className={styles.filterSelect}
+                value={filters.preset || 'THIS_YEAR'}
+                onChange={e => {
+                  const presetKey = e.target.value;
+                  if (presetKey === 'CUSTOM') {
+                    setFilters(p => ({ ...p, preset: 'CUSTOM' }));
+                    return;
+                  }
+                  const range = getDateRangePreset(presetKey);
+                  setFilters(p => ({
+                    ...p,
+                    preset: presetKey,
+                    fromDate: range ? range.fromDate : '',
+                    toDate: range ? range.toDate : '',
+                  }));
+                }}
+              >
+                {DATE_PRESET_OPTIONS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </SearchableSelect>
+            </div>
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>TỪ NGÀY</span>
               <input
                 type="date"
                 className={styles.filterInput}
                 value={filters.fromDate}
-                onChange={(e) => setFilters(prev => ({ ...prev, fromDate: e.target.value }))}
+                onChange={(e) => setFilters(prev => ({ ...prev, fromDate: e.target.value, preset: 'CUSTOM' }))}
+              />
+            </div>
+            <div className={styles.filterField}>
+              <span className={styles.filterLabel}>ĐẾN NGÀY</span>
+              <input
+                type="date"
+                className={styles.filterInput}
+                value={filters.toDate}
+                onChange={(e) => setFilters(prev => ({ ...prev, toDate: e.target.value, preset: 'CUSTOM' }))}
               />
             </div>
             <div className={styles.filterField}>
@@ -166,7 +210,7 @@ function StocktakeListPage() {
             </div>
           </div>
           <div className={styles.filterActions}>
-            <button className={`${styles.iconBtnAction} ${styles.reload}`} onClick={() => setFilters({ stocktakeCode: '', fromDate: '', status: '' })} title="Tải lại">
+            <button className={`${styles.iconBtnAction} ${styles.reload}`} onClick={() => setFilters(DEFAULT_FILTERS)} title="Tải lại">
               <i className="bi bi-arrow-clockwise"></i> Tải lại
             </button>
             <button className={`${styles.iconBtnAction} ${styles.excel}`} onClick={handleExport} title="Xuất ra file excel">

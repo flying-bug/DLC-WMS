@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import axiosClient from '../../../api/axiosClient';
+import { canViewPricing } from '../../../auth/session';
 import Modal from '../../../components/ui/Modal/Modal';
 import styles from './ProductDetailModal.module.css';
 
@@ -18,6 +19,7 @@ const yesNo = (value) => value ? 'Có' : 'Không';
 const ProductDetailModal = ({ product, onClose, onEdit }) => {
     const [variants, setVariants] = useState([]);
     const [loadingVariants, setLoadingVariants] = useState(false);
+    const showPricing = canViewPricing();
 
     useEffect(() => {
         let active = true;
@@ -84,12 +86,14 @@ const ProductDetailModal = ({ product, onClose, onEdit }) => {
                             <div className={styles.metrics}>
                                 <div>
                                     <span>Tồn kho</span>
-                                    <strong>{formatQuantity(product.stockQty)}</strong>
+                                    <strong>{formatQuantity(product.stockQty)} {product.unitName || ''}</strong>
                                 </div>
-                                <div>
-                                    <span>Giá bán</span>
-                                    <strong>{formatCurrency(product.salePrice)}</strong>
-                                </div>
+                                {showPricing && (
+                                    <div>
+                                        <span>Giá bán</span>
+                                        <strong>{formatCurrency(product.salePrice)}</strong>
+                                    </div>
+                                )}
                                 <div>
                                     <span>Bảo hành</span>
                                     <strong>{product.warrantyPeriod || (product.warrantyPeriodMonths ? `${product.warrantyPeriodMonths} tháng` : 'Không')}</strong>
@@ -104,13 +108,50 @@ const ProductDetailModal = ({ product, onClose, onEdit }) => {
                             <div><span>Mã sản phẩm</span><strong>{product.productCode || '-'}</strong></div>
                             <div><span>Danh mục</span><strong>{product.categoryName || '-'}</strong></div>
                             <div><span>Thương hiệu</span><strong>{product.brandName || '-'}</strong></div>
-                            <div><span>Đơn vị tính</span><strong>{product.unitName || '-'}</strong></div>
+                            <div><span>Đơn vị tính chính</span><strong>{product.unitName || '-'}</strong></div>
                             <div><span>Theo dõi serial</span><strong>{yesNo(product.trackSerial)}</strong></div>
                             <div><span>Theo dõi lô</span><strong>{yesNo(product.trackLot)}</strong></div>
                             <div><span>Tồn tối thiểu</span><strong>{formatQuantity(product.minStockQty)}</strong></div>
                             <div><span>Trạng thái giảm thuế</span><strong>{product.taxReductionStatus || '-'}</strong></div>
                         </div>
                     </section>
+
+                    {product.unitConversions && product.unitConversions.length > 0 && (
+                        <section className={styles.section}>
+                            <div className={styles.sectionHeading}>
+                                <h3>Đơn vị tính chuyển đổi</h3>
+                                <span>{product.unitConversions.length} ĐVT phụ</span>
+                            </div>
+                            <div className={styles.variantTableWrap}>
+                                <table className={styles.variantTable}>
+                                    <thead>
+                                        <tr>
+                                            <th>Đơn vị chuyển đổi</th>
+                                            <th>Phép tính</th>
+                                            <th>Tỷ lệ chuyển đổi</th>
+                                            <th>Quy đổi tương đương</th>
+                                            <th>Ghi chú</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {product.unitConversions.map((conv, idx) => (
+                                            <tr key={idx}>
+                                                <td style={{ fontWeight: 600 }}>{conv.unitName || '-'}</td>
+                                                <td>{conv.operator === 'DIVIDE' || conv.operator === '/' ? 'Chia (/)' : 'Nhân (*)'}</td>
+                                                <td>{conv.ratio}</td>
+                                                <td style={{ color: 'var(--color-primary)' }}>
+                                                    {conv.operator === 'DIVIDE' || conv.operator === '/'
+                                                        ? `1 ${conv.unitName} = 1/${conv.ratio} ${product.unitName}`
+                                                        : `1 ${conv.unitName} = ${conv.ratio} ${product.unitName}`}
+                                                </td>
+                                                <td>{conv.note || '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    )}
 
                     {product.description && (
                         <section className={styles.section}>
@@ -135,7 +176,7 @@ const ProductDetailModal = ({ product, onClose, onEdit }) => {
                                         <tr>
                                             <th>SKU</th>
                                             <th>Tên biến thể</th>
-                                            <th>Giá bán</th>
+                                            {showPricing && <th>Giá bán</th>}
                                             <th>Bảo hành</th>
                                             <th>Trạng thái</th>
                                         </tr>
@@ -145,7 +186,7 @@ const ProductDetailModal = ({ product, onClose, onEdit }) => {
                                             <tr key={variant.id}>
                                                 <td className={styles.code}>{variant.sku || '-'}</td>
                                                 <td>{variant.variantName || '-'}</td>
-                                                <td>{formatCurrency(variant.salePrice)}</td>
+                                                {showPricing && <td>{formatCurrency(variant.salePrice)}</td>}
                                                 <td>{variant.warrantyMonths ? `${variant.warrantyMonths} tháng` : 'Không'}</td>
                                                 <td>{variant.active === false ? 'Ngừng sử dụng' : 'Đang sử dụng'}</td>
                                             </tr>

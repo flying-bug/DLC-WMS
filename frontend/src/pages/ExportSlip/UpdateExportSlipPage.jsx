@@ -1,21 +1,25 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
 import AdminLayout from '../../components/layout/AdminLayout';
 import * as exportApi from '../../api/inventoryExportApi';
+import * as einvoiceApi from '../../api/einvoiceApi';
 import CustomerModal from '../Customer/components/CustomerModal';
 import Toast from '../../components/ui/Toast/Toast';
 import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrintModal';
+import IssueInvoiceModal from '../SalesOrder/components/IssueInvoiceModal';
+import EInvoicePreviewModal from '../EInvoice/components/EInvoicePreviewModal';
 import { printExportSlip } from '../../utils/printExportSlip';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
 import Select from 'react-select';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import styles from './UpdateExportSlipPage.module.css';
-
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import { focusField } from '../../utils/focusField';
+import { canViewPricing } from '../../auth/session';
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
 const pageContent = (payload) => payload?.content ?? payload ?? [];
@@ -31,8 +35,9 @@ const normalizeProductType = (value) =>
 
 const isServiceProduct = (item) => normalizeProductType(item?.productType) === 'dich vu';
 const isWarehouseProduct = (item) => {
+  if (!item) return false;
   const type = normalizeProductType(item?.productType);
-  return type === 'hang hoa' || type === 'thanh pham';
+  return type !== 'dich vu' && type !== 'service';
 };
 
 const filterWarehouseProducts = (items) => (items || []).filter(isWarehouseProduct);
@@ -94,9 +99,14 @@ const customSelectStyles = {
   })
 };
 
-const emptyLine = () => ({
+const emptyLine = (defaultWarehouseId = '') => ({
   localId: crypto.randomUUID(),
   variantId: '',
+  warehouseId: defaultWarehouseId,
+  unitId: '',
+  baseUnitId: '',
+  conversionRatio: 1,
+  conversionOperator: 'MULTIPLY',
   serialNumbers: [],
   scannedCode: '',
   quantity: 1,
@@ -108,6 +118,7 @@ function UpdateExportSlipPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
+  const showPricing = canViewPricing();
   const returnUrl = location.state?.returnUrl || null;
   const [loading, setLoading] = useState(true);
   const [warehouses, setWarehouses] = useState([]);
@@ -127,6 +138,11 @@ function UpdateExportSlipPage() {
   const [serialModalItemId, setSerialModalItemId] = useState(null);
   const [savedSlip, setSavedSlip] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [einvoice, setEinvoice] = useState(null);
+  const [soInvoice, setSoInvoice] = useState(null);
+  const [showIssueModal, setShowIssueModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [issuingInvoice, setIssuingInvoice] = useState(false);
   const [form, setForm] = useState({
     docCode: '',
     warehouseId: '',
@@ -148,51 +164,77 @@ function UpdateExportSlipPage() {
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
   const hideToast = () => setToast(prev => ({ ...prev, isVisible: false }));
 
-  useEffect(() => {
-    if (form.warehouseId) {
-      exportApi.getInventoryBalance({ warehouseId: form.warehouseId })
-        .then(res => setInventoryBalances(pageContent(unwrap(res))))
-        .catch(err => console.error('Failed to load balances', err));
-    }
-  }, [form.warehouseId]);
+  const loadAllInventoryBalances = () => {
+    exportApi.getInventoryBalance({ size: 10000 })
+      .then(res => setInventoryBalances(pageContent(unwrap(res))))
+      .catch(err => console.error('Lỗi khi tải số dư tồn kho', err));
+  };
 
-  const inventoryMap = useMemo(() => {
-    const map = new Map();
-    if (Array.isArray(inventoryBalances)) {
-      inventoryBalances.forEach(b => {
-        const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
-        const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
-        const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
-        const stock = Math.max(0, availableQuantity);
-        if (b.variantId) map.set(String(b.variantId), stock);
-        else if (b.itemId) map.set(String(b.itemId), stock);
+  useEffect(() => {
+    loadAllInventoryBalances();
+  }, []);
+
+  const handleApplyWarehouseToAllLines = (whId) => {
+    if (!whId) return;
+    setItems(prev => {
+      const mergedMap = new Map();
+      const result = [];
+      prev.forEach(item => {
+        if (!item.variantId) {
+          result.push({ ...item, warehouseId: String(whId), serialNumbers: [] });
+          return;
+        }
+        const key = String(item.variantId);
+        if (mergedMap.has(key)) {
+          const existing = mergedMap.get(key);
+          existing.quantity = Number(existing.quantity || 0) + (Number(item.quantity) || 1);
+        } else {
+          const newItem = { ...item, warehouseId: String(whId), serialNumbers: [] };
+          mergedMap.set(key, newItem);
+          result.push(newItem);
+        }
       });
+      return result;
+    });
+    showToast('info', 'Đã áp dụng kho cho tất cả các dòng sản phẩm và tự động gộp các dòng trùng');
+  };
+
+  const loadEInvoice = useCallback(async (soId) => {
+    if (!id) return;
+    try {
+      const res = await einvoiceApi.getEInvoiceByExportId(id);
+      setEinvoice(res.data?.data || null);
+    } catch {
+      setEinvoice(null);
     }
-    return map;
-  }, [inventoryBalances]);
-  const warehouseScopedProducts = useMemo(() => {
-    if (!form.warehouseId) return products;
-    const selectedIds = new Set(items.map(item => String(item.variantId || '')).filter(Boolean));
-    return products.filter(product => inventoryMap.has(String(product.id)) || selectedIds.has(String(product.id)));
-  }, [form.warehouseId, inventoryMap, items, products]);
+
+    if (soId) {
+      try {
+        const soRes = await einvoiceApi.getEInvoicesBySalesOrderId(soId);
+        const list = soRes.data?.data;
+        const invoices = Array.isArray(list) ? list : (list ? [list] : []);
+        const parentInv = invoices.find(i => !i.inventoryDocumentId);
+        setSoInvoice(parentInv || null);
+      } catch {
+        setSoInvoice(null);
+      }
+    }
+  }, [id]);
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       setError('');
       try {
-        const [detailRes, warehouseRes, productRes, customerRes, userRes] = await Promise.allSettled([
-          exportApi.getExportDetail(id),
+        const [warehouseRes, productRes, customerRes, userRes, slipRes] = await Promise.allSettled([
           exportApi.getWarehouses({ size: 100 }),
           exportApi.getProducts({ size: 1000 }),
           exportApi.getCustomers({ size: 1000 }),
           exportApi.getUsers({ size: 1000 }).catch(() => null),
+          exportApi.getExportDetail(id),
         ]);
 
-        let detail = null;
-        if (detailRes.status === 'fulfilled') {
-          detail = unwrap(detailRes.value);
-        }
+        const detail = slipRes.status === 'fulfilled' ? unwrap(slipRes.value) : null;
 
         if (warehouseRes.status === 'fulfilled') {
           setWarehouses(pageContent(unwrap(warehouseRes.value)));
@@ -210,7 +252,6 @@ function UpdateExportSlipPage() {
         if (detail) {
           const userList = userRes.status === 'fulfilled' ? pageContent(unwrap(userRes.value)) : [];
           setUsers(userList);
-          const salespersonUser = userList.find(u => String(u.id) === String(detail.salespersonId));
           const currentUserId = sessionStorage.getItem('userId') || sessionStorage.getItem('id');
           const salespersonIdToSet = detail.salespersonId ? String(detail.salespersonId) : (currentUserId ? String(currentUserId) : '');
 
@@ -236,6 +277,11 @@ function UpdateExportSlipPage() {
             localId: crypto.randomUUID(),
             id: line.id,
             variantId: line.variantId || '',
+            warehouseId: String(line.warehouseId || detail.warehouseId || ''),
+            unitId: line.unitId ? String(line.unitId) : '',
+            baseUnitId: line.baseUnitId ? String(line.baseUnitId) : '',
+            conversionRatio: line.conversionRatio != null ? Number(line.conversionRatio) : 1,
+            conversionOperator: line.conversionOperator || 'MULTIPLY',
             quantity: line.quantityOut || 1,
             price: line.unitPrice || 0,
             vatPercent: line.vatPercent ?? line.vatRate ?? 0,
@@ -244,6 +290,8 @@ function UpdateExportSlipPage() {
             serialNumbers: line.serialNumbers || [],
             scannedCode: line.serialNumber || line.productCode || '',
           })));
+          const parentSoId = detail.salesOrderId || (detail.referenceType === 'SALES_ORDER' ? detail.referenceId : null);
+          loadEInvoice(parentSoId);
         }
       } catch (err) {
         setError(err.response?.data?.userMessage || 'Không tải được phiếu xuất kho');
@@ -255,12 +303,80 @@ function UpdateExportSlipPage() {
     if (id) {
       loadData();
     }
-  }, [id]);
+  }, [id, loadEInvoice]);
+
+  const handleIssueEInvoice = async (formData) => {
+    setIssuingInvoice(true);
+    try {
+      const payload = {
+        salesOrderId: form.salesOrderId ? Number(form.salesOrderId) : undefined,
+        inventoryDocumentId: Number(id),
+        buyerName: formData.name,
+        buyerLegalName: formData.legalName,
+        buyerTaxCode: formData.taxCode,
+        buyerAddress: formData.address,
+        buyerPhone: formData.phone,
+        buyerEmail: formData.email,
+        paymentMethod: 'TM/CK',
+      };
+      await einvoiceApi.issueEInvoice(payload);
+      showToast('success', 'Phát hành Hóa đơn điện tử thành công!');
+      setShowIssueModal(false);
+      loadEInvoice();
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Phát hành HĐĐT thất bại');
+    } finally {
+      setIssuingInvoice(false);
+    }
+  };
 
   const selectedCustomer = useMemo(() => customers.find(c => String(c.id) === String(form.partnerId)), [customers, form.partnerId]);
 
   const productById = useMemo(() => new Map(products.map(product => [String(product.id), product])), [products]);
   const userById = useMemo(() => new Map(users.map(user => [String(user.id), user])), [users]);
+  const inventoryMap = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(inventoryBalances)) {
+      inventoryBalances.forEach(b => {
+        const totalQuantity = Number(b.totalQuantity ?? b.quantityOnHand ?? 0);
+        const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
+        const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
+        const stock = Math.max(0, availableQuantity);
+        const vId = b.variantId || b.itemId;
+        const wId = b.warehouseId;
+        if (vId && wId) {
+          map.set(`${vId}_${wId}`, stock);
+        }
+        if (vId) {
+          const currentTotal = map.get(String(vId)) || 0;
+          map.set(String(vId), currentTotal + stock);
+        }
+      });
+    }
+    return map;
+  }, [inventoryBalances]);
+
+  const getStockForLine = (variantId, warehouseId, item) => {
+    if (!variantId) return 0;
+    const effectiveWh = warehouseId || form.warehouseId;
+    let baseStock = 0;
+    if (effectiveWh) {
+      baseStock = inventoryMap.get(`${variantId}_${effectiveWh}`) || 0;
+    } else {
+      baseStock = inventoryMap.get(String(variantId)) || 0;
+    }
+
+    // Nếu phiếu xuất này gắn với Đơn bán hàng (SO), cộng bù số lượng cố định đã giữ chỗ (reservedQuantity)
+    const isSoExport = Boolean(form.salesOrderId || form.referenceType === 'SALES_ORDER' || form.referenceType === 'SO');
+    if (isSoExport && item && item.reservedQuantity !== undefined && item.reservedQuantity !== null) {
+      return baseStock + Number(item.reservedQuantity);
+    }
+    return baseStock;
+  };
+
+  const warehouseScopedProducts = useMemo(() => {
+    return products;
+  }, [products]);
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
   const totalVat = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vatPercent || 0) / 100), 0);
@@ -273,6 +389,9 @@ function UpdateExportSlipPage() {
   const isFormValid = Boolean(
     form.warehouseId &&
     form.docDate &&
+    (form.issuePurpose === 'SALES' ? (form.partnerId && form.referenceId)
+      : form.issuePurpose === 'ASSEMBLY' ? form.referenceId
+        : true) &&
     items.length &&
     items.every(isLineValid)
   );
@@ -309,23 +428,48 @@ function UpdateExportSlipPage() {
         } : item);
       }
       if (field === 'variantId') {
-        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value) && !(item.serialNumbers && item.serialNumbers.length > 0));
+        if (!value) {
+          return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], price: 0, warrantyMonths: 0, unitId: '', baseUnitId: '', conversionRatio: 1, conversionOperator: 'MULTIPLY' } : item);
+        }
+        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value));
         if (existingIndex >= 0) {
+          const currentItem = prev.find(item => item.localId === localId);
+          const addedQty = Number(currentItem?.quantity) || 1;
           const newItems = [...prev];
           newItems[existingIndex] = {
             ...newItems[existingIndex],
-            quantity: Number(newItems[existingIndex].quantity || 0) + 1
+            quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
           };
+          showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động cộng dồn số lượng.');
           return newItems.filter(item => item.localId !== localId);
         }
         const selectedProduct = products.find(p => String(p.id) === String(value));
         return prev.map(item => item.localId === localId ? {
           ...item,
-          variantId: value,
+          variantId: String(value),
           serialNumbers: [],
+          unitId: selectedProduct?.unitId ? String(selectedProduct.unitId) : '',
+          baseUnitId: selectedProduct?.unitId ? String(selectedProduct.unitId) : '',
+          conversionRatio: 1,
+          conversionOperator: 'MULTIPLY',
           price: selectedProduct ? Number(selectedProduct.salePrice || 0) : 0,
           warrantyMonths: selectedProduct ? Number(selectedProduct.warrantyMonths || 0) : 0
         } : item);
+      }
+      if (field === 'unitId') {
+        return prev.map(item => {
+          if (item.localId !== localId) return item;
+          const product = products.find(p => String(p.id) === String(item.variantId));
+          if (!product) return { ...item, unitId: value };
+          if (String(value) === String(product.unitId)) {
+            return { ...item, unitId: value, conversionRatio: 1, conversionOperator: 'MULTIPLY' };
+          }
+          const conv = (product.unitConversions || []).find(c => String(c.unitId) === String(value));
+          if (conv) {
+            return { ...item, unitId: value, conversionRatio: Number(conv.ratio) || 1, conversionOperator: conv.operator || 'MULTIPLY' };
+          }
+          return { ...item, unitId: value, conversionRatio: 1, conversionOperator: 'MULTIPLY' };
+        });
       }
       return prev.map(item => item.localId === localId ? { ...item, [field]: value } : item);
     });
@@ -394,7 +538,7 @@ function UpdateExportSlipPage() {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, emptyLine()]);
+    setItems(prev => [...prev, emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''))]);
   };
 
   const ensureScannedProduct = (scanResult) => {
@@ -431,7 +575,7 @@ function UpdateExportSlipPage() {
     if (!ensureScannedProduct(scanResult)) return;
 
     setItems(prev => {
-      const existingIndex = prev.findIndex(item => String(item.variantId) === String(scanResult.variantId));
+      const existingIndex = prev.findIndex(item => String(item.variantId) === String(scanResult.variantId) && String(item.warehouseId || form.warehouseId) === String(form.warehouseId));
       const serial = scanResult.serialNumber;
 
       if (existingIndex >= 0) {
@@ -458,8 +602,9 @@ function UpdateExportSlipPage() {
       }
 
       const newLine = {
-        ...emptyLine(),
+        ...emptyLine(form.warehouseId),
         variantId: scanResult.variantId,
+        warehouseId: String(form.warehouseId),
         scannedCode: scanResult.code,
         quantity: 1,
         price: scanResult.salePrice || 0,
@@ -498,70 +643,127 @@ function UpdateExportSlipPage() {
   };
 
   const removeItem = (localId) => {
-    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(), isNew: false }]);
+    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(form.warehouseId), isNew: false }]);
   };
 
-  const buildPayload = (status) => ({
-    docCode: form.docCode || undefined,
-    warehouseId: Number(form.warehouseId),
-    partnerId: form.partnerId ? Number(form.partnerId) : null,
-    salespersonId: (!isNaN(Number(form.salespersonId)) && String(form.salespersonId).trim() !== '') ? Number(form.salespersonId) : null,
-    customerAddress: form.customerAddress,
-    recipientName: form.receiverName || customers.find(s => String(s.id) === String(form.partnerId))?.name || '',
-    receiverPhone: form.receiverPhone || selectedCustomer?.phone || '',
-    recipientAddress: form.receiverAddress || form.customerAddress || customers.find(s => String(s.id) === String(form.partnerId))?.address || '',
-    docDate: form.docDate,
-    status,
-    note: form.note,
-    createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
-    lines: items.map(item => ({
-      id: item.id || undefined,
-      variantId: Number(item.variantId),
-      quantityIn: 0,
-      quantityOut: Number(item.quantity),
-      unitCost: 0,
-      unitPrice: Number(item.price),
-      vatRate: Number(item.vatPercent || 0),
-      vatPercent: Number(item.vatPercent || 0),
-      warrantyMonths: Number(item.warrantyMonths || 0),
-      serialNumbers: item.serialNumbers || [],
-      note: item.note,
-    })),
-    salesOrderId: form.salesOrderId || undefined,
-    issuePurpose: form.issuePurpose || undefined,
-    referenceType: form.referenceType || undefined,
-    referenceId: form.referenceId || undefined,
-  });
+  const buildPayload = (status) => {
+    return {
+      docCode: form.docCode || undefined,
+      warehouseId: Number(form.warehouseId),
+      partnerId: form.partnerId ? Number(form.partnerId) : null,
+      salespersonId: (!isNaN(Number(form.salespersonId)) && String(form.salespersonId).trim() !== '') ? Number(form.salespersonId) : null,
+      customerAddress: form.customerAddress,
+      recipientName: form.receiverName || customers.find(s => String(s.id) === String(form.partnerId))?.name || '',
+      receiverPhone: form.receiverPhone || selectedCustomer?.phone || '',
+      recipientAddress: form.receiverAddress || form.customerAddress || customers.find(s => String(s.id) === String(form.partnerId))?.address || '',
+      docDate: form.docDate,
+      status,
+      note: form.note,
+      createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
+      lines: items.map(item => {
+        const product = productById.get(String(item.variantId));
+        const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
+        const op = item.conversionOperator || 'MULTIPLY';
+        const qty = Number(item.quantity || 0);
+        const baseQty = (op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio);
+        return {
+          id: item.id || undefined,
+          variantId: Number(item.variantId),
+          warehouseId: Number(form.warehouseId),
+          quantityIn: 0,
+          quantityOut: qty,
+          unitId: item.unitId ? Number(item.unitId) : (product ? Number(product.unitId) : null),
+          baseUnitId: item.baseUnitId ? Number(item.baseUnitId) : (product ? Number(product.unitId) : null),
+          conversionOperator: op,
+          conversionRatio: ratio,
+          baseQuantity: baseQty,
+          unitCost: 0,
+          unitPrice: Number(item.price || 0),
+          vatRate: Number(item.vatPercent || 0),
+          vatPercent: Number(item.vatPercent || 0),
+          warrantyMonths: Number(item.warrantyMonths || 0),
+          serialNumbers: item.serialNumbers || [],
+          note: item.note,
+        };
+      }),
+      salesOrderId: form.salesOrderId || undefined,
+      issuePurpose: form.issuePurpose || undefined,
+      referenceType: form.referenceType || undefined,
+      referenceId: form.referenceId || undefined,
+    };
+  };
 
   const submit = async (status, shouldPost = false) => {
-    if (!isFormValid) {
-      if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho xuất.');
-      if (form.issuePurpose === 'SALES' && !form.referenceId) return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
-      if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày ghi nhận.');
-      const invalidVat = items.some(item => {
-        const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-        return isNaN(vat) || vat < 0 || vat > 10;
-      });
-      if (invalidVat) return showToast('error', 'Thuế VAT phải nằm trong khoảng từ 0% đến 10%.');
-      if (!items.length || !items.every(isLineValid)) {
-        return showToast('error', 'Vui lòng chọn hàng hóa và nhập số lượng > 0.');
+    if (!form.warehouseId) {
+      focusField('export-warehouseId');
+      return showToast('error', 'Vui lòng chọn kho xuất.');
+    }
+    if (form.issuePurpose === 'SALES' && !form.partnerId) {
+      focusField('export-partnerId');
+      return showToast('error', 'Vui lòng chọn khách hàng.');
+    }
+    if (form.issuePurpose === 'SALES' && !form.referenceId) {
+      return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
+    }
+    if (!form.docDate) {
+      focusField('export-docDate');
+      return showToast('error', 'Vui lòng chọn ngày lập phiếu.');
+    }
+
+    if (!items.length) {
+      return showToast('error', 'Vui lòng thêm ít nhất 1 dòng hàng hóa.');
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item.variantId) {
+        focusField(`export-line-product-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Vui lòng chọn hàng hóa.`);
       }
-      return showToast('error', 'Vui lòng điền đầy đủ thông tin bắt buộc.');
+      const qty = Number(item.quantity);
+      if (!Number.isInteger(qty) || qty <= 0) {
+        focusField(`export-line-qty-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Số lượng phải là số nguyên lớn hơn 0.`);
+      }
+      const product = productById.get(String(item.variantId));
+      if (product?.trackSerial) {
+        const serialCount = item.serialNumbers ? item.serialNumbers.length : 0;
+        if (serialCount !== qty) {
+          setSerialModalItemId(item.localId);
+          return showToast('error', `Dòng ${i + 1}: Vui lòng quét đủ ${qty} mã serial (hiện có ${serialCount}).`);
+        }
+      }
+      const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
+      if (isNaN(vat) || vat < 0 || vat > 10) {
+        focusField(`export-line-vat-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Thuế VAT không hợp lệ.`);
+      }
+      if (product) {
+        const balance = getStockForLine(product.id, item.warehouseId || form.warehouseId, item);
+        if (Number(item.quantity) > balance) {
+          focusField(`export-line-qty-${i}`);
+          return showToast('error', `Dòng ${i + 1}: Số lượng xuất (${item.quantity}) vượt quá tồn khả dụng (${balance}) tại kho đã chọn.`);
+        }
+      }
     }
     setSaving(true);
     try {
-      await exportApi.updateExportSlip(id, buildPayload(status));
+      const response = await exportApi.updateExportSlip(id, buildPayload(status));
+      const updated = unwrap(response);
       if (shouldPost) {
         await exportApi.postExportSlip(id);
       }
 
       const fullSlipData = {
-        id,
+        ...updated,
         docCode: form.docCode,
         docDate: form.docDate,
         status: shouldPost ? 'POSTED' : status,
+        warehouseId: form.warehouseId,
         lines: items.map(item => ({
           ...item,
+          warehouseId: Number(item.warehouseId),
+          warehouseName: warehouses.find(w => String(w.id) === String(item.warehouseId))?.name,
           quantityOut: item.quantity,
           unitPrice: item.price,
           variantName: productById.get(String(item.variantId))?.variantName || productById.get(String(item.variantId))?.name,
@@ -584,12 +786,86 @@ function UpdateExportSlipPage() {
     }
   };
 
+  const handlePrint = (printMode = 'SUMMARY') => {
+    if (!savedSlip) return;
+    printExportSlip(savedSlip, {
+      customer: customers.find(c => String(c.id) === String(savedSlip.partnerId || form.partnerId)),
+      warehouseById: new Map(warehouses.map(w => [w.id, w])),
+      productById,
+      userById,
+      printMode,
+    });
+  };
+
   return (
     <AdminLayout>
-      <div className={styles.pageHeader}>
+      <div className={styles.pageHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <a href="#" className={styles.backLink} onClick={(e) => { e.preventDefault(); returnUrl ? navigate(returnUrl) : navigate('/export-slips'); }}>
           <i className="bi bi-arrow-left"></i> Cập nhật phiếu xuất kho {form.docCode ? form.docCode : ''}
         </a>
+
+        {form.status === 'POSTED' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {einvoice ? (
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(true)}
+                style={{
+                  padding: '6px 14px', borderRadius: 6,
+                  border: '1px solid #16a34a', color: '#16a34a', background: '#f0fdf4',
+                  fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 6
+                }}
+              >
+                <i className="bi bi-file-earmark-check-fill" style={{ color: '#16a34a' }} />
+                Xem HĐĐT ({einvoice.invoiceNumber || 'Đã cấp'})
+              </button>
+            ) : soInvoice ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe',
+                    padding: '6px 12px', borderRadius: 6, fontSize: 13, fontWeight: 600
+                  }}
+                  title="Đơn bán hàng gốc đã xuất HĐĐT gộp toàn bộ đơn"
+                >
+                  <i className="bi bi-file-earmark-lock-fill" style={{ color: '#2563eb' }} />
+                  Đã xuất HĐĐT theo đơn hàng {form.referenceCode || ''} ({soInvoice.invoiceNumber || 'Đã cấp'})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEinvoice(soInvoice);
+                    setShowPreviewModal(true);
+                  }}
+                  style={{
+                    padding: '6px 12px', borderRadius: 6,
+                    border: '1px solid #2563eb', color: '#2563eb', background: '#fff',
+                    fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 6
+                  }}
+                >
+                  <i className="bi bi-receipt" /> Xem HĐ
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowIssueModal(true)}
+                style={{
+                  padding: '6px 14px', borderRadius: 6,
+                  background: '#059669', color: '#fff', border: 'none',
+                  fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                }}
+              >
+                <i className="bi bi-file-earmark-plus" /> Xuất Hóa Đơn Điện Tử (NĐ 123)
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className={styles.pageBody}>
@@ -613,6 +889,7 @@ function UpdateExportSlipPage() {
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <div style={{ flex: 1 }}>
                           <Select
+                            inputId="export-partnerId"
                             options={customers.map(c => ({ value: c.id, label: c.code || `KH#${c.id}` }))}
                             value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).code || `KH#${form.partnerId}` } : null}
                             onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
@@ -627,31 +904,29 @@ function UpdateExportSlipPage() {
                       </div>
                     </div>
                     <div className="misa-form-group" style={{ flex: '0 0 62%' }}>
-                      <label className="misa-label">Tên Khách hàng</label>
-                      <Select
-                        options={customers.map(c => ({ value: c.id, label: c.name || '' }))}
-                        value={customers.find(c => String(c.id) === String(form.partnerId)) ? { value: form.partnerId, label: customers.find(c => String(c.id) === String(form.partnerId)).name || '' } : null}
-                        onChange={(selected) => handleFormChange('partnerId', selected ? selected.value : '')}
-                        placeholder="Chọn Tên KH..."
-                        isClearable
-                        styles={customSelectStyles}
-                      />
+                      <label className="misa-label">Tên khách hàng</label>
+                      <input type="text" className="misa-input" readOnly value={form.partnerId ? (customers.find(s => String(s.id) === String(form.partnerId))?.name || '') : ''} style={{ backgroundColor: '#f9fafb' }} placeholder="Tên khách hàng" />
                     </div>
                   </div>
 
                   <div className="misa-form-group" style={{ marginTop: '12px' }}>
-                    <label className="misa-label">Địa chỉ khách hàng</label>
-                    <input type="text" className="misa-input" readOnly value={customers.find(s => String(s.id) === String(form.partnerId))?.address || ''} style={{ backgroundColor: '#f3f4f6' }} placeholder="Tự động điền theo Mã KH" />
+                    <label className="misa-label">Địa chỉ</label>
+                    <input type="text" className="misa-input" value={form.customerAddress || ''} onChange={(event) => handleFormChange('customerAddress', event.target.value)} placeholder="Nhập địa chỉ giao hàng (có thể tuỳ chỉnh)..." />
                   </div>
 
                   <div className="misa-form-row" style={{ marginTop: '12px' }}>
                     <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                       <label className="misa-label">Kho xuất <span className="required">*</span></label>
                       <Select
+                        inputId="export-warehouseId"
                         options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
                         value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
-                        onChange={(selected) => handleFormChange('warehouseId', selected ? selected.value : '')}
-                        placeholder="Chọn kho"
+                        onChange={(selected) => {
+                          const newWh = selected ? selected.value : '';
+                          handleFormChange('warehouseId', newWh);
+                          setItems(prev => prev.map(it => ({ ...it, warehouseId: newWh })));
+                        }}
+                        placeholder="Chọn kho xuất"
                         isClearable
                         styles={customSelectStyles}
                       />
@@ -666,6 +941,20 @@ function UpdateExportSlipPage() {
                         style={{ backgroundColor: '#f3f4f6' }}
                       />
                     </div>
+                  </div>
+
+                  <div className="misa-form-row" style={{ marginTop: '12px' }}>
+                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
+                      <label className="misa-label">Người nhận hàng</label>
+                      <input
+                        type="text"
+                        className="misa-input"
+                        value={form.receiverName || ''}
+                        onChange={(e) => handleFormChange('receiverName', e.target.value)}
+                        placeholder="Nhập tên người nhận hàng"
+                      />
+                    </div>
+                    <div className="misa-form-group" style={{ flex: '0 0 50%' }}></div>
                   </div>
 
                   <div className="misa-form-group" style={{ marginTop: '12px' }}>
@@ -706,7 +995,6 @@ function UpdateExportSlipPage() {
                     )}
                   </div>
 
-
                 </div>
               </div>
 
@@ -717,7 +1005,7 @@ function UpdateExportSlipPage() {
                 <div className={styles.cardBody}>
                   <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                     <label className="misa-label">Ngày ghi nhận <span className="required">*</span></label>
-                    <input type="date" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
+                    <input id="export-docDate" type="date" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
                   </div>
 
                   <div className="misa-form-group" style={{ marginBottom: '16px' }}>
@@ -760,28 +1048,39 @@ function UpdateExportSlipPage() {
                 <table className={styles.table}>
                   <thead>
                     <tr>
-                      <th style={{ width: '50px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                      <th style={{ width: '12%' }}>Mã hàng</th>
-                      <th style={{ width: '22%' }}>Tên hàng</th>
-                      <th style={{ width: '7%' }}>ĐVT</th>
-                      <th style={{ width: '8%' }} className={styles.textCenter}>Tồn khả dụng</th>
-                      <th style={{ width: '8%' }} className={styles.textRight}>SL</th>
-                      <th style={{ width: '10%', textAlign: 'center' }}>Serial</th>
-                      <th style={{ width: '8%', textAlign: 'center' }}>BH (T)</th>
-                      <th style={{ width: '11%' }} className={styles.textRight}>Đơn giá</th>
-                      <th style={{ width: '11%' }} className={styles.textRight}>Thành tiền</th>
-                      <th style={{ width: '8%' }} className={styles.textRight}>% VAT</th>
+                      <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
+                      <th style={{ minWidth: '110px', width: '12%' }}>Mã hàng</th>
+                      <th style={{ minWidth: '160px', width: '18%' }}>Tên hàng</th>
+                      <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                      <th style={{ minWidth: '75px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
+                      <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
+                      <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>
+                      <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>
+                      <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>
+                      <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>
+                      <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                      <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                      {showPricing && <th style={{ minWidth: '90px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>}
+                      {showPricing && <th style={{ minWidth: '90px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>}
+                      {showPricing && <th style={{ minWidth: '60px', width: '5%', whiteSpace: 'nowrap' }} className={styles.textRight}>% VAT</th>}
                       <th style={{ width: '40px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((item, index) => {
                       const product = productById.get(String(item.variantId));
+                      const baseUnitName = product?.unitName || '-';
+                      const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
+                      const op = item.conversionOperator || 'MULTIPLY';
+                      const qty = Number(item.quantity || 0);
+                      const baseQty = (op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio);
+                      const lineAmount = qty * Number(item.price || 0);
                       return (
                         <tr key={item.localId}>
                           <td className={styles.textCenter}>{index + 1}</td>
                           <td>
                             <ProductGridSelect
+                              id={`export-line-product-${index}`}
                               products={warehouseScopedProducts}
                               inventoryMap={inventoryMap}
                               value={item.variantId}
@@ -803,15 +1102,32 @@ function UpdateExportSlipPage() {
                             />
                           </td>
                           <td>
-                            {product?.unitName || ''}
-                            {item.serialNumberId && <div className={styles.serialTag}>{item.scannedCode}</div>}
+                            <select
+                              className="misa-input"
+                              style={{ height: '32px', padding: '0 4px', fontSize: '12px', minWidth: '80px' }}
+                              value={item.unitId || (product?.unitId ? String(product.unitId) : '')}
+                              onChange={(e) => handleItemChange(item.localId, 'unitId', e.target.value)}
+                              disabled={!product}
+                            >
+                              {product?.unitId && (
+                                <option value={product.unitId}>{product.unitName} (Chính)</option>
+                              )}
+                              {product?.unitConversions?.map(conv => (
+                                <option key={conv.unitId} value={conv.unitId}>{conv.unitName}</option>
+                              ))}
+                              {!product?.unitId && <option value="">-</option>}
+                            </select>
                           </td>
                           <td className={styles.textCenter} style={{ fontWeight: '600', color: '#0052cc' }}>
-                            {product ? (inventoryMap.get(String(product.id)) || 0) : ''}
+                            {product ? getStockForLine(product.id, item.warehouseId || form.warehouseId, item) : ''}
                           </td>
                           <td className={styles.textRight}>
-                            <input type="number" min="0" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
+                            <input id={`export-line-qty-${index}`} type="number" min="0" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
                           </td>
+                          <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
+                          <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
+                          <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: '#2563eb' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+                          <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: '#059669' }}>{Number(baseQty.toFixed(4))}</td>
                           <td align="center">
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
                               {product?.trackSerial && (
@@ -841,15 +1157,21 @@ function UpdateExportSlipPage() {
                             </div>
                           </td>
                           <td className={styles.textCenter}>
-                            <input type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '60px', margin: '0 auto', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(event) => handleItemChange(item.localId, 'warrantyMonths', event.target.value)} />
+                            <input id={`export-line-warranty-${index}`} type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '60px', margin: '0 auto', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(event) => handleItemChange(item.localId, 'warrantyMonths', event.target.value)} />
                           </td>
-                          <td className={styles.textRight}>
-                            <input type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} />
-                          </td>
-                          <td className={`${styles.textRight} ${styles.textBlue}`}>{money(Number(item.quantity || 0) * Number(item.price || 0))}</td>
-                          <td className={styles.textRight}>
-                            <input type="number" min="0" max="10" step="any" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '65px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(event) => handleItemChange(item.localId, 'vatPercent', event.target.value)} />
-                          </td>
+                          {showPricing && (
+                            <td className={styles.textRight}>
+                              <input id={`export-line-price-${index}`} type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} />
+                            </td>
+                          )}
+                          {showPricing && (
+                            <td className={`${styles.textRight} ${styles.textBlue}`}>{money(lineAmount)}</td>
+                          )}
+                          {showPricing && (
+                            <td className={styles.textRight}>
+                              <input id={`export-line-vat-${index}`} type="number" min="0" max="10" step="any" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '65px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(event) => handleItemChange(item.localId, 'vatPercent', event.target.value)} />
+                            </td>
+                          )}
                           <td className={styles.textCenter}>
                             <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)}><i className="bi bi-trash"></i></button>
                           </td>
@@ -866,18 +1188,22 @@ function UpdateExportSlipPage() {
                     <span>Tổng số lượng:</span>
                     <span>{money(totalQuantity)}</span>
                   </div>
-                  <div className={styles.summaryRow}>
-                    <span>Tiền hàng:</span>
-                    <span>{money(totalPrice)}</span>
-                  </div>
-                  <div className={styles.summaryRow}>
-                    <span>Tiền thuế VAT:</span>
-                    <span>{money(totalVat)}</span>
-                  </div>
-                  <div className={styles.summaryTotal}>
-                    <span>Tổng cộng thanh toán:</span>
-                    <span className={styles.totalValue}>{money(grandTotal)}</span>
-                  </div>
+                  {showPricing && (
+                    <>
+                      <div className={styles.summaryRow}>
+                        <span>Tiền hàng:</span>
+                        <span>{money(totalPrice)}</span>
+                      </div>
+                      <div className={styles.summaryRow}>
+                        <span>Tiền thuế VAT:</span>
+                        <span>{money(totalVat)}</span>
+                      </div>
+                      <div className={styles.summaryTotal}>
+                        <span>Tổng cộng thanh toán:</span>
+                        <span className={styles.totalValue}>{money(grandTotal)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className={styles.tableActions}>
@@ -948,13 +1274,13 @@ function UpdateExportSlipPage() {
           targetQuantity={Number(selectedSerialItem.quantity || 0)}
           initialSerials={selectedSerialItem.serialNumbers || []}
           mode="export"
-          warehouseId={form.warehouseId}
+          warehouseId={selectedSerialItem.warehouseId || form.warehouseId}
           variantId={selectedSerialProduct.id}
           onValidateSerial={async (serialValue) => {
             try {
               const response = await exportApi.resolveScan({
                 code: serialValue,
-                warehouseId: form.warehouseId,
+                warehouseId: selectedSerialItem.warehouseId || form.warehouseId,
               });
               const scanResult = unwrap(response);
               if (!scanResult.serialNumber) {
@@ -970,23 +1296,46 @@ function UpdateExportSlipPage() {
           }}
         />
       )}
+      {/* ── Modal Phát Hành Hóa Đơn Điện Tử ── */}
+      <IssueInvoiceModal
+        isOpen={showIssueModal}
+        onClose={() => setShowIssueModal(false)}
+        exportDoc={{
+          id: Number(id),
+          docCode: form.docCode,
+          partnerId: form.partnerId,
+          partnerName: form.customerName || customers.find(c => String(c.id) === String(form.partnerId))?.name,
+          partnerTaxCode: selectedCustomer?.taxCode || '',
+          partnerAddress: form.customerAddress || selectedCustomer?.address || '',
+          partnerPhone: form.receiverPhone || selectedCustomer?.phone || '',
+          partnerEmail: selectedCustomer?.email || '',
+          salesOrderId: form.salesOrderId,
+          lines: items.map(item => ({
+            ...item,
+            quantityOut: item.quantity,
+            unitPrice: item.price,
+            vatRate: item.vatPercent,
+            serialNumbersText: item.serialNumbers?.join(', '),
+          })),
+        }}
+        onConfirm={handleIssueEInvoice}
+        loading={issuingInvoice}
+      />
+
+      {/* ── Modal Xem Hóa Đơn Điện Tử ── */}
+      <EInvoicePreviewModal
+        invoice={einvoice}
+        isOpen={showPreviewModal}
+        onClose={() => setShowPreviewModal(false)}
+      />
+
       <SuccessPrintModal
         isOpen={showSuccessModal}
         title={savedSlip?.status === 'POSTED' || savedSlip?.statusCode === 'POSTED' ? 'Ghi sổ phiếu xuất kho thành công!' : 'Cập nhật phiếu xuất kho thành công!'}
-        message="Phiếu xuất kho đã được lưu và cập nhật thành công. Bạn có thể in phiếu ngay bây giờ."
+        message="Phiếu xuất kho đã được lưu và cập nhật thành công. Bạn có thể chọn cách in phiếu dưới đây."
         docCode={savedSlip?.docCode || form.docCode}
-        printBtnText="In phiếu xuất kho"
-        onPrint={() => {
-          const customer = customers.find(c => String(c.id) === String(savedSlip?.partnerId || form.partnerId)) || {};
-          const warehouseName = warehouses.find(w => String(w.id) === String(savedSlip?.warehouseId || form.warehouseId))?.name || '';
-          printExportSlip(savedSlip || {}, {
-            customer,
-            warehouseName,
-            productById,
-            userById,
-            isImport: false
-          });
-        }}
+        onPrintSummary={() => handlePrint('SUMMARY')}
+        onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
         onViewList={() => navigate('/export-slips')}
         onClose={() => navigate('/export-slips')}
       />

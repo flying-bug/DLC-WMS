@@ -31,10 +31,15 @@ public class ProductVariantResponse {
     private String variantName;
     private BigDecimal costPrice;
     private BigDecimal salePrice;
+    private BigDecimal vatRate;
     private String manufacturerPartNumber;
     private String specsJson;
+    private String trackingMode;
+    private Boolean trackLot;
+    private BigDecimal minStockQty;
     private Boolean active;
     private Integer warrantyMonths;
+    private java.util.List<ProductUnitConversionResponse> unitConversions;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

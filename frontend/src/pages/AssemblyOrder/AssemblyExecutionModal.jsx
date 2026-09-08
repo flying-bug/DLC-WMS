@@ -6,6 +6,8 @@ import { resolveScan, resolveBarcode } from '../../api/inventoryExportApi';
 import { executeAssemblyOrder } from '../../api/assemblyOrderApi';
 import { getAvailableSerials, checkSerialExists } from '../../api/warehouseApi';
 
+const generateNonSerialId = (identifier) => `SKU-${identifier}-${Date.now()}`;
+
 const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
     const sameVariant = (a, b) => String(a) === String(b);
     const [scannedInput, setScannedInput] = useState('');
@@ -160,7 +162,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
         if (isUsed) { showToast('error', `Mã "${code}" đã được dùng cho bộ khác!`); return false; }
 
         try {
-            const res = await checkSerialExists(code);
+            const res = await checkSerialExists(code, order.targetVariantId);
             const exists = res.data?.data === true;
             if (order.orderType === 'ASSEMBLY' && exists) {
                 showToast('error', `Serial thành phẩm "${code}" đã tồn tại trong hệ thống.`);
@@ -220,7 +222,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
 
             addComponentSerial(
                 req.variantId,
-                serial || `SKU-${variantId}-${Date.now()}`,
+                serial || generateNonSerialId(variantId),
                 productName || req.name
             );
         } catch (error) {
@@ -503,7 +505,7 @@ const AssemblyExecutionModal = ({ visible, onCancel, order, onSuccess }) => {
                                                             style={{ padding: '4px 12px', fontSize: '12px', backgroundColor: 'var(--color-primary, #0075c0)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                addComponentSerial(req.variantId, `SKU-${req.sku}-${Date.now()}`, req.name);
+                                                                addComponentSerial(req.variantId, generateNonSerialId(req.sku), req.name);
                                                             }}
                                                         >
                                                             Xác nhận dùng

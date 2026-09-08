@@ -12,18 +12,20 @@
     outline: none;
     white-space: nowrap;
     user-select: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    box-shadow: none;
 }
 
 /* Sizes */
 .sm {
-    padding: 6px 12px;
+    padding: 4px 10px;
     font-size: var(--font-size-caption, 12px);
-    min-height: 32px;
+    min-height: var(--height-control-sm, 32px);
 }
 
 .md {
@@ -35,7 +37,7 @@
 .lg {
     padding: 10px 20px;
     font-size: var(--font-size-card-title, 16px);
-    min-height: 44px;
+    min-height: var(--height-control-lg, 44px);
 }
 
 .fullWidth {
@@ -44,53 +46,93 @@
 
 /* Variants */
 .primary {
-    background-color: var(--color-primary);
-    color: var(--color-white);
-    border-color: var(--color-primary);
+    background-color: var(--wms-primary, var(--color-primary));
+    color: #ffffff;
+    border-color: var(--wms-primary, var(--color-primary));
 }
 
 .primary:hover:not(:disabled) {
-    background-color: var(--color-primary-hover);
-    border-color: var(--color-primary-hover);
+    background-color: var(--wms-primary-hover, var(--color-primary-hover));
+    border-color: var(--wms-primary-hover, var(--color-primary-hover));
+}
+
+/* WMS Voucher Draft Button */
+.draft {
+    background-color: var(--color-surface, #ffffff);
+    color: var(--wms-primary, var(--color-primary));
+    border-color: var(--wms-primary, var(--color-primary));
+}
+
+.draft:hover:not(:disabled) {
+    background-color: var(--wms-primary-soft, var(--color-primary-soft));
+}
+
+/* WMS Voucher Post / Ghi Sổ Button */
+.post,
+.success {
+    background-color: var(--wms-success, var(--color-success-action, #059669));
+    color: #ffffff;
+    border-color: var(--wms-success, var(--color-success-action, #059669));
+}
+
+.post:hover:not(:disabled),
+.success:hover:not(:disabled) {
+    background-color: var(--wms-success-hover, #047857);
+    border-color: var(--wms-success-hover, #047857);
+}
+
+.excel {
+    background-color: var(--color-excel, #107c41);
+    color: #ffffff;
+    border-color: var(--color-excel, #107c41);
+}
+
+.excel:hover:not(:disabled) {
+    background-color: #0b5c30;
+    border-color: #0b5c30;
 }
 
 .secondary {
-    background-color: var(--color-bg-soft);
-    color: var(--color-text-strong);
-    border-color: var(--color-border);
+    background-color: var(--color-bg-soft, #f8fafc);
+    color: var(--color-text-strong, #1e293b);
+    border-color: var(--color-border, #e2e8f0);
 }
 
 .secondary:hover:not(:disabled) {
-    background-color: var(--color-bg-control-hover);
+    background-color: var(--color-bg-control-hover, #f1f5f9);
+    border-color: var(--color-border-strong, #cbd5e1);
 }
 
 .outline {
     background-color: transparent;
-    color: var(--color-primary);
-    border-color: var(--color-primary);
+    color: var(--wms-primary, var(--color-primary));
+    border-color: var(--wms-primary, var(--color-primary));
 }
 
 .outline:hover:not(:disabled) {
-    background-color: var(--color-primary-soft);
+    background-color: var(--wms-primary-soft, var(--color-primary-soft));
 }
 
 .danger {
-    background-color: var(--color-danger);
-    color: var(--color-white);
-    border-color: var(--color-danger);
+    background-color: var(--wms-danger, var(--color-danger, #ef4444));
+    color: #ffffff;
+    border-color: var(--wms-danger, var(--color-danger, #ef4444));
 }
 
 .danger:hover:not(:disabled) {
-    background-color: var(--color-danger-strong);
+    background-color: var(--wms-danger-hover, #dc2626);
+    border-color: var(--wms-danger-hover, #dc2626);
 }
 
 .ghost {
     background-color: transparent;
-    color: var(--color-text-body);
+    color: var(--color-text-body, #334155);
+    box-shadow: none;
 }
 
 .ghost:hover:not(:disabled) {
-    background-color: var(--color-bg-hover);
+    background-color: var(--color-bg-hover, #f8fafc);
+    color: var(--wms-primary, var(--color-primary));
 }
 
 .icon {

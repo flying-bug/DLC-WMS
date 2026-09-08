@@ -105,7 +105,8 @@ public class WarehouseStaffServiceImpl implements WarehouseStaffService {
                     .orElseThrow(() -> new BusinessException(SystemMessage.ACCESS_DENIED));
 
             // Prevent assigning system roles
-            if ("SUPER_ADMIN".equals(role.getCode()) || "HR_MANAGER".equals(role.getCode())) {
+            String code = role.getCode() != null ? role.getCode().toUpperCase() : "";
+            if (code.contains("SUPER_ADMIN") || code.contains("HR_MANAGER")) {
                 throw new BusinessException(SystemMessage.WH_STAFF_INVALID_ROLE);
             }
 

@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.io.*;
 import java.util.Base64;
 import java.util.Collections;
@@ -28,6 +30,15 @@ public class GoogleDriveService {
 
     private final SystemSettingRepository settingRepo;
 
+    @Value("${google.client-id:${GMAIL_CLIENT_ID:889308816246-1sg2529hrhn6671gfcm2fae11eg9qque.apps.googleusercontent.com}}")
+    private String defaultClientId;
+
+    @Value("${google.client-secret:${GMAIL_CLIENT_SECRET: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}}")
+    private String defaultClientSecret;
+
+    @Value("${google.refresh-token:${GMAIL_REFRESH_TOKEN:1//04KBPq7hKygPUCgYIARAAGAQSNgF-L9Irb_g6d0iM3EJgsq6OGRXOQ-oPiugQgXmRjf5eylrUB013TdaOuRW5Fy-KdPNb--XHXQ}}")
+    private String defaultRefreshToken;
+
     private static final String APP_NAME = "DLC-WMS Backup";
 
     /**
@@ -35,20 +46,24 @@ public class GoogleDriveService {
      */
     private Drive buildDrive() throws Exception {
         String refreshToken = settingRepo.findBySettingKey("drive.oauth.refresh_token")
-                .map(SystemSetting::getSettingValue).orElse("").trim();
+                .map(SystemSetting::getSettingValue)
+                .filter(v -> !v.isBlank())
+                .orElse(defaultRefreshToken);
 
-        if (!refreshToken.isBlank()) {
+        if (refreshToken != null && !refreshToken.isBlank()) {
             String clientId = settingRepo.findBySettingKey("drive.oauth.client_id")
-                    .map(SystemSetting::getSettingValue).filter(v -> !v.isBlank())
-                    .orElse("29208005620-ed00era3o4fbp7d1lo3cd90v5rh8v2a.apps.googleusercontent.com");
+                    .map(SystemSetting::getSettingValue)
+                    .filter(v -> !v.isBlank())
+                    .orElse(defaultClientId);
             String clientSecret = settingRepo.findBySettingKey("drive.oauth.client_secret")
-                    .map(SystemSetting::getSettingValue).filter(v -> !v.isBlank())
-                    .orElse("p7lyw2v37X6t287uJz22a4Y8");
+                    .map(SystemSetting::getSettingValue)
+                    .filter(v -> !v.isBlank())
+                    .orElse(defaultClientSecret);
 
             UserCredentials credentials = UserCredentials.newBuilder()
-                    .setClientId(clientId)
-                    .setClientSecret(clientSecret)
-                    .setRefreshToken(refreshToken)
+                    .setClientId(clientId.trim())
+                    .setClientSecret(clientSecret.trim())
+                    .setRefreshToken(refreshToken.trim())
                     .build();
 
             return new Drive.Builder(
@@ -88,17 +103,14 @@ public class GoogleDriveService {
         String folderId = settingRepo.findBySettingKey("drive.folder.id")
                 .map(s -> s.getSettingValue()).orElse("").trim();
 
-        if (folderId.isBlank()) {
-            throw new IllegalStateException(SystemMessage.DRIVE_ERR_002.getMessage());
-        }
-
         FileContent content = new FileContent(mimeType, localFile);
 
         try {
-            // Attempt 1: Direct upload
             com.google.api.services.drive.model.File meta = new com.google.api.services.drive.model.File();
             meta.setName(localFile.getName());
-            meta.setParents(Collections.singletonList(folderId));
+            if (!folderId.isBlank()) {
+                meta.setParents(Collections.singletonList(folderId));
+            }
 
             com.google.api.services.drive.model.File uploaded = drive.files()
                     .create(meta, content)
@@ -109,7 +121,7 @@ public class GoogleDriveService {
             log.info("Uploaded backup to Drive directly: {} (id={})", localFile.getName(), uploaded.getId());
             return uploaded.getId();
         } catch (com.google.api.client.googleapis.json.GoogleJsonResponseException e) {
-            if (e.getMessage() != null && e.getMessage().contains("storageQuotaExceeded")) {
+            if (e.getMessage() != null && e.getMessage().contains("storageQuotaExceeded") && !folderId.isBlank()) {
                 log.info("Service Account quota limit hit. Using 2-step owner transfer upload...");
                 return uploadWithOwnerTransfer(drive, folderId, localFile, mimeType);
             }

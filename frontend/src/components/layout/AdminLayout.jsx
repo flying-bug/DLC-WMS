@@ -1,9 +1,14 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { getAuthRole } from '../../auth/session';
+import { getAuthRole, getAuthRoles, getAuthPermissions } from '../../auth/session';
+import { useAiFeature } from '../../contexts/AiFeatureContext';
 import UserProfileDropdown from '../ui/UserProfileDropdown/UserProfileDropdown';
+import NotificationBell from '../ui/NotificationBell/NotificationBell';
 import VoiceCommandButton from '../ui/VoiceCommandButton/VoiceCommandButton';
+import WorkspaceModeDropdown from '../ui/WorkspaceModeDropdown/WorkspaceModeDropdown';
+import { useWorkspaceMode, WORKSPACE_MODES } from '../../contexts/WorkspaceModeContext';
 import ActiveWorkflowGuide from '../workflow/ActiveWorkflowGuide';
+
 import styles from './AdminLayout.module.css';
 
 const MENU_CONFIG = [
@@ -11,28 +16,29 @@ const MENU_CONFIG = [
         id: 'main',
         label: 'PHÂN HỆ',
         items: [
-            { path: '/main-dashboard', icon: 'fas fa-chart-pie', label: 'Tổng quan', moduleId: 'overview' },
-            { path: '/dashboard', icon: 'fas fa-warehouse', label: 'Kho', moduleId: 'warehouse' },
-            { path: '/purchase-orders', icon: 'bi bi-bag-plus', label: 'Mua hàng', moduleId: 'purchase' },
-            { path: '/sales-orders', icon: 'bi bi-cart3', label: 'Bán hàng', moduleId: 'sales' },
-            { path: '/payments', icon: 'bi bi-cash-coin', label: 'Thu chi', moduleId: 'finance' },
-            { path: '/warranties', icon: 'fas fa-shield-alt', label: 'Dịch vụ', moduleId: 'service' }
+            { path: '/main-dashboard', icon: 'fas fa-chart-pie', label: 'Tổng quan', moduleId: 'overview', moduleKeys: ['report_balance', 'report_ledger', 'report_transfer', 'report_debt', 'report_sales', 'report_summary'] },
+            { path: '/dashboard', icon: 'fas fa-warehouse', label: 'Kho', moduleId: 'warehouse', moduleKeys: ['import', 'export', 'transfer', 'stocktake', 'assembly', 'assembly_config', 'warehouse_master', 'report_balance', 'report_ledger', 'report_transfer'] },
+            { path: '/purchase-orders', icon: 'bi bi-bag-plus', label: 'Mua hàng', moduleId: 'purchase', moduleKey: 'purchase_order' },
+            { path: '/sales-orders', icon: 'bi bi-cart3', label: 'Bán hàng', moduleId: 'sales', moduleKeys: ['sales_order', 'einvoice'] },
+            { path: '/payments', icon: 'bi bi-cash-coin', label: 'Thu chi', moduleId: 'finance', moduleKey: 'payment' },
+            { path: '/warranties', icon: 'fas fa-shield-alt', label: 'Dịch vụ', moduleId: 'service', moduleKeys: ['warranty', 'repair'] }
         ]
     },
     {
         id: 'catalog',
         label: 'DANH MỤC',
         items: [
-            { path: '/customers', icon: 'fas fa-handshake', label: 'Đối tác', moduleId: 'partner' },
-            { path: '/products', icon: 'fas fa-boxes', label: 'Vật tư hàng hóa', moduleId: 'catalog' }
+            { path: '/customers', icon: 'fas fa-handshake', label: 'Đối tác', moduleId: 'partner', moduleKeys: ['customer', 'supplier'] },
+            { path: '/products', icon: 'fas fa-boxes', label: 'Vật tư hàng hóa', moduleId: 'catalog', moduleKeys: ['product', 'product_category', 'brand', 'unit'] }
         ]
     },
     {
         id: 'system',
         label: 'HỆ THỐNG',
         items: [
-            { path: '/ai-chat', icon: 'fas fa-robot', label: 'Trợ lý AI' },
-            { path: '/operations', icon: 'fas fa-cogs', label: 'Thiết lập', adminOnly: true }
+            { path: '/ai-chat', icon: 'fas fa-robot', label: 'Trợ lý AI', moduleKey: 'ai_chat' },
+            { path: '/business-settings', icon: 'bi bi-sliders2-vertical', label: 'Thiết lập nghiệp vụ', managerOrAdmin: true },
+            { path: '/operations', icon: 'fas fa-cogs', label: 'Vận hành kỹ thuật', adminOnly: true }
         ]
     }
 ];
@@ -51,8 +57,12 @@ const AdminLayout = ({ children }) => {
     const location = useLocation();
     const currentPath = location.pathname;
 
-    const userRole = getAuthRole() || 'STAFF';
-    const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ROLE_SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'ROLE_ADMIN';
+    const userRoles = getAuthRoles();
+    const userPermissions = getAuthPermissions();
+    const isSuperAdmin = userRoles.some(r => r === 'SUPER_ADMIN' || r === 'ROLE_SUPER_ADMIN' || r === 'ADMIN' || r === 'ROLE_ADMIN');
+    const isManager = userRoles.some(r => r === 'MANAGER' || r === 'ROLE_MANAGER');
+    const { aiEnabled } = useAiFeature();
+    const { workspaceMode } = useWorkspaceMode();
     
     // Configuration for top header tabs based on active module
     const TABS_CONFIG = {
@@ -61,85 +71,106 @@ const AdminLayout = ({ children }) => {
         ],
         warehouse: [
             { path: '/dashboard', label: 'Quy trình', exact: true },
-            { path: '/import-history', label: 'Nhập kho', matches: ['/import-history', '/import-slips'] },
-            { path: '/export-slips', label: 'Xuất kho' },
-            { path: '/transfer-history', label: 'Chuyển kho' },
-            { path: '/stocktakes', label: 'Kiểm kê' },
-            { path: '/assembly-orders', label: 'Lắp ráp / Tháo dỡ' },
-            { path: '/assembly-boms', label: 'Cấu hình máy' },
-            { path: '/warehouses', label: 'Quản lý kho' },
-            { path: '/reports', label: 'Báo cáo kho' }
+            { path: '/import-history', label: 'Nhập kho', matches: ['/import-history', '/import-slips'], moduleKey: 'import' },
+            { path: '/export-slips', label: 'Xuất kho', moduleKey: 'export' },
+            { path: '/transfer-history', label: 'Chuyển kho', moduleKey: 'transfer' },
+            { path: '/stocktakes', label: 'Kiểm kê', moduleKey: 'stocktake' },
+            { path: '/assembly-orders', label: 'Lắp ráp / Tháo dỡ', moduleKey: 'assembly' },
+            { path: '/assembly-boms', label: 'Cấu hình máy', moduleKey: 'assembly_config' },
+            { path: '/warehouses', label: 'Quản lý kho', moduleKey: 'warehouse_master' },
+            { path: '/reports', label: 'Báo cáo kho', moduleKeys: ['report_balance', 'report_ledger', 'report_transfer'] }
+        ],
+        warehouse_workspace: [
+            { path: '/warehouse-workspace?tab=imports', tabId: 'imports', label: '1. Đề nghị nhập kho' },
+            { path: '/warehouse-workspace?tab=exports', tabId: 'exports', label: '2. Đề nghị xuất kho' },
+            { path: '/warehouse-workspace?tab=transfers', tabId: 'transfers', label: '3. Đề nghị chuyển kho' },
+            { path: '/warehouse-workspace?tab=stocktakes', tabId: 'stocktakes', label: '4. Biên bản kiểm kê' },
+            { path: '/reports', label: '5. Báo cáo kho' }
         ],
         purchase: [
-            { path: '/purchase-orders', label: 'Đơn mua hàng' }
+            { path: '/purchase-orders', label: 'Đơn mua hàng', moduleKey: 'purchase_order' }
         ],
         sales: [
-            { path: '/sales-orders', label: 'Đơn bán hàng' }
+            { path: '/sales-orders', label: 'Đơn bán hàng', moduleKey: 'sales_order' },
+            { path: '/einvoices', label: 'Hóa đơn điện tử', moduleKey: 'einvoice' }
         ],
         finance: [
-            { path: '/payments/receipt', label: 'Phiếu Thu' },
-            { path: '/payments/expense', label: 'Phiếu Chi' }
+            { path: '/payments/receipt', label: 'Phiếu Thu', moduleKey: 'payment' },
+            { path: '/payments/expense', label: 'Phiếu Chi', moduleKey: 'payment' }
+        ],
+        cashier_workspace: [
+            { path: '/cashier-workspace?tab=receipts', tabId: 'receipts', label: '1. Đề nghị thu tiền' },
+            { path: '/cashier-workspace?tab=vouchers', tabId: 'vouchers', label: '2. Đề nghị chi tiền' },
+            { path: '/cashier-workspace?tab=cash-book', tabId: 'cash-book', label: '3. Sổ quỹ tiền mặt' },
+            { path: '/cashier-workspace?tab=bank', tabId: 'bank', label: '4. Tiền gửi ngân hàng' },
+            { path: '/reports', label: '5. Báo cáo dòng tiền' }
         ],
         service: [
-            { path: '/warranties', label: 'Bảo hành' },
-            { path: '/repairs', label: 'Sửa chữa' }
+            { path: '/warranties', label: 'Bảo hành', moduleKey: 'warranty' },
+            { path: '/repairs', label: 'Sửa chữa', moduleKey: 'repair' }
         ],
         partner: [
-            { path: '/customers', label: 'Khách hàng' },
-            { path: '/suppliers', label: 'Nhà cung cấp' }
+            { path: '/customers', label: 'Khách hàng', moduleKey: 'customer' },
+            { path: '/suppliers', label: 'Nhà cung cấp', moduleKey: 'supplier' }
         ],
         catalog: [
-            { path: '/products', label: 'Danh sách Hàng hóa' },
-            { path: '/product-categories', label: 'Danh mục sản phẩm' },
-            { path: '/brands', label: 'Thương hiệu' },
-            { path: '/units', label: 'Đơn vị tính' }
+            { path: '/products', label: 'Danh sách Hàng hóa', moduleKey: 'product' },
+            { path: '/product-categories', label: 'Danh mục sản phẩm', moduleKey: 'product_category' },
+            { path: '/brands', label: 'Thương hiệu', moduleKey: 'brand' },
+            { path: '/units', label: 'Đơn vị tính', moduleKey: 'unit' }
         ],
         system: [
-            { path: '/ai-chat', label: 'AI Chat' },
-            { path: '/operations', label: 'Backup DB', adminOnly: true }
+            { path: '/ai-chat', label: 'AI Chat', moduleKey: 'ai_chat' },
+            { path: '/business-settings', label: 'Thiết lập nghiệp vụ', managerOrAdmin: true },
+            { path: '/operations', label: 'Vận hành kỹ thuật', adminOnly: true }
         ]
     };
 
     // Determine the active module based on currentPath
     const getActiveModule = () => {
+        if (currentPath.startsWith('/warehouse-workspace')) return 'warehouse_workspace';
+        if (currentPath.startsWith('/cashier-workspace')) return 'cashier_workspace';
         if (currentPath === '/main-dashboard') return 'overview';
         if (['/dashboard', '/import-history', '/import-slips', '/export-slips', '/transfer-history', '/stocktakes', '/assembly-orders', '/assembly-boms', '/warehouses', '/reports'].some(p => currentPath.startsWith(p))) return 'warehouse';
         if (currentPath.startsWith('/purchase-orders')) return 'purchase';
-        if (currentPath.startsWith('/sales-orders')) return 'sales';
+        if (currentPath.startsWith('/sales-orders') || currentPath.startsWith('/einvoices')) return 'sales';
         if (currentPath.startsWith('/payments')) return 'finance';
         if (currentPath.startsWith('/warranties') || currentPath.startsWith('/repairs')) return 'service';
         if (['/customers', '/suppliers'].some(p => currentPath.startsWith(p))) return 'partner';
         if (['/product-categories', '/brands', '/units', '/products'].some(p => currentPath.startsWith(p))) return 'catalog';
-        if (currentPath.startsWith('/ai-chat') || currentPath.startsWith('/operations')) return 'system';
+        if (currentPath.startsWith('/ai-chat') || currentPath.startsWith('/operations') || currentPath.startsWith('/business-settings')) return 'system';
         return 'overview';
     };
 
     const activeModule = getActiveModule();
-    const activeTabs = TABS_CONFIG[activeModule] || [];
+    const activeTabs = (TABS_CONFIG[activeModule] || []).filter(tab => {
+        if (tab.adminOnly && !isSuperAdmin) return false;
+        if (tab.managerOrAdmin && !isSuperAdmin && !isManager) return false;
+        if (tab.path === '/ai-chat' && !aiEnabled) return false;
+        if (isSuperAdmin || isManager) return true;
+        if (tab.moduleKey) {
+            return userPermissions.some(p => p.startsWith(`${tab.moduleKey}:`));
+        }
+        if (tab.moduleKeys) {
+            return tab.moduleKeys.some(key => userPermissions.some(p => p.startsWith(`${key}:`)));
+        }
+        return true;
+    });
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const navMenuRef = useRef(null);
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-        return localStorage.getItem('dlc_sidebar_collapsed') === 'true';
-    });
 
     useEffect(() => {
         const syncSidebarWidth = () => {
             const viewportWidth = window.innerWidth;
-            const sidebarWidth = viewportWidth < 768
-                ? '0px'
-                : isSidebarCollapsed
-                    ? '72px'
-                    : viewportWidth < 1200
-                        ? '80px'
-                        : '248px';
+            const sidebarWidth = viewportWidth < 768 ? '0px' : '72px';
             document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
         };
 
         syncSidebarWidth();
         window.addEventListener('resize', syncSidebarWidth);
         return () => window.removeEventListener('resize', syncSidebarWidth);
-    }, [isSidebarCollapsed]);
+    }, []);
 
     useLayoutEffect(() => {
         const savedScrollTop = Number(sessionStorage.getItem(SIDEBAR_SCROLL_KEY));
@@ -157,9 +188,37 @@ const AdminLayout = ({ children }) => {
         system: true
     });
 
+    const checkItemPermission = (item) => {
+        // Lọc menu sidebar theo Chế độ làm việc (Persona / Workspace Mode)
+        if (workspaceMode === WORKSPACE_MODES.WAREHOUSE) {
+            const allowedWarehouseModules = ['warehouse', 'catalog'];
+            if (!allowedWarehouseModules.includes(item.moduleId) && item.moduleKey !== 'ai_chat') {
+                return false;
+            }
+        } else if (workspaceMode === WORKSPACE_MODES.CASHIER) {
+            const allowedCashierModules = ['finance', 'partner'];
+            if (!allowedCashierModules.includes(item.moduleId) && item.moduleKey !== 'ai_chat') {
+                return false;
+            }
+        }
+
+        if (item.adminOnly && !isSuperAdmin) return false;
+        if (item.managerOrAdmin && !isSuperAdmin && !isManager) return false;
+        if (item.path === '/ai-chat' && !aiEnabled) return false;
+        if (isSuperAdmin || isManager) return true;
+
+        if (item.moduleKey) {
+            return userPermissions.some(p => p.startsWith(`${item.moduleKey}:`));
+        }
+        if (item.moduleKeys) {
+            return item.moduleKeys.some(key => userPermissions.some(p => p.startsWith(`${key}:`)));
+        }
+        return true;
+    };
+
     const visibleMenuGroups = MENU_CONFIG.map(group => ({
         ...group,
-        items: group.items.filter(item => !item.adminOnly || isSuperAdmin)
+        items: group.items.filter(checkItemPermission)
     })).filter(group => group.items.length > 0);
 
     const activeGroup = visibleMenuGroups.find(group => group.items.some(item => (
@@ -170,10 +229,6 @@ const AdminLayout = ({ children }) => {
     ));
 
     const toggleGroup = (groupId) => {
-        if (isSidebarCollapsed) {
-            setIsSidebarCollapsed(false);
-            localStorage.setItem('dlc_sidebar_collapsed', 'false');
-        }
         setExpandedGroups(prev => ({
             ...prev,
             [groupId]: !prev[groupId]
@@ -188,19 +243,17 @@ const AdminLayout = ({ children }) => {
         });
     };
 
-    const toggleSidebar = () => {
-        setIsSidebarCollapsed(prev => {
-            const next = !prev;
-            localStorage.setItem('dlc_sidebar_collapsed', String(next));
-            return next;
-        });
-    };
-
     const handleNavClick = (path) => {
         if (navMenuRef.current) {
             sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(navMenuRef.current.scrollTop));
         }
-        navigate(path);
+        if (path === '/dashboard' && workspaceMode === WORKSPACE_MODES.WAREHOUSE) {
+            navigate('/warehouse-workspace');
+        } else if (path === '/payments' && workspaceMode === WORKSPACE_MODES.CASHIER) {
+            navigate('/cashier-workspace');
+        } else {
+            navigate(path);
+        }
         setMobileMenuOpen(false);
     };
 
@@ -218,73 +271,68 @@ const AdminLayout = ({ children }) => {
                 />
             )}
 
-            <aside className={`${styles.sidebar} ${mobileMenuOpen ? styles.mobileOpen : ''} ${isSidebarCollapsed ? styles.collapsed : ''}`}>
-                <div className={styles.logoArea}>
-                    <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.brandLogo} />
-                    <div className={styles.brandText}>
-                        <span className={styles.brandTitle}>Duy Long Computer</span>
-                        <span className={styles.brandSubtitle}>Warehouse Management</span>
+            <div className={styles.sidebarWrapper}>
+                <aside
+                    className={`${styles.sidebar} ${mobileMenuOpen ? styles.mobileOpen : ''}`}
+                >
+                    <div className={styles.logoArea}>
+                        <img src="/dl-logo.png" alt="Duy Long Logo" className={styles.brandLogo} />
+                        <div className={styles.brandText}>
+                            <span className={styles.brandTitle}>Duy Long Computer</span>
+                            <span className={styles.brandSubtitle}>Warehouse Management</span>
+                        </div>
+                        <button
+                            type="button"
+                            className={styles.mobileCloseBtn}
+                            onClick={() => setMobileMenuOpen(false)}
+                        >
+                            <i className="fas fa-times"></i>
+                        </button>
                     </div>
-                    <button
-                        type="button"
-                        className={styles.mobileCloseBtn}
-                        onClick={() => setMobileMenuOpen(false)}
-                    >
-                        <i className="fas fa-times"></i>
-                    </button>
-                </div>
-                <nav ref={navMenuRef} className={styles.navMenu} onScroll={handleNavScroll}>
-                    {visibleMenuGroups.map(group => {
-                        const isExpanded = expandedGroups[group.id];
+                    <nav ref={navMenuRef} className={styles.navMenu} onScroll={handleNavScroll}>
+                        {visibleMenuGroups.map(group => {
+                            const isExpanded = expandedGroups[group.id];
 
-                        return (
-                            <div key={group.id} className={styles.menuGroup}>
-                                <div
-                                    className={styles.navGroupLabel}
-                                    onClick={() => toggleGroup(group.id)}
-                                    aria-expanded={isExpanded}
-                                >
-                                    <span>{group.label}</span>
-                                    <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
-                                </div>
-                                {isExpanded && (
-                                    <div className={styles.groupItems}>
-                                        {group.items.map(item => {
-                                            if (item.adminOnly && !isSuperAdmin) return null;
-
-                                            const isActive = item.moduleId 
-                                                ? item.moduleId === activeModule
-                                                : currentPath === item.path || currentPath.startsWith(item.path + '/');
-
-                                            return (
-                                                <button
-                                                    key={item.path}
-                                                    className={`${styles.navItem} ${isActive ? styles.active : ''}`}
-                                                    onClick={() => handleNavClick(item.path)}
-                                                    type="button"
-                                                >
-                                                    <i className={item.icon}></i>
-                                                    <span>{item.label}</span>
-                                                </button>
-                                            );
-                                        })}
+                            return (
+                                <div key={group.id} className={styles.menuGroup}>
+                                    <div
+                                        className={styles.navGroupLabel}
+                                        onClick={() => toggleGroup(group.id)}
+                                        aria-expanded={isExpanded}
+                                    >
+                                        <span>{group.label}</span>
+                                        <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </nav>
-                <div className={styles.collapseBtnContainer}>
-                    <button
-                        type="button"
-                        className={styles.collapseBtn}
-                        onClick={toggleSidebar}
-                        title={isSidebarCollapsed ? "Mở rộng" : "Thu gọn"}
-                    >
-                        <i className={`fas ${isSidebarCollapsed ? 'fa-angle-double-right' : 'fa-angle-double-left'}`}></i>
-                    </button>
-                </div>
-            </aside>
+                                    {isExpanded && (
+                                        <div className={styles.groupItems}>
+                                            {group.items.map(item => {
+                                                if (item.adminOnly && !isSuperAdmin) return null;
+
+                                                const isActive = item.moduleId 
+                                                    ? (item.moduleId === activeModule || (item.moduleId === 'warehouse' && activeModule === 'warehouse_workspace') || (item.moduleId === 'finance' && activeModule === 'cashier_workspace'))
+                                                    : currentPath === item.path || currentPath.startsWith(item.path + '/');
+
+                                                return (
+                                                    <button
+                                                        key={item.path}
+                                                        className={`${styles.navItem} ${isActive ? styles.active : ''}`}
+                                                        onClick={() => handleNavClick(item.path)}
+                                                        type="button"
+                                                        title={item.label}
+                                                    >
+                                                        <i className={item.icon}></i>
+                                                        <span>{item.label}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </nav>
+                </aside>
+            </div>
 
             <div className={styles.mainWrapper}>
                 <header className={styles.header}>
@@ -302,9 +350,12 @@ const AdminLayout = ({ children }) => {
                             if (tab.adminOnly && !isSuperAdmin) return null;
                             
                             // Check if current path matches the tab
-                            const isActive = tab.matches 
-                                ? tab.matches.some(m => currentPath.startsWith(m))
-                                : (tab.exact ? currentPath === tab.path : currentPath.startsWith(tab.path));
+                            const currentQueryTab = new URLSearchParams(location.search).get('tab');
+                            const isActive = tab.tabId
+                                ? (currentQueryTab === tab.tabId || (!currentQueryTab && (tab.tabId === 'imports' || tab.tabId === 'receipts')))
+                                : (tab.matches 
+                                    ? tab.matches.some(m => currentPath.startsWith(m))
+                                    : (tab.exact ? currentPath === tab.path : currentPath.startsWith(tab.path)));
 
                             return (
                                 <button
@@ -320,9 +371,12 @@ const AdminLayout = ({ children }) => {
                             );
                         })}
                     </nav>
-                    <div className={styles.headerRight}>
-                        <UserProfileDropdown voiceEnabled={voiceEnabled} onToggleVoice={toggleVoice} />
+                    <div className={styles.headerRight} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <WorkspaceModeDropdown />
+                        <NotificationBell />
+                        <UserProfileDropdown voiceEnabled={voiceEnabled} onToggleVoice={toggleVoice} aiEnabled={aiEnabled} />
                     </div>
+
                 </header>
 
                 <main className={styles.content}>
@@ -331,7 +385,7 @@ const AdminLayout = ({ children }) => {
                 <ActiveWorkflowGuide />
             </div>
 
-            {voiceEnabled && <VoiceCommandButton />}
+            {aiEnabled && voiceEnabled && <VoiceCommandButton />}
         </div>
     );
 };

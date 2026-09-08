@@ -6,6 +6,7 @@ import * as exportApi from '../../api/inventoryExportApi';
 import CustomerModal from '../Customer/components/CustomerModal';
 import ReferenceDocumentModal from '../../components/ReferenceDocumentModal';
 import * as stocktakeApi from '../../api/stocktakeApi';
+import * as salesOrderApi from '../../api/salesOrderApi';
 import AssemblyOrderSelectionModal from '../CreateImportSlip/components/AssemblyOrderSelectionModal';
 import * as assemblyOrderApi from '../../api/assemblyOrderApi';
 import Toast from '../../components/ui/Toast/Toast';
@@ -14,13 +15,17 @@ import SuccessPrintModal from '../../components/ui/SuccessPrintModal/SuccessPrin
 import { printExportSlip } from '../../utils/printExportSlip';
 import ProductGridSelect from '../../components/ui/ProductGridSelect/ProductGridSelect';
 import QuickAddProductModal from '../../components/ui/QuickAddProductModal/QuickAddProductModal';
+import AttachmentUpload from '../../components/ui/AttachmentUpload/AttachmentUpload';
+import { serializeNoteWithAttachments, parseNoteAndAttachments } from '../../utils/attachmentHelper';
 import Select from 'react-select';
 import axiosClient from '../../api/axiosClient';
 import ManageSerialModal from '../CreateImportSlip/ManageSerialModal';
 import styles from './CreateExportSlipPage.module.css';
 import { getTodayIsoDate } from '../../utils/dateFormat';
+import { focusField } from '../../utils/focusField';
 import SearchableSelect from '@/components/ui/SearchableSelect/SearchableSelect';
 import { findBestMatch } from '../../utils/fuzzyMatch';
+import { canViewPricing } from '../../auth/session';
 
 
 const unwrap = (response) => response?.data?.data ?? response?.data;
@@ -37,8 +42,9 @@ const normalizeProductType = (value) =>
 
 const isServiceProduct = (item) => normalizeProductType(item?.productType) === 'dich vu';
 const isWarehouseProduct = (item) => {
+  if (!item) return false;
   const type = normalizeProductType(item?.productType);
-  return type === 'hang hoa' || type === 'thanh pham';
+  return type !== 'dich vu' && type !== 'service';
 };
 
 const isWarehouseLine = (line) => !line?.productType || isWarehouseProduct(line);
@@ -102,9 +108,14 @@ const customSelectStyles = {
   })
 };
 
-const emptyLine = () => ({
+const emptyLine = (defaultWarehouseId = '') => ({
   localId: crypto.randomUUID(),
   variantId: '',
+  warehouseId: defaultWarehouseId,
+  unitId: '',
+  baseUnitId: '',
+  conversionRatio: 1,
+  conversionOperator: 'MULTIPLY',
   serialNumbers: [],
   scannedCode: '',
   quantity: 1,
@@ -116,6 +127,7 @@ const emptyLine = () => ({
 function CreateExportSlipPage({ mode: propMode }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const showPricing = canViewPricing();
 
   const searchParams = new URLSearchParams(location.search);
   const assemblyData = location.state?.assemblyData || null;
@@ -146,6 +158,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   const [selectedAssemblyOrder, setSelectedAssemblyOrder] = useState(null);
   const [savedSlip, setSavedSlip] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [attachments, setAttachments] = useState([]);
 
   const [form, setForm] = useState(() => ({
     docCode: '',
@@ -168,9 +181,12 @@ function CreateExportSlipPage({ mode: propMode }) {
     if (soData && soData.lines && soData.lines.length > 0) {
       const soLines = filterWarehouseLines(soData.lines);
       return soLines.length > 0 ? soLines.map(l => ({
-        ...emptyLine(),
+        ...emptyLine(String(soData.warehouseId || '')),
         variantId: String(l.variantId),
+        warehouseId: String(l.warehouseId || soData.warehouseId || ''),
         quantity: l.quantity || 1,
+        reservedQuantity: Number(l.quantity || 0),
+        maxQuantity: Number(l.quantity || 0),
         price: l.price || 0,
         vatPercent: l.vatPercent || 0,
         warrantyMonths: l.warrantyMonths || 0,
@@ -180,8 +196,9 @@ function CreateExportSlipPage({ mode: propMode }) {
     if (assemblyData && assemblyData.lines && assemblyData.lines.length > 0) {
       const assemblyLines = filterWarehouseLines(assemblyData.lines);
       return assemblyLines.length > 0 ? assemblyLines.map(comp => ({
-        ...emptyLine(),
+        ...emptyLine(String(assemblyData.warehouseId || '')),
         variantId: String(comp.variantId || comp.id),
+        warehouseId: String(comp.warehouseId || assemblyData.warehouseId || ''),
         quantity: comp.quantity || 1,
         price: comp.price || 0,
         note: `Cấu hình cho Lệnh ${assemblyData.code}`,
@@ -190,8 +207,9 @@ function CreateExportSlipPage({ mode: propMode }) {
     if (stocktakeData && stocktakeData.lines && stocktakeData.lines.length > 0) {
       const stocktakeLines = filterWarehouseLines(stocktakeData.lines);
       return stocktakeLines.length > 0 ? stocktakeLines.map(line => ({
-        ...emptyLine(),
+        ...emptyLine(String(stocktakeData.warehouseId || '')),
         variantId: String(line.variantId),
+        warehouseId: String(line.warehouseId || stocktakeData.warehouseId || ''),
         quantity: line.quantity || 1,
         price: line.price || 0,
         note: line.note || `Hàng thiếu từ kiểm kê ${stocktakeData.code}`,
@@ -209,13 +227,98 @@ function CreateExportSlipPage({ mode: propMode }) {
     setExportMode(newMode);
   };
 
+  const loadAllInventoryBalances = () => {
+    exportApi.getInventoryBalance({ size: 10000 })
+      .then(res => setInventoryBalances(pageContent(unwrap(res))))
+      .catch(err => console.error('Lỗi khi tải số dư tồn kho', err));
+  };
+
   useEffect(() => {
-    if (form.warehouseId) {
-      exportApi.getInventoryBalance({ warehouseId: form.warehouseId })
-        .then(res => setInventoryBalances(pageContent(unwrap(res))))
-        .catch(err => console.error('Lỗi khi tải số dư tồn kho', err));
-    }
-  }, [form.warehouseId]);
+    loadAllInventoryBalances();
+  }, []);
+
+  const handleApplyWarehouseToAllLines = (whId) => {
+    if (!whId) return;
+    setItems(prev => {
+      const mergedMap = new Map();
+      const result = [];
+      prev.forEach(item => {
+        if (!item.variantId) {
+          result.push({ ...item, warehouseId: String(whId), serialNumbers: [] });
+          return;
+        }
+        const key = String(item.variantId);
+        if (mergedMap.has(key)) {
+          const existing = mergedMap.get(key);
+          existing.quantity = Number(existing.quantity || 0) + (Number(item.quantity) || 1);
+        } else {
+          const newItem = { ...item, warehouseId: String(whId), serialNumbers: [] };
+          mergedMap.set(key, newItem);
+          result.push(newItem);
+        }
+      });
+      return result;
+    });
+    showToast('info', 'Đã áp dụng kho cho tất cả các dòng sản phẩm và tự động gộp các dòng trùng');
+  };
+
+  const handleItemChange = (localId, field, value) => {
+    setItems(prev => {
+      if (field === 'quantity') {
+        const quantity = Number(value || 0);
+        return prev.map(item => item.localId === localId ? {
+          ...item,
+          quantity: value,
+          serialNumbers: item.serialNumbers?.slice(0, Math.max(0, quantity)) || []
+        } : item);
+      }
+      if (field === 'variantId') {
+        if (!value) {
+          return prev.map(item => item.localId === localId ? { ...item, variantId: '', serialNumbers: [], price: 0, warrantyMonths: 0, unitId: '', baseUnitId: '', conversionRatio: 1, conversionOperator: 'MULTIPLY' } : item);
+        }
+        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value));
+        if (existingIndex >= 0) {
+          const currentItem = prev.find(item => item.localId === localId);
+          const addedQty = Number(currentItem?.quantity) || 1;
+          const newItems = [...prev];
+          newItems[existingIndex] = {
+            ...newItems[existingIndex],
+            quantity: Number(newItems[existingIndex].quantity || 0) + addedQty
+          };
+          showToast('info', 'Sản phẩm đã tồn tại trong danh sách, đã tự động cộng dồn số lượng.');
+          return newItems.filter(item => item.localId !== localId);
+        }
+        const selectedProduct = products.find(p => String(p.id) === String(value));
+        return prev.map(item => item.localId === localId ? {
+          ...item,
+          variantId: String(value),
+          serialNumbers: [],
+          unitId: selectedProduct?.unitId ? String(selectedProduct.unitId) : '',
+          baseUnitId: selectedProduct?.unitId ? String(selectedProduct.unitId) : '',
+          conversionRatio: 1,
+          conversionOperator: 'MULTIPLY',
+          price: selectedProduct ? Number(selectedProduct.salePrice || 0) : 0,
+          warrantyMonths: selectedProduct ? Number(selectedProduct.warrantyMonths || 0) : 0
+        } : item);
+      }
+      if (field === 'unitId') {
+        return prev.map(item => {
+          if (item.localId !== localId) return item;
+          const product = products.find(p => String(p.id) === String(item.variantId));
+          if (!product) return { ...item, unitId: value };
+          if (String(value) === String(product.unitId)) {
+            return { ...item, unitId: value, conversionRatio: 1, conversionOperator: 'MULTIPLY' };
+          }
+          const conv = (product.unitConversions || []).find(c => String(c.unitId) === String(value));
+          if (conv) {
+            return { ...item, unitId: value, conversionRatio: Number(conv.ratio) || 1, conversionOperator: conv.operator || 'MULTIPLY' };
+          }
+          return { ...item, unitId: value, conversionRatio: 1, conversionOperator: 'MULTIPLY' };
+        });
+      }
+      return prev.map(item => item.localId === localId ? { ...item, [field]: value } : item);
+    });
+  };
 
   useEffect(() => {
     const loadLookups = async () => {
@@ -330,17 +433,41 @@ function CreateExportSlipPage({ mode: propMode }) {
         const totalReserved = Number(b.totalReserved ?? b.quantityReserved ?? 0);
         const availableQuantity = Number(b.availableQuantity ?? (totalQuantity - totalReserved));
         const stock = Math.max(0, availableQuantity);
-        if (b.variantId) map.set(String(b.variantId), stock);
-        else if (b.itemId) map.set(String(b.itemId), stock);
+        const vId = b.variantId || b.itemId;
+        const wId = b.warehouseId;
+        if (vId && wId) {
+          map.set(`${vId}_${wId}`, stock);
+        }
+        if (vId) {
+          const currentTotal = map.get(String(vId)) || 0;
+          map.set(String(vId), currentTotal + stock);
+        }
       });
     }
     return map;
   }, [inventoryBalances]);
+
+  const getStockForLine = (variantId, warehouseId, item) => {
+    if (!variantId) return 0;
+    const effectiveWh = warehouseId || form.warehouseId;
+    let baseStock = 0;
+    if (effectiveWh) {
+      baseStock = inventoryMap.get(`${variantId}_${effectiveWh}`) || 0;
+    } else {
+      baseStock = inventoryMap.get(String(variantId)) || 0;
+    }
+
+    // Nếu phiếu xuất này được tạo cho một Đơn bán hàng (SO), cộng bù số lượng cố định đã giữ chỗ (reservedQuantity)
+    const isSoExport = Boolean(soData || form.salesOrderId || form.referenceType === 'SALES_ORDER' || form.referenceType === 'SO');
+    if (isSoExport && item && item.reservedQuantity !== undefined && item.reservedQuantity !== null) {
+      return baseStock + Number(item.reservedQuantity);
+    }
+    return baseStock;
+  };
+
   const warehouseScopedProducts = useMemo(() => {
-    if (!form.warehouseId) return products;
-    const selectedIds = new Set(items.map(item => String(item.variantId || '')).filter(Boolean));
-    return products.filter(product => inventoryMap.has(String(product.id)) || selectedIds.has(String(product.id)));
-  }, [form.warehouseId, inventoryMap, items, products]);
+    return products;
+  }, [products]);
 
   const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalPrice = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
@@ -355,6 +482,9 @@ function CreateExportSlipPage({ mode: propMode }) {
   const isFormValid = Boolean(
     form.warehouseId &&
     form.docDate &&
+    (exportMode === 'SALE' ? (form.partnerId && form.referenceId)
+      : exportMode === 'ASSEMBLY' ? form.referenceId
+        : true) &&
     items.length &&
     items.every(isLineValid)
   );
@@ -375,38 +505,6 @@ function CreateExportSlipPage({ mode: propMode }) {
     });
   };
 
-  const handleItemChange = (localId, field, value) => {
-    setItems(prev => {
-      if (field === 'quantity') {
-        const quantity = Number(value || 0);
-        return prev.map(item => item.localId === localId ? {
-          ...item,
-          quantity: value,
-          serialNumbers: item.serialNumbers?.slice(0, Math.max(0, quantity)) || []
-        } : item);
-      }
-      if (field === 'variantId') {
-        const existingIndex = prev.findIndex(item => item.localId !== localId && String(item.variantId) === String(value) && !(item.serialNumbers && item.serialNumbers.length > 0));
-        if (existingIndex >= 0) {
-          const newItems = [...prev];
-          newItems[existingIndex] = {
-            ...newItems[existingIndex],
-            quantity: Number(newItems[existingIndex].quantity || 0) + 1
-          };
-          return newItems.filter(item => item.localId !== localId);
-        }
-        const selectedProduct = products.find(p => String(p.id) === String(value));
-        return prev.map(item => item.localId === localId ? {
-          ...item,
-          variantId: value,
-          serialNumbers: [],
-          price: selectedProduct ? Number(selectedProduct.salePrice || 0) : 0,
-          warrantyMonths: selectedProduct ? Number(selectedProduct.warrantyMonths || 0) : 0
-        } : item);
-      }
-      return prev.map(item => item.localId === localId ? { ...item, [field]: value } : item);
-    });
-  };
 
   const handleQuickAddProductSuccess = async (newProduct) => {
     try {
@@ -468,8 +566,9 @@ function CreateExportSlipPage({ mode: propMode }) {
       if (isAssembly) {
         if (order.lines && order.lines.length > 0) {
           const loadedItems = order.lines.map(comp => ({
-            ...emptyLine(),
+            ...emptyLine(String(order.warehouseId || form.warehouseId || '')),
             variantId: String(comp.componentVariantId || comp.variantId || comp.id),
+            warehouseId: String(comp.warehouseId || order.warehouseId || form.warehouseId || ''),
             quantity: comp.quantityNeeded || comp.quantityRequired || comp.quantity || 1,
             price: comp.price || 0,
             note: `Cấu hình cho Lắp ráp`,
@@ -482,8 +581,9 @@ function CreateExportSlipPage({ mode: propMode }) {
       } else {
         if (order.targetVariantId || order.targetSku) {
           setItems([{
-            ...emptyLine(),
+            ...emptyLine(String(order.warehouseId || form.warehouseId || '')),
             variantId: String(order.targetVariantId || ''),
+            warehouseId: String(order.warehouseId || form.warehouseId || ''),
             quantity: order.quantity || 1,
             price: order.targetPrice || 0,
             note: `Thành phẩm cần tháo dỡ`
@@ -517,7 +617,7 @@ function CreateExportSlipPage({ mode: propMode }) {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, emptyLine()]);
+    setItems(prev => [...prev, emptyLine(form.warehouseId || (warehouses[0]?.id ? String(warehouses[0]?.id) : ''))]);
   };
 
   const handleScanSubmit = async (event) => {
@@ -556,7 +656,7 @@ function CreateExportSlipPage({ mode: propMode }) {
       });
 
       setItems(prev => {
-        const existingIndex = prev.findIndex(item => String(item.variantId) === String(scanResult.variantId));
+        const existingIndex = prev.findIndex(item => String(item.variantId) === String(scanResult.variantId) && String(item.warehouseId || form.warehouseId) === String(form.warehouseId));
         const serial = scanResult.serialNumber;
 
         if (existingIndex >= 0) {
@@ -587,8 +687,9 @@ function CreateExportSlipPage({ mode: propMode }) {
         return [
           ...basePrev,
           {
-            ...emptyLine(),
+            ...emptyLine(form.warehouseId),
             variantId: scanResult.variantId,
+            warehouseId: String(form.warehouseId),
             scannedCode: scanResult.code,
             quantity: 1,
             price: scanResult.salePrice || 0,
@@ -606,75 +707,118 @@ function CreateExportSlipPage({ mode: propMode }) {
   };
 
   const removeItem = (localId) => {
-    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(), isNew: false }]);
+    setItems(prev => prev.length > 1 ? prev.filter(item => item.localId !== localId) : [{ ...emptyLine(form.warehouseId), isNew: false }]);
   };
 
-  const buildPayload = (status) => ({
-    docCode: form.docCode || undefined,
-    issuePurpose: exportMode === 'SALE' ? 'SALES' : exportMode === 'USAGE' ? 'USAGE' : exportMode === 'ASSEMBLY' ? 'ASSEMBLY' : (form.referenceType === 'STOCKTAKE' ? 'INVENTORY_ADJUSTMENT' : 'USAGE'),
-    warehouseId: Number(form.warehouseId),
-    partnerId: form.partnerId ? Number(form.partnerId) : null,
-    salespersonId: (!isNaN(Number(form.salespersonId)) && String(form.salespersonId).trim() !== '') ? Number(form.salespersonId) : null,
-    customerAddress: form.customerAddress,
-    recipientName: form.receiverName || 'Người nhận',
-    receiverPhone: form.receiverPhone || '',
-    recipientAddress: form.receiverAddress || form.customerAddress || '',
-    docDate: form.docDate,
-    status,
-    note: form.note,
-    createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
-    lines: items.map(item => ({
-      variantId: Number(item.variantId),
-      quantityIn: 0,
-      quantityOut: Number(item.quantity),
-      unitCost: 0,
-      unitPrice: Number(item.price),
-      vatRate: Number(item.vatPercent || 0),
-      vatPercent: Number(item.vatPercent || 0),
-      warrantyMonths: Number(item.warrantyMonths || 0),
-      serialNumbers: item.serialNumbers || [],
-      note: item.note,
-    })),
-    referenceType: form.referenceType || undefined,
-    referenceId: form.referenceId || undefined,
-    salesOrderId: soData?.soId || undefined,
-  });
+  const buildPayload = (status) => {
+    return {
+      docCode: form.docCode || undefined,
+      issuePurpose: exportMode === 'SALE' ? 'SALES' : exportMode === 'USAGE' ? 'USAGE' : exportMode === 'ASSEMBLY' ? 'ASSEMBLY' : (form.referenceType === 'STOCKTAKE' ? 'INVENTORY_ADJUSTMENT' : 'USAGE'),
+      warehouseId: Number(form.warehouseId),
+      partnerId: form.partnerId ? Number(form.partnerId) : null,
+      salespersonId: (!isNaN(Number(form.salespersonId)) && String(form.salespersonId).trim() !== '') ? Number(form.salespersonId) : null,
+      customerAddress: form.customerAddress,
+      recipientName: form.receiverName || 'Người nhận',
+      receiverPhone: form.receiverPhone || '',
+      recipientAddress: form.receiverAddress || form.customerAddress || '',
+      docDate: form.docDate,
+      status,
+      note: serializeNoteWithAttachments(form.note, attachments),
+      createdBy: Number(sessionStorage.getItem('userId') || sessionStorage.getItem('id') || 1),
+      lines: items.map(item => {
+        const product = productById.get(String(item.variantId));
+        const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
+        const op = item.conversionOperator || 'MULTIPLY';
+        const qty = Number(item.quantity || 0);
+        const baseQty = (op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio);
+        return {
+          variantId: Number(item.variantId),
+          warehouseId: Number(form.warehouseId),
+          quantityIn: 0,
+          quantityOut: qty,
+          unitId: item.unitId ? Number(item.unitId) : (product ? Number(product.unitId) : null),
+          baseUnitId: item.baseUnitId ? Number(item.baseUnitId) : (product ? Number(product.unitId) : null),
+          conversionOperator: op,
+          conversionRatio: ratio,
+          baseQuantity: baseQty,
+          unitCost: 0,
+          unitPrice: Number(item.price || 0),
+          vatRate: Number(item.vatPercent || 0),
+          vatPercent: Number(item.vatPercent || 0),
+          warrantyMonths: Number(item.warrantyMonths || 0),
+          serialNumbers: item.serialNumbers || [],
+          note: item.note,
+        };
+      }),
+      referenceType: form.referenceType || undefined,
+      referenceId: form.referenceId || undefined,
+      salesOrderId: form.salesOrderId ? Number(form.salesOrderId) : (form.referenceType === 'SALES_ORDER' || form.referenceType === 'SO' ? Number(form.referenceId) : (soData?.soId ? Number(soData.soId) : undefined)),
+    };
+  };
 
   const submit = async (status, shouldPost = false) => {
-    if (!isFormValid) {
-      if (!form.warehouseId) return showToast('error', 'Vui lòng chọn kho xuất.');
-      if (exportMode === 'SALE' && !form.referenceId) return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
-      if (!form.docDate) return showToast('error', 'Vui lòng chọn ngày lập phiếu.');
-      const invalidVat = items.some(item => {
-        const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
-        return isNaN(vat) || vat < 0 || vat > 10;
-      });
-      if (invalidVat) return showToast('error', 'Thuế VAT không hợp lệ.');
-      if (!items.length || !items.every(isLineValid)) {
-        return showToast('error', 'Vui lòng chọn hàng hóa và nhập số lượng > 0.');
-      }
-      return showToast('error', 'Vui lòng điền đầy đủ thông tin bắt buộc.');
+    if (!form.warehouseId) {
+      focusField('export-warehouseId');
+      return showToast('error', 'Vui lòng chọn kho xuất.');
+    }
+    if (exportMode === 'SALE' && !form.partnerId) {
+      focusField('export-partnerId');
+      return showToast('error', 'Vui lòng chọn khách hàng.');
+    }
+    if (exportMode === 'USAGE' && !form.receiverName) {
+      focusField('export-receiverName');
+      return showToast('error', 'Vui lòng nhập người nhận / đối tượng.');
+    }
+    if (exportMode === 'SALE' && !form.referenceId) {
+      return showToast('error', 'Vui lòng chọn chứng từ tham chiếu.');
+    }
+    if (!form.docDate) {
+      focusField('export-docDate');
+      return showToast('error', 'Vui lòng chọn ngày lập phiếu.');
     }
 
-    for (const item of items) {
-      if (item.maxQuantity !== undefined && item.maxQuantity !== null && Number(item.quantity) > Number(item.maxQuantity)) {
-        const sku = productById.get(String(item.variantId))?.sku || '';
-        return showToast('error', `Số lượng xuất (${item.quantity}) vượt quá số lượng còn lại trong đơn bán hàng (tối đa ${item.maxQuantity}) ${sku ? `cho sản phẩm SKU ${sku}` : ''}`);
-      }
+    if (!items.length) {
+      return showToast('error', 'Vui lòng thêm ít nhất 1 dòng hàng hóa.');
     }
 
-    let hasOutOfStock = false;
-    for (const item of items) {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item.variantId) {
+        focusField(`export-line-product-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Vui lòng chọn hàng hóa.`);
+      }
+      const qty = Number(item.quantity);
+      if (!Number.isInteger(qty) || qty <= 0) {
+        focusField(`export-line-qty-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Số lượng phải là số nguyên lớn hơn 0.`);
+      }
       const product = productById.get(String(item.variantId));
+      if (product?.trackSerial) {
+        const serialCount = item.serialNumbers ? item.serialNumbers.length : 0;
+        if (serialCount !== qty) {
+          setSerialModalItemId(item.localId);
+          return showToast('error', `Dòng ${i + 1}: Vui lòng quét đủ ${qty} mã serial (hiện có ${serialCount}).`);
+        }
+      }
+      const vat = item.vatPercent !== undefined && item.vatPercent !== '' ? Number(item.vatPercent) : 0;
+      if (isNaN(vat) || vat < 0 || vat > 10) {
+        focusField(`export-line-vat-${i}`);
+        return showToast('error', `Dòng ${i + 1}: Thuế VAT không hợp lệ.`);
+      }
+      if (item.maxQuantity !== undefined && item.maxQuantity !== null && Number(item.quantity) > Number(item.maxQuantity)) {
+        focusField(`export-line-qty-${i}`);
+        const sku = product?.sku || '';
+        return showToast('error', `Dòng ${i + 1}: Số lượng xuất (${item.quantity}) vượt quá số lượng còn lại trong đơn bán hàng (tối đa ${item.maxQuantity}) ${sku ? `cho SKU ${sku}` : ''}`);
+      }
       if (product) {
-        const balance = inventoryMap.get(String(product.id)) || 0;
+        const lineWh = item.warehouseId || form.warehouseId;
+        const balance = getStockForLine(product.id, lineWh, item);
         if (Number(item.quantity) > balance) {
-          hasOutOfStock = true;
-          break;
+          focusField(`export-line-qty-${i}`);
+          return showToast('error', `Dòng ${i + 1}: Số lượng xuất (${item.quantity}) vượt quá tồn khả dụng (${balance}) tại kho đã chọn.`);
         }
       }
     }
-
     setSaving(true);
     try {
       const response = await exportApi.createExportSlip(buildPayload(status));
@@ -689,8 +833,11 @@ function CreateExportSlipPage({ mode: propMode }) {
         docCode: created?.docCode || form.docCode,
         docDate: form.docDate,
         status: shouldPost ? 'POSTED' : status,
+        warehouseId: form.warehouseId,
         lines: items.map(item => ({
           ...item,
+          warehouseId: Number(item.warehouseId || form.warehouseId),
+          warehouseName: warehouses.find(w => String(w.id) === String(item.warehouseId || form.warehouseId))?.name,
           quantityOut: item.quantity,
           unitPrice: item.price,
           variantName: productById.get(String(item.variantId))?.variantName || productById.get(String(item.variantId))?.name,
@@ -711,6 +858,17 @@ function CreateExportSlipPage({ mode: propMode }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePrint = (printMode = 'SUMMARY') => {
+    if (!savedSlip) return;
+    printExportSlip(savedSlip, {
+      customer: customers.find(c => String(c.id) === String(savedSlip.partnerId || form.partnerId)),
+      warehouseById: new Map(warehouses.map(w => [w.id, w])),
+      productById,
+      userById,
+      printMode,
+    });
   };
 
   return (
@@ -901,9 +1059,14 @@ function CreateExportSlipPage({ mode: propMode }) {
                 <div className="misa-form-group" style={{ flex: '0 0 50%' }}>
                   <label className="misa-label">Kho xuất <span className="required">*</span></label>
                   <Select
+                    inputId="export-warehouseId"
                     options={warehouses.map(w => ({ value: w.id, label: `${w.code} - ${w.name}` }))}
                     value={warehouses.find(w => String(w.id) === String(form.warehouseId)) ? { value: form.warehouseId, label: `${warehouses.find(w => String(w.id) === String(form.warehouseId)).code} - ${warehouses.find(w => String(w.id) === String(form.warehouseId)).name}` } : null}
-                    onChange={(selected) => handleFormChange('warehouseId', selected ? selected.value : '')}
+                    onChange={(selected) => {
+                      const newWh = selected ? selected.value : '';
+                      handleFormChange('warehouseId', newWh);
+                      setItems(prev => prev.map(it => ({ ...it, warehouseId: newWh })));
+                    }}
                     placeholder="Chọn kho xuất"
                     isClearable
                     styles={customSelectStyles}
@@ -1005,7 +1168,7 @@ function CreateExportSlipPage({ mode: propMode }) {
 
               <div className="misa-form-group" style={{ marginBottom: '16px' }}>
                 <label className="misa-label">Ngày lập phiếu <span className="required">*</span></label>
-                <input type="date" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
+                <input id="export-docDate" type="date" className="misa-input" value={form.docDate} onChange={(event) => handleFormChange('docDate', event.target.value)} />
               </div>
             </div>
           </div>
@@ -1044,27 +1207,39 @@ function CreateExportSlipPage({ mode: propMode }) {
               <thead>
                 <tr>
                   <th style={{ width: '40px', textAlign: 'center', whiteSpace: 'nowrap' }}>STT</th>
-                  <th style={{ minWidth: '130px', width: '13%' }}>Mã hàng</th>
-                  <th style={{ minWidth: '200px', width: '22%' }}>{exportMode === 'ASSEMBLY' ? 'Tên linh kiện' : 'Tên hàng'}</th>
-                  <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }}>ĐVT</th>
-                  <th style={{ minWidth: '90px', width: '8%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
-                  <th style={{ minWidth: '70px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
-                  <th style={{ minWidth: '80px', width: '9%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
-                  <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
-                  <th style={{ minWidth: '110px', width: '10%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>
-                  <th style={{ minWidth: '110px', width: '10%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>
-                  <th style={{ minWidth: '90px', width: '8%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thuế GTGT</th>
+                  <th style={{ minWidth: '110px', width: '12%' }}>Mã hàng</th>
+                  <th style={{ minWidth: '160px', width: '18%' }}>{exportMode === 'ASSEMBLY' ? 'Tên linh kiện' : 'Tên hàng'}</th>
+                  <th style={{ minWidth: '85px', width: '8%', whiteSpace: 'nowrap' }}>ĐVT</th>
+                  <th style={{ minWidth: '75px', width: '7%', whiteSpace: 'nowrap' }} className={styles.textCenter}>Tồn khả dụng</th>
+                  <th style={{ minWidth: '60px', width: '6%', whiteSpace: 'nowrap' }} className={styles.textRight}>SL</th>
+                  <th style={{ minWidth: '70px', width: '6%', textAlign: 'center', whiteSpace: 'nowrap' }}>ĐVC</th>
+                  <th style={{ minWidth: '60px', width: '5%', textAlign: 'center', whiteSpace: 'nowrap' }}>Tỷ lệ CĐ</th>
+                  <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>Phép tính</th>
+                  <th style={{ minWidth: '70px', width: '6%', textAlign: 'right', whiteSpace: 'nowrap' }}>SL (ĐVC)</th>
+                  <th style={{ minWidth: '70px', width: '7%', textAlign: 'center', whiteSpace: 'nowrap' }}>Serial</th>
+                  <th style={{ minWidth: '50px', width: '4%', textAlign: 'center', whiteSpace: 'nowrap' }}>BH (T)</th>
+                  {showPricing && <th style={{ minWidth: '90px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Đơn giá</th>}
+                  {showPricing && <th style={{ minWidth: '90px', width: '9%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thành tiền</th>}
+                  {showPricing && <th style={{ minWidth: '60px', width: '5%', whiteSpace: 'nowrap' }} className={styles.textRight}>Thuế GTGT</th>}
                   <th style={{ width: '40px', textAlign: 'center' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item, index) => {
                   const product = productById.get(String(item.variantId));
+                  const baseUnitName = product?.unitName || '-';
+                  const ratio = Number(item.conversionRatio) > 0 ? Number(item.conversionRatio) : 1;
+                  const op = item.conversionOperator || 'MULTIPLY';
+                  const qty = Number(item.quantity || 0);
+                  const baseQty = (op === 'DIVIDE' || op === '/') ? (qty / ratio) : (qty * ratio);
+                  const lineAmount = qty * Number(item.price || 0);
+
                   return (
                     <tr key={item.localId}>
                       <td className={styles.textCenter}>{index + 1}</td>
                       <td>
                         <ProductGridSelect
+                          id={`export-line-product-${index}`}
                           products={warehouseScopedProducts}
                           inventoryMap={inventoryMap}
                           value={item.variantId}
@@ -1086,14 +1261,32 @@ function CreateExportSlipPage({ mode: propMode }) {
                         />
                       </td>
                       <td>
-                        {product?.unitName || 'Cái'}
+                        <select
+                          className="misa-input"
+                          style={{ height: '32px', padding: '0 4px', fontSize: '12px', minWidth: '80px' }}
+                          value={item.unitId || (product?.unitId ? String(product.unitId) : '')}
+                          onChange={(e) => handleItemChange(item.localId, 'unitId', e.target.value)}
+                          disabled={!product}
+                        >
+                          {product?.unitId && (
+                            <option value={product.unitId}>{product.unitName} (Chính)</option>
+                          )}
+                          {product?.unitConversions?.map(conv => (
+                            <option key={conv.unitId} value={conv.unitId}>{conv.unitName}</option>
+                          ))}
+                          {!product?.unitId && <option value="">-</option>}
+                        </select>
                       </td>
                       <td className={styles.textCenter} style={{ fontWeight: '600', color: 'var(--color-primary)' }}>
-                        {product ? (inventoryMap.get(String(product.id)) || 0) : ''}
+                        {product ? getStockForLine(product.id, item.warehouseId || form.warehouseId, item) : ''}
                       </td>
                       <td className={styles.textRight}>
-                        <input type="number" min="1" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
+                        <input id={`export-line-qty-${index}`} type="number" min="1" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '100px', margin: '0 auto', textAlign: 'right', fontSize: '13px' }} value={item.quantity} onChange={(event) => handleItemChange(item.localId, 'quantity', event.target.value)} />
                       </td>
+                      <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{baseUnitName}</td>
+                      <td style={{ textAlign: 'center', fontSize: '12px', color: '#4b5563' }}>{ratio}</td>
+                      <td style={{ textAlign: 'center', fontSize: '12px', fontWeight: 600, color: '#2563eb' }}>{op === 'DIVIDE' || op === '/' ? '/' : '*'}</td>
+                      <td style={{ textAlign: 'right', fontSize: '12px', fontWeight: 600, color: '#059669' }}>{Number(baseQty.toFixed(4))}</td>
                       <td align="center">
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           {product?.trackSerial && (
@@ -1123,15 +1316,21 @@ function CreateExportSlipPage({ mode: propMode }) {
                         </div>
                       </td>
                       <td className={styles.textCenter}>
-                        <input type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '60px', margin: '0 auto', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(event) => handleItemChange(item.localId, 'warrantyMonths', event.target.value)} />
+                        <input id={`export-line-warranty-${index}`} type="number" min="0" className="misa-input text-center" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '60px', margin: '0 auto', textAlign: 'center', fontSize: '13px' }} value={item.warrantyMonths !== undefined ? item.warrantyMonths : ''} onChange={(event) => handleItemChange(item.localId, 'warrantyMonths', event.target.value)} />
                       </td>
-                      <td className={styles.textRight}>
-                        <input type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} />
-                      </td>
-                      <td className={`${styles.textRight} ${styles.textBlue}`}>{money(Number(item.quantity || 0) * Number(item.price || 0))}</td>
-                      <td className={styles.textRight}>
-                        <input type="number" min="0" max="10" step="any" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '65px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(event) => handleItemChange(item.localId, 'vatPercent', event.target.value)} />
-                      </td>
+                      {showPricing && (
+                        <td className={styles.textRight}>
+                          <input id={`export-line-price-${index}`} type="text" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '130px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.price ? new Intl.NumberFormat('vi-VN').format(item.price) : ''} onChange={(event) => handleItemChange(item.localId, 'price', event.target.value.replace(/\D/g, ''))} />
+                        </td>
+                      )}
+                      {showPricing && (
+                        <td className={`${styles.textRight} ${styles.textBlue}`}>{money(lineAmount)}</td>
+                      )}
+                      {showPricing && (
+                        <td className={styles.textRight}>
+                          <input id={`export-line-vat-${index}`} type="number" min="0" max="10" step="any" className="misa-input text-right" style={{ height: '32px', padding: '0 8px', width: '100%', maxWidth: '65px', marginLeft: 'auto', textAlign: 'right', fontSize: '13px' }} value={item.vatPercent !== undefined ? item.vatPercent : ''} onChange={(event) => handleItemChange(item.localId, 'vatPercent', event.target.value)} />
+                        </td>
+                      )}
                       <td className={styles.textCenter}>
                         <button className={styles.iconBtnDanger} onClick={() => removeItem(item.localId)} title="Xóa dòng"><i className="bi bi-trash"></i></button>
                       </td>
@@ -1148,7 +1347,15 @@ function CreateExportSlipPage({ mode: propMode }) {
                 <div style={{ color: '#4b5563', fontSize: '13px' }}>Tổng số: <span style={{ fontWeight: 'bold', color: '#111827' }}>{items.length}</span> bản ghi</div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button type="button" onClick={addItem} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Thêm dòng</button>
-                  <button type="button" onClick={() => setItems([{ ...emptyLine(), isNew: false }])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
+                  <button type="button" onClick={() => setItems([{ ...emptyLine(form.warehouseId), isNew: false }])} style={{ padding: '6px 12px', border: '1px solid #d1d5db', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}>Xóa hết dòng</button>
+                </div>
+
+                <div style={{ width: '100%', maxWidth: '520px', marginTop: '6px' }}>
+                  <AttachmentUpload
+                    files={attachments}
+                    onChange={setAttachments}
+                    folder="export_slips"
+                  />
                 </div>
               </div>
 
@@ -1166,22 +1373,33 @@ function CreateExportSlipPage({ mode: propMode }) {
                     <span style={{ cursor: 'pointer' }}>Sau</span>
                   </div>
                 </div>
-                <table style={{ width: '100%', fontSize: '13px' }}>
-                  <tbody>
-                    <tr>
-                      <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền hàng</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalPrice)}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Thuế GTGT</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalVat)}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền thanh toán</td>
-                      <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(grandTotal)}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                {showPricing ? (
+                  <table style={{ width: '100%', fontSize: '13px' }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền hàng</td>
+                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalPrice)}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Thuế GTGT</td>
+                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(totalVat)}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng tiền thanh toán</td>
+                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold' }}>{money(grandTotal)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                ) : (
+                  <table style={{ width: '100%', fontSize: '13px' }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ padding: '6px 0', fontWeight: 'bold' }}>Tổng số lượng xuất</td>
+                        <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 'bold', color: 'var(--color-primary)' }}>{money(totalQuantity)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           </div>
@@ -1233,8 +1451,44 @@ function CreateExportSlipPage({ mode: propMode }) {
             ...prev,
             referenceType: data.referenceType,
             referenceId: data.referenceId,
-            referenceCode: data.docCode
+            referenceCode: data.docCode,
+            salesOrderId: data.referenceType === 'SALES_ORDER' ? data.referenceId : prev.salesOrderId,
           }));
+          if (data.referenceType === 'SALES_ORDER' && data.referenceId) {
+            try {
+              const res = await salesOrderApi.getSalesOrderDetail(data.referenceId);
+              const so = res?.data?.data || res?.data;
+              if (so) {
+                setForm(prev => ({
+                  ...prev,
+                  salesOrderId: so.id,
+                  warehouseId: so.warehouseId ? String(so.warehouseId) : prev.warehouseId,
+                  partnerId: so.partnerId || so.customerId || prev.partnerId,
+                  salespersonId: so.salespersonId || prev.salespersonId,
+                  customerAddress: so.shippingAddress || so.partnerAddress || prev.customerAddress,
+                  receiverName: so.partnerName || so.customerName || prev.receiverName,
+                  receiverPhone: so.partnerPhone || so.customerPhone || prev.receiverPhone,
+                  note: prev.note || `Xuất kho theo đơn hàng ${so.soCode}`,
+                }));
+                if (so.lines && so.lines.length > 0) {
+                  setItems(so.lines.map(l => ({
+                    ...emptyLine(String(so.warehouseId || form.warehouseId || '')),
+                    variantId: String(l.variantId),
+                    warehouseId: String(l.warehouseId || so.warehouseId || form.warehouseId || ''),
+                    quantity: l.quantity || 1,
+                    price: l.unitPrice || l.price || 0,
+                    vatPercent: l.vatPercent || l.vatRate || 0,
+                    warrantyMonths: l.warrantyMonths || 0,
+                    note: l.note || '',
+                    serialNumbers: [],
+                  })));
+                  showToast('success', `Đã tải ${so.lines.length} sản phẩm từ đơn bán hàng ${so.soCode}`);
+                }
+              }
+            } catch (err) {
+              console.error('Failed to load SO detail', err);
+            }
+          }
           if (data.referenceType === 'STOCKTAKE' && data.referenceId) {
             try {
               const res = await stocktakeApi.getStocktakeDetail(data.referenceId);
@@ -1253,8 +1507,9 @@ function CreateExportSlipPage({ mode: propMode }) {
                       .filter(Boolean);
                     const serialList = missingSerials.length > 0 ? missingSerials : rawSerials.map(s => (typeof s === 'string' ? s : s.serialNumber)).filter(Boolean);
                     return {
-                      ...emptyLine(),
+                      ...emptyLine(String(stData.warehouseId || '')),
                       variantId: String(l.variantId),
+                      warehouseId: String(stData.warehouseId || ''),
                       quantity: Math.abs(Number(l.diffQty)) || 1,
                       price: 0,
                       serialNumbers: serialList,
@@ -1278,13 +1533,13 @@ function CreateExportSlipPage({ mode: propMode }) {
           targetQuantity={Number(selectedSerialItem.quantity || 0)}
           initialSerials={selectedSerialItem.serialNumbers || []}
           mode="export"
-          warehouseId={form.warehouseId}
+          warehouseId={selectedSerialItem.warehouseId || form.warehouseId}
           variantId={selectedSerialProduct.id}
           onValidateSerial={async (serialValue) => {
             try {
               const response = await exportApi.resolveScan({
                 code: serialValue,
-                warehouseId: form.warehouseId,
+                warehouseId: selectedSerialItem.warehouseId || form.warehouseId,
               });
               const scanResult = unwrap(response);
               if (!scanResult.serialNumber) {
@@ -1312,25 +1567,13 @@ function CreateExportSlipPage({ mode: propMode }) {
         onCancel={() => setShowConfirm(false)}
       />
 
-
-
       <SuccessPrintModal
         isOpen={showSuccessModal}
         title={savedSlip?.status === 'POSTED' || savedSlip?.statusCode === 'POSTED' ? 'Lưu & ghi sổ phiếu xuất kho thành công!' : 'Lưu tạm phiếu xuất kho thành công!'}
-        message="Phiếu xuất kho đã được ghi nhận vào hệ thống thành công. Bạn có thể in phiếu ngay bây giờ."
+        message="Phiếu xuất kho đã được ghi nhận vào hệ thống thành công. Bạn có thể chọn cách in phiếu dưới đây."
         docCode={savedSlip?.docCode}
-        printBtnText="In phiếu xuất kho"
-        onPrint={() => {
-          const customer = customers.find(c => String(c.id) === String(savedSlip?.partnerId || form.partnerId)) || {};
-          const warehouseName = warehouses.find(w => String(w.id) === String(savedSlip?.warehouseId || form.warehouseId))?.name || '';
-          printExportSlip(savedSlip || {}, {
-            customer,
-            warehouseName,
-            productById,
-            userById,
-            isImport: false
-          });
-        }}
+        onPrintSummary={() => handlePrint('SUMMARY')}
+        onPrintSplit={() => handlePrint('SPLIT_BY_WAREHOUSE')}
         onViewList={() => navigate(returnUrl || '/export-slips')}
         onCreateNew={() => window.location.reload()}
         onClose={() => navigate(returnUrl || '/export-slips')}

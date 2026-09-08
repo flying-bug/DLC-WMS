@@ -47,6 +47,14 @@ public class ProductVariant {
     @Column(name = "specs_json", columnDefinition = "TEXT")
     private String specsJson;
 
+    @Column(name = "tracking_mode", nullable = false, length = 20)
+    @Builder.Default
+    private String trackingMode = "NONE";
+
+    @Column(name = "min_stock_qty", nullable = false, precision = 15, scale = 4)
+    @Builder.Default
+    private BigDecimal minStockQty = BigDecimal.ZERO;
+
     @Column(name = "warranty_months")
     @Builder.Default
     private Integer warrantyMonths = 0;
@@ -62,4 +70,12 @@ public class ProductVariant {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public boolean isSerialTracked() {
+        return "SERIAL".equals(trackingMode) || "SERIAL_LOT".equals(trackingMode);
+    }
+
+    public boolean isLotTracked() {
+        return "LOT".equals(trackingMode) || "SERIAL_LOT".equals(trackingMode);
+    }
 }

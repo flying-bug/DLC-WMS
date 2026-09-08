@@ -27,9 +27,9 @@
     justify-content: center;
     font-size: 22px;
     color: #fff;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: var(--brand-gradient, linear-gradient(135deg, var(--color-primary, #059669), var(--color-primary-accent, #10b981)));
     box-shadow:
-        0 4px 16px rgba(99, 102, 241, 0.4),
+        0 4px 16px rgba(0, 0, 0, 0.2),
         0 2px 6px rgba(0, 0, 0, 0.15);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
@@ -38,8 +38,9 @@
 
 .micButton:hover {
     transform: scale(1.08);
+    background: var(--button-primary-hover-bg, var(--color-primary-hover, #047857));
     box-shadow:
-        0 6px 24px rgba(99, 102, 241, 0.5),
+        0 6px 24px rgba(0, 0, 0, 0.25),
         0 3px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -82,10 +83,10 @@
 
 /* ── Transcript Panel ────────────────────────────────────── */
 .transcriptPanel {
-    background: rgba(15, 23, 42, 0.92);
+    background: rgba(15, 23, 42, 0.94);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    border: 1px solid var(--color-primary, #059669);
     border-radius: 16px;
     padding: 20px;
     min-width: 320px;
@@ -117,13 +118,13 @@
 
 .panelHeader i {
     font-size: 16px;
-    color: #818cf8;
+    color: var(--color-primary-bright, #10b981);
 }
 
 .panelHeader .panelTitle {
     font-size: 14px;
     font-weight: 600;
-    color: #c7d2fe;
+    color: #f1f5f9;
     flex: 1;
 }
 
@@ -165,7 +166,7 @@
 /* ── Transcript Text ─────────────────────────────────────── */
 .transcriptArea {
     background: rgba(30, 41, 59, 0.7);
-    border: 1px solid rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     padding: 12px 14px;
     min-height: 48px;
@@ -191,7 +192,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #818cf8;
+    background: var(--color-primary-bright, #10b981);
     animation: dotBounce 1.4s infinite ease-in-out;
 }
 
@@ -216,8 +217,8 @@
 
 /* ── Intent Result ───────────────────────────────────────── */
 .intentResult {
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid rgba(99, 102, 241, 0.25);
+    background: var(--color-primary-soft, rgba(16, 185, 129, 0.1));
+    border: 1px solid var(--color-primary, #059669);
     border-radius: 10px;
     padding: 12px 14px;
     margin-bottom: 14px;
@@ -226,7 +227,7 @@
 .intentLabel {
     font-size: 11px;
     font-weight: 600;
-    color: #818cf8;
+    color: var(--color-primary-bright, #10b981);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 6px;
@@ -275,12 +276,12 @@
 }
 
 .btnConfirm {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: var(--brand-gradient, var(--color-primary, #059669));
     color: #fff;
 }
 
 .btnConfirm:hover {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: var(--button-primary-hover-bg, var(--color-primary-hover, #047857));
     transform: translateY(-1px);
 }
 
@@ -302,13 +303,13 @@
 }
 
 .btnRetry {
-    background: rgba(99, 102, 241, 0.15);
-    color: #a5b4fc;
-    border: 1px solid rgba(99, 102, 241, 0.3) !important;
+    background: var(--color-primary-soft, rgba(16, 185, 129, 0.15));
+    color: var(--color-primary-bright, #a7f3d0);
+    border: 1px solid var(--color-primary, #059669) !important;
 }
 
 .btnRetry:hover {
-    background: rgba(99, 102, 241, 0.25);
+    background: var(--color-primary-pale, rgba(16, 185, 129, 0.25));
 }
 
 /* ── Not Supported Banner ────────────────────────────────── */

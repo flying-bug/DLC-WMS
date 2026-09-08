@@ -10,6 +10,7 @@ import com.duylongtech.backend.service.ProductService;
 import com.duylongtech.backend.service.AuditLogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
+@Slf4j
 public class ProductController {
     private final ProductService productService;
     private final AuditLogService auditLogService;
@@ -157,33 +159,42 @@ public class ProductController {
         String actor = getCurrentUser();
         try {
             ProductResponse created = productService.createProduct(dto);
-            String detailJson = auditLogService.buildChangeDetail(null, created, "Tạo mới sản phẩm");
-            auditLogService.logEvent(
-                actor,
-                "CREATE",
-                "Product",
-                created.getId(),
-                "SUCCESS",
-                "Thêm mới sản phẩm " + created.getProductCode(),
-                ip,
-                detailJson
-            );
+            try {
+                String detailJson = auditLogService.buildChangeDetail(null, created, "Tao moi san pham");
+                int variantCount = created.getVariants() != null ? created.getVariants().size() : 0;
+                auditLogService.logEvent(
+                    actor,
+                    "CREATE",
+                    "Product",
+                    created.getId(),
+                    "SUCCESS",
+                    "Them moi san pham " + created.getProductCode() + " voi " + variantCount + " SKU",
+                    ip,
+                    detailJson
+                );
+            } catch (Exception auditException) {
+                log.warn("Audit create product failed for product {}", created.getId(), auditException);
+            }
             return ResponseEntity.ok(ApiResponse.<ProductResponse>builder()
                     .success(true)
                     .userMessage("Tạo hàng hóa/dịch vụ thành công")
                     .data(created)
                     .build());
         } catch (Exception e) {
-            auditLogService.logEvent(
-                actor,
-                "CREATE",
-                "Product",
-                null,
-                "FAILED",
-                "Thêm mới sản phẩm " + dto.getProductCode() + " thất bại: " + e.getMessage(),
-                ip,
-                null
-            );
+            try {
+                auditLogService.logEvent(
+                    actor,
+                    "CREATE",
+                    "Product",
+                    null,
+                    "FAILED",
+                    "Them moi san pham " + dto.getProductCode() + " that bai: " + e.getMessage(),
+                    ip,
+                    null
+                );
+            } catch (Exception auditException) {
+                log.warn("Audit failed create product failed", auditException);
+            }
             throw e;
         }
     }

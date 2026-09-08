@@ -6,6 +6,7 @@ import AdminLayout from '../../components/layout/AdminLayout';
 import SuperAdminLayout from '../../components/layout/SuperAdminLayout';
 import { useToast } from '../../contexts/ToastContext';
 import { formatDateTime } from '../../utils/dateFormat';
+import { compressImage } from '../../utils/imageCompressor';
 import styles from './ProfilePage.module.css';
 
 const ROLE_LABELS = {
@@ -13,6 +14,14 @@ const ROLE_LABELS = {
     super_admin: 'Quản trị hệ thống',
     role_manager: 'Quản lý',
     manager: 'Quản lý',
+    role_warehouse_controller: 'Thủ kho',
+    warehouse_controller: 'Thủ kho',
+    role_technician: 'Kỹ thuật viên',
+    technician: 'Kỹ thuật viên',
+    role_accountant: 'Kế toán',
+    accountant: 'Kế toán',
+    role_cashier_controller: 'Thủ quỹ',
+    cashier_controller: 'Thủ quỹ',
     role_staff: 'Nhân viên',
     staff: 'Nhân viên',
     admin: 'Quản trị viên',
@@ -159,11 +168,20 @@ function ProfilePage() {
             return;
         }
 
-        const avatarData = new FormData();
-        avatarData.append('file', file);
+        // 1. Optimistic Preview: Hiển thị ảnh ngay lập tức cho người dùng
+        const previousAvatarUrl = profile?.avatarUrl;
+        const localPreviewUrl = URL.createObjectURL(file);
+        setProfile((prev) => (prev ? { ...prev, avatarUrl: localPreviewUrl } : prev));
 
         try {
             setUploading(true);
+
+            // 2. Nén ảnh ở Client (Avatar chỉ cần tối đa 400x400 px, giảm từ nhiều MB xuống ~30KB-50KB)
+            const compressedFile = await compressImage(file, { maxWidth: 400, maxHeight: 400, quality: 0.85 });
+
+            const avatarData = new FormData();
+            avatarData.append('file', compressedFile);
+
             const response = await axiosClient.put('/users/me/avatar', avatarData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
@@ -172,6 +190,8 @@ function ProfilePage() {
             emitUserUpdated({ type: 'avatar-updated', user: updatedProfile });
             showToast('success', 'Cập nhật ảnh đại diện thành công.');
         } catch (err) {
+            // Khôi phục lại avatar cũ nếu upload lỗi
+            setProfile((prev) => (prev ? { ...prev, avatarUrl: previousAvatarUrl } : prev));
             showToast('error', err.response?.data?.userMessage || 'Không thể tải ảnh đại diện.');
         } finally {
             setUploading(false);

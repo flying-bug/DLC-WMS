@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import AdminLayout from '../../components/layout/AdminLayout';
 import Toast from '../../components/ui/Toast/Toast';
+import ConfirmModal from '../../components/ui/ConfirmModal/ConfirmModal';
 import * as customerApi from '../../api/customerApi';
 import * as purchaseOrderApi from '../../api/purchaseOrderApi';
 import * as paymentApi from '../../api/paymentApi';
@@ -58,6 +59,9 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [postingId, setPostingId] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
+  const [deletingItem, setDeletingItem] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState({ isVisible: false, type: 'info', message: '' });
 
   const showToast = (type, message) => setToast({ isVisible: true, type, message });
@@ -85,6 +89,7 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
   }, []);
 
   useEffect(() => {
+    setEditingItem(null);
     setPartnerId(null);
     setDebtBalance(0);
     setAmount('');
@@ -147,6 +152,20 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
     return true;
   };
 
+  const handleStartEdit = (item) => {
+    setEditingItem(item);
+    setPartnerId(item.partnerId);
+    setAmount(String(item.amount || ''));
+    setPaymentMethod(item.paymentMethod || 'CASH');
+    setNote(item.note || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItem(null);
+    setAmount('');
+    setNote('');
+  };
+
   const submit = async (nextStatus) => {
     if (!validate()) return;
     setSaving(true);
@@ -158,19 +177,49 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
         note: note || undefined,
         status: nextStatus,
       };
-      const res = mode === 'RECEIPT'
-        ? await paymentApi.createReceipt(payload)
-        : await paymentApi.createVoucher(payload);
-      const saved = unwrap(res);
+
+      let saved;
+      if (editingItem) {
+        const res = await paymentApi.updatePayment(editingItem.id, payload);
+        saved = unwrap(res);
+        setEditingItem(null);
+        showToast('success', nextStatus === 'POSTED' ? 'Cập nhật & ghi sổ thành công' : 'Cập nhật phiếu nháp thành công');
+      } else {
+        const res = mode === 'RECEIPT'
+          ? await paymentApi.createReceipt(payload)
+          : await paymentApi.createVoucher(payload);
+        saved = unwrap(res);
+        showToast('success', nextStatus === 'POSTED' ? 'Ghi sổ thành công' : 'Lưu tạm thành công');
+      }
+
       setDebtBalance(Number(saved?.partnerDebtBalance || 0));
       setAmount('');
       setNote('');
       await reloadPartnerSnapshot(partnerId);
-      showToast('success', nextStatus === 'POSTED' ? 'Ghi sổ thành công' : 'Lưu tạm thành công');
     } catch (err) {
-      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể lập phiếu thu/chi');
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể lưu phiếu thu/chi');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingItem?.id) return;
+    setDeleting(true);
+    try {
+      await paymentApi.deletePayment(deletingItem.id);
+      if (editingItem?.id === deletingItem.id) {
+        setEditingItem(null);
+        setAmount('');
+        setNote('');
+      }
+      await reloadPartnerSnapshot(partnerId);
+      showToast('success', `Đã xóa phiếu nháp ${deletingItem.code}`);
+      setDeletingItem(null);
+    } catch (err) {
+      showToast('error', err.response?.data?.userMessage || err.response?.data?.devMessage || 'Không thể xóa phiếu nháp');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -181,6 +230,11 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
       const res = await paymentApi.postPayment(item.id);
       const saved = unwrap(res);
       setDebtBalance(Number(saved?.partnerDebtBalance || 0));
+      if (editingItem?.id === item.id) {
+        setEditingItem(null);
+        setAmount('');
+        setNote('');
+      }
       await reloadPartnerSnapshot(partnerId);
       showToast('success', 'Ghi sổ phiếu nháp thành công');
     } catch (err) {
@@ -237,6 +291,18 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
               <div className={styles.loading}>Đang tải dữ liệu...</div>
             ) : (
               <>
+                {editingItem && (
+                  <div className={styles.editingBanner}>
+                    <div className={styles.editingInfo}>
+                      <i className="bi bi-pencil-square" />
+                      <span>Đang chỉnh sửa phiếu nháp <strong>{editingItem.code}</strong></span>
+                    </div>
+                    <button className={styles.btnCancelEdit} onClick={handleCancelEdit} type="button">
+                      <i className="bi bi-x" /> Hủy sửa
+                    </button>
+                  </div>
+                )}
+
                 <div className={styles.fieldRow}>
                   <label className={styles.label}>{mode === 'RECEIPT' ? 'Khách hàng' : 'Nhà cung cấp'} <span>*</span></label>
                   <Select
@@ -302,10 +368,10 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
 
                 <div className={styles.formActions}>
                   <button className={styles.btnDraft} disabled={saving} onClick={() => submit('DRAFT')} type="button">
-                    Lưu tạm
+                    {editingItem ? 'Cập nhật nháp' : 'Lưu tạm'}
                   </button>
                   <button className={styles.btnPost} disabled={saving || Number(debtBalance || 0) <= 0} onClick={() => submit('POSTED')} type="button">
-                    <i className="bi bi-check2-circle" /> Ghi sổ
+                    <i className="bi bi-check2-circle" /> {editingItem ? 'Cập nhật & Ghi sổ' : 'Ghi sổ'}
                   </button>
                 </div>
               </>
@@ -349,15 +415,32 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
                   <div className={styles.historyMain}>
                     <div className={styles.historyCodeRow}>
                       <strong>{item.code}</strong>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <button 
-                          className={styles.btnPostInline}
-                          style={{ padding: '2px 6px', fontSize: '12px', backgroundColor: '#fff', border: '1px solid #d1d5db', color: '#374151' }}
+                          className={styles.btnActionSmall}
                           onClick={() => printPaymentReceipt(item, { partnerName: selectedPartner?.label?.split(' - ')[1] || selectedPartner?.label, salespersonName: '' })}
                           title="In phiếu"
                         >
                           <i className="bi bi-printer"></i>
                         </button>
+                        {item.status === 'DRAFT' && (
+                          <>
+                            <button
+                              className={styles.btnActionSmallEdit}
+                              onClick={() => handleStartEdit(item)}
+                              title="Sửa phiếu nháp"
+                            >
+                              <i className="bi bi-pencil" />
+                            </button>
+                            <button
+                              className={styles.btnActionSmallDelete}
+                              onClick={() => setDeletingItem(item)}
+                              title="Xóa phiếu nháp"
+                            >
+                              <i className="bi bi-trash" />
+                            </button>
+                          </>
+                        )}
                         <span className={item.status === 'POSTED' ? styles.statusPosted : styles.statusDraft}>{statusText(item.status)}</span>
                       </div>
                     </div>
@@ -388,6 +471,17 @@ function PaymentManagementPage({ initialMode = 'RECEIPT' }) {
           </section>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={!!deletingItem}
+        title="Xóa phiếu nháp"
+        message={`Bạn có chắc chắn muốn xóa phiếu nháp "${deletingItem?.code}" số tiền ${money(deletingItem?.amount)} đ không? Thao tác này không thể hoàn tác.`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeletingItem(null)}
+        confirmText="Xóa phiếu"
+        isDanger={true}
+      />
+
       <Toast isVisible={toast.isVisible} type={toast.type} message={toast.message} onClose={hideToast} />
     </AdminLayout>
   );

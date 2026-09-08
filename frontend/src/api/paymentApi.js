@@ -2,7 +2,11 @@ import axiosClient from './axiosClient';
 
 const BASE = '/payments';
 
+export const getAllPayments = (params = {}) =>
+  axiosClient.get(BASE, { params });
+
 export const createReceipt = (data) =>
+
   axiosClient.post(`${BASE}/receipts`, data);
 
 export const createVoucher = (data) =>
@@ -10,6 +14,12 @@ export const createVoucher = (data) =>
 
 export const postPayment = (id) =>
   axiosClient.post(`${BASE}/${id}/post`);
+
+export const updatePayment = (id, data) =>
+  axiosClient.put(`${BASE}/${id}`, data);
+
+export const deletePayment = (id) =>
+  axiosClient.delete(`${BASE}/${id}`);
 
 export const getPartnerDebtBalance = (partnerId) =>
   axiosClient.get(`${BASE}/balance/${partnerId}`);

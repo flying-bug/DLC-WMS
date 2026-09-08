@@ -30,7 +30,7 @@
   justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid #e5e7eb;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--brand-gradient, linear-gradient(135deg, var(--color-primary, #059669) 0%, var(--color-primary-accent, #10b981) 100%));
   color: #fff;
 }
 
@@ -74,13 +74,13 @@
 }
 
 .dropZone:hover {
-  border-color: #667eea;
-  background: #f0f2ff;
+  border-color: var(--color-primary, #059669);
+  background: var(--color-primary-soft, #ecfdf5);
 }
 
 .dragOver {
-  border-color: #667eea;
-  background: #e8ecff;
+  border-color: var(--color-primary, #059669);
+  background: var(--color-primary-soft, #ecfdf5);
   transform: scale(1.01);
 }
 
@@ -126,7 +126,7 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  color: #667eea;
+  color: var(--color-primary, #059669);
 }
 
 .loadingWrap p {
@@ -139,7 +139,7 @@
   width: 40px;
   height: 40px;
   border: 3px solid #e5e7eb;
-  border-top-color: #667eea;
+  border-top-color: var(--color-primary, #059669);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -169,8 +169,8 @@
 
 .actionBtn:hover:not(:disabled) {
   background: #f3f4f6;
-  border-color: #667eea;
-  color: #667eea;
+  border-color: var(--color-primary, #059669);
+  color: var(--color-primary, #059669);
 }
 
 .actionBtn:disabled {

@@ -22,7 +22,17 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
+    @GetMapping
+    @PreAuthorize("hasAuthority('payment:view')")
+    @Operation(summary = "Get all payment receipts and vouchers")
+    public ResponseEntity<List<PaymentResponse>> getAllPayments(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(paymentService.getAllPayments(type, status));
+    }
+
     @PostMapping("/receipts")
+
     @PreAuthorize("hasAuthority('payment:add')")
     @Operation(summary = "Create customer receipt")
     public ResponseEntity<PaymentResponse> createReceipt(@RequestBody PaymentRequest request) {
@@ -41,6 +51,21 @@ public class PaymentController {
     @Operation(summary = "Post a DRAFT receipt/voucher")
     public ResponseEntity<PaymentResponse> postPayment(@PathVariable Long id) {
         return ResponseEntity.ok(paymentService.postPayment(id));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('payment:edit')")
+    @Operation(summary = "Update a DRAFT receipt/voucher")
+    public ResponseEntity<PaymentResponse> updatePayment(@PathVariable Long id, @RequestBody PaymentRequest request) {
+        return ResponseEntity.ok(paymentService.updatePayment(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('payment:delete') or hasAuthority('payment:edit')")
+    @Operation(summary = "Delete a DRAFT receipt/voucher")
+    public ResponseEntity<Void> deletePayment(@PathVariable Long id) {
+        paymentService.deletePayment(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/balance/{partnerId}")

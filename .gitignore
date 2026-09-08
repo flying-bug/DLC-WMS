@@ -13,6 +13,8 @@ package-lock.json
 .env.development.local
 .env.test.local
 .env.production.local
+*.pem
+*.key
 
 # ── OS Files (File rác hệ thống) ─────────────
 .DS_Store
@@ -27,6 +29,13 @@ coverage/
 *.db
 *.sqlite
 *.sql
+!backend/src/main/resources/db/migration/*.sql
 *.log
 npm-debug.log*
 yarn-error.log*
+
+# ── Playwright E2E Testing ───────────────────
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

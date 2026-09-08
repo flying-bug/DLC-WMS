@@ -94,4 +94,20 @@ public class InventoryDocument {
 
     @Column(name = "salesperson_id")
     private Long salespersonId;
+
+    @Column(name = "has_discrepancy")
+    private Boolean hasDiscrepancy;
+
+    @Column(name = "discrepancy_note", columnDefinition = "TEXT")
+    private String discrepancyNote;
+
+    @Column(name = "unposted_by")
+    private Long unpostedBy;
+
+    @Column(name = "unposted_at")
+    private LocalDateTime unpostedAt;
+
+    @Column(name = "unpost_reason", columnDefinition = "TEXT")
+    private String unpostReason;
 }
+

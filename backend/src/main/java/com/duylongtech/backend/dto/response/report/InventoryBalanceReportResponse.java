@@ -18,6 +18,7 @@ public class InventoryBalanceReportResponse {
     private BigDecimal totalQuantity;
     private BigDecimal availableQuantity;
     private BigDecimal totalValue;
+    private Long warehouseId;
     private String warehouseCode;
     private String warehouseName;
     private BigDecimal totalReserved;

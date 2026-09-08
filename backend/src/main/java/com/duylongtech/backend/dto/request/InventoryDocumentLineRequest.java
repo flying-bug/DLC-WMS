@@ -33,4 +33,17 @@ public class InventoryDocumentLineRequest {
     @DecimalMin(value = "0.00", message = "Thuế VAT phải nằm trong khoảng từ 0% đến 10%")
     @DecimalMax(value = "10.00", message = "Thuế VAT phải nằm trong khoảng từ 0% đến 10%")
     private BigDecimal vatPercent;
+
+    private Long warehouseId;
+    private Long targetWarehouseId;
+
+    private BigDecimal expectedQuantity;
+    private BigDecimal rejectedQuantity;
+    private String discrepancyReason;
+
+    private Long unitId;
+    private Long baseUnitId;
+    private String conversionOperator;
+    private BigDecimal conversionRatio;
+    private BigDecimal baseQuantity;
 }

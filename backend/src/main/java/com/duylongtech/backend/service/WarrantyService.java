@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -103,7 +104,7 @@ public class WarrantyService {
                 lineBuilder.productId(productId);
                 lineBuilder.productName(productName);
                 return lineBuilder.build();
-            }).collect(java.util.stream.Collectors.toList());
+            }).collect(Collectors.toList());
             builder.lines(lineResponses);
         }
 

@@ -509,6 +509,80 @@ class PaymentServiceImplTest {
         verifyNoInteractions(partnerLedgerService, codeGeneratorService);
     }
 
+    @Test
+    void updatePayment_whenDraft_updatesSuccessfully() {
+        PaymentTransaction draft = PaymentTransaction.builder()
+                .id(401L)
+                .transactionCode("PT00001")
+                .type("RECEIPT")
+                .partnerId(PARTNER_ID)
+                .amount(new BigDecimal("100.00"))
+                .status("DRAFT")
+                .paymentMethod("CASH")
+                .build();
+
+        when(paymentTransactionRepository.findById(401L)).thenReturn(Optional.of(draft));
+        when(partnerRepository.findById(PARTNER_ID)).thenReturn(Optional.of(partner()));
+        when(paymentTransactionRepository.save(any(PaymentTransaction.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(partnerLedgerRepository.findTopByPartnerIdOrderByIdDesc(PARTNER_ID))
+                .thenReturn(Optional.of(ledger("500.00")));
+
+        PaymentRequest updateReq = paymentRequest(PARTNER_ID, "200.00", "BANK_TRANSFER", "DRAFT", "Ghi chú sửa");
+        PaymentResponse response = paymentService.updatePayment(401L, updateReq);
+
+        assertNotNull(response);
+        assertEquals(new BigDecimal("200.00"), response.getAmount());
+        assertEquals("BANK_TRANSFER", response.getPaymentMethod());
+        assertEquals("Ghi chú sửa", response.getNote());
+        assertEquals("DRAFT", response.getStatus());
+    }
+
+    @Test
+    void updatePayment_whenPosted_throwsException() {
+        PaymentTransaction posted = PaymentTransaction.builder()
+                .id(402L)
+                .transactionCode("PT00002")
+                .type("RECEIPT")
+                .partnerId(PARTNER_ID)
+                .amount(new BigDecimal("100.00"))
+                .status("POSTED")
+                .build();
+
+        when(paymentTransactionRepository.findById(402L)).thenReturn(Optional.of(posted));
+
+        PaymentRequest updateReq = paymentRequest(PARTNER_ID, "200.00", "CASH", "DRAFT", null);
+        assertThrows(BusinessException.class, () -> paymentService.updatePayment(402L, updateReq));
+    }
+
+    @Test
+    void deletePayment_whenDraft_deletesSuccessfully() {
+        PaymentTransaction draft = PaymentTransaction.builder()
+                .id(403L)
+                .transactionCode("PT00003")
+                .status("DRAFT")
+                .build();
+
+        when(paymentTransactionRepository.findById(403L)).thenReturn(Optional.of(draft));
+
+        paymentService.deletePayment(403L);
+
+        verify(paymentTransactionRepository).delete(draft);
+    }
+
+    @Test
+    void deletePayment_whenPosted_throwsException() {
+        PaymentTransaction posted = PaymentTransaction.builder()
+                .id(404L)
+                .transactionCode("PT00004")
+                .status("POSTED")
+                .build();
+
+        when(paymentTransactionRepository.findById(404L)).thenReturn(Optional.of(posted));
+
+        assertThrows(BusinessException.class, () -> paymentService.deletePayment(404L));
+        verify(paymentTransactionRepository, never()).delete(any());
+    }
+
     private static Stream<BigDecimal> nonPositiveAmounts() {
         return Stream.of(null, BigDecimal.ZERO, new BigDecimal("-0.01"));
     }

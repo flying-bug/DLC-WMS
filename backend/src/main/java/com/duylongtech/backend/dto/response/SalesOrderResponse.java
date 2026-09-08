@@ -22,6 +22,8 @@ public class SalesOrderResponse {
     private String partnerName;
     private String partnerPhone;
     private String partnerEmail;
+    private String partnerTaxCode;
+    private String partnerAddress;
 
     // Warehouse info
     private Long warehouseId;
@@ -66,6 +68,9 @@ public class SalesOrderResponse {
         private BigDecimal vatRate;
         private BigDecimal vatAmount;
         private Integer warrantyMonths;
+        private Long warehouseId;
+        private String warehouseCode;
+        private String warehouseName;
         private BigDecimal lineAmount;
         private String note;
         // Tồn kho khả dụng — dùng để hiển thị cảnh báo trên UI

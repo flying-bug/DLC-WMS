@@ -8,7 +8,10 @@ import com.duylongtech.backend.dto.response.WarrantyLineResponse;
 import com.duylongtech.backend.dto.response.WarrantyResponse;
 import com.duylongtech.backend.entity.Warranty;
 import com.duylongtech.backend.entity.WarrantyLine;
+import com.duylongtech.backend.entity.SerialNumber;
 import com.duylongtech.backend.exception.BusinessException;
+import com.duylongtech.backend.repository.ProductVariantRepository;
+import com.duylongtech.backend.repository.SerialNumberRepository;
 import com.duylongtech.backend.repository.WarrantyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,7 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatter;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -32,6 +36,8 @@ public class WarrantyLifecycleService {
 
     private final WarrantyRepository warrantyRepository;
     private final CodeGeneratorService codeGeneratorService;
+    private final SerialNumberRepository serialNumberRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     @Transactional
     public WarrantyResponse createWarranty(WarrantyRequest request) {
@@ -72,18 +78,27 @@ public class WarrantyLifecycleService {
 
     private List<WarrantyLine> mapLines(List<WarrantyLineRequest> lineRequests, Warranty warranty) {
         if (lineRequests == null || lineRequests.isEmpty()) {
-            return new java.util.ArrayList<>();
+            return new ArrayList<>();
         }
-        return lineRequests.stream().map(req -> WarrantyLine.builder()
-                .warranty(warranty)
-                .serialNumberId(req.getSerialNumberId())
-                .productVariantId(req.getProductVariantId())
-                .quantity(req.getQuantity())
-                .startDate(req.getStartDate() != null ? req.getStartDate() : warranty.getStartDate())
-                .endDate(req.getEndDate() != null ? req.getEndDate() : warranty.getEndDate())
-                .warrantyStatus(normalizeStatusOrDefault(req.getWarrantyStatus(), warranty.getWarrantyStatus()))
-                .build()
-        ).collect(Collectors.toList());
+        return lineRequests.stream().map(req -> {
+            Long variantId = req.getProductVariantId();
+            BigDecimal quantity = req.getQuantity();
+            if (req.getSerialNumberId() != null) {
+                SerialNumber serial = serialNumberRepository.findById(req.getSerialNumberId())
+                        .orElseThrow(() -> new BusinessException("Serial bao hanh khong ton tai"));
+                variantId = serial.getVariantId();
+                quantity = BigDecimal.ONE;
+            }
+            return WarrantyLine.builder()
+                    .warranty(warranty)
+                    .serialNumberId(req.getSerialNumberId())
+                    .productVariantId(variantId)
+                    .quantity(quantity)
+                    .startDate(req.getStartDate() != null ? req.getStartDate() : warranty.getStartDate())
+                    .endDate(req.getEndDate() != null ? req.getEndDate() : warranty.getEndDate())
+                    .warrantyStatus(normalizeStatusOrDefault(req.getWarrantyStatus(), warranty.getWarrantyStatus()))
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     @Transactional
@@ -118,6 +133,24 @@ public class WarrantyLifecycleService {
         for (WarrantyLineRequest line : request.getLines()) {
             if (line.getSerialNumberId() == null && (line.getProductVariantId() == null || line.getQuantity() == null)) {
                 throw new BusinessException(SystemMessage.WARR_ERR_006.getMessage());
+            }
+            if (line.getSerialNumberId() != null) {
+                SerialNumber serial = serialNumberRepository.findById(line.getSerialNumberId())
+                        .orElseThrow(() -> new BusinessException("Serial bao hanh khong ton tai"));
+                if (line.getProductVariantId() != null
+                        && !line.getProductVariantId().equals(serial.getVariantId())) {
+                    throw new BusinessException("Serial khong thuoc SKU da chon");
+                }
+                if (line.getQuantity() != null && line.getQuantity().compareTo(BigDecimal.ONE) != 0) {
+                    throw new BusinessException("Dong bao hanh theo serial phai co so luong bang 1");
+                }
+            } else {
+                if (!productVariantRepository.existsById(line.getProductVariantId())) {
+                    throw new BusinessException("SKU bao hanh khong ton tai");
+                }
+                if (line.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new BusinessException("So luong bao hanh phai lon hon 0");
+                }
             }
         }
         if (request.getPartnerId() == null) {

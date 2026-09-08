@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @Builder
@@ -27,8 +28,8 @@ public class ProductRequest {
     private String productName;
 
     private String productType;
-    @NotNull(message = "FIELD_REQUIRED")
     private BigDecimal salePrice;
+    private BigDecimal vatRate;
     private Boolean trackSerial;
     private Boolean trackLot;
     private Boolean isAssembly;
@@ -42,4 +43,8 @@ public class ProductRequest {
     private String bomTemplate;
     private String warrantyPeriod;
     private Integer warrantyPeriodMonths;
+    private Boolean applyWarrantyToVariants;
+    private Boolean hasVariants;
+    private List<ProductVariantRequest> variants;
+    private List<ProductUnitConversionRequest> unitConversions;
 }

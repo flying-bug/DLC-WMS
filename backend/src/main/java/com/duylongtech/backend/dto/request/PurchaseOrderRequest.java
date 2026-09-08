@@ -36,6 +36,8 @@ public class PurchaseOrderRequest {
         @NotNull(message = "Sản phẩm không được để trống")
         private Long variantId;
 
+        private Long warehouseId; // Kho nhận dự kiến
+
         @NotNull
         @DecimalMin(value = "1", message = "Số lượng phải là số nguyên lớn hơn 0")
         private BigDecimal quantity;

@@ -36,6 +36,8 @@ public class DirectCheckoutRequest {
         @NotNull(message = "Sản phẩm không được để trống")
         private Long variantId;
 
+        private Long warehouseId;
+
         @NotNull(message = "Số lượng không được để trống")
         @DecimalMin(value = "1.00", message = "Số lượng phải lớn hơn 0")
         private BigDecimal quantity;

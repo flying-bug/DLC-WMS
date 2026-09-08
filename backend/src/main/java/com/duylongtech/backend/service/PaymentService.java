@@ -13,11 +13,18 @@ public interface PaymentService {
 
     PaymentResponse createPaymentVoucher(PaymentRequest request);
 
+    PaymentResponse updatePayment(Long id, PaymentRequest request);
+
     PaymentResponse postPayment(Long id);
+
+    void deletePayment(Long id);
 
     BigDecimal getPartnerDebtBalance(Long partnerId);
 
     List<PaymentResponse> getPartnerPaymentHistory(Long partnerId);
 
     List<PartnerLedgerResponse> getPartnerLedgerDetails(Long partnerId);
+
+    List<PaymentResponse> getAllPayments(String type, String status);
 }
+

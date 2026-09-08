@@ -33,6 +33,10 @@ public class SystemSettingsService {
         return "true".equalsIgnoreCase(getSetting(key, "false"));
     }
 
+    public boolean isAiEnabled() {
+        return "true".equalsIgnoreCase(getSetting("ai.enabled", "true"));
+    }
+
     public SystemSettingsDto getSettings() {
         String saJson = getSetting("drive.service.account", "");
         return SystemSettingsDto.builder()
@@ -44,7 +48,9 @@ public class SystemSettingsService {
                 .encryptKey("") // never expose key
                 .notifyEmailEnabled(getBool("notify.email.enabled"))
                 .notifyEmailTo(getSetting("notify.email.to", ""))
+                .snapshotTime(getSetting("snapshot.time", "00:05"))
                 .reservationExpiryHours(Integer.parseInt(getSetting("sales.reservation.expiry_hours", "72")))
+                .aiEnabled(isAiEnabled())
                 .build();
     }
 
@@ -56,6 +62,11 @@ public class SystemSettingsService {
         upsert("backup.encrypt.enabled", String.valueOf(dto.isEncryptEnabled()));
         upsert("notify.email.enabled", String.valueOf(dto.isNotifyEmailEnabled()));
         upsert("notify.email.to", dto.getNotifyEmailTo());
+        upsert("ai.enabled", String.valueOf(dto.isAiEnabled()));
+
+        if (dto.getSnapshotTime() != null && !dto.getSnapshotTime().isBlank()) {
+            upsert("snapshot.time", dto.getSnapshotTime().trim());
+        }
         
         Integer expiry = dto.getReservationExpiryHours();
         if (expiry == null || expiry <= 0) {
@@ -118,6 +129,56 @@ public class SystemSettingsService {
             }
         } else {
             throw new IllegalStateException(SystemMessage.SYS_SET_ERR_001.getMessage());
+        }
+    }
+
+    public int getDefaultVatRate() {
+        try {
+            return Integer.parseInt(getSetting("tax.default_vat_rate", "8"));
+        } catch (Exception e) {
+            return 8;
+        }
+    }
+
+    public java.util.List<Integer> getAllowedVatRates() {
+        return java.util.List.of(0, 5, 8, 10);
+    }
+
+    public com.duylongtech.backend.dto.BusinessSettingsDto getBusinessSettings() {
+        return com.duylongtech.backend.dto.BusinessSettingsDto.builder()
+                .defaultVatRate(getDefaultVatRate())
+                .allowedVatRates(getAllowedVatRates())
+                .companyName(getSetting("company.name", "Công ty TNHH Công nghệ Thương mại Duy Long Techcom"))
+                .companyTaxCode(getSetting("company.tax_code", "0109123456"))
+                .companyAddress(getSetting("company.address", "Số 12 ngõ 44 Đỗ Đức Dục, Mễ Trì, Nam Từ Liêm, Hà Nội"))
+                .companyPhone(getSetting("company.phone", "0987654321"))
+                .companyEmail(getSetting("company.email", "duylongcomputer@gmail.com"))
+                .companyBankAccount(getSetting("company.bank_account", "1903666888999 - Techcombank"))
+                .build();
+    }
+
+    @Transactional
+    public void saveBusinessSettings(com.duylongtech.backend.dto.BusinessSettingsDto dto) {
+        if (dto.getDefaultVatRate() != null) {
+            upsert("tax.default_vat_rate", String.valueOf(dto.getDefaultVatRate()));
+        }
+        if (dto.getCompanyName() != null) {
+            upsert("company.name", dto.getCompanyName().trim());
+        }
+        if (dto.getCompanyTaxCode() != null) {
+            upsert("company.tax_code", dto.getCompanyTaxCode().trim());
+        }
+        if (dto.getCompanyAddress() != null) {
+            upsert("company.address", dto.getCompanyAddress().trim());
+        }
+        if (dto.getCompanyPhone() != null) {
+            upsert("company.phone", dto.getCompanyPhone().trim());
+        }
+        if (dto.getCompanyEmail() != null) {
+            upsert("company.email", dto.getCompanyEmail().trim());
+        }
+        if (dto.getCompanyBankAccount() != null) {
+            upsert("company.bank_account", dto.getCompanyBankAccount().trim());
         }
     }
 

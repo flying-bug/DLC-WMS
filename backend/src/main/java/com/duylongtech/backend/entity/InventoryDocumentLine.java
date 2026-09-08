@@ -63,4 +63,34 @@ public class InventoryDocumentLine {
 
     @Column(name = "vat_percent", precision = 5, scale = 2)
     private BigDecimal vatPercent;
+
+    @Column(name = "warehouse_id")
+    private Long warehouseId;
+
+    @Column(name = "target_warehouse_id")
+    private Long targetWarehouseId;
+
+    @Column(name = "expected_quantity", precision = 15, scale = 4)
+    private BigDecimal expectedQuantity;
+
+    @Column(name = "rejected_quantity", precision = 15, scale = 4)
+    private BigDecimal rejectedQuantity;
+
+    @Column(name = "discrepancy_reason", length = 255)
+    private String discrepancyReason;
+
+    @Column(name = "unit_id")
+    private Long unitId;
+
+    @Column(name = "base_unit_id")
+    private Long baseUnitId;
+
+    @Column(name = "conversion_operator", length = 20)
+    private String conversionOperator;
+
+    @Column(name = "conversion_ratio", precision = 15, scale = 4)
+    private BigDecimal conversionRatio;
+
+    @Column(name = "base_quantity", precision = 15, scale = 4)
+    private BigDecimal baseQuantity;
 }

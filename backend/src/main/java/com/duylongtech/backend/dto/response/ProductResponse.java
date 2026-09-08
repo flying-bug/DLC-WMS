@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -24,6 +25,7 @@ public class ProductResponse {
     private String productName;
     private String productType;
     private BigDecimal salePrice;
+    private BigDecimal vatRate;
     private Boolean trackSerial;
     private Boolean trackLot;
     private Boolean isAssembly;
@@ -37,6 +39,8 @@ public class ProductResponse {
     private String bomTemplate;
     private String warrantyPeriod;
     private Integer warrantyPeriodMonths;
+    private List<ProductUnitConversionResponse> unitConversions;
+    private List<ProductVariantResponse> variants;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

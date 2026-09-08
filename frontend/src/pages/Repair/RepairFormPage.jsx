@@ -177,6 +177,7 @@ function RepairFormPage() {
     repairCode: '',
     partnerId: '',
     productId: '',
+    productVariantId: '',
     productQuantity: 1,
     productUnit: '',
     warehouseId: '',
@@ -245,54 +246,48 @@ function RepairFormPage() {
     const base = variants.filter(p => p.productType === 'Hàng hóa' || p.productType === 'Thành phẩm');
     const warehouseId = repair?.warehouseId || formData.warehouseId;
     if (!warehouseId) return base;
-    return base.filter(p => inventoryMap.has(String(p.id)) || String(p.id) === String(formData.productId || ''));
+    return base.filter(p => inventoryMap.has(String(p.id)) || String(p.id) === String(formData.productVariantId || ''));
   })();
 
-  const filteredProductsList = (() => {
-    let list = products.filter(p => p.productType === 'Hàng hóa' || p.productType === 'Thành phẩm');
+  const filteredRepairVariants = (() => {
+    let list = variants.filter(v => v.productType === 'Hàng hóa' || v.productType === 'Thành phẩm');
     if (sourceWarranty && sourceWarranty.lines && sourceWarranty.lines.length > 0) {
-      const allowedIds = new Set();
+      const allowedVariantIds = new Set();
       sourceWarranty.lines.forEach(line => {
-        if (line.productId) {
-          allowedIds.add(Number(line.productId));
-        } else if (line.productVariantId) {
-          const matchV = variants.find(v => String(v.id) === String(line.productVariantId));
-          if (matchV && matchV.productId) allowedIds.add(Number(matchV.productId));
+        if (line.productVariantId) {
+          allowedVariantIds.add(Number(line.productVariantId));
         } else if (line.sku) {
-          const matchP = products.find(p => p.productCode === line.sku || p.sku === line.sku);
-          if (matchP) allowedIds.add(Number(matchP.id));
+          const matchV = variants.find(v => v.sku === line.sku);
+          if (matchV) allowedVariantIds.add(Number(matchV.id));
+        } else if (line.productId) {
+          variants.filter(v => Number(v.productId) === Number(line.productId))
+            .forEach(v => allowedVariantIds.add(Number(v.id)));
         }
       });
-      if (allowedIds.size > 0) {
-        list = list.filter(p => allowedIds.has(Number(p.id)));
+      if (allowedVariantIds.size > 0) {
+        list = list.filter(v => allowedVariantIds.has(Number(v.id)));
       }
     }
     return list;
   })();
 
   const _productId = formData.productId;
+  const _productVariantId = formData.productVariantId;
   const _serialNumberId = formData.serialNumberId;
 
   const maxWarrantyQuantity = useMemo(() => {
-    if (!sourceWarranty || !sourceWarranty.lines || !_productId) return null;
+    if (!sourceWarranty || !sourceWarranty.lines || !_productVariantId) return null;
     let total = 0;
     sourceWarranty.lines.forEach(line => {
-      let matches = false;
-      if (line.productId && Number(line.productId) === Number(_productId)) {
-        matches = true;
-      } else if (line.productVariantId) {
-        const matchV = variants.find(v => String(v.id) === String(line.productVariantId));
-        if (matchV && Number(matchV.productId) === Number(_productId)) matches = true;
-      } else if (line.sku) {
-        const matchP = products.find(p => p.productCode === line.sku || p.sku === line.sku);
-        if (matchP && Number(matchP.id) === Number(_productId)) matches = true;
-      }
+      const matches = Number(line.productVariantId) === Number(_productVariantId)
+        || (!line.productVariantId && line.sku
+          && variants.some(v => Number(v.id) === Number(_productVariantId) && v.sku === line.sku));
       if (matches) {
         total += Number(line.quantity || 1);
       }
     });
     return total > 0 ? total : null;
-  }, [sourceWarranty, _productId, variants, products]);
+  }, [sourceWarranty, _productVariantId, variants]);
 
   const selectedRepairProduct = useMemo(
     () => products.find(p => String(p.id) === String(_productId)) || null,
@@ -308,23 +303,17 @@ function RepairFormPage() {
       if (serialMatch) return serialMatch;
     }
 
-    if (_productId) {
-      const productMatch = warrantyLines.find(line => {
-        if (line.productId && String(line.productId) === String(_productId)) return true;
-        if (line.productVariantId) {
-          const variant = variants.find(v => String(v.id) === String(line.productVariantId));
-          return variant && String(variant.productId) === String(_productId);
-        }
-        return false;
-      });
-      if (productMatch) return productMatch;
+    if (_productVariantId) {
+      const variantMatch = warrantyLines.find(line =>
+        String(line.productVariantId) === String(_productVariantId));
+      if (variantMatch) return variantMatch;
     }
 
     return warrantyLines[0];
-  }, [sourceWarranty, _serialNumberId, _productId, variants]);
+  }, [sourceWarranty, _serialNumberId, _productVariantId]);
 
   const selectedDeviceSerialNumber = repair?.serialNumber || selectedWarrantyLine?.serialNumber || '';
-  const selectedDeviceVariantId = selectedWarrantyLine?.productVariantId || '';
+  const selectedDeviceVariantId = formData.productVariantId || selectedWarrantyLine?.productVariantId || '';
   const isFinishedRepairProduct = selectedRepairProduct?.productType === 'Thành phẩm';
   const shouldShowComponentSerialPanel = isFinishedRepairProduct;
 
@@ -429,6 +418,8 @@ function RepairFormPage() {
                     if (matchP) allowedProductIds.push(Number(matchP.id));
                   }
                 });
+                const firstVariantId = wData.lines.find(line => line.productVariantId)?.productVariantId;
+                if (firstVariantId) initialData.productVariantId = firstVariantId;
               }
 
               if (allowedProductIds.length > 0) {
@@ -482,6 +473,7 @@ function RepairFormPage() {
             repairCode: data.repairCode || '',
             partnerId: data.partnerId || '',
             productId: data.productId || '',
+            productVariantId: data.productVariantId || '',
             productQuantity: data.productQuantity || 1,
             productUnit: data.productUnit || '',
             warehouseId: data.warehouseId || '',
@@ -535,7 +527,7 @@ function RepairFormPage() {
   const handleSave = async () => {
     if (codeError) { showToast('error', 'Mã lệnh bị trùng.'); return; }
     if (!formData.partnerId) { showToast('error', 'Vui lòng chọn Khách hàng.'); return; }
-    if (!formData.productId) { showToast('error', 'Vui lòng chọn Sản phẩm cần sửa.'); return; }
+    if (!formData.productVariantId) { showToast('error', 'Vui lòng chọn SKU cần sửa.'); return; }
     if (!formData.warehouseId) { showToast('error', 'Vui lòng chọn Kho thực hiện sửa chữa.'); return; }
     if (!formData.productQuantity || Number(formData.productQuantity) <= 0) { showToast('error', 'Số lượng sản phẩm phải lớn hơn 0.'); return; }
     if (maxWarrantyQuantity !== null && Number(formData.productQuantity) > maxWarrantyQuantity) {
@@ -551,6 +543,7 @@ function RepairFormPage() {
         repairCode: formData.repairCode || undefined,
         partnerId: Number(formData.partnerId),
         productId: Number(formData.productId),
+        productVariantId: Number(formData.productVariantId),
         productQuantity: Number(formData.productQuantity) || 1,
         productUnit: formData.productUnit || null,
         warehouseId: formData.warehouseId ? Number(formData.warehouseId) : null,
@@ -1038,15 +1031,16 @@ function RepairFormPage() {
               </div>
               <div className="misa-form-row" style={{ marginBottom: '8px' }}>
                 <div className="misa-form-group" style={{ flex: 1 }}>
-                  <label className="misa-label">Sản phẩm cần sửa <span className="required">*</span></label>
+                  <label className="misa-label">SKU cần sửa <span className="required">*</span></label>
                   <ProductGridSelect
                     disabled={!isEditable}
-                    products={filteredProductsList}
-                    value={formData.productId}
+                    products={filteredRepairVariants}
+                    value={formData.productVariantId}
                     hideStock={true}
                     fullWidthPopover={true}
                     onChange={(selected) => {
-                      handleFormChange('productId', selected ? selected.id : '');
+                      handleFormChange('productVariantId', selected ? selected.id : '');
+                      handleFormChange('productId', selected ? selected.productId : '');
                       if (selected && selected.unitName) {
                         handleFormChange('productUnit', selected.unitName);
                       } else {
@@ -1054,7 +1048,7 @@ function RepairFormPage() {
                       }
                     }}
                     displayMode="code-name"
-                    placeholder="Chọn sản phẩm..."
+                    placeholder="Chọn SKU..."
                   />
                 </div>
               </div>
@@ -1270,7 +1264,7 @@ function RepairFormPage() {
                     </td>
                     <td align="right">
                       {isEditable ? (
-                        <input type="number" min="0" step="1" max="100" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} value={line.vatPercent || 0} onChange={(e) => handleUpdateLineField(line.id, line._key, 'vatPercent', Number(e.target.value))} />
+                        <input type="number" min="0" step="1" max="10" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={line.isFreeWarranty} value={line.vatPercent || 0} onChange={(e) => handleUpdateLineField(line.id, line._key, 'vatPercent', Math.min(10, Math.max(0, Number(e.target.value))))} />
                       ) : (line.vatPercent || 0)}
                     </td>
                     <td align="right" style={{ fontWeight: '500' }}>
@@ -1374,7 +1368,7 @@ function RepairFormPage() {
                     </td>
                     <td align="right">
                       {isEditable ? (
-                        <input type="number" min="0" step="1" max="100" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={fee.isFreeWarranty} value={fee.vatPercent || 0} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'vatPercent', Number(e.target.value))} />
+                        <input type="number" min="0" step="1" max="10" className="misa-input" style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }} disabled={fee.isFreeWarranty} value={fee.vatPercent || 0} onChange={(e) => handleUpdateFeeField(fee.id, fee._key, 'vatPercent', Math.min(10, Math.max(0, Number(e.target.value))))} />
                       ) : (fee.vatPercent || 0)}
                     </td>
                     <td align="right" style={{ fontWeight: '500' }}>
@@ -1902,11 +1896,11 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       <td align="right">
         <input
           type="number"
-          min="0" step="1" max="100"
+          min="0" step="1" max="10"
           className="misa-input"
           disabled={isSaving || isFree}
           value={form.vatPercent || 0}
-          onChange={e => setForm({ ...form, vatPercent: Number(e.target.value) })}
+          onChange={e => setForm({ ...form, vatPercent: Math.min(10, Math.max(0, Number(e.target.value))) })}
           onBlur={() => savePart(form)}
           onKeyDown={e => {
             if (e.key === 'Enter') savePart(form);
@@ -2033,12 +2027,12 @@ function NewInlineRow({ repair, type, variants, inventoryMap, onSave, onCancel, 
       <td align="right">
         <input
           type="number"
-          min="0" step="1" max="100"
+          min="0" step="1" max="10"
           className="misa-input"
           disabled={isSaving || isFree}
           style={{ width: '60px', textAlign: 'right', padding: '2px 4px', height: '28px' }}
           value={form.vatPercent || 0}
-          onChange={e => setForm({ ...form, vatPercent: Number(e.target.value) })}
+          onChange={e => setForm({ ...form, vatPercent: Math.min(10, Math.max(0, Number(e.target.value))) })}
           onBlur={() => saveFee(form)}
           onKeyDown={e => {
             if (e.key === 'Enter') saveFee(form);

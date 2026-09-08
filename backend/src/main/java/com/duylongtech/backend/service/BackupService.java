@@ -40,20 +40,24 @@ public class BackupService {
     private final Environment env;
 
     private void ensureNativePasswordAuth(String user, String pass) {
-        org.hibernate.Session session = entityManager.unwrap(org.hibernate.Session.class);
-        session.doWork(connection -> {
-            try (java.sql.Statement stmt = connection.createStatement()) {
-                try {
-                    stmt.executeUpdate("ALTER USER '" + user + "'@'%' IDENTIFIED WITH mysql_native_password BY '" + pass + "'");
-                    stmt.executeUpdate("FLUSH PRIVILEGES");
-                } catch (Exception e) {
+        try {
+            org.hibernate.Session session = entityManager.unwrap(org.hibernate.Session.class);
+            session.doWork(connection -> {
+                try (java.sql.Statement stmt = connection.createStatement()) {
                     try {
-                        stmt.executeUpdate("ALTER USER '" + user + "'@'localhost' IDENTIFIED WITH mysql_native_password BY '" + pass + "'");
+                        stmt.executeUpdate("ALTER USER '" + user + "'@'%' IDENTIFIED WITH mysql_native_password BY '" + pass + "'");
                         stmt.executeUpdate("FLUSH PRIVILEGES");
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) {
+                        try {
+                            stmt.executeUpdate("ALTER USER '" + user + "'@'localhost' IDENTIFIED WITH mysql_native_password BY '" + pass + "'");
+                            stmt.executeUpdate("FLUSH PRIVILEGES");
+                        } catch (Exception ignored) {}
+                    }
                 }
-            }
-        });
+            });
+        } catch (Exception e) {
+            log.debug("ensureNativePasswordAuth skipped: {}", e.getMessage());
+        }
     }
 
 
@@ -80,7 +84,20 @@ public class BackupService {
         return dir;
     }
 
-    // ─── Create Backup ─────────────────────────────────────────────────────────
+    private List<String> getSslDisableArgs(String executable) {
+        try {
+            Process p = new ProcessBuilder(executable, "--help").start();
+            String helpText = new String(p.getInputStream().readAllBytes());
+            if (helpText.contains("--ssl-mode")) {
+                return List.of("--ssl-mode=DISABLED");
+            } else if (helpText.contains("--skip-ssl")) {
+                return List.of("--skip-ssl");
+            }
+        } catch (Exception ignored) {}
+        return (executable != null && executable.contains("mariadb"))
+                ? List.of("--skip-ssl")
+                : List.of("--ssl-mode=DISABLED");
+    }
 
     // ─── Create Backup ─────────────────────────────────────────────────────────
 
@@ -127,18 +144,13 @@ public class BackupService {
         // ── Find dump executable & run dump ──────────────────────────────────
         String dumpCmd = new File("/usr/bin/mariadb-dump").exists() ? "/usr/bin/mariadb-dump" : "mysqldump";
 
-        ProcessBuilder pb = new ProcessBuilder(
-                dumpCmd,
-                "-h", host,
-                "-P", port,
-                "-u", dbUser,
-                "--password=" + dbPass,
-                "--skip-ssl",
-                "--single-transaction",
-                "--routines",
-                "--triggers",
-                dbName
-        );
+        List<String> dumpArgs = new java.util.ArrayList<>();
+        dumpArgs.add(dumpCmd);
+        dumpArgs.addAll(List.of("-h", host, "-P", port, "-u", dbUser, "--password=" + dbPass));
+        dumpArgs.addAll(getSslDisableArgs(dumpCmd));
+        dumpArgs.addAll(List.of("--single-transaction", "--routines", "--triggers", dbName));
+
+        ProcessBuilder pb = new ProcessBuilder(dumpArgs);
         pb.redirectErrorStream(false);
 
         Process process;
@@ -260,7 +272,6 @@ public class BackupService {
 
     // ─── Restore ───────────────────────────────────────────────────────────────
 
-    @Transactional
     public void restoreBackup(Long id, String userEncryptionKey) throws Exception {
         BackupRecord record = backupRecordRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Backup không tồn tại: " + id));
@@ -293,21 +304,17 @@ public class BackupService {
             else host = hostPort;
         } catch (Exception ignored) {}
 
-        record.setStatus(BackupRecord.BackupStatus.RESTORING);
-        backupRecordRepo.save(record);
-
         ensureNativePasswordAuth(dbUser, dbPass);
 
         // Decompress (and Cipher decrypt if encrypted) and pipe to mysql / mariadb
         String mysqlCmd = new File("/usr/bin/mariadb").exists() ? "/usr/bin/mariadb" : "mysql";
-        ProcessBuilder pb = new ProcessBuilder(
-                mysqlCmd,
-                "-h", host, "-P", port,
-                "-u", dbUser,
-                "--password=" + dbPass,
-                "--skip-ssl",
-                dbName
-        );
+        List<String> restoreArgs = new java.util.ArrayList<>();
+        restoreArgs.add(mysqlCmd);
+        restoreArgs.addAll(List.of("-h", host, "-P", port, "-u", dbUser, "--password=" + dbPass));
+        restoreArgs.addAll(getSslDisableArgs(mysqlCmd));
+        restoreArgs.addAll(List.of("--default-character-set=utf8mb4", dbName));
+
+        ProcessBuilder pb = new ProcessBuilder(restoreArgs);
         pb.redirectErrorStream(true);
 
         Process process = pb.start();
@@ -338,8 +345,13 @@ public class BackupService {
                     mysqlIn.write(buf, 0, read);
                 }
             } catch (Exception e) {
-                record.setStatus(BackupRecord.BackupStatus.FAILED);
-                backupRecordRepo.save(record);
+                String procErr = "";
+                try {
+                    procErr = new String(process.getInputStream().readAllBytes());
+                } catch (Exception ignored) {}
+                if (procErr != null && !procErr.isBlank()) {
+                    throw new com.duylongtech.backend.exception.BusinessException("Lỗi Database khi nạp dữ liệu: " + procErr);
+                }
                 throw new com.duylongtech.backend.exception.BusinessException(
                         "Khóa giải mã (Encryption Key) không đúng hoặc file backup bị hỏng: " + e.getMessage());
             }
@@ -348,13 +360,10 @@ public class BackupService {
         int exitCode = process.waitFor();
         if (exitCode != 0) {
             String errMsg = new String(process.getInputStream().readAllBytes());
-            record.setStatus(BackupRecord.BackupStatus.FAILED);
-            backupRecordRepo.save(record);
             throw new RuntimeException(String.format(SystemMessage.BACKUP_ERR_002.getMessage(), exitCode, errMsg));
         }
 
-        record.setStatus(BackupRecord.BackupStatus.LOCAL);
-        backupRecordRepo.save(record);
+        entityManager.clear();
         syncDiskBackupsWithDb();
         log.info("Database restored from: {}", record.getFilename());
     }

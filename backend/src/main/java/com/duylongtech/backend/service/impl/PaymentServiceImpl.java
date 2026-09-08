@@ -87,6 +87,58 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
+    public PaymentResponse updatePayment(Long id, PaymentRequest request) {
+        PaymentTransaction payment = paymentTransactionRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu thu/chi với ID: " + id));
+
+        if (!"DRAFT".equals(payment.getStatus())) {
+            throw new BusinessException("Chỉ có thể chỉnh sửa phiếu ở trạng thái Lưu tạm (DRAFT)");
+        }
+
+        Long partnerId = request != null && request.getPartnerId() != null ? request.getPartnerId() : payment.getPartnerId();
+        Partner partner = partnerRepository.findById(partnerId)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy đối tác với ID: " + partnerId));
+
+        BigDecimal amount = request != null && request.getAmount() != null ? request.getAmount() : payment.getAmount();
+        if (amount == null || amount.compareTo(ZERO) <= 0) {
+            throw new BusinessException(SystemMessage.PAY_ERR_005.getMessage());
+        }
+
+        String nextStatus = request != null && request.getStatus() != null ? normalizeStatus(request.getStatus()) : payment.getStatus();
+        String paymentMethod = request != null && request.getPaymentMethod() != null ? normalizePaymentMethod(request.getPaymentMethod()) : payment.getPaymentMethod();
+
+        if ("POSTED".equals(nextStatus)) {
+            ensurePaymentDoesNotExceedDebt(partner.getId(), amount);
+        }
+
+        payment.setPartnerId(partner.getId());
+        payment.setAmount(amount);
+        payment.setPaymentMethod(paymentMethod);
+        payment.setNote(request != null ? trimToNull(request.getNote()) : payment.getNote());
+        payment.setStatus(nextStatus);
+
+        PaymentTransaction saved = paymentTransactionRepository.save(payment);
+        if ("POSTED".equals(saved.getStatus())) {
+            recordPostedPaymentLedger(saved, saved.getNote());
+        }
+        return toResponse(saved, partner);
+    }
+
+    @Override
+    @Transactional
+    public void deletePayment(Long id) {
+        PaymentTransaction payment = paymentTransactionRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu thu/chi với ID: " + id));
+
+        if (!"DRAFT".equals(payment.getStatus())) {
+            throw new BusinessException("Chỉ có thể xóa phiếu ở trạng thái Lưu tạm (DRAFT)");
+        }
+
+        paymentTransactionRepository.delete(payment);
+    }
+
+    @Override
+    @Transactional
     public PaymentResponse postPayment(Long id) {
         PaymentTransaction payment = paymentTransactionRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy phiếu thu/chi"));
@@ -221,4 +273,31 @@ public class PaymentServiceImpl implements PaymentService {
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> getAllPayments(String type, String status) {
+        List<PaymentTransaction> list;
+        if (type != null && !type.isBlank()) {
+            list = paymentTransactionRepository.findByTypeOrderByCreatedAtDesc(type.trim().toUpperCase());
+        } else {
+
+            list = paymentTransactionRepository.findAllByOrderByCreatedAtDesc();
+        }
+        if (status != null && !status.isBlank()) {
+            String s = status.trim().toUpperCase();
+            list = list.stream().filter(p -> s.equalsIgnoreCase(p.getStatus())).collect(Collectors.toList());
+        }
+        return list.stream().map(p -> {
+            Partner partner = p.getPartnerId() != null ? partnerRepository.findById(p.getPartnerId()).orElse(null) : null;
+            if (partner == null) {
+                partner = new Partner();
+                partner.setId(p.getPartnerId());
+                partner.setName(p.getPartnerId() != null ? ("Đối tác #" + p.getPartnerId()) : "Vãng lai");
+            }
+            return toResponse(p, partner);
+        }).collect(Collectors.toList());
+    }
 }
+
+

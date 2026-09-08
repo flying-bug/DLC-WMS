@@ -41,3 +41,6 @@ export const createSupplier = (data) =>
 export const getProducts = (params = {}) =>
   axiosClient.get('/products/variants', { params });
 
+export const getWarehouses = (params = {}) =>
+  axiosClient.get('/warehouses', { params: { size: 100, ...cleanParams(params) } });
+

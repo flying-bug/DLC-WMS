@@ -34,6 +34,7 @@ public class SalesOrderService {
     private final AuditLogService auditLogService;
     private final PartnerLedgerService partnerLedgerService;
     private final EmailService emailService;
+    private final InventoryDocumentRepository inventoryDocumentRepository;
     private final InventoryDocumentLineRepository inventoryDocumentLineRepository;
     private final PaymentService paymentService;
     private final SystemSettingsService systemSettingsService;
@@ -89,11 +90,14 @@ public class SalesOrderService {
     @Transactional
     public SalesOrderResponse createSalesOrder(SalesOrderRequest request, String actor) {
         requireActiveCustomer(request.getPartnerId());
-        // Validate partner và warehouse tồn tại
+        // Validate partner
         partnerRepository.findById(request.getPartnerId())
                 .orElseThrow(() -> new BusinessException("Khách hàng không tồn tại"));
-        warehouseRepository.findById(request.getWarehouseId())
-                .orElseThrow(() -> new BusinessException("Kho không tồn tại"));
+        
+        Long headerWh = request.getWarehouseId();
+        if (headerWh == null && request.getLines() != null && !request.getLines().isEmpty()) {
+            headerWh = request.getLines().get(0).getWarehouseId();
+        }
 
         if (request.getPaymentDueDate() != null) {
             if (request.getPaymentDueDate().isBefore(request.getSoDate())) {
@@ -119,14 +123,17 @@ public class SalesOrderService {
         // Tạo lines và tính tiền
         BigDecimal subTotalAmount = BigDecimal.ZERO;
         BigDecimal taxAmount = BigDecimal.ZERO;
+        final Long fallbackWh = headerWh;
         List<SalesOrderLine> lines = request.getLines().stream().map(lr -> {
             BigDecimal lineAmount = lr.getUnitPrice().multiply(lr.getQuantity());
             BigDecimal vatRate = lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO;
             BigDecimal vatAmount = lineAmount.multiply(vatRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            Long lineWh = lr.getWarehouseId() != null ? lr.getWarehouseId() : fallbackWh;
             
             return SalesOrderLine.builder()
                     .salesOrderId(0L) // sẽ được set sau khi save
                     .variantId(lr.getVariantId())
+                    .warehouseId(lineWh)
                     .quantity(lr.getQuantity())
                     .unitPrice(lr.getUnitPrice())
                     .vatRate(vatRate)
@@ -145,7 +152,7 @@ public class SalesOrderService {
 
         SalesOrder so = SalesOrder.builder()
                 .partnerId(request.getPartnerId())
-                .warehouseId(request.getWarehouseId())
+                .warehouseId(headerWh)
                 .soCode(soCode)
                 .soDate(request.getSoDate())
                 .status("DRAFT")
@@ -196,8 +203,13 @@ public class SalesOrderService {
             }
         }
 
+        Long headerWh = request.getWarehouseId();
+        if (headerWh == null && request.getLines() != null && !request.getLines().isEmpty()) {
+            headerWh = request.getLines().get(0).getWarehouseId();
+        }
+
         so.setPartnerId(request.getPartnerId());
-        so.setWarehouseId(request.getWarehouseId());
+        so.setWarehouseId(headerWh);
         so.setSoDate(request.getSoDate());
         so.setPaymentDueDate(request.getPaymentDueDate());
         so.setDeliveryAddress(request.getDeliveryAddress());
@@ -207,11 +219,13 @@ public class SalesOrderService {
         so.getLines().clear();
         BigDecimal subTotalAmount = BigDecimal.ZERO;
         BigDecimal taxAmount = BigDecimal.ZERO;
+        final Long fallbackWh = headerWh;
         
         for (SalesOrderRequest.SalesOrderLineRequest lr : request.getLines()) {
             BigDecimal lineAmount = lr.getUnitPrice().multiply(lr.getQuantity());
             BigDecimal vatRate = lr.getVatRate() != null ? lr.getVatRate() : BigDecimal.ZERO;
             BigDecimal vatAmount = lineAmount.multiply(vatRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            Long lineWh = lr.getWarehouseId() != null ? lr.getWarehouseId() : fallbackWh;
             
             subTotalAmount = subTotalAmount.add(lineAmount);
             taxAmount = taxAmount.add(vatAmount);
@@ -219,6 +233,7 @@ public class SalesOrderService {
             SalesOrderLine line = SalesOrderLine.builder()
                     .salesOrderId(so.getId())
                     .variantId(lr.getVariantId())
+                    .warehouseId(lineWh)
                     .quantity(lr.getQuantity())
                     .unitPrice(lr.getUnitPrice())
                     .vatRate(vatRate)
@@ -263,9 +278,14 @@ public class SalesOrderService {
         LocalDateTime expiresAt = LocalDateTime.now().plusHours(expiryHours);
 
         for (SalesOrderLine line : so.getLines()) {
+            Long lineWh = line.getWarehouseId() != null ? line.getWarehouseId() : so.getWarehouseId();
+            if (lineWh == null) {
+                throw new BusinessException("Dòng sản phẩm " + line.getVariantId() + " chưa được chọn kho xuất");
+            }
+
             // Kiểm tra tồn kho khả dụng (on_hand - reserved)
             BigDecimal available = inventoryBalanceRepository
-                    .sumAvailableQuantityByWarehouseAndVariant(so.getWarehouseId(), line.getVariantId(), "GOOD");
+                    .sumAvailableQuantityByWarehouseAndVariant(lineWh, line.getVariantId(), "GOOD");
 
             if (available == null) available = BigDecimal.ZERO;
 
@@ -276,7 +296,7 @@ public class SalesOrderService {
             StockReservation reservation = StockReservation.builder()
                     .salesOrderId(so.getId())
                     .variantId(line.getVariantId())
-                    .warehouseId(so.getWarehouseId())
+                    .warehouseId(lineWh)
                     .quantityReserved(line.getQuantity())
                     .status(resStatus)
                     .expiresAt(expiresAt)
@@ -285,10 +305,10 @@ public class SalesOrderService {
 
             // Tăng quantity_reserved trong INVENTORY_BALANCES
             InventoryBalance balance = inventoryBalanceRepository
-                    .findByWarehouseAndVariant(so.getWarehouseId(), line.getVariantId(), "GOOD")
+                    .findByWarehouseAndVariant(lineWh, line.getVariantId(), "GOOD")
                     .orElseGet(() -> {
                         InventoryBalance newBalance = InventoryBalance.builder()
-                                .warehouseId(so.getWarehouseId())
+                                .warehouseId(lineWh)
                                 .variantId(line.getVariantId())
                                 .stockStatus("GOOD")
                                 .quantityOnHand(BigDecimal.ZERO)
@@ -306,8 +326,6 @@ public class SalesOrderService {
         SalesOrder approved = salesOrderRepository.save(so);
         log.info("Duyệt đơn bán hàng {} bởi {}", approved.getSoCode(), actor);
 
-
-
         List<StockReservation> reservations = stockReservationRepository.findBySalesOrderId(id);
         return toDetailResponse(approved, reservations);
     }
@@ -321,8 +339,16 @@ public class SalesOrderService {
         SalesOrder so = salesOrderRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy đơn bán hàng ID: " + id));
 
-        if ("POSTED".equals(so.getStatus()) || "CANCELLED".equals(so.getStatus()) || "APPROVED".equals(so.getStatus())) {
+        if ("POSTED".equals(so.getStatus()) || "CANCELLED".equals(so.getStatus())) {
             throw new BusinessException(String.format(SystemMessage.SO_ERR_005.getMessage(), so.getStatus()));
+        }
+
+        // Kiểm tra xem đơn hàng đã có phiếu xuất kho nào đã ghi sổ (POSTED) chưa
+        List<InventoryDocument> exportDocs = inventoryDocumentRepository.findAllExports();
+        boolean hasPostedExport = exportDocs.stream()
+                .anyMatch(d -> id.equals(d.getSalesOrderId()) && "POSTED".equalsIgnoreCase(d.getStatus()));
+        if (hasPostedExport) {
+            throw new BusinessException("Đơn bán hàng đã có phiếu xuất kho đã ghi sổ (hoàn tất xuất), không thể hủy đơn hàng.");
         }
 
         // Release tất cả reservations HOLDING
@@ -361,14 +387,17 @@ public class SalesOrderService {
                 .findBySalesOrderIdAndStatus(salesOrderId, "HOLDING");
 
         for (StockReservation r : holdings) {
-            // Giảm quantity_reserved trong INVENTORY_BALANCES
-            inventoryBalanceRepository
-                    .findByWarehouseAndVariant(warehouseId, r.getVariantId(), "GOOD")
-                    .ifPresent(balance -> {
-                        BigDecimal newReserved = balance.getQuantityReserved().subtract(r.getQuantityReserved());
-                        balance.setQuantityReserved(newReserved.max(BigDecimal.ZERO));
-                        inventoryBalanceRepository.save(balance);
-                    });
+            Long whId = r.getWarehouseId() != null ? r.getWarehouseId() : warehouseId;
+            if (whId != null) {
+                // Giảm quantity_reserved trong INVENTORY_BALANCES
+                inventoryBalanceRepository
+                        .findByWarehouseAndVariant(whId, r.getVariantId(), "GOOD")
+                        .ifPresent(balance -> {
+                            BigDecimal newReserved = balance.getQuantityReserved().subtract(r.getQuantityReserved());
+                            balance.setQuantityReserved(newReserved.max(BigDecimal.ZERO));
+                            inventoryBalanceRepository.save(balance);
+                        });
+            }
             r.setStatus("RELEASED");
             stockReservationRepository.save(r);
         }
@@ -379,28 +408,36 @@ public class SalesOrderService {
      */
     @Transactional
     public void fulfillReservation(Long salesOrderId, Long variantId, Long warehouseId, BigDecimal quantityFulfilled, BigDecimal costAmountFulfilled) {
-        stockReservationRepository
-                .findBySalesOrderIdAndVariantIdAndWarehouseId(salesOrderId, variantId, warehouseId)
-                .ifPresent(r -> {
-                    // Giảm quantity_reserved trong INVENTORY_BALANCES
-                    inventoryBalanceRepository
-                            .findByWarehouseAndVariant(warehouseId, variantId, "GOOD")
-                            .ifPresent(balance -> {
-                                BigDecimal newReserved = balance.getQuantityReserved().subtract(quantityFulfilled);
-                                balance.setQuantityReserved(newReserved.max(BigDecimal.ZERO));
-                                inventoryBalanceRepository.save(balance);
-                            });
+        List<StockReservation> reservations = stockReservationRepository.findBySalesOrderId(salesOrderId).stream()
+                .filter(r -> variantId.equals(r.getVariantId()) && ("HOLDING".equals(r.getStatus()) || "BACKORDERED".equals(r.getStatus())))
+                .collect(Collectors.toList());
 
-                    // Cập nhật quantityReserved còn lại
-                    BigDecimal remaining = r.getQuantityReserved().subtract(quantityFulfilled);
-                    if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
-                        r.setStatus("FULFILLED");
-                        r.setQuantityReserved(BigDecimal.ZERO);
-                    } else {
-                        r.setQuantityReserved(remaining);
-                    }
-                    stockReservationRepository.save(r);
-                });
+        BigDecimal remainingToFulfill = quantityFulfilled;
+        for (StockReservation r : reservations) {
+            if (remainingToFulfill.compareTo(BigDecimal.ZERO) <= 0) break;
+            Long whId = r.getWarehouseId() != null ? r.getWarehouseId() : warehouseId;
+            BigDecimal fulfillThis = remainingToFulfill.min(r.getQuantityReserved());
+
+            if (whId != null && "HOLDING".equals(r.getStatus())) {
+                inventoryBalanceRepository
+                        .findByWarehouseAndVariant(whId, variantId, "GOOD")
+                        .ifPresent(balance -> {
+                            BigDecimal newReserved = balance.getQuantityReserved().subtract(fulfillThis);
+                            balance.setQuantityReserved(newReserved.max(BigDecimal.ZERO));
+                            inventoryBalanceRepository.save(balance);
+                        });
+            }
+
+            BigDecimal remainingRes = r.getQuantityReserved().subtract(fulfillThis);
+            if (remainingRes.compareTo(BigDecimal.ZERO) <= 0) {
+                r.setStatus("FULFILLED");
+                r.setQuantityReserved(BigDecimal.ZERO);
+            } else {
+                r.setQuantityReserved(remainingRes);
+            }
+            stockReservationRepository.save(r);
+            remainingToFulfill = remainingToFulfill.subtract(fulfillThis);
+        }
 
         // Cập nhật giá vốn FIFO vào SalesOrderLine
         salesOrderRepository.findByIdWithDetails(salesOrderId).ifPresent(so -> {
@@ -551,6 +588,8 @@ public class SalesOrderService {
                 .partnerName(so.getPartner() != null ? so.getPartner().getName() : null)
                 .partnerPhone(so.getPartner() != null ? so.getPartner().getPhone() : null)
                 .partnerEmail(so.getPartner() != null ? so.getPartner().getEmail() : null)
+                .partnerTaxCode(so.getPartner() != null ? so.getPartner().getTaxCode() : null)
+                .partnerAddress(so.getPartner() != null ? so.getPartner().getAddress() : null)
                 .warehouseId(so.getWarehouseId())
                 .warehouseCode(so.getWarehouse() != null ? so.getWarehouse().getCode() : null)
                 .warehouseName(so.getWarehouse() != null ? so.getWarehouse().getName() : null)
@@ -578,8 +617,9 @@ public class SalesOrderService {
                     String productCode = (line.getVariant() != null && line.getVariant().getProduct() != null)
                             ? line.getVariant().getProduct().getProductCode() : null;
 
-                    BigDecimal available = inventoryBalanceRepository
-                            .sumAvailableQuantityByWarehouseAndVariant(so.getWarehouseId(), line.getVariantId(), "GOOD");
+                    Long lineWh = line.getWarehouseId() != null ? line.getWarehouseId() : so.getWarehouseId();
+                    BigDecimal available = lineWh != null ? inventoryBalanceRepository
+                            .sumAvailableQuantityByWarehouseAndVariant(lineWh, line.getVariantId(), "GOOD") : BigDecimal.ZERO;
 
                     BigDecimal exported = inventoryDocumentLineRepository
                             .sumExportedQuantityBySalesOrderIdAndVariantId(so.getId(), line.getVariantId());
@@ -594,6 +634,9 @@ public class SalesOrderService {
                             .variantName(variantName)
                             .productCode(productCode)
                             .unitName(line.getVariant() != null && line.getVariant().getProduct() != null && line.getVariant().getProduct().getUnit() != null ? line.getVariant().getProduct().getUnit().getName() : null)
+                            .warehouseId(line.getWarehouseId())
+                            .warehouseCode(line.getWarehouse() != null ? line.getWarehouse().getCode() : null)
+                            .warehouseName(line.getWarehouse() != null ? line.getWarehouse().getName() : null)
                             .quantity(line.getQuantity())
                             .unitPrice(line.getUnitPrice())
                             .vatRate(line.getVatRate())

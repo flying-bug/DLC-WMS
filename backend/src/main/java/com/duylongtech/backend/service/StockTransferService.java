@@ -16,7 +16,7 @@ public interface StockTransferService {
     StockTransferResponseDTO dispatchTransfer(Long transferId, StockTransferDispatchDTO dispatchDTO, Long userId);
     StockTransferResponseDTO receiveTransfer(Long transferId, StockTransferReceiptDTO receiptDTO, Long userId);
     
-    java.util.List<StockTransferResponseDTO> getAllTransfers();
+    List<StockTransferResponseDTO> getAllTransfers();
     StockTransferResponseDTO getTransferById(Long transferId);
     String generateNextTransferCode();
 }
